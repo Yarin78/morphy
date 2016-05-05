@@ -1,0 +1,776 @@
+File contents
+=============
+This text file contains the result of many hours work trying to figure out how the Chessbase CBH file format (and related files) work. Some file extensions, such as the search booster and the archive format CBV, are completely ignored for now. All data was derived from ChessBase 9.0.
+
+CBH - Contains the list of games in the database and pointers to location in the other files.
+CBG - The actual game data (ie sequence of moves)
+CBA - Game annotations
+CBP - Player data
+CBT - Tournament data
+CBC - Annotator data
+CBS - Source data
+CBE - Team data
+CBM - ?
+CBJ - ? Contains game->team mappings among other things
+CBB - ?
+
+
+
+CBH file
+========
+46 byte header, 46 byte records
+
+Header
+------
+Ofs 0, Len 6 - ?? 00 00 2C 00 2E 01 if created with cb9,  00 00 24 00 2E 01 if created with cblight
+Ofs 6, Len 4 - Number of games+1
+Ofs 12, Len 4 - ?? Can be 2
+Ofs 16, Len 4 - ?? Can be 3
+Ofs 20, Len 4 - ?? Can be 3
+Ofs 40, Len 4 - Either number of games+1 (?), or 0 (?)
+
+Other bytes zero?
+
+Game record
+-----------
+Ofs 0, Len 1 - bit 0: 1 = game (can sometimes be 0 if guiding text is 1?)
+               bit 1: 1 = guiding text
+               bit 7: 1 = marked as deleted
+Ofs 1, Len 4 - Position in .cbg file where the game data starts (or guiding text)
+Ofs 5, Len 4 - Position in .cba file where annotations start (0 = no annotations)
+Ofs 9, Len 3 - White player number (0 = first player in .cbp file)
+Ofs 12, Len 3 - Black player number (0 = first player in .cbp file)
+Ofs 15, Len 3 - Tournament number (0 = first tournament in .cbt file)
+Ofs 18, Len 3 - Annotator number (0 = first annotator in .cbc file)
+Ofs 21, Len 3 - Source number (0 = first source in .cbs file)
+Ofs 24, Len 3 - year & month & day
+                bit 0-4 = Day (0 = unset)
+                bit 5-8 = Month (0 = unset)
+                bit 9-20 = Year (0 = unset)
+
+Ofs 27, Len 1 - 3 = line
+                2 = 1-0
+                1 = �-�
+                0 = 0-1
+                6 = +:-
+                5 = =:=
+                4 = -:+
+                7 = 0-0
+Ofs 28, Len 1 - Line evaluation (only set if byte above is 3)
+                0 = unset
+                18 = +- (white is winning)
+                16 = +/- (white has a clear advantage)
+                14 = +/= (white has a slight advantage)
+                11 = = (the position is equal)
+                13 = The position is unclear
+                15 = -/= (black has a slight advantage)
+                17 = -/+ (black has a clear advantage)
+                19 = -+ (black is winning)
+                0x92 = theoretical novelty
+                0x2C = with compensation for the material
+                0x84 = with counterplay
+                0x24 = with initiative
+                0x28 = with attack
+
+Ofs 29, Len 1 - round (0 = unset)
+Ofs 30, Len 1 - subround (0 = unset)
+Ofs 31, Len 2 - white rating (0 = unset)
+Ofs 33, Len 2 - black rating (0 = unset)
+
+Ofs 35, Len 2 - bit 0-6: Sub ECO (00-99)
+                bit 7-15: ECO (0 = unset, 1 = A00, 500 = E99)
+
+Ofs 37, Len 2 - Medals:
+                bit 0: Best game
+                bit 1: Decided tournament
+                bit 2: Model game (opening plan)
+               	bit 3: Novelty
+               	bit 4: Pawn structure
+               	bit 5: Strategy
+               	bit 6: Tactics
+               	bit 7: With attack
+               	bit 8: Sacrifice
+               	bit 9: Defense
+               	bit 10: Material
+               	bit 11: Piece play
+               	bit 12: Endgame
+               	bit 13: Tactical blunder
+               	bit 14: Strategical blunder
+               	bit 15: User
+
+Ofs 39          bit 0: 1 = Contains critical position
+                bit 1: 1 = Contains correspondence header
+Ofs 40          bit 0: 1 = Contains embedded audio
+                bit 1: 1 = Contains embedded picture
+                bit 2: 1 = Contains embedded video
+                bit 3: 1 = Contains game quotation
+                bit 4: 1 = Contains path structure
+                bit 5: 1 = Contains piece path
+Ofs 41:         bit 1: 1 = Contains training annotation
+
+Ofs 42, Len 1 - bit 0: P (game starts from a position different from the initial one)
+                bit 1: v (contains variations)
+                bit 2: c (contains commentary)
+                bit 3: s (contains symbols)
+               	bit 4: The game is annotated with colored squares
+                bit 5: The game is annotated with arrows
+                bit 7: The game contains time notifications (??)
+
+Ofs 43 ?
+
+Ofs 44, Len 1 - bit 0-1: 1=V, 2=r, 3=R (many variations; bit 1 in ofs 42 must be set)
+                      v = [1,50] variation moves, V = [51,300] variation moves,
+                      r = [301,1000] variation moves, R = [1001,]
+                bit 2: C (many commentaries; bit 2 in ofs 42 must be set)
+                bit 3: S (many symbols; bit 3 in ofs 42 must be set)
+                bit 4: The game is annotated with color squares in at least 10 positions
+                bit 5: The game is annotated with arrows in at least 10 positions
+
+Ofs 45, Len 1 - number of moves in main variant. If 255, the actual number of
+				moves is checked in the game data
+
+If guiding text:
+
+Ofs 0-4 same as above
+Ofs 5?
+Ofs 7, Len 3 - Tournament Id
+Ofs 10, Len 3 - Source Id
+Ofs 13, Len 3 - Annotator Id
+Ofs 16, Len 1 - Round
+Ofs 17, Len 1 - ? 0
+Ofs 18, Len 1 - bit 2: Contains stream (wmv)
+Ofs 19, Len 1 - bit 0: Contains audio link
+                bit 1: Contains image link
+                bit 2: Contains video link
+
+
+
+
+CBG Format
+==========
+26 byte header. Actual game data pointed out from CBH file.
+
+Ofs  Type  Len   Description
+----------------------------
+  0  short   2   Pointer to first game (?)
+  2  int     4   Pointer to end of file (= file length)
+  6  int     4   ? Accumulated value of game bytes length changed
+ 14  int     4   Pointer to end of file (= file length) (same?)
+ 22  int     4   ? Accumulated value of game bytes length changed
+
+ [At game start]
+
+ +0  int     4   bit 0-29: Game size, in number of bytes (including this, excluding trash bytes)
+                 bit 30: If set, the game doesn't start with the initial position.
+                 bit 31: If set, the data is not encoded (iff guiding text?)
+ +4  byte   (28) If game does not start with initial position, here that position follows.
+  ?  byte   ?    Game data (see below), ends with 0C (=pop position)
+
+[For guiding texts]
+
+ +0  int     4   bit 0-29: Game size, in number of bytes (including this, excluding trash bytes)
+                 bit 30: If set, the game doesn't start with the initial position.
+                 bit 31: If set, the data is not encoded (iff guiding text?)
+ +4  word    2   ? (1?) (little-endian)
+ +6  word    2   Number of titles (can be 0) (little endian)
+
+For each title
+
+ +0  word    2   Language (0=english, 1=german, 2=france, 3=spain, 4=italian, 5=dutch) (little endian)
+ +2  word    2   Length of title (little endian)
+ +4  string  ?   Title
+
+Game setup format
+-----------------
+Ofs 0, Len 1 - Always 1?
+Ofs 1, Len 1 - Bit 0-3: En passant file (0 = no en passant, 1 = a, 8 = h)
+               Bit 4: 0=white to move, 1=black to move
+Ofs 2, Len 1 - Bit 0: White O-O-O possible
+               Bit 1: White O-O possible
+               Bit 2: Black O-O-O possible
+               Bit 3: Black O-O possible
+Ofs 3, Len 1 - Next move number
+Ofs 4, Len 24 - Piece setup as a bit stream (starting with MSB at ofs 4),
+                using these bit codes:
+
+				0 = Empty square
+				10001 = White king
+				10010 = White queen
+				10011 = White knight
+				10100 = White bishop
+				10101 = White rook
+				10110 = White pawn
+				11001 = Black king
+				11010 = Black queen
+				11011 = Black knight
+				11100 = Black bishop
+				11101 = Black rook
+				11110 = Black pawn
+Ofs 28 - Start of moves
+
+The board is then scanned from a1 to a8, b1 to b8 etc. The first piece
+of each type find is the initial first piece, etc (including pawns, of both colors).
+
+Game data
+=========
+The moves in a game are represented as a stream of bytes. Most moves are represented as a single byte, describing the relative movement of a piece. Pieces are described in terms such as "first rook" (meaning the rook that for white starts on a1 and for black on a8), "second rook" etc.
+
+When decoding the byte stream, first decrease the byte value with the number of moves so far processed in the game data (minus 0 for the first move). The special codes for "multiple byte moves" and begin/end of variations don't count. The move count should not be restarted when a variation end. Then translate the byte according to the translation table below.
+
+All pawn moments are seen from the point of view of the player to move. Pawn captures include en passant.
+
+When a "first piece" is captured, the "second piece" becomes the new "first piece" for that player, and the "third piece" becomes the "second piece". When a "second piece" is cpatured, the old "third piece" becomes the "second piece". A "fourth piece" (or higher) never "promotes" and its movements are always represented with multiple bytes. Pawns are never adjusted in this way, so the e-pawn remains as the "fifth pawn" throughout the game.
+
+Multiple byte moves describes a move by denoting the start square and the destination square. This is done with 6 bits each. Bit 0-5 in the second byte is the start square (a1=0, a2=1, h8=63), bit 6-7 in the second byte and 0-3 in the first is the destination square. For pawn promotions, bit 4-5 is also used (0=queen, 1=rook, 2=bishop, 3=knight). Any type of move can be described as a multipe byte move, but it's typically only done when moving a fourth piece or doing a pawn promotion.
+
+Single byte move translation table
+----------------------------------
+Note: These bytes look random, but they have actually been "encrypted" using a static array of 256 bytes that can be found at position 0x7AE4A8 in CBase9.exe and position 0x9D6530 in CBase10.exe (it starts with 0xAA, 0x49, 0x39, 0xD8, 0x5D, 0xC2, 0xB1, 0xB2). By reverse looking up these values, the new value will correspond to the order the are listed here.
+
+Special
+-------
+AA = null move
+
+King
+----
+49 = y+1
+39 = x+1, y+1
+D8 = x+1
+5D = x+1, y+7
+C2 = y+7
+B1 = x+7, y+7
+B2 = x+7
+47 = x+7, y+1
+76 = 0-0
+B5 = 0-0-0
+
+First queen
+-----------
+A5 = y+1
+B8 = y+2
+CB = y+3
+53 = y+4
+7F = y+5
+6B = y+6
+8D = y+7
+79 = x+1
+BE = x+2
+EB = x+3
+21 = x+4
+99 = x+5
+D2 = x+6
+57 = x+7
+4D = x+1, y+1
+B4 = x+2, y+2
+BF = x+3, y+3
+62 = x+4, y+4
+BD = x+5, y+5
+24 = x+6, y+6
+96 = x+7, y+7
+A7 = x+1, y+7
+48 = x+2, y+6
+28 = x+3, y+5
+6E = x+4, y+4 (not primarly used)
+2F = x+5, y+3
+5A = x+6, y+2
+18 = x+7, y+1
+
+First rook (a1/a8 at start)
+----------
+4E = y+1
+F8 = y+2
+43 = y+3
+D7 = y+4
+63 = y+5
+9C = y+6
+E6 = y+7
+2E = x+1
+C6 = x+2
+26 = x+3
+88 = x+4
+30 = x+5
+61 = x+6
+6F = x+7
+
+Second rook (h1/h8 at start)
+-----------
+14 = y+1
+A9 = y+2
+68 = y+3
+EE = y+4
+FB = y+5
+77 = y+6
+E2 = y+7
+A6 = x+1
+05 = x+2
+8B = x+3
+A1 = x+4
+98 = x+5
+32 = x+6
+52 = x+7
+
+First bishop (c1/c8 at start)
+------------
+02 = x+1, y+1
+97 = x+2, y+2
+E1 = x+3, y+3
+41 = x+4, y+4
+C3 = x+5, y+5
+7C = x+6, y+6
+E4 = x+7, y+7
+06 = x+1, y+7
+B7 = x+2, y+6
+55 = x+3, y+5
+D9 = x+4, y+4 (not primarily used)
+2C = x+5, y+3
+AE = x+6, y+2
+37 = x+7, y+1
+
+Second bishop (f1/f8 at start)
+-------------
+F6 = x+1, y+1
+3F = x+2, y+2
+08 = x+3, y+3
+93 = x+4, y+4
+73 = x+5, y+5
+5E = x+6, y+6
+78 = x+7, y+7
+35 = x+1, y+7
+F2 = x+2, y+6
+6D = x+3, y+5
+71 = x+4, y+4 (not primarly used)
+A2 = x+5, y+3
+F3 = x+6, y+2
+16 = x+7, y+1
+
+First knight (b1/b8 at start)
+------------
+58 = x+2, y+1
+3D = x+1, y+2
+FA = x-1, y+2
+E9 = x-2, y+1
+BA = x-2, y-1
+D4 = x-1, y-2
+DD = x+1, y-2
+4A = x+2, y-1
+
+Second knight (g1/g8 at start)
+-------------
+C4 = x+2, y+1
+0E = x+1, y+2
+FE = x-1, y+2
+5F = x-2, y+1
+75 = x-2, y-1
+07 = x-1, y-2
+89 = x+1, y-2
+34 = x+2, y-1
+
+a2/a7-pawn
+------------
+2D = one step forward
+C1 = two steps forward
+8E = capture right
+F5 = capture left
+
+b2/b7-pawn
+------------
+64 = one step forward
+17 = two steps forward
+70 = capture right
+A4 = capture left
+
+c2/c7-pawn
+------------
+7B = one step forward
+DA = two steps forward
+E0 = capture right
+85 = capture left
+
+d2/d7-pawn
+------------
+C5 = one step forward
+0B = two steps forward
+90 = capture right
+F9 = capture left
+
+e2/e7-pawn
+------------
+84 = one step forward
+FF = two steps forward
+15 = capture right
+36 = capture left
+
+f2/f7-pawn
+------------
+09 = one step forward
+9E = two steps forward
+7D = capture right
+DE = capture left
+
+g2/g7-pawn
+------------
+BB = one step forward
+DF = two steps forward
+BC = capture right
+3A = capture left
+
+h2/h7-pawn
+------------
+12 = one step forward
+33 = two steps forward
+13 = capture right
+19 = capture left
+
+Second queen
+------------
+E5 = y+1
+94 = y+2
+50 = y+3
+11 = y+4
+EA = y+5
+31 = y+6
+01 = y+7
+5C = x+1
+95 = x+2
+CA = x+3
+D3 = x+4
+1D = x+5
+7E = x+6
+EF = x+7
+44 = x+1, y+1
+80 = x+2, y+2
+A0 = x+3, y+3
+1F = x+4, y+4
+83 = x+5, y+5
+00 = x+6, y+6
+4B = x+7, y+7
+67 = x+1, y+7
+20 = x+2, y+6
+5B = x+3, y+5
+2A = x+4, y+4 (not primarly used)
+92 = x+5, y+3
+B6 = x+6, y+2
+60 = x+7, y+1
+
+Third queen
+-----------
+1A = y+1
+42 = y+2
+0F = y+3
+0D = y+4
+B0 = y+5
+D1 = y+6
+23 = y+7
+F0 = x+1
+7A = x+2
+54 = x+3
+4F = x+4
+F4 = x+5
+A8 = x+6
+72 = x+7
+E7 = x+1, y+1
+40 = x+2, y+2
+38 = x+3, y+3
+59 = x+4, y+4
+87 = x+5, y+5
+E8 = x+6, y+6
+6C = x+7, y+7
+86 = x+1, y+7
+04 = x+2, y+6
+F1 = x+3, y+5
+8C = x+4, y+4 (not primarly used)
+CE = x+5, y+3
+6A = x+6, y+2
+DB = x+7, y+1
+
+Third rook
+----------
+81 = y+1
+82 = y+2
+9A = y+3
+1B = y+4
+9D = y+5
+0A = y+6
+2B = y+7
+8F = x+1
+CD = x+2
+ED = x+3
+10 = x+4
+74 = x+5
+69 = x+6
+D6 = x+7
+
+Third bishop
+------------
+51 = x+1, y+1
+B9 = x+2, y+2
+45 = x+3, y+3
+3B = x+4, y+4
+56 = x+5, y+5
+91 = x+6, y+6
+FD = x+7, y+7
+AB = x+1, y+7
+66 = x+2, y+6
+3E = x+3, y+5
+46 = x+4, y+4 (not primarily used)
+B3 = x+5, y+3
+FC = x+6, y+2
+C8 = x+7, y+1
+
+Third knight
+------------
+9B = x+2, y+1
+C0 = x+1, y+2
+E3 = x-1, y+2
+A3 = x-2, y+1
+AC = x-2, y-1
+C9 = x-1, y-2
+EC = x+1, y-2
+27 = x+2, y-1
+
+Special
+-------
+29 = multiple byte move to follow
+9F = dummy - skip and don't count thi move. Used by earlier CB verions as padding!?
+25 = unused
+C7 = unused
+CC = unused
+65 = unused
+4C = unused
+D5 = unused
+1E = unused
+CF = unused
+03 = unused
+8A = unused
+AF = unused
+F7 = unused
+AD = unused
+3C = unused
+D0 = unused
+22 = unused
+1C = unused
+DC = push position (start of variant)
+0C = pop position (end of variant)
+
+
+CBA file (annotation data)
+==========================
+26 byte header. Actual annotation data pointer out from CBH file.
+
+Game start
+----------
+Ofs 0, Len 3 - The game ID this is the annotation for (little-endian)
+Ofs 4?
+Ofs 10, Len 4 - The number of bytes used for annotations in this game, starting at ofs 0 (big-endian)
+Ofs 14 - start of annotation data
+
+Annotation data
+---------------
+Ofs 0, Len 3 - Position in gaming sequence (0 = start position, 1 = after first move, -1 = game general) for this annotation (little-endian)
+Ofs 3, Len 1 - Type of annotation:
+                 0x02 = text after move
+                 0x03 = symbols
+                 0x18 = critical position
+                 0x82 = text before move
+                 0x14 = pawn structure (ofs 6 = 3?! TODO)
+                 0x15 = piece path (ofs 6-7 = 03 2b?  03 0d? TODO)
+                 0x13 = game quotation
+                 0x22 = medal
+                 0x23 = variation color
+                 0x10 = sound
+                 0x20 = video
+                 0x11 = picture
+                 0x09 = training annotation (TODO)
+                 0x61 = correspondence header (always move -1?)
+                 0x19 = correspondence move (header must exist?)
+Ofs 4, Len 2 - Number of bytes for this annotation (from ofs 0, little-endian).
+
+
+Symbols:
+Ofs 6, Len 1 - Move comment (! ? !? ?! !! ?? Zugzwang Only mode)
+Ofs 7, Len 1 - Position evaluation (optional byte, 0 if missing)
+Ofs 8, Len 1 - Prefix (optional byte, 0 if missing)
+
+Text:
+Ofs 6, Len 1 - 0?
+Ofs 7, Len 1 - Language 0 = All, 0x2A = English, 0x35 = Deutsch, 0x31 = France, 0x2B = Spain, 0x46 = Italian, 0x67 = Dutch, 0x75 = Portugese, 0x00 = Pol (bug??)
+Ofs 8, Len ? - Text (remaining bytes)  0x9E = diagram (denoted "{#}")
+
+Critical Position:
+Ofs 6, Len 1 - 1 = Critical opening position
+               2 = Critical middlegame position
+               3 = Critical endgame position
+
+Game Quotation:
+Not done yet
+
+Medal:
+Ofs 6, Len 4 - Bit 0-15 (bit 0 = 1 in ofs 9) sets medals according to medal table below
+
+Variation Color
+Ofs 6, Len 1 - 0?
+Ofs 7, Len 1 - blue component
+Ofs 8, Len 1 - green component
+Ofs 9, Len 1 - red component
+
+Move comments
+-------------
+1 = !
+2 = ?
+3 = !!
+4 = ??
+5 = !?
+6 = ?!
+0x16 = Zugzwang
+8 = Only move
+
+Position evaluations
+--------------------
+0x12 = +-
+0x10 = +/-
+0x0E = +/=
+0x0B = =
+0x0D = unclear
+0x0F = =/+
+0x11 = -/+
+0x13 = -+
+0x92 = theoretical novelty
+0x2C = with compensation for the material
+0x84 = with counterplay
+0x24 = with initiative
+0x28 = with attack
+0x20 = development advantage
+0x8A = zeitnot
+
+Prefix
+-----
+0x91 = Editorial annotation
+0x8E = better is
+0x8F = worse is
+0x90 = Equivalent is
+0x8C = with the idea
+0x8D = directed against
+
+
+
+
+
+
+CBP file (player data)
+======================
+28 byte header, 67 byte records
+
+Header
+------
+Ofs 0, Len 4 - Number of player records in file (little endian)
+Ofs 4, Len 4 - The root record
+Ofs 8, Len 4 - The number 1234567890 (??? reserved for future use perhaps?)
+Ofs 12, Len 4 - The size of a record (excluding the 9 bytes making up the binary tree structure)
+Ofs 16, Len 4 - The first deleted record (-1 if nothing deleted)
+Ofs 20, Len 4 - Number of existing records (little endian)
+Ofs 24, Len 4 - ? unused ? Always 0?
+
+Binary tree sorts players in alphabetical order (last name, first name).
+An AVL tree is used to make sure the tree is balanced.
+
+Record
+------
+Ofs 0, Len 4 - -999 if record is deleted. Otherwise left child node (-1 if missing) (little endian)
+Ofs 4, Len 4 - Right child node (-1 if missing). If record is deleted, contains next deleted record (or -1 if last) (little endian)
+Ofs 8, Len 1 - Height of right subtree minus height of left subtree. Used to balance the AVL tree. Usually -1, 0 or 1, but may become -2 or 2 temporarily. 0 for deleted records (unused)
+Ofs 9, Len 30 - Last name
+Ofs 39, Len 20 - First name
+Ofs 59, Len 4 - Number of games with this player? (little endian)
+Ofs 63, Len 4 - First game id with this player? (little endian)
+
+All other player information is fetched from the Player Encyclopedia.
+
+
+
+CBT file (tournament data)
+==========================
+28 byte header, 99 byte records
+
+Same header format at CBP
+Binary tree sorts tournament in alphabetical order
+
+Ofs 0, Len 2 - 19 FC == deleted?? FF FF == exist??
+
+Ofs 9, Len 40 - Title (zero terminated string)
+Ofs 49, Len 30 - Place (zero terminated string)
+Ofs 79, Len 3 - Date (little endian)
+				bit 0-4 = Day (0 = unset)
+                bit 5-8 = Month (0 = unset)
+                bit 9-20 = Year (0 = unset)
+Ofs 83, Len 1 - bit 0-4 game type
+                  0 = unset
+                  1 = game
+                  2 = match
+                  3 = tourn
+                  4 = swiss
+                  5 = team
+                  6 = k.o.
+                  7 = simul
+                  8 = schev
+                bit 5: 1 = blitz
+                bit 6: 1 = rapid
+                bit 7: 1 = corresp
+Ofs 85, Len 1 - Nation (0=unset, AFG=0x01, ..., GBR=0xF7) (complete list in Cbase9.exe between 0x6ba154 and 0x0x6ba510, in reverse order)
+Ofs 87, Len 1 - Category (0-99, 0=unset)
+Ofs 88, Len 1 - bit 0: ?? Almost always the same as bit 1, but there are exceptions.
+                bit 1: complete
+                bit 2: board points
+Ofs 89, Len 1 - Number of rounds (0-255, 0=unset)
+
+Ofs 91, Len 4 - Number of games with this tournament? (little endian)
+Ofs 95, Len 4 - First game id with this tournament? (little endian)
+
+
+
+CBC file (annotator data)
+=========================
+28 byte header, 62 byte records
+
+Same header format at CBP
+Binary tree used to sort annotators in alphabetical order
+
+Ofs 9, Len 45 - Annotator name (not zero terminated!?)
+Ofs 54, Len 4 - Number of games with this annotator? (little endian)
+Ofs 58, Len 4 - First game id with this annotator? (little endian)
+
+
+
+CBS file (source data)
+======================
+28 byte header, 68 byte records
+
+Same header format at CBP
+Binary tree used to sort sources in alphabetical order
+
+Ofs 9, Len 25 - Title
+Ofs 34, Len 16 - Publisher
+Ofs 50, Len 3 - Publication (little endian)
+Ofs 54, Len 3 - Date  (little endian)
+Ofs 58, Len 1 - Version
+Ofs 59, Len 1 - Quality (1 = high, 2 = normal, 3 = low, 0 = unset but treated as low)
+Ofs 60, Len 4 - Number of games with this source? (little endian)
+Ofs 64, Len 4 - First game id with this source? (little endian)
+
+
+
+CBE file (team data)
+====================
+28 byte header, 72 byte records
+
+Same header format at CBP
+Binary tree used to sort teams in alphabetical order
+A somewhat recent invention, not available in cblight which probably
+explains why the CBP file lacks pointers to teams.
+
+Ofs 9, Len 45 - Title
+Ofs 54, Len 2 - Team Number - Chessbase crashes if this value is large. 5000 works, but not 9999.
+Ofs 58, Len 1 - Bit 0: Season (if set, year is year/year+1, otherwise just year)
+Ofs 59, Len 2 - Year
+Ofs 63, Len 1 - Nation (same numbering as in CBT)
+Ofs 64, Len 4 - Number of games with this team? (little endian)
+Ofs 68, Len 4 - First game id with this team? (little endian)
