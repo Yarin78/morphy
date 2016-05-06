@@ -28,8 +28,8 @@ public class GameHeader extends DataRecord {
     private int tournamentId;
     private int annotatorId;
     private int sourceId;
-    private int gameDataPosition; // Square in the .cbg file where the actual moves are stored
-    private int annotationDataPosition; // Square in the .cba file where the actual annotation start (0 = no yarin.cbhlib.annotations)
+    private int gameDataPosition; // Position in the .cbg file where the actual moves are stored
+    private int annotationDataPosition; // Position in the .cba file where the actual annotation start (0 = no yarin.cbhlib.annotations)
     private GameResult result;
     private LineEvaluation lineEvaluation;
     private Medals medals;
@@ -390,7 +390,7 @@ public class GameHeader extends DataRecord {
             return null;
         if (game == null) {
             if (setupPosition)
-                throw new UnsupportedOperationException("Setup Square not yet supported");
+                throw new UnsupportedOperationException("Setup position not yet supported");
             game = new AnnotatedGame(getMoveDataPrivate(), 4, getAnnotationDataPrivate());
         }
         return game;
@@ -413,7 +413,7 @@ public class GameHeader extends DataRecord {
             throw new CBHFormatException("Bit 0 in byte 0 is not set");
         isGuidingText = (cbhData.get(0) & 0x02) > 0;
 
-        gameDataPosition = cbhData.get(1);
+        gameDataPosition = cbhData.getInt(1);
 
         // For now, throw exception if unknown fields are not null
         if ((cbhData.get(0) & 0x7C) > 0)

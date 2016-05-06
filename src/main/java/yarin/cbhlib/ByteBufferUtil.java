@@ -40,7 +40,7 @@ public class ByteBufferUtil {
     }
 
     public static int getBigEndianValue(ByteBuffer buf, int offset, int startBit, int noBits) {
-        if (offset >= buf.capacity())
+        if (offset >= buf.limit())
             throw new IllegalArgumentException("Offset out of range");
 
         int value = 0, pos = offset, curBit = startBit;
@@ -75,7 +75,7 @@ public class ByteBufferUtil {
         if (maxLength < 0)
             maxLength = Integer.MAX_VALUE;
         for (int i = 0; i < maxLength; i++) {
-            if (offset + i >= buf.capacity())
+            if (offset + i >= buf.limit())
                 throw new IllegalArgumentException("Offset out of range");
             if (buf.get(offset + i) == 0)
                 break;

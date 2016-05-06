@@ -668,7 +668,7 @@ Ofs 8, Len 4 - The number 1234567890 (??? reserved for future use perhaps?)
 Ofs 12, Len 4 - The size of a record (excluding the 9 bytes making up the binary tree structure)
 Ofs 16, Len 4 - The first deleted record (-1 if nothing deleted)
 Ofs 20, Len 4 - Number of existing records (little endian)
-Ofs 24, Len 4 - ? unused ? Always 0?
+Ofs 24, Len 4 - ? unused ? Always 0? No, set to 4 in the cbhlib_test now (extra length of header??)
 
 Binary tree sorts players in alphabetical order (last name, first name).
 An AVL tree is used to make sure the tree is balanced.

@@ -26,10 +26,13 @@ public class Database
     private int numberOfSources;
     private int numberOfTeams;
 
+    private int firstPlayerOffset;
+    private int playerRecordLength;
+
     private static final int CBH_HEADER_LENGTH = 46;
     private static final int CBH_RECORD_LENGTH = 46;
     private static final int CBP_HEADER_LENGTH = 28;
-    private static final int CBP_RECORD_LENGTH = 67;
+//    private static final int CBP_RECORD_LENGTH = 67;
     private static final int CBT_HEADER_LENGTH = 28;
     private static final int CBT_RECORD_LENGTH = 99;
     private static final int CBC_HEADER_LENGTH = 28;
@@ -113,10 +116,10 @@ public class Database
 
     /**
      * Loads a CBH database.
-     * @param cbhFile The CBH file to load. The extension .cbh will be added if missing.
+     * @param cbhFile The CBH file to open. The extension .cbh will be added if missing.
      * @return An instance of a valid CBH database
      */
-    public static Database load(String cbhFile) throws IOException {
+    public static Database open(String cbhFile) throws IOException {
         if (cbhFile == null)
             throw new IllegalArgumentException("cbhFile must not be null");
 
@@ -154,6 +157,8 @@ public class Database
             header.order(ByteOrder.LITTLE_ENDIAN);
             fc.read(header, 0);
             numberOfPlayers = header.getInt(0);
+            playerRecordLength = header.getInt(12) + 9;
+            firstPlayerOffset = CBP_HEADER_LENGTH + header.getInt(24);
 
             //		if (numberOfPlayers != ByteBufferUtil.GetLittleEndianInt(header, 20))
             //	throw new CBHFormatException("Number of players in header mismatched");
@@ -190,18 +195,16 @@ public class Database
         }
         try (FileChannel fc = getFileChannel("cbe"))
         {
-            if (fc == null)
-                numberOfTeams = 0;
-            else
-            {
-                ByteBuffer header = ByteBuffer.allocate(CBE_HEADER_LENGTH);
-                header.order(ByteOrder.LITTLE_ENDIAN);
-                fc.read(header, 0);
-                numberOfTeams = header.getInt(0);
-            }
+            ByteBuffer header = ByteBuffer.allocate(CBE_HEADER_LENGTH);
+            header.order(ByteOrder.LITTLE_ENDIAN);
+            fc.read(header, 0);
+            numberOfTeams = header.getInt(0);
 
             //if (numberOfTeams != ByteBufferUtil.GetLittleEndianInt(header, 20))
             //	throw new CBHFormatException("Number of teams in header mismatched");
+        } catch (FileNotFoundException e) {
+            // This is okay for this database
+            numberOfTeams = 0;
         }
     }
 
@@ -221,16 +224,12 @@ public class Database
     */
 
     // TODO: Should be internal
-    public FileChannel getFileChannel(String extension) throws IOException
+    public FileChannel getFileChannel(String extension) throws FileNotFoundException
     {
         File file = new File(_directory.toString(), _baseName + "." + extension);
-        try {
-            RandomAccessFile raf = new RandomAccessFile(file, "r");
-            return raf.getChannel();
-        } catch (FileNotFoundException e) {
-            //throw new IOException("Failed to open the " + _baseName + "." + extension + " file", e);
-            return null; // It may be ok for some files to not exist
-        }
+        RandomAccessFile raf = new RandomAccessFile(file, "r");
+        return raf.getChannel();
+//            throw new IOException("Failed to open the " + _baseName + "." + extension + " file", e);
     }
 
     /**
@@ -278,11 +277,11 @@ public class Database
         if (playerId < 0 || playerId >= numberOfPlayers)
             throw new IllegalArgumentException("Invalid player");
 
-        ByteBuffer buffer = ByteBuffer.allocate(CBP_RECORD_LENGTH);
+        ByteBuffer buffer = ByteBuffer.allocate(playerRecordLength);
         buffer.order(ByteOrder.LITTLE_ENDIAN);
         try (FileChannel fc = getFileChannel("cbp"))
         {
-            fc.read(buffer, CBP_HEADER_LENGTH + playerId * CBP_RECORD_LENGTH);
+            fc.read(buffer, firstPlayerOffset + playerId * playerRecordLength);
         }
         Player game = new Player(this, playerId, buffer);
         return game;
