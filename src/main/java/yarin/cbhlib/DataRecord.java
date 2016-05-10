@@ -2,7 +2,7 @@ package yarin.cbhlib;
 
 /**
  * Common base class for data records in the CBH file format,
- * such as yarin.cbhlib.GameHeader, yarin.cbhlib.Player, yarin.cbhlib.Tournament, yarin.cbhlib.Annotator, yarin.cbhlib.Source, yarin.cbhlib.Team
+ * such as GameHeader, Player, Tournament, Annotator, Source, Team
  */
 public abstract class DataRecord {
     private int id;

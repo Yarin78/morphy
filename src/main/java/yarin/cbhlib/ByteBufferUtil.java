@@ -1,6 +1,7 @@
 package yarin.cbhlib;
 
 import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
 
 /**
  * Contains helper methods for binary streams
@@ -71,17 +72,9 @@ public class ByteBufferUtil {
     }
 
     public static String getZeroTerminatedString(ByteBuffer buf, int offset, int maxLength) {
-        StringBuilder sb = new StringBuilder();
-        if (maxLength < 0)
-            maxLength = Integer.MAX_VALUE;
-        for (int i = 0; i < maxLength; i++) {
-            if (offset + i >= buf.limit())
-                throw new IllegalArgumentException("Offset out of range");
-            if (buf.get(offset + i) == 0)
-                break;
-            sb.append((char) buf.get(offset + i));
-        }
-        return sb.toString();
+        int len = 0;
+        while (len < maxLength && buf.get(offset + len) != 0) len++;
+        return new String(buf.array(), offset, len, Charset.forName("ISO-8859-1"));
     }
 
     private static String[][] romanDigits =

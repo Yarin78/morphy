@@ -77,7 +77,7 @@ public class AnnotatedGame extends Game {
         0xF7, 0xAD, 0x3C, 0xD0, 0x22, 0x1C, 0xDC, 0x0C
     };
 
-    // Inverse of the above map, created in static constructor
+    // Inverse of the above map
     private static int[] decryptMap;
 
     static {

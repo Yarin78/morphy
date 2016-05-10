@@ -2,18 +2,31 @@ File contents
 =============
 This text file contains the result of many hours work trying to figure out how the Chessbase CBH file format (and related files) work. Some file extensions, such as the search booster and the archive format CBV, are completely ignored for now. All data was derived from ChessBase 9.0.
 
-CBH - Contains the list of games in the database and pointers to location in the other files.
-CBG - The actual game data (ie sequence of moves)
-CBA - Game annotations
-CBP - Player data
-CBT - Tournament data
-CBC - Annotator data
-CBS - Source data
-CBE - Team data
-CBM - ?
-CBJ - ? Contains game->team mappings among other things
-CBB - ?
+The following files contain the minimal game information in a database:
 
+CBH - Game data (“H” is for game “header”). Contains the list of games in the database and pointers to location in the other files.
+CBG - Game moves and variations
+CBA - Annotations (text commentary)
+CBP - Players index
+CBT - Tournament index
+CBC - Commentators index
+CBS - Source index
+
+Additional game information can be found in the following files.  If they are lost, information is irrevocably lost, but the games will still be fine.
+
+CBE - Team index
+CBJ - Secondary header file, team information, final material, type of rating
+CBM - Multimedia baggage in HTML database text files.
+CBL - Contains game titles in all languages
+
+CBB/CBGI/CIT/CIP - Contains hashed information to speed up searches and retrievals. Recreated if lost.
+
+More can be read about the file extensions here:
+http://help.chessbase.com/Reader/12/Eng/index.html?filenames.htm
+
+
+
+All strings are ISO-8859-1 encoded. Characters that doesn't exist in that encoding are simply stored as ?
 
 
 CBH file
@@ -22,7 +35,7 @@ CBH file
 
 Header
 ------
-Ofs 0, Len 6 - ?? 00 00 2C 00 2E 01 if created with cb9,  00 00 24 00 2E 01 if created with cblight
+Ofs 0, Len 6 - ?? 00 00 2C 00 2E 01 if created with cb9,  00 00 24 00 2E 01 if created with cblight,
 Ofs 6, Len 4 - Number of games+1
 Ofs 12, Len 4 - ?? Can be 2
 Ofs 16, Len 4 - ?? Can be 3
@@ -658,7 +671,7 @@ Prefix
 
 CBP file (player data)
 ======================
-28 byte header, 67 byte records
+32 byte header, 67 byte records
 
 Header
 ------
@@ -668,7 +681,7 @@ Ofs 8, Len 4 - The number 1234567890 (??? reserved for future use perhaps?)
 Ofs 12, Len 4 - The size of a record (excluding the 9 bytes making up the binary tree structure)
 Ofs 16, Len 4 - The first deleted record (-1 if nothing deleted)
 Ofs 20, Len 4 - Number of existing records (little endian)
-Ofs 24, Len 4 - ? unused ? Always 0? No, set to 4 in the cbhlib_test now (extra length of header??)
+Ofs 24, Len 4 - Number of padding bytes until the first record
 
 Binary tree sorts players in alphabetical order (last name, first name).
 An AVL tree is used to make sure the tree is balanced.
@@ -689,7 +702,7 @@ All other player information is fetched from the Player Encyclopedia.
 
 CBT file (tournament data)
 ==========================
-28 byte header, 99 byte records
+32 byte header, 99 byte records
 
 Same header format at CBP
 Binary tree sorts tournament in alphabetical order
@@ -729,7 +742,7 @@ Ofs 95, Len 4 - First game id with this tournament? (little endian)
 
 CBC file (annotator data)
 =========================
-28 byte header, 62 byte records
+32 byte header, 62 byte records
 
 Same header format at CBP
 Binary tree used to sort annotators in alphabetical order
@@ -742,7 +755,7 @@ Ofs 58, Len 4 - First game id with this annotator? (little endian)
 
 CBS file (source data)
 ======================
-28 byte header, 68 byte records
+32 byte header, 68 byte records
 
 Same header format at CBP
 Binary tree used to sort sources in alphabetical order
@@ -760,9 +773,9 @@ Ofs 64, Len 4 - First game id with this source? (little endian)
 
 CBE file (team data)
 ====================
-28 byte header, 72 byte records
+32 byte header, 72 byte records
 
-Same header format at CBP
+Same header format as CBP
 Binary tree used to sort teams in alphabetical order
 A somewhat recent invention, not available in cblight which probably
 explains why the CBP file lacks pointers to teams.
@@ -774,3 +787,63 @@ Ofs 59, Len 2 - Year
 Ofs 63, Len 1 - Nation (same numbering as in CBT)
 Ofs 64, Len 4 - Number of games with this team? (little endian)
 Ofs 68, Len 4 - First game id with this team? (little endian)
+
+CBJ file (secondary game header)
+================================
+32 byte header, 120 byte records
+
+Header
+------
+Ofs 0, Len 4 - ?? 0b in cb13, 08 in cb12 (version number?)
+Ofs 4, Len 4 - Length of a record
+Ofs 8, Len 4 - Number of records
+Ofs 12, Len 4 - ?? 3a
+Ofs 16, Len 4 - ?? -1
+Ofs 20, Len 4 - ?? 05
+
+Record
+------
+Ofs 0, Len 4 - Id of white team (-1 = no team)
+Ofs 4, Len 4 - Id of black team (-1 = no team)
+Ofs 22, Len 1 - ?? Always 0x1a?
+Ofs 39, Len 9: Rating type for White player
+Ofs 55, Len 9: Rating type for Black player
+
+byte 39:
+   01 => International Elo Normal
+   11 => International Elo Blitz
+   19 => International Elo Rapid
+   21 => International ICCF Corresp Chess
+   02 => National Normal
+   1a => National Blitz
+   12 => National Rapid
+   22 => National Corresp Chess
+byte 40:
+   00 => International OR "National Normal"
+   01 => National Blitz
+   02 => National Rapid
+   03 => National Correspondence Chess
+byte 41:
+   01 => International Elo Normal
+   02 => International Elo Blitz
+   03 => International Elo Rapid
+   04 => International ICCF Corresp Chess
+   64 => National Normal
+   90 => National Blitz
+   bc => National Rapid
+   e8 => National Corresp Chess
+byte 42: Country code for national ratings
+   00 => International
+   5f => Moldova
+   9e => Zimbabwe
+   86 => Swedish
+   87 => Switzerland
+byte 43-46: Name of rating
+   00 00 00 00  => National
+   46 49 44 45  => International ELO ("FIDE")
+   49 43 43 46  => International Corresp Ch ("ICCF")
+
+CBL file (language stuff?)
+==========================
+Game title goes in here, all languages
+

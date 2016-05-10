@@ -4,21 +4,20 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import yarin.cbhlib.annotations.Annotation;
 import yarin.cbhlib.exceptions.CBHException;
+import yarin.cbhlib.exceptions.CBHFormatException;
 import yarin.chess.Game;
 import yarin.chess.GamePosition;
 
 import java.io.IOException;
 
-/**
- * Created by yarin on 06/05/16.
- */
 public class IntegrationTests {
 
     private Database db;
 
     @Before
-    public void openTestDatabase() throws IOException {
+    public void openTestDatabase() throws IOException, CBHFormatException {
         db = Database.open("src/test/java/yarin/cbhlib/databases/cbhlib_test.cbh");
     }
 
@@ -36,6 +35,7 @@ public class IntegrationTests {
 
     @Test
     public void simpleGame() throws IOException, CBHException {
+        // Checks that the moves in a simple game is recorded correctly
         GameHeader gameHeader = db.getGameHeader(1);
         Assert.assertEquals("Simple game", gameHeader.getWhitePlayer().getLastName());
         Assert.assertEquals("1-0", gameHeader.getResult());
@@ -61,4 +61,72 @@ public class IntegrationTests {
         currentPosition = currentPosition.moveForward();
         Assert.assertTrue(currentPosition.isEndOfVariation());
     }
+
+    @Test
+    public void testBasicGameMetadata() throws IOException, CBHException {
+        // Checks that "all" different metadata set for a game is correct
+        GameHeader gameHeader = db.getGameHeader(2);
+        Assert.assertEquals("Mårdell", gameHeader.getWhitePlayer().getLastName());
+        Assert.assertEquals("Jimmy", gameHeader.getWhitePlayer().getFirstName());
+        Assert.assertEquals("Doe", gameHeader.getBlackPlayer().getLastName());
+        Assert.assertEquals("John", gameHeader.getBlackPlayer().getFirstName());
+
+        Assert.assertEquals("compensation", gameHeader.getResult());
+        Assert.assertEquals("Swedish Ch", gameHeader.getTournament().getTitle());
+
+        Assert.assertEquals("A00", gameHeader.getECO());
+        Assert.assertEquals(2150, gameHeader.getWhiteElo());
+        Assert.assertEquals(2000, gameHeader.getBlackElo());
+        Assert.assertEquals(1, gameHeader.getRound());
+        Assert.assertEquals(2, gameHeader.getSubRound());
+        Assert.assertEquals(new Date(2016, 5, 9), gameHeader.getPlayedDate());
+
+        Assert.assertEquals("SK Rockaden Umeå", gameHeader.getWhiteTeam().getTitle());
+        Assert.assertEquals("Test Team", gameHeader.getBlackTeam().getTitle());
+        Assert.assertEquals("Test source", gameHeader.getSource().getTitle());
+        Assert.assertEquals("Jimmy", gameHeader.getAnnotator().getName());
+
+        Assert.assertEquals(new RatingDetails(true, RatingDetails.RatingType.Normal, 0), gameHeader.getWhiteRatingDetails());
+        Assert.assertEquals(new RatingDetails(false, RatingDetails.RatingType.Blitz, 0x86), gameHeader.getBlackRatingDetails());
+
+//        Assert.assertEquals("Test title", gameHeader.getGameTitle()); // Languages?
+//        Assert.assertEquals("German title", gameHeader.getGameTitle()); // Languages?
+    }
+
+    /*
+    @Test
+    public void testSimpleAnnotations() throws IOException, CBHException {
+        // Checks that the basic annotations work
+        GameHeader gameHeader = db.getGameHeader(3);
+
+        AnnotatedGame game = (AnnotatedGame) gameHeader.getGame();
+        GamePosition position = game.moveForward();
+
+        for (Annotation a : game.getAnnotations(position)){
+            System.out.println(a);
+        }
+
+    }
+    */
+
+    @Test
+    public void testDeletedGame() {
+        // Test that a game is marked correctly as deleted
+    }
+
+    @Test
+    public void testTournamentDetails() {
+        // Test that the tournament details are read correctly
+    }
+
+    @Test
+    public void testSourceDetails() {
+        // Test that the details of a source is read correctly
+    }
+
+    // Test variants
+    // Test annotations
+    // Test setup position
+    // Test null move
+    // Guiding texts
 }

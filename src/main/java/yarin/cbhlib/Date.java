@@ -74,4 +74,25 @@ public class Date {
             return String.format("%02d.%04d", getMonth(), getYear());
         return String.format("%02d.%02d.%04d", getDay(), getMonth(), getYear());
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        Date date = (Date) o;
+
+        if (year != date.year) return false;
+        if (month != date.month) return false;
+        return day == date.day;
+
+    }
+
+    @Override
+    public int hashCode() {
+        int result = year;
+        result = 31 * result + month;
+        result = 31 * result + day;
+        return result;
+    }
 }

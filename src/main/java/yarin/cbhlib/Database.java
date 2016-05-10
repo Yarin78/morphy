@@ -1,6 +1,7 @@
 package yarin.cbhlib;
 
 import yarin.cbhlib.exceptions.CBHException;
+import yarin.cbhlib.exceptions.CBHFormatException;
 
 import java.io.*;
 import java.nio.ByteBuffer;
@@ -16,8 +17,8 @@ import java.util.List;
  */
 public class Database
 {
-    private Path _directory; // e.g. "/Users/yarin/chessbase/bases"
-    private String _baseName; // e.g. "mybase"
+    private Path directory; // e.g. "/Users/yarin/chessbase/bases"
+    private String baseName; // e.g. "mybase"
 
     private int numberOfGames;
     private int numberOfPlayers;
@@ -25,22 +26,25 @@ public class Database
     private int numberOfAnnotators;
     private int numberOfSources;
     private int numberOfTeams;
+    private int numberOfExtraRecords;
 
-    private int firstPlayerOffset;
-    private int playerRecordLength;
+    private int extraHeaderVersion;
+    private int firstPlayerOffset, firstTournamentOffset, firstSourceOffset, firstAnnotatorOffset, firstTeamOffset;
+    private int playerRecordLength, tournamentRecordLength, sourceRecordLength, annotatorRecordLength, teamRecordLength, extraHeaderRecordLength;
 
     private static final int CBH_HEADER_LENGTH = 46;
     private static final int CBH_RECORD_LENGTH = 46;
     private static final int CBP_HEADER_LENGTH = 28;
 //    private static final int CBP_RECORD_LENGTH = 67;
     private static final int CBT_HEADER_LENGTH = 28;
-    private static final int CBT_RECORD_LENGTH = 99;
+//    private static final int CBT_RECORD_LENGTH = 99;
     private static final int CBC_HEADER_LENGTH = 28;
-    private static final int CBC_RECORD_LENGTH = 62;
+//    private static final int CBC_RECORD_LENGTH = 62;
     private static final int CBS_HEADER_LENGTH = 28;
-    private static final int CBS_RECORD_LENGTH = 68;
+//    private static final int CBS_RECORD_LENGTH = 68;
     private static final int CBE_HEADER_LENGTH = 28;
-    private static final int CBE_RECORD_LENGTH = 72;
+//    private static final int CBE_RECORD_LENGTH = 72;
+    private static final int CBJ_HEADER_LENGTH = 32;
 
     /**
      * Gets the number of games in the database.
@@ -104,8 +108,8 @@ public class Database
 
     private Database(Path directory, String baseName)
     {
-        _directory = directory;
-        _baseName = baseName;
+        this.directory = directory;
+        this.baseName = baseName;
         numberOfGames = 0;
         numberOfPlayers = 0;
         numberOfTournaments = 0;
@@ -119,7 +123,7 @@ public class Database
      * @param cbhFile The CBH file to open. The extension .cbh will be added if missing.
      * @return An instance of a valid CBH database
      */
-    public static Database open(String cbhFile) throws IOException {
+    public static Database open(String cbhFile) throws IOException, CBHFormatException {
         if (cbhFile == null)
             throw new IllegalArgumentException("cbhFile must not be null");
 
@@ -137,11 +141,11 @@ public class Database
     /**
      * Clears any cached data and reloads the file headers
      */
-    public void invalidate() throws IOException {
+    public void invalidate() throws IOException, CBHFormatException {
         refreshHeaders();
     }
 
-    private void refreshHeaders() throws IOException {
+    private void refreshHeaders() throws IOException, CBHFormatException {
         try (FileChannel fc = getFileChannel("cbh"))
         {
             ByteBuffer header = ByteBuffer.allocate(CBH_HEADER_LENGTH);
@@ -169,6 +173,8 @@ public class Database
             header.order(ByteOrder.LITTLE_ENDIAN);
             fc.read(header, 0);
             numberOfTournaments = header.getInt(0);
+            tournamentRecordLength = header.getInt(12) + 9;
+            firstTournamentOffset = CBT_HEADER_LENGTH + header.getInt(24);
 
             //if (numberOfTournaments != ByteBufferUtil.GetLittleEndianInt(header, 20))
             //	throw new CBHFormatException("Number of tournaments in header mismatched");
@@ -179,6 +185,8 @@ public class Database
             header.order(ByteOrder.LITTLE_ENDIAN);
             fc.read(header, 0);
             numberOfAnnotators = header.getInt(0);
+            annotatorRecordLength = header.getInt(12) + 9;
+            firstAnnotatorOffset = CBC_HEADER_LENGTH + header.getInt(24);
 
             //if (numberOfAnnotators != ByteBufferUtil.GetLittleEndianInt(header, 20))
             //	throw new CBHFormatException("Number of annotators in header mismatched");
@@ -189,6 +197,8 @@ public class Database
             header.order(ByteOrder.LITTLE_ENDIAN);
             fc.read(header, 0);
             numberOfSources = header.getInt(0);
+            sourceRecordLength = header.getInt(12) + 9;
+            firstSourceOffset = CBS_HEADER_LENGTH + header.getInt(24);
 
             //	if (numberOfSources != ByteBufferUtil.GetLittleEndianInt(header, 20))
             //	throw new CBHFormatException("Number of sources in header mismatched");
@@ -199,12 +209,31 @@ public class Database
             header.order(ByteOrder.LITTLE_ENDIAN);
             fc.read(header, 0);
             numberOfTeams = header.getInt(0);
+            teamRecordLength = header.getInt(12) + 9;
+            firstTeamOffset = CBE_HEADER_LENGTH + header.getInt(24);
 
             //if (numberOfTeams != ByteBufferUtil.GetLittleEndianInt(header, 20))
             //	throw new CBHFormatException("Number of teams in header mismatched");
         } catch (FileNotFoundException e) {
-            // This is okay for this database
+            // The team index must not exist
             numberOfTeams = 0;
+        }
+        try (FileChannel fc = getFileChannel("cbj"))
+        {
+            ByteBuffer header = ByteBuffer.allocate(CBJ_HEADER_LENGTH);
+            header.order(ByteOrder.LITTLE_ENDIAN);
+            fc.read(header, 0);
+            extraHeaderVersion = header.getInt(0);
+            extraHeaderRecordLength = header.getInt(4);
+            numberOfExtraRecords = header.getInt(8); // Should be the same as number of games?
+
+            if (numberOfExtraRecords != numberOfGames)
+            	throw new CBHFormatException("Number of extra records doesn't match number of games");
+        } catch (FileNotFoundException e) {
+            // The secondary header file must not exist
+            extraHeaderVersion = 0;
+            extraHeaderRecordLength = 0;
+            numberOfExtraRecords = 0;
         }
     }
 
@@ -212,13 +241,13 @@ public class Database
     // TODO: Should be internal
     public DataInputStream GetFileStream(String extension) throws IOException
     {
-        File file = new File(_directory.toString(), _baseName + "." + extension);
+        File file = new File(directory.toString(), baseName + "." + extension);
         try {
             return new DataInputStream(new BufferedInputStream(new FileInputStream(file)));
         } catch (FileNotFoundException e) {
 
         } catch (RuntimeException e) {
-            throw new CBHIOException("Failed to open the " + _baseName + "." + extension + " file", e);
+            throw new CBHIOException("Failed to open the " + baseName + "." + extension + " file", e);
         }
     }
     */
@@ -226,10 +255,10 @@ public class Database
     // TODO: Should be internal
     public FileChannel getFileChannel(String extension) throws FileNotFoundException
     {
-        File file = new File(_directory.toString(), _baseName + "." + extension);
+        File file = new File(directory.toString(), baseName + "." + extension);
         RandomAccessFile raf = new RandomAccessFile(file, "r");
         return raf.getChannel();
-//            throw new IOException("Failed to open the " + _baseName + "." + extension + " file", e);
+//            throw new IOException("Failed to open the " + baseName + "." + extension + " file", e);
     }
 
     /**
@@ -266,6 +295,30 @@ public class Database
             games[i - firstGameId] = getGameHeader(i);
         }
         return games;
+    }
+
+    /**
+     * Gets the secondary game header for a game from the database
+     * @param gameId The ID number of the secondary game header. The first game header has number 1.
+     * @return The specified secondary game header
+     */
+    public GameHeaderExtra getExtraHeader(int gameId) throws IOException, CBHException {
+        if (gameId < 1 || gameId > numberOfGames)
+            throw new IllegalArgumentException("Invalid game id");
+
+        if (gameId > numberOfExtraRecords) {
+            // If no secondary header exists for this game, return default values
+            return new GameHeaderExtra();
+        }
+
+        ByteBuffer buffer = ByteBuffer.allocate(extraHeaderRecordLength);
+        try (FileChannel fc = getFileChannel("cbj"))
+        {
+            fc.position(CBJ_HEADER_LENGTH + (gameId - 1) * extraHeaderRecordLength);
+            fc.read(buffer);
+        }
+        GameHeaderExtra extraHeader = new GameHeaderExtra(buffer, extraHeaderVersion);
+        return extraHeader;
     }
 
     /**
@@ -313,10 +366,10 @@ public class Database
         if (tournamentId < 0 || tournamentId >= numberOfTournaments)
             throw new IllegalArgumentException("Invalid tournament");
 
-        ByteBuffer buf = ByteBuffer.allocate(CBT_RECORD_LENGTH);
+        ByteBuffer buf = ByteBuffer.allocate(tournamentRecordLength);
         buf.order(ByteOrder.LITTLE_ENDIAN);
         try (FileChannel fc = getFileChannel("cbt")) {
-            fc.read(buf, CBT_HEADER_LENGTH + tournamentId * CBT_RECORD_LENGTH);
+            fc.read(buf, firstTournamentOffset + tournamentId * tournamentRecordLength);
         }
         Tournament game = new Tournament(this, tournamentId, buf);
         return game;
@@ -350,11 +403,11 @@ public class Database
         if (annotatorId < 0 || annotatorId >= numberOfAnnotators)
             throw new IllegalArgumentException("Invalid annotator");
 
-        ByteBuffer buffer = ByteBuffer.allocate(CBC_RECORD_LENGTH);
+        ByteBuffer buffer = ByteBuffer.allocate(annotatorRecordLength);
         buffer.order(ByteOrder.LITTLE_ENDIAN);
         try (FileChannel fc = getFileChannel("cbc"))
         {
-            fc.read(buffer, CBC_HEADER_LENGTH + annotatorId * CBC_RECORD_LENGTH);
+            fc.read(buffer, firstAnnotatorOffset + annotatorId * annotatorRecordLength);
         }
         Annotator annotator = new Annotator(this, annotatorId, buffer);
         return annotator;
@@ -386,10 +439,10 @@ public class Database
         if (sourceId < 0 || sourceId >= numberOfSources)
             throw new IllegalArgumentException("Invalid source");
 
-        ByteBuffer buffer = ByteBuffer.allocate(CBS_RECORD_LENGTH);
+        ByteBuffer buffer = ByteBuffer.allocate(sourceRecordLength);
         buffer.order(ByteOrder.LITTLE_ENDIAN);
         try (FileChannel fc = getFileChannel("cbs")) {
-            fc.read(buffer, CBS_HEADER_LENGTH + sourceId * CBS_RECORD_LENGTH);
+            fc.read(buffer, firstSourceOffset + sourceId * sourceRecordLength);
         }
         Source source = new Source(this, sourceId, buffer);
         return source;
@@ -421,11 +474,11 @@ public class Database
         if (teamId < 0 || teamId >= numberOfTeams)
             throw new IllegalArgumentException("Invalid team");
 
-        ByteBuffer buffer = ByteBuffer.allocate(CBE_RECORD_LENGTH);
+        ByteBuffer buffer = ByteBuffer.allocate(teamRecordLength);
         buffer.order(ByteOrder.LITTLE_ENDIAN);
         try (FileChannel fc = getFileChannel("cbe"))
         {
-            fc.read(buffer,CBE_HEADER_LENGTH + teamId * CBE_RECORD_LENGTH);
+            fc.read(buffer,firstTeamOffset + teamId * teamRecordLength);
         }
         Team team = new Team(this, teamId, buffer);
         return team;

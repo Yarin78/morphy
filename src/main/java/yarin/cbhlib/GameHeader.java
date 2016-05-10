@@ -51,6 +51,7 @@ public class GameHeader extends DataRecord {
     private int annotatedWithArrows; // 0 = no, 1 = < 10 positions, 2 >= 10 positions
 
     private Game game;
+    private GameHeaderExtra extraHeader;
 
     private int noMoves; // -1 = More than 255 moves. Count the exact number upon demand.
 
@@ -112,6 +113,30 @@ public class GameHeader extends DataRecord {
             return getWhitePlayer().toString();
         if (title.size() == 0) return "";
         return title.values().iterator().next();
+    }
+
+    public Team getWhiteTeam() throws IOException, CBHException {
+        if (isGuidingText()) return null;
+        int teamId = getExtraHeader().getWhitePlayerTeamId();
+        if (teamId < 0) return null;
+        return getOwnerBase().getTeam(teamId);
+    }
+
+    public Team getBlackTeam() throws IOException, CBHException {
+        if (isGuidingText()) return null;
+        int teamId = getExtraHeader().getBlackPlayerTeamId();
+        if (teamId < 0) return null;
+        return getOwnerBase().getTeam(teamId);
+    }
+
+    public RatingDetails getWhiteRatingDetails() throws IOException, CBHException {
+        if (isGuidingText()) return null;
+        return getExtraHeader().getWhiteRatingDetails();
+    }
+
+    public RatingDetails getBlackRatingDetails() throws IOException, CBHException {
+        if (isGuidingText()) return null;
+        return getExtraHeader().getBlackRatingDetails();
     }
 
     public String getIdString() {
@@ -396,6 +421,13 @@ public class GameHeader extends DataRecord {
         return game;
     }
 
+    private GameHeaderExtra getExtraHeader() throws IOException, CBHException {
+        if (extraHeader == null) {
+            this.extraHeader = getOwnerBase().getExtraHeader(getId());
+        }
+        return extraHeader;
+    }
+
     /**
      * Internal constructor used when loading a game header from a CBH database.
      *
@@ -464,7 +496,7 @@ public class GameHeader extends DataRecord {
         playedDate = new Date(ByteBufferUtil.getBigEndian24BitValue(cbhData, 24));
 
         result = GameResult.values()[cbhData.get(27)];
-        lineEvaluation = LineEvaluation.values()[cbhData.get(28)];
+        lineEvaluation = LineEvaluation.decode(cbhData.get(28));
 
         round = ByteBufferUtil.getUnsignedByte(cbhData, 29);
         subRound = ByteBufferUtil.getUnsignedByte(cbhData, 30);

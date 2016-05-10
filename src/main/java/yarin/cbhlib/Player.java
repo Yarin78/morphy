@@ -1,6 +1,9 @@
 package yarin.cbhlib;
 
 import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
+import java.nio.charset.CharsetDecoder;
+import java.nio.charset.CharsetEncoder;
 
 public class Player extends DataRecord {
     private String lastName;
@@ -33,6 +36,10 @@ public class Player extends DataRecord {
      */
     Player(Database database, int playerId, ByteBuffer cbpData) {
         super(database, playerId);
+//        Charset charset = Charset.forName("ISO-8859-1");
+//        CharsetDecoder decoder = charset.newDecoder();
+
+
         lastName = ByteBufferUtil.getZeroTerminatedString(cbpData, 9, 30);
         firstName = ByteBufferUtil.getZeroTerminatedString(cbpData, 39, 20);
         count = cbpData.getInt(59);

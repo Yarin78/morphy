@@ -3,7 +3,7 @@ package yarin.cbhlib;
 import java.nio.ByteBuffer;
 
 public class Tournament extends DataRecord {
-    private static String[] _nations = new String[]{};
+    private static String[] nations = new String[]{};
     private String title;
     private String place;
     private Date date;
@@ -13,8 +13,8 @@ public class Tournament extends DataRecord {
     private int noRounds;
     private int nation;
     private int count;
-    private TournamentType _type;
-    private TournamentTimeControls _timeControl;
+    private TournamentType type;
+    private TournamentTimeControls timeControl;
 
     public String getTitle() {
         return title;
@@ -52,12 +52,12 @@ public class Tournament extends DataRecord {
 
     public TournamentType getType()
     {
-        return _type;
+        return type;
     }
 
     public TournamentTimeControls getTimeControl()
     {
-        return _timeControl;
+        return timeControl;
     }
 
     public int getCount() {
@@ -84,14 +84,14 @@ public class Tournament extends DataRecord {
     public String getTournamentTypeString()
     {
         String s = "";
-        if (_timeControl.contains(TournamentTimeControls.TournamentTimeControl.Blitz))
+        if (timeControl.contains(TournamentTimeControls.TournamentTimeControl.Blitz))
             s += "blitz";
-        if (_timeControl.contains(TournamentTimeControls.TournamentTimeControl.Rapid)) {
+        if (timeControl.contains(TournamentTimeControls.TournamentTimeControl.Rapid)) {
             if (s.length() > 0)
                 s += ", ";
             s += "rapid";
         }
-        if (_timeControl.contains(TournamentTimeControls.TournamentTimeControl.Corresp)) {
+        if (timeControl.contains(TournamentTimeControls.TournamentTimeControl.Corresp)) {
             if (s.length() > 0)
                 s += ", ";
             s += "corr";
@@ -118,18 +118,18 @@ public class Tournament extends DataRecord {
         title = ByteBufferUtil.getZeroTerminatedString(cbtData, 9, 40);
         place = ByteBufferUtil.getZeroTerminatedString(cbtData, 49, 30);
         date = new Date(ByteBufferUtil.getLittleEndian24BitValue(cbtData, 79));
-        _type = TournamentType.values()[cbtData.get(83) & 31];
-        _timeControl = new TournamentTimeControls();
+        type = TournamentType.values()[cbtData.get(83) & 31];
+        timeControl = new TournamentTimeControls();
         if ((cbtData.get(83) & 0x20) > 0)
-            _timeControl.add(TournamentTimeControls.TournamentTimeControl.Blitz);
+            timeControl.add(TournamentTimeControls.TournamentTimeControl.Blitz);
         if ((cbtData.get(83) & 0x40) > 0)
-            _timeControl.add(TournamentTimeControls.TournamentTimeControl.Rapid);
+            timeControl.add(TournamentTimeControls.TournamentTimeControl.Rapid);
         if ((cbtData.get(83) & 0x80) > 0)
-            _timeControl.add(TournamentTimeControls.TournamentTimeControl.Corresp);
+            timeControl.add(TournamentTimeControls.TournamentTimeControl.Corresp);
         nation = cbtData.get(85);
         category = cbtData.get(87);
         //if ((cbtData.get(88) & 3) != 0 && (cbtData.get(88) & 3) != 3)
-        //throw new CBHFormatException("yarin.cbhlib.Tournament complete flag has invalid value");
+        //throw new CBHFormatException("Tournament complete flag has invalid value");
         complete = (cbtData.get(88) & 2) > 0;
         boardPoints = (cbtData.get(88) & 4) == 4;
         noRounds = cbtData.get(89);
