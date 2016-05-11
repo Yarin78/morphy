@@ -5,6 +5,9 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import yarin.cbhlib.annotations.Annotation;
+import yarin.cbhlib.annotations.SymbolAnnotation;
+import yarin.cbhlib.annotations.TextAfterMoveAnnotation;
+import yarin.cbhlib.annotations.TextBeforeMoveAnnotation;
 import yarin.cbhlib.exceptions.CBHException;
 import yarin.cbhlib.exceptions.CBHFormatException;
 import yarin.chess.Game;
@@ -93,21 +96,83 @@ public class IntegrationTests {
 //        Assert.assertEquals("German title", gameHeader.getGameTitle()); // Languages?
     }
 
-    /*
+
     @Test
     public void testSimpleAnnotations() throws IOException, CBHException {
         // Checks that the basic annotations work
         GameHeader gameHeader = db.getGameHeader(3);
 
-        AnnotatedGame game = (AnnotatedGame) gameHeader.getGame();
-        GamePosition position = game.moveForward();
+        AnnotatedGame game = gameHeader.getGame();
 
-        for (Annotation a : game.getAnnotations(position)){
-            System.out.println(a);
+        GamePosition position = game;
+        Annotation a = game.getAnnotations(position).get(0);
+        Assert.assertTrue(a instanceof SymbolAnnotation);
+        Assert.assertEquals(MoveComment.GoodMove, ((SymbolAnnotation) a).getMoveComment());
+
+        position = position.moveForward();
+        a = game.getAnnotations(position).get(0);
+        Assert.assertTrue(a instanceof SymbolAnnotation);
+        Assert.assertEquals(MoveComment.BadMove, ((SymbolAnnotation) a).getMoveComment());
+
+        position = position.moveForward();
+        a = game.getAnnotations(position).get(0);
+        Assert.assertTrue(a instanceof SymbolAnnotation);
+        Assert.assertEquals(MoveComment.ZugZwang2, ((SymbolAnnotation) a).getMoveComment());
+
+        position = position.moveForward();
+        a = game.getAnnotations(position).get(0);
+        Assert.assertTrue(a instanceof SymbolAnnotation);
+        Assert.assertEquals(MoveComment.OnlyMove, ((SymbolAnnotation) a).getMoveComment());
+
+        position = position.moveForward();
+        a = game.getAnnotations(position).get(0);
+        Assert.assertTrue(a instanceof SymbolAnnotation);
+        Assert.assertEquals(LineEvaluation.Unclear, ((SymbolAnnotation) a).getPositionEval());
+
+        position = position.moveForward();
+        a = game.getAnnotations(position).get(0);
+        Assert.assertTrue(a instanceof SymbolAnnotation);
+        Assert.assertEquals(LineEvaluation.WithInitiative, ((SymbolAnnotation) a).getPositionEval());
+
+        position = position.moveForward();
+        a = game.getAnnotations(position).get(0);
+        Assert.assertTrue(a instanceof TextAfterMoveAnnotation);
+        Assert.assertEquals(" Capture", a.getPostText());
+
+        position = position.moveForward();
+        position = position.moveForward();
+        position = position.moveForward();
+        a = game.getAnnotations(position).get(0);
+        Assert.assertTrue(a instanceof TextBeforeMoveAnnotation);
+        Assert.assertEquals("Fianchetto ", a.getPreText());
+
+        position = position.moveForward();
+        a = game.getAnnotations(position).get(0);
+        Assert.assertTrue(a instanceof SymbolAnnotation);
+        Assert.assertEquals(LineEvaluation.WhiteHasDecisiveAdvantage, ((SymbolAnnotation) a).getPositionEval());
+
+        position = position.moveForward();
+        a = game.getAnnotations(position).get(0);
+        Assert.assertTrue(a instanceof SymbolAnnotation);
+        Assert.assertEquals(MovePrefix.BetterIs, ((SymbolAnnotation) a).getMovePrefix());
+
+        /*
+        position = game;
+        while (!position.isEndOfVariation()) {
+            for (Annotation a2 : game.getAnnotations(position)){
+                if (a2.getPreText() != null) System.out.print(a2.getPreText() + " ");
+            }
+            System.out.print(position.getMainMove());
+            for (Annotation a2 : game.getAnnotations(position)){
+                if (a2.getPostText() != null) System.out.print(" " + a2.getPostText());
+            }
+            System.out.println();
+
+            position = position.moveForward();
         }
-
+        */
     }
-    */
+
 
     @Test
     public void testDeletedGame() {

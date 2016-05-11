@@ -600,7 +600,7 @@ Ofs 4, Len 2 - Number of bytes for this annotation (from ofs 0, little-endian).
 
 
 Symbols:
-Ofs 6, Len 1 - Move comment (! ? !? ?! !! ?? Zugzwang Only mode)
+Ofs 6, Len 1 - Move comment (! ? !? ?! !! ?? Zugzwang Only move)
 Ofs 7, Len 1 - Position evaluation (optional byte, 0 if missing)
 Ofs 8, Len 1 - Prefix (optional byte, 0 if missing)
 

@@ -13,6 +13,18 @@ public class SymbolAnnotation extends Annotation {
     private LineEvaluation positionEval;
     private MovePrefix movePrefix;
 
+    public MoveComment getMoveComment() {
+        return moveComment;
+    }
+
+    public LineEvaluation getPositionEval() {
+        return positionEval;
+    }
+
+    public MovePrefix getMovePrefix() {
+        return movePrefix;
+    }
+
     public SymbolAnnotation(GamePosition annotationPosition, ByteBuffer data, int symbolBytes) {
         super(annotationPosition);
         int moveCommentVal = symbolBytes >= 1 ? ByteBufferUtil.getUnsignedByte(data) : 0;
@@ -48,6 +60,7 @@ public class SymbolAnnotation extends Annotation {
                 s += "?!";
                 break;
             case ZugZwang:
+            case ZugZwang2:
                 s += " ZugZwang"; // TODO
                 break;
             case OnlyMove:

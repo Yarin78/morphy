@@ -13,7 +13,7 @@ public class TextAfterMoveAnnotation extends TextAnnotation {
     }
 
     public String getPostText() {
-        if (getTextLanguage() == Language.All)
+        if (getTextLanguage() == Language.All || getTextLanguage() == Language.English)
             return " " + getText();
         return null;
     }

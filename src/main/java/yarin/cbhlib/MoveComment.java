@@ -10,6 +10,7 @@ public enum MoveComment {
     Blunder(4),
     InterestingMove(5),
     DubiousMove(6),
+    ZugZwang2(22),
     ZugZwang(24),
     OnlyMove(8);
 

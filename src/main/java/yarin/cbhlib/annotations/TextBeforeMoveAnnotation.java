@@ -12,7 +12,7 @@ public class TextBeforeMoveAnnotation extends TextAnnotation {
     }
 
     public String getPreText() {
-        if (getTextLanguage() == Language.All)
+        if (getTextLanguage() == Language.All || getTextLanguage() == Language.English)
             return getText() + " ";
         return null;
     }

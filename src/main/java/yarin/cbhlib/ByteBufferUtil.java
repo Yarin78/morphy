@@ -64,9 +64,10 @@ public class ByteBufferUtil {
         if (maxLength < 0)
             maxLength = Integer.MAX_VALUE;
         for (int i = 0; i < maxLength; i++) {
-            if (buf.get() == 0)
+            byte b = buf.get();
+            if (b == 0)
                 break;
-            sb.append((char) buf.get());
+            sb.append((char) b);
         }
         return sb.toString();
     }

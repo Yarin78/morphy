@@ -35,7 +35,7 @@ public abstract class Annotation
 
         int annotationType = ByteBufferUtil.getUnsignedByte(annotationData);
         short noBytes = annotationData.getShort();
-        int nextAnnotationPosition = annotationData.position() + noBytes;
+        int nextAnnotationPosition = annotationData.position() + noBytes - 6;
         try {
             switch (annotationType)
             {

@@ -50,7 +50,7 @@ public class GameHeader extends DataRecord {
     private int annotatedWithColoredSqures; // 0 = no, 1 = < 10 positions, 2 >= 10 positions
     private int annotatedWithArrows; // 0 = no, 1 = < 10 positions, 2 >= 10 positions
 
-    private Game game;
+    private AnnotatedGame game;
     private GameHeaderExtra extraHeader;
 
     private int noMoves; // -1 = More than 255 moves. Count the exact number upon demand.
@@ -410,7 +410,7 @@ public class GameHeader extends DataRecord {
      * @return The game. Returns null if this is a guiding text.
      * @throws CBHFormatException
      */
-    public Game getGame() throws CBHException, IOException {
+    public AnnotatedGame getGame() throws CBHException, IOException {
         if (isGuidingText())
             return null;
         if (game == null) {
