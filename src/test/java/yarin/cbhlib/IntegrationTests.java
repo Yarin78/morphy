@@ -12,6 +12,8 @@ import yarin.cbhlib.exceptions.CBHException;
 import yarin.cbhlib.exceptions.CBHFormatException;
 import yarin.chess.Game;
 import yarin.chess.GamePosition;
+import yarin.chess.NullMove;
+import yarin.chess.Piece;
 
 import java.io.IOException;
 
@@ -41,6 +43,7 @@ public class IntegrationTests {
         // Checks that the moves in a simple game is recorded correctly
         GameHeader gameHeader = db.getGameHeader(1);
         Assert.assertFalse(gameHeader.isDeleted());
+        Assert.assertFalse(gameHeader.isGuidingText());
         Assert.assertEquals("Simple game", gameHeader.getWhitePlayer().getLastName());
         Assert.assertEquals("1-0", gameHeader.getResult());
 
@@ -190,7 +193,7 @@ public class IntegrationTests {
         Assert.assertEquals("Stockholm", tournament.getPlace());
         Assert.assertEquals(new Date(2016, 5, 9), tournament.getTournamentDate());
         Assert.assertEquals(20, tournament.getCategory());
-        Assert.assertEquals(1, tournament.getCount());
+        Assert.assertEquals(2, tournament.getCount());
         Assert.assertEquals("#134", tournament.getNationString());
         Assert.assertEquals(4, tournament.getNoRounds());
         Assert.assertTrue(tournament.getTimeControl().contains(TournamentTimeControls.TournamentTimeControl.Rapid));
@@ -225,9 +228,106 @@ public class IntegrationTests {
         Assert.assertTrue(team.isSeason());
     }
 
-    // Test variants
-    // Test annotations
-    // Test setup position
-    // Test various special moves (castle, en passant, promotion, null move)
-    // Guiding texts
+    @Test
+    public void testSpecialMoves() throws IOException, CBHException {
+        // Checks that special moves (castle, en passant, promition, null moves) work
+        GameHeader gameHeader = db.getGameHeader(5);
+
+        AnnotatedGame game = gameHeader.getGame();
+        GamePosition position = game;
+        Assert.assertFalse(position.getMainMove().isEnpassant());
+        position = position.moveForward(); // e4
+        position = position.moveForward(); // e6
+        position = position.moveForward(); // e5
+        position = position.moveForward(); // d5
+        Assert.assertTrue(position.getMainMove().isEnpassant());
+        position = position.moveForward(); // exd6 ep
+        position = position.moveForward(); // Nf6
+        position = position.moveForward(); // d4
+        position = position.moveForward(); // Be7
+        position = position.moveForward(); // Nc3
+        Assert.assertTrue(position.getMainMove().isCastle());
+        Assert.assertEquals("O-O", position.getMainMove().toString());
+        position = position.moveForward(); // 0-0
+        position = position.moveForward(); // Bg5
+        Assert.assertTrue(position.getMainMove() instanceof NullMove);
+        position = position.moveForward(); // --
+        position = position.moveForward(); // Qd2
+        position = position.moveForward(); // a6
+        Assert.assertTrue(position.getMainMove().isCastle());
+        Assert.assertEquals("O-O-O", position.getMainMove().toString());
+        position = position.moveForward(); // 0-0-0
+        position = position.moveForward(); // b5
+        position = position.moveForward(); // dxe7
+        Assert.assertFalse(position.getMainMove().isCastle());
+        position = position.moveForward(); // Kh8
+        Assert.assertEquals(Piece.PieceType.KNIGHT, position.getMainMove().getPromotionPiece());
+        position.moveForward(); // exd8=N
+    }
+
+    @Test
+    public void testVariants() throws IOException, CBHException {
+        // Checks that variants work
+        GameHeader gameHeader = db.getGameHeader(6);
+
+        AnnotatedGame game = gameHeader.getGame();
+        GamePosition position = game;
+        Assert.assertEquals(1, position.getMoves().size()); // [e4]
+        position = position.moveForward(); // e4
+        Assert.assertEquals(3, position.getMoves().size()); // [c5, e6, Nf6]
+        Assert.assertEquals("c7-c5", position.getMoves().get(0).toString());
+        Assert.assertEquals("e7-e6", position.getMoves().get(1).toString());
+        Assert.assertEquals("Ng8-f6", position.getMoves().get(2).toString());
+        position = position.moveForward(position.getMoves().get(1)); // e6
+        Assert.assertEquals(1, position.getMoves().size()); // [d4]
+        Assert.assertEquals("d2-d4", position.getMainMove().toString());
+        position = position.moveForward(); // d4
+        position = position.moveForward(); // d5
+        Assert.assertEquals(3, position.getMoves().size()); // [Nc3, Nd2, e5]
+        Assert.assertEquals("Nb1-c3", position.getMoves().get(0).toString());
+        position = position.moveForward(); // Nc3
+        position = position.moveForward(); // Nf6
+        position = position.moveForward(); // Bg5
+        Assert.assertEquals("Bf8-b4", position.getMainMove().toString());
+        position = position.moveForward(); // Bb4
+        Assert.assertTrue(position.isEndOfVariation());
+
+        position = game;
+        position = position.moveForward(); // e4
+        position = position.moveForward(); // c5
+        Assert.assertEquals("Ng1-f3", position.getMainMove().toString());
+        for (int i = 0; i < 8; i++) {
+            Assert.assertFalse(position.isEndOfVariation());
+            position = position.moveForward();
+        }
+        Assert.assertTrue(position.isEndOfVariation());
+    }
+
+    @Test
+    public void testSetupPosition() throws IOException, CBHException {
+        // Checks that setup positions work
+        GameHeader gameHeader = db.getGameHeader(7);
+
+        AnnotatedGame game = gameHeader.getGame();
+        Assert.assertTrue(game.isSetupPosition());
+        GamePosition position = game;
+    }
+
+    @Test
+    public void testGuidingTexts() throws IOException, CBHException {
+        // Checks that guiding texts work
+        GameHeader gameHeader = db.getGameHeader(8);
+        Assert.assertTrue(gameHeader.isGuidingText());
+
+        Assert.assertEquals("Swedish Ch", gameHeader.getTournament().getTitle());
+        Assert.assertEquals(2, gameHeader.getRound());
+        Assert.assertEquals("Jimmy", gameHeader.getAnnotator().getName());
+        Assert.assertEquals("Test text", gameHeader.getWhitePlayerString());
+
+        // TODO: Verify the actual contents here
+
+    }
+
+    // Test game title
+    // Test more annotations
 }

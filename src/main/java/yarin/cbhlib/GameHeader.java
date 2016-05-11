@@ -2,6 +2,7 @@ package yarin.cbhlib;
 
 import yarin.cbhlib.exceptions.CBHException;
 import yarin.cbhlib.exceptions.CBHFormatException;
+import yarin.chess.Board;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -358,22 +359,21 @@ public class GameHeader extends DataRecord {
         if (gameDataPosition == 0)
             return ByteBuffer.allocate(0);
 
-        int preRead = 4;
         ByteBuffer moveBuf = ByteBuffer.allocate(4);
-        //bool setupPosition, encoded;
+        boolean localSetupPosition, encoded;
         try (FileChannel fc = getOwnerBase().getFileChannel("cbg")) {
             fc.read(moveBuf, gameDataPosition);
             int bufferSize = moveBuf.getInt(0);
             //encoded = (bufferSize & 0x80000000) == 0;
-            //setupPosition = (bufferSize & 0x40000000) > 0;
+            localSetupPosition = (bufferSize & 0x40000000) > 0;
+            if (localSetupPosition != setupPosition)
+                throw new CBHFormatException("Flags for setup position differs in CBH and CBG files");
             bufferSize &= 0x3FFFFFFF;
-            if (bufferSize >= 0x1000000)
+            if (bufferSize < 4 || bufferSize >= 0x1000000)
                 throw new CBHFormatException("Game size error");
-            if (bufferSize > preRead) {
-                // Oops, we read too few bytes, reread
-                moveBuf = ByteBuffer.allocate(bufferSize);
-                fc.read(moveBuf, gameDataPosition);
-            }
+            moveBuf = ByteBuffer.allocate(bufferSize - 4);
+            fc.read(moveBuf, gameDataPosition + 4);
+            moveBuf.position(0);
         }
 
 			/*
@@ -417,9 +417,12 @@ public class GameHeader extends DataRecord {
         if (isGuidingText())
             return null;
         if (game == null) {
-            if (setupPosition)
-                throw new UnsupportedOperationException("Setup position not yet supported");
-            game = new AnnotatedGame(getMoveDataPrivate(), 4, getAnnotationDataPrivate());
+            ByteBuffer moveBuf = getMoveDataPrivate();
+            if (setupPosition) {
+                throw new CBHFormatException("Setup position not supported yet");
+            } else {
+                game = new AnnotatedGame(moveBuf, getAnnotationDataPrivate());
+            }
         }
         return game;
     }
@@ -467,11 +470,11 @@ public class GameHeader extends DataRecord {
             // Get title
             ByteBuffer data = getMoveDataPrivate();
             data.order(ByteOrder.LITTLE_ENDIAN);
-            int dummy = data.getShort(4);
+            int dummy = data.getShort(0);
 //				if (dummy != 1) // Can be 3
 //					throw new CBHFormatException("Unknown annotation data");
-            int noTitles = data.getShort(6);
-            int pos = 8;
+            int noTitles = data.getShort(2);
+            int pos = 4;
             for (int i = 0; i < noTitles; i++) {
                 Language titleLang = Language.values()[data.getShort(pos)];
                 int titleLen = data.getShort(pos + 2);
@@ -480,7 +483,7 @@ public class GameHeader extends DataRecord {
                 pos += 4 + titleLen;
             }
 
-            for (int i = 17; i < rawData.capacity(); i++) {
+            for (int i = 17; i < rawData.limit(); i++) {
                 if (i == 18 || i == 19) continue;
                 if (cbhData.get(i) != 0)
                     throw new CBHFormatException("Byte " + i + " is not 0 in guiding text");

@@ -88,9 +88,16 @@ public class AnnotatedGame extends Game {
 
     private HashMap<GamePosition, List<Annotation>> annotationMap = new HashMap<>();
 
-    public AnnotatedGame(ByteBuffer moveData, int moveDataIndex, ByteBuffer annotationData)
+    public AnnotatedGame(ByteBuffer moveData, ByteBuffer annotationData)
             throws CBHException {
-        List<GamePosition> allPositions = parseMoveData(moveData, moveDataIndex, true);
+        List<GamePosition> allPositions = parseMoveData(moveData, true);
+        parseAnnotationData(annotationData, allPositions);
+    }
+
+    public AnnotatedGame(Board b, int moveNo, ByteBuffer moveData, ByteBuffer annotationData)
+            throws CBHException {
+        super(b, moveNo);
+        List<GamePosition> allPositions = parseMoveData(moveData, true);
         parseAnnotationData(annotationData, allPositions);
     }
 
@@ -157,12 +164,11 @@ public class AnnotatedGame extends Game {
         }
     }
 
-    private List<GamePosition> parseMoveData(ByteBuffer moveData, int index, boolean verifyAfterEachMove)
+    private List<GamePosition> parseMoveData(ByteBuffer moveData, boolean verifyAfterEachMove)
             throws CBHException {
         int[][][] piecePosition = getPiecePositions();
 
         int modifier = 256; // Start at 256 instead of 0 to avoid negative modulo
-        int position = index;
         Stack<GamePosition> positionStack = new Stack<>();
         Stack<int[][][]> piecePositionStack = new Stack<>();
         GamePosition currentPosition = this;
@@ -173,10 +179,7 @@ public class AnnotatedGame extends Game {
         //string moveSeq = "";
 
         while (true) {
-            if (position >= moveData.limit())
-                throw new CBHFormatException("End of game not reached before game buffer ended");
-
-            int data = decryptMap[(moveData.get(position++) + modifier) % 256];
+            int data = decryptMap[(moveData.get() + modifier) % 256];
 
             if (data == OPCODE_IGNORE) {
                 // Not sure what this opcode do. Just ignoring it seems works fine.
@@ -340,10 +343,8 @@ public class AnnotatedGame extends Game {
                     }
                 }
             } else if (data == OPCODE_TWO_BYTES) {
-                if (position + 1 >= moveData.limit())
-                    throw new CBHFormatException("End of game not reached before game buffer ended");
-                int msb = decryptMap[(moveData.get(position++) + modifier) % 256];
-                int lsb = decryptMap[(moveData.get(position++) + modifier) % 256];
+                int msb = decryptMap[(moveData.get() + modifier) % 256];
+                int lsb = decryptMap[(moveData.get() + modifier) % 256];
                 int word = msb * 256 + lsb;
                 int y1 = word % 8;
                 int x1 = (word / 8) % 8;

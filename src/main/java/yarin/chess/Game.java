@@ -3,7 +3,7 @@ package yarin.chess;
 /**
  * Represents a chess game.
  *
- * This is the same as a yarin.chess.GamePosition with the exception that it has some extra data such as an artifical start position.
+ * This is the same as a GamePosition with the exception that it has some extra data such as an artifical start position.
  */
 public class Game extends GamePosition {
     private boolean setupPosition; // true if the game starts with a setup position
