@@ -3,12 +3,15 @@ package yarin.cbhlib;
 import java.nio.ByteBuffer;
 
 public class Source extends DataRecord {
+
+    public enum Quality { Unset, High, Normal, Low };
+
     private String title;
     private String publisher;
     private Date publication;
     private Date sourceDate;
     private int version;
-    private int quality;
+    private Quality quality;
     private int count;
 
     public String getTitle() {
@@ -31,7 +34,7 @@ public class Source extends DataRecord {
         return version;
     }
 
-    public int getQuality() {
+    public Quality getQuality() {
         return quality;
     }
 
@@ -41,13 +44,13 @@ public class Source extends DataRecord {
 
     public String getQualityString() {
         switch (quality) {
-            case 0:
+            case Unset:
                 return "low";
-            case 1:
+            case High:
                 return "high";
-            case 2:
+            case Normal:
                 return "normal";
-            case 3:
+            case Low:
                 return "low";
         }
         return "unknown";
@@ -70,7 +73,7 @@ public class Source extends DataRecord {
         publication = new Date(ByteBufferUtil.getLittleEndian24BitValue(cbsData, 50));
         sourceDate = new Date(ByteBufferUtil.getLittleEndian24BitValue(cbsData, 54));
         version = ByteBufferUtil.getUnsignedByte(cbsData, 58);
-        quality = ByteBufferUtil.getUnsignedByte(cbsData, 59);
+        quality = Quality.values()[ByteBufferUtil.getUnsignedByte(cbsData, 59)];
         count = cbsData.getInt(60);
     }
 }

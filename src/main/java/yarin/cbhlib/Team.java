@@ -71,7 +71,7 @@ public class Team extends DataRecord {
         teamNumber = cbeData.getShort(54);
         season = (cbeData.get(58) & 1) > 0;
         year = cbeData.getShort(59);
-        nation = cbeData.get(63);
-        count =  cbeData.getInt(64);
+        nation = ByteBufferUtil.getUnsignedByte(cbeData, 63);
+        count = cbeData.getInt(64);
     }
 }

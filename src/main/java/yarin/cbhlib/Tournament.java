@@ -10,6 +10,8 @@ public class Tournament extends DataRecord {
     private int category;
     private boolean complete;
     private boolean boardPoints;
+    private boolean threePointsWin;
+    private boolean teamTournament;
     private int noRounds;
     private int nation;
     private int count;
@@ -43,6 +45,14 @@ public class Tournament extends DataRecord {
     public boolean isBoardPoints()
     {
         return boardPoints;
+    }
+
+    public boolean isThreePointsWin() {
+        return threePointsWin;
+    }
+
+    public boolean isTeamTournament() {
+        return teamTournament;
     }
 
     public int getNoRounds()
@@ -126,12 +136,14 @@ public class Tournament extends DataRecord {
             timeControl.add(TournamentTimeControls.TournamentTimeControl.Rapid);
         if ((cbtData.get(83) & 0x80) > 0)
             timeControl.add(TournamentTimeControls.TournamentTimeControl.Corresp);
-        nation = cbtData.get(85);
+        teamTournament = (cbtData.get(84) & 1) > 0;
+        nation = ByteBufferUtil.getUnsignedByte(cbtData, 85);
         category = cbtData.get(87);
         //if ((cbtData.get(88) & 3) != 0 && (cbtData.get(88) & 3) != 3)
         //throw new CBHFormatException("Tournament complete flag has invalid value");
         complete = (cbtData.get(88) & 2) > 0;
         boardPoints = (cbtData.get(88) & 4) == 4;
+        threePointsWin = (cbtData.get(88) & 8) > 0;
         noRounds = cbtData.get(89);
         count = cbtData.getInt(91);
     }

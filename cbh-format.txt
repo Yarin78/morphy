@@ -728,16 +728,18 @@ Ofs 83, Len 1 - bit 0-4 game type
                 bit 5: 1 = blitz
                 bit 6: 1 = rapid
                 bit 7: 1 = corresp
+Ofs 84, Len 1 - bit 0: Team tournament
 Ofs 85, Len 1 - Nation (0=unset, AFG=0x01, ..., GBR=0xF7) (complete list in Cbase9.exe between 0x6ba154 and 0x0x6ba510, in reverse order)
 Ofs 87, Len 1 - Category (0-99, 0=unset)
 Ofs 88, Len 1 - bit 0: ?? Almost always the same as bit 1, but there are exceptions.
                 bit 1: complete
                 bit 2: board points
+                bit 3: 3 points for a win
 Ofs 89, Len 1 - Number of rounds (0-255, 0=unset)
-
 Ofs 91, Len 4 - Number of games with this tournament? (little endian)
 Ofs 95, Len 4 - First game id with this tournament? (little endian)
 
+What about latitude and longitude?
 
 
 CBC file (annotator data)

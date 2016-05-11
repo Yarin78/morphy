@@ -2,7 +2,6 @@ package yarin.cbhlib;
 
 import yarin.cbhlib.exceptions.CBHException;
 import yarin.cbhlib.exceptions.CBHFormatException;
-import yarin.chess.Game;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -15,7 +14,7 @@ import java.util.LinkedHashMap;
  */
 public class GameHeader extends DataRecord {
     private boolean deleted; // If true, game has been marked as deleted but no physical deletion has been done yet
-    private boolean isGuidingText; // If true, this is a text document and not a chess game
+    private boolean guidingText; // If true, this is a text document and not a chess game
     private Date playedDate;
     private int round; // 0 = not set
     private int subRound; // 0 = not set
@@ -61,8 +60,12 @@ public class GameHeader extends DataRecord {
     private ByteBuffer moveData;
     private ByteBuffer annotationData;
 
+    public boolean isDeleted() {
+        return deleted;
+    }
+
     public boolean isGuidingText() {
-        return isGuidingText;
+        return guidingText;
     }
 
     public int getWhiteElo() {
@@ -443,7 +446,7 @@ public class GameHeader extends DataRecord {
         deleted = (cbhData.get(0) & 0x80) > 0;
         if ((cbhData.get(0) & 1) == 0)
             throw new CBHFormatException("Bit 0 in byte 0 is not set");
-        isGuidingText = (cbhData.get(0) & 0x02) > 0;
+        guidingText = (cbhData.get(0) & 0x02) > 0;
 
         gameDataPosition = cbhData.getInt(1);
 
@@ -454,7 +457,7 @@ public class GameHeader extends DataRecord {
         if (gameDataPosition == 0)
             throw new CBHFormatException("No game data"); // Can this happen?
 
-        if (isGuidingText) {
+        if (guidingText) {
             if (cbhData.get(6) != 0)
                 throw new CBHFormatException("Byte 6 is not 0 in guiding text");
             tournamentId = ByteBufferUtil.getBigEndian24BitValue(cbhData, 7);

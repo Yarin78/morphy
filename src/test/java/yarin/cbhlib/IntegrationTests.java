@@ -40,6 +40,7 @@ public class IntegrationTests {
     public void simpleGame() throws IOException, CBHException {
         // Checks that the moves in a simple game is recorded correctly
         GameHeader gameHeader = db.getGameHeader(1);
+        Assert.assertFalse(gameHeader.isDeleted());
         Assert.assertEquals("Simple game", gameHeader.getWhitePlayer().getLastName());
         Assert.assertEquals("1-0", gameHeader.getResult());
 
@@ -175,23 +176,58 @@ public class IntegrationTests {
 
 
     @Test
-    public void testDeletedGame() {
+    public void testDeletedGame() throws IOException, CBHException {
         // Test that a game is marked correctly as deleted
+        GameHeader gameHeader = db.getGameHeader(4);
+        Assert.assertTrue(gameHeader.isDeleted());
     }
 
     @Test
-    public void testTournamentDetails() {
+    public void testTournamentDetails() throws IOException {
         // Test that the tournament details are read correctly
+        Tournament tournament = db.getTournament(2);
+        Assert.assertEquals("Swedish Ch", tournament.getTitle());
+        Assert.assertEquals("Stockholm", tournament.getPlace());
+        Assert.assertEquals(new Date(2016, 5, 9), tournament.getTournamentDate());
+        Assert.assertEquals(20, tournament.getCategory());
+        Assert.assertEquals(1, tournament.getCount());
+        Assert.assertEquals("#134", tournament.getNationString());
+        Assert.assertEquals(4, tournament.getNoRounds());
+        Assert.assertTrue(tournament.getTimeControl().contains(TournamentTimeControls.TournamentTimeControl.Rapid));
+        Assert.assertEquals(TournamentType.KnockOut, tournament.getType());
+        Assert.assertFalse(tournament.isComplete());
+        Assert.assertTrue(tournament.isBoardPoints());
+        Assert.assertTrue(tournament.isTeamTournament());
+        Assert.assertTrue(tournament.isThreePointsWin());
     }
 
     @Test
-    public void testSourceDetails() {
+    public void testSourceDetails() throws IOException {
         // Test that the details of a source is read correctly
+        Source source = db.getSource(2);
+        Assert.assertEquals("Test source", source.getTitle());
+        Assert.assertEquals("Test publisher", source.getPublisher());
+        Assert.assertEquals(new Date(2016, 5, 6), source.getPublication());
+        Assert.assertEquals(new Date(2016, 5, 9), source.getSourceDate());
+        Assert.assertEquals(3, source.getVersion());
+        Assert.assertEquals(Source.Quality.Normal, source.getQuality());
+        Assert.assertEquals(1, source.getCount());
+    }
+
+    @Test
+    public void testTeamDetails() throws IOException {
+        // Test that the details of a team is read correctly
+        Team team = db.getTeam(2);
+        Assert.assertEquals("SK Rockaden Umeå", team.getTitle());
+        Assert.assertEquals(2, team.getTeamNumber());
+        Assert.assertEquals(134, team.getNation());
+        Assert.assertEquals(2016, team.getYear());
+        Assert.assertTrue(team.isSeason());
     }
 
     // Test variants
     // Test annotations
     // Test setup position
-    // Test null move
+    // Test various special moves (castle, en passant, promotion, null move)
     // Guiding texts
 }
