@@ -4,18 +4,13 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import yarin.cbhlib.annotations.Annotation;
-import yarin.cbhlib.annotations.SymbolAnnotation;
-import yarin.cbhlib.annotations.TextAfterMoveAnnotation;
-import yarin.cbhlib.annotations.TextBeforeMoveAnnotation;
+import yarin.cbhlib.annotations.*;
 import yarin.cbhlib.exceptions.CBHException;
 import yarin.cbhlib.exceptions.CBHFormatException;
-import yarin.chess.Game;
-import yarin.chess.GamePosition;
-import yarin.chess.NullMove;
-import yarin.chess.Piece;
+import yarin.chess.*;
 
 import java.io.IOException;
+import java.util.List;
 
 public class IntegrationTests {
 
@@ -53,19 +48,19 @@ public class IntegrationTests {
 
         GamePosition currentPosition = game;
         Assert.assertEquals("e2-e4", currentPosition.getMainMove().toString());
-        currentPosition = currentPosition.moveForward();
+        currentPosition = currentPosition.getForwardPosition();
         Assert.assertEquals("e7-e5", currentPosition.getMainMove().toString());
-        currentPosition = currentPosition.moveForward();
+        currentPosition = currentPosition.getForwardPosition();
         Assert.assertEquals("Bf1-c4", currentPosition.getMainMove().toString());
-        currentPosition = currentPosition.moveForward();
+        currentPosition = currentPosition.getForwardPosition();
         Assert.assertEquals("Nb8-c6", currentPosition.getMainMove().toString());
-        currentPosition = currentPosition.moveForward();
+        currentPosition = currentPosition.getForwardPosition();
         Assert.assertEquals("Qd1-h5", currentPosition.getMainMove().toString());
-        currentPosition = currentPosition.moveForward();
+        currentPosition = currentPosition.getForwardPosition();
         Assert.assertEquals("Ng8-f6", currentPosition.getMainMove().toString());
-        currentPosition = currentPosition.moveForward();
+        currentPosition = currentPosition.getForwardPosition();
         Assert.assertEquals("Qh5xf7", currentPosition.getMainMove().toString());
-        currentPosition = currentPosition.moveForward();
+        currentPosition = currentPosition.getForwardPosition();
         Assert.assertTrue(currentPosition.isEndOfVariation());
     }
 
@@ -108,54 +103,55 @@ public class IntegrationTests {
 
         AnnotatedGame game = gameHeader.getGame();
 
-        GamePosition position = game;
+        GamePosition position = game.getForwardPosition();
+
         Annotation a = game.getAnnotations(position).get(0);
         Assert.assertTrue(a instanceof SymbolAnnotation);
         Assert.assertEquals(MoveComment.GoodMove, ((SymbolAnnotation) a).getMoveComment());
 
-        position = position.moveForward();
+        position = position.getForwardPosition();
         a = game.getAnnotations(position).get(0);
         Assert.assertTrue(a instanceof SymbolAnnotation);
         Assert.assertEquals(MoveComment.BadMove, ((SymbolAnnotation) a).getMoveComment());
 
-        position = position.moveForward();
+        position = position.getForwardPosition();
         a = game.getAnnotations(position).get(0);
         Assert.assertTrue(a instanceof SymbolAnnotation);
         Assert.assertEquals(MoveComment.ZugZwang2, ((SymbolAnnotation) a).getMoveComment());
 
-        position = position.moveForward();
+        position = position.getForwardPosition();
         a = game.getAnnotations(position).get(0);
         Assert.assertTrue(a instanceof SymbolAnnotation);
         Assert.assertEquals(MoveComment.OnlyMove, ((SymbolAnnotation) a).getMoveComment());
 
-        position = position.moveForward();
+        position = position.getForwardPosition();
         a = game.getAnnotations(position).get(0);
         Assert.assertTrue(a instanceof SymbolAnnotation);
         Assert.assertEquals(LineEvaluation.Unclear, ((SymbolAnnotation) a).getPositionEval());
 
-        position = position.moveForward();
+        position = position.getForwardPosition();
         a = game.getAnnotations(position).get(0);
         Assert.assertTrue(a instanceof SymbolAnnotation);
         Assert.assertEquals(LineEvaluation.WithInitiative, ((SymbolAnnotation) a).getPositionEval());
 
-        position = position.moveForward();
+        position = position.getForwardPosition();
         a = game.getAnnotations(position).get(0);
         Assert.assertTrue(a instanceof TextAfterMoveAnnotation);
         Assert.assertEquals(" Capture", a.getPostText());
 
-        position = position.moveForward();
-        position = position.moveForward();
-        position = position.moveForward();
+        position = position.getForwardPosition();
+        position = position.getForwardPosition();
+        position = position.getForwardPosition();
         a = game.getAnnotations(position).get(0);
         Assert.assertTrue(a instanceof TextBeforeMoveAnnotation);
         Assert.assertEquals("Fianchetto ", a.getPreText());
 
-        position = position.moveForward();
+        position = position.getForwardPosition();
         a = game.getAnnotations(position).get(0);
         Assert.assertTrue(a instanceof SymbolAnnotation);
         Assert.assertEquals(LineEvaluation.WhiteHasDecisiveAdvantage, ((SymbolAnnotation) a).getPositionEval());
 
-        position = position.moveForward();
+        position = position.getForwardPosition();
         a = game.getAnnotations(position).get(0);
         Assert.assertTrue(a instanceof SymbolAnnotation);
         Assert.assertEquals(MovePrefix.BetterIs, ((SymbolAnnotation) a).getMovePrefix());
@@ -172,7 +168,7 @@ public class IntegrationTests {
             }
             System.out.println();
 
-            position = position.moveForward();
+            position = position.getForwardPosition();
         }
         */
     }
@@ -236,33 +232,33 @@ public class IntegrationTests {
         AnnotatedGame game = gameHeader.getGame();
         GamePosition position = game;
         Assert.assertFalse(position.getMainMove().isEnpassant());
-        position = position.moveForward(); // e4
-        position = position.moveForward(); // e6
-        position = position.moveForward(); // e5
-        position = position.moveForward(); // d5
+        position = position.getForwardPosition(); // e4
+        position = position.getForwardPosition(); // e6
+        position = position.getForwardPosition(); // e5
+        position = position.getForwardPosition(); // d5
         Assert.assertTrue(position.getMainMove().isEnpassant());
-        position = position.moveForward(); // exd6 ep
-        position = position.moveForward(); // Nf6
-        position = position.moveForward(); // d4
-        position = position.moveForward(); // Be7
-        position = position.moveForward(); // Nc3
+        position = position.getForwardPosition(); // exd6 ep
+        position = position.getForwardPosition(); // Nf6
+        position = position.getForwardPosition(); // d4
+        position = position.getForwardPosition(); // Be7
+        position = position.getForwardPosition(); // Nc3
         Assert.assertTrue(position.getMainMove().isCastle());
         Assert.assertEquals("O-O", position.getMainMove().toString());
-        position = position.moveForward(); // 0-0
-        position = position.moveForward(); // Bg5
+        position = position.getForwardPosition(); // 0-0
+        position = position.getForwardPosition(); // Bg5
         Assert.assertTrue(position.getMainMove() instanceof NullMove);
-        position = position.moveForward(); // --
-        position = position.moveForward(); // Qd2
-        position = position.moveForward(); // a6
+        position = position.getForwardPosition(); // --
+        position = position.getForwardPosition(); // Qd2
+        position = position.getForwardPosition(); // a6
         Assert.assertTrue(position.getMainMove().isCastle());
         Assert.assertEquals("O-O-O", position.getMainMove().toString());
-        position = position.moveForward(); // 0-0-0
-        position = position.moveForward(); // b5
-        position = position.moveForward(); // dxe7
+        position = position.getForwardPosition(); // 0-0-0
+        position = position.getForwardPosition(); // b5
+        position = position.getForwardPosition(); // dxe7
         Assert.assertFalse(position.getMainMove().isCastle());
-        position = position.moveForward(); // Kh8
+        position = position.getForwardPosition(); // Kh8
         Assert.assertEquals(Piece.PieceType.KNIGHT, position.getMainMove().getPromotionPiece());
-        position.moveForward(); // exd8=N
+        position.getForwardPosition(); // exd8=N
     }
 
     @Test
@@ -273,34 +269,63 @@ public class IntegrationTests {
         AnnotatedGame game = gameHeader.getGame();
         GamePosition position = game;
         Assert.assertEquals(1, position.getMoves().size()); // [e4]
-        position = position.moveForward(); // e4
+        position = position.getForwardPosition(); // e4
         Assert.assertEquals(3, position.getMoves().size()); // [c5, e6, Nf6]
         Assert.assertEquals("c7-c5", position.getMoves().get(0).toString());
         Assert.assertEquals("e7-e6", position.getMoves().get(1).toString());
         Assert.assertEquals("Ng8-f6", position.getMoves().get(2).toString());
-        position = position.moveForward(position.getMoves().get(1)); // e6
+        position = position.getForwardPosition(position.getMoves().get(1)); // e6
         Assert.assertEquals(1, position.getMoves().size()); // [d4]
         Assert.assertEquals("d2-d4", position.getMainMove().toString());
-        position = position.moveForward(); // d4
-        position = position.moveForward(); // d5
+        position = position.getForwardPosition(); // d4
+        position = position.getForwardPosition(); // d5
         Assert.assertEquals(3, position.getMoves().size()); // [Nc3, Nd2, e5]
         Assert.assertEquals("Nb1-c3", position.getMoves().get(0).toString());
-        position = position.moveForward(); // Nc3
-        position = position.moveForward(); // Nf6
-        position = position.moveForward(); // Bg5
+        position = position.getForwardPosition(); // Nc3
+        position = position.getForwardPosition(); // Nf6
+        position = position.getForwardPosition(); // Bg5
         Assert.assertEquals("Bf8-b4", position.getMainMove().toString());
-        position = position.moveForward(); // Bb4
+        position = position.getForwardPosition(); // Bb4
         Assert.assertTrue(position.isEndOfVariation());
 
         position = game;
-        position = position.moveForward(); // e4
-        position = position.moveForward(); // c5
+        position = position.getForwardPosition(); // e4
+        position = position.getForwardPosition(); // c5
         Assert.assertEquals("Ng1-f3", position.getMainMove().toString());
         for (int i = 0; i < 8; i++) {
             Assert.assertFalse(position.isEndOfVariation());
-            position = position.moveForward();
+            position = position.getForwardPosition();
         }
         Assert.assertTrue(position.isEndOfVariation());
+    }
+
+    @Test
+    public void testCommentsInVariants() throws IOException, CBHException {
+        GameHeader gameHeader = db.getGameHeader(9);
+
+        AnnotatedGame game = gameHeader.getGame();
+        GamePosition position = game;
+
+        position = position.getForwardPosition(); // e4
+
+        TextAfterMoveAnnotation afterMoveAnnotation = game.getAnnotation(position, TextAfterMoveAnnotation.class);
+        Assert.assertEquals("After first move comment", afterMoveAnnotation.getText());
+
+        TextBeforeMoveAnnotation beforeMoveAnnotation = game.getAnnotation(position, TextBeforeMoveAnnotation.class);
+        Assert.assertEquals("Pre-game comment", beforeMoveAnnotation.getText());
+
+        position = position.getForwardPosition(); // e5
+        position = position.getForwardPosition(); // Nf3
+        position = position.getForwardPosition(); // Nc6
+
+        List<Move> moves = position.getMoves();
+        Assert.assertEquals(2, moves.size()); // [Bb5, Bc4]
+        Assert.assertEquals(0, game.getAnnotations(position).size());
+        Assert.assertEquals("Bf1-c4", moves.get(1).toString());
+        position = position.getForwardPosition(moves.get(1)); // Bc4
+        Assert.assertEquals(1, game.getAnnotations(position).size());
+        beforeMoveAnnotation = game.getAnnotation(position, TextBeforeMoveAnnotation.class);
+        Assert.assertEquals("Pre-variant comment", beforeMoveAnnotation.getText());
     }
 
     @Test
@@ -311,6 +336,7 @@ public class IntegrationTests {
         AnnotatedGame game = gameHeader.getGame();
         Assert.assertTrue(game.isSetupPosition());
         GamePosition position = game;
+        // TODO: Test that position is correct?
     }
 
     @Test

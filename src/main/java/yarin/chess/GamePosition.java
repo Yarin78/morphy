@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * yarin.chess.GamePosition represents a position in a recorded chess game or line.
+ * GamePosition represents a position in a recorded chess game or line.
  * It contains a list of moves (possibly 0) that moves the game forward.
  * The first move in this list is the main variation.
  */
@@ -109,6 +109,13 @@ public class GamePosition {
     }
 
     /**
+     * @return true if there is a single sequence of moves from this position to the end of the line
+     */
+    public boolean isSingleLine() {
+        return isEndOfVariation() || !hasVariations() && getForwardPosition().isSingleLine();
+    }
+
+    /**
      * Adds a move to a game position (if it hasn't already been added) and returns the position resulting after that.
      *
      * @param move the move to add. It's assumed that the move is pseudolegal.
@@ -145,7 +152,7 @@ public class GamePosition {
     /**
      * @return The next game position following the main variation, or null if end of variation reached.
      */
-    public GamePosition moveForward() {
+    public GamePosition getForwardPosition() {
         if (moveMap.size() == 0) return null;
         return moveMap.values().iterator().next();
     }
@@ -157,9 +164,9 @@ public class GamePosition {
      * @return the next game position after the played move
      * @throws RuntimeException if the specified move has not been added
      */
-    public GamePosition moveForward(Move move) {
+    public GamePosition getForwardPosition(Move move) {
         if (!moveMap.containsKey(move))
-            throw new RuntimeException("yarin.chess.Move does not exist");
+            throw new RuntimeException("Move does not exist");
         return moveMap.get(move);
     }
 
@@ -168,7 +175,7 @@ public class GamePosition {
      *
      * @return the previous game position, or null if start of game reached.
      */
-    public GamePosition moveBackward() {
+    public GamePosition getBackPosition() {
         return previousPosition;
     }
 
@@ -184,7 +191,7 @@ public class GamePosition {
                 return this;
             if (!pos.previousPosition.getMainMove().equals(pos.getLastMove()))
                 return this;
-            pos = pos.moveBackward();
+            pos = pos.getBackPosition();
         }
     }
 
@@ -198,7 +205,7 @@ public class GamePosition {
         GamePosition start = getVariationStart();
         if (start.getLastMove() == null)
             return null;
-        GamePosition previous = start.moveBackward();
+        GamePosition previous = start.getBackPosition();
         previous.deleteMove(start.getLastMove());
         return previous;
     }
@@ -213,12 +220,12 @@ public class GamePosition {
 
         LinkedHashMap<Move, GamePosition> newMoveMap = new LinkedHashMap<>();
         newMoveMap.put(start.getLastMove(), start);
-        for (Map.Entry<Move, GamePosition> de : start.moveBackward().moveMap.entrySet()) {
+        for (Map.Entry<Move, GamePosition> de : start.getBackPosition().moveMap.entrySet()) {
             if (!start.getLastMove().equals(de.getKey())) {
                 newMoveMap.put(de.getKey(), de.getValue());
             }
         }
-        start.moveBackward().moveMap = newMoveMap;
+        start.getBackPosition().moveMap = newMoveMap;
     }
 
     protected void convertToPGN(StringBuilder gameString) {
@@ -243,7 +250,7 @@ public class GamePosition {
             if (getOwnerGame().getPostMoveComment(gp) != null)
                 gameString.append(getOwnerGame().getPostMoveComment(gp));
 
-            GamePosition next = gp.moveForward();
+            GamePosition next = gp.getForwardPosition();
             if (!next.isEndOfVariation())
                 gameString.append(" ");
 
@@ -251,7 +258,7 @@ public class GamePosition {
                 List<Move> moves = gp.getMoves();
                 for (int i = 1; i < moves.size(); i++) {
                     gameString.append("(");
-                    gp.moveForward(moves.get(i)).convertToPGN(gameString);
+                    gp.getForwardPosition(moves.get(i)).convertToPGN(gameString);
                     gameString.append(") ");
                 }
             }

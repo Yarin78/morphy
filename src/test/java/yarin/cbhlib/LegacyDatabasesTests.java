@@ -30,13 +30,13 @@ public class LegacyDatabasesTests {
 
         GamePosition currentPosition = game;
         Assert.assertEquals("e2-e4", currentPosition.getMainMove().toString());
-        currentPosition = currentPosition.moveForward();
+        currentPosition = currentPosition.getForwardPosition();
         Assert.assertEquals("c7-c5", currentPosition.getMainMove().toString());
-        currentPosition = currentPosition.moveForward();
+        currentPosition = currentPosition.getForwardPosition();
         Assert.assertEquals("Ng1-f3", currentPosition.getMainMove().toString());
-        currentPosition = currentPosition.moveForward();
+        currentPosition = currentPosition.getForwardPosition();
         Assert.assertEquals("d7-d6", currentPosition.getMainMove().toString());
-        currentPosition = currentPosition.moveForward();
+        currentPosition = currentPosition.getForwardPosition();
         Assert.assertTrue(currentPosition.isEndOfVariation());
 
         Assert.assertEquals("My tournament", gameHeader.getTournament().getTitle());

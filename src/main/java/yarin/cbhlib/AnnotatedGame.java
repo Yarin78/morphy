@@ -115,6 +115,50 @@ public class AnnotatedGame extends Game {
         return annotations;
     }
 
+    /**
+     * Gets all annotations for a specified position of a specific type
+     * @param position The position to get annotations for
+     * @param clazz The type of annotations to get
+     * @return All annotations of the specified classs for this game position,
+     * or an empty array if there are no annotations for this position.
+     */
+    public <T extends Annotation> List<T> getAnnotations (GamePosition position, Class<?> clazz) {
+        if (position.getOwnerGame() != this)
+            throw new IllegalArgumentException("The position must belong to this game.");
+        List<Annotation> annotations = annotationMap.get(position);
+        if (annotations == null)
+            return new ArrayList<>();
+        ArrayList<T> result = new ArrayList<>();
+        for (Annotation annotation : annotations) {
+            if (annotation.getClass().isAssignableFrom(clazz)) {
+                result.add((T) annotation);
+            }
+
+        }
+        return result;
+    }
+
+    /**
+     * Gets an annotation for a specified position of a specific type.
+     * If there are more than one matching annotation, the first is returned.
+     * @param position The position to get the annotation for
+     * @param clazz The type of annotation to get
+     * @return An annotation of the specified type, or null if no annotation of that type for the given position exists
+     */
+    public <T extends Annotation> T getAnnotation (GamePosition position, Class<?> clazz) {
+        if (position.getOwnerGame() != this)
+            throw new IllegalArgumentException("The position must belong to this game.");
+        List<Annotation> annotations = annotationMap.get(position);
+        if (annotations == null)
+            return null;
+        for (Annotation annotation : annotations) {
+            if (annotation.getClass().isAssignableFrom(clazz)) {
+                return (T) annotation;
+            }
+        }
+        return null;
+    }
+
     protected String getPreMoveComment(GamePosition position) {
         List<Annotation> annotations = getAnnotations(position);
         StringBuilder sb = new StringBuilder();
@@ -173,8 +217,8 @@ public class AnnotatedGame extends Game {
         Stack<int[][][]> piecePositionStack = new Stack<>();
         GamePosition currentPosition = this;
 
-        ArrayList<GamePosition> positionsInOrder = new ArrayList<>(); // All positions in the game in a flat list
-        positionsInOrder.add(currentPosition);
+        // All positions in the game in a flat list, excluding the initial position
+        ArrayList<GamePosition> positionsInOrder = new ArrayList<>();
 
         //string moveSeq = "";
 

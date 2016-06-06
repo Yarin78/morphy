@@ -227,8 +227,9 @@ public class Database
             extraHeaderRecordLength = header.getInt(4);
             numberOfExtraRecords = header.getInt(8); // Should be the same as number of games?
 
-            if (numberOfExtraRecords != numberOfGames)
-            	throw new CBHFormatException("Number of extra records doesn't match number of games");
+            // TODO: This doesn't match on My White Openings or my personal games database
+//            if (numberOfExtraRecords != numberOfGames)
+//            	throw new CBHFormatException("Number of extra records (" + numberOfExtraRecords + ") doesn't match number of games (" + numberOfGames + ")");
         } catch (FileNotFoundException e) {
             // The secondary header file must not exist
             extraHeaderVersion = 0;
