@@ -335,8 +335,22 @@ public class IntegrationTests {
 
         AnnotatedGame game = gameHeader.getGame();
         Assert.assertTrue(game.isSetupPosition());
-        GamePosition position = game;
-        // TODO: Test that position is correct?
+        GamePosition currentPosition = game;
+
+        Assert.assertEquals("8/4R3/8/2K5/P1N4P/pPbk4/1p3p2/5r2", currentPosition.getPosition().toString());
+
+        Assert.assertEquals(63, currentPosition.getMoveNumber());
+        Assert.assertEquals("Re2-f2", currentPosition.getMainMove().toString());
+        currentPosition = currentPosition.getForwardPosition();
+        Assert.assertEquals(63, currentPosition.getMoveNumber());
+        Assert.assertEquals("f7-f5", currentPosition.getMainMove().toString());
+        currentPosition = currentPosition.getForwardPosition();
+        Assert.assertEquals(64, currentPosition.getMoveNumber());
+        Assert.assertEquals("Rf2-d2", currentPosition.getMainMove().toString());
+        currentPosition = currentPosition.getForwardPosition();
+        Assert.assertEquals("Kd6-e7", currentPosition.getMainMove().toString());
+        currentPosition = currentPosition.getForwardPosition();
+        Assert.assertTrue(currentPosition.isEndOfVariation());
     }
 
     @Test

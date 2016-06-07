@@ -1,8 +1,11 @@
 package yarin.cbhlib;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import yarin.cbhlib.exceptions.CBHException;
 import yarin.cbhlib.exceptions.CBHFormatException;
 import yarin.chess.Board;
+import yarin.chess.Piece;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -14,6 +17,9 @@ import java.util.LinkedHashMap;
  * Represents a game header record in the CBH file
  */
 public class GameHeader extends DataRecord {
+
+    private static final Logger log = LoggerFactory.getLogger(GameHeader.class);
+
     private boolean deleted; // If true, game has been marked as deleted but no physical deletion has been done yet
     private boolean guidingText; // If true, this is a text document and not a chess game
     private Date playedDate;
@@ -455,7 +461,58 @@ public class GameHeader extends DataRecord {
         if (game == null) {
             ByteBuffer moveBuf = getMoveDataPrivate();
             if (setupPosition) {
-                throw new CBHFormatException("Setup position not supported yet");
+                log.debug("Parsing setup position at moveBuf pos " + moveBuf.position());
+                // TODO: Move to method
+                byte b = moveBuf.get();
+                if (b != 1)
+                    throw new CBHFormatException("First byte in setup position should be 1");
+                b = moveBuf.get();
+                int epFile = (b & 15) - 1;
+                Piece.PieceColor sideToMove = (b & 16) == 0 ? Piece.PieceColor.WHITE : Piece.PieceColor.BLACK;
+                b = moveBuf.get();
+                boolean whiteQueenCastle = (b & 1) > 0;
+                boolean whiteKingCastle = (b & 2) > 0;
+                boolean blackQueenCastle = (b & 4) > 0;
+                boolean blackKingCastle = (b & 8) > 0;
+                int moveNumber = ByteBufferUtil.getUnsignedByte(moveBuf);
+                Piece[][] pieces = new Piece[8][8];
+                ByteBufferBitReader byteBufferBitReader = new ByteBufferBitReader(moveBuf);
+
+                for (int x = 0; x < 8; x++) {
+                    for (int y = 0; y < 8; y++) {
+//                        log.debug("At bit " + curBit);
+                        if (byteBufferBitReader.getBit() == 0) {
+                            pieces[y][x] = new Piece();
+//                            log.debug(String.format("%c%c: Empty", 'a'+x, '1'+y));
+                        } else {
+                            Piece.PieceColor color = byteBufferBitReader.getBit() == 0 ?
+                                    Piece.PieceColor.WHITE : Piece.PieceColor.BLACK;
+                            Piece.PieceType type;
+                            switch (byteBufferBitReader.getInt(3)) {
+                                case 1 : type = Piece.PieceType.KING; break;
+                                case 2 : type = Piece.PieceType.QUEEN; break;
+                                case 3 : type = Piece.PieceType.KNIGHT; break;
+                                case 4 : type = Piece.PieceType.BISHOP; break;
+                                case 5 : type = Piece.PieceType.ROOK; break;
+                                case 6 : type = Piece.PieceType.PAWN; break;
+                                default : throw new CBHException("Invalid piece in setup position");
+                            }
+                            pieces[y][x] = new Piece(type, color);
+//                            log.debug(String.format("%c%c: %s %s", 'a'+x, '1'+y, pieces[y][x].getColor(), pieces[y][x].getPiece()));
+                        }
+                    }
+                }
+
+
+                Board board = new Board();
+                try {
+                    board.setup(pieces, sideToMove, whiteKingCastle, whiteQueenCastle, blackKingCastle, blackQueenCastle, epFile);
+                } catch (RuntimeException e) {
+                    throw new CBHException("Invalid starting position", e);
+                }
+
+                moveBuf.position(28);
+                game = new AnnotatedGame(board, moveNumber, moveBuf, getAnnotationDataPrivate());
             } else {
                 game = new AnnotatedGame(moveBuf, getAnnotationDataPrivate());
             }

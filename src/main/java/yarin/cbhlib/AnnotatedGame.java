@@ -1,5 +1,7 @@
 package yarin.cbhlib;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import yarin.cbhlib.annotations.Annotation;
 import yarin.cbhlib.exceptions.CBHException;
 import yarin.cbhlib.exceptions.CBHFormatException;
@@ -12,6 +14,8 @@ import java.util.List;
 import java.util.Stack;
 
 public class AnnotatedGame extends Game {
+    private static final Logger log = LoggerFactory.getLogger(AnnotatedGame.class);
+
     private static final int OPCODE_NULLMOVE = 0;
     private static final int OPCODE_KING = 1;
     private static final int OPCODE_KING_OO = 9;
@@ -210,6 +214,7 @@ public class AnnotatedGame extends Game {
 
     private List<GamePosition> parseMoveData(ByteBuffer moveData, boolean verifyAfterEachMove)
             throws CBHException {
+        log.debug("Parsing move data at moveData pos " + moveData.position() + " with " + (moveData.limit() - moveData.position()) + " bytes left");
         int[][][] piecePosition = getPiecePositions();
 
         int modifier = 256; // Start at 256 instead of 0 to avoid negative modulo
@@ -316,6 +321,8 @@ public class AnnotatedGame extends Game {
                         throw new RuntimeException("Opcode error"); // Shouldn't happen
 
                     Square p = getPieceSquare(piecePosition, pieceType, moveColor, pieceNo);
+                    if (p.x < 0 || p.y < 0)
+                        throw new RuntimeException("No piece coordinate for " + moveColor + " " + pieceType + " number " + pieceNo);
                     int dir = data / 7, stride = data % 7 + 1;
                     switch (dir + (pieceType == Piece.PieceType.BISHOP ? 2 : 0)) {
                         case 0:
@@ -571,8 +578,8 @@ public class AnnotatedGame extends Game {
                     piecePosition[i][k][j] = -1;
             }
         }
-        for (int y = 0; y < 8; y++) {
-            for (int x = 0; x < 8; x++) {
+        for (int x = 0; x < 8; x++) {
+            for (int y = 0; y < 8; y++) {
                 Piece p = this.getPosition().pieceAt(y, x);
                 if (p.isEmpty())
                     continue;

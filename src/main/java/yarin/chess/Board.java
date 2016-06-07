@@ -91,6 +91,47 @@ public class Board {
         setupBoard(position, toMove, whiteKingCastle, whiteQueenCastle, blackKingCastle, blackQueenCastle, epFile);
     }
 
+    public void setup(Piece[][] squares, Piece.PieceColor toMove, boolean whiteKingCastle, boolean whiteQueenCastle, boolean blackKingCastle, boolean blackQueenCastle, int epFile) {
+        this.board = new Piece[8][8];
+        this.whiteKingX = -1;
+        this.whiteKingY = -1;
+        this.blackKingX = -1;
+        this.blackKingY = -1;
+        for (int y = 0; y < 8; y++)
+            for (int x = 0; x < 8; x++) {
+                this.board[y][x] = squares[y][x];
+                if (squares[y][x].getPiece() == Piece.PieceType.KING) {
+                    if (squares[y][x].getColor() == Piece.PieceColor.WHITE) {
+                        if (this.whiteKingX >= 0) {
+                            throw new RuntimeException("Two white kings is not allowed");
+                        }
+                        this.whiteKingX = x;
+                        this.whiteKingY = y;
+                    } else if (squares[y][x].getColor() == Piece.PieceColor.BLACK) {
+                        if (this.blackKingX >= 0) {
+                            throw new RuntimeException("Two black kings is not allowed");
+                        }
+                        this.blackKingX = x;
+                        this.blackKingY = y;
+                    }
+                }
+            }
+        this.toMove = toMove;
+        this.enPassantFile = epFile;
+        this.whiteKingCastle = whiteKingCastle;
+        this.blackKingCastle = blackKingCastle;
+        this.whiteQueenCastle = whiteQueenCastle;
+        this.blackQueenCastle = blackQueenCastle;
+
+        if (this.whiteKingX < 0) {
+            throw new RuntimeException("No white king on the board");
+        }
+        if (this.blackKingX < 0) {
+            throw new RuntimeException("No black king on the board");
+        }
+        // TODO: Validate the position (e.g. side to move can't capture the king)
+    }
+
     public String toString() {
         String s = "";
         for (int y = 0; y < 8; y++) {

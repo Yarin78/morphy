@@ -203,8 +203,8 @@ Ofs 2, Len 1 - Bit 0: White O-O-O possible
                Bit 2: Black O-O-O possible
                Bit 3: Black O-O possible
 Ofs 3, Len 1 - Next move number
-Ofs 4, Len 24 - Piece setup as a bit stream (starting with MSB at ofs 4),
-                using these bit codes:
+Ofs 4, Len 24 - A 192 bit long variable length bit stream encodes the 32 squares on the board, a1-a8, b1-b8 etc.
+                The piece codes are like this: (starting with MSB at ofs 4),
 
 				0 = Empty square
 				10001 = White king
@@ -226,15 +226,27 @@ of each type find is the initial first piece, etc (including pawns, of both colo
 
 Game data
 =========
-The moves in a game are represented as a stream of bytes. Most moves are represented as a single byte, describing the relative movement of a piece. Pieces are described in terms such as "first rook" (meaning the rook that for white starts on a1 and for black on a8), "second rook" etc.
+The moves in a game are represented as a stream of bytes. Most moves are represented as a single byte, describing the
+relative movement of a piece. Pieces are described in terms such as "first rook" (meaning the rook that for white
+starts on a1 and for black on a8), "second rook" etc.
 
-When decoding the byte stream, first decrease the byte value with the number of moves so far processed in the game data (minus 0 for the first move). The special codes for "multiple byte moves" and begin/end of variations don't count. The move count should not be restarted when a variation end. Then translate the byte according to the translation table below.
+When decoding the byte stream, first decrease the byte value with the number of moves so far processed in the game
+data (minus 0 for the first move). The special codes for "multiple byte moves" and begin/end of variations don't count.
+The move count should not be restarted when a variation end. Then translate the byte according to the
+translation table below.
 
 All pawn moments are seen from the point of view of the player to move. Pawn captures include en passant.
 
-When a "first piece" is captured, the "second piece" becomes the new "first piece" for that player, and the "third piece" becomes the "second piece". When a "second piece" is cpatured, the old "third piece" becomes the "second piece". A "fourth piece" (or higher) never "promotes" and its movements are always represented with multiple bytes. Pawns are never adjusted in this way, so the e-pawn remains as the "fifth pawn" throughout the game.
+When a "first piece" is captured, the "second piece" becomes the new "first piece" for that player, and the
+"third piece" becomes the "second piece". When a "second piece" is cpatured, the old "third piece" becomes the
+"second piece". A "fourth piece" (or higher) never "promotes" and its movements are always represented with
+multiple bytes. Pawns are never adjusted in this way, so the e-pawn remains as the "fifth pawn" throughout the game.
 
-Multiple byte moves describes a move by denoting the start square and the destination square. This is done with 6 bits each. Bit 0-5 in the second byte is the start square (a1=0, a2=1, h8=63), bit 6-7 in the second byte and 0-3 in the first is the destination square. For pawn promotions, bit 4-5 is also used (0=queen, 1=rook, 2=bishop, 3=knight). Any type of move can be described as a multipe byte move, but it's typically only done when moving a fourth piece or doing a pawn promotion.
+Multiple byte moves describes a move by denoting the start square and the destination square. This is done
+with 6 bits each. Bit 0-5 in the second byte is the start square (a1=0, a2=1, h8=63), bit 6-7 in the second
+byte and 0-3 in the first is the destination square. For pawn promotions, bit 4-5 is also used
+(0=queen, 1=rook, 2=bishop, 3=knight). Any type of move can be described as a multipe byte move, but it's
+typically only done when moving a fourth piece or doing a pawn promotion.
 
 Single byte move translation table
 ----------------------------------
