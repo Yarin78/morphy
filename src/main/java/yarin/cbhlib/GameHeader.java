@@ -119,11 +119,27 @@ public class GameHeader extends DataRecord {
         return title.values().iterator().next();
     }
 
+    public String getBlackPlayerString() throws IOException {
+        if (!isGuidingText())
+            return getBlackPlayer().toString();
+        return "";
+    }
+
+    public String getWhiteTeamString() throws IOException, CBHException {
+        Team team = getWhiteTeam();
+        return team == null ? "" : team.getTitle();
+    }
+
     public Team getWhiteTeam() throws IOException, CBHException {
         if (isGuidingText()) return null;
         int teamId = getExtraHeader().getWhitePlayerTeamId();
         if (teamId < 0) return null;
         return getOwnerBase().getTeam(teamId);
+    }
+
+    public String getBlackTeamString() throws IOException, CBHException {
+        Team team = getBlackTeam();
+        return team == null ? "" : team.getTitle();
     }
 
     public Team getBlackTeam() throws IOException, CBHException {
@@ -149,12 +165,24 @@ public class GameHeader extends DataRecord {
         return Integer.toString(getId());
     }
 
+    public String getTournamentString() throws IOException {
+        return getTournament().getTitle();
+    }
+
     public Tournament getTournament() throws IOException {
         return getOwnerBase().getTournament(tournamentId);
     }
 
+    public String getAnnotatorString() throws IOException {
+        return getAnnotator().getName();
+    }
+
     public Annotator getAnnotator() throws IOException {
         return getOwnerBase().getAnnotator(annotatorId);
+    }
+
+    public String getSourceString() throws IOException {
+        return getSource().getTitle();
     }
 
     public Source getSource() throws IOException {
@@ -169,7 +197,15 @@ public class GameHeader extends DataRecord {
         return getSubRound() == 0 ? "" : Integer.toString(getSubRound());
     }
 
-    public String getResult() {
+    public LineEvaluation getLineEvaluation() {
+        return lineEvaluation;
+    }
+
+    public GameResult getResult() {
+        return result;
+    }
+
+    public String getResultString() {
         if (isGuidingText())
             return "Text";
         switch (result) {

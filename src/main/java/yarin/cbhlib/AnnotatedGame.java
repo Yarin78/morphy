@@ -410,7 +410,7 @@ public class AnnotatedGame extends Game {
                         }
                     }
                     if (!found)
-                        throw new CBHFormatException("yarin.chess.Board in inconsistent state");
+                        throw new CBHFormatException("Board in inconsistent state");
 
                     // Add the promoted piece, unless three pieces of that type already exist
                     Piece.PieceType promotedPiece;
@@ -502,10 +502,10 @@ public class AnnotatedGame extends Game {
                                 endReached = true;
                             else {
                                 if (endReached && i != Piece.PieceType.PAWN)
-                                    throw new CBHFormatException("Pieces not adjustet correctly");
+                                    throw new CBHFormatException("Pieces not adjusted correctly");
                                 Piece p = currentPosition.getPosition().pieceAt(sq / 8, sq % 8);
                                 if (p.getColor() != color || p.getPiece() != i)
-                                    throw new CBHFormatException("yarin.chess.Board is in inconsistent state");
+                                    throw new CBHFormatException("Board is in inconsistent state");
                                 piecesFound++;
                             }
                         }
@@ -534,7 +534,7 @@ public class AnnotatedGame extends Game {
                     }
                 }
                 if (piecesFound != piecesOnBoard)
-                    throw new CBHFormatException("yarin.chess.Board is in inconsistent state"); // Some pieces are missing
+                    throw new CBHFormatException("Board is in inconsistent state"); // Some pieces are missing
             }
         }
 

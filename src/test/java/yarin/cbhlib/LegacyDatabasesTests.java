@@ -22,7 +22,7 @@ public class LegacyDatabasesTests {
         Assert.assertEquals("John", gameHeader.getWhitePlayer().getFirstName());
         Assert.assertEquals("Mårdell", gameHeader.getBlackPlayer().getLastName());
         Assert.assertEquals("Jimmy", gameHeader.getBlackPlayer().getFirstName());
-        Assert.assertEquals("½-½", gameHeader.getResult());
+        Assert.assertEquals("½-½", gameHeader.getResultString());
 
         Game game = gameHeader.getGame();
         Assert.assertFalse(game.isSetupPosition());

@@ -40,7 +40,7 @@ public class IntegrationTests {
         Assert.assertFalse(gameHeader.isDeleted());
         Assert.assertFalse(gameHeader.isGuidingText());
         Assert.assertEquals("Simple game", gameHeader.getWhitePlayer().getLastName());
-        Assert.assertEquals("1-0", gameHeader.getResult());
+        Assert.assertEquals("1-0", gameHeader.getResultString());
 
         Game game = gameHeader.getGame();
         Assert.assertFalse(game.isSetupPosition());
@@ -73,7 +73,7 @@ public class IntegrationTests {
         Assert.assertEquals("Doe", gameHeader.getBlackPlayer().getLastName());
         Assert.assertEquals("John", gameHeader.getBlackPlayer().getFirstName());
 
-        Assert.assertEquals("compensation", gameHeader.getResult());
+        Assert.assertEquals("compensation", gameHeader.getResultString());
         Assert.assertEquals("Swedish Ch", gameHeader.getTournament().getTitle());
 
         Assert.assertEquals("A00", gameHeader.getECO());
