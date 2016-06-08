@@ -595,19 +595,22 @@ Ofs 0, Len 3 - Position in gaming sequence (0 = start position, 1 = after first 
 Ofs 3, Len 1 - Type of annotation:
                  0x02 = text after move
                  0x03 = symbols
-                 0x18 = critical position
-                 0x82 = text before move
+                 0x04 = graphical squares
+                 0x05 = graphical arrows
+                 0x09 = training annotation (TODO)
+                 0x10 = sound
+                 0x11 = picture
+                 0x13 = game quotation
                  0x14 = pawn structure (ofs 6 = 3?! TODO)
                  0x15 = piece path (ofs 6-7 = 03 2b?  03 0d? TODO)
-                 0x13 = game quotation
+                 0x18 = critical position
+                 0x19 = correspondence move (header must exist?)
+                 0x20 = video
                  0x22 = medal
                  0x23 = variation color
-                 0x10 = sound
-                 0x20 = video
-                 0x11 = picture
-                 0x09 = training annotation (TODO)
                  0x61 = correspondence header (always move -1?)
-                 0x19 = correspondence move (header must exist?)
+                 0x82 = text before move
+
 Ofs 4, Len 2 - Number of bytes for this annotation (from ofs 0, little-endian).
 
 
@@ -620,6 +623,17 @@ Text:
 Ofs 6, Len 1 - 0?
 Ofs 7, Len 1 - Language 0 = All, 0x2A = English, 0x35 = Deutsch, 0x31 = France, 0x2B = Spain, 0x46 = Italian, 0x67 = Dutch, 0x75 = Portugese, 0x00 = Pol (bug??)
 Ofs 8, Len ? - Text (remaining bytes)  0x9E = diagram (denoted "{#}")
+
+Graphical squares:
+Ofs 6, Len 1 - Color (2 = green, 3 = yellow, 4 = red)
+Ofs 7, Len 1 - Square (1=a1, 2=a2, 9=b1, ... 64=h8)
+These two bytes are repeated until end of annotation
+
+Graphical arrows:
+Ofs 6, Len 1 - Color (2 = green, 3 = yellow, 4 = red)
+Ofs 7, Len 1 - From square (1=a1, 2=a2, 9=b1, ... 64=h8)
+Ofs 8, Len 1 - To square (1=a1, 2=a2, 9=b1, ... 64=h8)
+These three bytes are repeated until end of annotation
 
 Critical Position:
 Ofs 6, Len 1 - 1 = Critical opening position

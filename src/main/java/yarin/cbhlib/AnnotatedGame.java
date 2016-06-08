@@ -202,13 +202,11 @@ public class AnnotatedGame extends Game {
             throw new CBHFormatException("Unexpected end of annotation data");
 
         while (annotationData.position() < annotationData.limit()) {
-            Annotation annotation = Annotation.getFromData(gamePositionsByOrder, annotationData, true);
-            // TODO: Is this correct?
-            if (annotation != null && annotation.getPosition() != null) {
-                if (!annotationMap.containsKey(annotation.getPosition()))
-                    annotationMap.put(annotation.getPosition(), new ArrayList<>());
-                annotationMap.get(annotation.getPosition()).add(annotation);
+            Annotation annotation = Annotation.getFromData(this, gamePositionsByOrder, annotationData);
+            if (!annotationMap.containsKey(annotation.getPosition())) {
+                annotationMap.put(annotation.getPosition(), new ArrayList<>());
             }
+            annotationMap.get(annotation.getPosition()).add(annotation);
         }
     }
 

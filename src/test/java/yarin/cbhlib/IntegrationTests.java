@@ -354,6 +354,62 @@ public class IntegrationTests {
     }
 
     @Test
+    public void testGraphicalAnnotations() throws IOException, CBHException {
+        GameHeader gameHeader = db.getGameHeader(13);
+        AnnotatedGame game = gameHeader.getGame();
+
+        GamePosition currentPosition = game;
+
+        GraphicalSquaresAnnotation sqa = game.getAnnotation(currentPosition, GraphicalSquaresAnnotation.class);
+        Assert.assertEquals(1, sqa.getSquares().size());
+        Assert.assertEquals(Annotation.GraphicalColor.GREEN, sqa.getSquares().get(0).getColor());
+        Assert.assertEquals(35, sqa.getSquares().get(0).getSquare()); // e4
+
+        currentPosition = currentPosition.getForwardPosition();
+        GraphicalArrowsAnnotation aa = game.getAnnotation(currentPosition, GraphicalArrowsAnnotation.class);
+        Assert.assertEquals(1, aa.getArrows().size());
+        Assert.assertEquals(Annotation.GraphicalColor.GREEN, aa.getArrows().get(0).getColor());
+        Assert.assertEquals(35, aa.getArrows().get(0).getFromSquare()); // e4
+        Assert.assertEquals(36, aa.getArrows().get(0).getToSquare()); // e5
+
+        currentPosition = currentPosition.getForwardPosition();
+        sqa = game.getAnnotation(currentPosition, GraphicalSquaresAnnotation.class);
+        Assert.assertEquals(7, sqa.getSquares().size());
+        Assert.assertEquals(Annotation.GraphicalColor.YELLOW, sqa.getSquares().get(0).getColor());
+        Assert.assertEquals(10, sqa.getSquares().get(0).getSquare()); // b3
+        Assert.assertEquals(Annotation.GraphicalColor.YELLOW, sqa.getSquares().get(1).getColor());
+        Assert.assertEquals(18, sqa.getSquares().get(1).getSquare()); // c3
+        Assert.assertEquals(Annotation.GraphicalColor.YELLOW, sqa.getSquares().get(2).getColor());
+        Assert.assertEquals(36, sqa.getSquares().get(2).getSquare()); // e5
+        Assert.assertEquals(Annotation.GraphicalColor.RED, sqa.getSquares().get(3).getColor());
+        Assert.assertEquals(38, sqa.getSquares().get(3).getSquare()); // e7
+        Assert.assertEquals(Annotation.GraphicalColor.RED, sqa.getSquares().get(4).getColor());
+        Assert.assertEquals(46, sqa.getSquares().get(4).getSquare()); // f7
+        Assert.assertEquals(Annotation.GraphicalColor.GREEN, sqa.getSquares().get(5).getColor());
+        Assert.assertEquals(52, sqa.getSquares().get(5).getSquare()); // g5
+        Assert.assertEquals(Annotation.GraphicalColor.GREEN, sqa.getSquares().get(6).getColor());
+        Assert.assertEquals(60, sqa.getSquares().get(6).getSquare()); // h5
+
+        aa = game.getAnnotation(currentPosition, GraphicalArrowsAnnotation.class);
+        Assert.assertEquals(5, aa.getArrows().size());
+        Assert.assertEquals(Annotation.GraphicalColor.GREEN, aa.getArrows().get(0).getColor());
+        Assert.assertEquals(48, aa.getArrows().get(0).getFromSquare()); // g1
+        Assert.assertEquals(42, aa.getArrows().get(0).getToSquare()); // f3
+        Assert.assertEquals(Annotation.GraphicalColor.YELLOW, aa.getArrows().get(1).getColor());
+        Assert.assertEquals(25, aa.getArrows().get(1).getFromSquare()); // d2
+        Assert.assertEquals(26, aa.getArrows().get(1).getToSquare()); // d3
+        Assert.assertEquals(Annotation.GraphicalColor.RED, aa.getArrows().get(2).getColor());
+        Assert.assertEquals(15, aa.getArrows().get(2).getFromSquare()); // b8
+        Assert.assertEquals(21, aa.getArrows().get(2).getToSquare()); // c6
+        Assert.assertEquals(Annotation.GraphicalColor.YELLOW, aa.getArrows().get(3).getColor());
+        Assert.assertEquals(35, aa.getArrows().get(3).getFromSquare()); // e4
+        Assert.assertEquals(36, aa.getArrows().get(3).getToSquare()); // e5
+        Assert.assertEquals(Annotation.GraphicalColor.GREEN, aa.getArrows().get(4).getColor());
+        Assert.assertEquals(31, aa.getArrows().get(4).getFromSquare()); // d8
+        Assert.assertEquals(4, aa.getArrows().get(4).getToSquare()); // a5
+    }
+
+    @Test
     public void testGuidingTexts() throws IOException, CBHException {
         // Checks that guiding texts work
         GameHeader gameHeader = db.getGameHeader(8);
@@ -368,6 +424,8 @@ public class IntegrationTests {
 
     }
 
-    // Test game title
-    // Test more annotations
+
+
+    // TODO: Test game title
+    // TODO: Test more annotations
 }
