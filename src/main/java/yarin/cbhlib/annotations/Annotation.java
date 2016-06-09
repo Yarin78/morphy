@@ -68,7 +68,7 @@ public abstract class Annotation
                 case 0x03 : return new SymbolAnnotation(position, annotationData, noBytes - 6);
                 case 0x04 : return new GraphicalSquaresAnnotation(position, annotationData, noBytes - 6);
                 case 0x05 : return new GraphicalArrowsAnnotation(position, annotationData, noBytes - 6);
-//                case 0x18 : return new CriticalPositionAnnotation(position, annotationData);
+                case 0x18 : return new CriticalPositionAnnotation(position, annotationData);
                 case 0x82 : return new TextBeforeMoveAnnotation(position, annotationData, noBytes - 8);
 //                case 0x14 : return new PawnStructureAnnotation(position, annotationData);
 //                case 0x15 : return new PiecePathAnnotation(position, annotationData);

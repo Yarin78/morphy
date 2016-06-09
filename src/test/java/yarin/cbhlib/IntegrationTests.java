@@ -439,6 +439,26 @@ public class IntegrationTests {
     }
 
     @Test
+    public void testCriticalPositionAnnotations() throws IOException, CBHException {
+        GameHeader gameHeader = db.getGameHeader(15);
+
+        AnnotatedGame game = gameHeader.getGame();
+        GamePosition currentPosition = game;
+
+        for (int i = 0; i < 6; i++) currentPosition = currentPosition.getForwardPosition();
+        CriticalPositionAnnotation cpa = game.getAnnotation(currentPosition, CriticalPositionAnnotation.class);
+        Assert.assertEquals(CriticalPositionAnnotation.CriticalPositionType.OPENING, cpa.getType());
+
+        for (int i = 0; i < 3; i++) currentPosition = currentPosition.getForwardPosition();
+        cpa = game.getAnnotation(currentPosition, CriticalPositionAnnotation.class);
+        Assert.assertEquals(CriticalPositionAnnotation.CriticalPositionType.MIDDLEGAME, cpa.getType());
+
+        for (int i = 0; i < 4; i++) currentPosition = currentPosition.getForwardPosition();
+        cpa = game.getAnnotation(currentPosition, CriticalPositionAnnotation.class);
+        Assert.assertEquals(CriticalPositionAnnotation.CriticalPositionType.ENDGAME, cpa.getType());
+    }
+
+    @Test
     public void testGuidingTexts() throws IOException, CBHException {
         // Checks that guiding texts work
         GameHeader gameHeader = db.getGameHeader(8);

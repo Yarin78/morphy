@@ -6,10 +6,23 @@ import yarin.chess.GamePosition;
 import java.nio.ByteBuffer;
 
 public class CriticalPositionAnnotation extends Annotation {
+
+    public enum CriticalPositionType {
+        NONE,
+        OPENING,
+        MIDDLEGAME,
+        ENDGAME
+    }
+
+    private CriticalPositionType type;
+
+    public CriticalPositionType getType() {
+        return type;
+    }
+
     public CriticalPositionAnnotation(GamePosition annotationPosition, ByteBuffer data) throws CBHFormatException {
         super(annotationPosition);
-        throw new CBHFormatException("Critical positions are not yet supported");
+
+        type = CriticalPositionType.values()[data.get()];
     }
 }
-
-
