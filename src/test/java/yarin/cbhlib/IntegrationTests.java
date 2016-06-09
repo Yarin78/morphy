@@ -410,6 +410,35 @@ public class IntegrationTests {
     }
 
     @Test
+    public void testPositionsAreUniqueRegardlessOfMoveNumberAndVariations() throws IOException, CBHException {
+        GameHeader gameHeader = db.getGameHeader(14);
+
+        AnnotatedGame game = gameHeader.getGame();
+        GamePosition currentPosition = game;
+
+        currentPosition = currentPosition.getForwardPosition();
+        currentPosition = currentPosition.getForwardPosition();
+        TextAfterMoveAnnotation annotation = game.getAnnotation(currentPosition, TextAfterMoveAnnotation.class);
+        Assert.assertEquals("annotation1", annotation.getText());
+
+        GamePosition branch = currentPosition;
+
+        currentPosition = currentPosition.getForwardPosition();
+        currentPosition = currentPosition.getForwardPosition();
+        currentPosition = currentPosition.getForwardPosition();
+        currentPosition = currentPosition.getForwardPosition();
+        annotation = game.getAnnotation(currentPosition, TextAfterMoveAnnotation.class);
+        Assert.assertEquals("annotation2", annotation.getText());
+
+        currentPosition = branch.getForwardPosition(branch.getMoves().get(1));
+        currentPosition = currentPosition.getForwardPosition();
+        currentPosition = currentPosition.getForwardPosition();
+        currentPosition = currentPosition.getForwardPosition();
+        annotation = game.getAnnotation(currentPosition, TextAfterMoveAnnotation.class);
+        Assert.assertEquals("annotation3", annotation.getText());
+    }
+
+    @Test
     public void testGuidingTexts() throws IOException, CBHException {
         // Checks that guiding texts work
         GameHeader gameHeader = db.getGameHeader(8);
