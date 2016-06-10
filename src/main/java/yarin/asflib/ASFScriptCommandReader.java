@@ -147,7 +147,10 @@ public class ASFScriptCommandReader {
         int len = dis.readUnsignedShort();
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < len; i++) {
-            sb.append(dis.readChar());
+            char c = dis.readChar();
+            // If the last character is a 0, don't include it
+            if (i == len - 1 && c == 0) break;
+            sb.append(c);
         }
         return sb.toString();
     }
