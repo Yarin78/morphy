@@ -1,0 +1,1 @@
+This is not an ASF file so it should throw an exception.
