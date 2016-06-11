@@ -25,8 +25,7 @@ public class SymbolAnnotation extends Annotation {
         return movePrefix;
     }
 
-    public SymbolAnnotation(GamePosition annotationPosition, ByteBuffer data, int symbolBytes) {
-        super(annotationPosition);
+    public SymbolAnnotation(ByteBuffer data, int symbolBytes) {
         int moveCommentVal = symbolBytes >= 1 ? ByteBufferUtil.getUnsignedByte(data) : 0;
         int positionEvalVal = symbolBytes >= 2 ? ByteBufferUtil.getUnsignedByte(data) : 0;
         int movePrefixVal = symbolBytes >= 3 ? ByteBufferUtil.getUnsignedByte(data) : 0;

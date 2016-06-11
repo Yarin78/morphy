@@ -38,8 +38,7 @@ public class GraphicalArrowsAnnotation extends Annotation {
 
     private List<GraphicalArrow> arrows;
 
-    public GraphicalArrowsAnnotation(GamePosition annotationPosition, ByteBuffer data, int length) throws CBHFormatException {
-        super(annotationPosition);
+    public GraphicalArrowsAnnotation(ByteBuffer data, int length) throws CBHFormatException {
         arrows = new ArrayList<>();
         for (int i = 0; i < length / 3; i++) {
             int color = ByteBufferUtil.getUnsignedByte(data);

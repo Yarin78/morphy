@@ -10,8 +10,8 @@
         </layout>
     </appender>
 
-    <logger name="yarin">
-        <level value="DEBUG"/>
+    <logger name="yarin.cbhlib">
+        <level value="INFO"/>
     </logger>
 
     <root>

@@ -74,6 +74,15 @@ public class Tournament extends DataRecord {
         return count;
     }
 
+    // TODO: Map out the nations
+    /*
+      96 = MNC
+      94 = MEX
+      21 = BIH
+      149 = URS
+      49 = FRA
+      53 = GER
+     */
     public String getNationString()
     {
         return nation == 0 ? "" : ("#" + Integer.toString(nation));

@@ -6,8 +6,7 @@ import yarin.chess.GamePosition;
 import java.nio.ByteBuffer;
 
 public class CorrespondenceHeaderAnnotation extends Annotation {
-    public CorrespondenceHeaderAnnotation(GamePosition annotationPosition, ByteBuffer data) throws CBHFormatException {
-        super(annotationPosition);
+    public CorrespondenceHeaderAnnotation(ByteBuffer data) throws CBHFormatException {
         throw new CBHFormatException("Correspondence headers are not yet supported");
     }
 }

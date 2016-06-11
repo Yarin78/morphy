@@ -20,9 +20,7 @@ public class CriticalPositionAnnotation extends Annotation {
         return type;
     }
 
-    public CriticalPositionAnnotation(GamePosition annotationPosition, ByteBuffer data) throws CBHFormatException {
-        super(annotationPosition);
-
+    public CriticalPositionAnnotation(ByteBuffer data) throws CBHFormatException {
         type = CriticalPositionType.values()[data.get()];
     }
 }

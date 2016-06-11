@@ -6,8 +6,7 @@ import yarin.chess.GamePosition;
 import java.nio.ByteBuffer;
 
 public class CorrespondenceMoveAnnotation extends Annotation {
-    public CorrespondenceMoveAnnotation(GamePosition annotationPosition, ByteBuffer data) throws CBHFormatException {
-        super(annotationPosition);
+    public CorrespondenceMoveAnnotation(ByteBuffer data) throws CBHFormatException {
         throw new CBHFormatException("Correspondence move are not yet supported");
     }
 }

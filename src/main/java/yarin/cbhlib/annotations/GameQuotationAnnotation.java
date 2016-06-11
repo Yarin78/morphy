@@ -6,8 +6,7 @@ import yarin.chess.GamePosition;
 import java.nio.ByteBuffer;
 
 public class GameQuotationAnnotation extends Annotation {
-    public GameQuotationAnnotation(GamePosition annotationPosition, ByteBuffer data) throws CBHFormatException {
-        super(annotationPosition);
+    public GameQuotationAnnotation(ByteBuffer data) throws CBHFormatException {
         throw new CBHFormatException("Game quotations are not yet supported");
     }
 }

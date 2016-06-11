@@ -6,8 +6,7 @@ import yarin.chess.GamePosition;
 import java.nio.ByteBuffer;
 
 public class PictureAnnotation extends Annotation {
-    public PictureAnnotation(GamePosition annotationPosition, ByteBuffer data) throws CBHFormatException {
-        super(annotationPosition);
+    public PictureAnnotation(ByteBuffer data) throws CBHFormatException {
         throw new CBHFormatException("Picture is not yet supported");
     }
 }

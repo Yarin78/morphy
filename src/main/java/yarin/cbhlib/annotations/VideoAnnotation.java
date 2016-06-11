@@ -6,8 +6,7 @@ import yarin.chess.GamePosition;
 import java.nio.ByteBuffer;
 
 public class VideoAnnotation extends Annotation {
-    public VideoAnnotation(GamePosition annotationPosition, ByteBuffer data) throws CBHFormatException {
-        super(annotationPosition);
+    public VideoAnnotation(ByteBuffer data) throws CBHFormatException {
         throw new CBHFormatException("Video isn't yet supported");
     }
 }

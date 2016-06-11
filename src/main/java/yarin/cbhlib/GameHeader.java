@@ -27,8 +27,7 @@ public class GameHeader extends DataRecord {
     private int subRound; // 0 = not set
     private int whiteElo; // 0 = not set
     private int blackElo; // 0 = not set
-    private int subEco;
-    private int eco; // 0 = not set
+    private Eco eco;
     private int whitePlayerId;
     private int blackPlayerId;
     private int tournamentId;
@@ -267,12 +266,9 @@ public class GameHeader extends DataRecord {
     }
 
     public String getECO() {
-        if (isGuidingText() || eco == 0)
+        if (isGuidingText())
             return "";
-        String s = String.format("%c%02d", (char) ('A' + (eco - 1) / 100), (eco - 1) % 100);
-        if (subEco > 0)
-            s += String.format("/%02d", subEco);
-        return s;
+        return eco.toString();
     }
 
     public Date getPlayedDate() {
@@ -603,9 +599,7 @@ public class GameHeader extends DataRecord {
         whiteElo = cbhData.getShort(31);
         blackElo = cbhData.getShort(33);
 
-        subEco = ByteBufferUtil.getBigEndianValue(cbhData, 36, 0, 7);
-        eco = ByteBufferUtil.getBigEndianValue(cbhData, 36, 7, 9);
-
+        eco = Eco.parse(ByteBufferUtil.getUnsignedShort(cbhData, 35));
 
         medals = Medals.decode(cbhData.getShort(37));
 

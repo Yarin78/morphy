@@ -92,15 +92,22 @@ public class AnnotatedGame extends Game {
 
     private HashMap<GamePosition, List<Annotation>> annotationMap = new HashMap<>();
 
+    public AnnotatedGame() {
+    }
+
+    public AnnotatedGame(Board board, int moveNo) {
+        super(board, moveNo);
+    }
+
     public AnnotatedGame(ByteBuffer moveData, ByteBuffer annotationData)
             throws CBHException {
         List<GamePosition> allPositions = parseMoveData(moveData, true);
         parseAnnotationData(annotationData, allPositions);
     }
 
-    public AnnotatedGame(Board b, int moveNo, ByteBuffer moveData, ByteBuffer annotationData)
+    public AnnotatedGame(Board board, int moveNo, ByteBuffer moveData, ByteBuffer annotationData)
             throws CBHException {
-        super(b, moveNo);
+        super(board, moveNo);
         List<GamePosition> allPositions = parseMoveData(moveData, true);
         parseAnnotationData(annotationData, allPositions);
     }
@@ -163,6 +170,13 @@ public class AnnotatedGame extends Game {
         return null;
     }
 
+    public void addAnnotation(GamePosition position, Annotation annotation) {
+        if (!annotationMap.containsKey(position)) {
+            annotationMap.put(position, new ArrayList<>());
+        }
+        annotationMap.get(position).add(annotation);
+    }
+
     protected String getPreMoveComment(GamePosition position) {
         List<Annotation> annotations = getAnnotations(position);
         StringBuilder sb = new StringBuilder();
@@ -202,11 +216,23 @@ public class AnnotatedGame extends Game {
             throw new CBHFormatException("Unexpected end of annotation data");
 
         while (annotationData.position() < annotationData.limit()) {
-            Annotation annotation = Annotation.getFromData(this, gamePositionsByOrder, annotationData);
-            if (!annotationMap.containsKey(annotation.getPosition())) {
-                annotationMap.put(annotation.getPosition(), new ArrayList<>());
+            int moveNo = ByteBufferUtil.getSignedBigEndian24BitValue(annotationData);
+
+            GamePosition position;
+            if (moveNo == -1) {
+                position = this;
+            } else if (moveNo >= 0 && moveNo < gamePositionsByOrder.size()) {
+                position = gamePositionsByOrder.get(moveNo);
+            } else {
+                log.warn("Annotation referred to illegal game position; resetting to start position");
+                // TODO: Should do something else here probably
+                position = this;
             }
-            annotationMap.get(annotation.getPosition()).add(annotation);
+
+            Annotation annotation = Annotation.getFromData(annotationData);
+            addAnnotation(position, annotation);
+
+            log.debug("Found " + annotation.getClass().getSimpleName() + " at position number " + moveNo);
         }
     }
 

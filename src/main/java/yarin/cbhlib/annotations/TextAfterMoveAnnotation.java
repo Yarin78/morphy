@@ -7,9 +7,9 @@ import yarin.chess.GamePosition;
 import java.nio.ByteBuffer;
 
 public class TextAfterMoveAnnotation extends TextAnnotation {
-    public TextAfterMoveAnnotation(GamePosition annotationPosition, ByteBuffer data, int textLength)
+    public TextAfterMoveAnnotation(ByteBuffer data, int textLength)
             throws CBHFormatException {
-        super(annotationPosition, data, textLength);
+        super(data, textLength);
     }
 
     public String getPostText() {

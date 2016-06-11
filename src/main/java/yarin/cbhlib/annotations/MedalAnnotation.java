@@ -13,8 +13,7 @@ public class MedalAnnotation extends Annotation {
         return medals;
     }
 
-    public MedalAnnotation(GamePosition annotationPosition, ByteBuffer data) throws CBHFormatException {
-        super(annotationPosition);
+    public MedalAnnotation(ByteBuffer data) throws CBHFormatException {
         if (data.get() != 0 || data.get() != 0)
             throw new CBHFormatException("Unexpected non-zero bytes in medal annotation");
         this.medals = Medals.decode(data.getShort());

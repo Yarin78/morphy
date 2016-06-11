@@ -6,8 +6,7 @@ import yarin.chess.GamePosition;
 import java.nio.ByteBuffer;
 
 public class PiecePathAnnotation extends Annotation {
-    public PiecePathAnnotation(GamePosition annotationPosition, ByteBuffer data) throws CBHFormatException {
-        super(annotationPosition);
+    public PiecePathAnnotation(ByteBuffer data) throws CBHFormatException {
         throw new CBHFormatException("yarin.chess.Piece path is not yet supported");
     }
 }

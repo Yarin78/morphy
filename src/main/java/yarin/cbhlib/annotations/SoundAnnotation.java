@@ -6,8 +6,7 @@ import yarin.chess.GamePosition;
 import java.nio.ByteBuffer;
 
 public class SoundAnnotation extends Annotation {
-    public SoundAnnotation(GamePosition annotationPosition, ByteBuffer data) throws CBHFormatException {
-        super(annotationPosition);
+    public SoundAnnotation(ByteBuffer data) throws CBHFormatException {
         throw new CBHFormatException("Sound is not yet supported");
     }
 }

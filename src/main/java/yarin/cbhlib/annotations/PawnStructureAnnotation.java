@@ -6,8 +6,7 @@ import yarin.chess.GamePosition;
 import java.nio.ByteBuffer;
 
 public class PawnStructureAnnotation extends Annotation {
-    public PawnStructureAnnotation(GamePosition annotationPosition, ByteBuffer data) throws CBHFormatException {
-        super(annotationPosition);
+    public PawnStructureAnnotation(ByteBuffer data) throws CBHFormatException {
         throw new CBHFormatException("Pawn structure is not yet supported");
     }
 }

@@ -6,8 +6,7 @@ import yarin.chess.GamePosition;
 import java.nio.ByteBuffer;
 
 public class VariationColorAnnotation extends Annotation {
-    public VariationColorAnnotation(GamePosition annotationPosition, ByteBuffer data) throws CBHFormatException {
-        super(annotationPosition);
+    public VariationColorAnnotation(ByteBuffer data) throws CBHFormatException {
         throw new CBHFormatException("Variation color is not yet supported");
     }
 }

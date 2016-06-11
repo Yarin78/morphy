@@ -7,8 +7,8 @@ import yarin.chess.GamePosition;
 import java.nio.ByteBuffer;
 
 public class TextBeforeMoveAnnotation extends TextAnnotation {
-    public TextBeforeMoveAnnotation(GamePosition annotationPosition, ByteBuffer data, int textLength) throws CBHFormatException {
-        super(annotationPosition, data, textLength);
+    public TextBeforeMoveAnnotation(ByteBuffer data, int textLength) throws CBHFormatException {
+        super(data, textLength);
     }
 
     public String getPreText() {

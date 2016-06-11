@@ -19,8 +19,7 @@ public abstract class TextAnnotation extends Annotation {
         return textLanguage;
     }
 
-    public TextAnnotation(GamePosition annotationPosition, ByteBuffer data, int textLength) throws CBHFormatException {
-        super(annotationPosition);
+    public TextAnnotation(ByteBuffer data, int textLength) throws CBHFormatException {
         if (data.get() != 0)
             throw new CBHFormatException("Unexpected first byte for text annotation");
         textLanguage = Language.All;

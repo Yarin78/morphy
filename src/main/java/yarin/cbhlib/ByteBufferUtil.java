@@ -18,9 +18,25 @@ public class ByteBufferUtil {
         return buf.get(offset) & 0xff;
     }
 
+    public static int getUnsignedShort(ByteBuffer buf) {
+        return buf.getShort() & 0xffff;
+    }
+
+    public static int getUnsignedShort(ByteBuffer buf, int offset) {
+        return buf.getShort(offset) & 0xffff;
+    }
+
     public static int getSignedBigEndian24BitValue(ByteBuffer buf) {
         int b1 = getUnsignedByte(buf), b2 = getUnsignedByte(buf), b3 = getUnsignedByte(buf);
         int val = b1 * 256 * 256 + b2 * 256 + b3;
+        if (val >= 128 * 256 * 256)
+            val -= 256 * 256 * 256;
+        return val;
+    }
+
+    public static int getLittleEndian24BitValue(ByteBuffer buf) {
+        int b1 = getUnsignedByte(buf), b2 = getUnsignedByte(buf), b3 = getUnsignedByte(buf);
+        int val = b3 * 256 * 256 + b2 * 256 + b1;
         if (val >= 128 * 256 * 256)
             val -= 256 * 256 * 256;
         return val;

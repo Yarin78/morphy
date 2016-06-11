@@ -49,4 +49,10 @@ public class TournamentTimeControls
 
     public boolean contains(TournamentTimeControls.TournamentTimeControl timeControl) {
         return timeControls.contains(timeControl);
-    }}
+    }
+
+    @Override
+    public String toString() {
+        return timeControls.toString();
+    }
+}

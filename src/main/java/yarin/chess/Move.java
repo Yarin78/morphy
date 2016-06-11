@@ -138,6 +138,7 @@ public class Move {
      * @return the full algebraic notation of the move
      */
     public String toString(Board position) {
+        // TODO: Also add method to print move number
         StringBuilder sb = new StringBuilder();
 
         if (castle) {

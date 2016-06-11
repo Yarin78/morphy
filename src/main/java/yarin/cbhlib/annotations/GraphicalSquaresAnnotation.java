@@ -34,8 +34,7 @@ public class GraphicalSquaresAnnotation extends Annotation {
 
     private final List<GraphicalSquare> squares;
 
-    public GraphicalSquaresAnnotation(GamePosition annotationPosition, ByteBuffer data, int length) throws CBHFormatException {
-        super(annotationPosition);
+    public GraphicalSquaresAnnotation(ByteBuffer data, int length) throws CBHFormatException {
         squares = new ArrayList<>();
         for (int i = 0; i < length / 2; i++) {
             int color = ByteBufferUtil.getUnsignedByte(data);

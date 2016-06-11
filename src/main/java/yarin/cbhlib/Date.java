@@ -34,7 +34,7 @@ public class Date {
 
     /**
      * Creates a new date from a bitstream value
-     * @param dateValue the date value. Bit 0-4 is day, bit 5-8 is month, bit 9-20
+     * @param dateValue the date value. Bit 0-4 is day, bit 5-8 is month, bit 9-20 is year
      */
     Date(int dateValue) {
         setDay(dateValue % 32);
@@ -58,6 +58,13 @@ public class Date {
         setYear(0);
         setMonth(0);
         setDay(0);
+    }
+
+    /**
+     * Converts date back to an 24-bit integer representation
+     */
+    public int toInt() {
+        return year * 512 + month * 32 + day;
     }
 
     /**
