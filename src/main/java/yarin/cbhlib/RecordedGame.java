@@ -12,6 +12,7 @@ import yarin.chess.GameModel;
 import java.io.*;
 import java.nio.ByteBuffer;
 import java.util.NavigableMap;
+import java.util.SortedMap;
 import java.util.Stack;
 import java.util.TreeMap;
 
@@ -87,6 +88,25 @@ public class RecordedGame {
             log.warn("Failed to decode game model at " + millis);
             return new GameModel();
         }
+    }
+
+    public int applyActionsBetween(GameModel model, int start, int stop) {
+        // start is exclusive, stop is inclusive
+        int noActions = 0;
+        SortedMap<Integer, Event> map = events.tailMap(start);
+        for (Event event : map.values()) {
+            if (event.timestamp <= start) continue;
+            if (event.timestamp > stop) break;
+            try {
+                RecordedAction action = parser.parseTextCommand((String) event.data);
+                log.info("Applying action " + action.getClass().getSimpleName() + " at " + event.timestamp);
+                action.apply(model);
+                noActions++;
+            } catch (CBMException e) {
+                log.warn("Failed to parse action at " + event.timestamp, e);
+            }
+        }
+        return noActions;
     }
 
     public int getLastEventTime() {
