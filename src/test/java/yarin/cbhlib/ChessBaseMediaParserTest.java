@@ -105,10 +105,10 @@ public class ChessBaseMediaParserTest {
 //        video = "Ari Ziegler - French Defence/12.wmv"; // This contains the same move in the same position twice
 //        video = "Ari Ziegler - French Defence/25.wmv";
 //        video = "Alexei Shirov - My Best Games in the Sicilian/9.wmv";
-//        video = "Alexei Shirov - My Best Games in the Sicilian/0.wmv";
+        video = "Alexei Shirov - My Best Games in the Sicilian/1.wmv";
 //        video = "Garry Kasparov - Queens Gambit/3.wmv";
 //        video = "Andrew Martin - The ABC of the Benko Gambit (2nd Edition)/10 Accepted.wmv";
-        video = "Karsten Müller - Chess Endgames 3/68.wmv";
+//        video = "Karsten Müller - Chess Endgames 3/68.wmv";
 
 //        video = "Ari Ziegler - Modern Benoni/16 Fianchetto part VII.wmv";
 

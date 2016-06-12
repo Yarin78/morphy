@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * GamePosition represents a position in a recorded chess game or line.
@@ -12,7 +13,7 @@ import java.util.Map;
  */
 public class GamePosition {
     private Game ownerGame;
-    private LinkedHashMap<Move, GamePosition> moveMap; // First move is main variation
+    private List<GamePosition> nextPositions; // Positions in the game tree that occurs after this one
 
     private Move lastMove;
     private GamePosition previousPosition; // null if start position
@@ -27,7 +28,7 @@ public class GamePosition {
         moveNo = previousPosition.getMoveNumber();
         if (board.getToMove() == Piece.PieceColor.WHITE)
             moveNo++;
-        moveMap = new LinkedHashMap<>();
+        nextPositions = new ArrayList<>();
     }
 
     protected GamePosition(Board board, int moveNo) {
@@ -40,7 +41,7 @@ public class GamePosition {
         previousPosition = null;
         lastMove = null;
         this.moveNo = moveNo;
-        moveMap = new LinkedHashMap<>();
+        this.nextPositions = new ArrayList<>();
         this.board = board;
     }
 
@@ -80,32 +81,39 @@ public class GamePosition {
     }
 
     /**
-     * @return the entered moves in this position. The first move is the main move.
+     * @return the entered moves in this position. The first move is the main move. There may be duplicate moves.
      */
     public List<Move> getMoves() {
-        return new ArrayList<>(moveMap.keySet());
+        return nextPositions.stream().map(GamePosition::getLastMove).collect(Collectors.toList());
+    }
+
+    /**
+     * @return a list of positions that can be reached from this position
+     */
+    public List<GamePosition> getForwardPositions() {
+        return new ArrayList<>(nextPositions);
     }
 
     /**
      * @return the main move in the current position, or null if no more moves have been made
      */
     public Move getMainMove() {
-        if (moveMap.size() == 0) return null;
-        return moveMap.keySet().iterator().next();
+        if (nextPositions.size() == 0) return null;
+        return nextPositions.get(0).getLastMove();
     }
 
     /**
      * @return true if the current position has more moves than just the main move
      */
     public boolean hasVariations() {
-        return moveMap.size() > 1;
+        return nextPositions.size() > 1;
     }
 
     /**
      * @return true if this is the last game position in a variation
      */
     public boolean isEndOfVariation() {
-        return moveMap.size() == 0;
+        return nextPositions.size() == 0;
     }
 
     /**
@@ -116,16 +124,15 @@ public class GamePosition {
     }
 
     /**
-     * Adds a move to a game position (if it hasn't already been added) and returns the position resulting after that.
+     * Adds a move to a game position and returns the position resulting after that.
+     * A new variation will be created even if the same move has been added before.
      *
      * @param move the move to add. It's assumed that the move is pseudolegal.
      * @return the new game position
      */
     public GamePosition addMove(Move move) {
-        if (moveMap.containsKey(move))
-            return moveMap.get(move);
         GamePosition pos = new GamePosition(this, move);
-        moveMap.put(move, pos);
+        nextPositions.add(pos);
         return pos;
     }
 
@@ -136,38 +143,42 @@ public class GamePosition {
      * @return the new game position
      */
     public GamePosition replaceMove(Move move) {
-        moveMap.clear();
+        nextPositions = new ArrayList<>();
         return addMove(move);
     }
 
     /**
-     * Deletes a move from the game position, if it exist.
+     * Deletes a succeeding game position, if it exist.
      *
-     * @param move the move to delete
+     * @param position the succeeding position to delete
      */
-    public void deleteMove(Move move) {
-        moveMap.remove(move);
+    public boolean deleteForwardPosition(GamePosition position) {
+        return nextPositions.remove(position);
     }
 
     /**
      * @return The next game position following the main variation, or null if end of variation reached.
      */
     public GamePosition getForwardPosition() {
-        if (moveMap.size() == 0) return null;
-        return moveMap.values().iterator().next();
+        if (nextPositions.size() == 0) return null;
+        return nextPositions.get(0);
     }
 
     /**
      * Returns the next game position in the game, playing the specified move
+     * If there are multiple positions with the same move, the first one will be picked
      *
      * @param move the move to play
      * @return the next game position after the played move
      * @throws RuntimeException if the specified move has not been added
      */
     public GamePosition getForwardPosition(Move move) {
-        if (!moveMap.containsKey(move))
-            throw new RuntimeException("Move does not exist");
-        return moveMap.get(move);
+        for (GamePosition nextPosition : nextPositions) {
+            if (nextPosition.getLastMove().equals(move)) {
+                return nextPosition;
+            }
+        }
+        throw new RuntimeException("Move does not exist");
     }
 
     /**
@@ -187,9 +198,9 @@ public class GamePosition {
     public GamePosition getVariationStart() {
         GamePosition pos = this;
         while (true) {
-            if (pos.getLastMove() == null)
+            if (pos.getBackPosition() == null)
                 return this;
-            if (!pos.previousPosition.getMainMove().equals(pos.getLastMove()))
+            if (pos.getBackPosition().getForwardPosition() != this)
                 return this;
             pos = pos.getBackPosition();
         }
@@ -203,10 +214,10 @@ public class GamePosition {
      */
     public GamePosition deleteVariation() {
         GamePosition start = getVariationStart();
-        if (start.getLastMove() == null)
+        if (start.getBackPosition() == null)
             return null;
         GamePosition previous = start.getBackPosition();
-        previous.deleteMove(start.getLastMove());
+        previous.deleteForwardPosition(start);
         return previous;
     }
 
@@ -215,17 +226,17 @@ public class GamePosition {
      */
     public void promoteVariation() {
         GamePosition start = getVariationStart();
-        if (start.getLastMove() == null)
+        GamePosition parent = start.getBackPosition();
+        if (parent == null)
             return;
 
-        LinkedHashMap<Move, GamePosition> newMoveMap = new LinkedHashMap<>();
-        newMoveMap.put(start.getLastMove(), start);
-        for (Map.Entry<Move, GamePosition> de : start.getBackPosition().moveMap.entrySet()) {
-            if (!start.getLastMove().equals(de.getKey())) {
-                newMoveMap.put(de.getKey(), de.getValue());
-            }
-        }
-        start.getBackPosition().moveMap = newMoveMap;
+        ArrayList<GamePosition> newPositions = new ArrayList<>();
+        newPositions.add(start);
+        newPositions.addAll(parent.getForwardPositions()
+                .stream()
+                .filter(pos -> pos != start)
+                .collect(Collectors.toList()));
+        parent.nextPositions = newPositions;
     }
 
     protected void convertToPGN(StringBuilder gameString) {

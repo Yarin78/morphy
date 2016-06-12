@@ -159,6 +159,8 @@ public class ChessBaseMediaParser {
         }
 
         if (commandType == 2) {
+//            log.info(String.format("Board position at %d:%02d", (cmd.getMillis() - 5000) / 1000 / 60, (cmd.getMillis() - 5000) / 1000 % 60));
+
             int zero = buf.getInt();
             if (zero != 0) {
                 throw new CBMException("Expected 0 as first int for command type 2");
@@ -329,16 +331,6 @@ public class ChessBaseMediaParser {
             AnnotatedGame game = new AnnotatedGame(board, moveNo);
             parseMoves(buf, game);
 
-            List<GamePosition> positions = new ArrayList<>();
-            enumeratePositions(positions, game);
-
-            GamePosition selectedMove = null;
-            if (selectedMoveNo < positions.size()) {
-                selectedMove = positions.get(selectedMoveNo);
-            } else {
-                log.warn("Invalid selected move " + selectedMoveNo);
-            }
-
             int last = buf.getInt();
             if (last != 0 || buf.limit() != buf.capacity()) {
                 buf.position(buf.position() - 4);
@@ -346,10 +338,17 @@ public class ChessBaseMediaParser {
                 log.warn("Unexpected trailing bytes: " + rest);
             }
 
+            List<GamePosition> positions = new ArrayList<>();
+            enumeratePositions(positions, game);
+
+            GamePosition selectedMove = null;
+            if (selectedMoveNo < positions.size()) {
+                selectedMove = positions.get(selectedMoveNo);
+            } else {
+                throw new CBMException("Invalid selected move " + selectedMoveNo);
+            }
+
             /*
-            log.info(String.format("Board position at %d:%02d",
-                    (cmd.getMillis() - 5000) / 1000 / 60,
-                    (cmd.getMillis() - 5000) / 1000 % 60));
             if (selectedMove == game) {
                 log.info("Selected move: <start>");
             } else {
@@ -357,6 +356,8 @@ public class ChessBaseMediaParser {
                 String move = selectedMove.getLastMove().toString(selectedMove.getBackPosition().getPosition());
                 log.info("Selected move: " + prefix + move);
             }
+            */
+            /*
 
             log.info("part 2: " + part2); // Only zeros found so far!?
             log.info("part 4: " + part4); // Is either 00 00  or 01 01 ??
@@ -405,8 +406,8 @@ public class ChessBaseMediaParser {
 
     private void enumeratePositions(List<GamePosition> positions, GamePosition current) {
         positions.add(current);
-        for (Move move : current.getMoves()) {
-            enumeratePositions(positions, current.getForwardPosition(move));
+        for (GamePosition position : current.getForwardPositions()) {
+            enumeratePositions(positions, position);
         }
     }
 
@@ -460,12 +461,6 @@ public class ChessBaseMediaParser {
                 throw e;
             }
 //            log.info("Parsed move " + move);
-            if (pos.getMoves().contains(move)) {
-                // TODO: Fix this
-                log.warn("Same move "
-                        + pos.getMoveNumber() + ". "
-                        + move.toString() + " occurs twice in the same position; this is not supported in the current model");
-            }
             GamePosition newPos = pos.addMove(move);
 
             for (int j = 0; j < noAnnotations; j++) {
