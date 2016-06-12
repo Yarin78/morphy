@@ -42,10 +42,10 @@ public class ChessBaseMediaParserTest {
                 "000a1c0000000d2d0000002930000000091b00000030390000002d240000" +
                 "002233000000241c00000033220000001c3400000022280000003c3b0000" +
                 "0011170000003f3e01000800000000030008008a0000000000";
-        new ChessBaseMediaParser().parseCommand(new ASFScriptCommand(0, "TEXT", command));
+        new ChessBaseMediaParser().parseTextCommand(command);
     }
 
-    @Test
+    //@Test
     public void findCommandTypes() throws IOException {
         final AtomicInteger noErrors = new AtomicInteger();
         Files.walk(Paths.get("/Users/yarin/chessbasemedia/mediafiles/TEXT")).forEach(filePath -> {
@@ -68,7 +68,7 @@ public class ChessBaseMediaParserTest {
         });
     }
 
-    @Test
+//    @Test
     public void parseEverything() throws IOException {
         final AtomicInteger noErrors = new AtomicInteger();
         Files.walk(Paths.get("/Users/yarin/chessbasemedia/mediafiles/TEXT")).forEach(filePath -> {
@@ -80,7 +80,11 @@ public class ChessBaseMediaParserTest {
                     while (reader.hasMore()) {
                         ASFScriptCommand cmd = reader.read();
                         ChessBaseMediaParser parser = new ChessBaseMediaParser();
-                        parser.parseCommand(cmd);
+                        if (!cmd.getType().equals("TEXT")) {
+                            log.error("Command type " + cmd.getType() + " not yet supported");
+                            break;
+                        }
+                        parser.parseTextCommand(cmd.getCommand());
                     }
                 } catch (IOException e) {
                     System.err.println("Error reading file");
@@ -94,7 +98,7 @@ public class ChessBaseMediaParserTest {
         System.err.println("No errors: " + noErrors.get());
     }
 
-    @Test
+//    @Test
     public void parseFile() throws IOException, CBMException {
         String base = "/Users/yarin/chessbasemedia/mediafiles/TEXT/", video;
 
@@ -105,8 +109,14 @@ public class ChessBaseMediaParserTest {
 //        video = "Ari Ziegler - French Defence/12.wmv"; // This contains the same move in the same position twice
 //        video = "Ari Ziegler - French Defence/25.wmv";
 //        video = "Alexei Shirov - My Best Games in the Sicilian/9.wmv";
-        video = "Alexei Shirov - My Best Games in the Sicilian/1.wmv";
+//        video = "Alexei Shirov - My Best Games in the Sicilian/1.wmv";
+//        video = "Nigel Davies - The Tarrasch Defence/Tarrasch.html/04_Monacell_Nadanyan new.wmv";
 //        video = "Garry Kasparov - Queens Gambit/3.wmv";
+//        video = "Daniel King - Power Play 1 - Mating Patterns (only audio)/Daniel King - Power Play Vol.1.html/hifile3.wmv";
+        video = "Rustam Kasimdzhanov - Endgames for Experts/Endgame.html/endgame adams-kasim.wmv";
+//        video = "Rustam Kasimdzhanov - Endgames for Experts/Endgame.html/endgame kasim-ghaem.wmv";
+//        video = "Rustam Kasimdzhanov - Endgames for Experts/Endgame.html/endgame kasim-shirov.wmv";
+//        video = "Nigel Davies - The Tarrasch Defence/Tarrasch.html/04_Monacell_Nadanyan new.wmv";
 //        video = "Andrew Martin - The ABC of the Benko Gambit (2nd Edition)/10 Accepted.wmv";
 //        video = "Karsten Müller - Chess Endgames 3/68.wmv";
 
@@ -114,14 +124,8 @@ public class ChessBaseMediaParserTest {
 
 //        video = "CBM168/168!Start.html/CBM 168 Rogozenco - Classical Paulsen-Morphy.wmv";
 
-        ASFScriptCommandReader reader = new ASFScriptCommandReader(new File(base + video));
-        int cnt = reader.init();
-        System.out.println(cnt + " commands");
-        while (reader.hasMore()) {
-            ASFScriptCommand cmd = reader.read();
-            ChessBaseMediaParser parser = new ChessBaseMediaParser();
-            parser.parseCommand(cmd);
-//            break;
-        }
+        RecordedGame recordedGame = RecordedGame.load(new File(base + video));
+        recordedGame.getGameModelAt((8*60+36)*1000);
+//        System.out.println(recordedGame.getLastEventTime());
     }
 }

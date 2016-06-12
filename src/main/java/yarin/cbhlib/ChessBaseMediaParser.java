@@ -3,7 +3,7 @@ package yarin.cbhlib;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import yarin.asflib.ASFScriptCommand;
-import yarin.asflib.ASFScriptCommandReader;
+import yarin.cbhlib.actions.*;
 import yarin.cbhlib.annotations.Annotation;
 import yarin.cbhlib.exceptions.CBMException;
 import yarin.chess.*;
@@ -23,16 +23,10 @@ public class ChessBaseMediaParser {
         return (b1/16)*1000+(b1%16)*100+(b2/16)*10+b2%16;
     }
 
-    public AnnotatedGame parseCommand(ASFScriptCommand cmd) throws CBMException {
-        if (!cmd.getType().equals("TEXT")) {
-            throw new CBMException("Unsupported command type: " + cmd.getType());
-        }
-
-        String command = cmd.getCommand();
+    public RecordedAction parseTextCommand(String command) throws CBMException {
         if (command.length() % 2 != 0) {
             throw new CBMException("Invalid format of ChessBase script command");
         }
-//        log.info("Command at " + cmd.getMillis() + ", length " + command.length() / 2);
 
         ByteBuffer buf = ByteBuffer.allocateDirect(command.length() / 2);
         buf.order(ByteOrder.LITTLE_ENDIAN);
@@ -66,13 +60,17 @@ public class ChessBaseMediaParser {
         // 6 = add annotations
         // 8 = noop!?
 
+        if (commandType == 2) {
+//            log.info(String.format("Board position at %d:%02d", (cmd.getMillis() - 5000) / 1000 / 60, (cmd.getMillis() - 5000) / 1000 % 60));
+            return new FullUpdateAction(parseFullUpdate(buf));
+        }
+
         if (commandType == 3) {
-            // Change selected moved (< 0x60 = ply in main line, otherwise in a variation!?)
             int selectMoveNo = buf.getInt();
             if (buf.position() != buf.capacity()) {
                 throw new CBMException("More bytes left in command type 3 than expected");
             }
-            return null;
+            return new SelectMoveAction(selectMoveNo);
         }
 
         if (commandType == 4) {
@@ -95,7 +93,7 @@ public class ChessBaseMediaParser {
             if (buf.position() != buf.capacity()) {
                 throw new CBMException("More bytes left in command type 4 than expected");
             }
-            return null;
+            return new AddMoveAction(fromSquare, toSquare, code, code2);
         }
 
         if (commandType == 6) {
@@ -121,7 +119,8 @@ public class ChessBaseMediaParser {
             if (buf.position() != buf.capacity()) {
                 throw new CBMException("More bytes left in command type 6 than expected");
             }
-            return null;
+            // TODO: Support this
+            return new NullAction();
         }
 
         if (commandType == 7) {
@@ -129,14 +128,14 @@ public class ChessBaseMediaParser {
             int zero = buf.getInt();
             if (zero != 0 || buf.position() != buf.capacity())
                 throw new CBMException("Expected 0 as only data for command type 7");
-            return null;
+            return new NullAction();
         }
 
         if (commandType == 8) {
             int zero = buf.getInt();
             if (zero != 0 || buf.position() != buf.capacity())
                 throw new CBMException("Expected 0 as only data for command type 8");
-            return null;
+            return new NullAction();
         }
 
         if (commandType == 10) {
@@ -145,7 +144,7 @@ public class ChessBaseMediaParser {
                 throw new CBMException("Expected 0 as only data for command type 10");
 
 //            log.info("Command type 10: " + readBinaryToString(buf, bytesLeft - 4));
-            return null;
+            return new NullAction();
         }
 
         if (commandType == 11) {
@@ -155,198 +154,222 @@ public class ChessBaseMediaParser {
             if (zero != -1 || buf.position() != buf.capacity())
                 throw new CBMException("Expected -1 as only data for command type 11");
 
-            return null;
+            return new NullAction();
         }
 
-        if (commandType == 2) {
-//            log.info(String.format("Board position at %d:%02d", (cmd.getMillis() - 5000) / 1000 / 60, (cmd.getMillis() - 5000) / 1000 % 60));
+        // TODO: Create an UnknownAction
+        throw new CBMException("Unknown command type " + commandType + " with data " + readBinaryToString(buf, buf.limit() - buf.position()));
+    }
 
-            int zero = buf.getInt();
-            if (zero != 0) {
-                throw new CBMException("Expected 0 as first int for command type 2");
-            }
+    public GameModel parseFullUpdate(ByteBuffer buf) throws CBMException {
+        GameMetaData metadata = new GameMetaData();
 
-            short selectedMoveNo = buf.getShort();
+        int zero = buf.getInt();
+        if (zero != 0) {
+            throw new CBMException("Expected 0 as first int for command type 2");
+        }
 
-            String part2 = readBinaryToString(buf, 6);
-            if (!part2.equals("00 00 00 00 00 00 ")) {
-                throw new CBMException("Unknown part 2: " + part2);
-            }
+        short selectedMoveNo = buf.getShort();
 
-            String whitePlayerLastName = readString(buf);
-            String whitePlayerFirstName = readString(buf);
-            String blackPlayerLastName = readString(buf);
-            String blackPlayerFirstName = readString(buf);
+        String part2 = readBinaryToString(buf, 6);
+        if (!part2.equals("00 00 00 00 00 00 ")) {
+            throw new CBMException("Unknown part 2: " + part2);
+        }
 
-            String site = readString(buf);
-            String event = readString(buf);
+        metadata.setWhiteLastName(readString(buf));
+        metadata.setWhiteFirstName(readString(buf));
+        metadata.setBlackLastName(readString(buf));
+        metadata.setBlackFirstName(readString(buf));
 
-            Date eventDate = new Date(buf.getInt());
-            int eventTypeValue = buf.get();
-            if ((eventTypeValue & 31) < 0 || (eventTypeValue & 31) >= TournamentType.values().length)
-                throw new CBMException("Invalid event type value " + eventTypeValue);
-            TournamentType eventType = TournamentType.values()[eventTypeValue & 31];
+        metadata.setEventSite(readString(buf));
+        metadata.setEventName(readString(buf));
 
-            TournamentTimeControls timeControl = new TournamentTimeControls();
-            if ((eventTypeValue & 0x20) > 0)
-                timeControl.add(TournamentTimeControls.TournamentTimeControl.Blitz);
-            if ((eventTypeValue & 0x40) > 0)
-                timeControl.add(TournamentTimeControls.TournamentTimeControl.Rapid);
-            if ((eventTypeValue & 0x80) > 0)
-                timeControl.add(TournamentTimeControls.TournamentTimeControl.Corresp);
+        metadata.addExtra("eventDate", new Date(buf.getInt()).toString());
+        int eventTypeValue = buf.get();
+        if ((eventTypeValue & 31) < 0 || (eventTypeValue & 31) >= TournamentType.values().length)
+            throw new CBMException("Invalid event type value " + eventTypeValue);
+        TournamentType eventType = TournamentType.values()[eventTypeValue & 31];
+        metadata.addExtra("eventType", eventType.toString());
 
-            int eventValue2 = buf.get();
-            short eventCountryCode = buf.getShort();
-            int eventCategory = buf.get();
-            int eventValue = buf.get(); // Not sure what this is? Not always 0, can be 3
-            int eventRounds = buf.getShort();
+        TournamentTimeControls timeControl = new TournamentTimeControls();
+        if ((eventTypeValue & 0x20) > 0)
+            timeControl.add(TournamentTimeControls.TournamentTimeControl.Blitz);
+        if ((eventTypeValue & 0x40) > 0)
+            timeControl.add(TournamentTimeControls.TournamentTimeControl.Rapid);
+        if ((eventTypeValue & 0x80) > 0)
+            timeControl.add(TournamentTimeControls.TournamentTimeControl.Corresp);
+        metadata.addExtra("timeControl", timeControl.toString());
 
-            // Parsing event info same way as it's stored in the Tournament db
-/*
-            Date eventDate = new Date(ByteBufferUtil.getLittleEndian24BitValue(buf));
-            int eventTypeValue = ByteBufferUtil.getUnsignedByte(buf);
-            TournamentType eventType = TournamentType.values()[eventTypeValue & 31];
-            TournamentTimeControls timeControl = new TournamentTimeControls();
-            if ((eventTypeValue & 0x20) > 0)
-                timeControl.add(TournamentTimeControls.TournamentTimeControl.Blitz);
-            if ((eventTypeValue & 0x40) > 0)
-                timeControl.add(TournamentTimeControls.TournamentTimeControl.Rapid);
-            if ((eventTypeValue & 0x80) > 0)
-                timeControl.add(TournamentTimeControls.TournamentTimeControl.Corresp);
-            boolean teamTournament = (buf.get() & 1) > 0;
-            short eventCountryCode = buf.getShort();
-            int eventCategory = buf.get();
-            byte b = buf.get();
-            //if ((cbtData.get(88) & 3) != 0 && (cbtData.get(88) & 3) != 3)
-            //throw new CBHFormatException("Tournament complete flag has invalid value");
-            boolean complete = (b & 2) > 0;
-            boolean boardPoints = (b & 4) == 4;
-            boolean threePointsWin = (b & 8) > 0;
-            byte eventRounds = buf.get();
-*/
+        int eventValue2 = buf.get();
+        metadata.setEventCountry("#" + buf.getShort()); // TODO: Resolve country name
+        metadata.addExtra("eventCategory", Byte.toString(buf.get()));
+        int eventValue = buf.get(); // Not sure what this is? Not always 0, can be 3
+        metadata.addExtra("eventCategory", Short.toString(buf.getShort()));
 
-            String sourceTitle = readString(buf);
-            String source = readString(buf);
+        metadata.addExtra("sourceTitle", readString(buf));
+        metadata.setSource(readString(buf));
 
-            Date sourceDate = new Date(buf.getInt());
-            Date someOtherDate = new Date(buf.getInt());
-            String part4 = readBinaryToString(buf, 2);
+        metadata.addExtra("sourceDate", new Date(buf.getInt()).toString());
 
-            // part4 is usually 00 00 but can also be
-            // 01 02 in Müller/19
-            // 02 01 in Ari Ziegler - French Defence/25.wmv
-            // 01 01 in ?
-            // 00 01 in ?
+        Date someOtherDate = new Date(buf.getInt());
+        String part4 = readBinaryToString(buf, 2);
 
-            String annotator = readString(buf);
+        // part4 is usually 00 00 but can also be
+        // 01 02 in Müller/19
+        // 02 01 in Ari Ziegler - French Defence/25.wmv
+        // 01 01 in ?
+        // 00 01 in ?
 
-            short whiteRating = buf.getShort();
-            short blackRating = buf.getShort();
+        metadata.setAnnotator(readString(buf));
 
-            Eco eco = Eco.parse(ByteBufferUtil.getUnsignedShort(buf));
-            GameResult result = GameResult.values()[buf.get()];
+        metadata.setWhiteElo(buf.getShort());
+        metadata.setBlackElo(buf.getShort());
 
-            int unknownShort = buf.getShort(); // 0 or 13!?
-            Date date = new Date(buf.getInt());
-            int lastMoveNumber = buf.getShort();
-            int round = buf.get();
-            int subRound = buf.get();
+        Eco eco = Eco.parse(ByteBufferUtil.getUnsignedShort(buf));
+        metadata.setEco(eco.toString());
+        GameResult result = GameResult.values()[buf.get()];
+        switch (result) {
+            case BlackWon:
+            case BlackWonOnForfeit:
+                metadata.setResult("0-1");
+                break;
+            case Draw:
+                metadata.setResult("½-½");
+                break;
+            case WhiteWon:
+            case WhiteWonOnForfeit:
+                metadata.setResult("1-0");
+                break;
+            default:
+                metadata.setResult("");
+        }
 
-            String part5 = readBinaryToString(buf, 12); // This always seems to be 00?
+        int unknownShort = buf.getShort(); // 0 or 13!?
+        metadata.setPlayedDate(new Date(buf.getInt()).toString());
+        int lastMoveNumber = buf.getShort();
+        metadata.setRound(buf.get());
+        metadata.setSubRound(buf.get());
 
-            if (!part5.equals("00 00 00 00 00 00 00 00 00 00 00 00 ")) {
-                throw new CBMException("Unknown part 5: " + part5);
-            }
+        int unknown1 = buf.getInt();
+        int unknown2 = buf.getInt();
+        int headerSkipBytes = buf.getInt();
 
-            boolean setupPosition = buf.get() == 0;
+        if (unknown1 != 0) {
+            throw new CBMException("Unknown int 1: " + unknown1);
+        }
+        if (unknown2 != 0) {
+            throw new CBMException("Unknown int 2: " + unknown2);
+        }
 
-            Board board = new Board();
-            int moveNo = 1;
-            if (setupPosition) {
-                Piece[][] pieces = new Piece[8][8];
-                for (int x = 0; x < 8; x++) {
-                    for (int y = 0; y < 8; y++) {
-                        Piece p;
-                        Piece.PieceColor color = Piece.PieceColor.WHITE;
-                        byte pieceCode = buf.get();
-                        if ((pieceCode & 8) == 8) {
-                            color = Piece.PieceColor.BLACK;
-                            pieceCode -= 8;
-                        }
-                        switch (pieceCode) {
-                            case 0 :
-                                p = new Piece(Piece.PieceType.EMPTY, Piece.PieceColor.EMPTY);
-                                break;
-                            case 1 :
-                                p = new Piece(Piece.PieceType.KING, color);
-                                break;
-                            case 2:
-                                p = new Piece(Piece.PieceType.QUEEN, color);
-                                break;
-                            case 3:
-                                p = new Piece(Piece.PieceType.KNIGHT, color);
-                                break;
-                            case 4:
-                                p = new Piece(Piece.PieceType.BISHOP, color);
-                                break;
-                            case 5:
-                                p = new Piece(Piece.PieceType.ROOK, color);
-                                break;
-                            case 6:
-                                p = new Piece(Piece.PieceType.PAWN, color);
-                                break;
-                            default :
-                                throw new CBMException(String.format("Unknown piece in setup position at %c%c: %d", (char)('A'+x), (char)('1'+y), pieceCode));
-                        }
-                        pieces[y][x] = p;
+        boolean setupPosition = buf.get() == 0;
+
+        Board board = new Board();
+        int moveNo = 1;
+        if (setupPosition) {
+            Piece[][] pieces = new Piece[8][8];
+            for (int x = 0; x < 8; x++) {
+                for (int y = 0; y < 8; y++) {
+                    Piece p;
+                    Piece.PieceColor color = Piece.PieceColor.WHITE;
+                    byte pieceCode = buf.get();
+                    if ((pieceCode & 8) == 8) {
+                        color = Piece.PieceColor.BLACK;
+                        pieceCode -= 8;
                     }
+                    switch (pieceCode) {
+                        case 0 :
+                            p = new Piece(Piece.PieceType.EMPTY, Piece.PieceColor.EMPTY);
+                            break;
+                        case 1 :
+                            p = new Piece(Piece.PieceType.KING, color);
+                            break;
+                        case 2:
+                            p = new Piece(Piece.PieceType.QUEEN, color);
+                            break;
+                        case 3:
+                            p = new Piece(Piece.PieceType.KNIGHT, color);
+                            break;
+                        case 4:
+                            p = new Piece(Piece.PieceType.BISHOP, color);
+                            break;
+                        case 5:
+                            p = new Piece(Piece.PieceType.ROOK, color);
+                            break;
+                        case 6:
+                            p = new Piece(Piece.PieceType.PAWN, color);
+                            break;
+                        default :
+                            throw new CBMException(String.format("Unknown piece in setup position at %c%c: %d", (char)('A'+x), (char)('1'+y), pieceCode));
+                    }
+                    pieces[y][x] = p;
                 }
-
-                byte b = buf.get();
-                if (b != 0 && b != 1)
-                    throw new CBMException("Unknown side to move: " + b);
-                Piece.PieceColor sideToMove = b == 0 ? Piece.PieceColor.WHITE : Piece.PieceColor.BLACK;
-                String setupPos = readBinaryToString(buf, 7);
-                if (!setupPos.equals("00 00 00 00 00 01 00 ") && !setupPos.equals("00 00 00 08 00 01 00 ")) {
-                    // "00 00 00 08 00 01 00" occurs in Karsten Müller - Chess Endgames 3/22.wmv" start position
-                    throw new CBMException("Unknown setup values: " + setupPos);
-                }
-                moveNo = buf.getShort();
-                b = buf.get();
-                if (b != 0) {
-                    throw new CBMException("Unknown last value in setup position: " + b);
-                }
-
-                board.setup(pieces, sideToMove, false, false, false, false, -1);
             }
 
-            List<String> headers = new ArrayList<String>();
-            int noHeaders = buf.getShort(); // number of extra headers to follow??
-            for (int i = 0; i < noHeaders; i++) {
-                short size = buf.getShort();
-                String header = readBinaryToString(buf, size);
-                headers.add(header);
+            byte b = buf.get();
+            if (b != 0 && b != 1)
+                throw new CBMException("Unknown side to move: " + b);
+            Piece.PieceColor sideToMove = b == 0 ? Piece.PieceColor.WHITE : Piece.PieceColor.BLACK;
+            String setupPos = readBinaryToString(buf, 7);
+            if (!setupPos.equals("00 00 00 00 00 01 00 ") && !setupPos.equals("00 00 00 08 00 01 00 ")) {
+                // "00 00 00 08 00 01 00" occurs in Karsten Müller - Chess Endgames 3/22.wmv" start position
+                throw new CBMException("Unknown setup values: " + setupPos);
+            }
+            moveNo = buf.getShort();
+            b = buf.get();
+            if (b != 0) {
+                throw new CBMException("Unknown last value in setup position: " + b);
             }
 
-            AnnotatedGame game = new AnnotatedGame(board, moveNo);
-            parseMoves(buf, game);
+            board.setup(pieces, sideToMove, false, false, false, false, -1);
+        }
 
-            int last = buf.getInt();
-            if (last != 0 || buf.limit() != buf.capacity()) {
-                buf.position(buf.position() - 4);
-                String rest = readBinaryToString(buf, buf.limit() - buf.position());
-                log.warn("Unexpected trailing bytes: " + rest);
-            }
+        // This seems to be some extra game headers in the media format
+        // TODO: Figure out what to do with these extra headers
+        // Could one of them be teams?
+        List<String> headers = new ArrayList<String>();
+        int noHeaders = buf.getShort(); // number of extra headers to follow??
+//        log.info("# extra headers: " + noHeaders);
+        for (int i = 0; i < noHeaders; i++) {
+            short size = buf.getShort();
+            String header = readBinaryToString(buf, size);
+            headers.add(header);
+        }
+        // This is also some extra stuff occurring in a few files. Not sure what it is?
+        // Nigel Davies - The Tarrasch Defence/Tarrasch.html/04_Monacell_Nadanyan new.wmv
+        // Rustam Kasimdzhanov - Endgames for Experts/Endgame.html/endgame adams-kasim.wmv
+        // Rustam Kasimdzhanov - Endgames for Experts/Endgame.html/endgame kasim-ghaem.wmv
+        // Rustam Kasimdzhanov - Endgames for Experts/Endgame.html/endgame kasim-shirov.wmv
+        if (headerSkipBytes != 0) {
+            log.warn("Skipping ahead " + headerSkipBytes + " bytes before move data");
+        }
+        buf.position(buf.position() + headerSkipBytes);
 
-            List<GamePosition> positions = new ArrayList<>();
-            enumeratePositions(positions, game);
+//        int tmp = buf.position();
+//        String rest2 = readBinaryToString(buf, buf.limit() - buf.position());
+//        buf.position(tmp);
+//        log.info("Rest: " + rest2);
 
-            GamePosition selectedMove = null;
-            if (selectedMoveNo < positions.size()) {
-                selectedMove = positions.get(selectedMoveNo);
-            } else {
-                throw new CBMException("Invalid selected move " + selectedMoveNo);
-            }
+        AnnotatedGame game = new AnnotatedGame(board, moveNo);
+        parseMoves(buf, game);
+
+        int last = buf.getInt();
+        if (last != 0 || buf.limit() != buf.capacity()) {
+            buf.position(buf.position() - 4);
+            String rest = readBinaryToString(buf, buf.limit() - buf.position());
+            log.warn("Unexpected trailing bytes: " + rest);
+        }
+
+        List<GamePosition> positions = new ArrayList<>();
+        enumeratePositions(positions, game);
+
+        GamePosition selectedMove;
+        if (selectedMoveNo < positions.size()) {
+            selectedMove = positions.get(selectedMoveNo);
+        } else {
+            throw new CBMException("Invalid selected move " + selectedMoveNo);
+        }
+
+        GameModel gameModel = new GameModel(game, metadata, selectedMove);
 
             /*
             if (selectedMove == game) {
@@ -399,9 +422,7 @@ public class ChessBaseMediaParser {
             log.info("Setup: " + setupPosition);
 */
 
-            return null;
-        }
-        throw new CBMException("Unknown command type " + commandType + " with data " + readBinaryToString(buf, buf.limit() - buf.position()));
+        return gameModel;
     }
 
     private void enumeratePositions(List<GamePosition> positions, GamePosition current) {
@@ -426,7 +447,8 @@ public class ChessBaseMediaParser {
             String s = readBinaryToString(buf, cnt);
             buf.position(buf.position() - cnt);
 
-            int fromSquare = buf.get(), toSquare = buf.get();
+            int fromSquare = ByteBufferUtil.getUnsignedByte(buf);
+            int toSquare = ByteBufferUtil.getUnsignedByte(buf);
             byte noAnnotations = buf.get(), b2 = buf.get();
 
             Piece.PieceType promotionPiece = Piece.PieceType.EMPTY;
@@ -439,6 +461,10 @@ public class ChessBaseMediaParser {
                     case 1:
                         promotionPiece = Piece.PieceType.KNIGHT;
                         break;
+                    case 3:
+                        promotionPiece = Piece.PieceType.ROOK;
+                        break;
+                    // Presumably 2 = bishop...
                     default:
                         throw new CBMException("Unknown promotion piece: " + toSquare / 64);
                 }
@@ -460,7 +486,8 @@ public class ChessBaseMediaParser {
                 log.error("Illegal move parsing " + s);
                 throw e;
             }
-//            log.info("Parsed move " + move);
+
+//            log.info("Parsed move " + pos.getMoveNumber() + (pos.getPlayerToMove() == Piece.PieceColor.BLACK ? "..." : ".") + move.toString(pos.getPosition()));
             GamePosition newPos = pos.addMove(move);
 
             for (int j = 0; j < noAnnotations; j++) {
@@ -512,4 +539,6 @@ public class ChessBaseMediaParser {
         }
         return sb.toString();
     }
+
+
 }

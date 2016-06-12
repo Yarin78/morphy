@@ -5,6 +5,7 @@ import org.slf4j.LoggerFactory;
 import yarin.cbhlib.exceptions.CBHException;
 import yarin.cbhlib.exceptions.CBHFormatException;
 import yarin.chess.Board;
+import yarin.chess.GameMetaData;
 import yarin.chess.Piece;
 
 import java.io.IOException;
@@ -653,6 +654,44 @@ public class GameHeader extends DataRecord {
 
         // Do this on demand later when we know it's working
         getGame();
+    }
+
+    public GameMetaData toGameMetaData() throws IOException, CBHException {
+        GameMetaData meta = new GameMetaData();
+        meta.setWhiteFirstName(getWhitePlayer().getFirstName());
+        meta.setWhiteLastName(getWhitePlayer().getLastName());
+        meta.setBlackFirstName(getBlackPlayer().getFirstName());
+        meta.setBlackLastName(getBlackPlayer().getLastName());
+        meta.setWhiteElo(getWhiteElo());
+        meta.setBlackElo(getBlackElo());
+        meta.setWhiteTeam(getWhiteTeamString());
+        meta.setBlackTeam(getBlackTeamString());
+        meta.setEco(getECO());
+        Tournament t = getTournament();
+        meta.setEventCountry(t.getNationString());
+        meta.setEventName(t.getTitle());
+        meta.setEventSite(t.getPlace());
+        meta.setAnnotator(getAnnotator().getName());
+        meta.setPlayedDate(getPlayedDate().toString());
+        String resultString = "";
+        switch (result) {
+            case BlackWon:
+            case BlackWonOnForfeit:
+                resultString = "0-1";
+                break;
+            case Draw:
+            case DrawOnForfeit:
+                resultString = "½-½";
+                break;
+            case WhiteWon:
+            case WhiteWonOnForfeit:
+                resultString = "1-0";
+                break;
+        }
+        meta.setResult(resultString);
+        meta.setRound(getRound());
+        meta.setRound(getSubRound());
+        return meta;
     }
 }
 

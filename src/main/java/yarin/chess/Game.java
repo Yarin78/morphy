@@ -35,6 +35,17 @@ public class Game extends GamePosition {
         return gameString.toString();
     }
 
+    public boolean singleLine() {
+        // TODO: Cache this, but add listener so it can be cleared when game is changed
+        // Maybe could be implemented by counting nodes and comparing with total nodes?
+        GamePosition pos = this;
+        while (!pos.isEndOfVariation()) {
+            if (pos.hasVariations()) return false;
+            pos = pos.getForwardPosition();
+        }
+        return true;
+    }
+
     protected String getPreMoveComment(GamePosition position) {
         return null;
     }

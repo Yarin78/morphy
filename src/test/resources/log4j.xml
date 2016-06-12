@@ -11,7 +11,7 @@
     </appender>
 
     <logger name="yarin.cbhlib">
-        <level value="INFO"/>
+        <level value="DEBUG"/>
     </logger>
 
     <root>

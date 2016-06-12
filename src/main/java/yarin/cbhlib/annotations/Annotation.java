@@ -54,8 +54,7 @@ public abstract class Annotation
 //                case 0x61 : return new CorrespondenceHeaderAnnotation(annotationData);
 //                case 0x19 : return new CorrespondenceMoveAnnotation(annotationData);
                 default :
-                    log.warn(String.format("Unknown annotation type %d containing %d bytes of data",
-                            annotationType, noBytes - 6));
+//                    log.warn(String.format("Unknown annotation type %d containing %d bytes of data",                            annotationType, noBytes - 6));
                     return new UnknownAnnotation(annotationType, annotationData, noBytes-6);
             }
         } catch (CBHFormatException e) {
