@@ -4,6 +4,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import yarin.asflib.ASFScriptCommand;
 import yarin.asflib.ASFScriptCommandReader;
+import yarin.cbhlib.actions.ApplyActionException;
 import yarin.cbhlib.actions.RecordedAction;
 import yarin.cbhlib.exceptions.CBMException;
 import yarin.chess.GameMetaData;
@@ -41,11 +42,11 @@ public class RecordedGame {
 
     private TreeMap<Integer, Event> events = new TreeMap<>();
 
-    public static RecordedGame load(InputStream inputStream) throws CBMException {
+    public static RecordedGame load(InputStream inputStream, boolean tryParse) throws CBMException {
         RecordedGame game = new RecordedGame();
         try {
             ASFScriptCommandReader reader = new ASFScriptCommandReader(inputStream);
-            int cnt = reader.init();
+            int cnt = reader.init(), lastMillis = -1;
             log.debug("Found " + cnt + " commands");
             while (reader.hasMore()) {
                 ASFScriptCommand cmd = reader.read();
@@ -53,8 +54,22 @@ public class RecordedGame {
                 if (!cmd.getType().equals("TEXT")) {
                     throw new CBMException("Unsupported command type: " + cmd.getType());
                 }
+
                 // The commands are delayed with 5 seconds for some reason
-                game.addEvent(cmd.getMillis() - 5000, cmd.getCommand());
+                int millis = cmd.getMillis() - 5000;
+                if (millis == lastMillis) {
+                    // If multiple actions occur on the same timestamp, put them explicitly
+                    // after each other to avoid actions being reordered in the TreeMap
+                    // TODO: Would be nicer to do this more properly somehow
+                    millis = game.getLastEventTime() + 1;
+                } else {
+                    lastMillis = millis;
+                }
+                if (tryParse) {
+                    RecordedAction action = game.parser.parseTextCommand(cmd.getCommand());
+                    log.info(String.format("%s at %s", action.toString(), formatMillis(millis)));
+                }
+                game.addEvent(millis, cmd.getCommand());
             }
             return game;
         } catch (IOException e) {
@@ -62,8 +77,8 @@ public class RecordedGame {
         }
     }
 
-    public static RecordedGame load(File file) throws CBMException, FileNotFoundException {
-        return load(new FileInputStream(file));
+    public static RecordedGame load(File file, boolean tryParse) throws CBMException, FileNotFoundException {
+        return load(new FileInputStream(file), tryParse);
     }
 
     public GameModel getGameModelAt(int millis) {
@@ -81,7 +96,11 @@ public class RecordedGame {
             while (actionStack.size() > 0) {
                 RecordedAction action = actionStack.pop();
                 log.debug("Apply action " + action.getClass().getSimpleName());
-                action.apply(current);
+                try {
+                    action.apply(current);
+                } catch (ApplyActionException e) {
+                    log.warn(String.format("Failed to apply action %s: %s", e.toString(), e.getMessage()));
+                }
             }
             return current;
         } catch (CBMException e) {
@@ -99,9 +118,12 @@ public class RecordedGame {
             if (event.timestamp > stop) break;
             try {
                 RecordedAction action = parser.parseTextCommand((String) event.data);
-                log.info("Applying action " + action.getClass().getSimpleName() + " at " + event.timestamp);
+//                log.info(String.format("Applying action %s at %s", action.toString(), formatMillis(event.timestamp)));
                 action.apply(model);
                 noActions++;
+            } catch (ApplyActionException e) {
+                log.warn(String.format("Failed to apply action %s at %s: %s",
+                        e.getAction().toString(), formatMillis(event.timestamp), e.getMessage()));
             } catch (CBMException e) {
                 log.warn("Failed to parse action at " + event.timestamp, e);
             }

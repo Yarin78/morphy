@@ -8,6 +8,11 @@ public abstract class RecordedAction {
         return false;
     }
 
-    public abstract void apply(GameModel currentModel);
+    public abstract void apply(GameModel currentModel) throws ApplyActionException;
 
+
+    @Override
+    public String toString() {
+        return this.getClass().getSimpleName();
+    }
 }
