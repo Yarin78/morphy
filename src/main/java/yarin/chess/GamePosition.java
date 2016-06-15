@@ -230,6 +230,7 @@ public class GamePosition {
         if (parent == null)
             return;
 
+        // TODO: The two variation should actually exchange places, to get the same behaviour as CB
         ArrayList<GamePosition> newPositions = new ArrayList<>();
         newPositions.add(start);
         newPositions.addAll(parent.getForwardPositions()

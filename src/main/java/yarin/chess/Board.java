@@ -65,8 +65,51 @@ public class Board {
     private static String initialPositionFEN = "RNBQKBNR/PPPPPPPP/8/8/8/8/pppppppp/rnbqkbnr";
 
     public Board() {
-        board = new Piece[8][8];
-        setupBoard(initialPositionFEN, Piece.PieceColor.WHITE, true, true, true, true, -1);
+        board = new Piece[8][];
+        board[0] = new Piece[] {
+                new Piece(Piece.PieceType.ROOK, Piece.PieceColor.WHITE),
+                new Piece(Piece.PieceType.KNIGHT, Piece.PieceColor.WHITE),
+                new Piece(Piece.PieceType.BISHOP, Piece.PieceColor.WHITE),
+                new Piece(Piece.PieceType.QUEEN, Piece.PieceColor.WHITE),
+                new Piece(Piece.PieceType.KING, Piece.PieceColor.WHITE),
+                new Piece(Piece.PieceType.BISHOP, Piece.PieceColor.WHITE),
+                new Piece(Piece.PieceType.KNIGHT, Piece.PieceColor.WHITE),
+                new Piece(Piece.PieceType.ROOK, Piece.PieceColor.WHITE),
+        };
+        for (int i = 1; i < 7; i++) {
+            board[i] = new Piece[8];
+            for (int j = 0; j < 8; j++) {
+                switch (i) {
+                    case 1:
+                        board[i][j] = new Piece(Piece.PieceType.PAWN, Piece.PieceColor.WHITE);
+                        break;
+                    case 6:
+                        board[i][j] = new Piece(Piece.PieceType.PAWN, Piece.PieceColor.BLACK);
+                        break;
+                    default:
+                        board[i][j] = new Piece(Piece.PieceType.EMPTY, Piece.PieceColor.EMPTY);
+                }
+            }
+        }
+
+        board[7] = new Piece[]{
+                new Piece(Piece.PieceType.ROOK, Piece.PieceColor.BLACK),
+                new Piece(Piece.PieceType.KNIGHT, Piece.PieceColor.BLACK),
+                new Piece(Piece.PieceType.BISHOP, Piece.PieceColor.BLACK),
+                new Piece(Piece.PieceType.QUEEN, Piece.PieceColor.BLACK),
+                new Piece(Piece.PieceType.KING, Piece.PieceColor.BLACK),
+                new Piece(Piece.PieceType.BISHOP, Piece.PieceColor.BLACK),
+                new Piece(Piece.PieceType.KNIGHT, Piece.PieceColor.BLACK),
+                new Piece(Piece.PieceType.ROOK, Piece.PieceColor.BLACK)
+        };
+
+        this.toMove = Piece.PieceColor.WHITE;
+        this.whiteKingCastle = this.blackKingCastle = this.whiteQueenCastle = this.blackQueenCastle = true;
+        this.enPassantFile = -1;
+        this.whiteKingX = 4;
+        this.whiteKingY = 0;
+        this.blackKingX = 4;
+        this.blackKingY = 7;
     }
 
     public Board(Board b) {

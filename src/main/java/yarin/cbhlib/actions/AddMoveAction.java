@@ -27,10 +27,13 @@ public class AddMoveAction extends RecordedAction {
         // 0080  Overwrite
         // 0400  Insert in current variation (change move but keep remaining moves if possible)
         //       This occurs 17:20 in Jacob Aagaard - The Nimzoindian Defence - The easy way (only audio)/The Nimzoindian Defence - The easy way.html/6.wmv
+
         // 0800  New Main Line, the old main line becomes variation 0
         // 0801  New Main Line, the old main line becomes variation 1
         // 0802  New Main Line, the old main line becomes variation 2
         // 0803  New Main Line, the old main line becomes variation 3
+        // Hmm the New Maine Line 0800 marker is ALWAYS followed by a "promotion variation" command.
+        // So maybe it's not actually new main line but something else?!
         this.lineNo = actionFlags & 15;
         this.appendMove = (actionFlags & 64) == 64;
         this.insertMove = (actionFlags & 1024) == 1024;
@@ -74,7 +77,7 @@ public class AddMoveAction extends RecordedAction {
         } else if ((moveFlags & 0xFF00) > 0) {
             throw new RuntimeException("Unknown move flags: " + moveFlags);
         } else {
-            promotionPiece = Piece.PieceType.QUEEN;
+            promotionPiece = Piece.PieceType.EMPTY;
         }
 
         if (fromSquare < 0 || fromSquare >= 64 || toSquare < 0 || toSquare >= 64)
@@ -114,7 +117,7 @@ public class AddMoveAction extends RecordedAction {
                 // TODO: Should be a suitable primitive for this
                 GamePosition position = selectedMove.addMove(move);
                 currentModel.setSelectedMove(position);
-                // TODO: This is probably not correct. The old mainline should become the last variation
+                // TODO: This is not correct. The old mainline should become the last variation
                 // (which seems to be the same as lineNo)
                 position.promoteVariation();
             } else {

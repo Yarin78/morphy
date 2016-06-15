@@ -2,7 +2,6 @@ package yarin.cbhlib;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import yarin.asflib.ASFScriptCommand;
 import yarin.cbhlib.actions.*;
 import yarin.cbhlib.annotations.Annotation;
 import yarin.cbhlib.exceptions.CBMException;
@@ -113,22 +112,33 @@ public class ChessBaseMediaParser {
                 action = new AddAnnotationAction(annotations);
                 break;
             case 7:
-            case 8:
-            case 10:
-                // TODO: Figure out what these actually do, if anything
                 int zero = buf.getInt();
                 if (zero != 0)
                     throw new CBMException("Expected 0 as only data for command type " + commandType);
-                action = new NullAction();
+                // Occurs in Alexei Shirov - My Best Games in the Najdorf (only audio)/My best games in the Sicilian Najdorf.html/2.wmv
+                action = new DeleteVariationAction();
+                break;
+            case 8:
+                zero = buf.getInt();
+                if (zero != 0)
+                    throw new CBMException("Expected 0 as only data for command type " + commandType);
+                // Occurs in Alexei Shirov - My Best Games in the Najdorf (only audio)/My best games in the Sicilian Najdorf.html/2.wmv
+                action = new PromoteVariationAction();
+                break;
+            case 10:
+                zero = buf.getInt();
+                if (zero != 0)
+                    throw new CBMException("Expected 0 as only data for command type " + commandType);
+                // Occurs in Jacob Aagaard - Queen's Indian Defence/Queen's Indian Defence.avi/8.wmv
+                action = new DeleteRemainingMovesAction();
                 break;
             case 11:
-                // TODO: This is not correct
-                // Occurs in Karsten Müller - Chess Endgames 3/68.wmv
                 int minus1 = buf.getInt();
                 if (minus1 != -1)
                     throw new CBMException("Expected -1 as only data for command type 11");
-
-                return new NullAction();
+                // Occurs in Karsten Müller - Chess Endgames 3/68.wmv - probably a mouse slip...
+                action = new DeleteAllCommentaryAction();
+                break;
             default:
                 byte[] unknownBytes = new byte[buf.limit() - buf.position()];
                 buf.get(unknownBytes);

@@ -32,17 +32,17 @@ public class RecordedGame {
 
     private class Event {
         private int timestamp;
-        private Object data;
+        private RecordedAction action;
 
-        Event(int timestamp, Object data) {
+        Event(int timestamp, RecordedAction action) {
             this.timestamp = timestamp;
-            this.data = data;
+            this.action = action;
         }
     }
 
     private TreeMap<Integer, Event> events = new TreeMap<>();
 
-    public static RecordedGame load(InputStream inputStream, boolean tryParse) throws CBMException {
+    public static RecordedGame load(InputStream inputStream) throws CBMException {
         RecordedGame game = new RecordedGame();
         try {
             ASFScriptCommandReader reader = new ASFScriptCommandReader(inputStream);
@@ -65,11 +65,12 @@ public class RecordedGame {
                 } else {
                     lastMillis = millis;
                 }
-                if (tryParse) {
+                try {
                     RecordedAction action = game.parser.parseTextCommand(cmd.getCommand());
-                    log.info(String.format("%s at %s", action.toString(), formatMillis(millis)));
+                    game.addEvent(millis, action);
+                } catch (CBMException e) {
+                    log.error(String.format("Failed to parse ASF command at %s: %s", formatMillis(millis), e.toString()));
                 }
-                game.addEvent(millis, cmd.getCommand());
             }
             return game;
         } catch (IOException e) {
@@ -77,36 +78,30 @@ public class RecordedGame {
         }
     }
 
-    public static RecordedGame load(File file, boolean tryParse) throws CBMException, FileNotFoundException {
-        return load(new FileInputStream(file), tryParse);
+    public static RecordedGame load(File file) throws CBMException, FileNotFoundException {
+        return load(new FileInputStream(file));
     }
 
     public GameModel getGameModelAt(int millis) {
-        try {
-            log.debug("Getting game model at " + formatMillis(millis));
-            // Find the most recent full update and apply all actions that have happened since then
-            NavigableMap<Integer, Event> map = events.headMap(millis, true).descendingMap();
-            Stack<RecordedAction> actionStack = new Stack<>();
-            for (Event event : map.values()) {
-                RecordedAction action = parser.parseTextCommand((String) event.data);
-                actionStack.add(action);
-                if (action.isFullUpdate()) break;
-            }
-            GameModel current = new GameModel(new AnnotatedGame(), new GameMetaData(), null);
-            while (actionStack.size() > 0) {
-                RecordedAction action = actionStack.pop();
-                log.debug("Apply action " + action.getClass().getSimpleName());
-                try {
-                    action.apply(current);
-                } catch (ApplyActionException e) {
-                    log.warn(String.format("Failed to apply action %s: %s", e.toString(), e.getMessage()));
-                }
-            }
-            return current;
-        } catch (CBMException e) {
-            log.warn("Failed to decode game model at " + millis);
-            return new GameModel();
+        log.debug("Getting game model at " + formatMillis(millis));
+        // Find the most recent full update and apply all actions that have happened since then
+        NavigableMap<Integer, Event> map = events.headMap(millis, true).descendingMap();
+        Stack<RecordedAction> actionStack = new Stack<>();
+        for (Event event : map.values()) {
+            actionStack.add(event.action);
+            if (event.action.isFullUpdate()) break;
         }
+        GameModel current = new GameModel(new AnnotatedGame(), new GameMetaData(), null);
+        while (actionStack.size() > 0) {
+            RecordedAction action = actionStack.pop();
+            log.debug("Apply action " + action.getClass().getSimpleName());
+            try {
+                action.apply(current);
+            } catch (ApplyActionException e) {
+                log.warn(String.format("Failed to apply action %s: %s", e.toString(), e.getMessage()));
+            }
+        }
+        return current;
     }
 
     public int applyActionsBetween(GameModel model, int start, int stop) {
@@ -117,15 +112,12 @@ public class RecordedGame {
             if (event.timestamp <= start) continue;
             if (event.timestamp > stop) break;
             try {
-                RecordedAction action = parser.parseTextCommand((String) event.data);
-//                log.info(String.format("Applying action %s at %s", action.toString(), formatMillis(event.timestamp)));
-                action.apply(model);
+//                log.info(String.format("Applying action %s at %s", event.action.toString(), formatMillis(event.timestamp)));
+                event.action.apply(model);
                 noActions++;
             } catch (ApplyActionException e) {
                 log.warn(String.format("Failed to apply action %s at %s: %s",
                         e.getAction().toString(), formatMillis(event.timestamp), e.getMessage()));
-            } catch (CBMException e) {
-                log.warn("Failed to parse action at " + event.timestamp, e);
             }
         }
         return noActions;
@@ -136,10 +128,10 @@ public class RecordedGame {
         return events.lastKey();
     }
 
-    public void addEvent(int millis, Object data) {
+    public void addEvent(int millis, RecordedAction action) {
         if (events.size() > 0 && millis < events.lastKey()) {
             throw new IllegalArgumentException("Can only add events to the end of the event list");
         }
-        events.put(millis, new Event(millis, data));
+        events.put(millis, new Event(millis, action));
     }
 }
