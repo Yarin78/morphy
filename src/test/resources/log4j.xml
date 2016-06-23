@@ -14,6 +14,10 @@
         <level value="INFO"/>
     </logger>
 
+    <logger name="se.yarin.cbhlib">
+        <level value="INFO"/>
+    </logger>
+
     <root>
         <priority value ="WARN" />
         <appender-ref ref="console" />
