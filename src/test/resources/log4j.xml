@@ -24,7 +24,7 @@
     </logger>
 
     <logger name="se.yarin.cbhlib">
-        <level value="DEBUG"/>
+        <level value="INFO"/>
     </logger>
 
     <root>

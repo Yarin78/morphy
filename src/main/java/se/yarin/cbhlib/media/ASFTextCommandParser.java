@@ -69,6 +69,8 @@ public class ASFTextCommandParser {
         // 8 = noop!?
         // 10 = ?
         // 11 = ?
+        // 12 = ? Some messaging? Occurs in Simon Williams - Amazing Moves, with text "Stream is protected"
+        // 14 = ? Some sequential id marker occurring just before ReplaceAllEvent
 
         switch (commandType) {
             case 2:
@@ -132,11 +134,22 @@ public class ASFTextCommandParser {
                 // Occurs in Karsten Müller - Chess Endgames 3/68.wmv - probably a mouse slip...
                 action = new DeleteAllAnnotationEvents();
                 break;
+            case 14:
+                int id = CBUtil.getIntL(buf);
+                // Occurs in CBM168/Festival Biel 2015.html/Biel 2015 round 04 Navara-Wojtaszek.wmv
+                action = new MarkerEvent(id);
+                break;
             default:
                 byte[] unknownBytes = new byte[buf.limit() - buf.position()];
                 buf.get(unknownBytes);
+//                StringBuilder sb = new StringBuilder();
+//                for (int i = 0; i < unknownBytes.length; i++) {
+//                    sb.append(unknownBytes[i] >= 32 && unknownBytes[i] < 127 ? (char) unknownBytes[i] : '?');
+//                }
                 log.warn(String.format("Unknown command type %d with data %s",
                         commandType, Arrays.toString(unknownBytes)));
+//                log.warn(sb.toString());
+
                 action = new UnknownEvent(commandType);
                 break;
         }

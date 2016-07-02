@@ -36,13 +36,13 @@ public class BenchmarkMediaParser {
     public static void main(String[] args) throws IOException {
         final AtomicInteger noErrors = new AtomicInteger();
         ArrayList<MediaFileReport> reports = new ArrayList<>();
-        Files.walk(Paths.get("/Users/yarin/chessbasemedia/mediafiles/GA")).forEach(filePath -> {
+        Files.walk(Paths.get("/Users/yarin/chessbasemedia/mediafiles/CBM168")).forEach(filePath -> {
             if (Files.isRegularFile(filePath) && filePath.toString().endsWith(".wmv")) {
                 MediaFileReport report = new MediaFileReport(filePath.toString());
                 try {
                     long start = System.currentTimeMillis();
                     log.info("Reading " + filePath);
-                    NavigableGameModelTimeline model = ChessBaseMediaLoader.openMedia(filePath.toFile());
+                    NavigableGameModelTimeline model = ChessBaseMediaLoader.loadMedia(filePath.toFile());
 
                     while (model.getNextEventTimestamp() < Integer.MAX_VALUE) {
                         int tm = model.getNextEventTimestamp() / 1000;

@@ -23,7 +23,7 @@ public class VerboseSingleMediaFileTest {
 //        String video = "Rustam Kasimdzhanov - Endgames for Experts/Endgame.html/endgame adams-kasim.wmv";
 //        String video = "Rustam Kasimdzhanov - Endgames for Experts/Endgame.html/endgame kasim-ghaem.wmv";
 
-        String base = "/Users/yarin/chessbasemedia/mediafiles/GA/";
+//        String base = "/Users/yarin/chessbasemedia/mediafiles/GA/";
 //        String video = "Alexei Shirov - My Best Games in the Caro Kann Defence/My best games in the Caro-Kann.html/Shirov-Bologan.wmv";
 //        String video = "Alexei Shirov - My Best Games in the Caro Kann Defence/My best games in the Caro-Kann.html/Shirov-Hracek.wmv";
 
@@ -31,10 +31,17 @@ public class VerboseSingleMediaFileTest {
 //        String video = "Alexei Shirov - Guide to the Tkachiev Ruy Lopez/Spanish with black.html/Svidler-Shirov(2).wmv";
 
 //        String video = "Maurice Ashley - The Secret to Chess/17Secret.wmv";
-        String video = "Viswanathan Anand - My Career - Volume 1/10.wmv";
+//        String video = "Viswanathan Anand - My Career - Volume 1/10.wmv";
+
+        String base = "/Users/yarin/chessbasemedia/mediafiles/";
+//        String video = "HEADER/Simon Williams - Most Amazing Moves/Game 15 Spassky-Fischer/Game 15 Spassky-Fischer000.wmv";
+//        String video = "HEADER/Simon Williams - Most Amazing Moves/Game 16 Hickl-Jussupow/Game 16 Hickl-Jussupow000.wmv";
+//        String video = "CBM168/168!Start.html/CBM 168 Marin - KI Mar del Plata/02 Mar del Plata000.wmv";
+        String video = "CBM168/Festival Biel 2015.html/Biel 2015 round 04 Navara-Wojtaszek.wmv";
+//        String video = "CBM168/168!Start.html/CBM 168 Rogozenco - Classical Paulsen-Morphy.wmv";
 
         try {
-            NavigableGameModelTimeline model = ChessBaseMediaLoader.openMedia(new File(base + video));
+            NavigableGameModelTimeline model = ChessBaseMediaLoader.loadMedia(new File(base + video));
             while (model.getNextEventTimestamp() < Integer.MAX_VALUE) {
                 int tm = model.getNextEventTimestamp() / 1000;
                 GameEvent nextEvent = model.getNextEvent();
