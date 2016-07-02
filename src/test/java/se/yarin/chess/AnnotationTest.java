@@ -123,4 +123,16 @@ public class AnnotationTest {
         anno2.addAll(anno1);
         assertEquals(3, anno2.size());
     }
+
+    private static class DummyAnnotation1 extends Annotation {}
+    private static class DummyAnnotation2 extends Annotation {}
+
+    @Test
+    public void testAddAnnotationsWithSamePriority() {
+        Annotations annotations = new Annotations();
+        annotations.add(new DummyAnnotation1());
+        annotations.add(new DummyAnnotation2());
+
+        assertEquals(2, annotations.size());
+    }
 }
