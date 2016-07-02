@@ -36,7 +36,7 @@ public class BenchmarkMediaParser {
     public static void main(String[] args) throws IOException {
         final AtomicInteger noErrors = new AtomicInteger();
         ArrayList<MediaFileReport> reports = new ArrayList<>();
-        Files.walk(Paths.get("/Users/yarin/chessbasemedia/mediafiles/TEXT")).forEach(filePath -> {
+        Files.walk(Paths.get("/Users/yarin/chessbasemedia/mediafiles/GA")).forEach(filePath -> {
             if (Files.isRegularFile(filePath) && filePath.toString().endsWith(".wmv")) {
                 MediaFileReport report = new MediaFileReport(filePath.toString());
                 try {

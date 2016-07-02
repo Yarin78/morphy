@@ -5,16 +5,11 @@ import org.slf4j.LoggerFactory;
 import se.yarin.cbhlib.AnnotationParser;
 import se.yarin.cbhlib.CBUtil;
 import se.yarin.chess.*;
-import se.yarin.chess.Date;
-import se.yarin.chess.Move;
-import se.yarin.chess.Piece;
-import se.yarin.chess.Player;
 import se.yarin.chess.annotations.Annotation;
 import se.yarin.chess.timeline.*;
 import yarin.cbhlib.GameResult;
 import yarin.cbhlib.TournamentTimeControls;
 import yarin.cbhlib.TournamentType;
-import yarin.chess.*;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -153,6 +148,10 @@ public class ASFTextCommandParser {
                     commandType, Arrays.toString(unknownBytes)));
         }
 
+        if (log.isDebugEnabled()) {
+            log.debug("Parsed event " + action.toString());
+        }
+
         return action;
     }
 
@@ -170,6 +169,8 @@ public class ASFTextCommandParser {
         // 0003  Move becomes variation 3
         // 0040  Add move in current variation (only seems to occur if there are no other moves at this point)
         // 0080  Overwrite
+        // 0200  New variation but same move as in the main variation (?)
+        //       This occurs 1:54 in Viswanathan Anand - My Career - Volume 1/10.wmv
         // 0400  Insert in current variation (change move but keep remaining moves if possible)
         //       This occurs 17:20 in Jacob Aagaard - The Nimzoindian Defence - The easy way (only audio)/The Nimzoindian Defence - The easy way.html/6.wmv
 
@@ -180,19 +181,10 @@ public class ASFTextCommandParser {
         // Hmm the New Maine Line 0800 marker is ALWAYS followed by a "promotion variation" command.
         // So maybe it's not actually new main line but something else?!
         int lineNo = actionFlags & 15;
-        boolean appendMove = (actionFlags & 64) == 64;
-        boolean insertMove = (actionFlags & 1024) == 1024;
-        boolean overwriteMove = (actionFlags & 128) == 128;
-        boolean newMainline = (actionFlags & 2048) == 2048;
-        if ((actionFlags & ~0x0CCF) != 0)
-            throw new RuntimeException(String.format("Unknown AddMove action flags: %04x", actionFlags));
-        if ((appendMove || overwriteMove || insertMove) && lineNo > 0) {
-            // This combination doesn't make sense (maybe with appendMove?) and shouldn't exist. Probably.
-            throw new RuntimeException(String.format("Unknown AddMove action flags: %04x", actionFlags));
-        }
-        if (actionFlags2 != 0) {
-            throw new RuntimeException(String.format("Unknown AddMove action flags 2: %04x", actionFlags2));
-        }
+        boolean appendMove = (actionFlags & 0x40) == 0x40;
+        boolean insertMove = (actionFlags & 0x400) == 0x400;
+        boolean overwriteMove = (actionFlags & 0x80) == 0x80;
+        boolean newMainline = (actionFlags & 0x800) == 0x800;
 
         // moveFlags:
         // 0000  default
@@ -236,6 +228,18 @@ public class ASFTextCommandParser {
             Stone promotionStone = promotionPiece.toStone(Chess.sqiToRow(toSquare) == 7 ? Player.WHITE : Player.BLACK);
             move = new ShortMove(fromSquare, toSquare, promotionStone);
         }
+
+        if ((actionFlags & ~0x0FCF) != 0)
+            throw new RuntimeException(String.format("Unknown AddMove action flags: %04x (%s)", actionFlags, move.toString()));
+        if ((appendMove || overwriteMove || insertMove) && lineNo > 0) {
+            // This combination doesn't make sense (maybe with appendMove?) and shouldn't exist. Probably.
+            throw new RuntimeException(String.format("Unknown AddMove action flags: %04x (%s)", actionFlags, move.toString()));
+        }
+        if (actionFlags2 != 0) {
+            throw new RuntimeException(String.format("Unknown AddMove action flags 2: %04x (%s)", actionFlags2, move.toString()));
+        }
+
+
         if (overwriteMove) {
             return new OverwriteMoveEvent(move);
         } else if (insertMove) {
@@ -338,7 +342,6 @@ public class ASFTextCommandParser {
 
         int unknown1 = CBUtil.getIntL(buf);
         int unknown2 = CBUtil.getIntL(buf);
-        int headerSkipBytes = CBUtil.getIntL(buf);
 
         if (unknown1 != 0) {
             throw new ChessBaseMediaException("Unknown int 1: " + unknown1);
@@ -346,6 +349,18 @@ public class ASFTextCommandParser {
         if (unknown2 != 0) {
             throw new ChessBaseMediaException("Unknown int 2: " + unknown2);
         }
+
+        // This is also some extra stuff occurring in a few files. Not sure what it is?
+        // Nigel Davies - The Tarrasch Defence/Tarrasch.html/04_Monacell_Nadanyan new.wmv
+        // Rustam Kasimdzhanov - Endgames for Experts/Endgame.html/endgame adams-kasim.wmv
+        // Rustam Kasimdzhanov - Endgames for Experts/Endgame.html/endgame kasim-ghaem.wmv
+        // Rustam Kasimdzhanov - Endgames for Experts/Endgame.html/endgame kasim-shirov.wmv
+        // Maurice Ashley - The Secret to Chess/17Secret.wmv
+        int headerSkipBytes = CBUtil.getIntL(buf);
+        if (headerSkipBytes > 0) {
+            log.debug("Skipping " + headerSkipBytes + " bytes in header");
+        }
+        buf.position(buf.position() + headerSkipBytes);
 
         boolean setupPosition = CBUtil.getUnsignedByte(buf) == 0;
 
@@ -405,24 +420,17 @@ public class ASFTextCommandParser {
         // This seems to be some extra game headers in the media format
         // TODO: Figure out what to do with these extra headers
         // Could one of them be teams?
-        List<String> headers = new ArrayList<String>();
+        List<String> headers = new ArrayList<>();
         int noHeaders = CBUtil.getUnsignedShortL(buf); // number of extra headers to follow??
-//        log.info("# extra headers: " + noHeaders);
+        if (noHeaders != 0) {
+            log.debug(String.format("# extra headers: %d", noHeaders));
+        }
         for (int i = 0; i < noHeaders; i++) {
             int size = CBUtil.getUnsignedShortL(buf);
             byte[] header = new byte[size];
             buf.get(header);
             headers.add(Arrays.toString(header));
         }
-        // This is also some extra stuff occurring in a few files. Not sure what it is?
-        // Nigel Davies - The Tarrasch Defence/Tarrasch.html/04_Monacell_Nadanyan new.wmv
-        // Rustam Kasimdzhanov - Endgames for Experts/Endgame.html/endgame adams-kasim.wmv
-        // Rustam Kasimdzhanov - Endgames for Experts/Endgame.html/endgame kasim-ghaem.wmv
-        // Rustam Kasimdzhanov - Endgames for Experts/Endgame.html/endgame kasim-shirov.wmv
-        if (headerSkipBytes != 0) {
-            log.debug("Skipping ahead " + headerSkipBytes + " bytes before move data");
-        }
-        buf.position(buf.position() + headerSkipBytes);
 
         parseMoves(buf, model.moves().root());
 
@@ -533,6 +541,11 @@ public class ASFTextCommandParser {
                 if (fromSquare == 0 && toSquare == 0) {
                     move = Move.nullMove(node.position());
                 } else {
+                    // In one game there is a move Ng8-f6=Q!?
+                    // Alexei Shirov - My Best Games in the King's Indian/My best games in the King's Indian.html/Gelfand-Shirov.wmv
+                    if (node.position().stoneAt(fromSquare).toPiece() != Piece.PAWN) {
+                        promotionPiece = Piece.NO_PIECE;
+                    }
                     move = new Move(node.position(), fromSquare, toSquare, promotionPiece.toStone(node.position().playerToMove()));
                 }
             } catch (IllegalArgumentException e) {
@@ -556,7 +569,9 @@ public class ASFTextCommandParser {
                 }
 
                 Annotation annotation = AnnotationParser.getAnnotation(buf);
-                log.debug("Parsed annotation: {}", annotation.getClass().getSimpleName());
+                if (log.isDebugEnabled()) {
+                    log.debug("Parsed annotation: {}", annotation.toString());
+                }
                 newNode.addAnnotation(annotation);
 
                 buf.position(nextPosition);

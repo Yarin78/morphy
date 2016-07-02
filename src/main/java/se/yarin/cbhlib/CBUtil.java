@@ -258,4 +258,25 @@ public final class CBUtil {
         return (b4 << 24) + (b3 << 16) + (b2 << 8) + b1;
     }
 
+
+    // Debug code
+
+    private static String toHexString(ByteBuffer buf) {
+        int oldPos = buf.position();
+        byte[] bytes = new byte[buf.limit() - oldPos];
+        buf.get(bytes);
+        buf.position(oldPos);
+        return toHexString(bytes);
+    }
+
+    public static String toHexString(byte[] bytes) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < bytes.length; i++) {
+            int v = bytes[i];
+            if (v < 0) v += 256;
+            sb.append(String.format("%02X ", v));
+        }
+        return sb.toString();
+
+    }
 }

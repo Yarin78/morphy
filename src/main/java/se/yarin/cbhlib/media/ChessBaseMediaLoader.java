@@ -52,7 +52,30 @@ public final class ChessBaseMediaLoader {
             while (reader.hasMore()) {
                 ASFScriptCommand cmd = reader.read();
                 log.debug(cmd.getType() + " command at " + formatMillis(cmd.getMillis()));
+
                 // TODO: Support more formats
+                if (cmd.getType().equals("GA")) {
+                    // Convert GA command into TEXT command
+                    String s = cmd.getCommand();
+                    int[] bytes = new int[s.length() * 6 / 8];
+                    for (int i = 0, p = 0; i < s.length(); i++) {
+                        int b = s.charAt(i) - 63;
+                        if (b < 0 || b >= 64) throw new RuntimeException();
+                        for (int j = 0; j < 6; j++, p++) {
+                            int q = p/8, r = 7-p%8;
+                            if (((1<<(5-j)) & b) > 0) {
+                                bytes[q] |= (1<<r);
+                            }
+                        }
+                    }
+                    // This could be done more efficiently :) Please refactor!
+                    StringBuilder sb = new StringBuilder();
+                    sb.append(String.format("000000%02d%02d", bytes.length / 100, bytes.length%100));
+                    for (int i = 0; i < bytes.length; i++) {
+                        sb.append(String.format("%02X", bytes[i]));
+                    }
+                    cmd = new ASFScriptCommand(cmd.getMillis(), "TEXT", sb.toString());
+                }
                 if (!cmd.getType().equals("TEXT")) {
                     throw new ChessBaseMediaException("Unsupported command type: " + cmd.getType());
                 }

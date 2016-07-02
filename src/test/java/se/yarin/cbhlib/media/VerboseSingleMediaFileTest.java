@@ -13,12 +13,25 @@ public class VerboseSingleMediaFileTest {
     private static final Logger log = LoggerFactory.getLogger(VerboseSingleMediaFileTest.class);
 
     public static void main(String[] args) throws IOException {
-        String base = "/Users/yarin/chessbasemedia/mediafiles/TEXT/";
+//        String base = "/Users/yarin/chessbasemedia/mediafiles/TEXT/";
 //        String video = "Jacob Aagaard - Queen's Indian Defence/Queen's Indian Defence.avi/8.wmv";
 //        String video = "Alexei Shirov - My Best Games in the Najdorf (only audio)/My best games in the Sicilian Najdorf.html/2.wmv";
 //        String video = "Karsten Müller - Chess Endgames 3/68.wmv";
 //        String video = "Ari Ziegler - French Defence/2.wmv";
-        String video = "Andrew Martin - The ABC of the Modern Benoni/Modern Benoni.html/CMO GAME FOUR.wmv";
+//        String video = "Andrew Martin - The ABC of the Modern Benoni/Modern Benoni.html/CMO GAME FOUR.wmv";
+//        String video = "Nigel Davies - The Tarrasch Defence/Tarrasch.html/04_Monacell_Nadanyan new.wmv";
+//        String video = "Rustam Kasimdzhanov - Endgames for Experts/Endgame.html/endgame adams-kasim.wmv";
+//        String video = "Rustam Kasimdzhanov - Endgames for Experts/Endgame.html/endgame kasim-ghaem.wmv";
+
+        String base = "/Users/yarin/chessbasemedia/mediafiles/GA/";
+//        String video = "Alexei Shirov - My Best Games in the Caro Kann Defence/My best games in the Caro-Kann.html/Shirov-Bologan.wmv";
+//        String video = "Alexei Shirov - My Best Games in the Caro Kann Defence/My best games in the Caro-Kann.html/Shirov-Hracek.wmv";
+
+        // This file has an unreasonble number of headers
+//        String video = "Alexei Shirov - Guide to the Tkachiev Ruy Lopez/Spanish with black.html/Svidler-Shirov(2).wmv";
+
+//        String video = "Maurice Ashley - The Secret to Chess/17Secret.wmv";
+        String video = "Viswanathan Anand - My Career - Volume 1/10.wmv";
 
         try {
             NavigableGameModelTimeline model = ChessBaseMediaLoader.openMedia(new File(base + video));
