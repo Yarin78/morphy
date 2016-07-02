@@ -12,6 +12,7 @@ import java.util.*;
  */
 public class Annotations {
 
+    // TODO: This is bad; two annotations with the same priority will overwrite each other
     private TreeSet<Annotation> annotations = new TreeSet<>(new Comparator<Annotation>() {
         @Override
         public int compare(Annotation o1, Annotation o2) {

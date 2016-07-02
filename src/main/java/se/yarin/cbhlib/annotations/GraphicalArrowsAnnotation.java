@@ -22,4 +22,9 @@ public class GraphicalArrowsAnnotation extends Annotation {
     public GraphicalArrowsAnnotation(@NonNull List<Arrow> arrows) {
         this.arrows = Collections.unmodifiableCollection(arrows);
     }
+
+    @Override
+    public int priority() {
+        return 5;
+    }
 }

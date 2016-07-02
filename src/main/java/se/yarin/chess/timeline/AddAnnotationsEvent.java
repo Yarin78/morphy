@@ -21,4 +21,14 @@ public class AddAnnotationsEvent extends GameEvent {
     public void apply(@NonNull NavigableGameModel model) throws GameEventException {
         annotations.forEach(model::addAnnotation);
     }
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        for (Annotation annotation : annotations) {
+            if (sb.length() > 0) sb.append(", ");
+            sb.append(annotation.toString());
+        }
+        return super.toString() + ": " + sb.toString();
+    }
 }

@@ -22,4 +22,9 @@ public class GraphicalSquaresAnnotation extends Annotation {
     public GraphicalSquaresAnnotation(@NonNull List<Square> squares) {
         this.squares = Collections.unmodifiableCollection(squares);
     }
+
+    @Override
+    public int priority() {
+        return 6;
+    }
 }

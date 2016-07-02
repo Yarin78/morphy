@@ -9,17 +9,12 @@ import se.yarin.cbhlib.annotations.GraphicalArrowsAnnotation;
 import se.yarin.cbhlib.annotations.GraphicalSquaresAnnotation;
 import se.yarin.cbhlib.annotations.InvalidAnnotation;
 import se.yarin.cbhlib.annotations.UnknownAnnotation;
-import se.yarin.chess.LineEvaluation;
-import se.yarin.chess.MoveComment;
-import se.yarin.chess.MovePrefix;
 import se.yarin.chess.Symbol;
 import se.yarin.chess.annotations.*;
 import se.yarin.chess.annotations.Annotation;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 
 public class AnnotationParser {
 
@@ -51,6 +46,7 @@ public class AnnotationParser {
                 case 0x05 : return getGraphicalArrowsAnnotation(buf, noBytes - 6);
                 case 0x18 : return getCriticalPositionAnnotation(buf);
                 case 0x82 : return getCommentaryBeforeMoveAnnotation(buf, noBytes - 8);
+                case 0x25 : return new VideoStreamTimeAnnotation(CBUtil.getIntB(buf));
 
 //                case 0x14 : return new PawnStructureAnnotation(buf);
 //                case 0x15 : return new PiecePathAnnotation(buf);

@@ -50,4 +50,9 @@ public abstract class Annotation {
     public boolean isEmptyAnnotation() {
         return false;
     }
+
+    @Override
+    public String toString() {
+        return this.getClass().getSimpleName();
+    }
 }
