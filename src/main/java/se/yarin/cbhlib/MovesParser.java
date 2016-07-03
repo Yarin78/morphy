@@ -4,6 +4,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.chess.*;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.EnumSet;
@@ -14,7 +16,8 @@ public final class MovesParser {
 
     private MovesParser() {}
 
-    private static final boolean INTEGRITY_CHECK = true;
+    // Enabling this will integrity check the two parallel position structures after parsing every move
+    static boolean INTEGRITY_CHECKS_ENABLED = false;
 
     private static final int OPCODE_NULLMOVE = 0;
     private static final int OPCODE_KING = 1;
@@ -38,55 +41,25 @@ public final class MovesParser {
     private static final int OPCODE_START_VARIANT = 254;
     private static final int OPCODE_END_VARIANT = 255;
 
-    private static int[] kingDir = new int[] { 1, 9, 8, 7, -1, -9, -8, -7};
-    private static int[] knightDir = new int[] { 17, 10, -6, -15, -17, -10, 6, 15 };
+    private static final int[] kingDir = new int[] { 1, 9, 8, 7, -1, -9, -8, -7};
+    private static final int[] knightDir = new int[] { 17, 10, -6, -15, -17, -10, 6, 15 };
 
-    // TODO: Move as resource
-    // This encryption map occurs in in CBase9.exe starting at position 0x7AE4A8
-    // Hence it has probably been randomly generated, so no formula exist.
-    // In CBase10.exe, it starts at 0x9D6530
-    private static int[] encryptMap = new int[] {
-            0xAA, 0x49, 0x39, 0xD8, 0x5D, 0xC2, 0xB1, 0xB2,
-            0x47, 0x76, 0xB5, 0xA5, 0xB8, 0xCB, 0x53, 0x7F,
-            0x6B, 0x8D, 0x79, 0xBE, 0xEB, 0x21, 0x99, 0xD2,
-            0x57, 0x4D, 0xB4, 0xBF, 0x62, 0xBD, 0x24, 0x96,
-            0xA7, 0x48, 0x28, 0x6E, 0x2F, 0x5A, 0x18, 0x4E,
-            0xF8, 0x43, 0xD7, 0x63, 0x9C, 0xE6, 0x2E, 0xC6,
-            0x26, 0x88, 0x30, 0x61, 0x6F, 0x14, 0xA9, 0x68,
-            0xEE, 0xFB, 0x77, 0xE2, 0xA6, 0x05, 0x8B, 0xA1,
-            0x98, 0x32, 0x52, 0x02, 0x97, 0xE1, 0x41, 0xC3,
-            0x7C, 0xE4, 0x06, 0xB7, 0x55, 0xD9, 0x2C, 0xAE,
-            0x37, 0xF6, 0x3F, 0x08, 0x93, 0x73, 0x5E, 0x78,
-            0x35, 0xF2, 0x6D, 0x71, 0xA2, 0xF3, 0x16, 0x58,
-            0x3D, 0xFA, 0xE9, 0xBA, 0xD4, 0xDD, 0x4A, 0xC4,
-            0x0E, 0xFE, 0x5F, 0x75, 0x07, 0x89, 0x34, 0x2D,
-            0xC1, 0x8E, 0xF5, 0x64, 0x17, 0x70, 0xA4, 0x7B,
-            0xDA, 0xE0, 0x85, 0xC5, 0x0B, 0x90, 0xF9, 0x84,
-            0xFF, 0x15, 0x36, 0x09, 0x9E, 0x7D, 0xDE, 0xBB,
-            0xDF, 0xBC, 0x3A, 0x12, 0x33, 0x13, 0x19, 0xE5,
-            0x94, 0x50, 0x11, 0xEA, 0x31, 0x01, 0x5C, 0x95,
-            0xCA, 0xD3, 0x1D, 0x7E, 0xEF, 0x44, 0x80, 0xA0,
-            0x1F, 0x83, 0x00, 0x4B, 0x67, 0x20, 0x5B, 0x2A,
-            0x92, 0xB6, 0x60, 0x1A, 0x42, 0x0F, 0x0D, 0xB0,
-            0xD1, 0x23, 0xF0, 0x7A, 0x54, 0x4F, 0xF4, 0xA8,
-            0x72, 0xE7, 0x40, 0x38, 0x59, 0x87, 0xE8, 0x6C,
-            0x86, 0x04, 0xF1, 0x8C, 0xCE, 0x6A, 0xDB, 0x81,
-            0x82, 0x9A, 0x1B, 0x9D, 0x0A, 0x2B, 0x8F, 0xCD,
-            0xED, 0x10, 0x74, 0x69, 0xD6, 0x51, 0xB9, 0x45,
-            0x3B, 0x56, 0x91, 0xFD, 0xAB, 0x66, 0x3E, 0x46,
-            0xB3, 0xFC, 0xC8, 0x9B, 0xC0, 0xE3, 0xA3, 0xAC,
-            0xC9, 0xEC, 0x27, 0x29, 0x9F, 0x25, 0xC7, 0xCC,
-            0x65, 0x4C, 0xD5, 0x1E, 0xCF, 0x03, 0x8A, 0xAF,
-            0xF7, 0xAD, 0x3C, 0xD0, 0x22, 0x1C, 0xDC, 0x0C
-    };
-
-    // Inverse of the above map
-    private static int[] decryptMap;
+    private static final byte[] encryptMap = new byte[256];
+    private static final int[] decryptMap = new int[256];
 
     static {
-        decryptMap = new int[256];
-        for (int i = 0; i < 256; i++)
-            decryptMap[encryptMap[i]] = i;
+        // This encryption map occurs in in CBase9.exe starting at position 0x7AE4A8
+        // Hence it has probably been randomly generated, so no formula exist.
+        // In CBase10.exe, it starts at 0x9D6530
+        InputStream stream = MovesParser.class.getResourceAsStream("moveEncryptionKey.bin");
+        try {
+            stream.read(encryptMap);
+            for (int i = 0; i < 256; i++) {
+                decryptMap[(encryptMap[i] + 256) % 256] = i;
+            }
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to load resource moveEncryptionKey.bin");
+        }
     }
 
     public static GameMovesModel parseMoveData(ByteBuffer buf)
@@ -106,11 +79,11 @@ public final class MovesParser {
 
         log.debug(String.format("Parsing move data at moveData pos %s with %d bytes left",
                 model.root().position().toString(), buf.limit() - buf.position()));
-        PiecePositions piecePosition = PiecePositions.fromPosition(model.root().position());
+        StonePositions piecePosition = StonePositions.fromPosition(model.root().position());
 
         int modifier = 0;
         Stack<GameMovesModel.Node> nodeStack = new Stack<>();
-        Stack<PiecePositions> piecePositionStack = new Stack<>();
+        Stack<StonePositions> piecePositionStack = new Stack<>();
         GameMovesModel.Node currentNode = model.root();
 
         // All positions in the game in a flat list, excluding the initial position
@@ -375,7 +348,7 @@ public final class MovesParser {
 
             nodesInOrder.add(currentNode);
 
-            if (INTEGRITY_CHECK) {
+            if (INTEGRITY_CHECKS_ENABLED) {
                 verifyPosition(currentNode.position(), piecePosition);
             }
         }
@@ -429,7 +402,7 @@ public final class MovesParser {
         return new GameMovesModel(startPosition, Chess.moveNumberToPly(moveNumber, sideToMove));
     }
 
-    private static void verifyPosition(Position position, PiecePositions pieces)
+    private static void verifyPosition(Position position, StonePositions pieces)
             throws ChessBaseInvalidDataException {
         // Verify that all pieces in pieces are accounted for in position and vice versa
         // Only for debugging!
@@ -470,160 +443,6 @@ public final class MovesParser {
         if (piecesFound != piecesOnBoard) {
             throw new ChessBaseInvalidDataException("Board is in inconsistent state"); // Some pieces are missing
         }
-    }
-
-    /**
-     * An internal representation of where the pieces are on the board.
-     * This can't be determined from {@link Position} as the order of the pieces is important for the move parser.
-     * This class is immutable.
-     */
-    private static class PiecePositions {
-        // For every stone, there's a list of square indexes
-        private int[][] pieceSqi;
-
-        private PiecePositions(int[][] pieceSqi) {
-            this.pieceSqi = pieceSqi;
-        }
-
-        public static PiecePositions fromPosition(Position position) {
-            int[][] pps = new int[13][];
-            for (Stone stone : Stone.values()) {
-                int cnt;
-                switch (stone.toPiece()) {
-                    case PAWN: cnt = 8; break;
-                    case KING: cnt = 1; break;
-                    default  : cnt = 3; break;
-                }
-                pps[stone.index()] = new int[cnt];
-                for (int i = 0; i < cnt; i++) {
-                    pps[stone.index()][i] = -1;
-                }
-            }
-
-            for (int i = 0; i < 64; i++) {
-                Stone stone = position.stoneAt(i);
-                if (!stone.isNoStone()) {
-                    int[] pp = pps[stone.index()];
-                    for (int j = 0; j < pp.length; j++) {
-                        if (pp[j] == -1) {
-                            pp[j] = i;
-                            break;
-                        }
-                    }
-                }
-            }
-            return new PiecePositions(pps);
-        }
-
-        private int[][] cloneData() {
-            int[][] a = new int[pieceSqi.length][];
-            for (int i = 0; i < a.length; i++) {
-                a[i] = pieceSqi[i].clone();
-            }
-            return a;
-        }
-
-        /**
-         * Gets the square of a specific stone give the stoneNo
-         * @param stone the stone to get
-         * @param stoneNo the stone number
-         * @return the square for this stone, or -1 if no stone with this stoneNo on the board
-         */
-        public int getSqi(Stone stone, int stoneNo) {
-            if (stoneNo >= 0 && stoneNo < pieceSqi[stone.index()].length) {
-                return pieceSqi[stone.index()][stoneNo];
-            }
-            return -1;
-        }
-
-        /**
-         * Gets all the squares the given stone is on, in stoneNo order
-         * @param stone the stone to get squares for
-         * @return an array containing the square indexes of the given stone
-         */
-        public int[] getSqis(Stone stone) {
-            return pieceSqi[stone.index()].clone(); // clone to ensure immutability
-        }
-
-        /**
-         * Finds which stoneNo is on a given square
-         * @param stone the stone to look for
-         * @param sqi the square to check
-         * @return the stone number, or -1 if the given stone isn't on the given square
-         */
-        public int getStoneNo(Stone stone, int sqi) {
-            int[] pp = pieceSqi[stone.index()];
-            for (int j = 0; j < pp.length; j++) {
-                if (pp[j] == sqi) return j;
-            }
-            return -1;
-        }
-        /**
-         * Removes a stone from the position and returns the updated position
-         * @param stone the stone to remove
-         * @param sqi the square it should be removed from
-         * @return the update position
-         */
-        public PiecePositions remove(Stone stone, int sqi) {
-            int pno = getStoneNo(stone, sqi);
-            if (pno < 0) {
-                // This can happen if e.g. the fourth queen is captured
-                return this;
-            }
-            int[][] pieces = cloneData();
-            int[] removeStone = pieces[stone.index()];
-
-            // If it's a pawn, just remove it
-            if (stone.toPiece() == Piece.PAWN) {
-                removeStone[pno] = -1;
-            } else {
-                // Otherwise we must adjust the pieces
-                int i = 0, j = 0;
-                while (i < removeStone.length) {
-                    if (removeStone[i] != sqi) {
-                        removeStone[j++] = removeStone[i++];
-                    } else {
-                        i++;
-                    }
-                }
-                while (j < removeStone.length) {
-                    removeStone[j++] = -1;
-                }
-            }
-            return new PiecePositions(pieces);
-        }
-
-        /**
-         * Changes the square of a stone and returns the updated position
-         * @param stone the type of stone to update
-         * @param stoneNo the stone number
-         * @param sqi the new square for the stone
-         * @return the updated position
-         */
-        public PiecePositions move(Stone stone, int stoneNo, int sqi) {
-            int[][] pieces = cloneData();
-            pieces[stone.index()][stoneNo] = sqi;
-            return new PiecePositions(pieces);
-        }
-
-        /**
-         * Adds a new stone and returns the updated position
-         * @param stone the stone to add
-         * @param sqi the square to add it to
-         * @return the updated position
-         */
-        public PiecePositions add(Stone stone, int sqi) {
-            int[][] pieces = cloneData();
-            int[] pp = pieces[stone.index()];
-            for (int j = 0; j < pp.length; j++) {
-                if (pp[j] == -1) {
-                    pp[j] = sqi;
-                    return new PiecePositions(pieces);
-                }
-            }
-            return this; // This is ok since it's an immutable data structure
-        }
-
     }
 
 }

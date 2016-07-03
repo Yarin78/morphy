@@ -1,5 +1,6 @@
 package se.yarin.cbhlib;
 
+import org.junit.Before;
 import org.junit.Test;
 import se.yarin.chess.GameMovesModel;
 
@@ -10,6 +11,11 @@ import java.nio.ByteBuffer;
 import static org.junit.Assert.assertEquals;
 
 public class MovesParserTest {
+
+    @Before
+    public void setup() {
+        MovesParser.INTEGRITY_CHECKS_ENABLED = true;
+    }
 
     private ByteBuffer loadGame(String resourceName) throws IOException {
         InputStream stream = getClass().getResourceAsStream(resourceName);
