@@ -1,6 +1,5 @@
 package se.yarin.cbhlib.media;
 
-import jdk.nashorn.internal.runtime.regexp.joni.Regex;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.cbhlib.CBUtil;
@@ -136,7 +135,7 @@ public class ReverseEngineerGAFiles {
         ByteBuffer buf = ByteBuffer.wrap(bytes);
         CBUtil.getIntL(buf);
         try {
-            NavigableGameModel navigableGameModel = ASFTextCommandParser.parseFullUpdate(buf);
+            NavigableGameModel navigableGameModel = ChessBaseMediaEventParser.parseFullUpdate(buf);
         } catch (ChessBaseMediaException e) {
             out.println("Error parsing: " + e);
         }

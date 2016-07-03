@@ -8,6 +8,7 @@ import yarin.asflib.ASFScriptCommand;
 import yarin.asflib.ASFScriptCommandReader;
 
 import java.io.*;
+import java.nio.ByteBuffer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -21,6 +22,18 @@ public final class ChessBaseMediaLoader {
     private static final Logger log = LoggerFactory.getLogger(ChessBaseMediaLoader.class);
 
     private ChessBaseMediaLoader() { }
+
+    private static int[] hexToDec = new int[128];
+
+    static {
+        for (int i = 0; i < 10; i++) {
+            hexToDec['0' + i] = i;
+        }
+        for (int i = 0; i < 6; i++) {
+            hexToDec['A' + i] = 10 + i;
+            hexToDec['a' + i] = 10 + i;
+        }
+    }
 
     private static File getCommandFile(File file) {
         int ix = file.getPath().lastIndexOf('.');
@@ -43,9 +56,12 @@ public final class ChessBaseMediaLoader {
             throws ChessBaseMediaException, FileNotFoundException {
         File commandFile = getCommandFile(file);
         if (commandFile != null) {
-            return loadFromTxt(new FileInputStream(commandFile));
+            // Probably just assuming that the TXT file will contain commands is wrong.
+            // The lack of commands in the ASF file is a good indicator, although
+            // for protected streams there seems to be both.
+            return loadfromTXT(new FileInputStream(commandFile));
         }
-        return loadfromAsf(new FileInputStream(file));
+        return loadfromASF(new FileInputStream(file));
     }
 
     /**
@@ -56,7 +72,7 @@ public final class ChessBaseMediaLoader {
      * @throws ChessBaseMediaException thrown if there was an error reading the
      * stream or if the format was unknown
      */
-    public static NavigableGameModelTimeline loadfromAsf(InputStream inputStream)
+    public static NavigableGameModelTimeline loadfromASF(InputStream inputStream)
             throws ChessBaseMediaException {
         NavigableGameModelTimeline model = new NavigableGameModelTimeline();
         try {
@@ -66,34 +82,6 @@ public final class ChessBaseMediaLoader {
             while (reader.hasMore()) {
                 ASFScriptCommand cmd = reader.read();
                 log.debug(cmd.getType() + " command at " + formatMillis(cmd.getMillis()));
-
-                if (cmd.getType().equals("GA")) {
-                    // Convert GA command into TEXT command
-                    String s = cmd.getCommand();
-                    int[] bytes = new int[s.length() * 6 / 8];
-                    for (int i = 0, p = 0; i < s.length(); i++) {
-                        int b = s.charAt(i) - 63;
-                        if (b < 0 || b >= 64) throw new RuntimeException();
-                        for (int j = 0; j < 6; j++, p++) {
-                            int q = p/8, r = 7-p%8;
-                            if (((1<<(5-j)) & b) > 0) {
-                                bytes[q] |= (1<<r);
-                            }
-                        }
-                    }
-                    // This could be done more efficiently :) Please refactor!
-                    StringBuilder sb = new StringBuilder();
-                    sb.append(String.format("000000%02d%02d", bytes.length / 100, bytes.length%100));
-                    for (int i = 0; i < bytes.length; i++) {
-                        sb.append(String.format("%02X", bytes[i]));
-                    }
-                    cmd = new ASFScriptCommand(cmd.getMillis(), "TEXT", sb.toString());
-                }
-                if (!cmd.getType().equals("TEXT")) {
-                    log.warn("Unsupported command type " + cmd.getType() + " with data " + cmd.getCommand());
-                    continue;
-//                    throw new ChessBaseMediaException("Unsupported command type: " + cmd.getType());
-                }
 
                 // The commands are delayed with 5 seconds for some reason
                 // Except in Andrew Martin - The ABC of the Modern Benoni/Modern Benoni.html/CMO GAME FOUR.wmv for some reason!?
@@ -105,7 +93,7 @@ public final class ChessBaseMediaLoader {
                 int millis = cmd.getMillis() - timestampOffset;
 
                 try {
-                    GameEvent event = ASFTextCommandParser.parseTextCommand(cmd.getCommand());
+                    GameEvent event = parseCommand(cmd.getType(), cmd.getCommand());
                     model.addEvent(millis, event);
                 } catch (ChessBaseMediaException e) {
                     log.error(String.format("Failed to parse ASF command at %s: %s",
@@ -129,7 +117,7 @@ public final class ChessBaseMediaLoader {
      * @throws ChessBaseMediaException thrown if there was an error reading the
      * stream or if the format was unknown
      */
-    public static NavigableGameModelTimeline loadFromTxt(InputStream inputStream)
+    public static NavigableGameModelTimeline loadfromTXT(InputStream inputStream)
             throws ChessBaseMediaException {
         NavigableGameModelTimeline model = new NavigableGameModelTimeline();
         Pattern pattern = Pattern.compile("(\\d):(\\d\\d):(\\d\\d)(\\.\\d)?:");
@@ -177,37 +165,76 @@ public final class ChessBaseMediaLoader {
         return model;
     }
 
-    private static GameEvent parseCommand(String type, String cmd) throws ChessBaseMediaException {
+    private static GameEvent parseCommand(String type, String text) throws ChessBaseMediaException {
         if (type.equals("GA")) {
-            // Convert GA command into TEXT command
-            String s = cmd;
-            int[] bytes = new int[s.length() * 6 / 8];
-            for (int i = 0, p = 0; i < s.length(); i++) {
-                int b = s.charAt(i) - 63;
-                if (b < 0 || b >= 64) throw new RuntimeException();
-                for (int j = 0; j < 6; j++, p++) {
-                    int q = p/8, r = 7-p%8;
-                    if (((1<<(5-j)) & b) > 0) {
-                        bytes[q] |= (1<<r);
+            // The GA type stores 6 bits of data per character in the text stream
+            // using ASCII characters [63, 126] inclusive
+            byte[] bytes = new byte[text.length() * 6 / 8];
+            for (int i = 0, p = 0, q = 128; i < text.length(); i++) {
+                int b = text.charAt(i) - 63;
+                if (b < 0 || b >= 64) {
+                    throw new ChessBaseMediaException("Invalid byte in GA command: " + b);
+                }
+                for (int j = 32; j > 0; j >>= 1) {
+                    if ((j & b) > 0) bytes[p] += q;
+                    if ((q >>= 1) == 0) {
+                        p++;
+                        q=128;
                     }
+
                 }
             }
-            // This could be done more efficiently :) Please refactor!
-            StringBuilder sb = new StringBuilder();
-            sb.append(String.format("000000%02d%02d", bytes.length / 100, bytes.length%100));
-            for (int i = 0; i < bytes.length; i++) {
-                sb.append(String.format("%02X", bytes[i]));
+            return ChessBaseMediaEventParser.parseChessMediaEvent(ByteBuffer.wrap(bytes));
+        }
+
+        if (type.equals("TEXT")) {
+            // The TEXT type stores 4 bits of data per character in the text stream using hexadecimal digits.
+            // It also contains a 6 byte header containing the length of the rest of the data.
+            // This is the old ChessBase media format which is no longer used.
+            if (text.length() % 2 != 0 || text.length() < 10) {
+                throw new ChessBaseMediaException("Invalid format of ChessBase script command");
             }
-            type = "TEXT";
-            cmd = sb.toString();
+
+            byte[] bytes = new byte[text.length() / 2];
+            for (int i = 0, j = 0; i < text.length(); i += 2, j++) {
+                try {
+                    // Parse a hexadecimal byte
+                    bytes[j] = (byte) (hexToDec[text.charAt(i)] * 16 + hexToDec[text.charAt(i+1)]);
+                } catch (NumberFormatException e) {
+                    throw new ChessBaseMediaException("Invalid format of ChessBase script command", e);
+                }
+            }
+
+            // The 5 first bytes stores the length using binary coded decimals
+            int len = 0;
+            for (int i = 0; i < 5; i++) {
+                int bcdDigits = bytes[i];
+                if (bcdDigits < 0) bcdDigits += 256;
+                int msbDigit = bcdDigits/16;
+                int lsbDigit = bcdDigits%16;
+                len = (len * 10 + msbDigit) * 10 + lsbDigit;
+            }
+            int bytesLeft = bytes.length - 5;
+            if (bytesLeft != len) {
+                String msg = String.format("Number of bytes left in buffer (%d) didn't match specified length (%d)",
+                        bytesLeft, len);
+                log.warn(msg);
+                throw new ChessBaseMediaException("Invalid format of ChessBase script command: " + msg);
+            }
+
+            ByteBuffer buf = ByteBuffer.wrap(bytes, 5, bytes.length - 5);
+            return ChessBaseMediaEventParser.parseChessMediaEvent(buf);
         }
 
-        if (!type.equals("TEXT")) {
-            log.warn("Unsupported command type " + type + " with data " + cmd);
-            throw new ChessBaseMediaException("Unsupported command type: " + type);
+        if (type.equals("HEADER")) {
+            // Occurs in Simon Williams - Most Amazing Moves
+            // Probably related to protected streams?
+            log.warn("Ignoring HEADER command with data " + text);
+            return new HeaderEvent();
         }
 
-        return ASFTextCommandParser.parseTextCommand(cmd);
+        log.warn("Unsupported command type " + type + " with data " + text);
+        throw new ChessBaseMediaException("Unsupported command type: " + type);
     }
 
     private static String formatMillis(int millis) {

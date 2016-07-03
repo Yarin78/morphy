@@ -171,19 +171,6 @@ public final class CBUtil {
     }
 
 
-    /**
-     * Gets an unsigned short (two bytes) from a {@link ByteBuffer}
-     * as a binary coded decimal number with the most significant digits first
-     * @param buf the buffer to read from
-     * @return an integer between 0 and 9999
-     */
-    public static int getShortBCD(ByteBuffer buf) {
-        int b1 = buf.get(), b2 = buf.get();
-        if (b1<0) b1 += 256;
-        if (b2<0) b2 += 256;
-        return (b1/16)*1000+(b1%16)*100+(b2/16)*10+b2%16;
-    }
-
     public static byte getSignedByte(ByteBuffer buf) {
         return buf.get();
     }
@@ -261,7 +248,7 @@ public final class CBUtil {
 
     // Debug code
 
-    private static String toHexString(ByteBuffer buf) {
+    public static String toHexString(ByteBuffer buf) {
         int oldPos = buf.position();
         byte[] bytes = new byte[buf.limit() - oldPos];
         buf.get(bytes);

@@ -12,82 +12,65 @@ import yarin.cbhlib.TournamentTimeControls;
 import yarin.cbhlib.TournamentType;
 
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
 
 /**
- * Parser of ASF text commands into {@link se.yarin.chess.timeline.GameEvent}s
+ * Class responsible for parsing a {@link GameEvent} from the ChessBase media format.
+ * <p>
+ * Example of events:
+ * </p>
+ * <ul>
+ *     <li>Replace existing game with a new one</li>
+ *     <li>Add a move</li>
+ *     <li>Add an annotation</li>
+ *     <li>Go to a specific move</li>
+ * </ul>
  */
-public class ASFTextCommandParser {
+public class ChessBaseMediaEventParser {
 
-    private static final Logger log = LoggerFactory.getLogger(ASFTextCommandParser.class);
+    private static final Logger log = LoggerFactory.getLogger(ChessBaseMediaEventParser.class);
 
     /**
-     * Parses a TEXT command in the ASF script command stream
-     * @param command the data of the TEXT command encoded as a hexstring
-     * @return the parsed {@link GameEvent}; if the event code is unknown, it will be an @{@link UnknownEvent}
+     * Parses a ChessBase media event from a byte buffer
+     * @param buf a buffer containing the data to parse
+     * @return the parsed {@link GameEvent}; if the event code is unknown, it will be an {@link UnknownEvent}
      * @throws ChessBaseMediaException if unexpected or invalid data was found in a known event
      */
-    public static GameEvent parseTextCommand(String command) throws ChessBaseMediaException {
-        if (command.length() % 2 != 0) {
-            throw new ChessBaseMediaException("Invalid format of ChessBase script command");
-        }
-
-        ByteBuffer buf = ByteBuffer.allocateDirect(command.length() / 2);
-        buf.order(ByteOrder.LITTLE_ENDIAN);
-        for (int i = 0; i < command.length(); i+=2) {
-            try {
-                buf.put((byte) (Integer.parseInt("" + command.charAt(i) + command.charAt(i + 1), 16)));
-            } catch (NumberFormatException e) {
-                throw new ChessBaseMediaException("Invalid format of ChessBase script command", e);
-            }
-        }
-        buf.rewind();
-
-        for (int i = 0; i < 3; i++) {
-            byte b = CBUtil.getSignedByte(buf);
-            if (b != 0) throw new ChessBaseMediaException("Unexpected header byte: " + i + " " + b);
-        }
-        int len = CBUtil.getShortBCD(buf);
-        int bytesLeft = buf.limit() - buf.position();
-        if (bytesLeft != len) {
-            log.warn("Number of bytes left in buffer (" + bytesLeft + ") didn't match specified length (" + len + ")");
-        }
-
+    public static GameEvent parseChessMediaEvent(ByteBuffer buf) throws ChessBaseMediaException {
         int commandType = CBUtil.getIntL(buf);
-        GameEvent action;
 
-        // The following command types seems to exist
-        // 2 = complete game refresh (sent every 10 seconds)
-        // 3 = change selected moved (< 0x60 = ply in main line, otherwise in a variation!?)
-        // 4 = insert new move
-        // 6 = add annotations
-        // 7 = ?
-        // 8 = noop!?
-        // 10 = ?
-        // 11 = ?
+        // The following command types have been seen in the wild:
+        //  2 = Complete game refresh (this event is sent as a heartbeat roughly every 6-10 seconds)
+        //  3 = Change selected moved
+        //  4 = Add a new move
+        //  6 = Add annotations
+        //  7 = Delete variation
+        //  8 = Promote variation
+        // 10 = Delete remaining moves
+        // 11 = Delete all annotations
         // 12 = ? Some messaging? Occurs in Simon Williams - Amazing Moves, with text "Stream is protected"
         // 14 = ? Some sequential id marker occurring just before ReplaceAllEvent
 
+        GameEvent event;
         switch (commandType) {
             case 2:
-                action = new ReplaceAllEvent(parseFullUpdate(buf));
+                event = new ReplaceAllEvent(parseFullUpdate(buf));
                 break;
             case 3:
-                action = new SetCursorEvent(CBUtil.getIntL(buf));
+                event = new SetCursorEvent(CBUtil.getIntL(buf));
                 break;
             case 4:
-                action = parseAddMoveEvent(buf);
+                event = parseAddMoveEvent(buf);
                 break;
             case 6 :
                 int unknown = CBUtil.getIntL(buf);
                 if (unknown != 0 && unknown != 1) {
                     // Is usually 0, but was 1 in Andrew Martin - The ABC of the Benko Gambit (2nd Edition)/10 Accepted.wmv
                     // Version!?
-                    throw new ChessBaseMediaException("Expected 0 or 1 at start of add annotation action");
+                    throw new ChessBaseMediaException("Expected 0 or 1 at start of add annotation event");
                 }
                 short noAnnotations = CBUtil.getSignedShortL(buf);
                 ArrayList<Annotation> annotations = new ArrayList<>(noAnnotations);
@@ -104,71 +87,70 @@ public class ASFTextCommandParser {
                     annotations.add(AnnotationParser.getAnnotation(buf));
                     buf.position(next);
                 }
-                action = new AddAnnotationsEvent(annotations);
+                event = new AddAnnotationsEvent(annotations);
                 break;
             case 7:
                 int zero = CBUtil.getIntL(buf);
                 if (zero != 0)
                     throw new ChessBaseMediaException("Expected 0 as only data for command type " + commandType);
                 // Occurs in Alexei Shirov - My Best Games in the Najdorf (only audio)/My best games in the Sicilian Najdorf.html/2.wmv
-                action = new DeleteVariationEvent();
+                event = new DeleteVariationEvent();
                 break;
             case 8:
                 zero = CBUtil.getIntL(buf);
                 if (zero != 0)
                     throw new ChessBaseMediaException("Expected 0 as only data for command type " + commandType);
                 // Occurs in Alexei Shirov - My Best Games in the Najdorf (only audio)/My best games in the Sicilian Najdorf.html/2.wmv
-                action = new PromoteVariationEvent();
+                event = new PromoteVariationEvent();
                 break;
             case 10:
                 zero = CBUtil.getIntL(buf);
                 if (zero != 0)
                     throw new ChessBaseMediaException("Expected 0 as only data for command type " + commandType);
                 // Occurs in Jacob Aagaard - Queen's Indian Defence/Queen's Indian Defence.avi/8.wmv
-                action = new DeleteRemainingMovesEvent();
+                event = new DeleteRemainingMovesEvent();
                 break;
             case 11:
                 int minus1 = CBUtil.getIntL(buf);
                 if (minus1 != -1)
                     throw new ChessBaseMediaException("Expected -1 as only data for command type 11");
                 // Occurs in Karsten Müller - Chess Endgames 3/68.wmv - probably a mouse slip...
-                action = new DeleteAllAnnotationEvents();
+                event = new DeleteAllAnnotationEvents();
                 break;
             case 14:
                 int id = CBUtil.getIntL(buf);
                 // Occurs in CBM168/Festival Biel 2015.html/Biel 2015 round 04 Navara-Wojtaszek.wmv
-                action = new MarkerEvent(id);
+                event = new MarkerEvent(id);
                 break;
             default:
-                byte[] unknownBytes = new byte[buf.limit() - buf.position()];
-                buf.get(unknownBytes);
-//                StringBuilder sb = new StringBuilder();
-//                for (int i = 0; i < unknownBytes.length; i++) {
-//                    sb.append(unknownBytes[i] >= 32 && unknownBytes[i] < 127 ? (char) unknownBytes[i] : '?');
-//                }
-                log.warn(String.format("Unknown command type %d with data %s",
-                        commandType, Arrays.toString(unknownBytes)));
-//                log.warn(sb.toString());
-
-                action = new UnknownEvent(commandType);
+                log.warn(String.format("Unknown command type %d with data %s", commandType, CBUtil.toHexString(buf)));
+                /*
+                StringBuilder sb = new StringBuilder();
+                while (buf.hasRemaining()) {
+                    byte b = buf.get();
+                    sb.append(b >= 32 && b < 127 ? (char) b : '?');
+                }
+                log.warn(sb.toString());
+                */
+                buf.position(buf.limit());
+                event = new UnknownEvent(commandType);
                 break;
         }
 
         if (buf.hasRemaining()) {
-            byte[] unknownBytes = new byte[buf.limit() - buf.position()];
-            buf.get(unknownBytes);
-            throw new ChessBaseMediaException(String.format("More bytes left in command type %d than expected: %s",
-                    commandType, Arrays.toString(unknownBytes)));
+            String msg = String.format("More bytes left in command type %d than expected: %s",
+                    commandType, CBUtil.toHexString(buf));
+            throw new ChessBaseMediaException(msg);
         }
 
         if (log.isDebugEnabled()) {
-            log.debug("Parsed event " + action.toString());
+            log.debug("Parsed event " + event.toString());
         }
 
-        return action;
+        return event;
     }
 
-    public static GameEvent parseAddMoveEvent(ByteBuffer buf) throws ChessBaseMediaException {
+    static GameEvent parseAddMoveEvent(ByteBuffer buf) throws ChessBaseMediaException {
         int actionFlags = CBUtil.getUnsignedShortL(buf);
         int actionFlags2 = CBUtil.getUnsignedShortL(buf);
         int fromSquare = CBUtil.getUnsignedByte(buf);
@@ -262,7 +244,7 @@ public class ASFTextCommandParser {
         }
     }
 
-    public static NavigableGameModel parseFullUpdate(ByteBuffer buf) throws ChessBaseMediaException {
+    static NavigableGameModel parseFullUpdate(ByteBuffer buf) throws ChessBaseMediaException {
         NavigableGameModel model = new NavigableGameModel();
 
         int zero = CBUtil.getIntL(buf);
@@ -517,7 +499,7 @@ public class ASFTextCommandParser {
         return model;
     }
 
-    private static void parseMoves(ByteBuffer buf, GameMovesModel.Node node)
+    static void parseMoves(ByteBuffer buf, GameMovesModel.Node node)
             throws ChessBaseMediaException {
         int noMoves = CBUtil.getUnsignedShortL(buf);
         int zero = CBUtil.getUnsignedShortL(buf);
@@ -597,6 +579,4 @@ public class ASFTextCommandParser {
             node = newNode;
         }
     }
-
-
 }
