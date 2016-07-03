@@ -23,11 +23,17 @@ public enum Stone {
     private static Stone[] charToStone;
 
     static {
-        charToStone= new Stone[128];
+        charToStone = new Stone[128];
         for (Stone stone : Stone.values()) {
             charToStone[stone.ch] = stone;
         }
     }
+
+    /**
+     * @return an index in the range [0,12] representing this stone
+     * &lt;6 = white stones, 6 = NO_STONE, &gt;6 = black stones
+     */
+    public int index() { return this.value + 6; }
 
     public boolean isWhite() {
         return value > 0;

@@ -16,9 +16,11 @@ import se.yarin.chess.annotations.Annotation;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 
-public class AnnotationParser {
+public final class AnnotationParser {
 
     private static final Logger log = LoggerFactory.getLogger(AnnotationParser.class);
+
+    private AnnotationParser() { }
 
     /**
      * Gets a ChessBase annotation from a {@link ByteBuffer}. Some ChessBae annotation

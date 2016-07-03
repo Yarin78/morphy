@@ -104,6 +104,13 @@ public class Position {
         return startPosition;
     }
 
+    /**
+     * Creates a new position
+     * @param board an 64-element array of the stones on the board
+     * @param playerToMove the player to move
+     * @param castles castle rights
+     * @param epFile the file which an en-passant is possible; -1 if no file
+     */
     public Position(Stone[] board, Player playerToMove, EnumSet<Castles> castles, int epFile) {
         this.board = board.clone();
         locateKings();
@@ -150,13 +157,17 @@ public class Position {
     }
 
     public String toString() {
+        return toString("\n");
+    }
+
+    public String toString(String rowDelimeter) {
         StringBuilder sb = new StringBuilder(64 + 8);
         for (int row = 7; row >= 0; row--) {
             for (int col = 0; col < 8; col++) {
                 char c = stoneAt(col, row).toChar();
                 sb.append(c == ' ' ? '.' : c);
             }
-            sb.append("\n");
+            sb.append(rowDelimeter);
         }
         return sb.toString();
     }

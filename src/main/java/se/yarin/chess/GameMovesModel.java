@@ -33,6 +33,10 @@ public class GameMovesModel {
         this.root = new Node(Position.start(), 0);
     }
 
+    public GameMovesModel(Position startPosition, int startPly) {
+        this.root = new Node(startPosition, startPly);
+    }
+
     /**
      * @return the root node of the game tree
      */
