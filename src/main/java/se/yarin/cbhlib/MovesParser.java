@@ -7,7 +7,6 @@ import se.yarin.chess.*;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.Stack;
 
@@ -86,9 +85,6 @@ public final class MovesParser {
         Stack<StonePositions> piecePositionStack = new Stack<>();
         GameMovesModel.Node currentNode = model.root();
 
-        // All positions in the game in a flat list, excluding the initial position
-        ArrayList<GameMovesModel.Node> nodesInOrder = new ArrayList<>();
-
         while (true) {
             int data = ByteBufferUtil.getUnsignedByte(buf);
             if (encoded) {
@@ -99,13 +95,16 @@ public final class MovesParser {
                 // Not sure what this opcode do. Just ignoring it seems works fine.
                 // Chessbase 9 removes this opcode when replacing the game.
                 continue;
-            } else if (data > OPCODE_IGNORE && data < OPCODE_START_VARIANT) {
+            }
+            if (data > OPCODE_IGNORE && data < OPCODE_START_VARIANT) {
                 throw new ChessBaseInvalidDataException(String.format("Unknown opcode in game data: 0x%02X", data));
-            } else if (data == OPCODE_START_VARIANT) {
+            }
+            if (data == OPCODE_START_VARIANT) {
                 nodeStack.push(currentNode);
                 piecePositionStack.push(piecePosition);
                 continue;
-            } else if (data == OPCODE_END_VARIANT) {
+            }
+            if (data == OPCODE_END_VARIANT) {
                 // Also used as end of game
                 if (nodeStack.size() == 0)
                     break;
@@ -115,168 +114,9 @@ public final class MovesParser {
                 continue;
             }
 
-            // Decode the move and update position
-            Position board = currentNode.position();
-            Player playerToMove = board.playerToMove();
+            // Decode the move
             Move move;
-            Piece pieceType;
-            Stone stone;
-
-            if (data < OPCODE_TWO_BYTES) {
-                int stoneNo;
-                if (data == OPCODE_NULLMOVE) {
-                    move = Move.nullMove(board);
-                    pieceType = Piece.NO_PIECE;
-                    stone = Stone.NO_STONE;
-                    stoneNo = 0;
-                } else if (data < OPCODE_QUEEN_1) {
-                    stoneNo = 0;
-                    pieceType = Piece.KING;
-                    stone = Piece.KING.toStone(playerToMove);
-                    int backRank = playerToMove == Player.WHITE ? 0 : 7;
-                    if (data == OPCODE_KING_OO)
-                        move = new Move(board, 4, backRank, 6, backRank);
-                    else if (data == OPCODE_KING_OOO)
-                        move = new Move(board, 4, backRank, 2, backRank);
-                    else {
-                        int dir = data - OPCODE_KING;
-                        int ksqi = piecePosition.getSqi(stone, 0);
-                        move = new Move(board, ksqi, ksqi+kingDir[dir]);
-                    }
-                } else if ((data < OPCODE_KNIGHT_1) || (data >= OPCODE_QUEEN_2 && data < OPCODE_KNIGHT_3)) {
-                    if (data >= OPCODE_BISHOP_3) {
-                        stoneNo = 2;
-                        data -= OPCODE_BISHOP_3;
-                        pieceType = Piece.BISHOP;
-                    } else if (data >= OPCODE_ROOK_3) {
-                        stoneNo = 2;
-                        data -= OPCODE_ROOK_3;
-                        pieceType = Piece.ROOK;
-                    } else if (data >= OPCODE_QUEEN_3) {
-                        stoneNo = 2;
-                        data -= OPCODE_QUEEN_3;
-                        pieceType = Piece.QUEEN;
-                    } else if (data >= OPCODE_QUEEN_2) {
-                        stoneNo = 1;
-                        data -= OPCODE_QUEEN_2;
-                        pieceType = Piece.QUEEN;
-                    } else if (data >= OPCODE_BISHOP_2) {
-                        stoneNo = 1;
-                        data -= OPCODE_BISHOP_2;
-                        pieceType = Piece.BISHOP;
-                    } else if (data >= OPCODE_BISHOP_1) {
-                        stoneNo = 0;
-                        data -= OPCODE_BISHOP_1;
-                        pieceType = Piece.BISHOP;
-                    } else if (data >= OPCODE_ROOK_2) {
-                        stoneNo = 1;
-                        data -= OPCODE_ROOK_2;
-                        pieceType = Piece.ROOK;
-                    } else if (data >= OPCODE_ROOK_1) {
-                        stoneNo = 0;
-                        data -= OPCODE_ROOK_1;
-                        pieceType = Piece.ROOK;
-                    } else if (data >= OPCODE_QUEEN_1) {
-                        stoneNo = 0;
-                        data -= OPCODE_QUEEN_1;
-                        pieceType = Piece.QUEEN;
-                    } else {
-                        throw new ChessBaseInvalidDataException("Opcode error");
-                    }
-                    stone = pieceType.toStone(playerToMove);
-                    int sqi = piecePosition.getSqi(stone, stoneNo);
-                    if (sqi < 0) {
-                        throw new ChessBaseInvalidDataException(
-                                String.format("No piece coordinate for %s %s number %d", playerToMove, pieceType, stoneNo));
-                    }
-                    int px = Chess.sqiToCol(sqi), py = Chess.sqiToRow(sqi);
-                    int dir = data / 7, stride = data % 7 + 1;
-                    switch (dir + (pieceType == Piece.BISHOP ? 2 : 0)) {
-                        case 0:
-                            move = new Move(board, sqi, Chess.coorToSqi(px, (py + stride) % 8));
-                            break;
-                        case 1:
-                            move = new Move(board, sqi, Chess.coorToSqi((px + stride) % 8, py));
-                            break;
-                        case 2:
-                            move = new Move(board, sqi, Chess.coorToSqi((px + stride) % 8, (py + stride) % 8));
-                            break;
-                        case 3:
-                            move = new Move(board, sqi, Chess.coorToSqi((px + stride) % 8, (py + 8 - stride) % 8));
-                            break;
-                        default:
-                            throw new ChessBaseInvalidDataException("Opcode error"); // Shouldn't happen
-                    }
-                } else if ((data < OPCODE_PAWNS) || (data >= OPCODE_KNIGHT_3 && data < OPCODE_TWO_BYTES)) {
-                    pieceType = Piece.KNIGHT;
-                    if (data >= OPCODE_KNIGHT_3) {
-                        stoneNo = 2;
-                        data -= OPCODE_KNIGHT_3;
-                    } else if (data >= OPCODE_KNIGHT_2) {
-                        stoneNo = 1;
-                        data -= OPCODE_KNIGHT_2;
-                    } else {
-                        stoneNo = 0;
-                        data -= OPCODE_KNIGHT_1;
-                    }
-                    stone = Piece.KNIGHT.toStone(playerToMove);
-                    int sqi = piecePosition.getSqi(stone, stoneNo);
-                    if (sqi < 0) {
-                        throw new ChessBaseInvalidDataException(
-                                String.format("No piece coordinate for %s number %d", stone.toString(), stoneNo));
-                    }
-                    move = new Move(board, sqi, sqi+knightDir[data]);
-                } else if (data >= OPCODE_PAWNS && data < OPCODE_QUEEN_2) {
-                    data -= OPCODE_PAWNS;
-                    stoneNo = data / 4;
-                    pieceType = Piece.PAWN;
-                    stone = pieceType.toStone(playerToMove);
-                    int pawnMove = data % 4;
-                    int sqi = piecePosition.getSqi(stone, stoneNo);
-                    if (sqi < 0) {
-                        throw new ChessBaseInvalidDataException(
-                                String.format("No piece coordinate for %s number %d", stone.toString(), stoneNo));
-                    }
-                    int dir = playerToMove == Player.WHITE ? 1 : -1;
-                    switch (pawnMove) {
-                        case 0:
-                            move = new Move(board, sqi, sqi + dir);
-                            break;
-                        case 1:
-                            move = new Move(board, sqi, sqi + dir * 2);
-                            break;
-                        case 2:
-                            move = new Move(board, sqi, sqi + dir * 9);
-                            break;
-                        case 3:
-                            move = new Move(board, sqi, sqi - dir * 7);
-                            break;
-                        default:
-                            throw new ChessBaseInvalidDataException("Opcode error"); // Shouldn't happen
-                    }
-                } else {
-                    throw new ChessBaseInvalidDataException("Opcode error"); // Shouldn't happen
-                }
-
-                // Update position of the moved piece
-                if (pieceType != Piece.NO_PIECE) {
-                    piecePosition = piecePosition.move(stone, stoneNo, move.toSqi());
-                }
-                if (move.isCastle()) {
-                    int rookX1 = move.toCol() == 6 ? 7 : 0;
-                    int rookX2 = (move.fromCol() + move.toCol()) / 2;
-                    int rookY = playerToMove == Player.WHITE ? 0 : 7;
-                    int rookFromSqi = Chess.coorToSqi(rookX1, rookY);
-                    int rookToSqi = Chess.coorToSqi(rookX2, rookY);
-                    // Update rook position as well
-                    Stone rook = Piece.ROOK.toStone(playerToMove);
-                    for (int i = 0; i < 3; i++) {
-                        if (piecePosition.getSqi(rook, i) == rookFromSqi) {
-                            piecePosition = piecePosition.move(rook, i, rookToSqi);
-                        }
-                    }
-                }
-            } else if (data == OPCODE_TWO_BYTES) {
+            if (data == OPCODE_TWO_BYTES) {
                 // In rare cases a move has to be encoded as two bytes
                 // Typically pawn promotions or if a player has more than 3 pieces of some kind
                 int msb = ByteBufferUtil.getUnsignedByte(buf);
@@ -286,74 +126,179 @@ public final class MovesParser {
                     lsb = decryptMap[(lsb + modifier) % 256];
                 }
                 int word = msb * 256 + lsb;
-                int fromSqi = word % 64, toSqi = (word / 64) % 64;
-                pieceType = board.stoneAt(fromSqi).toPiece();
-                if (pieceType == Piece.NO_PIECE) {
-                    throw new ChessBaseInvalidDataException("No piece at source position");
-                }
-                if (pieceType == Piece.PAWN) {
-                    // This should be a pawn promotion, weird otherwise
-                    int toRow = Chess.sqiToRow(toSqi);
-                    if (toRow > 0 && toRow < 7) {
-                        throw new ChessBaseInvalidDataException("Double bytes used for non-promotion pawn move");
-                    }
-
-                    Piece promotedPiece;
-                    switch (word / 4096) {
-                        case 0: promotedPiece = Piece.QUEEN;  break;
-                        case 1: promotedPiece = Piece.ROOK;   break;
-                        case 2: promotedPiece = Piece.BISHOP; break;
-                        case 3: promotedPiece = Piece.KNIGHT; break;
-                        default:
-                            throw new ChessBaseInvalidDataException("Illegal promoted piece");
-                    }
-                    Stone promotedStone = promotedPiece.toStone(playerToMove);
-                    stone = Piece.PAWN.toStone(playerToMove);
-                    if (piecePosition.getStoneNo(stone, fromSqi) < 0) {
-                        throw new ChessBaseInvalidDataException("Board is in inconsistent state");
-                    }
-                    piecePosition = piecePosition.remove(stone, fromSqi);
-                    piecePosition = piecePosition.add(promotedStone, toSqi);
-                    move = new Move(board, fromSqi, toSqi, promotedStone);
-                } else {
-                    move = new Move(board, fromSqi, toSqi);
-                    if (piecePosition.getStoneNo(pieceType.toStone(playerToMove), fromSqi) >= 0) {
-                        // Sanity check: make sure this piece doesn't occur in piecePosition
-                        throw new ChessBaseInvalidDataException("A piece was moved with double bytes even though it was among the first three");
-                    }
-                }
-            } else
-                throw new ChessBaseInvalidDataException("Opcode error"); // Shouldn't happen
-
-
-            if (move.isCapture()) {
-                int captureSqi = move.toSqi();
-                Stone capturedStone = board.stoneAt(captureSqi);
-                if (capturedStone == Stone.NO_STONE) {
-                    // En passant
-                    captureSqi = Chess.coorToSqi(move.toCol(), move.fromRow());
-                    capturedStone = Piece.PAWN.toStone(playerToMove.otherPlayer());
-                }
-                piecePosition = piecePosition.remove(capturedStone, captureSqi);
+                move = decodeTwoByteMove(word, currentNode.position());
+            } else {
+                move = decodeSingleByteMove(data, piecePosition, currentNode.position());
             }
 
             if (log.isDebugEnabled()) {
                 log.debug("Parsed move " + move.toLAN());
             }
 
-            modifier = (modifier + 255) % 256;
-
+            // Update position of the moved piece
+            piecePosition = piecePosition.doMove(move);
             currentNode = currentNode.addMove(move);
 
-
-            nodesInOrder.add(currentNode);
-
             if (INTEGRITY_CHECKS_ENABLED) {
-                verifyPosition(currentNode.position(), piecePosition);
+                piecePosition.validate(currentNode.position());
             }
+
+            modifier = (modifier + 255) % 256;
         }
 
         return model;
+    }
+
+    private static Move decodeSingleByteMove(int data, StonePositions stonePositions, Position position)
+            throws ChessBaseInvalidDataException {
+        Player playerToMove = position.playerToMove();
+
+        if (data == OPCODE_NULLMOVE) {
+            return Move.nullMove(position);
+        }
+
+        if (data < OPCODE_QUEEN_1) {
+            // King move
+            Stone kingStone = Piece.KING.toStone(playerToMove);
+            int backRank = playerToMove == Player.WHITE ? 0 : 7;
+            if (data == OPCODE_KING_OO)
+                return new Move(position, 4, backRank, 6, backRank);
+            if (data == OPCODE_KING_OOO)
+                return new Move(position, 4, backRank, 2, backRank);
+            int dir = data - OPCODE_KING;
+            int ksqi = stonePositions.getSqi(kingStone, 0);
+            return new Move(position, ksqi, ksqi + kingDir[dir]);
+        }
+
+        // TODO: Eliminate these range checks and multitude of if-statements somehow
+        // But first add tests that uses all three pieces of each type
+        if ((data < OPCODE_KNIGHT_1) || (data >= OPCODE_QUEEN_2 && data < OPCODE_KNIGHT_3)) {
+            // Bishop, rook or queen move
+            Piece pieceType;
+            int stoneNo;
+            if (data >= OPCODE_BISHOP_3) {
+                stoneNo = 2;
+                data -= OPCODE_BISHOP_3;
+                pieceType = Piece.BISHOP;
+            } else if (data >= OPCODE_ROOK_3) {
+                stoneNo = 2;
+                data -= OPCODE_ROOK_3;
+                pieceType = Piece.ROOK;
+            } else if (data >= OPCODE_QUEEN_3) {
+                stoneNo = 2;
+                data -= OPCODE_QUEEN_3;
+                pieceType = Piece.QUEEN;
+            } else if (data >= OPCODE_QUEEN_2) {
+                stoneNo = 1;
+                data -= OPCODE_QUEEN_2;
+                pieceType = Piece.QUEEN;
+            } else if (data >= OPCODE_BISHOP_2) {
+                stoneNo = 1;
+                data -= OPCODE_BISHOP_2;
+                pieceType = Piece.BISHOP;
+            } else if (data >= OPCODE_BISHOP_1) {
+                stoneNo = 0;
+                data -= OPCODE_BISHOP_1;
+                pieceType = Piece.BISHOP;
+            } else if (data >= OPCODE_ROOK_2) {
+                stoneNo = 1;
+                data -= OPCODE_ROOK_2;
+                pieceType = Piece.ROOK;
+            } else if (data >= OPCODE_ROOK_1) {
+                stoneNo = 0;
+                data -= OPCODE_ROOK_1;
+                pieceType = Piece.ROOK;
+            } else if (data >= OPCODE_QUEEN_1) {
+                stoneNo = 0;
+                data -= OPCODE_QUEEN_1;
+                pieceType = Piece.QUEEN;
+            } else {
+                throw new ChessBaseInvalidDataException("Opcode error");
+            }
+            Stone stone = pieceType.toStone(playerToMove);
+            int sqi = stonePositions.getSqi(stone, stoneNo);
+            if (sqi < 0) {
+                throw new ChessBaseInvalidDataException(
+                        String.format("No piece coordinate for %s %s number %d", playerToMove, pieceType, stoneNo));
+            }
+            int px = Chess.sqiToCol(sqi), py = Chess.sqiToRow(sqi);
+            int dir = data / 7, stride = data % 7 + 1;
+            switch (dir + (pieceType == Piece.BISHOP ? 2 : 0)) {
+                case 0: return new Move(position, sqi, Chess.coorToSqi(px, (py + stride) % 8));
+                case 1: return new Move(position, sqi, Chess.coorToSqi((px + stride) % 8, py));
+                case 2: return new Move(position, sqi, Chess.coorToSqi((px + stride) % 8, (py + stride) % 8));
+                case 3: return new Move(position, sqi, Chess.coorToSqi((px + stride) % 8, (py + 8 - stride) % 8));
+            }
+        } else if ((data < OPCODE_PAWNS) || (data >= OPCODE_KNIGHT_3 && data < OPCODE_TWO_BYTES)) {
+            int stoneNo;
+            if (data >= OPCODE_KNIGHT_3) {
+                stoneNo = 2;
+                data -= OPCODE_KNIGHT_3;
+            } else if (data >= OPCODE_KNIGHT_2) {
+                stoneNo = 1;
+                data -= OPCODE_KNIGHT_2;
+            } else {
+                stoneNo = 0;
+                data -= OPCODE_KNIGHT_1;
+            }
+            Stone stone = Piece.KNIGHT.toStone(playerToMove);
+            int sqi = stonePositions.getSqi(stone, stoneNo);
+            if (sqi < 0) {
+                throw new ChessBaseInvalidDataException(
+                        String.format("No piece coordinate for %s number %d", stone.toString(), stoneNo));
+            }
+            return new Move(position, sqi, sqi + knightDir[data]);
+        } else if (data >= OPCODE_PAWNS && data < OPCODE_QUEEN_2) {
+            data -= OPCODE_PAWNS;
+            int stoneNo = data / 4;
+            Stone stone = Piece.PAWN.toStone(playerToMove);
+            int pawnMove = data % 4;
+            int sqi = stonePositions.getSqi(stone, stoneNo);
+            if (sqi < 0) {
+                throw new ChessBaseInvalidDataException(
+                        String.format("No piece coordinate for %s number %d", stone.toString(), stoneNo));
+            }
+            int dir = playerToMove == Player.WHITE ? 1 : -1;
+            switch (pawnMove) {
+                case 0: return new Move(position, sqi, sqi + dir);
+                case 1: return new Move(position, sqi, sqi + dir * 2);
+                case 2: return new Move(position, sqi, sqi + dir * 9);
+                case 3: return new Move(position, sqi, sqi - dir * 7);
+            }
+        }
+        throw new ChessBaseInvalidDataException("Opcode error");
+    }
+
+    private static Move decodeTwoByteMove(int data, Position board)
+            throws ChessBaseInvalidDataException {
+        Player playerToMove = board.playerToMove();
+        int fromSqi = data % 64, toSqi = (data / 64) % 64;
+        Piece pieceType = board.stoneAt(fromSqi).toPiece();
+        if (pieceType == Piece.NO_PIECE) {
+            throw new ChessBaseInvalidDataException("No piece at source position");
+        }
+
+        if (pieceType != Piece.PAWN) {
+            return new Move(board, fromSqi, toSqi);
+        }
+
+        // This should be a pawn promotion, weird otherwise
+        int toRow = Chess.sqiToRow(toSqi);
+        if (toRow > 0 && toRow < 7) {
+            throw new ChessBaseInvalidDataException("Double bytes used for non-promotion pawn move");
+        }
+
+        Piece promotedPiece;
+        switch (data / 4096) {
+            case 0: promotedPiece = Piece.QUEEN;  break;
+            case 1: promotedPiece = Piece.ROOK;   break;
+            case 2: promotedPiece = Piece.BISHOP; break;
+            case 3: promotedPiece = Piece.KNIGHT; break;
+            default:
+                throw new ChessBaseInvalidDataException("Illegal promoted piece");
+        }
+        Stone promotedStone = promotedPiece.toStone(playerToMove);
+        return new Move(board, fromSqi, toSqi, promotedStone);
     }
 
     private static GameMovesModel parseInitialPosition(ByteBuffer buf)
@@ -401,48 +346,4 @@ public final class MovesParser {
         Position startPosition = new Position(stones, sideToMove, castles, epFile);
         return new GameMovesModel(startPosition, Chess.moveNumberToPly(moveNumber, sideToMove));
     }
-
-    private static void verifyPosition(Position position, StonePositions pieces)
-            throws ChessBaseInvalidDataException {
-        // Verify that all pieces in pieces are accounted for in position and vice versa
-        // Only for debugging!
-        int piecesFound = 0, piecesOnBoard = 0;
-        for (Stone stone : Stone.values()) {
-            if (stone.isNoStone()) continue;
-            boolean endReached = false;
-            for (int sqi : pieces.getSqis(stone)) {
-                if (sqi < 0) {
-                    endReached = true;
-                } else {
-                    if (endReached && stone.toPiece() != Piece.PAWN) {
-                        throw new ChessBaseInvalidDataException("Pieces not adjusted correctly");
-                    }
-                    if (position.stoneAt(sqi) != stone) {
-                        throw new ChessBaseInvalidDataException("Board is in inconsistent state");
-                    }
-                    piecesFound++;
-                }
-            }
-            if (stone.toPiece() != Piece.PAWN) {
-                // There may be more than 3 pieces of this color, count them off
-                for (int sqi = 0; sqi < 64; sqi++) {
-                    if (stone == position.stoneAt(sqi)) {
-                        if (pieces.getStoneNo(stone, sqi) < 0) {
-                            piecesFound++; // This is an extra piece
-                        }
-                    }
-                }
-            }
-        }
-
-        for (int i = 0; i < 64; i++) {
-            if (!position.stoneAt(i).isNoStone()) {
-                piecesOnBoard++;
-            }
-        }
-        if (piecesFound != piecesOnBoard) {
-            throw new ChessBaseInvalidDataException("Board is in inconsistent state"); // Some pieces are missing
-        }
-    }
-
 }
