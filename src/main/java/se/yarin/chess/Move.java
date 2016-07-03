@@ -49,9 +49,27 @@ public class Move extends ShortMove {
         return isCapture;
     }
 
+    public Stone movingStone() {
+        if (isNullMove()) return Stone.NO_STONE;
+        return fromPosition.stoneAt(fromSqi());
+    }
+
     public Piece movingPiece() {
-        if (isNullMove()) return NO_PIECE;
-        return fromPosition.stoneAt(fromSqi()).toPiece();
+        return movingStone().toPiece();
+    }
+
+    public Stone capturedStone() {
+        if (isCapture()) {
+            if (isEnPassant()) {
+                return Piece.PAWN.toStone(fromPosition.playerToMove().otherPlayer());
+            }
+            return fromPosition.stoneAt(toSqi());
+        }
+        return Stone.NO_STONE;
+    }
+
+    public Piece capturedPiece() {
+        return capturedStone().toPiece();
     }
 
     public boolean isShortCastle() {
@@ -67,7 +85,8 @@ public class Move extends ShortMove {
     }
 
     public boolean isEnPassant() {
-        return movingPiece() == PAWN && Chess.deltaCol(fromSqi(), toSqi()) != 0;
+        return movingPiece() == PAWN && Chess.deltaCol(fromSqi(), toSqi()) != 0
+                && fromPosition.stoneAt(toSqi()).isNoStone();
     }
 
     public boolean isCheck() {
