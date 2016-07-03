@@ -1,4 +1,4 @@
-package yarin.asflib;
+package se.yarin.asflib;
 
 import org.junit.Assert;
 import org.junit.Test;

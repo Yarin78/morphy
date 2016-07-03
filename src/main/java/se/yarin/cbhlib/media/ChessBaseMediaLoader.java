@@ -4,8 +4,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.chess.timeline.GameEvent;
 import se.yarin.chess.timeline.NavigableGameModelTimeline;
-import yarin.asflib.ASFScriptCommand;
-import yarin.asflib.ASFScriptCommandReader;
+import se.yarin.asflib.ASFScriptCommand;
+import se.yarin.asflib.ASFScriptCommandReader;
 
 import java.io.*;
 import java.nio.ByteBuffer;

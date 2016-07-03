@@ -1,4 +1,4 @@
-package yarin.asflib;
+package se.yarin.asflib;
 
 public class ASFScriptCommand {
     private final int millis;

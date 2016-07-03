@@ -4,8 +4,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.cbhlib.CBUtil;
 import se.yarin.chess.NavigableGameModel;
-import yarin.asflib.ASFScriptCommand;
-import yarin.asflib.ASFScriptCommandReader;
+import se.yarin.asflib.ASFScriptCommand;
+import se.yarin.asflib.ASFScriptCommandReader;
 
 import java.io.IOException;
 import java.io.PrintWriter;
