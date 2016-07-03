@@ -1,6 +1,5 @@
 package se.yarin.chess;
 
-import javafx.geometry.Pos;
 import org.junit.Test;
 
 import java.util.EnumSet;
@@ -71,6 +70,23 @@ public class MoveTest {
         assertEquals("Nc4e3", new Move(position, C4, E3).toSAN());
         assertEquals("N2e3", new Move(position, C2, E3).toSAN());
         assertEquals("Nce7", new Move(position, C6, E7).toSAN());
+    }
+
+    @Test
+    public void testAmbiguousSAN2() {
+        Position position = Position.fromString(
+                "......k.\n" +
+                "..Q.n...\n" +
+                "..n.....\n" +
+                ".Q...Qn.\n" +
+                "...n....\n" +
+                "....Qn..\n" +
+                ".K..Q..Q\n" +
+                "........\n", WHITE);
+
+        assertEquals("Qcd7", new Move(position, C7, D7).toSAN());
+        assertEquals("Qhe5", new Move(position, H2, E5).toSAN());
+        assertEquals("Q2d3", new Move(position, E2, D3).toSAN());
     }
 
     @Test

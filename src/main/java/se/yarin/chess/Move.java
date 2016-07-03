@@ -119,10 +119,12 @@ public class Move extends ShortMove {
                         }
                     } else {
                         sb.append(piece.toChar());
-                        boolean colUnique = true, rowUnique = true;
+                        // TODO: A bit overkill to generate all legal moves; could be made faster
+                        boolean colUnique = true, rowUnique = true, destUnique = true;
                         for (Move move : fromPosition.generateAllLegalMoves()) {
                             if (move.equals(this)) continue;
                             if (move.movingPiece() == piece && move.toSqi() == toSqi()) {
+                                destUnique = false;
                                 if (Chess.sqiToCol(move.fromSqi()) == Chess.sqiToCol(fromSqi())) {
                                     colUnique = false;
                                 }
@@ -131,12 +133,14 @@ public class Move extends ShortMove {
                                 }
                             }
                         }
-                        if (!colUnique && !rowUnique) {
-                            sb.append(Chess.sqiToStr(fromSqi()));
-                        } else if (colUnique && !rowUnique) {
-                            sb.append(Chess.colToChar(Chess.sqiToCol(fromSqi())));
-                        } else if (!colUnique) {
-                            sb.append(Chess.rowToChar(Chess.sqiToRow(fromSqi())));
+                        if (!destUnique) {
+                            if (colUnique) {
+                                sb.append(Chess.colToChar(Chess.sqiToCol(fromSqi())));
+                            } else if (rowUnique) {
+                                sb.append(Chess.rowToChar(Chess.sqiToRow(fromSqi())));
+                            } else {
+                                sb.append(Chess.sqiToStr(fromSqi()));
+                            }
                         }
                     }
                     sanCache = sb.toString();
