@@ -2,7 +2,7 @@ package se.yarin.cbhlib.media;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import se.yarin.cbhlib.CBUtil;
+import se.yarin.cbhlib.ByteBufferUtil;
 import se.yarin.chess.NavigableGameModel;
 import se.yarin.asflib.ASFScriptCommand;
 import se.yarin.asflib.ASFScriptCommandReader;
@@ -133,7 +133,7 @@ public class ReverseEngineerGAFiles {
         }
 
         ByteBuffer buf = ByteBuffer.wrap(bytes);
-        CBUtil.getIntL(buf);
+        ByteBufferUtil.getIntL(buf);
         try {
             NavigableGameModel navigableGameModel = ChessBaseMediaEventParser.parseFullUpdate(buf);
         } catch (ChessBaseMediaException e) {

@@ -32,8 +32,8 @@ public class AnnotationParser {
         // All annotation data is stored in Big Endian
         // TODO: Really? Maybe it's just the noBytes below that should be treated as one byte
         int startPos = buf.position();
-        int annotationType = CBUtil.getUnsignedByte(buf);
-        short noBytes = CBUtil.getSignedShortB(buf);
+        int annotationType = ByteBufferUtil.getUnsignedByte(buf);
+        short noBytes = ByteBufferUtil.getSignedShortB(buf);
         int nextPosition = buf.position() + noBytes - 6;
 
         try {
@@ -46,7 +46,7 @@ public class AnnotationParser {
                 case 0x05 : return getGraphicalArrowsAnnotation(buf, noBytes - 6);
                 case 0x18 : return getCriticalPositionAnnotation(buf);
                 case 0x82 : return getCommentaryBeforeMoveAnnotation(buf, noBytes - 8);
-                case 0x25 : return new VideoStreamTimeAnnotation(CBUtil.getIntB(buf));
+                case 0x25 : return new VideoStreamTimeAnnotation(ByteBufferUtil.getIntB(buf));
 
 //                case 0x14 : return new PawnStructureAnnotation(buf);
 //                case 0x15 : return new PiecePathAnnotation(buf);
@@ -79,9 +79,9 @@ public class AnnotationParser {
     private static GraphicalArrowsAnnotation getGraphicalArrowsAnnotation(ByteBuffer buf, int length) throws ChessBaseAnnotationException {
         ArrayList<GraphicalArrowsAnnotation.Arrow> arrows = new ArrayList<>();
         for (int i = 0; i < length / 3; i++) {
-            int color = CBUtil.getUnsignedByte(buf);
-            int fromSqi = CBUtil.getUnsignedByte(buf) - 1;
-            int toSqi = CBUtil.getUnsignedByte(buf) - 1;
+            int color = ByteBufferUtil.getUnsignedByte(buf);
+            int fromSqi = ByteBufferUtil.getUnsignedByte(buf) - 1;
+            int toSqi = ByteBufferUtil.getUnsignedByte(buf) - 1;
             if (fromSqi < 0 || fromSqi > 63 || toSqi < 0 || toSqi > 63
                     || color < 0 || color > GraphicalAnnotationColor.maxColor())
                 throw new ChessBaseAnnotationException("Invalid graphical arrows annotation");
@@ -93,8 +93,8 @@ public class AnnotationParser {
     private static GraphicalSquaresAnnotation getGraphicalSquaresAnnotation(ByteBuffer buf, int length) throws ChessBaseAnnotationException {
         ArrayList<GraphicalSquaresAnnotation.Square> squares = new ArrayList<>();
         for (int i = 0; i < length / 2; i++) {
-            int color = CBUtil.getUnsignedByte(buf);
-            int sqi = CBUtil.getUnsignedByte(buf) - 1;
+            int color = ByteBufferUtil.getUnsignedByte(buf);
+            int sqi = ByteBufferUtil.getUnsignedByte(buf) - 1;
             if (sqi < 0 || sqi > 63 || color < 0 || color > GraphicalAnnotationColor.maxColor())
                 throw new ChessBaseAnnotationException("Invalid graphical squares annotation");
             squares.add(new GraphicalSquaresAnnotation.Square(GraphicalAnnotationColor.fromInt(color), sqi));
@@ -113,14 +113,14 @@ public class AnnotationParser {
     private static CommentaryAfterMoveAnnotation getCommentaryAfterMoveAnnotation(
             ByteBuffer buf, int commentLength) {
         getTextLanguage(buf); // This is ignored for now
-        String text = CBUtil.getByteStringZeroTerminated(buf, commentLength);
+        String text = ByteBufferUtil.getByteStringZeroTerminated(buf, commentLength);
         return new CommentaryAfterMoveAnnotation(text);
     }
 
     private static CommentaryBeforeMoveAnnotation getCommentaryBeforeMoveAnnotation(
             ByteBuffer buf, int commentLength) {
         getTextLanguage(buf); // This is ignored for now
-        String text = CBUtil.getByteStringZeroTerminated(buf, commentLength);
+        String text = ByteBufferUtil.getByteStringZeroTerminated(buf, commentLength);
         return new CommentaryBeforeMoveAnnotation(text);
     }
 

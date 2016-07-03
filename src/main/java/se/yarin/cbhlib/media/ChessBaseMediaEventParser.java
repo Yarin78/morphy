@@ -3,6 +3,7 @@ package se.yarin.cbhlib.media;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.cbhlib.AnnotationParser;
+import se.yarin.cbhlib.ByteBufferUtil;
 import se.yarin.cbhlib.CBUtil;
 import se.yarin.chess.*;
 import se.yarin.chess.annotations.Annotation;
@@ -40,7 +41,7 @@ public class ChessBaseMediaEventParser {
      * @throws ChessBaseMediaException if unexpected or invalid data was found in a known event
      */
     public static GameEvent parseChessMediaEvent(ByteBuffer buf) throws ChessBaseMediaException {
-        int commandType = CBUtil.getIntL(buf);
+        int commandType = ByteBufferUtil.getIntL(buf);
 
         // The following command types have been seen in the wild:
         //  2 = Complete game refresh (this event is sent as a heartbeat roughly every 6-10 seconds)
@@ -60,25 +61,25 @@ public class ChessBaseMediaEventParser {
                 event = new ReplaceAllEvent(parseFullUpdate(buf));
                 break;
             case 3:
-                event = new SetCursorEvent(CBUtil.getIntL(buf));
+                event = new SetCursorEvent(ByteBufferUtil.getIntL(buf));
                 break;
             case 4:
                 event = parseAddMoveEvent(buf);
                 break;
             case 6 :
-                int unknown = CBUtil.getIntL(buf);
+                int unknown = ByteBufferUtil.getIntL(buf);
                 if (unknown != 0 && unknown != 1) {
                     // Is usually 0, but was 1 in Andrew Martin - The ABC of the Benko Gambit (2nd Edition)/10 Accepted.wmv
                     // Version!?
                     throw new ChessBaseMediaException("Expected 0 or 1 at start of add annotation event");
                 }
-                short noAnnotations = CBUtil.getSignedShortL(buf);
+                short noAnnotations = ByteBufferUtil.getSignedShortL(buf);
                 ArrayList<Annotation> annotations = new ArrayList<>(noAnnotations);
 //                log.info("# annotations: " + noAnnotations);
                 for (int i = 0; i < noAnnotations; i++) {
-                    int annotationSize = CBUtil.getUnsignedShortL(buf);
+                    int annotationSize = ByteBufferUtil.getUnsignedShortL(buf);
                     int next = buf.position() + annotationSize;
-                    int moveNo = CBUtil.getUnsigned24BitL(buf);
+                    int moveNo = ByteBufferUtil.getUnsigned24BitL(buf);
                     if (moveNo != 0) {
                         // In the ChessBase media format, annotations are always at move 0,
                         // probably since there is no need for it as there is a selected move.
@@ -90,35 +91,35 @@ public class ChessBaseMediaEventParser {
                 event = new AddAnnotationsEvent(annotations);
                 break;
             case 7:
-                int zero = CBUtil.getIntL(buf);
+                int zero = ByteBufferUtil.getIntL(buf);
                 if (zero != 0)
                     throw new ChessBaseMediaException("Expected 0 as only data for command type " + commandType);
                 // Occurs in Alexei Shirov - My Best Games in the Najdorf (only audio)/My best games in the Sicilian Najdorf.html/2.wmv
                 event = new DeleteVariationEvent();
                 break;
             case 8:
-                zero = CBUtil.getIntL(buf);
+                zero = ByteBufferUtil.getIntL(buf);
                 if (zero != 0)
                     throw new ChessBaseMediaException("Expected 0 as only data for command type " + commandType);
                 // Occurs in Alexei Shirov - My Best Games in the Najdorf (only audio)/My best games in the Sicilian Najdorf.html/2.wmv
                 event = new PromoteVariationEvent();
                 break;
             case 10:
-                zero = CBUtil.getIntL(buf);
+                zero = ByteBufferUtil.getIntL(buf);
                 if (zero != 0)
                     throw new ChessBaseMediaException("Expected 0 as only data for command type " + commandType);
                 // Occurs in Jacob Aagaard - Queen's Indian Defence/Queen's Indian Defence.avi/8.wmv
                 event = new DeleteRemainingMovesEvent();
                 break;
             case 11:
-                int minus1 = CBUtil.getIntL(buf);
+                int minus1 = ByteBufferUtil.getIntL(buf);
                 if (minus1 != -1)
                     throw new ChessBaseMediaException("Expected -1 as only data for command type 11");
                 // Occurs in Karsten Müller - Chess Endgames 3/68.wmv - probably a mouse slip...
                 event = new DeleteAllAnnotationEvents();
                 break;
             case 14:
-                int id = CBUtil.getIntL(buf);
+                int id = ByteBufferUtil.getIntL(buf);
                 // Occurs in CBM168/Festival Biel 2015.html/Biel 2015 round 04 Navara-Wojtaszek.wmv
                 event = new MarkerEvent(id);
                 break;
@@ -151,11 +152,11 @@ public class ChessBaseMediaEventParser {
     }
 
     static GameEvent parseAddMoveEvent(ByteBuffer buf) throws ChessBaseMediaException {
-        int actionFlags = CBUtil.getUnsignedShortL(buf);
-        int actionFlags2 = CBUtil.getUnsignedShortL(buf);
-        int fromSquare = CBUtil.getUnsignedByte(buf);
-        int toSquare = CBUtil.getUnsignedByte(buf);
-        int moveFlags = CBUtil.getUnsignedShortL(buf);
+        int actionFlags = ByteBufferUtil.getUnsignedShortL(buf);
+        int actionFlags2 = ByteBufferUtil.getUnsignedShortL(buf);
+        int fromSquare = ByteBufferUtil.getUnsignedByte(buf);
+        int toSquare = ByteBufferUtil.getUnsignedByte(buf);
+        int moveFlags = ByteBufferUtil.getUnsignedShortL(buf);
 
         // actionFlags:
         // 0000  Move becomes variation 0
@@ -247,29 +248,29 @@ public class ChessBaseMediaEventParser {
     static NavigableGameModel parseFullUpdate(ByteBuffer buf) throws ChessBaseMediaException {
         NavigableGameModel model = new NavigableGameModel();
 
-        int zero = CBUtil.getIntL(buf);
+        int zero = ByteBufferUtil.getIntL(buf);
         if (zero != 0) {
             throw new ChessBaseMediaException("Expected 0 as first int for command type 2");
         }
 
-        int selectedMoveNo = CBUtil.getUnsignedShortL(buf);
+        int selectedMoveNo = ByteBufferUtil.getUnsignedShortL(buf);
 
-        int p21 = CBUtil.getUnsignedShortL(buf), p22 = CBUtil.getUnsignedShortL(buf), p23 = CBUtil.getUnsignedShortL(buf);
+        int p21 = ByteBufferUtil.getUnsignedShortL(buf), p22 = ByteBufferUtil.getUnsignedShortL(buf), p23 = ByteBufferUtil.getUnsignedShortL(buf);
         if (p21 != 0 || p22 != 0 || p23 != 0) {
             throw new ChessBaseMediaException(String.format("Unknown part 2: %02x %02x %02x", p21, p22, p23));
         }
 
-        String whiteLast = CBUtil.getByteString(buf), whiteFirst = CBUtil.getByteString(buf);
-        String blackLast = CBUtil.getByteString(buf), blackFirst = CBUtil.getByteString(buf);
+        String whiteLast = ByteBufferUtil.getByteString(buf), whiteFirst = ByteBufferUtil.getByteString(buf);
+        String blackLast = ByteBufferUtil.getByteString(buf), blackFirst = ByteBufferUtil.getByteString(buf);
         String whiteDelim = whiteLast.length() > 0 && whiteFirst.length() > 0 ? ", " : "";
         String blackDelim = blackLast.length() > 0 && blackFirst.length() > 0 ? ", " : "";
         model.header().setField("white",  whiteLast + whiteDelim + whiteFirst);
         model.header().setField("black",  blackLast + blackDelim + blackFirst);
-        model.header().setField("eventSite", CBUtil.getByteString(buf));
-        model.header().setField("eventName", CBUtil.getByteString(buf));
-        model.header().setField("eventDate", CBUtil.decodeDate(CBUtil.getIntL(buf)));
+        model.header().setField("eventSite", ByteBufferUtil.getByteString(buf));
+        model.header().setField("eventName", ByteBufferUtil.getByteString(buf));
+        model.header().setField("eventDate", CBUtil.decodeDate(ByteBufferUtil.getIntL(buf)));
 
-        int eventTypeValue = CBUtil.getUnsignedByte(buf);
+        int eventTypeValue = ByteBufferUtil.getUnsignedByte(buf);
         if ((eventTypeValue & 31) < 0 || (eventTypeValue & 31) >= TournamentType.values().length)
             throw new ChessBaseMediaException("Invalid event type value " + eventTypeValue);
         TournamentType eventType = TournamentType.values()[eventTypeValue & 31];
@@ -284,21 +285,21 @@ public class ChessBaseMediaEventParser {
             timeControl.add(TournamentTimeControls.TournamentTimeControl.Corresp);
         model.header().setField("timeControl", timeControl.toString());
 
-        int eventValue2 = CBUtil.getUnsignedByte(buf);
-        model.header().setField("eventCountry", "#" + CBUtil.getUnsignedShortL(buf)); // TODO: Resolve country name
-        model.header().setField("eventCategory", Integer.toString(CBUtil.getUnsignedByte(buf)));
-        int eventValue = CBUtil.getUnsignedByte(buf); // Not sure what this is? Not always 0, can be 3
+        int eventValue2 = ByteBufferUtil.getUnsignedByte(buf);
+        model.header().setField("eventCountry", "#" + ByteBufferUtil.getUnsignedShortL(buf)); // TODO: Resolve country name
+        model.header().setField("eventCategory", Integer.toString(ByteBufferUtil.getUnsignedByte(buf)));
+        int eventValue = ByteBufferUtil.getUnsignedByte(buf); // Not sure what this is? Not always 0, can be 3
         // TODO: Huh, why is eventCategory set twice here!?
-        model.header().setField("eventCategory", Integer.toString(CBUtil.getUnsignedShortL(buf)));
+        model.header().setField("eventCategory", Integer.toString(ByteBufferUtil.getUnsignedShortL(buf)));
 
-        model.header().setField("sourceTitle", CBUtil.getByteString(buf));
-        model.header().setField("source", CBUtil.getByteString(buf));
+        model.header().setField("sourceTitle", ByteBufferUtil.getByteString(buf));
+        model.header().setField("source", ByteBufferUtil.getByteString(buf));
 
-        model.header().setField("sourceDate", CBUtil.decodeDate(CBUtil.getIntL(buf)));
+        model.header().setField("sourceDate", CBUtil.decodeDate(ByteBufferUtil.getIntL(buf)));
 
-        Date someOtherDate = CBUtil.decodeDate(CBUtil.getIntL(buf));
+        Date someOtherDate = CBUtil.decodeDate(ByteBufferUtil.getIntL(buf));
 
-        byte b1 = CBUtil.getSignedByte(buf), b2 = CBUtil.getSignedByte(buf);
+        byte b1 = ByteBufferUtil.getSignedByte(buf), b2 = ByteBufferUtil.getSignedByte(buf);
         // TODO: Figure out what b1 and b2 is used for. It's usually 00 00 but can also be
         // Crazy guess: number of times white/black repeats moves!?
         // 01 02 in Müller/19
@@ -306,14 +307,14 @@ public class ChessBaseMediaEventParser {
         // 01 01 in ?
         // 00 01 in ?
 
-        model.header().setField("annotator", CBUtil.getByteString(buf));
+        model.header().setField("annotator", ByteBufferUtil.getByteString(buf));
 
-        model.header().setField("whiteElo", CBUtil.getUnsignedShortL(buf));
-        model.header().setField("blackElo", CBUtil.getUnsignedShortL(buf));
+        model.header().setField("whiteElo", ByteBufferUtil.getUnsignedShortL(buf));
+        model.header().setField("blackElo", ByteBufferUtil.getUnsignedShortL(buf));
 
-        model.header().setField("eco", CBUtil.decodeEco(CBUtil.getUnsignedShortL(buf)));
+        model.header().setField("eco", CBUtil.decodeEco(ByteBufferUtil.getUnsignedShortL(buf)));
 
-        GameResult result = GameResult.values()[CBUtil.getUnsignedByte(buf)];
+        GameResult result = GameResult.values()[ByteBufferUtil.getUnsignedByte(buf)];
         switch (result) {
             case BlackWon:
             case BlackWonOnForfeit:
@@ -329,14 +330,14 @@ public class ChessBaseMediaEventParser {
             default:
         }
 
-        int unknownShort = CBUtil.getUnsignedShortL(buf); // 0 or 13!?
-        model.header().setField("date", CBUtil.decodeDate(CBUtil.getIntL(buf)));
-        int lastMoveNumber = CBUtil.getUnsignedShortL(buf);
-        model.header().setField("round", CBUtil.getUnsignedByte(buf));
-        model.header().setField("subRound", CBUtil.getUnsignedByte(buf));
+        int unknownShort = ByteBufferUtil.getUnsignedShortL(buf); // 0 or 13!?
+        model.header().setField("date", CBUtil.decodeDate(ByteBufferUtil.getIntL(buf)));
+        int lastMoveNumber = ByteBufferUtil.getUnsignedShortL(buf);
+        model.header().setField("round", ByteBufferUtil.getUnsignedByte(buf));
+        model.header().setField("subRound", ByteBufferUtil.getUnsignedByte(buf));
 
-        int unknown1 = CBUtil.getIntL(buf);
-        int unknown2 = CBUtil.getIntL(buf);
+        int unknown1 = ByteBufferUtil.getIntL(buf);
+        int unknown2 = ByteBufferUtil.getIntL(buf);
 
         if (unknown1 != 0) {
             throw new ChessBaseMediaException("Unknown int 1: " + unknown1);
@@ -351,19 +352,19 @@ public class ChessBaseMediaEventParser {
         // Rustam Kasimdzhanov - Endgames for Experts/Endgame.html/endgame kasim-ghaem.wmv
         // Rustam Kasimdzhanov - Endgames for Experts/Endgame.html/endgame kasim-shirov.wmv
         // Maurice Ashley - The Secret to Chess/17Secret.wmv
-        int headerSkipBytes = CBUtil.getIntL(buf);
+        int headerSkipBytes = ByteBufferUtil.getIntL(buf);
         if (headerSkipBytes > 0) {
             log.debug("Skipping " + headerSkipBytes + " bytes in header");
         }
         buf.position(buf.position() + headerSkipBytes);
 
-        boolean setupPosition = CBUtil.getUnsignedByte(buf) == 0;
+        boolean setupPosition = ByteBufferUtil.getUnsignedByte(buf) == 0;
 
         if (setupPosition) {
             Stone[] stones = new Stone[64];
             for (int i = 0; i < 64; i++) {
                 Player player = Player.WHITE;
-                int pieceCode = CBUtil.getUnsignedByte(buf);
+                int pieceCode = ByteBufferUtil.getUnsignedByte(buf);
                 if ((pieceCode & 8) == 8) {
                     player = Player.BLACK;
                     pieceCode -= 8;
@@ -385,7 +386,7 @@ public class ChessBaseMediaEventParser {
                 stones[i] = p.toStone(player);
             }
 
-            int b = CBUtil.getUnsignedByte(buf);
+            int b = ByteBufferUtil.getUnsignedByte(buf);
             if (b != 0 && b != 1)
                 throw new ChessBaseMediaException("Unknown side to move: " + b);
             Player toMove = b == 0 ? Player.WHITE : Player.BLACK;
@@ -399,8 +400,8 @@ public class ChessBaseMediaEventParser {
                 // bytes[3] == 8 occurs in Karsten Müller - Chess Endgames 3/22.wmv" start position
                 throw new ChessBaseMediaException("Unknown setup values: " + Arrays.toString(bytes));
             }
-            int moveNo = CBUtil.getUnsignedShortL(buf);
-            b = CBUtil.getUnsignedByte(buf);
+            int moveNo = ByteBufferUtil.getUnsignedShortL(buf);
+            b = ByteBufferUtil.getUnsignedByte(buf);
             if (b != 0) {
                 throw new ChessBaseMediaException("Unknown last value in setup position: " + b);
             }
@@ -416,12 +417,12 @@ public class ChessBaseMediaEventParser {
         // TODO: Figure out what to do with these extra headers
         // Could one of them be teams?
         List<String> headers = new ArrayList<>();
-        int noHeaders = CBUtil.getUnsignedShortL(buf); // number of extra headers to follow??
+        int noHeaders = ByteBufferUtil.getUnsignedShortL(buf); // number of extra headers to follow??
         if (noHeaders != 0) {
             log.debug(String.format("# extra headers: %d", noHeaders));
         }
         for (int i = 0; i < noHeaders; i++) {
-            int size = CBUtil.getUnsignedShortL(buf);
+            int size = ByteBufferUtil.getUnsignedShortL(buf);
             byte[] header = new byte[size];
             buf.get(header);
             headers.add(Arrays.toString(header));
@@ -429,7 +430,7 @@ public class ChessBaseMediaEventParser {
 
         parseMoves(buf, model.moves().root());
 
-        int last = CBUtil.getIntL(buf);
+        int last = ByteBufferUtil.getIntL(buf);
         if (last != 0 || buf.position() != buf.limit()) {
             buf.position(buf.position() - 4);
             byte[] bytes = new byte[buf.limit() - buf.position()];
@@ -501,17 +502,17 @@ public class ChessBaseMediaEventParser {
 
     static void parseMoves(ByteBuffer buf, GameMovesModel.Node node)
             throws ChessBaseMediaException {
-        int noMoves = CBUtil.getUnsignedShortL(buf);
-        int zero = CBUtil.getUnsignedShortL(buf);
+        int noMoves = ByteBufferUtil.getUnsignedShortL(buf);
+        int zero = ByteBufferUtil.getUnsignedShortL(buf);
 
         if (zero != 0) {
             throw new ChessBaseMediaException(String.format("Unknown variation data: %02x %02x", noMoves, zero));
         }
 
         for (int i = 0; i < noMoves; i++) {
-            int fromSquare = CBUtil.getUnsignedByte(buf);
-            int toSquare = CBUtil.getUnsignedByte(buf);
-            int noAnnotations = CBUtil.getUnsignedByte(buf), b2 = CBUtil.getUnsignedByte(buf);
+            int fromSquare = ByteBufferUtil.getUnsignedByte(buf);
+            int toSquare = ByteBufferUtil.getUnsignedByte(buf);
+            int noAnnotations = ByteBufferUtil.getUnsignedByte(buf), b2 = ByteBufferUtil.getUnsignedByte(buf);
 
             Piece promotionPiece = Piece.NO_PIECE;
             if ((fromSquare & 64) == 64) {
@@ -554,10 +555,10 @@ public class ChessBaseMediaEventParser {
             GameMovesModel.Node newNode = node.addMove(move);
 
             for (int j = 0; j < noAnnotations; j++) {
-                int annotationLength = CBUtil.getUnsignedShortL(buf);
+                int annotationLength = ByteBufferUtil.getUnsignedShortL(buf);
                 int nextPosition = buf.position() + annotationLength;
 
-                int moveNo = CBUtil.getSigned24BitB(buf);
+                int moveNo = ByteBufferUtil.getSigned24BitB(buf);
                 if (moveNo != 0) {
                     // Since annotations are embedded, this should always be 0
                     throw new ChessBaseMediaException("Expected move no to be 0");
@@ -571,7 +572,7 @@ public class ChessBaseMediaEventParser {
 
                 buf.position(nextPosition);
             }
-            int noVariations = CBUtil.getUnsignedByte(buf);
+            int noVariations = ByteBufferUtil.getUnsignedByte(buf);
 
             for (int j = 0; j < noVariations; j++) {
                 parseMoves(buf, node);
