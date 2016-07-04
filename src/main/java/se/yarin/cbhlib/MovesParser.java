@@ -318,6 +318,10 @@ public final class MovesParser {
         if ((b & 4) > 0) castles.add(Castles.BLACK_LONG_CASTLE);
         if ((b & 8) > 0) castles.add(Castles.BLACK_SHORT_CASTLE);
         int moveNumber = ByteBufferUtil.getUnsignedByte(buf);
+        if (moveNumber == 0) {
+            // 0 and 1 seems to mean same thing!?
+            moveNumber = 1;
+        }
         Stone[] stones = new Stone[64];
         ByteBufferBitReader byteBufferBitReader = new ByteBufferBitReader(buf);
 
