@@ -9,12 +9,15 @@ import se.yarin.cbhlib.annotations.GraphicalArrowsAnnotation;
 import se.yarin.cbhlib.annotations.GraphicalSquaresAnnotation;
 import se.yarin.cbhlib.annotations.InvalidAnnotation;
 import se.yarin.cbhlib.annotations.UnknownAnnotation;
+import se.yarin.chess.GameMovesModel;
 import se.yarin.chess.Symbol;
 import se.yarin.chess.annotations.*;
 import se.yarin.chess.annotations.Annotation;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 public final class AnnotationParser {
 
@@ -22,32 +25,74 @@ public final class AnnotationParser {
 
     private AnnotationParser() { }
 
+    public static void parseGameAnnotations(@NonNull ByteBuffer buf, @NonNull GameMovesModel model) {
+        List<Annotations> annotations = parseGameAnnotations(buf);
+        List<GameMovesModel.Node> allNodes = model.getAllNodes();
+        if (annotations.size() > allNodes.size()) {
+            log.warn("Annotations set on moves not in the game");
+        }
+        for (int i = 0; i < annotations.size() && i < allNodes.size(); i++) {
+            annotations.get(i).getAll().forEach(allNodes.get(i)::addAnnotation);
+        }
+    }
+
+    public static List<Annotations> parseGameAnnotations(@NonNull ByteBuffer buf) {
+        ArrayList<Annotations> annotations = new ArrayList<>();
+        if (!buf.hasRemaining()) {
+            return annotations;
+        }
+        int gameId = ByteBufferUtil.getUnsigned24BitB(buf);
+        int unknown = ByteBufferUtil.getIntB(buf);
+        if (unknown != 0x01000E0E) {
+            log.warn(String.format("Unknown bytes in annotation header for game " + gameId + ": %08X", unknown));
+        }
+        int noAnnotations = ByteBufferUtil.getUnsigned24BitB(buf) - 1;
+        int size = ByteBufferUtil.getIntB(buf);
+        if (log.isDebugEnabled()) {
+            log.debug("Parsing " + noAnnotations + " annotations for game " + gameId + " occupying " + size + " bytes");
+        }
+        int expectedEnd = buf.position() - 14 + size;
+        for (int i = 0; i < noAnnotations; i++) {
+            int posNo = ByteBufferUtil.getSigned24BitB(buf);
+            Annotation annotation = parseAnnotation(buf);
+            if (posNo < -1 || posNo > 1000000) {
+                log.warn("Invalid position for an annotation in game " + gameId + ": " + posNo);
+            } else {
+                posNo++;
+                while (annotations.size() <= posNo) {
+                    annotations.add(new Annotations());
+                }
+                annotations.get(posNo).add(annotation);
+            }
+        }
+        if (buf.position() != expectedEnd) {
+            log.warn("Annotation parser ended at position " + buf.position() + " but expected to end at " + expectedEnd);
+        }
+        return annotations;
+    }
+
     /**
-     * Gets a ChessBase annotation from a {@link ByteBuffer}. Some ChessBae annotation
-     * might be split up into multiple {@link Annotation}, hence the return of a list.
+     * Gets a ChessBase annotation from a {@link ByteBuffer}.
      * If an annotation is of an unknown type, {@link UnknownAnnotation} will be returned.
      * If there was some error parsing the annotation data, {@link InvalidAnnotation} will be returned.
      * @param buf the byte buffer
      * @return an annotation
      */
-    public static Annotation getAnnotation(@NonNull ByteBuffer buf) {
-        // All annotation data is stored in Big Endian
-        // TODO: Really? Maybe it's just the noBytes below that should be treated as one byte
+    public static Annotation parseAnnotation(@NonNull ByteBuffer buf) {
         int startPos = buf.position();
         int annotationType = ByteBufferUtil.getUnsignedByte(buf);
-        short noBytes = ByteBufferUtil.getSignedShortB(buf);
-        int nextPosition = buf.position() + noBytes - 6;
+        int annotationSize = ByteBufferUtil.getSignedShortB(buf) - 6;
+        int nextPosition = buf.position() + annotationSize;
 
         try {
             switch (annotationType)
             {
-                // TODO: This noBytes - 8 is odd, why isn't it noBytes-6? Check if this really is the case.
-                case 0x02 : return getCommentaryAfterMoveAnnotation(buf, noBytes-8);
-                case 0x03 : return getSymbolAnnotation(buf, noBytes - 6);
-                case 0x04 : return getGraphicalSquaresAnnotation(buf, noBytes - 6);
-                case 0x05 : return getGraphicalArrowsAnnotation(buf, noBytes - 6);
+                case 0x02 : return getCommentaryAfterMoveAnnotation(buf, annotationSize);
+                case 0x03 : return getSymbolAnnotation(buf, annotationSize);
+                case 0x04 : return getGraphicalSquaresAnnotation(buf, annotationSize);
+                case 0x05 : return getGraphicalArrowsAnnotation(buf, annotationSize);
                 case 0x18 : return getCriticalPositionAnnotation(buf);
-                case 0x82 : return getCommentaryBeforeMoveAnnotation(buf, noBytes - 8);
+                case 0x82 : return getCommentaryBeforeMoveAnnotation(buf, annotationSize);
                 case 0x25 : return new VideoStreamTimeAnnotation(ByteBufferUtil.getIntB(buf));
 
 //                case 0x14 : return new PawnStructureAnnotation(buf);
@@ -63,11 +108,11 @@ public final class AnnotationParser {
 //                case 0x19 : return new CorrespondenceMoveAnnotation(buf);
                 default :
 //                    log.warn(String.format("Unknown annotation type %d containing %d bytes of data",                            annotationType, noBytes - 6));
-                    return new UnknownAnnotation(annotationType, buf, noBytes-6);
+                    return new UnknownAnnotation(annotationType, buf, annotationSize);
             }
         } catch (ChessBaseAnnotationException | IllegalArgumentException e) {
             buf.position(startPos);
-            return new InvalidAnnotation(annotationType, buf, noBytes-6);
+            return new InvalidAnnotation(annotationType, buf, annotationSize);
         } finally {
             buf.position(nextPosition);
         }
@@ -113,16 +158,22 @@ public final class AnnotationParser {
     }
 
     private static CommentaryAfterMoveAnnotation getCommentaryAfterMoveAnnotation(
-            ByteBuffer buf, int commentLength) {
+            ByteBuffer buf, int length) {
+        if (buf.get() != 0) {
+            log.warn("First byte in commentary after move annotation was not 0");
+        }
         getTextLanguage(buf); // This is ignored for now
-        String text = ByteBufferUtil.getByteStringZeroTerminated(buf, commentLength);
+        String text = ByteBufferUtil.getByteStringZeroTerminated(buf, length - 2);
         return new CommentaryAfterMoveAnnotation(text);
     }
 
     private static CommentaryBeforeMoveAnnotation getCommentaryBeforeMoveAnnotation(
-            ByteBuffer buf, int commentLength) {
+            ByteBuffer buf, int length) {
+        if (buf.get() != 0) {
+            log.warn("First byte in commentary after move annotation was not 0");
+        }
         getTextLanguage(buf); // This is ignored for now
-        String text = ByteBufferUtil.getByteStringZeroTerminated(buf, commentLength);
+        String text = ByteBufferUtil.getByteStringZeroTerminated(buf, length - 2);
         return new CommentaryBeforeMoveAnnotation(text);
     }
 

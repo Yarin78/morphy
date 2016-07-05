@@ -68,7 +68,7 @@ public class GameHeader extends DataRecord {
     private ByteBuffer annotationData;
 
     public int getGameDataPosition() { return gameDataPosition; }
-    
+
     public boolean isDeleted() {
         return deleted;
     }

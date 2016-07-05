@@ -584,14 +584,15 @@ CBA file (annotation data)
 
 Game start
 ----------
-Ofs 0, Len 3 - The game ID this is the annotation for (little-endian)
-Ofs 4?
+Ofs 0, Len 3 - The game ID this is the annotation for (big-endian)
+Ofs 3, Len 4 - ? 01 00 0E 0E ?
+Ofs 7, Len 3 - Number of annotations in this game + 1
 Ofs 10, Len 4 - The number of bytes used for annotations in this game, starting at ofs 0 (big-endian)
 Ofs 14 - start of annotation data
 
 Annotation data
 ---------------
-Ofs 0, Len 3 - Position in gaming sequence (0 = start position, 1 = after first move, -1 = game general) for this annotation (little-endian)
+Ofs 0, Len 3 - Position in gaming sequence (0 = start position, 1 = after first move, -1 = game general) for this annotation (big-endian)
 Ofs 3, Len 1 - Type of annotation:
                  0x02 = text after move
                  0x03 = symbols

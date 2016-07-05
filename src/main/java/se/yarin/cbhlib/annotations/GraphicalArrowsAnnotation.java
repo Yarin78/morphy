@@ -1,6 +1,7 @@
 package se.yarin.cbhlib.annotations;
 
 import lombok.AllArgsConstructor;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NonNull;
 import se.yarin.chess.annotations.Annotation;
@@ -12,6 +13,7 @@ import java.util.List;
 public class GraphicalArrowsAnnotation extends Annotation {
 
     @AllArgsConstructor
+    @EqualsAndHashCode
     public static class Arrow {
         @Getter private GraphicalAnnotationColor color;
         @Getter private int fromSqi, toSqi;
