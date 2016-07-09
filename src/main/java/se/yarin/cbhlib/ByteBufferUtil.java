@@ -29,22 +29,47 @@ public final class ByteBufferUtil {
      * @return the read string
      */
     public static String getByteStringZeroTerminated(ByteBuffer buf) {
-        return getByteStringZeroTerminated(buf, Integer.MAX_VALUE);
+        int len = 0, start = buf.position();
+        while (buf.get(start + len) != 0) len++;
+        byte[] bytes = new byte[len+1];
+        buf.get(bytes, 0, len+1);
+        return new String(bytes, 0, len, CBUtil.cbCharSet);
     }
 
     /**
-     * Gets a zero-terminated, max-length, byte string from a {@link ByteBuffer}.
+     * Gets a byte encoded string with a given max length from a {@link ByteBuffer}.
+     * Exactly maxLength bytes will be read from the buffer, even if the actual
+     * string is shorter (the string stops at the first 0)
      * @param buf the buffer to read from
      * @param maxLength the maximum length of the string
      * @return the read string
      */
-    public static String getByteStringZeroTerminated(ByteBuffer buf, int maxLength) {
-        // TODO: Check why we need maxLength here!?
-        int len = 0, start = buf.position();
-        while (len < maxLength && buf.get(start + len) != 0) len++;
-        byte[] bytes = new byte[len+1];
-        buf.get(bytes, 0, len+1);
+    public static String getFixedSizeByteString(ByteBuffer buf, int maxLength) {
+        byte[] bytes = new byte[maxLength];
+        buf.get(bytes);
+        int len = 0;
+        while (len < maxLength && bytes[len] != 0) len++;
         return new String(bytes, 0, len, CBUtil.cbCharSet);
+    }
+
+    /**
+     * Puts a fixed-width string to a {@link ByteBuffer}. If the length of the string
+     * is longer than the max length, it will get truncated.
+     * If it's shorter, it will be padded with zeros.
+     * @param buf the buffer to write to
+     * @param s the string to put
+     * @param length the length of the string
+     */
+    public static void putByteString(ByteBuffer buf, String s, int length) {
+        ByteBuffer sbuf = CBUtil.cbCharSet.encode(s);
+        sbuf.position(0);
+        if (sbuf.limit() > length) {
+            sbuf.limit(length);
+        }
+        buf.put(sbuf);
+        for (int i = sbuf.limit(); i < length; i++) {
+            buf.put((byte) 0);
+        }
     }
 
     public static byte getSignedByte(ByteBuffer buf) {
@@ -55,7 +80,9 @@ public final class ByteBufferUtil {
         return buf.get() & 0xff;
     }
 
-    // Methods for reading Big Endian data from a ByteBuffer
+    public static void putByte(ByteBuffer buf, int value) { buf.put((byte) value); }
+
+    // Methods for reading and writing Big Endian data from a ByteBuffer
     // (most significant byte comes first)
 
     public static int getUnsignedShortB(ByteBuffer buf) {
@@ -88,8 +115,15 @@ public final class ByteBufferUtil {
         return (b1 << 24) + (b2 << 16) + (b3 << 8) + b4;
     }
 
+    public static void putIntB(ByteBuffer buf, int value) {
+        buf.put((byte) (value >> 24));
+        buf.put((byte) (value >> 16));
+        buf.put((byte) (value >> 8));
+        buf.put((byte) value);
+    }
 
-    // Methods for reading Little Endian data from a ByteBuffer
+
+    // Methods for reading and writing Little Endian data from a ByteBuffer
     // (most significant byte comes last)
 
     public static int getUnsignedShortL(ByteBuffer buf) {
@@ -120,5 +154,12 @@ public final class ByteBufferUtil {
         int b1 = getUnsignedByte(buf), b2 = getUnsignedByte(buf);
         int b3 = getUnsignedByte(buf), b4 = getUnsignedByte(buf);
         return (b4 << 24) + (b3 << 16) + (b2 << 8) + b1;
+    }
+
+    public static void putIntL(ByteBuffer buf, int value) {
+        buf.put((byte) value);
+        buf.put((byte) (value >> 8));
+        buf.put((byte) (value >> 16));
+        buf.put((byte) (value >> 24));
     }
 }

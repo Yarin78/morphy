@@ -17,7 +17,6 @@ import se.yarin.chess.annotations.Annotation;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 public final class AnnotationParser {
 
@@ -163,7 +162,7 @@ public final class AnnotationParser {
             log.warn("First byte in commentary after move annotation was not 0");
         }
         getTextLanguage(buf); // This is ignored for now
-        String text = ByteBufferUtil.getByteStringZeroTerminated(buf, length - 2);
+        String text = ByteBufferUtil.getFixedSizeByteString(buf, length - 2);
         return new CommentaryAfterMoveAnnotation(text);
     }
 
@@ -173,7 +172,7 @@ public final class AnnotationParser {
             log.warn("First byte in commentary after move annotation was not 0");
         }
         getTextLanguage(buf); // This is ignored for now
-        String text = ByteBufferUtil.getByteStringZeroTerminated(buf, length - 2);
+        String text = ByteBufferUtil.getFixedSizeByteString(buf, length - 2);
         return new CommentaryBeforeMoveAnnotation(text);
     }
 
