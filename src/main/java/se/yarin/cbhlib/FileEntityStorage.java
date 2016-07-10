@@ -10,7 +10,6 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -144,11 +143,10 @@ public class FileEntityStorage<T extends Entity> extends EntityStorageBase<T> im
      * @param entityId the id of the entity to get the header for
      * @return the entity header
      * @throws IOException if some IO error occurred
-     * @throws EntityStorageException if the entityId was outside the capacity
      */
-    private EntityHeader getEntityHeader(int entityId) throws IOException, EntityStorageException {
+    private EntityHeader getEntityHeader(int entityId) throws IOException {
         if (entityId < 0 || entityId >= capacity) {
-            throw new EntityStorageException("Invalid entity id " + entityId + "; capacity is " + capacity);
+            throw new IllegalArgumentException("Invalid entity id " + entityId + "; capacity is " + capacity);
         }
 
         positionChannel(entityId);
@@ -165,9 +163,9 @@ public class FileEntityStorage<T extends Entity> extends EntityStorageBase<T> im
         return header;
     }
 
-    private void putEntityHeader(int entityId, EntityHeader header) throws EntityStorageException, IOException {
+    private void putEntityHeader(int entityId, EntityHeader header) throws IOException {
         if (entityId < 0 || entityId > capacity) {
-            throw new EntityStorageException("Can't write entity header with id " + entityId + "; capacity is " + capacity);
+            throw new IllegalArgumentException("Can't write entity header with id " + entityId + "; capacity is " + capacity);
         }
 
         positionChannel(entityId);
@@ -180,7 +178,7 @@ public class FileEntityStorage<T extends Entity> extends EntityStorageBase<T> im
         channel.write(headerBuf);
     }
 
-    public int nextDeletedBlobId(int entityId) throws IOException, EntityStorageException {
+    public int nextDeletedBlobId(int entityId) throws IOException {
         EntityHeader entityHeader = getEntityHeader(entityId);
         return entityHeader.rightEntityId;
     }
@@ -196,7 +194,7 @@ public class FileEntityStorage<T extends Entity> extends EntityStorageBase<T> im
     }
 
     @Override
-    public T getEntity(int entityId) throws EntityStorageException, IOException {
+    public T getEntity(int entityId) throws IOException {
         if (entityId < 0 || entityId >= capacity) {
             return null;
         }
@@ -248,11 +246,6 @@ public class FileEntityStorage<T extends Entity> extends EntityStorageBase<T> im
 
     @Override
     public Stream<T> getEntityStream()  {
-//        return IntStream.range(0, capacity).mapToObj(id -> getEntitySafe(id)).filter(entity -> entity != null);
-
-//        final Stream<List<Integer>> stream = Stream.empty();
-//        final List<Integer> two = stream.flatMap(List::stream).collect(Collectors.toList());
-
         int bufferSize = 1000;
         Stream<List<T>> stream = IntStream.range(0, (capacity + bufferSize - 1) / bufferSize)
                 .mapToObj(rangeId -> {
@@ -268,29 +261,27 @@ public class FileEntityStorage<T extends Entity> extends EntityStorageBase<T> im
     }
 
     @Override
-    public int addEntity(@NonNull T entity) throws EntityStorageException, IOException {
+    public int addEntity(@NonNull T entity) throws IOException {
         int entityId = getInsertId();
         putEntity(entityId, entity);
         return entityId;
     }
 
     @Override
-    public void putEntity(int entityId, @NonNull T entity) throws EntityStorageException, IOException {
+    public void putEntity(int entityId, @NonNull T entity) throws IOException {
         if (entityId < 0 || entityId > capacity) {
-            throw new EntityStorageException("Can't put an entity with id " + entityId + " when capacity is " + capacity);
+            throw new IllegalArgumentException("Can't put an entity with id " + entityId + " when capacity is " + capacity);
         }
         if (entityId < capacity && getEntityHeader(entityId).isDeleted() && entityId != firstDeletedEntityId) {
             // This would break the linked list of deleted entities
-            throw new EntityStorageException("Can't put an entity over a randomly deleted entity");
+            // Shouldn't happen if you only use putEntity to replace the entity with itself, or through addEntity
+            throw new IllegalArgumentException("Can't put an entity over a randomly deleted entity");
         }
-        putEntityHeader(entityId, new EntityHeader());
-        ByteBuffer buffer = serializer.serialize(entity);
-        buffer.position(0);
-        channel.write(buffer);
 
         if (entityId == firstDeletedEntityId) {
             // Replace a deleted entity
             firstDeletedEntityId = nextDeletedBlobId(firstDeletedEntityId);
+            numEntities++;
             updateStorageHeader();
         } else if (entityId == capacity) {
             // Appended new entity to the end
@@ -298,11 +289,17 @@ public class FileEntityStorage<T extends Entity> extends EntityStorageBase<T> im
             capacity++;
             updateStorageHeader();
         } // Otherwise it was a replacement and no stats have changed
+
+        putEntityHeader(entityId, new EntityHeader());
+        ByteBuffer buffer = serializer.serialize(entity);
+        buffer.position(0);
+        channel.write(buffer);
+
         log.debug("Successfully put entity blob to " + storageName + " with id " + entityId);
     }
 
     @Override
-    public boolean deleteEntity(int entityId) throws EntityStorageException, IOException {
+    public boolean deleteEntity(int entityId) throws IOException {
         EntityHeader header = getEntityHeader(entityId);
         if (header.isDeleted()) {
             log.debug("Deleted entity with id " + entityId + " that was already deleted");
@@ -316,5 +313,10 @@ public class FileEntityStorage<T extends Entity> extends EntityStorageBase<T> im
         numEntities--;
         updateStorageHeader();
         return true;
+    }
+
+    @Override
+    public void close() throws IOException {
+        channel.close();
     }
 }

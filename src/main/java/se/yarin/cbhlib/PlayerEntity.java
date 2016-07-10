@@ -33,6 +33,10 @@ public class PlayerEntity implements Entity, Comparable<PlayerEntity> {
         this.firstGameId = firstGameId;
     }
 
+    public static PlayerEntity key(@NonNull String lastName, @NonNull String firstName) {
+        return new PlayerEntity(lastName, firstName, 0, 0);
+    }
+
     public String getFullName() {
         if (lastName.length() == 0) {
             return firstName;
@@ -53,5 +57,24 @@ public class PlayerEntity implements Entity, Comparable<PlayerEntity> {
         int comp = lastName.compareTo(o.lastName);
         if (comp != 0) return comp;
         return firstName.compareTo(o.firstName);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        PlayerEntity that = (PlayerEntity) o;
+
+        if (!lastName.equals(that.lastName)) return false;
+        return firstName.equals(that.firstName);
+
+    }
+
+    @Override
+    public int hashCode() {
+        int result = lastName.hashCode();
+        result = 31 * result + firstName.hashCode();
+        return result;
     }
 }

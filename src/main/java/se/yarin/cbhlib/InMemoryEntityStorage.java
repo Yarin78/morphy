@@ -26,7 +26,7 @@ public class InMemoryEntityStorage<T extends Entity> extends EntityStorageBase<T
     }
 
     @Override
-    public T getEntity(int entityId) throws EntityStorageException, IOException {
+    public T getEntity(int entityId) throws IOException {
         if (entityId < 0 || entityId >= entityList.size()) {
             return null;
         }
@@ -39,7 +39,7 @@ public class InMemoryEntityStorage<T extends Entity> extends EntityStorageBase<T
     }
 
     @Override
-    public int addEntity(@NonNull T entity) throws EntityStorageException, IOException {
+    public int addEntity(@NonNull T entity) throws IOException {
         for (int i = 0; i < entityList.size(); i++) {
             if (entityList.get(i) == null) {
                 putEntity(i, entity);
@@ -52,9 +52,9 @@ public class InMemoryEntityStorage<T extends Entity> extends EntityStorageBase<T
     }
 
     @Override
-    public void putEntity(int entityId, @NonNull T entity) throws EntityStorageException, IOException {
+    public void putEntity(int entityId, @NonNull T entity) throws IOException {
         if (entityId < 0) {
-            throw new EntityStorageException("Invalid entity id: " + entityId);
+            throw new IllegalArgumentException("Invalid entity id: " + entityId);
         }
         while (entityList.size() <= entityId) {
             entityList.add(null);
@@ -66,9 +66,9 @@ public class InMemoryEntityStorage<T extends Entity> extends EntityStorageBase<T
     }
 
     @Override
-    public boolean deleteEntity(int entityId) throws EntityStorageException, IOException {
+    public boolean deleteEntity(int entityId) throws IOException {
         if (entityId < 0 || entityId >= entityList.size()) {
-            throw new EntityStorageException("There is no entity with id " + entityId);
+            throw new IllegalArgumentException("There is no entity with id " + entityId);
         }
         if (entityList.get(entityId) != null) {
             log.debug("Deleted entity with id " + entityId + " that was already deleted");
@@ -77,5 +77,10 @@ public class InMemoryEntityStorage<T extends Entity> extends EntityStorageBase<T
             return true;
         }
         return false;
+    }
+
+    @Override
+    public void close() throws IOException {
+        // Nothing to do here
     }
 }

@@ -26,7 +26,7 @@ public class PlayerBase extends EntityBase<PlayerEntity> {
      * @param file the initial data of the database
      * @return an in-memory player base
      */
-    public static PlayerBase openInMemory(@NonNull File file) throws IOException, EntityStorageException {
+    public static PlayerBase openInMemory(@NonNull File file) throws IOException {
         OrderedEntityStorageImpl<PlayerEntity> outputStorage = loadInMemoryStorage(file, new PlayerBase());
         return new PlayerBase(outputStorage);
     }
@@ -58,16 +58,16 @@ public class PlayerBase extends EntityBase<PlayerEntity> {
         ByteBuffer buf = ByteBuffer.allocate(SERIALIZED_PLAYER_SIZE);
         ByteBufferUtil.putByteString(buf, player.getLastName(), 30);
         ByteBufferUtil.putByteString(buf, player.getFirstName(), 20);
-        ByteBufferUtil.putIntB(buf, player.getNoGames());
-        ByteBufferUtil.putIntB(buf, player.getFirstGameId());
+        ByteBufferUtil.putIntL(buf, player.getNoGames());
+        ByteBufferUtil.putIntL(buf, player.getFirstGameId());
         return buf;
     }
 
     public PlayerEntity deserialize(int entityId, @NonNull ByteBuffer buf) {
         String last = ByteBufferUtil.getFixedSizeByteString(buf, 30);
         String first = ByteBufferUtil.getFixedSizeByteString(buf, 20);
-        int noGames = ByteBufferUtil.getIntB(buf);
-        int firstGame = ByteBufferUtil.getIntB(buf);
+        int noGames = ByteBufferUtil.getIntL(buf);
+        int firstGame = ByteBufferUtil.getIntL(buf);
         return new PlayerEntity(entityId, last, first, noGames, firstGame);
     }
 

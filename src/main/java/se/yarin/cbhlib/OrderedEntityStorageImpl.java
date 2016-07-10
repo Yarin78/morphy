@@ -5,7 +5,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.Map;
 import java.util.TreeMap;
 import java.util.stream.Stream;
 
@@ -42,7 +41,7 @@ public class OrderedEntityStorageImpl<T extends Entity> extends EntityStorageBas
     }
 
     @Override
-    public T getEntity(int entityId) throws EntityStorageException, IOException {
+    public T getEntity(int entityId) throws IOException {
         return storage.getEntity(entityId);
     }
 
@@ -83,7 +82,7 @@ public class OrderedEntityStorageImpl<T extends Entity> extends EntityStorageBas
     }
 
     @Override
-    public boolean deleteEntity(int entityId) throws EntityStorageException, IOException {
+    public boolean deleteEntity(int entityId) throws IOException {
         ensureIndexExists();
         T entity = storage.getEntity(entityId);
         if (entity != null) {
@@ -92,21 +91,22 @@ public class OrderedEntityStorageImpl<T extends Entity> extends EntityStorageBas
         return storage.deleteEntity(entityId);
     }
 
-
-
+    @Override
+    public void close() throws IOException {
+        storage.close();
+    }
 
 
     @Override
-    public int firstId() {
+    public T getEntity(@NonNull T key) throws IOException {
         ensureIndexExists();
-        return entityTree.size() == 0 ? -1 : entityTree.firstEntry().getValue();
+        Integer id = entityTree.get(key);
+        if (id == null) {
+            return null;
+        }
+        return getEntity(id);
     }
 
-    @Override
-    public int lastId() {
-        ensureIndexExists();
-        return entityTree.size() == 0 ? -1 : entityTree.lastEntry().getValue();
-    }
 
     @Override
     public T firstEntity() {
@@ -118,24 +118,6 @@ public class OrderedEntityStorageImpl<T extends Entity> extends EntityStorageBas
     public T lastEntity() {
         ensureIndexExists();
         return entityTree.size() == 0 ? null : entityTree.lastKey();
-    }
-
-    @Override
-    public int nextEntityId(int entityId) throws EntityStorageException, IOException {
-        ensureIndexExists();
-        T entity = getEntity(entityId);
-        Map.Entry<T, Integer> entry = entityTree.higherEntry(entity);
-        if (entry == null) return -1;
-        return entry.getValue();
-    }
-
-    @Override
-    public int previousEntityId(int entityId) throws EntityStorageException, IOException {
-        ensureIndexExists();
-        T entity = getEntity(entityId);
-        Map.Entry<T, Integer> entry = entityTree.higherEntry(entity);
-        if (entry == null) return -1;
-        return entry.getValue();
     }
 
     @Override
