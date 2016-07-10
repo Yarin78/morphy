@@ -115,6 +115,17 @@ public final class ByteBufferUtil {
         return (b1 << 24) + (b2 << 16) + (b3 << 8) + b4;
     }
 
+    public static void putShortB(ByteBuffer buf, int value) {
+        buf.put((byte) (value >> 8));
+        buf.put((byte) value);
+    }
+
+    public static void put24BitB(ByteBuffer buf, int value) {
+        buf.put((byte) (value >> 16));
+        buf.put((byte) (value >> 8));
+        buf.put((byte) value);
+    }
+
     public static void putIntB(ByteBuffer buf, int value) {
         buf.put((byte) (value >> 24));
         buf.put((byte) (value >> 16));
@@ -154,6 +165,17 @@ public final class ByteBufferUtil {
         int b1 = getUnsignedByte(buf), b2 = getUnsignedByte(buf);
         int b3 = getUnsignedByte(buf), b4 = getUnsignedByte(buf);
         return (b4 << 24) + (b3 << 16) + (b2 << 8) + b1;
+    }
+
+    public static void putShortL(ByteBuffer buf, int value) {
+        buf.put((byte) value);
+        buf.put((byte) (value >> 8));
+    }
+
+    public static void put24BitL(ByteBuffer buf, int value) {
+        buf.put((byte) value);
+        buf.put((byte) (value >> 8));
+        buf.put((byte) (value >> 16));
     }
 
     public static void putIntL(ByteBuffer buf, int value) {

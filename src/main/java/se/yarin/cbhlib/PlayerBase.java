@@ -47,7 +47,7 @@ public class PlayerBase extends EntityBase<PlayerEntity> {
      * If the target file already exists, an {@link IOException} is thrown.
      * @param file the file to create
      * @return the opened player database
-     * @throws IOException if something went wrong when creating the databaes
+     * @throws IOException if something went wrong when creating the database
      */
     public static PlayerBase create(@NonNull File file) throws IOException {
         FileEntityStorage<PlayerEntity> storage = FileEntityStorage.create(file, new PlayerBase());
@@ -64,11 +64,14 @@ public class PlayerBase extends EntityBase<PlayerEntity> {
     }
 
     public PlayerEntity deserialize(int entityId, @NonNull ByteBuffer buf) {
-        String last = ByteBufferUtil.getFixedSizeByteString(buf, 30);
-        String first = ByteBufferUtil.getFixedSizeByteString(buf, 20);
-        int noGames = ByteBufferUtil.getIntL(buf);
-        int firstGame = ByteBufferUtil.getIntL(buf);
-        return new PlayerEntity(entityId, last, first, noGames, firstGame);
+        String lastName = ByteBufferUtil.getFixedSizeByteString(buf, 30);
+        String firstName = ByteBufferUtil.getFixedSizeByteString(buf, 20);
+
+        PlayerEntity player = new PlayerEntity(entityId, lastName, firstName);
+        player.setNoGames(ByteBufferUtil.getIntL(buf));
+        player.setFirstGameId(ByteBufferUtil.getIntL(buf));
+
+        return player;
     }
 
     public int getSerializedEntityLength() {

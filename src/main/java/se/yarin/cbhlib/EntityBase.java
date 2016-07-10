@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public abstract class EntityBase<T extends Entity> implements EntitySerializer<PlayerEntity> {
+public abstract class EntityBase<T extends Entity> implements EntitySerializer<T> {
     private static final Logger log = LoggerFactory.getLogger(EntityBase.class);
 
     private final OrderedEntityStorageImpl<T> storage;

@@ -17,24 +17,14 @@ public class PlayerEntity implements Entity, Comparable<PlayerEntity> {
     @Getter @Setter
     private int firstGameId;
 
-    PlayerEntity(int id, @NonNull String lastName, @NonNull String firstName, int noGames, int firstGameId) {
+    PlayerEntity(int id, @NonNull String lastName, @NonNull String firstName) {
         this.id = id;
         this.lastName = lastName;
         this.firstName = firstName;
-        this.noGames = noGames;
-        this.firstGameId = firstGameId;
     }
 
-    public PlayerEntity(@NonNull String lastName, @NonNull String firstName, int noGames, int firstGameId) {
-        this.id = -1;
-        this.lastName = lastName;
-        this.firstName = firstName;
-        this.noGames = noGames;
-        this.firstGameId = firstGameId;
-    }
-
-    public static PlayerEntity key(@NonNull String lastName, @NonNull String firstName) {
-        return new PlayerEntity(lastName, firstName, 0, 0);
+    public PlayerEntity(@NonNull String lastName, @NonNull String firstName) {
+        this(-1, lastName, firstName);
     }
 
     public String getFullName() {

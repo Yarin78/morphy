@@ -51,12 +51,12 @@ public class PlayerEntityTest {
         PlayerBase playerBase = PlayerBase.open(playerIndexFile);
 
         PlayerEntity p0 = playerBase.get(0);
-        assertEquals(PlayerEntity.key("Adams", "Michael"), p0);
+        assertEquals(new PlayerEntity("Adams", "Michael"), p0);
         assertEquals(28, p0.getNoGames());
         assertEquals(2, p0.getFirstGameId());
 
         PlayerEntity p5 = playerBase.get(5);
-        assertEquals(PlayerEntity.key("Giri", "Anish"), p5);
+        assertEquals(new PlayerEntity("Giri", "Anish"), p5);
         assertEquals(22, p5.getNoGames());
         assertEquals(6, p5.getFirstGameId());
     }
@@ -67,7 +67,7 @@ public class PlayerEntityTest {
         PlayerBase playerBase = PlayerBase.open(playerIndexFile);
 
         PlayerEntity p0 = playerBase.get(0);
-        assertEquals(PlayerEntity.key("Adams", "Michael"), p0);
+        assertEquals(new PlayerEntity("Adams", "Michael"), p0);
         playerBase.close();
 
         playerBase.get(5);
@@ -93,60 +93,60 @@ public class PlayerEntityTest {
     @Test
     public void testGetPlayerByKey() throws IOException {
         PlayerBase playerBase = PlayerBase.open(playerIndexFile);
-        PlayerEntity player = playerBase.get(PlayerEntity.key("Carlsen", "Magnus"));
+        PlayerEntity player = playerBase.get(new PlayerEntity("Carlsen", "Magnus"));
         assertEquals(22, player.getNoGames());
     }
 
     @Test
     public void testGetMissingPlayerByKey() throws IOException {
         PlayerBase playerBase = PlayerBase.open(playerIndexFile);
-        PlayerEntity player = playerBase.get(PlayerEntity.key("Mardell", "Jimmy"));
+        PlayerEntity player = playerBase.get(new PlayerEntity("Mardell", "Jimmy"));
         assertNull(player);
     }
 
     @Test
     public void testGetAscendingRangeOfPlayers() throws IOException {
         PlayerBase playerBase = PlayerBase.open(playerIndexFile);
-        List<PlayerEntity> list = playerBase.getAscendingList(PlayerEntity.key("M", ""), 3);
+        List<PlayerEntity> list = playerBase.getAscendingList(new PlayerEntity("M", ""), 3);
         assertEquals(3, list.size());
-        assertEquals(PlayerEntity.key("Machelett", "Heiko"), list.get(0));
-        assertEquals(PlayerEntity.key("Mainka", "Romuald"), list.get(1));
-        assertEquals(PlayerEntity.key("Maiwald", "Jens Uwe"), list.get(2));
+        assertEquals(new PlayerEntity("Machelett", "Heiko"), list.get(0));
+        assertEquals(new PlayerEntity("Mainka", "Romuald"), list.get(1));
+        assertEquals(new PlayerEntity("Maiwald", "Jens Uwe"), list.get(2));
     }
 
     @Test
     public void testGetDescendingRangeOfPlayers() throws IOException {
         PlayerBase playerBase = PlayerBase.open(playerIndexFile);
-        List<PlayerEntity> list = playerBase.getDescendingList(PlayerEntity.key("Sp", ""), 3);
+        List<PlayerEntity> list = playerBase.getDescendingList(new PlayerEntity("Sp", ""), 3);
         assertEquals(3, list.size());
-        assertEquals(PlayerEntity.key("Socko", "Bartosz"), list.get(0));
-        assertEquals(PlayerEntity.key("So", "Wesley"), list.get(1));
-        assertEquals(PlayerEntity.key("Smerdon", "David"), list.get(2));
+        assertEquals(new PlayerEntity("Socko", "Bartosz"), list.get(0));
+        assertEquals(new PlayerEntity("So", "Wesley"), list.get(1));
+        assertEquals(new PlayerEntity("Smerdon", "David"), list.get(2));
     }
 
     @Test
     public void testGetFirstPlayer() throws IOException {
         PlayerBase playerBase = PlayerBase.open(playerIndexFile);
-        assertEquals(PlayerEntity.key("Adams", "Michael"), playerBase.getFirst());
+        assertEquals(new PlayerEntity("Adams", "Michael"), playerBase.getFirst());
     }
 
     @Test
     public void testGetLastPlayer() throws IOException {
         PlayerBase playerBase = PlayerBase.open(playerIndexFile);
-        assertEquals(PlayerEntity.key("Zwanzger", "Johannes"), playerBase.getLast());
+        assertEquals(new PlayerEntity("Zwanzger", "Johannes"), playerBase.getLast());
     }
 
     @Test
     public void testGetNextPlayer() throws IOException {
         PlayerBase playerBase = PlayerBase.open(playerIndexFile);
-        assertEquals(PlayerEntity.key("Agopov", "Mikael"), playerBase.getNext(playerBase.getFirst()));
+        assertEquals(new PlayerEntity("Agopov", "Mikael"), playerBase.getNext(playerBase.getFirst()));
         assertNull(playerBase.getNext(playerBase.getLast()));
     }
 
     @Test
     public void testGetPreviousPlayer() throws IOException {
         PlayerBase playerBase = PlayerBase.open(playerIndexFile);
-        assertEquals(PlayerEntity.key("Zumsande", "Martin"), playerBase.getPrevious(playerBase.getLast()));
+        assertEquals(new PlayerEntity("Zumsande", "Martin"), playerBase.getPrevious(playerBase.getLast()));
         assertNull(playerBase.getPrevious(playerBase.getFirst()));
     }
 
@@ -163,7 +163,9 @@ public class PlayerEntityTest {
         PlayerBase playerBase = PlayerBase.open(playerIndexFile);
         int oldCount = playerBase.getCount();
 
-        PlayerEntity newPlayer = new PlayerEntity("Mardell", "Jimmy", 10, 7);
+        PlayerEntity newPlayer = new PlayerEntity("Mardell", "Jimmy");
+        newPlayer.setNoGames(10);
+        newPlayer.setFirstGameId(7);
         assertTrue(playerBase.streamAll().noneMatch(e -> e.equals(newPlayer)));
 
         PlayerEntity entity = playerBase.add(newPlayer);
@@ -177,15 +179,15 @@ public class PlayerEntityTest {
     @Test
     public void testRenamePlayer() throws IOException, EntityStorageException {
         PlayerBase playerBase = PlayerBase.open(playerIndexFile);
-        PlayerEntity player = playerBase.get(PlayerEntity.key("Carlsen", "Magnus"));
+        PlayerEntity player = playerBase.get(new PlayerEntity("Carlsen", "Magnus"));
 
         assertNotEquals(player.getId(), playerBase.getLast().getId());
 
         player.setLastName("Zzz");
         playerBase.put(player);
 
-        assertNull(playerBase.get(PlayerEntity.key("Carlsen", "Magnus")));
-        assertEquals(PlayerEntity.key("Zzz", "Magnus"), playerBase.get(player.getId()));
+        assertNull(playerBase.get(new PlayerEntity("Carlsen", "Magnus")));
+        assertEquals(new PlayerEntity("Zzz", "Magnus"), playerBase.get(player.getId()));
         assertEquals(player.getId(), playerBase.getLast().getId());
     }
 
@@ -193,14 +195,14 @@ public class PlayerEntityTest {
     public void testChangePlayerStats() throws IOException, EntityStorageException {
         PlayerBase playerBase = PlayerBase.open(playerIndexFile);
 
-        PlayerEntity player = playerBase.get(PlayerEntity.key("Carlsen", "Magnus"));
+        PlayerEntity player = playerBase.get(new PlayerEntity("Carlsen", "Magnus"));
         int id = player.getId();
         assertNotEquals(1, player.getNoGames());
 
         player.setNoGames(1);
         playerBase.put(player);
 
-        player = playerBase.get(PlayerEntity.key("Carlsen", "Magnus"));
+        player = playerBase.get(new PlayerEntity("Carlsen", "Magnus"));
         assertEquals(1, player.getNoGames());
 
         player = playerBase.get(id);
@@ -212,7 +214,7 @@ public class PlayerEntityTest {
         PlayerBase playerBase = PlayerBase.open(playerIndexFile);
         int oldCount = playerBase.getCount();
 
-        PlayerEntity player = playerBase.get(PlayerEntity.key("Carlsen", "Magnus"));
+        PlayerEntity player = playerBase.get(new PlayerEntity("Carlsen", "Magnus"));
         assertTrue(playerBase.streamAll().anyMatch(e -> e.equals(player)));
 
         assertTrue(playerBase.delete(player.getId()));
@@ -244,13 +246,13 @@ public class PlayerEntityTest {
         playerBase.delete(30);
         playerBase.delete(57);
 
-        PlayerEntity first = playerBase.add(new PlayerEntity("First", "", 0, 0));
+        PlayerEntity first = playerBase.add(new PlayerEntity("First", ""));
         assertEquals(57, first.getId());
-        PlayerEntity second = playerBase.add(new PlayerEntity("Second", "", 0, 0));
+        PlayerEntity second = playerBase.add(new PlayerEntity("Second", ""));
         assertEquals(30, second.getId());
-        PlayerEntity third = playerBase.add(new PlayerEntity("Third", "", 0, 0));
+        PlayerEntity third = playerBase.add(new PlayerEntity("Third", ""));
         assertEquals(10, third.getId());
-        PlayerEntity fourth = playerBase.add(new PlayerEntity("Fourth", "", 0, 0));
+        PlayerEntity fourth = playerBase.add(new PlayerEntity("Fourth", ""));
         assertEquals(playerBase.getCount() - 1, fourth.getId());
     }
 
@@ -274,13 +276,13 @@ public class PlayerEntityTest {
         file.delete(); // Need to delete it first so we can create it in PlayerBase
 
         PlayerBase playerBase = PlayerBase.create(file);
-        playerBase.add(new PlayerEntity("Carlsen", "Magnus", 10, 3));
-        playerBase.add(new PlayerEntity("Karjakin", "Sergey", 2, 0));
-        playerBase.add(new PlayerEntity("Svidler", "Peter", 5, 5));
+        playerBase.add(new PlayerEntity("Carlsen", "Magnus"));
+        playerBase.add(new PlayerEntity("Karjakin", "Sergey"));
+        playerBase.add(new PlayerEntity("Svidler", "Peter"));
         playerBase.close();
 
         playerBase = PlayerBase.open(file);
         PlayerEntity player = playerBase.get(1);
-        assertEquals(PlayerEntity.key("Karjakin", "Sergey"), player);
+        assertEquals(new PlayerEntity("Karjakin", "Sergey"), player);
     }
 }
