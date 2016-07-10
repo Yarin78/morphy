@@ -58,7 +58,7 @@ public class PlayerBase extends EntityBase<PlayerEntity> {
         ByteBuffer buf = ByteBuffer.allocate(SERIALIZED_PLAYER_SIZE);
         ByteBufferUtil.putByteString(buf, player.getLastName(), 30);
         ByteBufferUtil.putByteString(buf, player.getFirstName(), 20);
-        ByteBufferUtil.putIntL(buf, player.getNoGames());
+        ByteBufferUtil.putIntL(buf, player.getCount());
         ByteBufferUtil.putIntL(buf, player.getFirstGameId());
         return buf;
     }
@@ -68,7 +68,7 @@ public class PlayerBase extends EntityBase<PlayerEntity> {
         String firstName = ByteBufferUtil.getFixedSizeByteString(buf, 20);
 
         PlayerEntity player = new PlayerEntity(entityId, lastName, firstName);
-        player.setNoGames(ByteBufferUtil.getIntL(buf));
+        player.setCount(ByteBufferUtil.getIntL(buf));
         player.setFirstGameId(ByteBufferUtil.getIntL(buf));
 
         return player;

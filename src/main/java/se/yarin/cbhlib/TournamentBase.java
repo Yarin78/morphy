@@ -85,7 +85,7 @@ public class TournamentBase extends EntityBase<TournamentEntity> {
         ByteBufferUtil.putByte(buf, optionByte);
         ByteBufferUtil.putByte(buf, tournament.getRounds());
         ByteBufferUtil.putByte(buf, 0); // Or is rounds 2 bytes?
-        ByteBufferUtil.putIntL(buf, tournament.getNoGames()); // TODO: rename to getGameCount here and elsewhere
+        ByteBufferUtil.putIntL(buf, tournament.getCount());
         ByteBufferUtil.putIntL(buf, tournament.getFirstGameId());
 
         return buf;
@@ -105,7 +105,7 @@ public class TournamentBase extends EntityBase<TournamentEntity> {
         int optionByte = ByteBufferUtil.getUnsignedByte(buf);
         tournament.setRounds(ByteBufferUtil.getUnsignedByte(buf));
         int unknownByte2 = ByteBufferUtil.getUnsignedByte(buf);
-        tournament.setNoGames(ByteBufferUtil.getIntL(buf));
+        tournament.setCount(ByteBufferUtil.getIntL(buf));
         tournament.setFirstGameId(ByteBufferUtil.getIntL(buf));
 
         tournament.setType(TournamentType.values()[typeByte & 31]);

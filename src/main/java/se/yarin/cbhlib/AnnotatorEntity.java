@@ -13,7 +13,7 @@ public class AnnotatorEntity implements Entity, Comparable<AnnotatorEntity> {
     private String name;
 
     @Getter @Setter
-    private int noGames;
+    private int count;
 
     @Getter @Setter
     private int firstGameId;

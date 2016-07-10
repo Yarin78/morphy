@@ -56,7 +56,7 @@ public class TournamentEntity implements Entity, Comparable<TournamentEntity> {
     // Maybe stored in another database?
 
     @Getter @Setter
-    private int noGames;
+    private int count;
 
     @Getter @Setter
     private int firstGameId;

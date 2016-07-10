@@ -61,7 +61,7 @@ public class TeamBase extends EntityBase<TeamEntity> {
         ByteBufferUtil.putByte(buf, team.isSeason() ? 1 : 0);
         ByteBufferUtil.putIntL(buf, team.getYear());
         ByteBufferUtil.putByte(buf, team.getNation().ordinal());
-        ByteBufferUtil.putIntL(buf, team.getNoGames());
+        ByteBufferUtil.putIntL(buf, team.getCount());
         ByteBufferUtil.putIntL(buf, team.getFirstGameId());
 
         return buf;
@@ -69,13 +69,13 @@ public class TeamBase extends EntityBase<TeamEntity> {
 
     public TeamEntity deserialize(int entityId, @NonNull ByteBuffer buf) {
         String title = ByteBufferUtil.getFixedSizeByteString(buf, 45);
-        TeamEntity team = new TeamEntity(title);
+        TeamEntity team = new TeamEntity(entityId, title);
 
         team.setTeamNumber(ByteBufferUtil.getIntL(buf));
         team.setSeason((ByteBufferUtil.getUnsignedByte(buf) & 1) > 0);
         team.setYear(ByteBufferUtil.getIntL(buf));
         team.setNation(Nation.values()[ByteBufferUtil.getUnsignedByte(buf)]);
-        team.setNoGames(ByteBufferUtil.getIntL(buf));
+        team.setCount(ByteBufferUtil.getIntL(buf));
         team.setFirstGameId(ByteBufferUtil.getIntL(buf));
 
         return team;

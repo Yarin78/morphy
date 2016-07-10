@@ -33,7 +33,7 @@ public class SourceEntity implements Entity, Comparable<SourceEntity> {
     private SourceQuality quality = SourceQuality.UNSET;
 
     @Getter @Setter
-    private int noGames;
+    private int count;
 
     @Getter @Setter
     private int firstGameId;

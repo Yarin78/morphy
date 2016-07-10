@@ -3,7 +3,6 @@ package se.yarin.cbhlib;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.Setter;
-import se.yarin.chess.Date;
 
 public class TeamEntity implements Entity, Comparable<TeamEntity> {
     @Getter
@@ -27,7 +26,7 @@ public class TeamEntity implements Entity, Comparable<TeamEntity> {
     private Nation nation = Nation.NONE;
 
     @Getter @Setter
-    private int noGames;
+    private int count;
 
     @Getter @Setter
     private int firstGameId;

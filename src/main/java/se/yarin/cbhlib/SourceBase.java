@@ -61,7 +61,7 @@ public class SourceBase extends EntityBase<SourceEntity> {
         ByteBufferUtil.putIntL(buf, CBUtil.encodeDate(source.getDate()));
         ByteBufferUtil.putByte(buf, source.getVersion());
         ByteBufferUtil.putByte(buf, source.getQuality().ordinal());
-        ByteBufferUtil.putIntL(buf, source.getNoGames());
+        ByteBufferUtil.putIntL(buf, source.getCount());
         ByteBufferUtil.putIntL(buf, source.getFirstGameId());
 
         return buf;
@@ -76,7 +76,7 @@ public class SourceBase extends EntityBase<SourceEntity> {
         source.setDate(CBUtil.decodeDate(ByteBufferUtil.getIntL(buf)));
         source.setVersion(ByteBufferUtil.getUnsignedByte(buf));
         source.setQuality(SourceQuality.values()[ByteBufferUtil.getUnsignedByte(buf)]);
-        source.setNoGames(ByteBufferUtil.getIntL(buf));
+        source.setCount(ByteBufferUtil.getIntL(buf));
         source.setFirstGameId(ByteBufferUtil.getIntL(buf));
 
         return source;

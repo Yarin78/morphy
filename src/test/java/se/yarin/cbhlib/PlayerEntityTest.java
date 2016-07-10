@@ -52,12 +52,12 @@ public class PlayerEntityTest {
 
         PlayerEntity p0 = playerBase.get(0);
         assertEquals(new PlayerEntity("Adams", "Michael"), p0);
-        assertEquals(28, p0.getNoGames());
+        assertEquals(28, p0.getCount());
         assertEquals(2, p0.getFirstGameId());
 
         PlayerEntity p5 = playerBase.get(5);
         assertEquals(new PlayerEntity("Giri", "Anish"), p5);
-        assertEquals(22, p5.getNoGames());
+        assertEquals(22, p5.getCount());
         assertEquals(6, p5.getFirstGameId());
     }
 
@@ -94,7 +94,7 @@ public class PlayerEntityTest {
     public void testGetPlayerByKey() throws IOException {
         PlayerBase playerBase = PlayerBase.open(playerIndexFile);
         PlayerEntity player = playerBase.get(new PlayerEntity("Carlsen", "Magnus"));
-        assertEquals(22, player.getNoGames());
+        assertEquals(22, player.getCount());
     }
 
     @Test
@@ -164,7 +164,7 @@ public class PlayerEntityTest {
         int oldCount = playerBase.getCount();
 
         PlayerEntity newPlayer = new PlayerEntity("Mardell", "Jimmy");
-        newPlayer.setNoGames(10);
+        newPlayer.setCount(10);
         newPlayer.setFirstGameId(7);
         assertTrue(playerBase.streamAll().noneMatch(e -> e.equals(newPlayer)));
 
@@ -174,6 +174,14 @@ public class PlayerEntityTest {
         assertTrue(entity.getId() >= 0);
 
         assertTrue(playerBase.streamAll().anyMatch(e -> e.equals(newPlayer)));
+    }
+
+    @Test
+    public void testAddPlayerWithTooLongName() throws IOException, EntityStorageException {
+        PlayerBase playerBase = PlayerBase.open(playerIndexFile);
+        PlayerEntity newPlayer = new PlayerEntity("Thisisaverylongnamethatwillgettruncated", "");
+        PlayerEntity entity = playerBase.add(newPlayer);
+        assertEquals("Thisisaverylongnamethatwillget", entity.getLastName());
     }
 
     @Test
@@ -197,16 +205,16 @@ public class PlayerEntityTest {
 
         PlayerEntity player = playerBase.get(new PlayerEntity("Carlsen", "Magnus"));
         int id = player.getId();
-        assertNotEquals(1, player.getNoGames());
+        assertNotEquals(1, player.getCount());
 
-        player.setNoGames(1);
+        player.setCount(1);
         playerBase.put(player);
 
         player = playerBase.get(new PlayerEntity("Carlsen", "Magnus"));
-        assertEquals(1, player.getNoGames());
+        assertEquals(1, player.getCount());
 
         player = playerBase.get(id);
-        assertEquals(1, player.getNoGames());
+        assertEquals(1, player.getCount());
     }
 
     @Test

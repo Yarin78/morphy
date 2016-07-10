@@ -8,12 +8,16 @@ public class PlayerEntity implements Entity, Comparable<PlayerEntity> {
 
     @Getter
     private int id;
+
     @Getter @Setter @NonNull
     private String lastName;
+
     @Getter @Setter @NonNull
     private String firstName;
+
     @Getter @Setter
-    private int noGames;
+    private int count;
+
     @Getter @Setter
     private int firstGameId;
 
