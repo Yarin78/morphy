@@ -9,8 +9,8 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
-
-import static org.junit.Assert.assertEquals;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class PlayerEntityTest {
 
@@ -33,7 +33,21 @@ public class PlayerEntityTest {
     }
 
     @Test
-    public void testPlayerBaseStats() throws IOException, BlobStorageException {
+    public void testIterateAllPlayers() throws IOException, EntityStorageException {
+        File cbpFile = materializeStream(this.getClass().getResourceAsStream("jimmy.cbp"));
+        PlayerBase playerBase = PlayerBase.openInMemory(cbpFile);
+//        PlayerBase playerBase = PlayerBase.open(cbpFile);
+        AtomicInteger total = new AtomicInteger();
+        playerBase.getAll().forEach(playerEntity -> {
+            System.out.printf("%3d: %s%n", playerEntity.getId(), playerEntity.getFullName());
+            total.incrementAndGet();
+        });
+
+        System.out.printf("Total: " + total);
+    }
+
+    @Test
+    public void testPlayerBaseStats() throws IOException, EntityStorageException {
         File cbpFile = materializeStream(this.getClass().getResourceAsStream("jimmy.cbp"));
 
         PlayerBase playerBase = PlayerBase.openInMemory(cbpFile);
@@ -52,35 +66,26 @@ public class PlayerEntityTest {
     }
 
     @Test
-    public void testDeleteTrail() throws IOException, BlobStorageException {
-        URL url = this.getClass().getResource("megadb2016.cbp");
-        FileBlobStorage storage = new FileBlobStorage(new File(url.getFile()), 58);
-        int current = storage.firstDeletedBlobId();
-        int total = 0;
-        while (current >= 0) {
-            total++;
-            System.out.println(current);
-            current = storage.nextDeletedBlobId(current);
-        }
-        System.out.println(total + " deleted entries");
-    }
-
-    @Test
-    public void testAddBlob() throws IOException, BlobStorageException {
+    public void testAddBlob() throws IOException, EntityStorageException {
         File cbpFile = materializeStream(this.getClass().getResourceAsStream("jimmy.cbp"));
         PlayerBase playerBase = PlayerBase.open(cbpFile);
 //        PlayerBase playerBase = PlayerBase.create(new File("/Users/yarin/tmp/unittest.cbp"));
 //        PlayerBase playerBase = PlayerBase.open(new File("/Users/yarin/tmp/unittest.cbp"));
 //        System.out.println(playerBase.get(0));
-        playerBase.put(new PlayerEntity(-1, "Mardell", "Jimmy", 7, 2));
+        playerBase.put(new PlayerEntity("Mårdell2", "Jimmy", 7, 2));
     }
 
     @Test
-    public void testLoadMegabasePlayer() throws IOException, BlobStorageException {
+    public void testLoadMegabasePlayer() throws IOException, EntityStorageException {
         URL url = this.getClass().getResource("megadb2016.cbp");
 //        URL url = this.getClass().getResource("jimmy.cbp");
         PlayerBase playerBase = PlayerBase.open(new File(url.getFile()));
+        List<PlayerEntity> players = playerBase.getDescendingList(new PlayerEntity("Mardell", "Jimmy", 0, 0), 20);
 
+        for (PlayerEntity current : players) {
+            System.out.printf("%3d: %s%n", current.getId(), current.toString());
+        }
+/*
         PlayerEntity current = playerBase.getFirst();
         int total = 0;
         while (current != null) {
@@ -92,6 +97,7 @@ public class PlayerEntityTest {
             total++;
         }
         System.out.println("Total: " + total);
+        */
     }
 
     @Test
