@@ -55,7 +55,7 @@ public class TournamentEntityTest {
         assertEquals(20, t0.getCategory());
         assertEquals(13, t0.getRounds());
         assertEquals(new Date(2016, 1, 16), t0.getDate());
-        assertEquals(Nation.NAT_103, t0.getNation());
+        assertEquals(Nation.NETHERLANDS, t0.getNation());
         assertEquals("Wijk aan Zee", t0.getPlace());
         assertEquals(TournamentTimeControl.NORMAL, t0.getTimeControl());
         assertEquals(TournamentType.ROUND_ROBIN, t0.getType());
@@ -70,7 +70,7 @@ public class TournamentEntityTest {
         assertEquals(0, t2.getCategory());
         assertEquals(15, t2.getRounds());
         assertEquals(new Date(2015, 9, 18), t2.getDate());
-        assertEquals(Nation.NAT_53, t2.getNation());
+        assertEquals(Nation.GERMANY, t2.getNation());
         assertEquals("Germany", t2.getPlace());
         assertEquals(TournamentTimeControl.NORMAL, t2.getTimeControl());
         assertEquals(TournamentType.ROUND_ROBIN, t2.getType());
@@ -102,7 +102,7 @@ public class TournamentEntityTest {
         newTournament.setBoardPoints(true);
         newTournament.setTimeControl(TournamentTimeControl.CORRESPONDENCE);
         newTournament.setPlace("my place");
-        newTournament.setNation(Nation.NAT_7);
+        newTournament.setNation(Nation.ARGENTINA);
         newTournament.setCount(3);
         newTournament.setFirstGameId(100);
 
@@ -126,7 +126,7 @@ public class TournamentEntityTest {
         assertTrue(tournament.isBoardPoints());
         assertEquals(TournamentTimeControl.CORRESPONDENCE, tournament.getTimeControl());
         assertEquals("my place", tournament.getPlace());
-        assertEquals(Nation.NAT_7, tournament.getNation());
+        assertEquals(Nation.ARGENTINA, tournament.getNation());
         assertEquals(3, tournament.getCount());
         assertEquals(100, tournament.getFirstGameId());
     }

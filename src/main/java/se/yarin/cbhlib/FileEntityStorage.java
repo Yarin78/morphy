@@ -1,5 +1,6 @@
 package se.yarin.cbhlib;
 
+import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NonNull;
 import org.slf4j.Logger;
@@ -16,7 +17,7 @@ import java.util.stream.Stream;
 
 import static java.nio.file.StandardOpenOption.*;
 
-public class FileEntityStorage<T extends Entity> extends EntityStorageBase<T> implements EntityStorage<T> {
+public class FileEntityStorage<T extends Entity & Comparable<T>> extends EntityStorageBase<T> implements EntityStorage<T> {
 
     private static final Logger log = LoggerFactory.getLogger(FileEntityStorage.class);
 
@@ -27,7 +28,7 @@ public class FileEntityStorage<T extends Entity> extends EntityStorageBase<T> im
     private final int serializedEntitySize;
 
     private int capacity;
-    private int rootEntityId;
+    private int rootEntityId; // The id of the root entity in the tree
     private int firstDeletedEntityId;
     private int numEntities;
     private int entityOffset;
@@ -35,30 +36,79 @@ public class FileEntityStorage<T extends Entity> extends EntityStorageBase<T> im
     private FileChannel channel;
 
     /**
-     * A small structure preceding each entity in the storage.
-     * Mostly legacy, used to keep the ordered structure in the blob.
-     * Now it's only used to keep track of deleted entities.
+     * An entity node in the entity tree, including its data.
+     * If the entity is deleted, then it contains a link to the next deleted entity.
      */
     @Data
-    static class EntityHeader {
+    class EntityNode {
+        private int entityId;
         // The id of the preceding entity id. If -999, this entity is deleted.
         private int leftEntityId = -1;
         // The id of the succeeding entity id. If this entity is deleted, this points to the next deleted entity.
         private int rightEntityId = -1;
         // Height of left tree - height of right tree. Used for balancing the binary tree.
         private int heightDif = 0;
+        private byte[] serializedEntity;
+        private T entity = null; // cached deserialization
 
-        private boolean isDeleted() {
+        private EntityNode() {
+        }
+
+        public EntityNode(int entityId, T entity) {
+            this.entityId = entityId;
+            this.entity = entity;
+            serializedEntity = serializer.serialize(entity).array();
+        }
+
+        public EntityNode(T entity) {
+            this(entity.getId(), entity);
+        }
+
+        public boolean isDeleted() {
             return leftEntityId == ENTITY_DELETED;
         }
 
-        static EntityHeader deserialize(ByteBuffer buf) {
-            EntityHeader header = new EntityHeader();
-            header.leftEntityId = ByteBufferUtil.getIntL(buf);
-            header.rightEntityId = ByteBufferUtil.getIntL(buf);
-            header.heightDif = ByteBufferUtil.getSignedByte(buf);
-            return header;
+        public T getEntity() {
+            if (isDeleted()) {
+                return null;
+            }
+            if (entity == null) {
+                entity = serializer.deserialize(entityId, ByteBuffer.wrap(serializedEntity));
+            }
+            return entity;
         }
+    }
+
+    private EntityNode createDeletedNode(int entityId, int nextDeletedEntityId) {
+        EntityNode node = new EntityNode();
+        node.entityId = entityId;
+        node.setLeftEntityId(ENTITY_DELETED);
+        node.setRightEntityId(nextDeletedEntityId);
+        node.setHeightDif(0);
+        node.serializedEntity = new byte[serializedEntitySize];
+        return node;
+    }
+
+
+    private EntityNode deserializeNode(int entityId, ByteBuffer buf) {
+        EntityNode node = new EntityNode();
+        node.entityId = entityId;
+        node.leftEntityId = ByteBufferUtil.getIntL(buf);
+        node.rightEntityId = ByteBufferUtil.getIntL(buf);
+        node.heightDif = ByteBufferUtil.getSignedByte(buf);
+        // Only deserialize the actual entity on demand
+        node.serializedEntity = new byte[serializedEntitySize];
+        buf.get(node.serializedEntity);
+        return node;
+    }
+
+    private ByteBuffer serializeNode(EntityNode node) {
+        ByteBuffer buf = ByteBuffer.allocate(9 + serializedEntitySize);
+        ByteBufferUtil.putIntL(buf, node.getLeftEntityId());
+        ByteBufferUtil.putIntL(buf, node.getRightEntityId());
+        ByteBufferUtil.putByte(buf, node.getHeightDif());
+        buf.put(node.serializedEntity);
+        return buf;
     }
 
     FileEntityStorage(File file, EntitySerializer<T> serializer, boolean create) throws IOException {
@@ -98,13 +148,13 @@ public class FileEntityStorage<T extends Entity> extends EntityStorageBase<T> im
         }
     }
 
-    public static <T extends Entity> FileEntityStorage open(File file, @NonNull EntitySerializer<T> serializer)
-            throws IOException {
+    public static <T extends Entity & Comparable<T>> FileEntityStorage open(
+            File file, @NonNull EntitySerializer<T> serializer) throws IOException {
         return new FileEntityStorage<>(file, serializer, false);
     }
 
-    public static <T extends Entity> FileEntityStorage create(File file, @NonNull EntitySerializer<T> serializer)
-            throws IOException {
+    public static <T extends Entity & Comparable<T>> FileEntityStorage create(
+            File file, @NonNull EntitySerializer<T> serializer) throws IOException {
         return new FileEntityStorage<>(file, serializer, true);
     }
 
@@ -138,55 +188,45 @@ public class FileEntityStorage<T extends Entity> extends EntityStorageBase<T> im
     }
 
     /**
-     * Gets the entity header for the specified entity id.
-     * The channel position is updated and points to the serialized entity data.
-     * @param entityId the id of the entity to get the header for
+     * Gets the entity node for the specified entity id.
+     * The channel position is updated and points to the serialized entity node.
+     * @param entityId the id of the entity node to get
      * @return the entity header
      * @throws IOException if some IO error occurred
      */
-    private EntityHeader getEntityHeader(int entityId) throws IOException {
+    private EntityNode getEntityNode(int entityId) throws IOException {
         if (entityId < 0 || entityId >= capacity) {
             throw new IllegalArgumentException("Invalid entity id " + entityId + "; capacity is " + capacity);
         }
 
         positionChannel(entityId);
-        ByteBuffer headerBuf = ByteBuffer.allocate(9);
-        channel.read(headerBuf);
-        headerBuf.position(0);
+        ByteBuffer buf = ByteBuffer.allocate(9 + serializedEntitySize);
+        channel.read(buf);
+        buf.position(0);
 
-        EntityHeader header = EntityHeader.deserialize(headerBuf);
+        EntityNode entityNode = deserializeNode(entityId, buf);
 
         if (log.isTraceEnabled()) {
-            log.trace("Entity id " + entityId + " in " + storageName + " has header " + header);
+            log.trace("Read entity node: " + entityNode);
         }
 
-        return header;
+        return entityNode;
     }
 
-    private void putEntityHeader(int entityId, EntityHeader header) throws IOException {
-        if (entityId < 0 || entityId > capacity) {
-            throw new IllegalArgumentException("Can't write entity header with id " + entityId + "; capacity is " + capacity);
+    private void putEntityNode(EntityNode node) throws IOException {
+        if (node.entityId < 0 || node.entityId > capacity) {
+            throw new IllegalArgumentException("Can't write entity header with id " + node.entityId + "; capacity is " + capacity);
         }
 
-        positionChannel(entityId);
-        ByteBuffer headerBuf = ByteBuffer.allocate(9);
-        ByteBufferUtil.putIntL(headerBuf, header.getLeftEntityId());
-        ByteBufferUtil.putIntL(headerBuf, header.getRightEntityId());
-        ByteBufferUtil.putByte(headerBuf, header.getHeightDif());
+        positionChannel(node.entityId);
+        ByteBuffer src = serializeNode(node);
+        src.position(0);
+        channel.write(src);
 
-        headerBuf.position(0);
-        channel.write(headerBuf);
+        if (log.isDebugEnabled()) {
+            log.debug(String.format("Put entity node: " + node));
+        }
     }
-
-    public int nextDeletedBlobId(int entityId) throws IOException {
-        EntityHeader entityHeader = getEntityHeader(entityId);
-        return entityHeader.rightEntityId;
-    }
-
-    public int getInsertId() {
-        return firstDeletedEntityId >= 0 ? firstDeletedEntityId : capacity;
-    }
-
 
     @Override
     public int getNumEntities() {
@@ -198,14 +238,7 @@ public class FileEntityStorage<T extends Entity> extends EntityStorageBase<T> im
         if (entityId < 0 || entityId >= capacity) {
             return null;
         }
-        EntityHeader blobHeader = getEntityHeader(entityId);
-        if (blobHeader.isDeleted()) {
-            return null;
-        }
-        ByteBuffer blob = ByteBuffer.allocate(serializedEntitySize);
-        channel.read(blob);
-        blob.position(0);
-        return serializer.deserialize(entityId, blob);
+        return getEntityNode(entityId).getEntity();
     }
 
     /**
@@ -236,9 +269,9 @@ public class FileEntityStorage<T extends Entity> extends EntityStorageBase<T> im
         buf.position(0);
         for (int i = startIdInclusive; i < endIdExclusive; i++) {
             buf.position((i - startIdInclusive) * (9 + serializedEntitySize));
-            EntityHeader header = EntityHeader.deserialize(buf);
-            if (!header.isDeleted()) {
-                result.add(serializer.deserialize(i, buf));
+            EntityNode node = deserializeNode(i, buf);
+            if (node.getEntity() != null) {
+                result.add(node.getEntity());
             }
         }
         return result;
@@ -261,54 +294,98 @@ public class FileEntityStorage<T extends Entity> extends EntityStorageBase<T> im
     }
 
     @Override
-    public int addEntity(@NonNull T entity) throws IOException {
-        int entityId = getInsertId();
-        putEntity(entityId, entity);
+    public int addEntity(@NonNull T entity) throws IOException, EntityStorageException {
+        int entityId;
+
+        SearchResult result = treeSearch(entity);
+        if (result.node != null && result.compare == 0) {
+            throw new EntityStorageException("An entity with the same key already exists");
+        }
+
+        if (firstDeletedEntityId >= 0) {
+            // Replace a deleted entity
+            entityId = firstDeletedEntityId;
+            firstDeletedEntityId = getEntityNode(firstDeletedEntityId).rightEntityId;
+        } else {
+            // Appended new entity to the end
+            entityId = capacity++;
+        }
+        numEntities++;
+
+        if (result.node == null) {
+            rootEntityId = entityId;
+        } else {
+            if (result.compare < 0) {
+                result.node.setLeftEntityId(entityId);
+            } else {
+                result.node.setRightEntityId(entityId);
+            }
+            putEntityNode(result.node);
+        }
+        // TODO: Balance tree
+
+        updateStorageHeader();
+
+        putEntityNode(new EntityNode(entityId, entity));
+
+        log.debug("Successfully added entity to " + storageName + " with id " + entityId);
+
         return entityId;
+    }
+
+    @AllArgsConstructor
+    private class SearchResult {
+        private int compare;
+        private EntityNode node;
+    }
+
+    private SearchResult treeSearch(@NonNull T entity) throws IOException {
+        return treeSearch(rootEntityId, new SearchResult(0, null), entity);
+    }
+
+    private SearchResult treeSearch(int currentId, SearchResult result, @NonNull T entity) throws IOException {
+        if (currentId < 0) {
+            return result;
+        }
+
+        T current = getEntity(currentId);
+        EntityNode node = getEntityNode(currentId);
+        int comp = entity.compareTo(current);
+
+        result = new SearchResult(comp, node);
+        if (comp == 0) {
+            return result;
+        } else if (comp < 0) {
+            return treeSearch(node.leftEntityId, result, entity);
+        } else {
+            return treeSearch(node.rightEntityId, result, entity);
+        }
     }
 
     @Override
     public void putEntity(int entityId, @NonNull T entity) throws IOException {
-        if (entityId < 0 || entityId > capacity) {
-            throw new IllegalArgumentException("Can't put an entity with id " + entityId + " when capacity is " + capacity);
+        if (entityId < 0 || entityId >= capacity) {
+            throw new IllegalArgumentException(String.format("Can't put an entity with id %d when capacity is %d",
+                    entityId, capacity));
         }
-        if (entityId < capacity && getEntityHeader(entityId).isDeleted() && entityId != firstDeletedEntityId) {
-            // This would break the linked list of deleted entities
-            // Shouldn't happen if you only use putEntity to replace the entity with itself, or through addEntity
-            throw new IllegalArgumentException("Can't put an entity over a randomly deleted entity");
+        if (getEntityNode(entityId).isDeleted()) {
+            throw new IllegalArgumentException("Can't replace a deleted entity");
         }
 
-        if (entityId == firstDeletedEntityId) {
-            // Replace a deleted entity
-            firstDeletedEntityId = nextDeletedBlobId(firstDeletedEntityId);
-            numEntities++;
-            updateStorageHeader();
-        } else if (entityId == capacity) {
-            // Appended new entity to the end
-            numEntities++;
-            capacity++;
-            updateStorageHeader();
-        } // Otherwise it was a replacement and no stats have changed
+        putEntityNode(new EntityNode(entityId, entity));
 
-        putEntityHeader(entityId, new EntityHeader());
-        ByteBuffer buffer = serializer.serialize(entity);
-        buffer.position(0);
-        channel.write(buffer);
-
-        log.debug("Successfully put entity blob to " + storageName + " with id " + entityId);
+        log.debug("Successfully put entity to " + storageName + " with id " + entityId);
     }
 
     @Override
     public boolean deleteEntity(int entityId) throws IOException {
-        EntityHeader header = getEntityHeader(entityId);
-        if (header.isDeleted()) {
+        EntityNode node = getEntityNode(entityId);
+        if (node.isDeleted()) {
             log.debug("Deleted entity with id " + entityId + " that was already deleted");
             return false;
         }
-        header.setLeftEntityId(ENTITY_DELETED);
-        header.setRightEntityId(firstDeletedEntityId);
-        header.setHeightDif(0);
-        putEntityHeader(entityId, header);
+
+        putEntityNode(createDeletedNode(entityId, firstDeletedEntityId));
         firstDeletedEntityId = entityId;
         numEntities--;
         updateStorageHeader();
@@ -318,5 +395,49 @@ public class FileEntityStorage<T extends Entity> extends EntityStorageBase<T> im
     @Override
     public void close() throws IOException {
         channel.close();
+    }
+
+    /**
+     * Validates that the entity headers correctly reflects the order of the entities
+     */
+    public void validateStructure() throws EntityStorageException, IOException {
+        if (rootEntityId == -1) {
+            if (getNumEntities() == 0) {
+                return;
+            }
+            throw new EntityStorageException(String.format(
+                    "Header says there are %d entities in the storage but the root points to no entity.", getNumEntities()));
+        }
+
+        int sum = validate(rootEntityId, null, null);
+        if (sum != getNumEntities()) {
+            throw new EntityStorageException(String.format(
+                    "Found %d entities when traversing the base but the header says there should be %d entities.", sum, getNumEntities()));
+        }
+    }
+
+    private int validate(int entityId, T min, T max) throws IOException, EntityStorageException {
+        // TODO: Validate height difference of left and right tree
+        EntityNode node = getEntityNode(entityId);
+        T entity = node.getEntity();
+        if (node.isDeleted() || entity == null) {
+            throw new EntityStorageException(String.format(
+                    "Reached deleted element %d when validating the storage structure.", entityId));
+        }
+        if ((min != null && min.compareTo(entity) >= 0) || (max != null && max.compareTo(entity) <= 0)) {
+            throw new EntityStorageException(String.format(
+                    "Entity %d out of order when validating the storage structure", entityId));
+        }
+
+        // Since the range is strictly decreasing every time, we should not have to worry
+        // about ending up in an infinite recursion.
+        int cnt = 1;
+        if (node.getLeftEntityId() != -1) {
+            cnt += validate(node.getLeftEntityId(), min, entity);
+        }
+        if (node.getRightEntityId() != -1) {
+            cnt += validate(node.getRightEntityId(), entity, max);
+        }
+        return cnt;
     }
 }

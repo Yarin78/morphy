@@ -54,7 +54,7 @@ public class TeamEntityTest {
         assertEquals(0, s1.getTeamNumber());
         assertTrue(s1.isSeason());
         assertEquals(2015, s1.getYear());
-        assertEquals(Nation.NAT_53, s1.getNation());
+        assertEquals(Nation.GERMANY, s1.getNation());
         assertEquals(120, s1.getCount());
     }
 
@@ -63,7 +63,7 @@ public class TeamEntityTest {
         TeamBase teamBase = TeamBase.open(teamIndexFile);
         TeamEntity team = teamBase.get(new TeamEntity("Hamburger SK"));
         assertEquals(2015, team.getYear());
-        assertEquals(Nation.NAT_53, team.getNation());
+        assertEquals(Nation.GERMANY, team.getNation());
     }
 
     @Test
@@ -74,7 +74,7 @@ public class TeamEntityTest {
         newTeam.setTeamNumber(7);
         newTeam.setSeason(false);
         newTeam.setYear(2001);
-        newTeam.setNation(Nation.NAT_3);
+        newTeam.setNation(Nation.ALGERIA);
         newTeam.setCount(15);
         newTeam.setFirstGameId(123);
 
@@ -91,7 +91,7 @@ public class TeamEntityTest {
         assertEquals(7, team.getTeamNumber());
         assertFalse(team.isSeason());
         assertEquals(2001, team.getYear());
-        assertEquals(Nation.NAT_3, team.getNation());
+        assertEquals(Nation.ALGERIA, team.getNation());
         assertEquals(15, team.getCount());
         assertEquals(123, team.getFirstGameId());
     }

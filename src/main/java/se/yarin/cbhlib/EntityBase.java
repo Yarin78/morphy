@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public abstract class EntityBase<T extends Entity> implements EntitySerializer<T> {
+public abstract class EntityBase<T extends Entity & Comparable<T>> implements EntitySerializer<T> {
     private static final Logger log = LoggerFactory.getLogger(EntityBase.class);
 
     private final OrderedEntityStorageImpl<T> storage;
@@ -35,7 +35,7 @@ public abstract class EntityBase<T extends Entity> implements EntitySerializer<T
      * @param <T> the type of the entity
      * @return an open in-memory storage
      */
-    protected static <T extends Entity> OrderedEntityStorageImpl<T> loadInMemoryStorage(
+    protected static <T extends Entity & Comparable<T>> OrderedEntityStorageImpl<T> loadInMemoryStorage(
             @NonNull File file, EntitySerializer<T> serializer)
             throws IOException {
         FileEntityStorage<T> inputStorage = FileEntityStorage.open(file, serializer);
