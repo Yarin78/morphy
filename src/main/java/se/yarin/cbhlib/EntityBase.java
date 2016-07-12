@@ -3,6 +3,7 @@ package se.yarin.cbhlib;
 import lombok.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import se.yarin.cbhlib.entities.*;
 
 import java.io.File;
 import java.io.IOException;
@@ -38,7 +39,7 @@ public abstract class EntityBase<T extends Entity & Comparable<T>> implements En
     protected static <T extends Entity & Comparable<T>> OrderedEntityStorageImpl<T> loadInMemoryStorage(
             @NonNull File file, EntitySerializer<T> serializer)
             throws IOException {
-        FileEntityStorage<T> inputStorage = FileEntityStorage.open(file, serializer);
+        EntityStorage<T> inputStorage = EntityStorageImpl.open(file, serializer);
         OrderedEntityStorageImpl<T> outputStorage = new OrderedEntityStorageImpl<>(new InMemoryEntityStorage<>());
         inputStorage.getEntityStream().forEach(entity -> {
             try {

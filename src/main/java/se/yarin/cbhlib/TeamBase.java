@@ -1,6 +1,10 @@
 package se.yarin.cbhlib;
 
 import lombok.NonNull;
+import se.yarin.cbhlib.entities.EntityStorage;
+import se.yarin.cbhlib.entities.EntityStorageImpl;
+import se.yarin.cbhlib.entities.InMemoryEntityStorage;
+import se.yarin.cbhlib.entities.OrderedEntityStorageImpl;
 
 import java.io.File;
 import java.io.IOException;
@@ -38,7 +42,7 @@ public class TeamBase extends EntityBase<TeamEntity> {
      * @throws IOException if something went wrong when opening the database
      */
     public static TeamBase open(@NonNull File file) throws IOException {
-        FileEntityStorage<TeamEntity> storage = FileEntityStorage.open(file, new TeamBase());
+        EntityStorage<TeamEntity> storage = EntityStorageImpl.open(file, new TeamBase());
         return new TeamBase(new OrderedEntityStorageImpl<>(storage));
     }
 
@@ -50,7 +54,7 @@ public class TeamBase extends EntityBase<TeamEntity> {
      * @throws IOException if something went wrong when creating the database
      */
     public static TeamBase create(@NonNull File file) throws IOException {
-        FileEntityStorage<TeamEntity> storage = FileEntityStorage.create(file, new TeamBase());
+        EntityStorage<TeamEntity> storage = EntityStorageImpl.create(file, new TeamBase());
         return new TeamBase(new OrderedEntityStorageImpl<>(storage));
     }
 

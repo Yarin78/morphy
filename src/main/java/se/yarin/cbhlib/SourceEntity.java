@@ -3,6 +3,7 @@ package se.yarin.cbhlib;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.Setter;
+import se.yarin.cbhlib.entities.Entity;
 import se.yarin.chess.Date;
 
 public class SourceEntity implements Entity, Comparable<SourceEntity> {

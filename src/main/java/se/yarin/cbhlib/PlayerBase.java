@@ -1,6 +1,10 @@
 package se.yarin.cbhlib;
 
 import lombok.NonNull;
+import se.yarin.cbhlib.entities.EntityStorage;
+import se.yarin.cbhlib.entities.EntityStorageImpl;
+import se.yarin.cbhlib.entities.InMemoryEntityStorage;
+import se.yarin.cbhlib.entities.OrderedEntityStorageImpl;
 
 import java.io.File;
 import java.io.IOException;
@@ -38,7 +42,7 @@ public class PlayerBase extends EntityBase<PlayerEntity> {
      * @throws IOException if something went wrong when opening the database
      */
     public static PlayerBase open(@NonNull File file) throws IOException {
-        FileEntityStorage<PlayerEntity> storage = FileEntityStorage.open(file, new PlayerBase());
+        EntityStorage<PlayerEntity> storage = EntityStorageImpl.open(file, new PlayerBase());
         return new PlayerBase(new OrderedEntityStorageImpl<>(storage));
     }
 
@@ -50,7 +54,7 @@ public class PlayerBase extends EntityBase<PlayerEntity> {
      * @throws IOException if something went wrong when creating the database
      */
     public static PlayerBase create(@NonNull File file) throws IOException {
-        FileEntityStorage<PlayerEntity> storage = FileEntityStorage.create(file, new PlayerBase());
+        EntityStorage<PlayerEntity> storage = EntityStorageImpl.create(file, new PlayerBase());
         return new PlayerBase(new OrderedEntityStorageImpl<>(storage));
     }
 

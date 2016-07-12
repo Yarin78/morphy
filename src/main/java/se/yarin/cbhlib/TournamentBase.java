@@ -3,6 +3,10 @@ package se.yarin.cbhlib;
 import lombok.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import se.yarin.cbhlib.entities.EntityStorage;
+import se.yarin.cbhlib.entities.EntityStorageImpl;
+import se.yarin.cbhlib.entities.InMemoryEntityStorage;
+import se.yarin.cbhlib.entities.OrderedEntityStorageImpl;
 
 import java.io.File;
 import java.io.IOException;
@@ -42,7 +46,7 @@ public class TournamentBase extends EntityBase<TournamentEntity> {
      * @throws IOException if something went wrong when opening the database
      */
     public static TournamentBase open(@NonNull File file) throws IOException {
-        FileEntityStorage<TournamentEntity> storage = FileEntityStorage.open(file, new TournamentBase());
+        EntityStorage<TournamentEntity> storage = EntityStorageImpl.open(file, new TournamentBase());
         return new TournamentBase(new OrderedEntityStorageImpl<>(storage));
     }
 
@@ -54,7 +58,7 @@ public class TournamentBase extends EntityBase<TournamentEntity> {
      * @throws IOException if something went wrong when creating the database
      */
     public static TournamentBase create(@NonNull File file) throws IOException {
-        FileEntityStorage<TournamentEntity> storage = FileEntityStorage.create(file, new TournamentBase());
+        EntityStorage<TournamentEntity> storage = EntityStorageImpl.create(file, new TournamentBase());
         return new TournamentBase(new OrderedEntityStorageImpl<>(storage));
     }
 

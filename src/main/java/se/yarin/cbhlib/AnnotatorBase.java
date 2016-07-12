@@ -1,6 +1,10 @@
 package se.yarin.cbhlib;
 
 import lombok.NonNull;
+import se.yarin.cbhlib.entities.EntityStorage;
+import se.yarin.cbhlib.entities.EntityStorageImpl;
+import se.yarin.cbhlib.entities.InMemoryEntityStorage;
+import se.yarin.cbhlib.entities.OrderedEntityStorageImpl;
 
 import java.io.File;
 import java.io.IOException;
@@ -38,7 +42,7 @@ public class AnnotatorBase extends EntityBase<AnnotatorEntity> {
      * @throws IOException if something went wrong when opening the database
      */
     public static AnnotatorBase open(@NonNull File file) throws IOException {
-        FileEntityStorage<AnnotatorEntity> storage = FileEntityStorage.open(file, new AnnotatorBase());
+        EntityStorage<AnnotatorEntity> storage = EntityStorageImpl.open(file, new AnnotatorBase());
         return new AnnotatorBase(new OrderedEntityStorageImpl<>(storage));
     }
 
@@ -50,7 +54,7 @@ public class AnnotatorBase extends EntityBase<AnnotatorEntity> {
      * @throws IOException if something went wrong when creating the database
      */
     public static AnnotatorBase create(@NonNull File file) throws IOException {
-        FileEntityStorage<AnnotatorEntity> storage = FileEntityStorage.create(file, new AnnotatorBase());
+        EntityStorage<AnnotatorEntity> storage = EntityStorageImpl.create(file, new AnnotatorBase());
         return new AnnotatorBase(new OrderedEntityStorageImpl<>(storage));
     }
 

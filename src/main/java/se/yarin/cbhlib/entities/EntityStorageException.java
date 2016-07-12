@@ -1,4 +1,4 @@
-package se.yarin.cbhlib;
+package se.yarin.cbhlib.entities;
 
 public class EntityStorageException extends Exception {
     public EntityStorageException() {

@@ -1,21 +1,20 @@
-package se.yarin.cbhlib;
+package se.yarin.cbhlib.entities;
 
 import lombok.Getter;
 import lombok.Setter;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import se.yarin.cbhlib.ByteBufferUtil;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Random;
 
 import static org.junit.Assert.assertEquals;
 
-public class FileEntityStorageTest {
+public class EntityStorageTest {
     @Rule
     public TemporaryFolder folder = new TemporaryFolder();
 
@@ -62,10 +61,11 @@ public class FileEntityStorageTest {
         }
     }
 
-    private FileEntityStorage<TestEntity> createStorage() throws IOException, EntityStorageException {
-        File file = folder.newFile();
-        file.delete();
-        return FileEntityStorage.create(file, new TestEntitySerializer());
+    private EntityStorageImpl<TestEntity> createStorage() throws IOException, EntityStorageException {
+//        File file = folder.newFile();
+//        file.delete();
+//        return EntityStorageImpl.create(file, new TestEntitySerializer());
+        return EntityStorageImpl.createInMemory("inmem", new TestEntitySerializer());
     }
 
     @Before
@@ -83,14 +83,14 @@ public class FileEntityStorageTest {
 
     @Test
     public void testCreateStorage() throws IOException, EntityStorageException {
-        FileEntityStorage<TestEntity> storage = createStorage();
+        EntityStorageImpl<TestEntity> storage = createStorage();
         assertEquals(0, storage.getNumEntities());
         storage.validateStructure();
     }
 
     @Test
     public void testAddEntity() throws IOException, EntityStorageException {
-        FileEntityStorage<TestEntity> storage = createStorage();
+        EntityStorageImpl<TestEntity> storage = createStorage();
         int id = storage.addEntity(new TestEntity("hello"));
         assertEquals(0, id);
         assertEquals(1, storage.getNumEntities());
@@ -103,7 +103,7 @@ public class FileEntityStorageTest {
 
     @Test
     public void testAddMultipleEntities() throws IOException, EntityStorageException {
-        FileEntityStorage<TestEntity> storage = createStorage();
+        EntityStorageImpl<TestEntity> storage = createStorage();
         for (int i = 0; i < 20; i++) {
             int id = storage.addEntity(new TestEntity(nextRandomString()));
             assertEquals(i, id);

@@ -1,4 +1,4 @@
-package se.yarin.cbhlib;
+package se.yarin.cbhlib.entities;
 
 /**
  * Exception thrown internally when processing a {@link java.util.stream.Stream} of entities.

@@ -1,5 +1,7 @@
 package se.yarin.cbhlib;
 
+import se.yarin.cbhlib.entities.EntityStorageException;
+
 import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileInputStream;

@@ -1,4 +1,4 @@
-package se.yarin.cbhlib;
+package se.yarin.cbhlib.entities;
 
 import lombok.NonNull;
 import org.slf4j.Logger;

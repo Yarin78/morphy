@@ -1,4 +1,4 @@
-package se.yarin.cbhlib;
+package se.yarin.cbhlib.entities;
 
 import java.io.IOException;
 import java.util.ArrayList;
