@@ -219,7 +219,7 @@ public class PlayerEntityTest {
     }
 
     @Test
-    public void testDeletePlayer() throws IOException {
+    public void testDeletePlayer() throws IOException, EntityStorageException {
         PlayerBase playerBase = PlayerBase.open(playerIndexFile);
         int oldCount = playerBase.getCount();
 
@@ -233,7 +233,7 @@ public class PlayerEntityTest {
     }
 
     @Test
-    public void testDeleteMissingPlayer() throws IOException {
+    public void testDeleteMissingPlayer() throws IOException, EntityStorageException {
         PlayerBase playerBase = PlayerBase.open(playerIndexFile);
         int oldCount = playerBase.getCount();
 

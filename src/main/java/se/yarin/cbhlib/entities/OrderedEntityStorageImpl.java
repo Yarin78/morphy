@@ -82,7 +82,7 @@ public class OrderedEntityStorageImpl<T extends Entity> extends EntityStorageBas
     }
 
     @Override
-    public boolean deleteEntity(int entityId) throws IOException {
+    public boolean deleteEntity(int entityId) throws IOException, EntityStorageException {
         ensureIndexExists();
         T entity = storage.getEntity(entityId);
         if (entity != null) {

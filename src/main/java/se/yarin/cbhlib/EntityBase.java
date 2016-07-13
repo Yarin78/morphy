@@ -109,9 +109,10 @@ public abstract class EntityBase<T extends Entity & Comparable<T>> implements En
      * Deletes an entity from the database
      * @param entityId the id of the entity to delete
      * @return true if the entity was deleted; false if there was no entity with that id in the database
+     * @throws EntityStorageException if the database is in an inconsistent state preventing the delete
      * @throws IOException if some IO error occurred
      */
-    public boolean delete(int entityId) throws IOException {
+    public boolean delete(int entityId) throws IOException, EntityStorageException {
         return storage.deleteEntity(entityId);
     }
 

@@ -1,7 +1,6 @@
 package se.yarin.cbhlib.entities;
 
-import lombok.AllArgsConstructor;
-import lombok.NonNull;
+import lombok.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -15,31 +14,35 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>>
         extends EntityStorageBase<T> implements EntityStorage<T> {
     private static final Logger log = LoggerFactory.getLogger(EntityStorageImpl.class);
 
-    private final EntityNodeStorageBase<T> nodeStorage;
+    private static final int ENTITY_DELETED = -999;
 
-    private EntityStorageImpl(@NonNull File file, @NonNull EntitySerializer<T> serializer, boolean create)
+    private final EntityNodeStorageBase<T> nodeStorage;
+    private final EntityNodeStorageMetadata metadata;
+
+    private EntityStorageImpl(@NonNull File file, @NonNull EntitySerializer<T> serializer)
             throws IOException {
-        nodeStorage = new PersistentEntityNodeStorage<T>(file, serializer, create);
+        nodeStorage = new PersistentEntityNodeStorage<>(file, serializer);
+        metadata = ((PersistentEntityNodeStorage) nodeStorage).getMetadata();
     }
 
-    private EntityStorageImpl(String storageName, @NonNull EntitySerializer<T> serializer)
-            throws IOException {
-        nodeStorage = new InMemoryEntityNodeStorage<>(storageName, serializer);
+    private EntityStorageImpl() {
+        nodeStorage = new InMemoryEntityNodeStorage<>();
+        metadata = new EntityNodeStorageMetadata(0, 0);
     }
 
     public static <T extends Entity & Comparable<T>> EntityStorageImpl open(
             File file, @NonNull EntitySerializer<T> serializer) throws IOException {
-        return new EntityStorageImpl<T>(file, serializer, false);
+        return new EntityStorageImpl<>(file, serializer);
     }
 
     public static <T extends Entity & Comparable<T>> EntityStorageImpl create(
             File file, @NonNull EntitySerializer<T> serializer) throws IOException {
-        return new EntityStorageImpl<>(file, serializer, true);
+        PersistentEntityNodeStorage.createEmptyStorage(file, serializer);
+        return open(file, serializer);
     }
 
-    public static <T extends Entity & Comparable<T>> EntityStorageImpl createInMemory(
-            String name, @NonNull EntitySerializer<T> serializer) throws IOException {
-        return new EntityStorageImpl<>(name, serializer);
+    public static <T extends Entity & Comparable<T>> EntityStorageImpl createInMemory(String name) {
+        return new EntityStorageImpl<T>();
     }
 
     // TODO: Add public static method for creating new in-memory version
@@ -47,12 +50,12 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>>
 
     @Override
     public int getNumEntities() {
-        return nodeStorage.getNumEntities();
+        return metadata.getNumEntities();
     }
 
     @Override
     public T getEntity(int entityId) throws IOException {
-        if (entityId < 0 || entityId >= nodeStorage.getCapacity()) {
+        if (entityId < 0 || entityId >= metadata.getCapacity()) {
             return null;
         }
         return nodeStorage.getEntityNode(entityId).getEntity();
@@ -62,102 +65,168 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>>
     public int addEntity(@NonNull T entity) throws IOException, EntityStorageException {
         int entityId;
 
-        SearchResult result = treeSearch(entity);
+        TreePath result = treeSearch(entity);
         if (result.node != null && result.compare == 0) {
             throw new EntityStorageException("An entity with the same key already exists");
         }
 
-        if (nodeStorage.getFirstDeletedEntityId() >= 0) {
+        if (metadata.getFirstDeletedEntityId() >= 0) {
             // Replace a deleted entity
-            entityId = nodeStorage.getFirstDeletedEntityId();
-            nodeStorage.setFirstDeletedEntityId(nodeStorage.getEntityNode(entityId).getRightEntityId());
+            entityId = metadata.getFirstDeletedEntityId();
+            metadata.setFirstDeletedEntityId(nodeStorage.getEntityNode(entityId).getRightEntityId());
         } else {
             // Appended new entity to the end
-            entityId = nodeStorage.getCapacity();
-            nodeStorage.setCapacity(entityId + 1);
+            entityId = metadata.getCapacity();
+            metadata.setCapacity(entityId + 1);
         }
-        nodeStorage.setNumEntities(nodeStorage.getNumEntities() + 1);
+        metadata.setNumEntities(metadata.getNumEntities() + 1);
 
         if (result.node == null) {
-            nodeStorage.setRootEntityId(entityId);
+            metadata.setRootEntityId(entityId);
         } else {
+            // TODO: The height should be updated here
             if (result.compare < 0) {
-                result.node.setLeftEntityId(entityId);
+                result.node = result.node.update(entityId, result.node.getRightEntityId(), result.node.getHeightDif());
             } else {
-                result.node.setRightEntityId(entityId);
+                result.node = result.node.update(result.node.getLeftEntityId(), entityId, result.node.getHeightDif());
             }
             nodeStorage.putEntityNode(result.node);
         }
         // TODO: Balance tree
 
-        nodeStorage.updateStorageHeader();
-
         nodeStorage.putEntityNode(nodeStorage.createNode(entityId, entity));
-
-        log.debug(String.format("Successfully added entity to %s with id %d",
-                nodeStorage.getStorageName(), entityId));
+        nodeStorage.putMetadata(metadata);
 
         return entityId;
     }
 
     @AllArgsConstructor
-    private class SearchResult {
+    private class TreePath {
         private int compare;
-        private EntityNodeStorageBase<T>.EntityNode node;
+        private EntityNode<T> node;
+        private TreePath parent;
     }
 
-    private SearchResult treeSearch(@NonNull T entity) throws IOException {
-        return treeSearch(nodeStorage.getRootEntityId(), new SearchResult(0, null), entity);
+    private TreePath treeSearch(@NonNull T entity) throws IOException {
+        return treeSearch(metadata.getRootEntityId(), new TreePath(0, null, null), entity);
     }
 
-    private SearchResult treeSearch(int currentId, SearchResult result, @NonNull T entity) throws IOException {
+    private TreePath treeSearch(int currentId, TreePath path, @NonNull T entity) throws IOException {
         if (currentId < 0) {
-            return result;
+            return path;
         }
 
         T current = getEntity(currentId);
-        EntityNodeStorageBase.EntityNode node = nodeStorage.getEntityNode(currentId);
+        EntityNode<T> node = nodeStorage.getEntityNode(currentId);
         int comp = entity.compareTo(current);
 
-        result = new SearchResult(comp, node);
+        path = new TreePath(comp, node, path);
         if (comp == 0) {
-            return result;
+            return path;
         } else if (comp < 0) {
-            return treeSearch(node.getLeftEntityId(), result, entity);
+            return treeSearch(node.getLeftEntityId(), path, entity);
         } else {
-            return treeSearch(node.getRightEntityId(), result, entity);
+            return treeSearch(node.getRightEntityId(), path, entity);
         }
     }
 
     @Override
     public void putEntity(int entityId, @NonNull T entity) throws IOException {
-        if (entityId < 0 || entityId >= nodeStorage.getCapacity()) {
+        if (entityId < 0 || entityId >= metadata.getCapacity()) {
             throw new IllegalArgumentException(String.format("Can't put an entity with id %d when capacity is %d",
-                    entityId, nodeStorage.getCapacity()));
+                    entityId, metadata.getCapacity()));
         }
         if (nodeStorage.getEntityNode(entityId).isDeleted()) {
             throw new IllegalArgumentException("Can't replace a deleted entity");
         }
 
+        // TODO: Update tree if necessary
         nodeStorage.putEntityNode(nodeStorage.createNode(entityId, entity));
+    }
 
-        log.debug("Successfully put entity to " + nodeStorage.getStorageName() + " with id " + entityId);
+    private void replaceChild(TreePath path, int newChildId) throws IOException {
+        if (path.node == null) {
+            // The root node has no parent
+            metadata.setRootEntityId(newChildId);
+        } else {
+            EntityNode<T> node = nodeStorage.getEntityNode(path.node.getEntityId());
+            if (path.compare < 0) {
+                node = node.update(newChildId, node.getRightEntityId(), node.getHeightDif());
+            } else {
+                node = node.update(node.getLeftEntityId(), newChildId, node.getHeightDif());
+            }
+            nodeStorage.putEntityNode(node);
+        }
     }
 
     @Override
-    public boolean deleteEntity(int entityId) throws IOException {
-        EntityNodeStorageBase.EntityNode node = nodeStorage.getEntityNode(entityId);
+    public boolean deleteEntity(int entityId) throws IOException, EntityStorageException {
+        EntityNode<T> node = nodeStorage.getEntityNode(entityId);
         if (node.isDeleted()) {
             log.debug("Deleted entity with id " + entityId + " that was already deleted");
             return false;
         }
 
-        nodeStorage.putEntityNode(nodeStorage.createDeletedNode(entityId));
-        nodeStorage.setFirstDeletedEntityId(entityId);
-        nodeStorage.setNumEntities(nodeStorage.getNumEntities() - 1);
-        nodeStorage.updateStorageHeader();
+        // Find the node we want to delete in the tree
+        TreePath nodePath = treeSearch(node.getEntity());
+        if (nodePath.compare != 0) {
+            throw new EntityStorageException("Broken database structure; couldn't find the node to delete.");
+        }
+        nodePath = nodePath.parent;
+
+        // Switch the node we want to delete with a successor node until it has at most one child
+        // This will take at most one iteration, so we could simplify this
+        while (node.getLeftEntityId() >= 0 && node.getRightEntityId() >= 0) {
+            // Invariant: node is the node we want to delete, and it has two children
+            // nodePath.node = the parent node
+            // nodePath.compare < 0 if the deleted node is a left child, > 0 if a right child
+
+            // Find successor node and replace it with this one
+            TreePath successorPath = treeSearch(node.getRightEntityId(), null, node.getEntity());
+            assert successorPath.compare < 0; // Should always be a left child
+            EntityNode<T> successorNode = successorPath.node;
+            // successorPath.node = the node we want to move up and replace node
+            successorPath = successorPath.parent; // successorPath.node may now equal node!!
+
+            EntityNode<T> newNode = node.update(successorNode.getLeftEntityId(), successorNode.getRightEntityId(), successorNode.getHeightDif());
+            int rid = node.getRightEntityId();
+            if (rid == successorNode.getEntityId()) {
+                rid = node.getEntityId();
+            }
+            EntityNode<T> newSuccessorNode = successorNode.update(node.getLeftEntityId(), rid, node.getHeightDif());
+            replaceChild(nodePath, successorNode.getEntityId());
+            if (successorPath != null) {
+                replaceChild(successorPath, node.getEntityId());
+            }
+            nodeStorage.putEntityNode(newNode);
+            nodeStorage.putEntityNode(newSuccessorNode);
+
+            node = newNode;
+            nodePath = successorPath; // Won't work probably if parent to successor was node
+            if (nodePath == null) {
+                nodePath = new TreePath(1, newSuccessorNode, null);
+            }
+        }
+
+        // Now node has at most one child!
+        // treePath.node = the parent node
+        // treePath.compare < 0 if the deleted node is a left child, > 0 if a right child
+        int onlyChild = node.getLeftEntityId() >= 0 ? node.getLeftEntityId() : node.getRightEntityId();
+        replaceChild(nodePath, onlyChild);
+
+        // Nothing should now point to the node we want to delete
+        EntityNode<T> deletedNode = nodeStorage.createNode(entityId, null)
+                .update(ENTITY_DELETED, metadata.getFirstDeletedEntityId(), 0);
+
+        nodeStorage.putEntityNode(deletedNode);
+        metadata.setFirstDeletedEntityId(entityId);
+        metadata.setNumEntities(metadata.getNumEntities() - 1);
+
+        nodeStorage.putMetadata(metadata);
         return true;
     }
+
+
 
     @Override
     public void close() throws IOException {
@@ -168,7 +237,7 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>>
      * Validates that the entity headers correctly reflects the order of the entities
      */
     public void validateStructure() throws EntityStorageException, IOException {
-        if (nodeStorage.getRootEntityId() == -1) {
+        if (metadata.getRootEntityId() == -1) {
             if (getNumEntities() == 0) {
                 return;
             }
@@ -176,7 +245,7 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>>
                     "Header says there are %d entities in the storage but the root points to no entity.", getNumEntities()));
         }
 
-        int sum = validate(nodeStorage.getRootEntityId(), null, null);
+        int sum = validate(metadata.getRootEntityId(), null, null);
         if (sum != getNumEntities()) {
             throw new EntityStorageException(String.format(
                     "Found %d entities when traversing the base but the header says there should be %d entities.", sum, getNumEntities()));
@@ -185,7 +254,7 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>>
 
     private int validate(int entityId, T min, T max) throws IOException, EntityStorageException {
         // TODO: Validate height difference of left and right tree
-        EntityNodeStorageBase<T>.EntityNode node = nodeStorage.getEntityNode(entityId);
+        EntityNode<T> node = nodeStorage.getEntityNode(entityId);
         T entity = node.getEntity();
         if (node.isDeleted() || entity == null) {
             throw new EntityStorageException(String.format(
@@ -213,10 +282,10 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>>
     public Stream<T> getEntityStream()  {
         int bufferSize = 1000;
 
-        return IntStream.range(0, (nodeStorage.getCapacity() + bufferSize - 1) / bufferSize)
+        return IntStream.range(0, (metadata.getCapacity() + bufferSize - 1) / bufferSize)
                 .mapToObj(rangeId -> {
                     int rangeStart = rangeId * bufferSize;
-                    int rangeEnd = Math.min(nodeStorage.getCapacity(), (rangeId + 1) * bufferSize);
+                    int rangeEnd = Math.min(metadata.getCapacity(), (rangeId + 1) * bufferSize);
                     try {
                         return nodeStorage.getEntityNodes(rangeStart, rangeEnd);
                     } catch (IOException e) {
@@ -224,6 +293,6 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>>
                     }
                 })
                 .flatMap(List::stream)
-                .map(EntityNodeStorageBase.EntityNode::getEntity);
+                .map(EntityNode::getEntity);
     }
 }

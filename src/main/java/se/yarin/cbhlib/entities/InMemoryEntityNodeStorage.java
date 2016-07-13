@@ -8,24 +8,14 @@ import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
 
-public class InMemoryEntityNodeStorage<T extends Entity> extends EntityNodeStorageBase {
+public class InMemoryEntityNodeStorage<T extends Entity & Comparable<T>> extends EntityNodeStorageBase<T> {
     private static final Logger log = LoggerFactory.getLogger(InMemoryEntityNodeStorage.class);
 
-    private TreeMap<Integer, EntityNode> nodes = new TreeMap<>();
-
-    public InMemoryEntityNodeStorage(@NonNull String storageName, @NonNull EntitySerializer serializer) {
-        super(storageName, serializer);
-
-        setCapacity(0);
-        setRootEntityId(-1);
-        setNumEntities(0);
-        setFirstDeletedEntityId(-1);
-    }
-
+    private TreeMap<Integer, EntityNode<T>> nodes = new TreeMap<>();
 
     @Override
-    protected EntityNode getEntityNode(int entityId) throws IOException {
-        EntityNode entityNode = nodes.get(entityId);
+    protected EntityNode<T> getEntityNode(int entityId) throws IOException {
+        EntityNode<T> entityNode = nodes.get(entityId);
         if (log.isTraceEnabled()) {
             log.trace("Read entity node: " + entityNode);
         }
@@ -33,7 +23,8 @@ public class InMemoryEntityNodeStorage<T extends Entity> extends EntityNodeStora
     }
 
     @Override
-    protected List<EntityNode> getEntityNodes(int startIdInclusive, int endIdExclusive) throws IOException {
+    protected List<EntityNode<T>> getEntityNodes(int startIdInclusive, int endIdExclusive)
+            throws IOException {
         return nodes.subMap(startIdInclusive, true, endIdExclusive, false)
                 .values()
                 .stream()
@@ -42,18 +33,23 @@ public class InMemoryEntityNodeStorage<T extends Entity> extends EntityNodeStora
     }
 
     @Override
-    protected void putEntityNode(@NonNull EntityNode node) throws IOException {
+    protected void putEntityNode(@NonNull EntityNode<T> node) throws IOException {
         nodes.put(node.getEntityId(), node);
         if (log.isDebugEnabled()) {
-            log.debug(String.format("Put entity node: " + node));
+            log.debug(String.format("Put entity node: %s", node));
         }
+    }
+
+    @Override
+    public EntityNode<T> createNode(int entityId, T entity) {
+        return new EntityNodeImpl<>(entityId, entity, -1, -1, 0);
     }
 
     @Override
     public void close() throws IOException { }
 
     @Override
-    public void updateStorageHeader() throws IOException {
-
+    public void putMetadata(EntityNodeStorageMetadata metadata) throws IOException {
+        // Nothing to do
     }
 }

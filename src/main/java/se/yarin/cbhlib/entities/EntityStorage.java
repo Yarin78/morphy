@@ -55,7 +55,7 @@ public interface EntityStorage<T> {
      * @param entityId the id of the entity to delete
      * @return true if an entity was deleted; false if there was no entity with that id
      */
-    boolean deleteEntity(int entityId) throws IOException;
+    boolean deleteEntity(int entityId) throws IOException, EntityStorageException;
 
     /**
      * Closes the storage. Any further operations on the storage will cause IO errors.
