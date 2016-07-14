@@ -34,6 +34,9 @@ public class InMemoryEntityNodeStorage<T extends Entity & Comparable<T>> extends
 
     @Override
     protected void putEntityNode(@NonNull EntityNode<T> node) throws IOException {
+        // TODO: Fix this!!!
+        assert node.isDeleted() || node.getEntity().getId() == node.getEntityId()
+            : "Entity id of node must match entity id";
         nodes.put(node.getEntityId(), node);
         if (log.isDebugEnabled()) {
             log.debug(String.format("Put entity node: %s", node));

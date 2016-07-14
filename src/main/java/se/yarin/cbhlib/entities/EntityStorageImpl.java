@@ -6,6 +6,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Iterator;
 import java.util.List;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -66,7 +67,7 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>>
         int entityId;
 
         TreePath result = treeSearch(entity);
-        if (result.node != null && result.compare == 0) {
+        if (result != null && result.compare == 0) {
             throw new EntityStorageException("An entity with the same key already exists");
         }
 
@@ -81,7 +82,7 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>>
         }
         metadata.setNumEntities(metadata.getNumEntities() + 1);
 
-        if (result.node == null) {
+        if (result == null) {
             metadata.setRootEntityId(entityId);
         } else {
             // TODO: The height should be updated here
@@ -107,10 +108,30 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>>
         private TreePath parent;
     }
 
+    /**
+     * Searches the tree for a specific entity. Returns a path from the root
+     * to the searched entity.
+     * If the entity doesn't exist in the tree, the path ends at the node in the
+     * tree where the entity can be inserted.
+     * @param entity the entity to search for
+     * @return the most recent node in the path
+     * @throws IOException if an IO error occurred when searching in the tree
+     */
     private TreePath treeSearch(@NonNull T entity) throws IOException {
-        return treeSearch(metadata.getRootEntityId(), new TreePath(0, null, null), entity);
+        return treeSearch(metadata.getRootEntityId(), null, entity);
     }
 
+    /**
+     * Searches the tree for a specific entity. Returns a path from the root
+     * to the searched entity.
+     * If the entity doesn't exist in the tree, the path ends at the node in the
+     * tree where the entity can be inserted.
+     * @param currentId the start node to search from
+     * @param path the path searched for so far
+     * @param entity the entity to search for
+     * @return the most recent node in the path
+     * @throws IOException if an IO error occurred when searching in the tree
+     */
     private TreePath treeSearch(int currentId, TreePath path, @NonNull T entity) throws IOException {
         if (currentId < 0) {
             return path;
@@ -154,7 +175,7 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>>
     }
 
     private void replaceChild(TreePath path, int newChildId) throws IOException {
-        if (path.node == null) {
+        if (path == null) {
             // The root node has no parent
             metadata.setRootEntityId(newChildId);
         } else {
@@ -178,7 +199,7 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>>
 
         // Find the node we want to delete in the tree
         TreePath nodePath = treeSearch(node.getEntity());
-        if (nodePath.compare != 0) {
+        if (nodePath == null || nodePath.compare != 0) {
             throw new EntityStorageException("Broken database structure; couldn't find the node to delete.");
         }
         nodePath = nodePath.parent;
@@ -218,8 +239,8 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>>
         }
 
         // Now node has at most one child!
-        // treePath.node = the parent node
-        // treePath.compare < 0 if the deleted node is a left child, > 0 if a right child
+        // nodePath.node = the parent node
+        // nodePath.compare < 0 if the deleted node is a left child, > 0 if a right child
         int onlyChild = node.getLeftEntityId() >= 0 ? node.getLeftEntityId() : node.getRightEntityId();
         replaceChild(nodePath, onlyChild);
 
@@ -303,5 +324,72 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>>
                 })
                 .flatMap(List::stream)
                 .map(EntityNode::getEntity);
+    }
+
+    private class EntityStorageIterator implements Iterator<T> {
+
+        // Invariant: treePath.node is the next entity to be returned
+        // If treePath == null, there are no more entities to be returned
+        private TreePath treePath;
+        private final boolean ascending;
+
+        public EntityStorageIterator(TreePath treePath, boolean ascending) throws IOException {
+            this.treePath = treePath;
+            this.ascending = ascending;
+        }
+
+        @Override
+        public boolean hasNext() {
+            return treePath != null;
+        }
+
+        @Override
+        public T next() {
+            try {
+                // TODO: Check if any writes have happened since iterator was created
+                T entity = treePath.node.getEntity();
+                if (ascending && treePath.node.getRightEntityId() >= 0) {
+                    treePath.compare = 1;
+                    treePath = treeSearch(treePath.node.getRightEntityId(), treePath, entity);
+                } else if (!ascending && treePath.node.getLeftEntityId() >= 0) {
+                    treePath.compare = -1;
+                    treePath = treeSearch(treePath.node.getLeftEntityId(), treePath, entity);
+                } else {
+                    treePath = treePath.parent;
+                    while (treePath != null && treePath.compare * (ascending ? 1 : -1) > 0) {
+                        treePath = treePath.parent;
+                    }
+                }
+                return entity;
+            } catch (IOException e) {
+                throw new UncheckedEntityException("Error iterating entities", e);
+            }
+        }
+    }
+
+    private Iterator<T> getOrderedIterator(T startEntity, boolean ascending) throws IOException {
+        TreePath treePath = null;
+        if (startEntity == null) {
+            int currentId = metadata.getRootEntityId();
+            while (currentId >= 0) {
+                EntityNode<T> node = nodeStorage.getEntityNode(currentId);
+                treePath = new TreePath(ascending ? -1 : 1, node, treePath);
+                currentId = ascending ? node.getLeftEntityId() : node.getRightEntityId();
+            }
+        } else {
+            treePath = treeSearch(startEntity);
+            while (treePath != null && treePath.compare * (ascending ? 1 : -1) > 0) {
+                treePath = treePath.parent;
+            }
+        }
+        return new EntityStorageIterator(treePath, ascending);
+    }
+
+    public Iterator<T> getOrderedAscendingIterator(T startEntity) throws IOException {
+        return getOrderedIterator(startEntity, true);
+    }
+
+    public Iterator<T> getOrderedDescendingIterator(T startEntity) throws IOException {
+        return getOrderedIterator(startEntity, false);
     }
 }

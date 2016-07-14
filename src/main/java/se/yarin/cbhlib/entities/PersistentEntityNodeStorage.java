@@ -158,6 +158,9 @@ class PersistentEntityNodeStorage<T extends Entity & Comparable<T>> extends Enti
 
     @Override
     protected void putEntityNode(@NonNull EntityNode<T> node) throws IOException {
+        assert node.isDeleted() || node.getEntity().getId() < 0 || node.getEntity().getId() == node.getEntityId()
+                : "The id of the entity was set but didn't match node entity id";
+
         positionChannel(node.getEntityId());
         ByteBuffer src = serializeNode(node);
         src.position(0);

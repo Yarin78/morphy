@@ -11,6 +11,7 @@ import se.yarin.cbhlib.ByteBufferUtil;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.Iterator;
 import java.util.Random;
 
 import static org.junit.Assert.*;
@@ -92,12 +93,12 @@ public class EntityStorageTest {
     @Test
     public void testAddEntity() throws IOException, EntityStorageException {
         EntityStorageImpl<TestEntity> storage = createStorage();
-        int id = storage.addEntity(new TestEntity("hello"));
-        assertEquals(0, id);
+        int id = storage.addEntity(new TestEntity(0, "hello"));
         assertEquals(1, storage.getNumEntities());
 
         TestEntity entity = storage.getEntity(id);
         assertEquals("hello", entity.getValue());
+        assertEquals(0, entity.getId());
 
         storage.validateStructure();
     }
@@ -106,7 +107,7 @@ public class EntityStorageTest {
     public void testAddMultipleEntities() throws IOException, EntityStorageException {
         EntityStorageImpl<TestEntity> storage = createStorage();
         for (int i = 0; i < 20; i++) {
-            int id = storage.addEntity(new TestEntity(nextRandomString()));
+            int id = storage.addEntity(new TestEntity(i, nextRandomString()));
             assertEquals(i, id);
             assertEquals(i + 1, storage.getNumEntities());
             storage.validateStructure();
@@ -116,8 +117,8 @@ public class EntityStorageTest {
     @Test
     public void testDeleteEntity() throws IOException, EntityStorageException {
         EntityStorageImpl<TestEntity> storage = createStorage();
-        int id1 = storage.addEntity(new TestEntity("hello"));
-        int id2 = storage.addEntity(new TestEntity("world"));
+        int id1 = storage.addEntity(new TestEntity(0, "hello"));
+        int id2 = storage.addEntity(new TestEntity(1, "world"));
 
         assertTrue(storage.deleteEntity(id1));
 
@@ -131,7 +132,7 @@ public class EntityStorageTest {
     @Test
     public void testDeleteDeletedEntity() throws IOException, EntityStorageException {
         EntityStorageImpl<TestEntity> storage = createStorage();
-        int id1 = storage.addEntity(new TestEntity("hello"));
+        int id1 = storage.addEntity(new TestEntity(0, "hello"));
         assertTrue(storage.deleteEntity(id1));
         assertEquals(0, storage.getNumEntities());
         assertFalse(storage.deleteEntity(id1));
@@ -143,13 +144,13 @@ public class EntityStorageTest {
     @Test
     public void testDeleteNodeWithTwoChildren() throws IOException, EntityStorageException {
         EntityStorageImpl<TestEntity> storage = createStorage();
-        storage.addEntity(new TestEntity("B"));
-        storage.addEntity(new TestEntity("A"));
-        storage.addEntity(new TestEntity("D"));
-        storage.addEntity(new TestEntity("C"));
-        storage.addEntity(new TestEntity("F"));
-        storage.addEntity(new TestEntity("E"));
-        storage.addEntity(new TestEntity("G"));
+        storage.addEntity(new TestEntity(0, "B"));
+        storage.addEntity(new TestEntity(1, "A"));
+        storage.addEntity(new TestEntity(2, "D"));
+        storage.addEntity(new TestEntity(3, "C"));
+        storage.addEntity(new TestEntity(4, "F"));
+        storage.addEntity(new TestEntity(5, "E"));
+        storage.addEntity(new TestEntity(6, "G"));
 
         storage.deleteEntity(2);
         assertNull(storage.getEntity(2));
@@ -163,12 +164,12 @@ public class EntityStorageTest {
     public void testDeleteNodeWithTwoChildren2() throws IOException, EntityStorageException {
         // Special case when the code swaps two nodes that have parent-child relation
         EntityStorageImpl<TestEntity> storage = createStorage();
-        storage.addEntity(new TestEntity("B"));
-        storage.addEntity(new TestEntity("A"));
-        storage.addEntity(new TestEntity("D"));
-        storage.addEntity(new TestEntity("C"));
-        storage.addEntity(new TestEntity("E"));
-        storage.addEntity(new TestEntity("F"));
+        storage.addEntity(new TestEntity(0, "B"));
+        storage.addEntity(new TestEntity(1, "A"));
+        storage.addEntity(new TestEntity(2, "D"));
+        storage.addEntity(new TestEntity(3, "C"));
+        storage.addEntity(new TestEntity(4, "E"));
+        storage.addEntity(new TestEntity(5, "F"));
 
         storage.deleteEntity(2);
         assertNull(storage.getEntity(2));
@@ -184,7 +185,7 @@ public class EntityStorageTest {
         EntityStorageImpl<TestEntity> storage = createStorage();
         int count = 500;
         for (int i = 0; i < count; i++) {
-            storage.addEntity(new TestEntity(nextRandomString()));
+            storage.addEntity(new TestEntity(i, nextRandomString()));
         }
         for (int i = 0; i < count; i++) {
             storage.deleteEntity(i);
@@ -196,11 +197,11 @@ public class EntityStorageTest {
     @Test
     public void testReplaceNodeWithSameKey() throws IOException, EntityStorageException {
         EntityStorageImpl<TestEntity> storage = createStorage();
-        storage.addEntity(new TestEntity("b"));
-        storage.addEntity(new TestEntity("a"));
-        storage.addEntity(new TestEntity("c"));
+        storage.addEntity(new TestEntity(0, "b"));
+        storage.addEntity(new TestEntity(1, "a"));
+        storage.addEntity(new TestEntity(2, "c"));
 
-        storage.putEntity(0, new TestEntity("b"));
+        storage.putEntity(0, new TestEntity(0, "b"));
         assertEquals(3, storage.getNumEntities());
         storage.validateStructure();
     }
@@ -208,14 +209,112 @@ public class EntityStorageTest {
     @Test
     public void testReplaceNodeWithNewKey() throws IOException, EntityStorageException {
         EntityStorageImpl<TestEntity> storage = createStorage();
-        storage.addEntity(new TestEntity("b"));
-        storage.addEntity(new TestEntity("a"));
-        storage.addEntity(new TestEntity("c"));
+        storage.addEntity(new TestEntity(0, "b"));
+        storage.addEntity(new TestEntity(1, "a"));
+        storage.addEntity(new TestEntity(2, "c"));
 
-        storage.putEntity(0, new TestEntity("d"));
+        storage.putEntity(0, new TestEntity(0, "d"));
         assertEquals(3, storage.getNumEntities());
         assertEquals("d", storage.getEntity(0).getValue());
         storage.validateStructure();
     }
-    // Test replace (both changing key and not)
+
+    @Test
+    public void testAscendingIterator() throws IOException, EntityStorageException {
+        EntityStorageImpl<TestEntity> storage = createStorage();
+        String[] values = {"d", "t", "b", "e", "q", "w", "a", "l", "c", "v"};
+        for (int i = 0; i < values.length; i++) {
+            storage.addEntity(new TestEntity(i, values[i]));
+        }
+
+        Iterator<TestEntity> iterator = storage.getOrderedAscendingIterator(null);
+        StringBuilder sb = new StringBuilder();
+        while (iterator.hasNext()) {
+            sb.append(iterator.next().getValue());
+        }
+        assertEquals("abcdelqtvw", sb.toString());
+
+        iterator = storage.getOrderedAscendingIterator(new TestEntity("f"));
+        sb = new StringBuilder();
+        while (iterator.hasNext()) {
+            sb.append(iterator.next().getValue());
+        }
+        assertEquals("lqtvw", sb.toString());
+
+        iterator = storage.getOrderedAscendingIterator(new TestEntity("q"));
+        sb = new StringBuilder();
+        while (iterator.hasNext()) {
+            sb.append(iterator.next().getValue());
+        }
+        assertEquals("qtvw", sb.toString());
+    }
+
+    @Test
+    public void testAscendingIterateOverEmptyStorage() throws IOException, EntityStorageException {
+        EntityStorageImpl<TestEntity> storage = createStorage();
+
+        Iterator<TestEntity> iterator = storage.getOrderedAscendingIterator(null);
+        assertFalse(iterator.hasNext());
+
+        iterator = storage.getOrderedAscendingIterator(new TestEntity("a"));
+        assertFalse(iterator.hasNext());
+    }
+
+    @Test
+    public void testAscendingIterateOverSingleNodeStorage() throws IOException, EntityStorageException {
+        EntityStorageImpl<TestEntity> storage = createStorage();
+        storage.addEntity(new TestEntity(0, "e"));
+
+        // No start marker
+        Iterator<TestEntity> iterator = storage.getOrderedAscendingIterator(null);
+        assertTrue(iterator.hasNext());
+        assertEquals("e", iterator.next().getValue());
+        assertFalse(iterator.hasNext());
+
+        // Start before first
+        iterator = storage.getOrderedAscendingIterator(new TestEntity("b"));
+        assertTrue(iterator.hasNext());
+        assertEquals("e", iterator.next().getValue());
+        assertFalse(iterator.hasNext());
+
+        // Start same as first
+        iterator = storage.getOrderedAscendingIterator(new TestEntity("e"));
+        assertTrue(iterator.hasNext());
+        assertEquals("e", iterator.next().getValue());
+        assertFalse(iterator.hasNext());
+
+        // Start after as first
+        iterator = storage.getOrderedAscendingIterator(new TestEntity("g"));
+        assertFalse(iterator.hasNext());
+    }
+
+    @Test
+    public void testDescendingIterator() throws IOException, EntityStorageException {
+        EntityStorageImpl<TestEntity> storage = createStorage();
+        String[] values = {"d", "t", "b", "e", "q", "w", "a", "l", "c", "v"};
+        for (int i = 0; i < values.length; i++) {
+            storage.addEntity(new TestEntity(i, values[i]));
+        }
+
+        Iterator<TestEntity> iterator = storage.getOrderedDescendingIterator(null);
+        StringBuilder sb = new StringBuilder();
+        while (iterator.hasNext()) {
+            sb.append(iterator.next().getValue());
+        }
+        assertEquals("wvtqledcba", sb.toString());
+
+        iterator = storage.getOrderedDescendingIterator(new TestEntity("f"));
+        sb = new StringBuilder();
+        while (iterator.hasNext()) {
+            sb.append(iterator.next().getValue());
+        }
+        assertEquals("edcba", sb.toString());
+
+        iterator = storage.getOrderedDescendingIterator(new TestEntity("q"));
+        sb = new StringBuilder();
+        while (iterator.hasNext()) {
+            sb.append(iterator.next().getValue());
+        }
+        assertEquals("qledcba", sb.toString());
+    }
 }
