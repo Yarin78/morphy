@@ -3,8 +3,6 @@ package se.yarin.cbhlib;
 import lombok.NonNull;
 import se.yarin.cbhlib.entities.EntityStorage;
 import se.yarin.cbhlib.entities.EntityStorageImpl;
-import se.yarin.cbhlib.entities.InMemoryEntityStorage;
-import se.yarin.cbhlib.entities.OrderedEntityStorageImpl;
 
 import java.io.File;
 import java.io.IOException;
@@ -18,10 +16,10 @@ public class PlayerBase extends EntityBase<PlayerEntity> {
      * Creates a new in-memory player database that is initially empty.
      */
     public PlayerBase() {
-        super(new OrderedEntityStorageImpl<>(new InMemoryEntityStorage<>()));
+        super(EntityStorageImpl.createInMemory());
     }
 
-    private PlayerBase(@NonNull OrderedEntityStorageImpl<PlayerEntity> storage) {
+    private PlayerBase(@NonNull EntityStorage<PlayerEntity> storage) {
         super(storage);
     }
 
@@ -31,8 +29,7 @@ public class PlayerBase extends EntityBase<PlayerEntity> {
      * @return an in-memory player base
      */
     public static PlayerBase openInMemory(@NonNull File file) throws IOException {
-        OrderedEntityStorageImpl<PlayerEntity> outputStorage = loadInMemoryStorage(file, new PlayerBase());
-        return new PlayerBase(outputStorage);
+        return new PlayerBase(loadInMemoryStorage(file, new PlayerBase()));
     }
 
     /**
@@ -42,8 +39,7 @@ public class PlayerBase extends EntityBase<PlayerEntity> {
      * @throws IOException if something went wrong when opening the database
      */
     public static PlayerBase open(@NonNull File file) throws IOException {
-        EntityStorage<PlayerEntity> storage = EntityStorageImpl.open(file, new PlayerBase());
-        return new PlayerBase(new OrderedEntityStorageImpl<>(storage));
+        return new PlayerBase(EntityStorageImpl.open(file, new PlayerBase()));
     }
 
     /**
@@ -54,8 +50,7 @@ public class PlayerBase extends EntityBase<PlayerEntity> {
      * @throws IOException if something went wrong when creating the database
      */
     public static PlayerBase create(@NonNull File file) throws IOException {
-        EntityStorage<PlayerEntity> storage = EntityStorageImpl.create(file, new PlayerBase());
-        return new PlayerBase(new OrderedEntityStorageImpl<>(storage));
+        return new PlayerBase(EntityStorageImpl.create(file, new PlayerBase()));
     }
 
     public ByteBuffer serialize(@NonNull PlayerEntity player) {

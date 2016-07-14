@@ -28,7 +28,6 @@ public class InMemoryEntityNodeStorage<T extends Entity & Comparable<T>> extends
         return nodes.subMap(startIdInclusive, true, endIdExclusive, false)
                 .values()
                 .stream()
-                .filter(entityNode -> entityNode != null)
                 .collect(Collectors.toList());
     }
 

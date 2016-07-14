@@ -42,7 +42,7 @@ class PersistentEntityNodeStorage<T extends Entity & Comparable<T>> extends Enti
                 metadata.getNumEntities(), metadata.getFirstDeletedEntityId()));
     }
 
-    public static <T extends Entity> void createEmptyStorage(File file, EntitySerializer<T> serializer)
+    static <T extends Entity> void createEmptyStorage(File file, EntitySerializer<T> serializer)
             throws IOException {
         FileChannel channel = FileChannel.open(file.toPath(), CREATE_NEW, READ, WRITE);
         EntityNodeStorageMetadata metadata = new EntityNodeStorageMetadata(
@@ -51,7 +51,7 @@ class PersistentEntityNodeStorage<T extends Entity & Comparable<T>> extends Enti
         channel.close();
     }
 
-    public EntityNodeStorageMetadata getMetadata() throws IOException {
+    EntityNodeStorageMetadata getMetadata() throws IOException {
         channel.position(0);
         ByteBuffer header = ByteBuffer.allocate(32);
         channel.read(header);
@@ -131,8 +131,7 @@ class PersistentEntityNodeStorage<T extends Entity & Comparable<T>> extends Enti
     }
 
     /**
-     * Gets all entity node in the specified range. Deleted entities will be omitted,
-     * so the resulting array may be shorter than the specified range.
+     * Gets all entity node in the specified range.
      */
     protected List<EntityNode<T>> getEntityNodes(int startIdInclusive, int endIdExclusive) throws IOException {
         if (startIdInclusive >= endIdExclusive) {
@@ -148,10 +147,7 @@ class PersistentEntityNodeStorage<T extends Entity & Comparable<T>> extends Enti
         buf.position(0);
         for (int i = startIdInclusive; i < endIdExclusive; i++) {
             buf.position((i - startIdInclusive) * (9 + serializedEntitySize));
-            EntityNode<T> node = deserializeNode(i, buf);
-            if (!node.isDeleted()) {
-                result.add(node);
-            }
+            result.add(deserializeNode(i, buf));
         }
         return result;
     }

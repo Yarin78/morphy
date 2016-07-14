@@ -7,24 +7,26 @@ import se.yarin.cbhlib.entities.*;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 public abstract class EntityBase<T extends Entity & Comparable<T>> implements EntitySerializer<T> {
     private static final Logger log = LoggerFactory.getLogger(EntityBase.class);
 
-    private final OrderedEntityStorageImpl<T> storage;
+    private final EntityStorage<T> storage;
 
     /**
      * Gets the underlying storage of the database.
      * @return an entity storage
      */
-    protected OrderedEntityStorageImpl<T> getStorage() {
+    protected EntityStorage<T> getStorage() {
         return storage;
     }
 
-    protected EntityBase(@NonNull OrderedEntityStorageImpl<T> storage) {
+    protected EntityBase(@NonNull EntityStorage<T> storage) {
         this.storage = storage;
     }
 
@@ -36,20 +38,9 @@ public abstract class EntityBase<T extends Entity & Comparable<T>> implements En
      * @param <T> the type of the entity
      * @return an open in-memory storage
      */
-    protected static <T extends Entity & Comparable<T>> OrderedEntityStorageImpl<T> loadInMemoryStorage(
-            @NonNull File file, EntitySerializer<T> serializer)
-            throws IOException {
-        EntityStorage<T> inputStorage = EntityStorageImpl.open(file, serializer);
-        OrderedEntityStorageImpl<T> outputStorage = new OrderedEntityStorageImpl<>(new InMemoryEntityStorage<>());
-        inputStorage.getEntityStream().forEach(entity -> {
-            try {
-                outputStorage.putEntity(entity.getId(), entity);
-            } catch (EntityStorageException | IOException e) {
-                // This shouldn't happen since the output storage is an in-memory storage
-                log.error("There was an error putting an entity in the in-memory storage", e);
-            }
-        });
-        return outputStorage;
+    protected static <T extends Entity & Comparable<T>> EntityStorage<T> loadInMemoryStorage(
+            @NonNull File file, EntitySerializer<T> serializer) throws IOException {
+        return EntityStorageImpl.openInMemory(file, serializer);
     }
 
     /**
@@ -122,7 +113,7 @@ public abstract class EntityBase<T extends Entity & Comparable<T>> implements En
      * @return a stream of all entities
      */
     public Stream<T> streamAll() {
-        return storage.getEntityStream();
+        return StreamSupport.stream(storage.spliterator(), false);
     }
 
     /**
@@ -136,51 +127,64 @@ public abstract class EntityBase<T extends Entity & Comparable<T>> implements En
 
     /**
      * Gets the first entity in the database according to the default sort order
-     * @return the first entity
+     * @return the first entity, or null if there are no entities in the database
      * @throws IOException if some IO error occurred reading the database
      */
     public T getFirst() throws IOException {
-        return storage.firstEntity();
+        Iterator<T> iterator = storage.getOrderedAscendingIterator(null);
+        return iterator.hasNext() ? iterator.next() : null;
     }
 
     /**
      * Gets the last entity in the database according to the default sort order
-     * @return the last entity
+     * @return the last entity, or null if there are no entities in the database
      * @throws IOException if some IO error occurred reading the database
      */
     public T getLast() throws IOException {
-        return storage.lastEntity();
+        Iterator<T> iterator = storage.getOrderedDescendingIterator(null);
+        return iterator.hasNext() ? iterator.next() : null;
     }
 
     /**
      * Gets the entity after the given one in the database according to the default sort order.
      * The given entity doesn't have to exist, it can be a search key as well.
      * @param entity an entity or an entity key
-     * @return the succeeding entity
+     * @return the succeeding entity, or null if there are no succeeding entities
      * @throws IOException if some IO error occurred reading the database
      */
-    public T getNext(T entity) throws IOException {
-        return storage.nextEntity(entity);
+    public T getNext(@NonNull T entity) throws IOException {
+        Iterator<T> iterator = storage.getOrderedAscendingIterator(entity);
+        if (!iterator.hasNext()) return null;
+        T next = iterator.next();
+        if (!next.equals(entity)) return next;
+        if (!iterator.hasNext()) return null;
+        return iterator.next();
     }
 
     /**
      * Gets the entity before the given one in the database according to the default sort order.
      * The given entity doesn't have to exist, it can be a search key as well.
      * @param entity an entity or an entity key
-     * @return the preceeding entity
+     * @return the preceding entity, or null if there are no preceding entities
      * @throws IOException if some IO error occurred reading the database
      */
-    public T getPrevious(T entity) throws IOException {
-        return storage.previousEntity(entity);
+    public T getPrevious(@NonNull T entity) throws IOException {
+        Iterator<T> iterator = storage.getOrderedDescendingIterator(entity);
+        if (!iterator.hasNext()) return null;
+        T next = iterator.next();
+        if (!next.equals(entity)) return next;
+        if (!iterator.hasNext()) return null;
+        return iterator.next();
     }
 
     /**
      * Gets a stream of all entities in the database, sorted by the default sorting order.
      * If an error occurs while processing the stream, a {@link UncheckedEntityException} is thrown.
      * @return a stream of all entities
+     * @throws IOException if an IO error occurs
      */
-    public Stream<T> getAscendingStream() {
-        return storage.getAscendingEntityStream();
+    public Stream<T> getAscendingStream() throws IOException {
+        return getAscendingStream(null);
     }
 
     /**
@@ -189,18 +193,22 @@ public abstract class EntityBase<T extends Entity & Comparable<T>> implements En
      * If an error occurs while processing the stream, a {@link UncheckedEntityException} is thrown.
      * @param start the starting key
      * @return a stream of entities
+     * @throws IOException if an IO error occurs
      */
-    public Stream<T> getAscendingStream(@NonNull T start) {
-        return storage.getAscendingEntityStream(start);
+    public Stream<T> getAscendingStream(T start) throws IOException {
+        Iterator<T> iterator = storage.getOrderedAscendingIterator(start);
+        Iterable<T> iterable = () -> iterator;
+        return StreamSupport.stream(iterable.spliterator(), false);
     }
 
     /**
      * Gets a stream of all entities in the database in reverse default sorting order.
      * If an error occurs while processing the stream, a {@link UncheckedEntityException} is thrown.
      * @return a stream of all entities
+     * @throws IOException if an IO error occurs
      */
-    public Stream<T> getDescendingStream() {
-        return storage.getDescendingEntityStream();
+    public Stream<T> getDescendingStream() throws IOException {
+        return getDescendingStream(null);
     }
 
     /**
@@ -209,9 +217,12 @@ public abstract class EntityBase<T extends Entity & Comparable<T>> implements En
      * If an error occurs while processing the stream, a {@link UncheckedEntityException} is thrown.
      * @param start the starting key
      * @return a stream of entities
+     * @throws IOException if an IO error occurs
      */
-    public Stream<T> getDescendingStream(@NonNull T start) {
-        return storage.getDescendingEntityStream(start);
+    public Stream<T> getDescendingStream(T start) throws IOException {
+        Iterator<T> iterator = storage.getOrderedDescendingIterator(start);
+        Iterable<T> iterable = () -> iterator;
+        return StreamSupport.stream(iterable.spliterator(), false);
     }
 
     /**

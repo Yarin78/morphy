@@ -1,18 +1,18 @@
 package se.yarin.cbhlib.entities;
 
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import java.util.stream.IntStream;
-import java.util.stream.Stream;
+import java.util.NoSuchElementException;
 
-public class EntityStorageImpl<T extends Entity & Comparable<T>>
-        extends EntityStorageBase<T> implements EntityStorage<T> {
+public class EntityStorageImpl<T extends Entity & Comparable<T>> implements EntityStorage<T> {
     private static final Logger log = LoggerFactory.getLogger(EntityStorageImpl.class);
 
     private static final int ENTITY_DELETED = -999;
@@ -31,23 +31,38 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>>
         metadata = new EntityNodeStorageMetadata(0, 0);
     }
 
-    public static <T extends Entity & Comparable<T>> EntityStorageImpl open(
+    public static <T extends Entity & Comparable<T>> EntityStorage<T> open(
             File file, @NonNull EntitySerializer<T> serializer) throws IOException {
         return new EntityStorageImpl<>(file, serializer);
     }
 
-    public static <T extends Entity & Comparable<T>> EntityStorageImpl create(
+    public static <T extends Entity & Comparable<T>> EntityStorage<T> create(
             File file, @NonNull EntitySerializer<T> serializer) throws IOException {
         PersistentEntityNodeStorage.createEmptyStorage(file, serializer);
         return open(file, serializer);
     }
 
-    public static <T extends Entity & Comparable<T>> EntityStorageImpl createInMemory(String name) {
-        return new EntityStorageImpl<T>();
+    public static <T extends Entity & Comparable<T>> EntityStorage<T> openInMemory(
+            File file, @NonNull EntitySerializer<T> serializer) throws IOException {
+        EntityStorageImpl<T> source = new EntityStorageImpl<>(file, serializer);
+        EntityStorageImpl<T> target = new EntityStorageImpl<>();
+        int batchSize = 1000, capacity = source.metadata.getCapacity();
+        for (int i = 0; i < capacity; i+=batchSize) {
+            List<EntityNode<T>> nodes = source.nodeStorage.getEntityNodes(i, Math.min(i + batchSize, capacity));
+            for (EntityNode<T> node : nodes) {
+                target.nodeStorage.putEntityNode(node);
+            }
+        }
+        target.metadata.setCapacity(capacity);
+        target.metadata.setRootEntityId(source.metadata.getRootEntityId());
+        target.metadata.setFirstDeletedEntityId(source.metadata.getFirstDeletedEntityId());
+        target.metadata.setNumEntities(source.metadata.getNumEntities());
+        return target;
     }
 
-    // TODO: Add public static method for creating new in-memory version
-    // Maybe also in-memory version that loads initial data from disk
+    public static <T extends Entity & Comparable<T>> EntityStorage<T> createInMemory() {
+        return new EntityStorageImpl<>();
+    }
 
     @Override
     public int getNumEntities() {
@@ -60,6 +75,15 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>>
             return null;
         }
         return nodeStorage.getEntityNode(entityId).getEntity();
+    }
+
+    @Override
+    public T getEntity(T entity) throws IOException {
+        TreePath treePath = treeSearch(entity);
+        if (treePath.compare == 0) {
+            return treePath.node.getEntity();
+        }
+        return null;
     }
 
     @Override
@@ -99,6 +123,20 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>>
         nodeStorage.putMetadata(metadata);
 
         return entityId;
+    }
+
+    /**
+     * Returns all entities. There will be no null entries in the output.
+     * If there are a large number of entities, consider using {@link #iterator()} instead.
+     * @return a list of all entities
+     * @throws IOException if there was an error getting any entity
+     */
+    public List<T> getAllEntities() throws IOException {
+        ArrayList<T> result = new ArrayList<>(getNumEntities());
+        for (T entity : this) {
+            result.add(entity);
+        }
+        return result;
     }
 
     @AllArgsConstructor
@@ -307,33 +345,73 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>>
         return cnt;
     }
 
-
-    @Override
-    public Stream<T> getEntityStream()  {
-        int bufferSize = 1000;
-
-        return IntStream.range(0, (metadata.getCapacity() + bufferSize - 1) / bufferSize)
-                .mapToObj(rangeId -> {
-                    int rangeStart = rangeId * bufferSize;
-                    int rangeEnd = Math.min(metadata.getCapacity(), (rangeId + 1) * bufferSize);
-                    try {
-                        return nodeStorage.getEntityNodes(rangeStart, rangeEnd);
-                    } catch (IOException e) {
-                        throw new UncheckedEntityException("Error reading entities", e);
-                    }
-                })
-                .flatMap(List::stream)
-                .map(EntityNode::getEntity);
+    public Iterator<T> iterator() {
+        return iterator(0);
     }
 
-    private class EntityStorageIterator implements Iterator<T> {
+    @Override
+    public Iterator<T> iterator(int startId) {
+        return new DefaultIterator(startId);
+    }
+
+    private class DefaultIterator implements Iterator<T> {
+        private List<EntityNode<T>> batch = new ArrayList<>();
+        private int batchPos, nextBatchStart = 0, batchSize = 1000;
+
+        private void getNextBatch() {
+            int endId = Math.min(metadata.getCapacity(), nextBatchStart + batchSize);
+            if (nextBatchStart >= endId) {
+                batch = null;
+            } else {
+                try {
+                    batch = nodeStorage.getEntityNodes(nextBatchStart, endId);
+                } catch (IOException e) {
+                    throw new UncheckedEntityException("AN IO error when iterating entities", e);
+                }
+                nextBatchStart = endId;
+            }
+            batchPos = 0;
+        }
+
+        private void skipDeleted() {
+            while (batch != null) {
+                while (batchPos < batch.size()) {
+                    if (!batch.get(batchPos).isDeleted()) return;
+                    batchPos++;
+                }
+                getNextBatch();
+            }
+        }
+
+        DefaultIterator(int startId) {
+            nextBatchStart = startId;
+            skipDeleted();
+        }
+
+        @Override
+        public boolean hasNext() {
+            return batch != null;
+        }
+
+        @Override
+        public T next() {
+            if (!hasNext()) {
+                throw new NoSuchElementException("End of entity iteration reached");
+            }
+            EntityNode<T> node = batch.get(batchPos++);
+            skipDeleted();
+            return node.getEntity();
+        }
+    }
+
+    private class OrderedIterator implements Iterator<T> {
 
         // Invariant: treePath.node is the next entity to be returned
         // If treePath == null, there are no more entities to be returned
         private TreePath treePath;
         private final boolean ascending;
 
-        public EntityStorageIterator(TreePath treePath, boolean ascending) throws IOException {
+        OrderedIterator(TreePath treePath, boolean ascending) throws IOException {
             this.treePath = treePath;
             this.ascending = ascending;
         }
@@ -345,6 +423,9 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>>
 
         @Override
         public T next() {
+            if (!hasNext()) {
+                throw new NoSuchElementException("End of entity iteration reached");
+            }
             try {
                 // TODO: Check if any writes have happened since iterator was created
                 T entity = treePath.node.getEntity();
@@ -362,7 +443,7 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>>
                 }
                 return entity;
             } catch (IOException e) {
-                throw new UncheckedEntityException("Error iterating entities", e);
+                throw new UncheckedEntityException("AN IO error when iterating entities", e);
             }
         }
     }
@@ -382,7 +463,7 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>>
                 treePath = treePath.parent;
             }
         }
-        return new EntityStorageIterator(treePath, ascending);
+        return new OrderedIterator(treePath, ascending);
     }
 
     public Iterator<T> getOrderedAscendingIterator(T startEntity) throws IOException {

@@ -3,8 +3,6 @@ package se.yarin.cbhlib;
 import lombok.NonNull;
 import se.yarin.cbhlib.entities.EntityStorage;
 import se.yarin.cbhlib.entities.EntityStorageImpl;
-import se.yarin.cbhlib.entities.InMemoryEntityStorage;
-import se.yarin.cbhlib.entities.OrderedEntityStorageImpl;
 
 import java.io.File;
 import java.io.IOException;
@@ -17,10 +15,10 @@ public class SourceBase extends EntityBase<SourceEntity> {
      * Creates a new in-memory source database that is initially empty.
      */
     public SourceBase() {
-        super(new OrderedEntityStorageImpl<>(new InMemoryEntityStorage<>()));
+        super(EntityStorageImpl.createInMemory());
     }
 
-    private SourceBase(@NonNull OrderedEntityStorageImpl<SourceEntity> storage) {
+    private SourceBase(@NonNull EntityStorage<SourceEntity> storage) {
         super(storage);
     }
 
@@ -30,8 +28,7 @@ public class SourceBase extends EntityBase<SourceEntity> {
      * @return an in-memory source base
      */
     public static SourceBase openInMemory(@NonNull File file) throws IOException {
-        OrderedEntityStorageImpl<SourceEntity> outputStorage = loadInMemoryStorage(file, new SourceBase());
-        return new SourceBase(outputStorage);
+        return new SourceBase(loadInMemoryStorage(file, new SourceBase()));
     }
 
     /**
@@ -41,8 +38,7 @@ public class SourceBase extends EntityBase<SourceEntity> {
      * @throws IOException if something went wrong when opening the database
      */
     public static SourceBase open(@NonNull File file) throws IOException {
-        EntityStorage<SourceEntity> storage = EntityStorageImpl.open(file, new SourceBase());
-        return new SourceBase(new OrderedEntityStorageImpl<>(storage));
+        return new SourceBase(EntityStorageImpl.open(file, new SourceBase()));
     }
 
     /**
@@ -53,8 +49,7 @@ public class SourceBase extends EntityBase<SourceEntity> {
      * @throws IOException if something went wrong when creating the database
      */
     public static SourceBase create(@NonNull File file) throws IOException {
-        EntityStorage<SourceEntity> storage = EntityStorageImpl.create(file, new SourceBase());
-        return new SourceBase(new OrderedEntityStorageImpl<>(storage));
+        return new SourceBase(EntityStorageImpl.create(file, new SourceBase()));
     }
 
     public ByteBuffer serialize(@NonNull SourceEntity source) {

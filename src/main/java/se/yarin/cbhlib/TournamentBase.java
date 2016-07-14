@@ -5,8 +5,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.cbhlib.entities.EntityStorage;
 import se.yarin.cbhlib.entities.EntityStorageImpl;
-import se.yarin.cbhlib.entities.InMemoryEntityStorage;
-import se.yarin.cbhlib.entities.OrderedEntityStorageImpl;
 
 import java.io.File;
 import java.io.IOException;
@@ -22,10 +20,10 @@ public class TournamentBase extends EntityBase<TournamentEntity> {
      * Creates a new in-memory tournament database that is initially empty.
      */
     public TournamentBase() {
-        super(new OrderedEntityStorageImpl<>(new InMemoryEntityStorage<>()));
+        super(EntityStorageImpl.createInMemory());
     }
 
-    private TournamentBase(@NonNull OrderedEntityStorageImpl<TournamentEntity> storage) {
+    private TournamentBase(@NonNull EntityStorage<TournamentEntity> storage) {
         super(storage);
     }
 
@@ -35,8 +33,7 @@ public class TournamentBase extends EntityBase<TournamentEntity> {
      * @return an in-memory tournament base
      */
     public static TournamentBase openInMemory(@NonNull File file) throws IOException {
-        OrderedEntityStorageImpl<TournamentEntity> outputStorage = loadInMemoryStorage(file, new TournamentBase());
-        return new TournamentBase(outputStorage);
+        return new TournamentBase(loadInMemoryStorage(file, new TournamentBase()));
     }
 
     /**
@@ -46,8 +43,7 @@ public class TournamentBase extends EntityBase<TournamentEntity> {
      * @throws IOException if something went wrong when opening the database
      */
     public static TournamentBase open(@NonNull File file) throws IOException {
-        EntityStorage<TournamentEntity> storage = EntityStorageImpl.open(file, new TournamentBase());
-        return new TournamentBase(new OrderedEntityStorageImpl<>(storage));
+        return new TournamentBase(EntityStorageImpl.open(file, new TournamentBase()));
     }
 
     /**
@@ -58,8 +54,7 @@ public class TournamentBase extends EntityBase<TournamentEntity> {
      * @throws IOException if something went wrong when creating the database
      */
     public static TournamentBase create(@NonNull File file) throws IOException {
-        EntityStorage<TournamentEntity> storage = EntityStorageImpl.create(file, new TournamentBase());
-        return new TournamentBase(new OrderedEntityStorageImpl<>(storage));
+        return new TournamentBase(EntityStorageImpl.create(file, new TournamentBase()));
     }
 
     public ByteBuffer serialize(@NonNull TournamentEntity tournament) {

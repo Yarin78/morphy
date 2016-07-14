@@ -1,6 +1,5 @@
 package se.yarin.cbhlib.entities;
 
-import lombok.Getter;
 import lombok.NonNull;
 
 import java.io.IOException;
@@ -17,15 +16,14 @@ public abstract class EntityNodeStorageBase<T extends Entity & Comparable<T>> {
     protected abstract EntityNode<T> getEntityNode(int entityId) throws IOException;
 
     /**
-     * Gets all entity node in the specified range. Deleted entities will be omitted,
-     * so the resulting array may be shorter than the specified range.
+     * Gets all entity node in the specified range.
      * @param startIdInclusive the id of the first entity to get
      * @param endIdExclusive the id of the first entity <i>not</i> to get
      * @return a list of all entities between startIdInclusive and endIdExclusive
      * @throws IOException if some IO error occurred
      */
     protected abstract List<EntityNode<T>> getEntityNodes(int startIdInclusive, int endIdExclusive)
-            throws IOException;
+        throws IOException;
 
     /**
      * Puts an entity node in the storage

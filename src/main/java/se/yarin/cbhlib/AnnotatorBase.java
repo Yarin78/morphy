@@ -3,8 +3,6 @@ package se.yarin.cbhlib;
 import lombok.NonNull;
 import se.yarin.cbhlib.entities.EntityStorage;
 import se.yarin.cbhlib.entities.EntityStorageImpl;
-import se.yarin.cbhlib.entities.InMemoryEntityStorage;
-import se.yarin.cbhlib.entities.OrderedEntityStorageImpl;
 
 import java.io.File;
 import java.io.IOException;
@@ -18,10 +16,10 @@ public class AnnotatorBase extends EntityBase<AnnotatorEntity> {
      * Creates a new in-memory annotator database that is initially empty.
      */
     public AnnotatorBase() {
-        super(new OrderedEntityStorageImpl<>(new InMemoryEntityStorage<>()));
+        super(EntityStorageImpl.createInMemory());
     }
 
-    private AnnotatorBase(@NonNull OrderedEntityStorageImpl<AnnotatorEntity> storage) {
+    private AnnotatorBase(@NonNull EntityStorage<AnnotatorEntity> storage) {
         super(storage);
     }
 
@@ -31,8 +29,7 @@ public class AnnotatorBase extends EntityBase<AnnotatorEntity> {
      * @return an in-memory annotator base
      */
     public static AnnotatorBase openInMemory(@NonNull File file) throws IOException {
-        OrderedEntityStorageImpl<AnnotatorEntity> outputStorage = loadInMemoryStorage(file, new AnnotatorBase());
-        return new AnnotatorBase(outputStorage);
+        return new AnnotatorBase(loadInMemoryStorage(file, new AnnotatorBase()));
     }
 
     /**
@@ -42,8 +39,7 @@ public class AnnotatorBase extends EntityBase<AnnotatorEntity> {
      * @throws IOException if something went wrong when opening the database
      */
     public static AnnotatorBase open(@NonNull File file) throws IOException {
-        EntityStorage<AnnotatorEntity> storage = EntityStorageImpl.open(file, new AnnotatorBase());
-        return new AnnotatorBase(new OrderedEntityStorageImpl<>(storage));
+        return new AnnotatorBase(EntityStorageImpl.open(file, new AnnotatorBase()));
     }
 
     /**
@@ -54,8 +50,7 @@ public class AnnotatorBase extends EntityBase<AnnotatorEntity> {
      * @throws IOException if something went wrong when creating the database
      */
     public static AnnotatorBase create(@NonNull File file) throws IOException {
-        EntityStorage<AnnotatorEntity> storage = EntityStorageImpl.create(file, new AnnotatorBase());
-        return new AnnotatorBase(new OrderedEntityStorageImpl<>(storage));
+        return new AnnotatorBase(EntityStorageImpl.create(file, new AnnotatorBase()));
     }
 
     public ByteBuffer serialize(@NonNull AnnotatorEntity annotator) {

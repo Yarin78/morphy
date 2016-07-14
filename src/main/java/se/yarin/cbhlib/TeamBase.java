@@ -3,8 +3,6 @@ package se.yarin.cbhlib;
 import lombok.NonNull;
 import se.yarin.cbhlib.entities.EntityStorage;
 import se.yarin.cbhlib.entities.EntityStorageImpl;
-import se.yarin.cbhlib.entities.InMemoryEntityStorage;
-import se.yarin.cbhlib.entities.OrderedEntityStorageImpl;
 
 import java.io.File;
 import java.io.IOException;
@@ -18,10 +16,10 @@ public class TeamBase extends EntityBase<TeamEntity> {
      * Creates a new in-memory team database that is initially empty.
      */
     public TeamBase() {
-        super(new OrderedEntityStorageImpl<>(new InMemoryEntityStorage<>()));
+        super(EntityStorageImpl.createInMemory());
     }
 
-    private TeamBase(@NonNull OrderedEntityStorageImpl<TeamEntity> storage) {
+    private TeamBase(@NonNull EntityStorage<TeamEntity> storage) {
         super(storage);
     }
 
@@ -31,8 +29,7 @@ public class TeamBase extends EntityBase<TeamEntity> {
      * @return an in-memory team base
      */
     public static TeamBase openInMemory(@NonNull File file) throws IOException {
-        OrderedEntityStorageImpl<TeamEntity> outputStorage = loadInMemoryStorage(file, new TeamBase());
-        return new TeamBase(outputStorage);
+        return new TeamBase(loadInMemoryStorage(file, new TeamBase()));
     }
 
     /**
@@ -42,8 +39,7 @@ public class TeamBase extends EntityBase<TeamEntity> {
      * @throws IOException if something went wrong when opening the database
      */
     public static TeamBase open(@NonNull File file) throws IOException {
-        EntityStorage<TeamEntity> storage = EntityStorageImpl.open(file, new TeamBase());
-        return new TeamBase(new OrderedEntityStorageImpl<>(storage));
+        return new TeamBase(EntityStorageImpl.open(file, new TeamBase()));
     }
 
     /**
@@ -54,8 +50,7 @@ public class TeamBase extends EntityBase<TeamEntity> {
      * @throws IOException if something went wrong when creating the database
      */
     public static TeamBase create(@NonNull File file) throws IOException {
-        EntityStorage<TeamEntity> storage = EntityStorageImpl.create(file, new TeamBase());
-        return new TeamBase(new OrderedEntityStorageImpl<>(storage));
+        return new TeamBase(EntityStorageImpl.create(file, new TeamBase()));
     }
 
     public ByteBuffer serialize(@NonNull TeamEntity team) {
