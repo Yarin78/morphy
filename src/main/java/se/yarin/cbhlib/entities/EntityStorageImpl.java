@@ -131,17 +131,26 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>>
     }
 
     @Override
-    public void putEntity(int entityId, @NonNull T entity) throws IOException {
+    public void putEntity(int entityId, @NonNull T entity) throws IOException, EntityStorageException {
         if (entityId < 0 || entityId >= metadata.getCapacity()) {
             throw new IllegalArgumentException(String.format("Can't put an entity with id %d when capacity is %d",
                     entityId, metadata.getCapacity()));
         }
-        if (nodeStorage.getEntityNode(entityId).isDeleted()) {
+        EntityNode<T> oldNode = nodeStorage.getEntityNode(entityId);
+        if (oldNode.isDeleted()) {
             throw new IllegalArgumentException("Can't replace a deleted entity");
         }
-
-        // TODO: Update tree if necessary
-        nodeStorage.putEntityNode(nodeStorage.createNode(entityId, entity));
+        if (oldNode.getEntity().compareTo(entity) == 0) {
+            // The key is the same, so we don't have to update the tree
+            EntityNode<T> newNode = nodeStorage.createNode(entityId, entity);
+            newNode = newNode.update(oldNode.getLeftEntityId(), oldNode.getRightEntityId(), oldNode.getHeightDif());
+            nodeStorage.putEntityNode(newNode);
+        } else {
+            // TODO: Do this in a transaction?
+            deleteEntity(entityId);
+            int newEntityId = addEntity(entity);
+            assert entityId == newEntityId; // Important!
+        }
     }
 
     private void replaceChild(TreePath path, int newChildId) throws IOException {

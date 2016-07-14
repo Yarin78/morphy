@@ -193,5 +193,29 @@ public class EntityStorageTest {
         }
     }
 
+    @Test
+    public void testReplaceNodeWithSameKey() throws IOException, EntityStorageException {
+        EntityStorageImpl<TestEntity> storage = createStorage();
+        storage.addEntity(new TestEntity("b"));
+        storage.addEntity(new TestEntity("a"));
+        storage.addEntity(new TestEntity("c"));
+
+        storage.putEntity(0, new TestEntity("b"));
+        assertEquals(3, storage.getNumEntities());
+        storage.validateStructure();
+    }
+
+    @Test
+    public void testReplaceNodeWithNewKey() throws IOException, EntityStorageException {
+        EntityStorageImpl<TestEntity> storage = createStorage();
+        storage.addEntity(new TestEntity("b"));
+        storage.addEntity(new TestEntity("a"));
+        storage.addEntity(new TestEntity("c"));
+
+        storage.putEntity(0, new TestEntity("d"));
+        assertEquals(3, storage.getNumEntities());
+        assertEquals("d", storage.getEntity(0).getValue());
+        storage.validateStructure();
+    }
     // Test replace (both changing key and not)
 }
