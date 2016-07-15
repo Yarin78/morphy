@@ -16,6 +16,7 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
     private static final Logger log = LoggerFactory.getLogger(EntityStorageImpl.class);
 
     private static final int ENTITY_DELETED = -999;
+    private static final int DEFAULT_HEADER_SIZE = 32;
 
     private final EntityNodeStorageBase<T> nodeStorage;
     private final EntityNodeStorageMetadata metadata;
@@ -38,7 +39,12 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
 
     public static <T extends Entity & Comparable<T>> EntityStorage<T> create(
             File file, @NonNull EntitySerializer<T> serializer) throws IOException {
-        PersistentEntityNodeStorage.createEmptyStorage(file, serializer);
+        return create(file, serializer, DEFAULT_HEADER_SIZE);
+    }
+
+    static <T extends Entity & Comparable<T>> EntityStorage<T> create(
+            File file, @NonNull EntitySerializer<T> serializer, int headerSize) throws IOException {
+        PersistentEntityNodeStorage.createEmptyStorage(file, serializer, headerSize);
         return open(file, serializer);
     }
 
@@ -67,6 +73,11 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
     @Override
     public int getNumEntities() {
         return metadata.getNumEntities();
+    }
+
+    @Override
+    public int getCapacity() {
+        return metadata.getCapacity();
     }
 
     @Override

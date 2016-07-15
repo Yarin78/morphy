@@ -11,10 +11,10 @@ public class EntityNodeStorageMetadata {
     private int numEntities = 0;
     private int firstDeletedEntityId = -1;
     private int capacity = 0;
-    private final int entityOffset;
+    private final int headerSize;
 
-    public EntityNodeStorageMetadata(int serializedEntitySize, int entityOffset) {
+    public EntityNodeStorageMetadata(int serializedEntitySize, int headerSize) {
         this.serializedEntitySize = serializedEntitySize;
-        this.entityOffset = entityOffset;
+        this.headerSize = headerSize;
     }
 }

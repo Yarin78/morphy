@@ -1,16 +1,12 @@
 package se.yarin.cbhlib.entities;
 
-import lombok.Getter;
-import lombok.Setter;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
-import se.yarin.cbhlib.ByteBufferUtil;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.Random;
 
@@ -21,52 +17,6 @@ public class EntityStorageTest {
     public TemporaryFolder folder = new TemporaryFolder();
 
     private Random random;
-
-    private static class TestEntity implements Entity, Comparable<TestEntity> {
-        @Getter
-        private int id;
-        @Getter @Setter
-        private String key;
-        @Getter @Setter
-        private int value;
-
-        TestEntity(int id, String key) {
-            this.id = id;
-            this.key = key;
-        }
-
-        public TestEntity(String key) {
-            this(-1, key);
-        }
-
-        @Override
-        public int compareTo(TestEntity o) {
-            return key.compareTo(o.key);
-        }
-    }
-
-    private static class TestEntitySerializer implements EntitySerializer<TestEntity> {
-        @Override
-        public ByteBuffer serialize(TestEntity entity) {
-            ByteBuffer buf = ByteBuffer.allocate(24);
-            ByteBufferUtil.putByteString(buf, entity.getKey(), 20);
-            ByteBufferUtil.putIntB(buf, entity.getValue());
-            return buf;
-        }
-
-        @Override
-        public TestEntity deserialize(int entityId, ByteBuffer buffer) {
-            String value = ByteBufferUtil.getFixedSizeByteString(buffer, 20);
-            TestEntity testEntity = new TestEntity(entityId, value);
-            testEntity.setValue(ByteBufferUtil.getIntB(buffer));
-            return testEntity;
-        }
-
-        @Override
-        public int getSerializedEntityLength() {
-            return 24;
-        }
-    }
 
     private EntityStorage<TestEntity> createStorage() throws IOException, EntityStorageException {
 //        File file = folder.newFile();
@@ -414,5 +364,159 @@ public class EntityStorageTest {
         assertNull(storage.getEntity(3));
         assertNull(storage.getEntity(8));
         assertEquals(values.length - 2, storage.getNumEntities());
+    }
+
+
+    @Test
+    public void testUseStorageWithShorterEntityLength() throws IOException, EntityStorageException {
+        // Test that we can open and work with a storage where the entity size is different than expected
+        // This corresponds to having a new version of the database reading older database files.
+        // The expected outcome is that new fields will have their new fields truncated when written.
+        File file = folder.newFile();
+        file.delete();
+
+        // Add two entities as an old database with shorter entity size
+        EntityStorage<TestEntity> oldDb = EntityStorageImpl.create(file, new TestEntitySerializer());
+        TestEntity key = new TestEntity("a");
+        key.setValue(7);
+        oldDb.addEntity(key);
+        key = new TestEntity("b");
+        key.setValue(9);
+        oldDb.addEntity(key);
+        oldDb.close();
+
+        // Open as a new database with longer entity size and check that we can read the data
+        EntityStorage<TestEntityv2> newDb = EntityStorageImpl.open(file, new TestEntityv2Serializer());
+        assertEquals(2, newDb.getNumEntities());
+        TestEntityv2 e2 = newDb.getEntity(0);
+        assertEquals(e2.getKey(), "a");
+        assertEquals(e2.getValue(), 7);
+        assertEquals(e2.getExtraValue(), 0);
+        assertEquals(e2.getExtraString(), "");
+
+        e2 = newDb.getEntity(1);
+        assertEquals(e2.getKey(), "b");
+        assertEquals(e2.getValue(), 9);
+        assertEquals(e2.getExtraValue(), 0);
+        assertEquals(e2.getExtraString(), "");
+
+        // Add one new entity, replace one and deleted one as the new database
+        TestEntityv2 key2 = new TestEntityv2("c");
+        key2.setValue(12);
+        key2.setExtraValue(19);
+        key2.setExtraString("truncated");
+        newDb.addEntity(key2);
+        key2 = new TestEntityv2("a");
+        key2.setValue(-8);
+        key2.setExtraValue(100);
+        key2.setExtraString("also removed");
+        newDb.putEntity(0, key2);
+        newDb.deleteEntity(1);
+
+        TestEntityv2 key3 = newDb.getEntity(0);
+        assertEquals(-8, key3.getValue());
+        assertEquals(0, key3.getExtraValue());
+        assertEquals("", key3.getExtraString());
+        key3 = newDb.getEntity(2);
+        assertEquals(12, key3.getValue());
+        assertEquals(0, key3.getExtraValue());
+        assertEquals("", key3.getExtraString());
+
+        newDb.close();
+
+        // Check that we can read the new entities as the old database
+        oldDb = EntityStorageImpl.open(file, new TestEntitySerializer());
+        TestEntity key5 = oldDb.getEntity(0);
+        assertEquals("a", key5.getKey());
+        assertEquals(-8, key5.getValue());
+        key5 = oldDb.getEntity(2);
+        assertEquals("c", key5.getKey());
+        assertEquals(12, key5.getValue());
+        assertNull(oldDb.getEntity(1));
+        oldDb.close();
+    }
+
+    @Test
+    public void testUseStorageWithLongerEntityLength() throws IOException, EntityStorageException {
+        // Test that we can open and work with a storage where the entity size is larger than expected
+        // This corresponds to having an old version of the database reading and working with
+        // database files from a newer version.
+        // The expected outcome is that unknown fields will be untouched when updating entities,
+        // or empty if writing new ones.
+
+        File file = folder.newFile();
+        file.delete();
+
+        // Add two entities as a new database with longer entity size
+        EntityStorage<TestEntityv2> newDb = EntityStorageImpl.create(file, new TestEntityv2Serializer());
+        TestEntityv2 key = new TestEntityv2("a");
+        key.setValue(7);
+        key.setExtraValue(10);
+        key.setExtraString("hello");
+        newDb.addEntity(key);
+        key = new TestEntityv2("b");
+        key.setValue(9);
+        key.setExtraValue(1);
+        key.setExtraString("world");
+        newDb.addEntity(key);
+        newDb.close();
+
+        // Open as an old database with shorter entity size and check that we can read the data
+        EntityStorage<TestEntity> oldDb = EntityStorageImpl.open(file, new TestEntitySerializer());
+        assertEquals(2, oldDb.getNumEntities());
+        TestEntity e2 = oldDb.getEntity(0);
+        assertEquals(e2.getKey(), "a");
+        assertEquals(e2.getValue(), 7);
+
+        e2 = oldDb.getEntity(1);
+        assertEquals(e2.getKey(), "b");
+        assertEquals(e2.getValue(), 9);
+
+        // Add one new entity, replace one and delete one as the old database
+        TestEntity key2 = new TestEntity("c");
+        key2.setValue(12);
+        oldDb.addEntity(key2);
+        key2 = new TestEntity("a");
+        key2.setValue(-8);
+        oldDb.putEntity(0, key2);
+        oldDb.deleteEntity(1);
+
+        TestEntity key3 = oldDb.getEntity(0);
+        assertEquals(-8, key3.getValue());
+
+        oldDb.close();
+
+        // Check that we can read the new entities as the new database
+        // Also check that the entity that was updated didn't get the extra field modified
+        newDb = EntityStorageImpl.open(file, new TestEntityv2Serializer());
+        TestEntityv2 key5 = newDb.getEntity(0);
+        assertEquals("a", key5.getKey());
+        assertEquals(-8, key5.getValue());
+        assertEquals(10, key5.getExtraValue());
+        assertEquals("hello", key5.getExtraString());
+        key5 = newDb.getEntity(2);
+        assertEquals("c", key5.getKey());
+        assertEquals(12, key5.getValue());
+        assertEquals(0, key5.getExtraValue());
+        assertEquals("", key5.getExtraString());
+        assertNull(newDb.getEntity(1));
+        newDb.close();
+    }
+
+    @Test
+    public void testUseStorageWithDifferentHeaderSize() throws IOException, EntityStorageException {
+        File file = folder.newFile();
+        file.delete();
+
+        EntityStorage<TestEntity> oldDb = EntityStorageImpl.create(file, new TestEntitySerializer(), 28);
+        TestEntity hello = new TestEntity(0, "hello");
+        hello.setValue(5);
+        oldDb.addEntity(hello);
+        oldDb.close();
+
+        EntityStorage<TestEntity> newDb = EntityStorageImpl.open(file, new TestEntitySerializer());
+        TestEntity entity = newDb.getEntity(0);
+        assertEquals("hello", entity.getKey());
+        assertEquals(5, entity.getValue());
     }
 }

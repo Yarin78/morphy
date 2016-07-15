@@ -24,7 +24,7 @@ class PersistentEntityNodeStorage<T extends Entity & Comparable<T>> extends Enti
     private final String storageName;
 
     private FileChannel channel;
-    private int entityOffset;
+    private int headerSize;
     private int serializedEntitySize;
 
     PersistentEntityNodeStorage(File file, EntitySerializer<T> serializer)
@@ -34,7 +34,7 @@ class PersistentEntityNodeStorage<T extends Entity & Comparable<T>> extends Enti
         this.serializer = serializer;
         channel = FileChannel.open(file.toPath(), READ, WRITE);
         EntityNodeStorageMetadata metadata = getMetadata();
-        entityOffset = metadata.getEntityOffset();
+        headerSize = metadata.getHeaderSize();
         serializedEntitySize = metadata.getSerializedEntitySize();
 
         log.debug(String.format("Opening %s; capacity = %d, root = %d, numEntities = %d, firstDeletedId = %d",
@@ -42,18 +42,25 @@ class PersistentEntityNodeStorage<T extends Entity & Comparable<T>> extends Enti
                 metadata.getNumEntities(), metadata.getFirstDeletedEntityId()));
     }
 
-    static <T extends Entity> void createEmptyStorage(File file, EntitySerializer<T> serializer)
+    static <T extends Entity> void createEmptyStorage(File file, EntitySerializer<T> serializer, int headerSize)
             throws IOException {
+        if (headerSize < 28) {
+            throw new IllegalArgumentException("The size of the header must be at least 28 bytes");
+        }
         FileChannel channel = FileChannel.open(file.toPath(), CREATE_NEW, READ, WRITE);
         EntityNodeStorageMetadata metadata = new EntityNodeStorageMetadata(
-                serializer.getSerializedEntityLength(), 32);
+                serializer.getSerializedEntityLength(), headerSize);
         channel.write(serializeMetadata(metadata));
         channel.close();
     }
 
     EntityNodeStorageMetadata getMetadata() throws IOException {
         channel.position(0);
-        ByteBuffer header = ByteBuffer.allocate(32);
+        // Only 28 bytes of the header is used by this library.
+        // The last 4 bytes of those is an integer specifying number of additional bytes
+        // until the first entity. It used by be 0 in older versions of ChessBase, but is now 4.
+        // What these 4 bytes are used for is unknown.
+        ByteBuffer header = ByteBuffer.allocate(28);
         channel.read(header);
         header.position(0);
 
@@ -67,9 +74,9 @@ class PersistentEntityNodeStorage<T extends Entity & Comparable<T>> extends Enti
         int serializedEntitySize = ByteBufferUtil.getIntL(header);
         int firstDeletedId = ByteBufferUtil.getIntL(header);
         int numEntities = ByteBufferUtil.getIntL(header);
-        int entityOffset = 28 + ByteBufferUtil.getIntL(header);
+        int headerSize = 28 + ByteBufferUtil.getIntL(header);
 
-        EntityNodeStorageMetadata metadata = new EntityNodeStorageMetadata(serializedEntitySize, entityOffset);
+        EntityNodeStorageMetadata metadata = new EntityNodeStorageMetadata(serializedEntitySize, headerSize);
         metadata.setCapacity(capacity);
         metadata.setRootEntityId(rootEntityId);
         metadata.setFirstDeletedEntityId(firstDeletedId);
@@ -79,14 +86,14 @@ class PersistentEntityNodeStorage<T extends Entity & Comparable<T>> extends Enti
     }
 
     private static ByteBuffer serializeMetadata(EntityNodeStorageMetadata metadata) {
-        ByteBuffer buffer = ByteBuffer.allocate(32);
+        ByteBuffer buffer = ByteBuffer.allocate(metadata.getHeaderSize());
         ByteBufferUtil.putIntL(buffer, metadata.getCapacity());
         ByteBufferUtil.putIntL(buffer, metadata.getRootEntityId());
         ByteBufferUtil.putIntL(buffer, MAGIC_CONSTANT);
         ByteBufferUtil.putIntL(buffer, metadata.getSerializedEntitySize());
         ByteBufferUtil.putIntL(buffer, metadata.getFirstDeletedEntityId());
         ByteBufferUtil.putIntL(buffer, metadata.getNumEntities());
-        ByteBufferUtil.putIntL(buffer, metadata.getEntityOffset() - 28);
+        ByteBufferUtil.putIntL(buffer, metadata.getHeaderSize() - 28);
 
         buffer.position(0);
         return buffer;
@@ -110,7 +117,7 @@ class PersistentEntityNodeStorage<T extends Entity & Comparable<T>> extends Enti
      * @throws IOException
      */
     private void positionChannel(int entityId) throws IOException {
-        channel.position(entityOffset + entityId * (9 + serializedEntitySize));
+        channel.position(headerSize + entityId * (9 + serializedEntitySize));
     }
 
 
@@ -171,7 +178,7 @@ class PersistentEntityNodeStorage<T extends Entity & Comparable<T>> extends Enti
     public EntityNode<T> createNode(int entityId, T entity) {
         if (entity == null) {
             // If creating a deleted node
-            return new SerializedEntityNode(entityId, -1, -1, 0, new byte[serializedEntitySize], null);
+            return new SerializedEntityNode(entityId, -1, -1, 0, new byte[serializer.getSerializedEntityLength()], null);
         }
         return new SerializedEntityNode(entityId, -1, -1, 0, entity);
     }
@@ -220,11 +227,13 @@ class PersistentEntityNodeStorage<T extends Entity & Comparable<T>> extends Enti
     }
 
     private ByteBuffer serializeNode(EntityNode<T> node) {
-        ByteBuffer buf = ByteBuffer.allocate(9 + serializedEntitySize);
+        ByteBuffer buf = ByteBuffer.allocate(9 + serializer.getSerializedEntityLength());
         ByteBufferUtil.putIntL(buf, node.getLeftEntityId());
         ByteBufferUtil.putIntL(buf, node.getRightEntityId());
         ByteBufferUtil.putByte(buf, node.getHeightDif());
         buf.put(((SerializedEntityNode) node).getSerializedEntity());
+        // Truncate buffer if working with a database with shorter entity size
+        buf.limit(Math.min(buf.limit(), 9 + serializedEntitySize));
         return buf;
     }
 
@@ -233,8 +242,9 @@ class PersistentEntityNodeStorage<T extends Entity & Comparable<T>> extends Enti
         int rightEntityId = ByteBufferUtil.getIntL(buf);
         int heightDif = ByteBufferUtil.getSignedByte(buf);
         // Only deserialize the actual entity on demand
-        byte[] serializedEntity = new byte[serializedEntitySize];
-        buf.get(serializedEntity);
+        byte[] serializedEntity = new byte[serializer.getSerializedEntityLength()];
+        // Allow reading databases with different entity sizes
+        buf.get(serializedEntity, 0, Math.min(serializedEntitySize, serializer.getSerializedEntityLength()));
 
         return new SerializedEntityNode(entityId, leftEntityId, rightEntityId, heightDif, serializedEntity);
     }

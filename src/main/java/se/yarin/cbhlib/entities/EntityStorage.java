@@ -14,6 +14,12 @@ public interface EntityStorage<T> extends Iterable<T> {
     int getNumEntities();
 
     /**
+     * Gets the current capacity of the underlying storage.
+     * @return the capacity
+     */
+    int getCapacity();
+
+    /**
      * Gets the entity with given id.
      * @param entityId the id of the entity to get
      * @return the entity, or null if there was no entity with that id
