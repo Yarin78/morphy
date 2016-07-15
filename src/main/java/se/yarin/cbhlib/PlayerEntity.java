@@ -1,35 +1,30 @@
 package se.yarin.cbhlib;
 
-import lombok.Getter;
-import lombok.NonNull;
-import lombok.Setter;
+import lombok.*;
 import se.yarin.cbhlib.entities.Entity;
 
+@Builder(toBuilder = true)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class PlayerEntity implements Entity, Comparable<PlayerEntity> {
 
     @Getter
     private int id;
 
-    @Getter @Setter @NonNull
+    @Getter @NonNull
     private String lastName;
 
-    @Getter @Setter @NonNull
+    @Getter @NonNull
     private String firstName;
 
-    @Getter @Setter
+    @Getter
     private int count;
 
-    @Getter @Setter
+    @Getter
     private int firstGameId;
 
-    PlayerEntity(int id, @NonNull String lastName, @NonNull String firstName) {
-        this.id = id;
+    public PlayerEntity(@NonNull String lastName, @NonNull String firstName) {
         this.lastName = lastName;
         this.firstName = firstName;
-    }
-
-    public PlayerEntity(@NonNull String lastName, @NonNull String firstName) {
-        this(-1, lastName, firstName);
     }
 
     public String getFullName() {
@@ -52,6 +47,11 @@ public class PlayerEntity implements Entity, Comparable<PlayerEntity> {
         int comp = lastName.compareTo(o.lastName);
         if (comp != 0) return comp;
         return firstName.compareTo(o.firstName);
+    }
+
+    @Override
+    public PlayerEntity withNewId(int id) {
+        return toBuilder().id(id).build();
     }
 
     @Override

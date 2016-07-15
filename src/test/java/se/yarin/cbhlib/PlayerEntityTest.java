@@ -164,9 +164,12 @@ public class PlayerEntityTest {
         PlayerBase playerBase = PlayerBase.open(playerIndexFile);
         int oldCount = playerBase.getCount();
 
-        PlayerEntity newPlayer = new PlayerEntity("Mardell", "Jimmy");
-        newPlayer.setCount(10);
-        newPlayer.setFirstGameId(7);
+        PlayerEntity newPlayer = PlayerEntity.builder()
+            .lastName("Mardell")
+            .firstName("Jimmy")
+            .count(10)
+            .firstGameId(7)
+            .build();
         assertTrue(playerBase.streamAll().noneMatch(e -> e.equals(newPlayer)));
 
         PlayerEntity entity = playerBase.add(newPlayer);
@@ -192,8 +195,8 @@ public class PlayerEntityTest {
 
         assertNotEquals(player.getId(), playerBase.getLast().getId());
 
-        player.setLastName("Zzz");
-        playerBase.put(player);
+        player = player.toBuilder().lastName("Zzz").build();
+        playerBase.put(player.getId(), player);
 
         assertNull(playerBase.get(new PlayerEntity("Carlsen", "Magnus")));
         assertEquals(new PlayerEntity("Zzz", "Magnus"), playerBase.get(player.getId()));
@@ -208,8 +211,8 @@ public class PlayerEntityTest {
         int id = player.getId();
         assertNotEquals(1, player.getCount());
 
-        player.setCount(1);
-        playerBase.put(player);
+        player = player.toBuilder().count(1).build();
+        playerBase.put(player.getId(), player);
 
         player = playerBase.get(new PlayerEntity("Carlsen", "Magnus"));
         assertEquals(1, player.getCount());

@@ -62,13 +62,12 @@ public class AnnotatorBase extends EntityBase<AnnotatorEntity> {
     }
 
     public AnnotatorEntity deserialize(int entityId, @NonNull ByteBuffer buf) {
-        String name = ByteBufferUtil.getFixedSizeByteString(buf, 45);
-
-        AnnotatorEntity annotator = new AnnotatorEntity(entityId, name);
-        annotator.setCount(ByteBufferUtil.getIntL(buf));
-        annotator.setFirstGameId(ByteBufferUtil.getIntL(buf));
-
-        return annotator;
+        return AnnotatorEntity.builder()
+                .id(entityId)
+                .name(ByteBufferUtil.getFixedSizeByteString(buf, 45))
+                .count(ByteBufferUtil.getIntL(buf))
+                .firstGameId(ByteBufferUtil.getIntL(buf))
+                .build();
     }
 
     public int getSerializedEntityLength() {

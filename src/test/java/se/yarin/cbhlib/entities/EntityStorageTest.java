@@ -48,8 +48,8 @@ public class EntityStorageTest {
     @Test
     public void testAddEntity() throws IOException, EntityStorageException {
         EntityStorage<TestEntity> storage = createStorage();
-        TestEntity hello = new TestEntity(0, "hello");
-        hello.setValue(7);
+
+        TestEntity hello = TestEntity.builder().key("hello").value(7).build();
         int id = storage.addEntity(hello);
         assertEquals(1, storage.getNumEntities());
 
@@ -64,8 +64,7 @@ public class EntityStorageTest {
     @Test
     public void testGetEntityByKey() throws EntityStorageException, IOException {
         EntityStorage<TestEntity> storage = createStorage();
-        TestEntity hello = new TestEntity(0, "hello");
-        hello.setValue(7);
+        TestEntity hello = TestEntity.builder().key("hello").value(7).build();
         storage.addEntity(hello);
 
         TestEntity entity = storage.getEntity(new TestEntity("hello"));
@@ -80,7 +79,7 @@ public class EntityStorageTest {
     public void testAddMultipleEntities() throws IOException, EntityStorageException {
         EntityStorage<TestEntity> storage = createStorage();
         for (int i = 0; i < 20; i++) {
-            int id = storage.addEntity(new TestEntity(i, nextRandomString()));
+            int id = storage.addEntity(new TestEntity(nextRandomString()));
             assertEquals(i, id);
             assertEquals(i + 1, storage.getNumEntities());
             storage.validateStructure();
@@ -90,8 +89,8 @@ public class EntityStorageTest {
     @Test
     public void testDeleteEntity() throws IOException, EntityStorageException {
         EntityStorage<TestEntity> storage = createStorage();
-        int id1 = storage.addEntity(new TestEntity(0, "hello"));
-        int id2 = storage.addEntity(new TestEntity(1, "world"));
+        int id1 = storage.addEntity(new TestEntity("hello"));
+        int id2 = storage.addEntity(new TestEntity("world"));
 
         assertTrue(storage.deleteEntity(id1));
 
@@ -103,12 +102,28 @@ public class EntityStorageTest {
     }
 
     @Test
+    public void testDeleteEntityByKey() throws IOException, EntityStorageException {
+        EntityStorage<TestEntity> storage = createStorage();
+        int id1 = storage.addEntity(new TestEntity("hello"));
+        int id2 = storage.addEntity(new TestEntity("world"));
+
+        assertTrue(storage.deleteEntity(new TestEntity("world")));
+
+        assertEquals(1, storage.getNumEntities());
+        assertNull(storage.getEntity(id2));
+        assertNotNull(storage.getEntity(id1));
+
+        storage.validateStructure();
+    }
+
+    @Test
     public void testDeleteDeletedEntity() throws IOException, EntityStorageException {
         EntityStorage<TestEntity> storage = createStorage();
-        int id1 = storage.addEntity(new TestEntity(0, "hello"));
+        int id1 = storage.addEntity(new TestEntity("hello"));
         assertTrue(storage.deleteEntity(id1));
         assertEquals(0, storage.getNumEntities());
         assertFalse(storage.deleteEntity(id1));
+        assertFalse(storage.deleteEntity(new TestEntity("hello")));
         assertEquals(0, storage.getNumEntities());
 
         storage.validateStructure();
@@ -117,13 +132,13 @@ public class EntityStorageTest {
     @Test
     public void testDeleteNodeWithTwoChildren() throws IOException, EntityStorageException {
         EntityStorage<TestEntity> storage = createStorage();
-        storage.addEntity(new TestEntity(0, "B"));
-        storage.addEntity(new TestEntity(1, "A"));
-        storage.addEntity(new TestEntity(2, "D"));
-        storage.addEntity(new TestEntity(3, "C"));
-        storage.addEntity(new TestEntity(4, "F"));
-        storage.addEntity(new TestEntity(5, "E"));
-        storage.addEntity(new TestEntity(6, "G"));
+        storage.addEntity(new TestEntity("B"));
+        storage.addEntity(new TestEntity("A"));
+        storage.addEntity(new TestEntity("D"));
+        storage.addEntity(new TestEntity("C"));
+        storage.addEntity(new TestEntity("F"));
+        storage.addEntity(new TestEntity("E"));
+        storage.addEntity(new TestEntity("G"));
 
         storage.deleteEntity(2);
         assertNull(storage.getEntity(2));
@@ -137,12 +152,12 @@ public class EntityStorageTest {
     public void testDeleteNodeWithTwoChildren2() throws IOException, EntityStorageException {
         // Special case when the code swaps two nodes that have parent-child relation
         EntityStorage<TestEntity> storage = createStorage();
-        storage.addEntity(new TestEntity(0, "B"));
-        storage.addEntity(new TestEntity(1, "A"));
-        storage.addEntity(new TestEntity(2, "D"));
-        storage.addEntity(new TestEntity(3, "C"));
-        storage.addEntity(new TestEntity(4, "E"));
-        storage.addEntity(new TestEntity(5, "F"));
+        storage.addEntity(new TestEntity("B"));
+        storage.addEntity(new TestEntity("A"));
+        storage.addEntity(new TestEntity("D"));
+        storage.addEntity(new TestEntity("C"));
+        storage.addEntity(new TestEntity("E"));
+        storage.addEntity(new TestEntity("F"));
 
         storage.deleteEntity(2);
         assertNull(storage.getEntity(2));
@@ -158,7 +173,7 @@ public class EntityStorageTest {
         EntityStorage<TestEntity> storage = createStorage();
         int count = 500;
         for (int i = 0; i < count; i++) {
-            storage.addEntity(new TestEntity(i, nextRandomString()));
+            storage.addEntity(new TestEntity(nextRandomString()));
         }
         for (int i = 0; i < count; i++) {
             storage.deleteEntity(i);
@@ -170,11 +185,11 @@ public class EntityStorageTest {
     @Test
     public void testReplaceNodeWithSameKey() throws IOException, EntityStorageException {
         EntityStorage<TestEntity> storage = createStorage();
-        storage.addEntity(new TestEntity(0, "b"));
-        storage.addEntity(new TestEntity(1, "a"));
-        storage.addEntity(new TestEntity(2, "c"));
+        storage.addEntity(new TestEntity("b"));
+        storage.addEntity(new TestEntity("a"));
+        storage.addEntity(new TestEntity("c"));
 
-        storage.putEntity(0, new TestEntity(0, "b"));
+        storage.putEntityById(0, new TestEntity("b"));
         assertEquals(3, storage.getNumEntities());
         storage.validateStructure();
     }
@@ -182,22 +197,38 @@ public class EntityStorageTest {
     @Test
     public void testReplaceNodeWithNewKey() throws IOException, EntityStorageException {
         EntityStorage<TestEntity> storage = createStorage();
-        storage.addEntity(new TestEntity(0, "b"));
-        storage.addEntity(new TestEntity(1, "a"));
-        storage.addEntity(new TestEntity(2, "c"));
+        storage.addEntity(new TestEntity("b"));
+        storage.addEntity(new TestEntity("a"));
+        storage.addEntity(new TestEntity("c"));
 
-        storage.putEntity(0, new TestEntity(0, "d"));
+        storage.putEntityById(0, new TestEntity("d"));
         assertEquals(3, storage.getNumEntities());
         assertEquals("d", storage.getEntity(0).getKey());
         storage.validateStructure();
+    }
+
+    @Test(expected = EntityStorageException.class)
+    public void testReplaceNodeWithNewKeyThatAlreadyExists() throws EntityStorageException, IOException {
+        EntityStorage<TestEntity> storage = createStorage();
+        int id = storage.addEntity(new TestEntity("b"));
+        storage.addEntity(new TestEntity("a"));
+
+        TestEntity replaceEntity = TestEntity.builder().id(id).key("a").build();
+        storage.putEntityById(id, replaceEntity);
+    }
+
+    @Test(expected = NullPointerException.class)
+    public void testAddEntityWhenMandatoryFieldIsNotSet() throws EntityStorageException, IOException {
+        EntityStorage<TestEntityv2> storage = EntityStorageImpl.createInMemory();
+        storage.addEntity(TestEntityv2.builder().key("b").build());
     }
 
     @Test
     public void testOrderedAscendingIterator() throws IOException, EntityStorageException {
         EntityStorage<TestEntity> storage = createStorage();
         String[] values = {"d", "t", "b", "e", "q", "w", "a", "l", "c", "v"};
-        for (int i = 0; i < values.length; i++) {
-            storage.addEntity(new TestEntity(i, values[i]));
+        for (String value : values) {
+            storage.addEntity(new TestEntity(value));
         }
 
         Iterator<TestEntity> iterator = storage.getOrderedAscendingIterator(null);
@@ -236,7 +267,7 @@ public class EntityStorageTest {
     @Test
     public void testAscendingIterateOverSingleNodeStorage() throws IOException, EntityStorageException {
         EntityStorage<TestEntity> storage = createStorage();
-        storage.addEntity(new TestEntity(0, "e"));
+        storage.addEntity(new TestEntity("e"));
 
         // No start marker
         Iterator<TestEntity> iterator = storage.getOrderedAscendingIterator(null);
@@ -265,8 +296,8 @@ public class EntityStorageTest {
     public void testOrderedDescendingIterator() throws IOException, EntityStorageException {
         EntityStorage<TestEntity> storage = createStorage();
         String[] values = {"d", "t", "b", "e", "q", "w", "a", "l", "c", "v"};
-        for (int i = 0; i < values.length; i++) {
-            storage.addEntity(new TestEntity(i, values[i]));
+        for (String value : values) {
+            storage.addEntity(new TestEntity(value));
         }
 
         Iterator<TestEntity> iterator = storage.getOrderedDescendingIterator(null);
@@ -300,7 +331,7 @@ public class EntityStorageTest {
         }
         assertEquals(0, count);
 
-        storage.addEntity(new TestEntity(0, "hello"));
+        storage.addEntity(new TestEntity("hello"));
         storage.deleteEntity(0);
 
         count = 0;
@@ -314,8 +345,8 @@ public class EntityStorageTest {
     public void testIterator() throws EntityStorageException, IOException {
         EntityStorage<TestEntity> storage = createStorage();
         String[] values = {"d", "t", "b", "e", "q", "w", "a", "l", "c", "v"};
-        for (int i = 0; i < values.length; i++) {
-            storage.addEntity(new TestEntity(i, values[i]));
+        for (String value : values) {
+            storage.addEntity(new TestEntity(value));
         }
         storage.deleteEntity(3);
         storage.deleteEntity(8);
@@ -332,7 +363,7 @@ public class EntityStorageTest {
         EntityStorage<TestEntity> storage = createStorage();
         int expected = 3876;
         for (int i = 0; i < expected; i++) {
-            storage.addEntity(new TestEntity(i, nextRandomString()));
+            storage.addEntity(new TestEntity(nextRandomString()));
         }
 
         int count = 0;
@@ -348,8 +379,8 @@ public class EntityStorageTest {
         file.delete();
         EntityStorage<TestEntity> diskStorage = EntityStorageImpl.create(file, new TestEntitySerializer());
         String[] values = {"d", "t", "b", "e", "q", "w", "a", "l", "c", "v"};
-        for (int i = 0; i < values.length; i++) {
-            diskStorage.addEntity(new TestEntity(i, values[i]));
+        for (String value : values) {
+            diskStorage.addEntity(new TestEntity(value));
         }
         diskStorage.deleteEntity(3);
         diskStorage.deleteEntity(8);
@@ -377,11 +408,9 @@ public class EntityStorageTest {
 
         // Add two entities as an old database with shorter entity size
         EntityStorage<TestEntity> oldDb = EntityStorageImpl.create(file, new TestEntitySerializer());
-        TestEntity key = new TestEntity("a");
-        key.setValue(7);
+        TestEntity key = TestEntity.builder().key("a").value(7).build();
         oldDb.addEntity(key);
-        key = new TestEntity("b");
-        key.setValue(9);
+        key = TestEntity.builder().key("b").value(9).build();
         oldDb.addEntity(key);
         oldDb.close();
 
@@ -394,23 +423,17 @@ public class EntityStorageTest {
         assertEquals(e2.getExtraValue(), 0);
         assertEquals(e2.getExtraString(), "");
 
-        e2 = newDb.getEntity(1);
-        assertEquals(e2.getKey(), "b");
-        assertEquals(e2.getValue(), 9);
-        assertEquals(e2.getExtraValue(), 0);
-        assertEquals(e2.getExtraString(), "");
+        TestEntityv2 e3 = newDb.getEntity(1);
+        assertEquals(e3.getKey(), "b");
+        assertEquals(e3.getValue(), 9);
+        assertEquals(e3.getExtraValue(), 0);
+        assertEquals(e3.getExtraString(), "");
 
         // Add one new entity, replace one and deleted one as the new database
-        TestEntityv2 key2 = new TestEntityv2("c");
-        key2.setValue(12);
-        key2.setExtraValue(19);
-        key2.setExtraString("truncated");
+        TestEntityv2 key2 = TestEntityv2.builder().key("c").value(12).extraValue(19).extraString("truncated").build();
         newDb.addEntity(key2);
-        key2 = new TestEntityv2("a");
-        key2.setValue(-8);
-        key2.setExtraValue(100);
-        key2.setExtraString("also removed");
-        newDb.putEntity(0, key2);
+        key2 = e2.toBuilder().value(-8).extraValue(100).extraString("also removed").build();
+        newDb.putEntityById(0, key2);
         newDb.deleteEntity(1);
 
         TestEntityv2 key3 = newDb.getEntity(0);
@@ -449,15 +472,9 @@ public class EntityStorageTest {
 
         // Add two entities as a new database with longer entity size
         EntityStorage<TestEntityv2> newDb = EntityStorageImpl.create(file, new TestEntityv2Serializer());
-        TestEntityv2 key = new TestEntityv2("a");
-        key.setValue(7);
-        key.setExtraValue(10);
-        key.setExtraString("hello");
+        TestEntityv2 key = TestEntityv2.builder().key("a").value(7).extraValue(10).extraString("hello").build();
         newDb.addEntity(key);
-        key = new TestEntityv2("b");
-        key.setValue(9);
-        key.setExtraValue(1);
-        key.setExtraString("world");
+        key = TestEntityv2.builder().key("b").value(9).extraValue(1).extraString("world").build();
         newDb.addEntity(key);
         newDb.close();
 
@@ -468,17 +485,15 @@ public class EntityStorageTest {
         assertEquals(e2.getKey(), "a");
         assertEquals(e2.getValue(), 7);
 
-        e2 = oldDb.getEntity(1);
-        assertEquals(e2.getKey(), "b");
-        assertEquals(e2.getValue(), 9);
+        TestEntity e3 = oldDb.getEntity(1);
+        assertEquals(e3.getKey(), "b");
+        assertEquals(e3.getValue(), 9);
 
         // Add one new entity, replace one and delete one as the old database
-        TestEntity key2 = new TestEntity("c");
-        key2.setValue(12);
+        TestEntity key2 = TestEntity.builder().key("c").value(12).build();
         oldDb.addEntity(key2);
-        key2 = new TestEntity("a");
-        key2.setValue(-8);
-        oldDb.putEntity(0, key2);
+        key2 = e2.toBuilder().value(-8).build();
+        oldDb.putEntityById(0, key2);
         oldDb.deleteEntity(1);
 
         TestEntity key3 = oldDb.getEntity(0);
@@ -509,8 +524,7 @@ public class EntityStorageTest {
         file.delete();
 
         EntityStorage<TestEntity> oldDb = EntityStorageImpl.create(file, new TestEntitySerializer(), 28);
-        TestEntity hello = new TestEntity(0, "hello");
-        hello.setValue(5);
+        TestEntity hello = TestEntity.builder().key("hello").value(5).build();
         oldDb.addEntity(hello);
         oldDb.close();
 

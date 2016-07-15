@@ -71,13 +71,15 @@ public class TeamEntityTest {
     public void testTeamSerialization() throws IOException, EntityStorageException {
         TeamBase teamBase = TeamBase.open(teamIndexFile);
 
-        TeamEntity newTeam = new TeamEntity("My team");
-        newTeam.setTeamNumber(7);
-        newTeam.setSeason(false);
-        newTeam.setYear(2001);
-        newTeam.setNation(Nation.ALGERIA);
-        newTeam.setCount(15);
-        newTeam.setFirstGameId(123);
+        TeamEntity newTeam = TeamEntity.builder()
+                .title("My team")
+                .teamNumber(7)
+                .season(false)
+                .year(2001)
+                .nation(Nation.ALGERIA)
+                .count(15)
+                .firstGameId(123)
+                .build();
 
         TeamEntity entity = teamBase.add(newTeam);
 

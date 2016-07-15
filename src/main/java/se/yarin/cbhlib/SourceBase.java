@@ -67,18 +67,17 @@ public class SourceBase extends EntityBase<SourceEntity> {
     }
 
     public SourceEntity deserialize(int entityId, @NonNull ByteBuffer buf) {
-        String title = ByteBufferUtil.getFixedSizeByteString(buf, 25);
-
-        SourceEntity source = new SourceEntity(entityId, title);
-        source.setPublisher(ByteBufferUtil.getFixedSizeByteString(buf, 16));
-        source.setPublication(CBUtil.decodeDate(ByteBufferUtil.getIntL(buf)));
-        source.setDate(CBUtil.decodeDate(ByteBufferUtil.getIntL(buf)));
-        source.setVersion(ByteBufferUtil.getUnsignedByte(buf));
-        source.setQuality(SourceQuality.values()[ByteBufferUtil.getUnsignedByte(buf)]);
-        source.setCount(ByteBufferUtil.getIntL(buf));
-        source.setFirstGameId(ByteBufferUtil.getIntL(buf));
-
-        return source;
+        return SourceEntity.builder()
+                .id(entityId)
+                .title(ByteBufferUtil.getFixedSizeByteString(buf, 25))
+                .publisher(ByteBufferUtil.getFixedSizeByteString(buf, 16))
+                .publication(CBUtil.decodeDate(ByteBufferUtil.getIntL(buf)))
+                .date(CBUtil.decodeDate(ByteBufferUtil.getIntL(buf)))
+                .version(ByteBufferUtil.getUnsignedByte(buf))
+                .quality(SourceQuality.values()[ByteBufferUtil.getUnsignedByte(buf)])
+                .count(ByteBufferUtil.getIntL(buf))
+                .firstGameId(ByteBufferUtil.getIntL(buf))
+                .build();
     }
 
     public int getSerializedEntityLength() {

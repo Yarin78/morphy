@@ -92,20 +92,22 @@ public class TournamentEntityTest {
     public void testTournamentSerialization() throws IOException, EntityStorageException {
         TournamentBase tournamentBase = TournamentBase.open(tournamentIndexFile);
 
-        TournamentEntity newTournament = new TournamentEntity("My tournament");
-        newTournament.setDate(new Date(2016, 7, 10));
-        newTournament.setCategory(15);
-        newTournament.setRounds(7);
-        newTournament.setType(TournamentType.KNOCK_OUT);
-        newTournament.setComplete(false);
-        newTournament.setThreePointsWin(true);
-        newTournament.setTeamTournament(false);
-        newTournament.setBoardPoints(true);
-        newTournament.setTimeControl(TournamentTimeControl.CORRESPONDENCE);
-        newTournament.setPlace("my place");
-        newTournament.setNation(Nation.ARGENTINA);
-        newTournament.setCount(3);
-        newTournament.setFirstGameId(100);
+        TournamentEntity newTournament = TournamentEntity.builder()
+                .title("My tournament")
+                .date(new Date(2016, 7, 10))
+                .category(15)
+                .rounds(7)
+                .type(TournamentType.KNOCK_OUT)
+                .complete(false)
+                .threePointsWin(true)
+                .teamTournament(false)
+                .boardPoints(true)
+                .timeControl(TournamentTimeControl.CORRESPONDENCE)
+                .place("my place")
+                .nation(Nation.ARGENTINA)
+                .count(3)
+                .firstGameId(100)
+                .build();
 
         TournamentEntity entity = tournamentBase.add(newTournament);
 

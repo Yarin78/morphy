@@ -17,12 +17,13 @@ class TestEntityv2Serializer implements EntitySerializer<TestEntityv2> {
 
     @Override
     public TestEntityv2 deserialize(int entityId, ByteBuffer buffer) {
-        String value = ByteBufferUtil.getFixedSizeByteString(buffer, 20);
-        TestEntityv2 testEntity = new TestEntityv2(entityId, value);
-        testEntity.setValue(ByteBufferUtil.getIntB(buffer));
-        testEntity.setExtraValue(ByteBufferUtil.getIntB(buffer));
-        testEntity.setExtraString(ByteBufferUtil.getFixedSizeByteString(buffer, 20));
-        return testEntity;
+        return TestEntityv2.builder()
+                .id(entityId)
+                .key(ByteBufferUtil.getFixedSizeByteString(buffer, 20))
+                .value(ByteBufferUtil.getIntB(buffer))
+                .extraValue(ByteBufferUtil.getIntB(buffer))
+                .extraString(ByteBufferUtil.getFixedSizeByteString(buffer, 20))
+                .build();
     }
 
     @Override

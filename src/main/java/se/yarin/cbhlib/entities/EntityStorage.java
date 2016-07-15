@@ -34,13 +34,6 @@ public interface EntityStorage<T> extends Iterable<T> {
     T getEntity(T entity) throws IOException;
 
     /**
-     * Returns all entities. There will be no null entries in the output.
-     * If there are a large number of entities, consider using {@link #iterator()} instead.
-     * @return a list of all entities
-     */
-    List<T> getAllEntities() throws IOException;
-
-    /**
      * Adds a new entity to the storage. The id-field in the entity is ignored.
      * @param entity the entity to add
      * @return the id of the new entity
@@ -50,11 +43,19 @@ public interface EntityStorage<T> extends Iterable<T> {
 
     /**
      * Updates an entity in the storage.
-     * @param entityId the id of the entity to update
-     * @param entity the new entity
+     * @param id the entity id to update.
+     * @param entity the new entity. {@link Entity#getId()} will be ignored.
      * @throws EntityStorageException if another entity with the same key already exists
      */
-    void putEntity(int entityId, @NonNull T entity) throws EntityStorageException, IOException;
+    void putEntityById(int id, @NonNull T entity) throws EntityStorageException, IOException;
+
+    /**
+     * Updates an entity in the storage. The key fields of the entity will
+     * determine which entity in the storage to update.
+     * @param entity the new entity. {@link Entity#getId()} will be ignored.
+     * @throws EntityStorageException if no existing entity with the key exists
+     */
+    void putEntityByKey(@NonNull T entity) throws EntityStorageException, IOException;
 
     /**
      * Deletes an entity from the storage.
@@ -64,10 +65,24 @@ public interface EntityStorage<T> extends Iterable<T> {
     boolean deleteEntity(int entityId) throws IOException, EntityStorageException;
 
     /**
+     * Deletes an entity from the storage.
+     * @param entity the entity key to delete
+     * @return true if an entity was deleted; false if there was no entity with that key
+     */
+    boolean deleteEntity(@NonNull T entity) throws IOException, EntityStorageException;
+
+    /**
      * Closes the storage. Any further operations on the storage will cause IO errors.
      * @throws IOException if an IO error occurs
      */
     void close() throws IOException;
+
+    /**
+     * Returns all entities. There will be no null entries in the output.
+     * If there are a large number of entities, consider using {@link #iterator()} instead.
+     * @return a list of all entities
+     */
+    List<T> getAllEntities() throws IOException;
 
     /**
      * Gets an iterator over the entities in ascending id order.

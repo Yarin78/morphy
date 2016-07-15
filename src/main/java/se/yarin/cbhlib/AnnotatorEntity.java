@@ -1,31 +1,26 @@
 package se.yarin.cbhlib;
 
-import lombok.Getter;
-import lombok.NonNull;
-import lombok.Setter;
+import lombok.*;
 import se.yarin.cbhlib.entities.Entity;
 
+@Builder(toBuilder = true)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class AnnotatorEntity implements Entity, Comparable<AnnotatorEntity> {
     @Getter
     private int id;
 
-    @Getter @Setter
+    @Getter
     @NonNull
     private String name;
 
-    @Getter @Setter
+    @Getter
     private int count;
 
-    @Getter @Setter
+    @Getter
     private int firstGameId;
 
-    AnnotatorEntity(int id, @NonNull String name) {
-        this.id = id;
-        this.name = name;
-    }
-
     public AnnotatorEntity(@NonNull String name) {
-        this(-1, name);
+        this.name = name;
     }
 
     @Override
@@ -36,6 +31,11 @@ public class AnnotatorEntity implements Entity, Comparable<AnnotatorEntity> {
     @Override
     public int compareTo(AnnotatorEntity o) {
         return name.compareTo(o.name);
+    }
+
+    @Override
+    public AnnotatorEntity withNewId(int id) {
+        return toBuilder().id(id).build();
     }
 
     @Override

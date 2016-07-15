@@ -1,10 +1,10 @@
 package se.yarin.cbhlib;
 
-import lombok.Getter;
-import lombok.NonNull;
-import lombok.Setter;
+import lombok.*;
 import se.yarin.cbhlib.entities.Entity;
 
+@Builder(toBuilder = true)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class TeamEntity implements Entity, Comparable<TeamEntity> {
     @Getter
     private int id;
@@ -13,32 +13,27 @@ public class TeamEntity implements Entity, Comparable<TeamEntity> {
     @NonNull
     private String title;
 
-    @Getter @Setter
+    @Getter
     private int teamNumber;
 
-    @Getter @Setter
+    @Getter
     private boolean season;
 
-    @Getter @Setter
+    @Getter
     private int year;
 
-    @Getter @Setter
+    @Getter
     @NonNull
     private Nation nation = Nation.NONE;
 
-    @Getter @Setter
+    @Getter
     private int count;
 
-    @Getter @Setter
+    @Getter
     private int firstGameId;
 
-    TeamEntity(int id, @NonNull String title) {
-        this.id = id;
-        this.title = title;
-    }
-
     public TeamEntity(@NonNull String title) {
-        this(-1, title);
+        this.title = title;
     }
 
     @Override
@@ -49,6 +44,11 @@ public class TeamEntity implements Entity, Comparable<TeamEntity> {
     @Override
     public int compareTo(TeamEntity o) {
         return title.compareTo(o.title);
+    }
+
+    @Override
+    public TeamEntity withNewId(int id) {
+        return toBuilder().id(id).build();
     }
 
     @Override

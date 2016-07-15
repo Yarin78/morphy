@@ -36,10 +36,12 @@ public class ExtractNations {
             System.out.println(te.getId() + ": " + te);
         }
         for (int i = 1; i <= 100; i++) {
-            TournamentEntity te = new TournamentEntity("country #" + i);
-            te.setNation(Nation.values()[i]);
-            te.setCount(1);
-            te.setFirstGameId(1);
+            TournamentEntity te = TournamentEntity.builder()
+                .title("country #" + i)
+                .nation(Nation.values()[i])
+                .count(1)
+                .firstGameId(1)
+                .build();
             tb.add(te);
         }
         tb.close();

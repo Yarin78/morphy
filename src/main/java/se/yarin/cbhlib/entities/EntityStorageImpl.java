@@ -201,7 +201,7 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
     }
 
     @Override
-    public void putEntity(int entityId, @NonNull T entity) throws IOException, EntityStorageException {
+    public void putEntityById(int entityId, @NonNull T entity) throws IOException, EntityStorageException {
         if (entityId < 0 || entityId >= metadata.getCapacity()) {
             throw new IllegalArgumentException(String.format("Can't put an entity with id %d when capacity is %d",
                     entityId, metadata.getCapacity()));
@@ -223,6 +223,19 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
         }
     }
 
+    @Override
+    public void putEntityByKey(@NonNull T entity) throws IOException, EntityStorageException {
+        TreePath treePath = treeSearch(entity);
+        if (treePath == null || treePath.compare != 0) {
+            throw new EntityStorageException("The entity doesn't exist in the storage");
+        }
+        EntityNode<T> node = treePath.node;
+        int entityId = node.getEntityId();
+        EntityNode<T> newNode = nodeStorage.createNode(entityId, entity);
+        newNode = newNode.update(node.getLeftEntityId(), node.getRightEntityId(), node.getHeightDif());
+        nodeStorage.putEntityNode(newNode);
+    }
+
     private void replaceChild(TreePath path, int newChildId) throws IOException {
         if (path == null) {
             // The root node has no parent
@@ -239,6 +252,16 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
     }
 
     @Override
+    public boolean deleteEntity(T entity) throws IOException, EntityStorageException {
+        TreePath nodePath = treeSearch(entity);
+        if (nodePath == null || nodePath.compare != 0) {
+            log.debug("Deleted entity didn't exist");
+            return false;
+        }
+        return internalDeleteEntity(nodePath);
+    }
+
+    @Override
     public boolean deleteEntity(int entityId) throws IOException, EntityStorageException {
         EntityNode<T> node = nodeStorage.getEntityNode(entityId);
         if (node.isDeleted()) {
@@ -251,6 +274,12 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
         if (nodePath == null || nodePath.compare != 0) {
             throw new EntityStorageException("Broken database structure; couldn't find the node to delete.");
         }
+        return internalDeleteEntity(nodePath);
+    }
+
+    private boolean internalDeleteEntity(TreePath nodePath) throws IOException {
+        EntityNode<T> node = nodePath.node;
+        int entityId = node.getEntityId();
         nodePath = nodePath.parent;
 
         // Switch the node we want to delete with a successor node until it has at most one child

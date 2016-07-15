@@ -91,32 +91,32 @@ public class TournamentBase extends EntityBase<TournamentEntity> {
     }
 
     public TournamentEntity deserialize(int entityId, @NonNull ByteBuffer buf) {
-        String title = ByteBufferUtil.getFixedSizeByteString(buf, 40);
-        TournamentEntity tournament = new TournamentEntity(entityId, title);
-
-        tournament.setPlace(ByteBufferUtil.getFixedSizeByteString(buf, 30));
-        tournament.setDate(CBUtil.decodeDate(ByteBufferUtil.getIntL(buf)));
+        TournamentEntity.TournamentEntityBuilder builder = TournamentEntity.builder()
+            .id(entityId)
+            .title(ByteBufferUtil.getFixedSizeByteString(buf, 40))
+            .place(ByteBufferUtil.getFixedSizeByteString(buf, 30))
+            .date(CBUtil.decodeDate(ByteBufferUtil.getIntL(buf)));
         int typeByte = ByteBufferUtil.getUnsignedByte(buf);
-        tournament.setTeamTournament((ByteBufferUtil.getUnsignedByte(buf) & 1) == 1);
-        tournament.setNation(Nation.values()[ByteBufferUtil.getUnsignedByte(buf)]);
+        builder.teamTournament((ByteBufferUtil.getUnsignedByte(buf) & 1) == 1);
+        builder.nation(Nation.values()[ByteBufferUtil.getUnsignedByte(buf)]);
         int unknownByte1 = ByteBufferUtil.getUnsignedByte(buf);
-        tournament.setCategory(ByteBufferUtil.getUnsignedByte(buf));
+        builder.category(ByteBufferUtil.getUnsignedByte(buf));
         int optionByte = ByteBufferUtil.getUnsignedByte(buf);
-        tournament.setRounds(ByteBufferUtil.getUnsignedByte(buf));
+        builder.rounds(ByteBufferUtil.getUnsignedByte(buf));
         int unknownByte2 = ByteBufferUtil.getUnsignedByte(buf);
-        tournament.setCount(ByteBufferUtil.getIntL(buf));
-        tournament.setFirstGameId(ByteBufferUtil.getIntL(buf));
+        builder.count(ByteBufferUtil.getIntL(buf));
+        builder.firstGameId(ByteBufferUtil.getIntL(buf));
 
-        tournament.setType(TournamentType.values()[typeByte & 31]);
+        builder.type(TournamentType.values()[typeByte & 31]);
         // Only one of these bits ought to be set
-        tournament.setTimeControl(TournamentTimeControl.NORMAL);
-        if ((typeByte & 32) > 0) tournament.setTimeControl(TournamentTimeControl.BLITZ);
-        if ((typeByte & 64) > 0) tournament.setTimeControl(TournamentTimeControl.RAPID);
-        if ((typeByte & 128) > 0) tournament.setTimeControl(TournamentTimeControl.CORRESPONDENCE);
+        builder.timeControl(TournamentTimeControl.NORMAL);
+        if ((typeByte & 32) > 0) builder.timeControl(TournamentTimeControl.BLITZ);
+        if ((typeByte & 64) > 0) builder.timeControl(TournamentTimeControl.RAPID);
+        if ((typeByte & 128) > 0) builder.timeControl(TournamentTimeControl.CORRESPONDENCE);
 
-        tournament.setComplete((optionByte & 2) > 0);
-        tournament.setBoardPoints((optionByte & 4) > 0);
-        tournament.setThreePointsWin((optionByte & 8) > 0);
+        builder.complete((optionByte & 2) > 0);
+        builder.boardPoints((optionByte & 4) > 0);
+        builder.threePointsWin((optionByte & 8) > 0);
 
         if (unknownByte1 != 0) {
             log.debug("unknownByte1 = " + unknownByte1 + " when deserializing tournament with id " + entityId);
@@ -128,7 +128,7 @@ public class TournamentBase extends EntityBase<TournamentEntity> {
             log.debug("optionByte = " + optionByte + " when deserializing tournament with id " + entityId);
         }
 
-        return tournament;
+        return builder.build();
     }
 
     public int getSerializedEntityLength() {

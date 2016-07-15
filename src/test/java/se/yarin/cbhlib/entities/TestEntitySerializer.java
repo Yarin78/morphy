@@ -15,10 +15,11 @@ class TestEntitySerializer implements EntitySerializer<TestEntity> {
 
     @Override
     public TestEntity deserialize(int entityId, ByteBuffer buffer) {
-        String value = ByteBufferUtil.getFixedSizeByteString(buffer, 20);
-        TestEntity testEntity = new TestEntity(entityId, value);
-        testEntity.setValue(ByteBufferUtil.getIntB(buffer));
-        return testEntity;
+        return TestEntity.builder()
+                .id(entityId)
+                .key(ByteBufferUtil.getFixedSizeByteString(buffer, 20))
+                .value(ByteBufferUtil.getIntB(buffer))
+                .build();
     }
 
     @Override

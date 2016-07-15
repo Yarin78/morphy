@@ -1,31 +1,43 @@
 package se.yarin.cbhlib.entities;
 
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
 
+@Builder(toBuilder = true)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 class TestEntityv2 implements Entity, Comparable<TestEntityv2> {
     @Getter
     private int id;
-    @Getter @Setter
+    @Getter @NonNull
     private String key;
-    @Getter @Setter
+    @Getter
     private int value;
-    @Getter @Setter
+    @Getter
     private int extraValue;
-    @Getter @Setter
+    @Getter @NonNull
     private String extraString;
 
-    TestEntityv2(int id, String key) {
-        this.id = id;
-        this.key = key;
-    }
-
     public TestEntityv2(String key) {
-        this(-1, key);
+        this.key = key;
     }
 
     @Override
     public int compareTo(TestEntityv2 o) {
         return key.compareTo(o.key);
+    }
+
+    @Override
+    public Entity withNewId(int id) {
+        return toBuilder().id(id).build();
+    }
+
+    @Override
+    public String toString() {
+        return "TestEntityv2{" +
+                "id=" + id +
+                ", key='" + key + '\'' +
+                ", value=" + value +
+                ", extraValue=" + extraValue +
+                ", extraString='" + extraString + '\'' +
+                '}';
     }
 }

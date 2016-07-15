@@ -7,7 +7,6 @@ import lombok.Getter;
 public class EntityNodeImpl<T extends Entity & Comparable<T>> implements EntityNode<T> {
     @Getter
     private int entityId;
-    @Getter
     private T entity;
     @Getter
     private int leftEntityId;
@@ -15,6 +14,11 @@ public class EntityNodeImpl<T extends Entity & Comparable<T>> implements EntityN
     private int rightEntityId;
     @Getter
     private int heightDif;
+
+    // This version will only be used by the in-memory node storage
+    public T getEntity() {
+        return entity == null ? null : entity.withNewId(entityId);
+    }
 
     public boolean isDeleted() {
         return this.leftEntityId == -999;

@@ -1,54 +1,54 @@
 package se.yarin.cbhlib;
 
-import lombok.Getter;
-import lombok.NonNull;
-import lombok.Setter;
+import lombok.*;
 import se.yarin.cbhlib.entities.Entity;
 import se.yarin.chess.Date;
 
+@Builder(toBuilder = true)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class TournamentEntity implements Entity, Comparable<TournamentEntity> {
     @Getter
     private int id;
 
-    @Getter @Setter
+    @Getter
     @NonNull
     private String title;
 
-    @Getter @Setter
+    @Getter
     @NonNull
     private Date date = Date.today();
 
-    @Getter @Setter
+    @Getter
     private int category;
 
-    @Getter @Setter
+    @Getter
     private int rounds;
 
-    @Getter @Setter
+    @Getter
     @NonNull
     private TournamentType type = TournamentType.NONE;
 
-    @Getter @Setter
+    @Getter
     private boolean complete;
 
-    @Getter @Setter
+    @Getter
     private boolean threePointsWin;
 
-    @Getter @Setter
+    @Getter
     private boolean teamTournament;
 
-    @Getter @Setter
+    @Getter
     private boolean boardPoints;
 
-    @Getter @Setter
+    @Getter
     @NonNull
     private TournamentTimeControl timeControl = TournamentTimeControl.NORMAL;
 
-    @Getter @Setter
+    @Getter
     @NonNull
     private String place = "";
 
-    @Getter @Setter
+    @Getter
     @NonNull
     private Nation nation = Nation.NONE;
 
@@ -56,19 +56,14 @@ public class TournamentEntity implements Entity, Comparable<TournamentEntity> {
     // Missing is also tiebreak rules
     // Maybe stored in another database?
 
-    @Getter @Setter
+    @Getter
     private int count;
 
-    @Getter @Setter
+    @Getter
     private int firstGameId;
 
-    TournamentEntity(int id, @NonNull String title) {
-        this.id = id;
-        this.title = title;
-    }
-
     public TournamentEntity(@NonNull String title) {
-        this(-1, title);
+        this.title = title;
     }
 
     @Override
@@ -79,6 +74,11 @@ public class TournamentEntity implements Entity, Comparable<TournamentEntity> {
     @Override
     public int compareTo(TournamentEntity o) {
         return title.compareTo(o.title);
+    }
+
+    @Override
+    public TournamentEntity withNewId(int id) {
+        return toBuilder().id(id).build();
     }
 
     @Override

@@ -85,15 +85,16 @@ public abstract class EntityBase<T extends Entity & Comparable<T>> implements En
 
     /**
      * Updates an existing entity in the database
-     * @param entity the entity to update
+     * @param id the id of the entity to update
+     * @param entity the new entity
      * @throws EntityStorageException if another entity with the same key exists
      * @throws IOException if some other IO error occurred
      */
-    public void put(@NonNull T entity) throws EntityStorageException, IOException {
+    public void put(int id, @NonNull T entity) throws EntityStorageException, IOException {
         if (entity.getId() == -1) {
             throw new IllegalArgumentException("The id of the entity to update must be set");
         }
-        storage.putEntity(entity.getId(), entity);
+        storage.putEntityById(id, entity);
     }
 
     /**
@@ -105,6 +106,17 @@ public abstract class EntityBase<T extends Entity & Comparable<T>> implements En
      */
     public boolean delete(int entityId) throws IOException, EntityStorageException {
         return storage.deleteEntity(entityId);
+    }
+
+    /**
+     * Deletes an entity from the database
+     * @param entity the key of the entity to delete
+     * @return true if the entity was deleted; false if there was no entity with that key in the database
+     * @throws EntityStorageException if the database is in an inconsistent state preventing the delete
+     * @throws IOException if some IO error occurred
+     */
+    public boolean delete(T entity) throws IOException, EntityStorageException {
+        return storage.deleteEntity(entity);
     }
 
     /**

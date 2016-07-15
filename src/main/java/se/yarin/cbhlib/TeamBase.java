@@ -67,17 +67,16 @@ public class TeamBase extends EntityBase<TeamEntity> {
     }
 
     public TeamEntity deserialize(int entityId, @NonNull ByteBuffer buf) {
-        String title = ByteBufferUtil.getFixedSizeByteString(buf, 45);
-        TeamEntity team = new TeamEntity(entityId, title);
-
-        team.setTeamNumber(ByteBufferUtil.getIntL(buf));
-        team.setSeason((ByteBufferUtil.getUnsignedByte(buf) & 1) > 0);
-        team.setYear(ByteBufferUtil.getIntL(buf));
-        team.setNation(Nation.values()[ByteBufferUtil.getUnsignedByte(buf)]);
-        team.setCount(ByteBufferUtil.getIntL(buf));
-        team.setFirstGameId(ByteBufferUtil.getIntL(buf));
-
-        return team;
+        return TeamEntity.builder()
+                .id(entityId)
+                .title(ByteBufferUtil.getFixedSizeByteString(buf, 45))
+                .teamNumber(ByteBufferUtil.getIntL(buf))
+                .season((ByteBufferUtil.getUnsignedByte(buf) & 1) > 0)
+                .year(ByteBufferUtil.getIntL(buf))
+                .nation(Nation.values()[ByteBufferUtil.getUnsignedByte(buf)])
+                .count(ByteBufferUtil.getIntL(buf))
+                .firstGameId(ByteBufferUtil.getIntL(buf))
+                .build();
     }
 
     public int getSerializedEntityLength() {

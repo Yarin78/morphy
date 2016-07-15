@@ -63,14 +63,13 @@ public class PlayerBase extends EntityBase<PlayerEntity> {
     }
 
     public PlayerEntity deserialize(int entityId, @NonNull ByteBuffer buf) {
-        String lastName = ByteBufferUtil.getFixedSizeByteString(buf, 30);
-        String firstName = ByteBufferUtil.getFixedSizeByteString(buf, 20);
-
-        PlayerEntity player = new PlayerEntity(entityId, lastName, firstName);
-        player.setCount(ByteBufferUtil.getIntL(buf));
-        player.setFirstGameId(ByteBufferUtil.getIntL(buf));
-
-        return player;
+        return PlayerEntity.builder()
+            .id(entityId)
+            .lastName(ByteBufferUtil.getFixedSizeByteString(buf, 30))
+            .firstName(ByteBufferUtil.getFixedSizeByteString(buf, 20))
+            .count(ByteBufferUtil.getIntL(buf))
+            .firstGameId(ByteBufferUtil.getIntL(buf))
+            .build();
     }
 
     public int getSerializedEntityLength() {

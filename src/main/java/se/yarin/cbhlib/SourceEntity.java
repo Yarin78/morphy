@@ -1,51 +1,46 @@
 package se.yarin.cbhlib;
 
-import lombok.Getter;
-import lombok.NonNull;
-import lombok.Setter;
+import lombok.*;
 import se.yarin.cbhlib.entities.Entity;
 import se.yarin.chess.Date;
 
+@Builder(toBuilder = true)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class SourceEntity implements Entity, Comparable<SourceEntity> {
     @Getter
     private int id;
 
-    @Getter @Setter
+    @Getter
     @NonNull
     private String title;
 
-    @Getter @Setter
+    @Getter
     @NonNull
     private String publisher = "";
 
-    @Getter @Setter
+    @Getter
     @NonNull
     private Date publication = Date.today();
 
-    @Getter @Setter
+    @Getter
     @NonNull
     private Date date = Date.today();
 
-    @Getter @Setter
+    @Getter
     private int version;
 
-    @Getter @Setter
+    @Getter
     @NonNull
     private SourceQuality quality = SourceQuality.UNSET;
 
-    @Getter @Setter
+    @Getter
     private int count;
 
-    @Getter @Setter
+    @Getter
     private int firstGameId;
 
-    SourceEntity(int id, @NonNull String title) {
-        this.id = id;
-        this.title = title;
-    }
-
     public SourceEntity(@NonNull String title) {
-        this(-1, title);
+        this.title = title;
     }
 
     @Override
@@ -56,6 +51,11 @@ public class SourceEntity implements Entity, Comparable<SourceEntity> {
     @Override
     public int compareTo(SourceEntity o) {
         return title.compareTo(o.title);
+    }
+
+    @Override
+    public SourceEntity withNewId(int id) {
+        return toBuilder().id(id).build();
     }
 
     @Override

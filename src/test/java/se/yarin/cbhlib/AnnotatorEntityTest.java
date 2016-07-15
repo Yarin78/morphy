@@ -69,9 +69,11 @@ public class AnnotatorEntityTest {
     public void testAnnotatorSerialization() throws IOException, EntityStorageException {
         AnnotatorBase annotatorBase = AnnotatorBase.open(annotatorIndexFile);
 
-        AnnotatorEntity newAnnotator = new AnnotatorEntity("My annotator");
-        newAnnotator.setCount(2);
-        newAnnotator.setFirstGameId(34);
+        AnnotatorEntity newAnnotator = AnnotatorEntity.builder()
+            .name("My annotator")
+            .count(2)
+            .firstGameId(34)
+            .build();
 
         AnnotatorEntity entity = annotatorBase.add(newAnnotator);
 

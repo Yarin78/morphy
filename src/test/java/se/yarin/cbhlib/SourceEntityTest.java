@@ -73,14 +73,16 @@ public class SourceEntityTest {
     public void testSourceSerialization() throws IOException, EntityStorageException {
         SourceBase sourceBase = SourceBase.open(sourceIndexFile);
 
-        SourceEntity newSource = new SourceEntity("My source");
-        newSource.setPublisher("my publisher");
-        newSource.setPublication(new Date(2016, 7, 10));
-        newSource.setDate(new Date(2015, 1, 2));
-        newSource.setVersion(3);
-        newSource.setQuality(SourceQuality.MEDIUM);
-        newSource.setCount(1);
-        newSource.setFirstGameId(10);
+        SourceEntity newSource = SourceEntity.builder()
+            .title("My source")
+            .publisher("my publisher")
+            .publication(new Date(2016, 7, 10))
+            .date(new Date(2015, 1, 2))
+            .version(3)
+            .quality(SourceQuality.MEDIUM)
+            .count(1)
+            .firstGameId(10)
+            .build();
 
         SourceEntity entity = sourceBase.add(newSource);
 
