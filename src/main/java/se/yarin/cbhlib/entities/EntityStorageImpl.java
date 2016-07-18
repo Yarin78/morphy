@@ -1,6 +1,7 @@
 package se.yarin.cbhlib.entities;
 
 import lombok.AllArgsConstructor;
+import lombok.Getter;
 import lombok.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -81,6 +82,11 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
     }
 
     @Override
+    public void close() throws IOException {
+        nodeStorage.close();
+    }
+
+    @Override
     public T getEntity(int entityId) throws IOException {
         if (entityId < 0 || entityId >= metadata.getCapacity()) {
             return null;
@@ -120,7 +126,6 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
         if (result == null) {
             metadata.setRootEntityId(entityId);
         } else {
-            // TODO: The height should be updated here
             if (result.compare < 0) {
                 result.node = result.node.update(entityId, result.node.getRightEntityId(), result.node.getHeightDif());
             } else {
@@ -128,9 +133,69 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
             }
             nodeStorage.putEntityNode(result.node);
         }
-        // TODO: Balance tree
 
-        nodeStorage.putEntityNode(nodeStorage.createNode(entityId, entity));
+        EntityNode<T> z = nodeStorage.createNode(entityId, entity);
+        nodeStorage.putEntityNode(z);
+
+        for(; result != null; result = result.parent) {
+            // result.node might contain an old version of the node (I think!?)
+            EntityNode<T> x = nodeStorage.getEntityNode(result.node.getEntityId());
+            EntityNode<T> g;
+            int n;
+            // BalanceFactor(X) has not yet been updated!
+            if (z.getEntityId() == x.getRightEntityId()) { // The right subtree increases
+                if (x.getHeightDif() > 0) { // X is right-heavy
+                    // ===> the temporary BalanceFactor(X) == +2
+                    // ===> rebalancing is required.
+                    g = result.parent != null ? result.parent.node : null;
+                    if (z.getHeightDif() < 0) {
+                        n = rotateRightLeft(x.getEntityId());
+                    } else {
+                        n = rotateLeft(x.getEntityId());
+                    }
+                } else {
+                    if (x.getHeightDif() < 0) {
+                        nodeStorage.putEntityNode(x.update(x.getLeftEntityId(), x.getRightEntityId(), 0));
+                        break;
+                    }
+                    EntityNode<T> newX = x.update(x.getLeftEntityId(), x.getRightEntityId(), 1);
+                    nodeStorage.putEntityNode(newX);
+                    z = newX;
+                    continue;
+                }
+            } else { // Z == left_child(X): the left subtree increases
+                if (x.getHeightDif() < 0) { // X is left-heavy
+                    g = result.parent != null ? result.parent.node : null;
+                    if (z.getHeightDif() > 0) {
+                        n = rotateLeftRight(x.getEntityId());
+                    } else {
+                        n = rotateRight(x.getEntityId());
+                    }
+                } else {
+                    if (x.getHeightDif() > 0) {
+                        nodeStorage.putEntityNode(x.update(x.getLeftEntityId(), x.getRightEntityId(), 0));
+                        break;
+                    }
+                    EntityNode<T> newX = x.update(x.getLeftEntityId(), x.getRightEntityId(), -1);
+                    nodeStorage.putEntityNode(newX);
+                    z = newX;
+                    continue;
+                }
+            }
+
+            if (g != null) {
+                if (x.getEntityId() == g.getLeftEntityId()) {
+                    nodeStorage.putEntityNode(g.update(n, g.getRightEntityId(), g.getHeightDif()));
+                } else {
+                    nodeStorage.putEntityNode(g.update(g.getLeftEntityId(), n, g.getHeightDif()));
+                }
+                break;
+            } else {
+                metadata.setRootEntityId(n);
+                break;
+            }
+        }
+
         nodeStorage.putMetadata(metadata);
 
         return entityId;
@@ -149,12 +214,15 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
         }
         return result;
     }
-
     @AllArgsConstructor
     private class TreePath {
         private int compare;
         private EntityNode<T> node;
         private TreePath parent;
+
+        private TreePath last() {
+            return parent == null ? this : parent.last();
+        }
     }
 
     /**
@@ -277,9 +345,12 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
         return internalDeleteEntity(nodePath);
     }
 
+
+
     private boolean internalDeleteEntity(TreePath nodePath) throws IOException {
         EntityNode<T> node = nodePath.node;
         int entityId = node.getEntityId();
+        TreePath nodePathOrg = nodePath;
         nodePath = nodePath.parent;
 
         // Switch the node we want to delete with a successor node until it has at most one child
@@ -310,10 +381,16 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
             nodeStorage.putEntityNode(newSuccessorNode);
 
             node = newNode;
-            nodePath = successorPath; // Won't work probably if parent to successor was node
-            if (nodePath == null) {
-                nodePath = new TreePath(1, newSuccessorNode, null);
+            if (successorPath == null) {
+                successorPath = new TreePath(1, newSuccessorNode, nodePath);
+            } else {
+                successorPath.last().parent = new TreePath(1, newSuccessorNode, nodePath);
             }
+
+            nodePath = successorPath; // Won't work probably if parent to successor was node
+//            if (nodePath == null) {
+//                nodePath = new TreePath(1, newSuccessorNode, null);
+//            }
         }
 
         // Now node has at most one child!
@@ -330,15 +407,163 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
         metadata.setFirstDeletedEntityId(entityId);
         metadata.setNumEntities(metadata.getNumEntities() - 1);
 
+
+        // Retrace and rebalance tree
+        /*
+        TreePath tp = nodePath;
+        System.out.println("nodepath");
+        while (tp != null) {
+            System.out.println(tp.node.getEntityId() + " " + tp.compare);
+            tp = tp.parent;
+        }*/
+
+        int n = -1;
+        EntityNode<T> g;
+        for (EntityNode<T> x = nodePath == null ? null : nodeStorage.getEntityNode(nodePath.node.getEntityId()); x != null; x = g, nodePath = nodePath.parent){
+            // The stored value in the path might be old
+            g = nodePath.parent == null ? null : nodeStorage.getEntityNode(nodePath.parent.node.getEntityId());
+            int b;
+            if (nodePath.compare < 0) {
+                if (x.getHeightDif() > 0) {
+                    EntityNode<T> z = nodeStorage.getEntityNode(x.getRightEntityId());
+                    b = z.getHeightDif();
+                    if (b < 0) {
+                        n = rotateRightLeft(x.getEntityId());
+                    } else {
+                        n = rotateLeft(x.getEntityId());
+                    }
+                    // After rotation adapt parent link
+                } else {
+                    if (x.getHeightDif() == 0) {
+                        nodeStorage.putEntityNode(x.update(x.getLeftEntityId(), x.getRightEntityId(), 1));
+                        break;
+                    }
+                    n = x.getEntityId();
+                    nodeStorage.putEntityNode(x.update(x.getLeftEntityId(), x.getRightEntityId(), 0));
+                    continue;
+                }
+            } else {
+                if (x.getHeightDif() < 0) {
+                    EntityNode<T> z = nodeStorage.getEntityNode(x.getLeftEntityId());
+                    b = z.getHeightDif();
+                    if (b > 0) {
+                        n = rotateLeftRight(x.getEntityId());
+                    } else {
+                        n = rotateRight(x.getEntityId());
+                    }
+                    // After rotation adapt parent link
+                } else {
+                    if (x.getHeightDif() == 0) {
+                        nodeStorage.putEntityNode(x.update(x.getLeftEntityId(), x.getRightEntityId(), -1));
+                        break;
+                    }
+                    n = x.getEntityId();
+                    nodeStorage.putEntityNode(x.update(x.getLeftEntityId(), x.getRightEntityId(), 0));
+                    continue;
+                }
+            }
+
+            if (g == null) {
+                metadata.setRootEntityId(n);
+            } else {
+                if (nodePath.parent.compare < 0) {
+                    g = g.update(n, g.getRightEntityId(), g.getHeightDif());
+                } else {
+                    g = g.update(g.getLeftEntityId(), n, g.getHeightDif());
+                }
+                nodeStorage.putEntityNode(g);
+                if (b == 0) break;
+            }
+        }
+
         nodeStorage.putMetadata(metadata);
         return true;
     }
 
+    // Rotates the tree rooted at nodeId to the left and returns the new root
+    int rotateLeft(int nodeId) throws IOException {
+        EntityNode<T> x = nodeStorage.getEntityNode(nodeId);
+        EntityNode<T> z = nodeStorage.getEntityNode(x.getRightEntityId());
+        int newRightChildX = z.getLeftEntityId();
+        int newLeftChildZ = x.getEntityId();
+        int newXHeightDif = 0, newZHeightDif = 0;
+        if (z.getHeightDif() == 0) {
+            newXHeightDif = 1;
+            newZHeightDif = -1;
+        }
+        nodeStorage.putEntityNode(x.update(x.getLeftEntityId(), newRightChildX, newXHeightDif));
+        nodeStorage.putEntityNode(z.update(newLeftChildZ, z.getRightEntityId(), newZHeightDif));
+        return z.getEntityId();
+    }
 
+    // Rotates the tree rooted at nodeId to the right and returns the new root
+    int rotateRight(int nodeId) throws IOException {
+        EntityNode<T> x = nodeStorage.getEntityNode(nodeId);
+        EntityNode<T> z = nodeStorage.getEntityNode(x.getLeftEntityId());
+        int newLeftChildX = z.getRightEntityId();
+        int newRightChildZ = x.getEntityId();
+        int newXHeightDif = 0, newZHeightDif = 0;
+        if (z.getHeightDif() == 0) {
+            newXHeightDif = -1;
+            newZHeightDif = 1;
+        }
+        nodeStorage.putEntityNode(x.update(newLeftChildX, x.getRightEntityId(), newXHeightDif));
+        nodeStorage.putEntityNode(z.update(z.getLeftEntityId(), newRightChildZ, newZHeightDif));
+        return z.getEntityId();
+    }
 
-    @Override
-    public void close() throws IOException {
-        nodeStorage.close();
+    // Rotates the tree rooted at nodeId first to the right then to the left and returns the new root
+    int rotateRightLeft(int nodeId) throws IOException {
+        EntityNode<T> x = nodeStorage.getEntityNode(nodeId);
+        EntityNode<T> z = nodeStorage.getEntityNode(x.getRightEntityId());
+        EntityNode<T> y = nodeStorage.getEntityNode(z.getLeftEntityId());
+        int newLeftChildZ = y.getRightEntityId();
+        int newRightChildY = z.getEntityId();
+        int newRightChildX = y.getLeftEntityId();
+        int newLeftChildY = nodeId;
+        int newXHeightDif = 0, newYHeightDif = 0, newZHeightDif = 0;
+        if (y.getHeightDif() > 0) {
+            newXHeightDif = -1;
+        } else if (y.getHeightDif() < 0) {
+            newZHeightDif = 1;
+        }
+        nodeStorage.putEntityNode(x.update(x.getLeftEntityId(), newRightChildX, newXHeightDif));
+        nodeStorage.putEntityNode(y.update(newLeftChildY, newRightChildY, newYHeightDif));
+        nodeStorage.putEntityNode(z.update(newLeftChildZ, z.getRightEntityId(), newZHeightDif));
+        return y.getEntityId();
+    }
+
+    // Rotates the tree rooted at nodeId first to the left then to the right and returns the new root
+    int rotateLeftRight(int nodeId) throws IOException {
+        EntityNode<T> x = nodeStorage.getEntityNode(nodeId);
+        EntityNode<T> z = nodeStorage.getEntityNode(x.getLeftEntityId());
+        EntityNode<T> y = nodeStorage.getEntityNode(z.getRightEntityId());
+        int newRightChildZ = y.getLeftEntityId();
+        int newLeftChildY = z.getEntityId();
+        int newLeftChildX = y.getRightEntityId();
+        int newRightChildY = nodeId;
+        int newXHeightDif = 0, newYHeightDif = 0, newZHeightDif = 0;
+        if (y.getHeightDif() < 0) {
+            newXHeightDif = 1;
+        } else if (y.getHeightDif() > 0) {
+            newZHeightDif = -1;
+        }
+        nodeStorage.putEntityNode(x.update(newLeftChildX, x.getRightEntityId(), newXHeightDif));
+        nodeStorage.putEntityNode(y.update(newLeftChildY, newRightChildY, newYHeightDif));
+        nodeStorage.putEntityNode(z.update(z.getLeftEntityId(), newRightChildZ, newZHeightDif));
+        return y.getEntityId();
+    }
+
+    public void printTree() throws IOException {
+        printTree(metadata.getRootEntityId());
+    }
+
+    public void printTree(int entityId) throws IOException {
+        if (entityId < 0) return;
+        EntityNode<T> node = nodeStorage.getEntityNode(entityId);
+        System.out.println(String.format("%d -> %d,%d (%d)", entityId, node.getLeftEntityId(), node.getRightEntityId(), node.getHeightDif()));
+        printTree(node.getLeftEntityId());
+        printTree(node.getRightEntityId());
     }
 
     /**
@@ -353,15 +578,21 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
                     "Header says there are %d entities in the storage but the root points to no entity.", getNumEntities()));
         }
 
-        int sum = validate(metadata.getRootEntityId(), null, null);
-        if (sum != getNumEntities()) {
+        ValidationResult result = validate(metadata.getRootEntityId(), null, null);
+        if (result.getCount() != getNumEntities()) {
             throw new EntityStorageException(String.format(
-                    "Found %d entities when traversing the base but the header says there should be %d entities.", sum, getNumEntities()));
+                    "Found %d entities when traversing the base but the header says there should be %d entities.",
+                    result.getCount(), getNumEntities()));
         }
     }
 
-    private int validate(int entityId, T min, T max) throws IOException, EntityStorageException {
-        // TODO: Validate height difference of left and right tree
+    @AllArgsConstructor
+    private class ValidationResult {
+        @Getter private int count;
+        @Getter private int height;
+    }
+
+    private ValidationResult validate(int entityId, T min, T max) throws IOException, EntityStorageException {
         EntityNode<T> node = nodeStorage.getEntityNode(entityId);
         T entity = node.getEntity();
         if (node.isDeleted() || entity == null) {
@@ -375,14 +606,29 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
 
         // Since the range is strictly decreasing every time, we should not have to worry
         // about ending up in an infinite recursion.
-        int cnt = 1;
+        int cnt = 1, leftHeight = 0, rightHeight = 0;
         if (node.getLeftEntityId() != -1) {
-            cnt += validate(node.getLeftEntityId(), min, entity);
+            ValidationResult result = validate(node.getLeftEntityId(), min, entity);
+            cnt += result.getCount();
+            leftHeight = result.getHeight();
         }
         if (node.getRightEntityId() != -1) {
-            cnt += validate(node.getRightEntityId(), entity, max);
+            ValidationResult result = validate(node.getRightEntityId(), entity, max);
+            cnt += result.getCount();
+            rightHeight = result.getHeight();
         }
-        return cnt;
+
+        if (rightHeight - leftHeight != node.getHeightDif()) {
+            throw new EntityStorageException(String.format("Height difference at node %d was %d but node data says it should be %d",
+                    node.getEntityId(), rightHeight - leftHeight, node.getHeightDif()));
+        }
+
+        if (Math.abs(leftHeight - rightHeight) > 1) {
+            throw new EntityStorageException(String.format("Height difference at node %d was %d",
+                    node.getEntityId(), leftHeight - rightHeight));
+        }
+
+        return new ValidationResult(cnt, 1 + Math.max(leftHeight, rightHeight));
     }
 
     public Iterator<T> iterator() {

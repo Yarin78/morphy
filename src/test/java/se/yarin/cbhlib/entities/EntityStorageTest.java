@@ -7,8 +7,7 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Iterator;
-import java.util.Random;
+import java.util.*;
 
 import static org.junit.Assert.*;
 
@@ -62,6 +61,55 @@ public class EntityStorageTest {
     }
 
     @Test
+    public void testAddTwoEntities() throws IOException, EntityStorageException {
+        // Should cause no rotation
+        EntityStorage<TestEntity> storage = createStorage();
+
+        storage.addEntity(TestEntity.builder().key("a").build());
+        storage.addEntity(TestEntity.builder().key("b").build());
+
+        storage.validateStructure();
+    }
+
+    @Test
+    public void testAddThreeEntitiesSingleRotate() throws IOException, EntityStorageException {
+        // Should cause a left single rotation
+        EntityStorage<TestEntity> storage = createStorage();
+
+        storage.addEntity(TestEntity.builder().key("a").build());
+        storage.addEntity(TestEntity.builder().key("b").build());
+        storage.addEntity(TestEntity.builder().key("c").build());
+
+        storage.validateStructure();
+    }
+
+    @Test
+    public void testAddThreeEntitiesDoubleRotate() throws IOException, EntityStorageException {
+        // Should cause a right-left double rotation
+        EntityStorage<TestEntity> storage = createStorage();
+
+        storage.addEntity(TestEntity.builder().key("a").build());
+        storage.addEntity(TestEntity.builder().key("c").build());
+        storage.addEntity(TestEntity.builder().key("b").build());
+
+        storage.validateStructure();
+    }
+
+    @Test
+    public void testAddSixEntities() throws IOException, EntityStorageException {
+        EntityStorage<TestEntity> storage = createStorage();
+
+        storage.addEntity(TestEntity.builder().key("e").build());
+        storage.addEntity(TestEntity.builder().key("f").build());
+        storage.addEntity(TestEntity.builder().key("b").build());
+        storage.addEntity(TestEntity.builder().key("d").build());
+        storage.addEntity(TestEntity.builder().key("a").build());
+        storage.addEntity(TestEntity.builder().key("c").build());
+
+        storage.validateStructure();
+    }
+
+    @Test
     public void testGetEntityByKey() throws EntityStorageException, IOException {
         EntityStorage<TestEntity> storage = createStorage();
         TestEntity hello = TestEntity.builder().key("hello").value(7).build();
@@ -77,12 +125,14 @@ public class EntityStorageTest {
 
     @Test
     public void testAddMultipleEntities() throws IOException, EntityStorageException {
-        EntityStorage<TestEntity> storage = createStorage();
-        for (int i = 0; i < 20; i++) {
-            int id = storage.addEntity(new TestEntity(nextRandomString()));
-            assertEquals(i, id);
-            assertEquals(i + 1, storage.getNumEntities());
-            storage.validateStructure();
+        for (int iter = 0; iter < 100; iter++) {
+            EntityStorage<TestEntity> storage = createStorage();
+            for (int i = 0; i < 100; i++) {
+                int id = storage.addEntity(new TestEntity(nextRandomString()));
+                assertEquals(i, id);
+                assertEquals(i + 1, storage.getNumEntities());
+                storage.validateStructure();
+            }
         }
     }
 
@@ -98,6 +148,36 @@ public class EntityStorageTest {
         assertNull(storage.getEntity(id1));
         assertNotNull(storage.getEntity(id2));
 
+        storage.validateStructure();
+    }
+
+    @Test
+    public void testRebalancingAfterDeleteEntity() throws IOException, EntityStorageException {
+        for (int i = 0; i < 7; i++) {
+            EntityStorage<TestEntity> storage = createStorage();
+            storage.addEntity(new TestEntity("e"));
+            storage.addEntity(new TestEntity("b"));
+            storage.addEntity(new TestEntity("f"));
+            storage.addEntity(new TestEntity("a"));
+            storage.addEntity(new TestEntity("d"));
+            storage.addEntity(new TestEntity("g"));
+            storage.addEntity(new TestEntity("c"));
+            storage.deleteEntity(i);
+            storage.validateStructure();
+        }
+    }
+
+    @Test
+    public void testRebalancingAfterDeleteEntity2() throws IOException, EntityStorageException {
+        EntityStorage<TestEntity> storage = createStorage();
+        storage.addEntity(new TestEntity("d"));
+        storage.addEntity(new TestEntity("e"));
+        storage.addEntity(new TestEntity("b"));
+        storage.addEntity(new TestEntity("f"));
+        storage.addEntity(new TestEntity("a"));
+        storage.addEntity(new TestEntity("c"));
+        storage.deleteEntity(0);
+        storage.deleteEntity(2);
         storage.validateStructure();
     }
 
@@ -170,15 +250,40 @@ public class EntityStorageTest {
 
     @Test
     public void testAddMultipleEntitiesAndThenDeleteThem() throws IOException, EntityStorageException {
-        EntityStorage<TestEntity> storage = createStorage();
-        int count = 500;
-        for (int i = 0; i < count; i++) {
-            storage.addEntity(new TestEntity(nextRandomString()));
+        for (int iter = 0; iter < 100; iter++) {
+            EntityStorage<TestEntity> storage = createStorage();
+            int count = 100;
+            for (int i = 0; i < count; i++) {
+                storage.addEntity(new TestEntity(nextRandomString()));
+            }
+            for (int i = 0; i < count; i++) {
+                storage.deleteEntity(i);
+                assertEquals(count - i - 1, storage.getNumEntities());
+                storage.validateStructure();
+            }
         }
-        for (int i = 0; i < count; i++) {
-            storage.deleteEntity(i);
-            assertEquals(count - i - 1, storage.getNumEntities());
-            storage.validateStructure();
+    }
+
+    @Test
+    public void testRandomlyAddAndDeleteEntities() throws EntityStorageException, IOException {
+        for (int iter = 0; iter < 10; iter++) {
+            EntityStorage<TestEntity> storage = createStorage();
+            ArrayList<String> list = new ArrayList<>();
+            int noOps = 1000;
+            for (int ops = 0; ops < noOps; ops++) {
+                if (random.nextDouble() < 1-(double) ops/noOps || list.size() == 0) {
+                    String key = nextRandomString();
+                    list.add(key);
+                    storage.addEntity(new TestEntity(key));
+                } else {
+                    int i = random.nextInt(list.size());
+                    String key = list.get(i);
+                    storage.deleteEntity(new TestEntity(key));
+                    list.remove(i);
+                }
+                assertEquals(list.size(), storage.getNumEntities());
+                storage.validateStructure();
+            }
         }
     }
 
