@@ -96,11 +96,11 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
 
     @Override
     public T getEntity(@NonNull T entity) throws IOException {
-        TreePath treePath = treeSearch(entity);
+        TreePath<T> treePath = treeSearch(entity);
         if (treePath == null) {
             return null;
         }
-        T foundEntity = treePath.node.getEntity();
+        T foundEntity = treePath.getNode().getEntity();
         if (foundEntity.compareTo(entity) == 0) {
             return foundEntity;
         }
@@ -111,8 +111,8 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
     public int addEntity(@NonNull T entity) throws IOException, EntityStorageException {
         int entityId;
 
-        TreePath result = treeSearch(entity);
-        if (result != null && result.compare == 0) {
+        TreePath<T> result = treeSearch(entity);
+        if (result != null && result.getCompare() == 0) {
             throw new EntityStorageException("An entity with the same key already exists");
         }
 
@@ -130,20 +130,23 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
         if (result == null) {
             metadata.setRootEntityId(entityId);
         } else {
-            if (result.compare < 0) {
-                result.node = result.node.update(entityId, result.node.getRightEntityId(), result.node.getHeightDif());
+            EntityNode<T> update;
+            if (result.getCompare() < 0) {
+                update = result.getNode().update(entityId, result.getNode().getRightEntityId(), result.getNode().getHeightDif());
             } else {
-                result.node = result.node.update(result.node.getLeftEntityId(), entityId, result.node.getHeightDif());
+                update = result.getNode().update(result.getNode().getLeftEntityId(), entityId, result.getNode().getHeightDif());
             }
-            nodeStorage.putEntityNode(result.node);
+            result = new TreePath<>(result.getCompare(), update, result.getParent());
+
+            nodeStorage.putEntityNode(result.getNode());
         }
 
         EntityNode<T> z = nodeStorage.createNode(entityId, entity);
         nodeStorage.putEntityNode(z);
 
-        for(; result != null; result = result.parent) {
+        for(; result != null; result = result.getParent()) {
             // result.node might contain an old version of the node (I think!?)
-            EntityNode<T> x = nodeStorage.getEntityNode(result.node.getEntityId());
+            EntityNode<T> x = nodeStorage.getEntityNode(result.getNode().getEntityId());
             EntityNode<T> g;
             int n;
             // BalanceFactor(X) has not yet been updated!
@@ -151,7 +154,7 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
                 if (x.getHeightDif() > 0) { // X is right-heavy
                     // ===> the temporary BalanceFactor(X) == +2
                     // ===> rebalancing is required.
-                    g = result.parent != null ? result.parent.node : null;
+                    g = result.getParent() != null ? result.getParent().getNode() : null;
                     if (z.getHeightDif() < 0) {
                         n = rotateRightLeft(x.getEntityId());
                     } else {
@@ -169,7 +172,7 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
                 }
             } else { // Z == left_child(X): the left subtree increases
                 if (x.getHeightDif() < 0) { // X is left-heavy
-                    g = result.parent != null ? result.parent.node : null;
+                    g = result.getParent() != null ? result.getParent().getNode() : null;
                     if (z.getHeightDif() > 0) {
                         n = rotateLeftRight(x.getEntityId());
                     } else {
@@ -218,16 +221,7 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
         }
         return result;
     }
-    @AllArgsConstructor
-    private class TreePath {
-        private int compare;
-        private EntityNode<T> node;
-        private TreePath parent;
 
-        private TreePath last() {
-            return parent == null ? this : parent.last();
-        }
-    }
 
     /**
      * Searches the tree for a specific entity. Returns a path from the root
@@ -238,38 +232,8 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
      * @return the most recent node in the path
      * @throws IOException if an IO error occurred when searching in the tree
      */
-    private TreePath treeSearch(@NonNull T entity) throws IOException {
-        return treeSearch(metadata.getRootEntityId(), null, entity);
-    }
-
-    /**
-     * Searches the tree for a specific entity. Returns a path from the root
-     * to the searched entity.
-     * If the entity doesn't exist in the tree, the path ends at the node in the
-     * tree where the entity can be inserted.
-     * @param currentId the start node to search from
-     * @param path the path searched for so far
-     * @param entity the entity to search for
-     * @return the most recent node in the path
-     * @throws IOException if an IO error occurred when searching in the tree
-     */
-    private TreePath treeSearch(int currentId, TreePath path, @NonNull T entity) throws IOException {
-        if (currentId < 0) {
-            return path;
-        }
-
-        T current = getEntity(currentId);
-        EntityNode<T> node = nodeStorage.getEntityNode(currentId);
-        int comp = entity.compareTo(current);
-
-        path = new TreePath(comp, node, path);
-        if (comp == 0) {
-            return path;
-        } else if (comp < 0) {
-            return treeSearch(node.getLeftEntityId(), path, entity);
-        } else {
-            return treeSearch(node.getRightEntityId(), path, entity);
-        }
+    private TreePath<T> treeSearch(@NonNull T entity) throws IOException {
+        return nodeStorage.treeSearch(metadata.getRootEntityId(), null, entity);
     }
 
     @Override
@@ -297,24 +261,24 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
 
     @Override
     public void putEntityByKey(@NonNull T entity) throws IOException, EntityStorageException {
-        TreePath treePath = treeSearch(entity);
-        if (treePath == null || treePath.compare != 0) {
+        TreePath<T> treePath = treeSearch(entity);
+        if (treePath == null || treePath.getCompare() != 0) {
             throw new EntityStorageException("The entity doesn't exist in the storage");
         }
-        EntityNode<T> node = treePath.node;
+        EntityNode<T> node = treePath.getNode();
         int entityId = node.getEntityId();
         EntityNode<T> newNode = nodeStorage.createNode(entityId, entity);
         newNode = newNode.update(node.getLeftEntityId(), node.getRightEntityId(), node.getHeightDif());
         nodeStorage.putEntityNode(newNode);
     }
 
-    private void replaceChild(TreePath path, int newChildId) throws IOException {
+    private void replaceChild(TreePath<T> path, int newChildId) throws IOException {
         if (path == null) {
             // The root node has no parent
             metadata.setRootEntityId(newChildId);
         } else {
-            EntityNode<T> node = nodeStorage.getEntityNode(path.node.getEntityId());
-            if (path.compare < 0) {
+            EntityNode<T> node = nodeStorage.getEntityNode(path.getNode().getEntityId());
+            if (path.getCompare() < 0) {
                 node = node.update(newChildId, node.getRightEntityId(), node.getHeightDif());
             } else {
                 node = node.update(node.getLeftEntityId(), newChildId, node.getHeightDif());
@@ -325,8 +289,8 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
 
     @Override
     public boolean deleteEntity(T entity) throws IOException, EntityStorageException {
-        TreePath nodePath = treeSearch(entity);
-        if (nodePath == null || nodePath.compare != 0) {
+        TreePath<T> nodePath = treeSearch(entity);
+        if (nodePath == null || nodePath.getCompare() != 0) {
             log.debug("Deleted entity didn't exist");
             return false;
         }
@@ -342,8 +306,8 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
         }
 
         // Find the node we want to delete in the tree
-        TreePath nodePath = treeSearch(node.getEntity());
-        if (nodePath == null || nodePath.compare != 0) {
+        TreePath<T> nodePath = treeSearch(node.getEntity());
+        if (nodePath == null || nodePath.getCompare() != 0) {
             throw new EntityStorageException("Broken database structure; couldn't find the node to delete.");
         }
         return internalDeleteEntity(nodePath);
@@ -351,10 +315,10 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
 
 
 
-    private boolean internalDeleteEntity(TreePath nodePath) throws IOException {
-        EntityNode<T> node = nodePath.node;
+    private boolean internalDeleteEntity(TreePath<T> nodePath) throws IOException {
+        EntityNode<T> node = nodePath.getNode();
         int entityId = node.getEntityId();
-        nodePath = nodePath.parent;
+        nodePath = nodePath.getParent();
 
         // Switch the node we want to delete with a successor node until it has at most one child
         // This will take at most one iteration, so we could simplify this
@@ -364,11 +328,11 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
             // nodePath.compare < 0 if the deleted node is a left child, > 0 if a right child
 
             // Find successor node and replace it with this one
-            TreePath successorPath = treeSearch(node.getRightEntityId(), null, node.getEntity());
-            assert successorPath.compare < 0; // Should always be a left child
-            EntityNode<T> successorNode = successorPath.node;
+            TreePath<T> successorPath = nodeStorage.treeSearch(node.getRightEntityId(), null, node.getEntity());
+            assert successorPath.getCompare() < 0; // Should always be a left child
+            EntityNode<T> successorNode = successorPath.getNode();
             // successorPath.node = the node we want to move up and replace node
-            successorPath = successorPath.parent; // successorPath.node may now equal node!!
+            successorPath = successorPath.getParent(); // successorPath.node may now equal node!!
 
             EntityNode<T> newNode = node.update(successorNode.getLeftEntityId(), successorNode.getRightEntityId(), successorNode.getHeightDif());
             int rid = node.getRightEntityId();
@@ -385,9 +349,9 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
 
             node = newNode;
             if (successorPath == null) {
-                successorPath = new TreePath(1, newSuccessorNode, nodePath);
+                successorPath = new TreePath<>(1, newSuccessorNode, nodePath);
             } else {
-                successorPath.last().parent = new TreePath(1, newSuccessorNode, nodePath);
+                successorPath = successorPath.appendToTail(new TreePath<>(1, newSuccessorNode, nodePath));
             }
 
             nodePath = successorPath; // Won't work probably if parent to successor was node
@@ -410,11 +374,11 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
 
         // Retrace and rebalance tree
         EntityNode<T> g;
-        for (EntityNode<T> x = nodePath == null ? null : nodeStorage.getEntityNode(nodePath.node.getEntityId()); x != null; x = g, nodePath = nodePath.parent){
+        for (EntityNode<T> x = nodePath == null ? null : nodeStorage.getEntityNode(nodePath.getNode().getEntityId()); x != null; x = g, nodePath = nodePath.getParent()){
             // The stored value in the path might be old
-            g = nodePath.parent == null ? null : nodeStorage.getEntityNode(nodePath.parent.node.getEntityId());
+            g = nodePath.getParent() == null ? null : nodeStorage.getEntityNode(nodePath.getParent().getNode().getEntityId());
             int b, n;
-            if (nodePath.compare < 0) {
+            if (nodePath.getCompare() < 0) {
                 if (x.getHeightDif() > 0) {
                     EntityNode<T> z = nodeStorage.getEntityNode(x.getRightEntityId());
                     b = z.getHeightDif();
@@ -453,7 +417,7 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
             if (g == null) {
                 metadata.setRootEntityId(n);
             } else {
-                if (nodePath.parent.compare < 0) {
+                if (nodePath.getParent().getCompare() < 0) {
                     g = g.update(n, g.getRightEntityId(), g.getHeightDif());
                 } else {
                     g = g.update(g.getLeftEntityId(), n, g.getHeightDif());
@@ -681,10 +645,10 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
 
         // Invariant: treePath.node is the next entity to be returned
         // If treePath == null, there are no more entities to be returned
-        private TreePath treePath;
+        private TreePath<T> treePath;
         private final boolean ascending;
 
-        OrderedIterator(TreePath treePath, boolean ascending) throws IOException {
+        OrderedIterator(TreePath<T> treePath, boolean ascending) throws IOException {
             this.treePath = treePath;
             this.ascending = ascending;
         }
@@ -701,17 +665,17 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
             }
             try {
                 // TODO: Check if any writes have happened since iterator was created
-                T entity = treePath.node.getEntity();
-                if (ascending && treePath.node.getRightEntityId() >= 0) {
-                    treePath.compare = 1;
-                    treePath = treeSearch(treePath.node.getRightEntityId(), treePath, entity);
-                } else if (!ascending && treePath.node.getLeftEntityId() >= 0) {
-                    treePath.compare = -1;
-                    treePath = treeSearch(treePath.node.getLeftEntityId(), treePath, entity);
+                T entity = treePath.getNode().getEntity();
+                if (ascending && treePath.getNode().getRightEntityId() >= 0) {
+                    treePath = new TreePath<>(1, treePath.getNode(), treePath.getParent());
+                    treePath = nodeStorage.treeSearch(treePath.getNode().getRightEntityId(), treePath, entity);
+                } else if (!ascending && treePath.getNode().getLeftEntityId() >= 0) {
+                    treePath = new TreePath<>(-1, treePath.getNode(), treePath.getParent());
+                    treePath = nodeStorage.treeSearch(treePath.getNode().getLeftEntityId(), treePath, entity);
                 } else {
-                    treePath = treePath.parent;
-                    while (treePath != null && treePath.compare * (ascending ? 1 : -1) > 0) {
-                        treePath = treePath.parent;
+                    treePath = treePath.getParent();
+                    while (treePath != null && treePath.getCompare() * (ascending ? 1 : -1) > 0) {
+                        treePath = treePath.getParent();
                     }
                 }
                 return entity;
@@ -722,18 +686,18 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
     }
 
     private Iterator<T> getOrderedIterator(T startEntity, boolean ascending) throws IOException {
-        TreePath treePath = null;
+        TreePath<T> treePath = null;
         if (startEntity == null) {
             int currentId = metadata.getRootEntityId();
             while (currentId >= 0) {
                 EntityNode<T> node = nodeStorage.getEntityNode(currentId);
-                treePath = new TreePath(ascending ? -1 : 1, node, treePath);
+                treePath = new TreePath<>(ascending ? -1 : 1, node, treePath);
                 currentId = ascending ? node.getLeftEntityId() : node.getRightEntityId();
             }
         } else {
             treePath = treeSearch(startEntity);
-            while (treePath != null && treePath.compare * (ascending ? 1 : -1) > 0) {
-                treePath = treePath.parent;
+            while (treePath != null && treePath.getCompare() * (ascending ? 1 : -1) > 0) {
+                treePath = treePath.getParent();
             }
         }
         return new OrderedIterator(treePath, ascending);
