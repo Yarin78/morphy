@@ -304,9 +304,17 @@ public class EntityStorageTest {
         storage.addEntity(new TestEntity("a"));
         storage.addEntity(new TestEntity("c"));
 
-        storage.putEntityById(0, new TestEntity("b"));
+        storage.putEntityByKey(new TestEntity("b"));
         assertEquals(3, storage.getNumEntities());
         storage.validateStructure();
+    }
+
+    @Test(expected = EntityStorageException.class)
+    public void testReplaceNodeWithMissingKey() throws IOException, EntityStorageException {
+        EntityStorage<TestEntity> storage = createStorage();
+        storage.addEntity(new TestEntity("b"));
+
+        storage.putEntityByKey(new TestEntity("c"));
     }
 
     @Test

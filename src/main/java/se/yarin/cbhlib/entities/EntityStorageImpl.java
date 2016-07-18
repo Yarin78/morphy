@@ -354,7 +354,6 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
     private boolean internalDeleteEntity(TreePath nodePath) throws IOException {
         EntityNode<T> node = nodePath.node;
         int entityId = node.getEntityId();
-        TreePath nodePathOrg = nodePath;
         nodePath = nodePath.parent;
 
         // Switch the node we want to delete with a successor node until it has at most one child
@@ -392,9 +391,6 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
             }
 
             nodePath = successorPath; // Won't work probably if parent to successor was node
-//            if (nodePath == null) {
-//                nodePath = new TreePath(1, newSuccessorNode, null);
-//            }
         }
 
         // Now node has at most one child!
@@ -413,20 +409,11 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
 
 
         // Retrace and rebalance tree
-        /*
-        TreePath tp = nodePath;
-        System.out.println("nodepath");
-        while (tp != null) {
-            System.out.println(tp.node.getEntityId() + " " + tp.compare);
-            tp = tp.parent;
-        }*/
-
-        int n = -1;
         EntityNode<T> g;
         for (EntityNode<T> x = nodePath == null ? null : nodeStorage.getEntityNode(nodePath.node.getEntityId()); x != null; x = g, nodePath = nodePath.parent){
             // The stored value in the path might be old
             g = nodePath.parent == null ? null : nodeStorage.getEntityNode(nodePath.parent.node.getEntityId());
-            int b;
+            int b, n;
             if (nodePath.compare < 0) {
                 if (x.getHeightDif() > 0) {
                     EntityNode<T> z = nodeStorage.getEntityNode(x.getRightEntityId());
@@ -436,13 +423,11 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
                     } else {
                         n = rotateLeft(x.getEntityId());
                     }
-                    // After rotation adapt parent link
                 } else {
                     if (x.getHeightDif() == 0) {
                         nodeStorage.putEntityNode(x.update(x.getLeftEntityId(), x.getRightEntityId(), 1));
                         break;
                     }
-                    n = x.getEntityId();
                     nodeStorage.putEntityNode(x.update(x.getLeftEntityId(), x.getRightEntityId(), 0));
                     continue;
                 }
@@ -455,13 +440,11 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
                     } else {
                         n = rotateRight(x.getEntityId());
                     }
-                    // After rotation adapt parent link
                 } else {
                     if (x.getHeightDif() == 0) {
                         nodeStorage.putEntityNode(x.update(x.getLeftEntityId(), x.getRightEntityId(), -1));
                         break;
                     }
-                    n = x.getEntityId();
                     nodeStorage.putEntityNode(x.update(x.getLeftEntityId(), x.getRightEntityId(), 0));
                     continue;
                 }
