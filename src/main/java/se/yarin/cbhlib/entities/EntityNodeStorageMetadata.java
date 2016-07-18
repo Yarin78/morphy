@@ -12,14 +12,18 @@ public class EntityNodeStorageMetadata {
     private int firstDeletedEntityId = -1;
     private int capacity = 0;
     private final int headerSize;
+    // Number of committed transactions since storage was opened
+    // This field is not persisted
+    private final int version;
 
-    public EntityNodeStorageMetadata(int serializedEntitySize, int headerSize) {
+    public EntityNodeStorageMetadata(int serializedEntitySize, int headerSize, int version) {
         this.serializedEntitySize = serializedEntitySize;
         this.headerSize = headerSize;
+        this.version = version;
     }
 
     public EntityNodeStorageMetadata clone() {
-        EntityNodeStorageMetadata clone = new EntityNodeStorageMetadata(serializedEntitySize, headerSize);
+        EntityNodeStorageMetadata clone = new EntityNodeStorageMetadata(serializedEntitySize, headerSize, version + 1);
         clone.rootEntityId = this.rootEntityId;
         clone.numEntities = this.numEntities;
         clone.firstDeletedEntityId = this.firstDeletedEntityId;

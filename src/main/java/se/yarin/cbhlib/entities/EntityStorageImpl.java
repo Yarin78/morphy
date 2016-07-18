@@ -19,7 +19,7 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
     private static final int DEFAULT_HEADER_SIZE = 32;
 
     private final EntityNodeStorageBase<T> nodeStorage;
-    private final EntityNodeStorageMetadata metadata;
+    private EntityNodeStorageMetadata metadata;
 
     private EntityStorageImpl(@NonNull File file, @NonNull EntitySerializer<T> serializer)
             throws IOException {
@@ -29,7 +29,7 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
 
     private EntityStorageImpl() {
         nodeStorage = new InMemoryEntityNodeStorage<>();
-        metadata = new EntityNodeStorageMetadata(0, 0);
+        metadata = new EntityNodeStorageMetadata(0, 0, 0);
     }
 
     public static <T extends Entity & Comparable<T>> EntityStorage<T> open(
@@ -81,6 +81,11 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
     }
 
     @Override
+    public int getVersion() {
+        return metadata.getVersion();
+    }
+
+    @Override
     public void close() throws IOException {
         nodeStorage.close();
     }
@@ -108,13 +113,12 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
 
     @Override
     public EntityStorageTransaction<T> beginTransaction() {
-        return new EntityStorageTransaction<>(nodeStorage, metadata);
+        return new EntityStorageTransaction<>(this, nodeStorage, metadata);
     }
 
-    @Override
-    public void commitTransaction(@NonNull EntityStorageTransaction<T> transaction)
-            throws EntityStorageException, IOException {
-        transaction.commit();
+    // TODO: This is ugly. Would be nicer and more consistent to move metadata into nodestorage.
+    void updateMetadata(@NonNull EntityNodeStorageMetadata newMetadata) {
+        this.metadata = newMetadata;
     }
 
     @Override

@@ -13,28 +13,35 @@ public class EntityStorageTransaction<T extends Entity & Comparable<T>> {
 
     private final TransactionalNodeStorage<T> nodeStorage;
     private final EntityNodeStorageMetadata metadata;
-    private final EntityNodeStorageBase<T> wrappedNodeStorage;
+    private final EntityNodeStorageBase<T> underlyingNodeStorage;
+    private final EntityStorage<T> storage;
     private boolean committed = false;
-    // TODO: Add version
 
-    EntityStorageTransaction(@NonNull EntityNodeStorageBase<T> nodeStorage,
+    EntityStorageTransaction(@NonNull EntityStorage<T> storage,
+                             @NonNull EntityNodeStorageBase<T> nodeStorage,
                              @NonNull EntityNodeStorageMetadata metadata) {
-        this.wrappedNodeStorage = nodeStorage;
+        this.storage = storage;
+        this.underlyingNodeStorage = nodeStorage;
         this.nodeStorage = new TransactionalNodeStorage<>(nodeStorage);
-        this.metadata = metadata;
+        this.metadata = metadata.clone();
     }
 
-    public void commit() throws EntityStorageException, IOException {
+    public synchronized void commit() throws EntityStorageException, IOException {
         if (committed) {
             throw new IllegalStateException("The transaction has already been committed");
         }
 
-        for (EntityNode<T> node : nodeStorage.getChanges()) {
-            wrappedNodeStorage.putEntityNode(node);
+        if (storage.getVersion() + 1 != metadata.getVersion()) {
+            throw new EntityStorageException("Storage has changed since the transaction was begun");
         }
-        wrappedNodeStorage.putMetadata(metadata);
 
-        // TODO: flush nodeStorage?
+        for (EntityNode<T> node : nodeStorage.getChanges()) {
+            underlyingNodeStorage.putEntityNode(node);
+        }
+        underlyingNodeStorage.putMetadata(metadata);
+        ((EntityStorageImpl) storage).updateMetadata(metadata);
+
+        // TODO: flush underlyingNodeStorage?
         if (log.isDebugEnabled()) {
             log.debug(String.format("Committed transaction containing %d node changes",
                     nodeStorage.getChanges().size()));
@@ -55,6 +62,33 @@ public class EntityStorageTransaction<T extends Entity & Comparable<T>> {
      */
     private TreePath<T> treeSearch(@NonNull T entity) throws IOException {
         return nodeStorage.treeSearch(metadata.getRootEntityId(), null, entity);
+    }
+
+    public T getEntity(int entityId) throws IOException {
+        if (entityId < 0 || entityId >= metadata.getCapacity()) {
+            return null;
+        }
+        return nodeStorage.getEntityNode(entityId).getEntity();
+    }
+
+    public T getEntity(@NonNull T entity) throws IOException {
+        TreePath<T> treePath = treeSearch(entity);
+        if (treePath == null) {
+            return null;
+        }
+        T foundEntity = treePath.getNode().getEntity();
+        if (foundEntity.compareTo(entity) == 0) {
+            return foundEntity;
+        }
+        return null;
+    }
+
+    public int getNumEntities() {
+        return metadata.getNumEntities();
+    }
+
+    public int getCapacity() {
+        return metadata.getCapacity();
     }
 
     /**

@@ -49,7 +49,7 @@ class PersistentEntityNodeStorage<T extends Entity & Comparable<T>> extends Enti
         }
         FileChannel channel = FileChannel.open(file.toPath(), CREATE_NEW, READ, WRITE);
         EntityNodeStorageMetadata metadata = new EntityNodeStorageMetadata(
-                serializer.getSerializedEntityLength(), headerSize);
+                serializer.getSerializedEntityLength(), headerSize, 0);
         channel.write(serializeMetadata(metadata));
         channel.close();
     }
@@ -76,7 +76,7 @@ class PersistentEntityNodeStorage<T extends Entity & Comparable<T>> extends Enti
         int numEntities = ByteBufferUtil.getIntL(header);
         int headerSize = 28 + ByteBufferUtil.getIntL(header);
 
-        EntityNodeStorageMetadata metadata = new EntityNodeStorageMetadata(serializedEntitySize, headerSize);
+        EntityNodeStorageMetadata metadata = new EntityNodeStorageMetadata(serializedEntitySize, headerSize, 0);
         metadata.setCapacity(capacity);
         metadata.setRootEntityId(rootEntityId);
         metadata.setFirstDeletedEntityId(firstDeletedId);

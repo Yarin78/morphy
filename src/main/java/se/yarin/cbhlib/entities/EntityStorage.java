@@ -40,15 +40,6 @@ public interface EntityStorage<T extends Entity & Comparable<T>> extends Iterabl
     EntityStorageTransaction<T> beginTransaction();
 
     /**
-     * Commits a transaction
-     * @param transaction the transaction to commit
-     * @throws EntityStorageException if the transaction failed to commit
-     * @throws IOException if some IO errors occurred when trying to commit the transaction
-     */
-    void commitTransaction(@NonNull EntityStorageTransaction<T> transaction)
-            throws EntityStorageException, IOException;
-
-    /**
      * Adds a new entity to the storage. The id-field in the entity is ignored.
      * @param entity the entity to add
      * @return the id of the new entity
@@ -130,4 +121,10 @@ public interface EntityStorage<T extends Entity & Comparable<T>> extends Iterabl
      * @throws IOException if an IO error occurs
      */
     void validateStructure() throws EntityStorageException, IOException;
+
+    /**
+     * Gets the number of transactions committed to the storage since it was opened
+     * @return the version number of the storage
+     */
+    int getVersion();
 }
