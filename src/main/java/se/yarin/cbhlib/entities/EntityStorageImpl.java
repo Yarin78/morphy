@@ -95,10 +95,14 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
     }
 
     @Override
-    public T getEntity(T entity) throws IOException {
+    public T getEntity(@NonNull T entity) throws IOException {
         TreePath treePath = treeSearch(entity);
-        if (treePath.compare == 0) {
-            return treePath.node.getEntity();
+        if (treePath == null) {
+            return null;
+        }
+        T foundEntity = treePath.node.getEntity();
+        if (foundEntity.compareTo(entity) == 0) {
+            return foundEntity;
         }
         return null;
     }

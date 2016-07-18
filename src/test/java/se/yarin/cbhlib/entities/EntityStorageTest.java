@@ -119,8 +119,18 @@ public class EntityStorageTest {
         assertEquals("hello", entity.getKey());
         assertEquals(0, entity.getId());
         assertEquals(7, entity.getValue());
+    }
 
-        storage.validateStructure();
+    @Test
+    public void testGetMissingEntityByKey() throws EntityStorageException, IOException {
+        EntityStorage<TestEntity> storage = createStorage();
+
+        assertNull(storage.getEntity(new TestEntity("world")));
+
+        TestEntity hello = TestEntity.builder().key("hello").value(7).build();
+        storage.addEntity(hello);
+
+        assertNull(storage.getEntity(new TestEntity("world")));
     }
 
     @Test
