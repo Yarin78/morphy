@@ -17,4 +17,13 @@ public class EntityNodeStorageMetadata {
         this.serializedEntitySize = serializedEntitySize;
         this.headerSize = headerSize;
     }
+
+    public EntityNodeStorageMetadata clone() {
+        EntityNodeStorageMetadata clone = new EntityNodeStorageMetadata(serializedEntitySize, headerSize);
+        clone.rootEntityId = this.rootEntityId;
+        clone.numEntities = this.numEntities;
+        clone.firstDeletedEntityId = this.firstDeletedEntityId;
+        clone.capacity = this.capacity;
+        return clone;
+    }
 }

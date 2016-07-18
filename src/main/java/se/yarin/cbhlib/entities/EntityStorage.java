@@ -6,7 +6,7 @@ import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
 
-public interface EntityStorage<T> extends Iterable<T> {
+public interface EntityStorage<T extends Entity & Comparable<T>> extends Iterable<T> {
     /**
      * Gets the number of entities in the storage.
      * @return the number of entities
@@ -32,6 +32,21 @@ public interface EntityStorage<T> extends Iterable<T> {
      * @return the entity, or null if there was no entity with that key
      */
     T getEntity(T entity) throws IOException;
+
+    /**
+     * Begins a new transaction
+     * @return the transaction
+     */
+    EntityStorageTransaction<T> beginTransaction();
+
+    /**
+     * Commits a transaction
+     * @param transaction the transaction to commit
+     * @throws EntityStorageException if the transaction failed to commit
+     * @throws IOException if some IO errors occurred when trying to commit the transaction
+     */
+    void commitTransaction(@NonNull EntityStorageTransaction<T> transaction)
+            throws EntityStorageException, IOException;
 
     /**
      * Adds a new entity to the storage. The id-field in the entity is ignored.
