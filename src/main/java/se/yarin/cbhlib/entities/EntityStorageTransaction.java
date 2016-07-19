@@ -99,12 +99,12 @@ class EntityStorageTransaction<T extends Entity & Comparable<T>> {
             throw new IllegalStateException("The transaction has already been committed");
         }
 
-        int entityId;
         TreePath<T> result = treeSearch(entity);
         if (result != null && result.getCompare() == 0) {
             throw new EntityStorageException("An entity with the same key already exists");
         }
 
+        int entityId;
         if (nodeStorage.getFirstDeletedEntityId() >= 0) {
             // Replace a deleted entity
             entityId = nodeStorage.getFirstDeletedEntityId();
@@ -131,61 +131,45 @@ class EntityStorageTransaction<T extends Entity & Comparable<T>> {
         EntityNode<T> z = nodeStorage.createNode(entityId, entity);
         nodeStorage.putEntityNode(z);
 
+        // Retrace and re-balance the tree
         for(; result != null; result = result.getParent()) {
-            // result.node might contain an old version of the node (I think!?)
+            // The node in the result path may be old
             EntityNode<T> x = nodeStorage.getEntityNode(result.getNode().getEntityId());
-            EntityNode<T> g;
-            int n;
-            // BalanceFactor(X) has not yet been updated!
-            if (z.getEntityId() == x.getRightEntityId()) { // The right subtree increases
-                if (x.getHeightDif() > 0) { // X is right-heavy
-                    // ===> the temporary BalanceFactor(X) == +2
-                    // ===> rebalancing is required.
-                    g = result.getParent() != null ? result.getParent().getNode() : null;
-                    if (z.getHeightDif() < 0) {
-                        n = rotateRightLeft(x.getEntityId());
-                    } else {
-                        n = rotateLeft(x.getEntityId());
-                    }
+            EntityNode<T> g = result.getParent() != null ? result.getParent().getNode() : null;
+            EntityNode<T> n;
+            if (z.getEntityId() == x.getRightEntityId()) {
+                if (x.getHeightDif() > 0) {
+                    n = z.getHeightDif() < 0 ? rotateRightLeft(x, z) : rotateLeft(x, z);
+                } else if (x.getHeightDif() < 0) {
+                    nodeStorage.putEntityNode(x.update(x.getLeftEntityId(), x.getRightEntityId(), 0));
+                    break;
                 } else {
-                    if (x.getHeightDif() < 0) {
-                        nodeStorage.putEntityNode(x.update(x.getLeftEntityId(), x.getRightEntityId(), 0));
-                        break;
-                    }
-                    EntityNode<T> newX = x.update(x.getLeftEntityId(), x.getRightEntityId(), 1);
-                    nodeStorage.putEntityNode(newX);
-                    z = newX;
+                    z = x.update(x.getLeftEntityId(), x.getRightEntityId(), 1);
+                    nodeStorage.putEntityNode(z);
                     continue;
                 }
-            } else { // Z == left_child(X): the left subtree increases
-                if (x.getHeightDif() < 0) { // X is left-heavy
-                    g = result.getParent() != null ? result.getParent().getNode() : null;
-                    if (z.getHeightDif() > 0) {
-                        n = rotateLeftRight(x.getEntityId());
-                    } else {
-                        n = rotateRight(x.getEntityId());
-                    }
+            } else {
+                if (x.getHeightDif() < 0) {
+                    n = z.getHeightDif() > 0 ? rotateLeftRight(x, z) : rotateRight(x, z);
+                } else if (x.getHeightDif() > 0) {
+                    nodeStorage.putEntityNode(x.update(x.getLeftEntityId(), x.getRightEntityId(), 0));
+                    break;
                 } else {
-                    if (x.getHeightDif() > 0) {
-                        nodeStorage.putEntityNode(x.update(x.getLeftEntityId(), x.getRightEntityId(), 0));
-                        break;
-                    }
-                    EntityNode<T> newX = x.update(x.getLeftEntityId(), x.getRightEntityId(), -1);
-                    nodeStorage.putEntityNode(newX);
-                    z = newX;
+                    z = x.update(x.getLeftEntityId(), x.getRightEntityId(), -1);
+                    nodeStorage.putEntityNode(z);
                     continue;
                 }
             }
 
             if (g != null) {
                 if (x.getEntityId() == g.getLeftEntityId()) {
-                    nodeStorage.putEntityNode(g.update(n, g.getRightEntityId(), g.getHeightDif()));
+                    nodeStorage.putEntityNode(g.update(n.getEntityId(), g.getRightEntityId(), g.getHeightDif()));
                 } else {
-                    nodeStorage.putEntityNode(g.update(g.getLeftEntityId(), n, g.getHeightDif()));
+                    nodeStorage.putEntityNode(g.update(g.getLeftEntityId(), n.getEntityId(), g.getHeightDif()));
                 }
                 break;
             } else {
-                nodeStorage.setRootEntityId(n);
+                nodeStorage.setRootEntityId(n.getEntityId());
                 break;
             }
         }
@@ -218,7 +202,6 @@ class EntityStorageTransaction<T extends Entity & Comparable<T>> {
             newNode = newNode.update(oldNode.getLeftEntityId(), oldNode.getRightEntityId(), oldNode.getHeightDif());
             nodeStorage.putEntityNode(newNode);
         } else {
-            // TODO: Do this in a transaction?
             deleteEntity(entityId);
             int newEntityId = addEntity(entity);
             assert entityId == newEntityId; // Important!
@@ -295,13 +278,8 @@ class EntityStorageTransaction<T extends Entity & Comparable<T>> {
         int entityId = node.getEntityId();
         nodePath = nodePath.getParent();
 
-        // Switch the node we want to delete with a successor node until it has at most one child
-        // This will take at most one iteration, so we could simplify this
-        while (node.getLeftEntityId() >= 0 && node.getRightEntityId() >= 0) {
-            // Invariant: node is the node we want to delete, and it has two children
-            // nodePath.node = the parent node
-            // nodePath.compare < 0 if the deleted node is a left child, > 0 if a right child
-
+        // If the node we want to delete has two children, swap it with the in-order successor
+        if (node.getLeftEntityId() >= 0 && node.getRightEntityId() >= 0) {
             // Find successor node and replace it with this one
             TreePath<T> successorPath = nodeStorage.treeSearch(node.getRightEntityId(), null, node.getEntity());
             assert successorPath.getCompare() < 0; // Should always be a left child
@@ -322,14 +300,13 @@ class EntityStorageTransaction<T extends Entity & Comparable<T>> {
             nodeStorage.putEntityNode(newNode);
             nodeStorage.putEntityNode(newSuccessorNode);
 
+            // Ensure we have the whole path from root to the deleted node, so we can retrace
             node = newNode;
             if (successorPath == null) {
-                successorPath = new TreePath<>(1, newSuccessorNode, nodePath);
+                nodePath = new TreePath<>(1, newSuccessorNode, nodePath);
             } else {
-                successorPath = successorPath.appendToTail(new TreePath<>(1, newSuccessorNode, nodePath));
+                nodePath = successorPath.appendToTail(new TreePath<>(1, newSuccessorNode, nodePath));
             }
-
-            nodePath = successorPath; // Won't work probably if parent to successor was node
         }
 
         // Now node has at most one child!
@@ -346,27 +323,23 @@ class EntityStorageTransaction<T extends Entity & Comparable<T>> {
         nodeStorage.setFirstDeletedEntityId(entityId);
         nodeStorage.setNumEntities(nodeStorage.getNumEntities() - 1);
 
-
-        // Retrace and rebalance tree
-        EntityNode<T> g;
-        for (EntityNode<T> x = nodePath == null ? null : nodeStorage.getEntityNode(nodePath.getNode().getEntityId()); x != null; x = g, nodePath = nodePath.getParent()){
+        // Retrace and re-balance tree
+        while (nodePath != null) {
             // The stored value in the path might be old
-            g = nodePath.getParent() == null ? null : nodeStorage.getEntityNode(nodePath.getParent().getNode().getEntityId());
-            int b, n;
-            if (nodePath.getCompare() < 0) {
+            EntityNode<T> x = nodeStorage.getEntityNode(nodePath.getNode().getEntityId());
+            int comp = nodePath.getCompare();
+            nodePath = nodePath.getParent();
+            int b;
+            EntityNode<T> n;
+            if (comp < 0) {
                 if (x.getHeightDif() > 0) {
                     EntityNode<T> z = nodeStorage.getEntityNode(x.getRightEntityId());
                     b = z.getHeightDif();
-                    if (b < 0) {
-                        n = rotateRightLeft(x.getEntityId());
-                    } else {
-                        n = rotateLeft(x.getEntityId());
-                    }
+                    n = b < 0 ? rotateRightLeft(x, z) : rotateLeft(x, z);
+                } else if (x.getHeightDif() == 0) {
+                    nodeStorage.putEntityNode(x.update(x.getLeftEntityId(), x.getRightEntityId(), 1));
+                    break;
                 } else {
-                    if (x.getHeightDif() == 0) {
-                        nodeStorage.putEntityNode(x.update(x.getLeftEntityId(), x.getRightEntityId(), 1));
-                        break;
-                    }
                     nodeStorage.putEntityNode(x.update(x.getLeftEntityId(), x.getRightEntityId(), 0));
                     continue;
                 }
@@ -374,28 +347,25 @@ class EntityStorageTransaction<T extends Entity & Comparable<T>> {
                 if (x.getHeightDif() < 0) {
                     EntityNode<T> z = nodeStorage.getEntityNode(x.getLeftEntityId());
                     b = z.getHeightDif();
-                    if (b > 0) {
-                        n = rotateLeftRight(x.getEntityId());
-                    } else {
-                        n = rotateRight(x.getEntityId());
-                    }
+                    n = b > 0 ? rotateLeftRight(x, z) : rotateRight(x, z);
+                } else if (x.getHeightDif() == 0) {
+                    nodeStorage.putEntityNode(x.update(x.getLeftEntityId(), x.getRightEntityId(), -1));
+                    break;
                 } else {
-                    if (x.getHeightDif() == 0) {
-                        nodeStorage.putEntityNode(x.update(x.getLeftEntityId(), x.getRightEntityId(), -1));
-                        break;
-                    }
                     nodeStorage.putEntityNode(x.update(x.getLeftEntityId(), x.getRightEntityId(), 0));
                     continue;
                 }
             }
 
-            if (g == null) {
-                nodeStorage.setRootEntityId(n);
+
+            if (nodePath == null) {
+                nodeStorage.setRootEntityId(n.getEntityId());
             } else {
-                if (nodePath.getParent().getCompare() < 0) {
-                    g = g.update(n, g.getRightEntityId(), g.getHeightDif());
+                EntityNode<T> g = nodeStorage.getEntityNode(nodePath.getNode().getEntityId());
+                if (x.getEntityId() == g.getLeftEntityId()) {
+                    g = g.update(n.getEntityId(), g.getRightEntityId(), g.getHeightDif());
                 } else {
-                    g = g.update(g.getLeftEntityId(), n, g.getHeightDif());
+                    g = g.update(g.getLeftEntityId(), n.getEntityId(), g.getHeightDif());
                 }
                 nodeStorage.putEntityNode(g);
                 if (b == 0) break;
@@ -420,77 +390,35 @@ class EntityStorageTransaction<T extends Entity & Comparable<T>> {
         }
     }
 
-    // Rotates the tree rooted at nodeId to the left and returns the new root
-    private int rotateLeft(int nodeId) throws IOException {
-        EntityNode<T> x = nodeStorage.getEntityNode(nodeId);
-        EntityNode<T> z = nodeStorage.getEntityNode(x.getRightEntityId());
-        int newRightChildX = z.getLeftEntityId();
-        int newLeftChildZ = x.getEntityId();
-        int newXHeightDif = 0, newZHeightDif = 0;
-        if (z.getHeightDif() == 0) {
-            newXHeightDif = 1;
-            newZHeightDif = -1;
-        }
-        nodeStorage.putEntityNode(x.update(x.getLeftEntityId(), newRightChildX, newXHeightDif));
-        nodeStorage.putEntityNode(z.update(newLeftChildZ, z.getRightEntityId(), newZHeightDif));
-        return z.getEntityId();
+    // Rotates the tree rooted at x with right child z to the left and returns the new root
+    private EntityNode<T> rotateLeft(EntityNode<T> x, EntityNode<T> z) throws IOException {
+        nodeStorage.putEntityNode(x.update(x.getLeftEntityId(), z.getLeftEntityId(), z.getHeightDif() == 0 ? 1 : 0));
+        nodeStorage.putEntityNode(z.update(x.getEntityId(), z.getRightEntityId(), z.getHeightDif() == 0 ? -1 : 0));
+        return z;
     }
 
-    // Rotates the tree rooted at nodeId to the right and returns the new root
-    private int rotateRight(int nodeId) throws IOException {
-        EntityNode<T> x = nodeStorage.getEntityNode(nodeId);
-        EntityNode<T> z = nodeStorage.getEntityNode(x.getLeftEntityId());
-        int newLeftChildX = z.getRightEntityId();
-        int newRightChildZ = x.getEntityId();
-        int newXHeightDif = 0, newZHeightDif = 0;
-        if (z.getHeightDif() == 0) {
-            newXHeightDif = -1;
-            newZHeightDif = 1;
-        }
-        nodeStorage.putEntityNode(x.update(newLeftChildX, x.getRightEntityId(), newXHeightDif));
-        nodeStorage.putEntityNode(z.update(z.getLeftEntityId(), newRightChildZ, newZHeightDif));
-        return z.getEntityId();
+    // Rotates the tree rooted at x with the left child z to the right and returns the new root
+    private EntityNode<T> rotateRight(EntityNode<T> x, EntityNode<T> z) throws IOException {
+        nodeStorage.putEntityNode(x.update(z.getRightEntityId(), x.getRightEntityId(), z.getHeightDif() == 0 ? -1 : 0));
+        nodeStorage.putEntityNode(z.update(z.getLeftEntityId(), x.getEntityId(), z.getHeightDif() == 0 ? 1 : 0));
+        return z;
     }
 
-    // Rotates the tree rooted at nodeId first to the right then to the left and returns the new root
-    private int rotateRightLeft(int nodeId) throws IOException {
-        EntityNode<T> x = nodeStorage.getEntityNode(nodeId);
-        EntityNode<T> z = nodeStorage.getEntityNode(x.getRightEntityId());
+    // Rotates the tree rooted at x with right child z first to the right then to the left and returns the new root
+    private EntityNode<T> rotateRightLeft(EntityNode<T> x, EntityNode<T> z) throws IOException {
         EntityNode<T> y = nodeStorage.getEntityNode(z.getLeftEntityId());
-        int newLeftChildZ = y.getRightEntityId();
-        int newRightChildY = z.getEntityId();
-        int newRightChildX = y.getLeftEntityId();
-        int newLeftChildY = nodeId;
-        int newXHeightDif = 0, newYHeightDif = 0, newZHeightDif = 0;
-        if (y.getHeightDif() > 0) {
-            newXHeightDif = -1;
-        } else if (y.getHeightDif() < 0) {
-            newZHeightDif = 1;
-        }
-        nodeStorage.putEntityNode(x.update(x.getLeftEntityId(), newRightChildX, newXHeightDif));
-        nodeStorage.putEntityNode(y.update(newLeftChildY, newRightChildY, newYHeightDif));
-        nodeStorage.putEntityNode(z.update(newLeftChildZ, z.getRightEntityId(), newZHeightDif));
-        return y.getEntityId();
+        nodeStorage.putEntityNode(x.update(x.getLeftEntityId(), y.getLeftEntityId(), y.getHeightDif() > 0 ? -1 : 0));
+        nodeStorage.putEntityNode(y.update(x.getEntityId(), z.getEntityId(), 0));
+        nodeStorage.putEntityNode(z.update(y.getRightEntityId(), z.getRightEntityId(), y.getHeightDif() < 0 ? 1 : 0));
+        return y;
     }
 
-    // Rotates the tree rooted at nodeId first to the left then to the right and returns the new root
-    private int rotateLeftRight(int nodeId) throws IOException {
-        EntityNode<T> x = nodeStorage.getEntityNode(nodeId);
-        EntityNode<T> z = nodeStorage.getEntityNode(x.getLeftEntityId());
+    // Rotates the tree rooted at x with left child z first to the left then to the right and returns the new root
+    private EntityNode<T> rotateLeftRight(EntityNode<T> x, EntityNode<T> z) throws IOException {
         EntityNode<T> y = nodeStorage.getEntityNode(z.getRightEntityId());
-        int newRightChildZ = y.getLeftEntityId();
-        int newLeftChildY = z.getEntityId();
-        int newLeftChildX = y.getRightEntityId();
-        int newRightChildY = nodeId;
-        int newXHeightDif = 0, newYHeightDif = 0, newZHeightDif = 0;
-        if (y.getHeightDif() < 0) {
-            newXHeightDif = 1;
-        } else if (y.getHeightDif() > 0) {
-            newZHeightDif = -1;
-        }
-        nodeStorage.putEntityNode(x.update(newLeftChildX, x.getRightEntityId(), newXHeightDif));
-        nodeStorage.putEntityNode(y.update(newLeftChildY, newRightChildY, newYHeightDif));
-        nodeStorage.putEntityNode(z.update(z.getLeftEntityId(), newRightChildZ, newZHeightDif));
-        return y.getEntityId();
+        nodeStorage.putEntityNode(x.update(y.getRightEntityId(), x.getRightEntityId(), y.getHeightDif() < 0 ? 1 : 0));
+        nodeStorage.putEntityNode(y.update(z.getEntityId(), x.getEntityId(), 0));
+        nodeStorage.putEntityNode(z.update(z.getLeftEntityId(), y.getLeftEntityId(), y.getHeightDif() > 0 ? -1 : 0));
+        return y;
     }
 }
