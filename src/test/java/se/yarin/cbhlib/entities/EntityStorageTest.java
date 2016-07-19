@@ -481,6 +481,28 @@ public class EntityStorageTest {
         assertEquals("dtbqwalv", sb.toString());
     }
 
+    @Test(expected = IllegalStateException.class)
+    public void testDefaultIteratorWhenStorageChanges() throws IOException, EntityStorageException {
+        EntityStorage<TestEntity> storage = createStorage();
+        storage.addEntity(new TestEntity("a"));
+        storage.addEntity(new TestEntity("b"));
+        Iterator<TestEntity> iterator = storage.iterator();
+        assertEquals("a", iterator.next().getKey());
+        storage.addEntity(new TestEntity("c"));
+        iterator.next();
+    }
+
+    @Test(expected = IllegalStateException.class)
+    public void testOrderedIteratorWhenStorageChanges() throws IOException, EntityStorageException {
+        EntityStorage<TestEntity> storage = createStorage();
+        storage.addEntity(new TestEntity("a"));
+        storage.addEntity(new TestEntity("b"));
+        Iterator<TestEntity> iterator = storage.getOrderedAscendingIterator(null);
+        assertEquals("a", iterator.next().getKey());
+        storage.addEntity(new TestEntity("c"));
+        iterator.next();
+    }
+
     @Test
     public void testIteratorOverMultipleBatches() throws EntityStorageException, IOException {
         EntityStorage<TestEntity> storage = createStorage();

@@ -254,6 +254,7 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
     private class DefaultIterator implements Iterator<T> {
         private List<EntityNode<T>> batch = new ArrayList<>();
         private int batchPos, nextBatchStart = 0, batchSize = 1000;
+        private final int version;
 
         private void getNextBatch() {
             int endId = Math.min(nodeStorage.getCapacity(), nextBatchStart + batchSize);
@@ -281,12 +282,16 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
         }
 
         DefaultIterator(int startId) {
+            version = getVersion();
             nextBatchStart = startId;
             skipDeleted();
         }
 
         @Override
         public boolean hasNext() {
+            if (version != getVersion()) {
+                throw new IllegalStateException("The storage has changed since the iterator was created");
+            }
             return batch != null;
         }
 
@@ -307,14 +312,19 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
         // If treePath == null, there are no more entities to be returned
         private TreePath<T> treePath;
         private final boolean ascending;
+        private final int version;
 
         OrderedIterator(TreePath<T> treePath, boolean ascending) throws IOException {
             this.treePath = treePath;
             this.ascending = ascending;
+            this.version = getVersion();
         }
 
         @Override
         public boolean hasNext() {
+            if (this.version != getVersion()) {
+                throw new IllegalStateException("The storage has changed since the iterator was created");
+            }
             return treePath != null;
         }
 
@@ -324,7 +334,6 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
                 throw new NoSuchElementException("End of entity iteration reached");
             }
             try {
-                // TODO: Check if any writes have happened since iterator was created
                 T entity = treePath.getNode().getEntity();
                 if (ascending && treePath.getNode().getRightEntityId() >= 0) {
                     treePath = new TreePath<>(1, treePath.getNode(), treePath.getParent());
