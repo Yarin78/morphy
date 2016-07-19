@@ -4,7 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 
 @AllArgsConstructor
-public class EntityNodeImpl<T extends Entity & Comparable<T>> implements EntityNode<T> {
+class EntityNodeImpl<T extends Entity & Comparable<T>> implements EntityNode<T> {
     @Getter
     private int entityId;
     private T entity;

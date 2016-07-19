@@ -22,24 +22,23 @@ class PersistentEntityNodeStorage<T extends Entity & Comparable<T>> extends Enti
 
     private final EntitySerializer<T> serializer;
     private final String storageName;
+    private final int serializedEntitySize;
+    private final int headerSize;
 
     private FileChannel channel;
-    private int headerSize;
-    private int serializedEntitySize;
 
     PersistentEntityNodeStorage(File file, EntitySerializer<T> serializer)
             throws IOException {
-        storageName = file.getName();
+        super(loadMetadata(file));
 
+        this.serializedEntitySize = getMetadata().getSerializedEntitySize();
+        this.headerSize = getMetadata().getHeaderSize();
+        this.storageName = file.getName();
         this.serializer = serializer;
         channel = FileChannel.open(file.toPath(), READ, WRITE);
-        EntityNodeStorageMetadata metadata = getMetadata();
-        headerSize = metadata.getHeaderSize();
-        serializedEntitySize = metadata.getSerializedEntitySize();
 
         log.debug(String.format("Opening %s; capacity = %d, root = %d, numEntities = %d, firstDeletedId = %d",
-                storageName, metadata.getCapacity(), metadata.getRootEntityId(),
-                metadata.getNumEntities(), metadata.getFirstDeletedEntityId()));
+                storageName, getCapacity(), getRootEntityId(), getNumEntities(), getFirstDeletedEntityId()));
     }
 
     static <T extends Entity> void createEmptyStorage(File file, EntitySerializer<T> serializer, int headerSize)
@@ -54,35 +53,36 @@ class PersistentEntityNodeStorage<T extends Entity & Comparable<T>> extends Enti
         channel.close();
     }
 
-    EntityNodeStorageMetadata getMetadata() throws IOException {
-        channel.position(0);
-        // Only 28 bytes of the header is used by this library.
-        // The last 4 bytes of those is an integer specifying number of additional bytes
-        // until the first entity. It used by be 0 in older versions of ChessBase, but is now 4.
-        // What these 4 bytes are used for is unknown.
-        ByteBuffer header = ByteBuffer.allocate(28);
-        channel.read(header);
-        header.position(0);
+    private static EntityNodeStorageMetadata loadMetadata(File file) throws IOException {
+        try (FileChannel channel = FileChannel.open(file.toPath(), READ)) {
+            channel.position(0);
+            // Only 28 bytes of the header is used by this library.
+            // The last 4 bytes of those is an integer specifying number of additional bytes
+            // until the first entity. It used by be 0 in older versions of ChessBase, but is now 4.
+            // What these 4 bytes are used for is unknown.
+            ByteBuffer header = ByteBuffer.allocate(28);
+            channel.read(header);
+            header.position(0);
 
-        int capacity = ByteBufferUtil.getIntL(header);
-        int rootEntityId= ByteBufferUtil.getIntL(header);
-        int headerInt = ByteBufferUtil.getIntL(header);
-        if (headerInt != MAGIC_CONSTANT) {
-            // Not sure what this is!?
-            throw new IOException("Invalid header int: " + headerInt);
+            int capacity = ByteBufferUtil.getIntL(header);
+            int rootEntityId = ByteBufferUtil.getIntL(header);
+            int headerInt = ByteBufferUtil.getIntL(header);
+            if (headerInt != MAGIC_CONSTANT) {
+                // Not sure what this is!?
+                throw new IOException("Invalid header int: " + headerInt);
+            }
+            int serializedEntitySize = ByteBufferUtil.getIntL(header);
+            int firstDeletedId = ByteBufferUtil.getIntL(header);
+            int numEntities = ByteBufferUtil.getIntL(header);
+            int headerSize = 28 + ByteBufferUtil.getIntL(header);
+
+            EntityNodeStorageMetadata metadata = new EntityNodeStorageMetadata(serializedEntitySize, headerSize, 0);
+            metadata.setCapacity(capacity);
+            metadata.setRootEntityId(rootEntityId);
+            metadata.setFirstDeletedEntityId(firstDeletedId);
+            metadata.setNumEntities(numEntities);
+            return metadata;
         }
-        int serializedEntitySize = ByteBufferUtil.getIntL(header);
-        int firstDeletedId = ByteBufferUtil.getIntL(header);
-        int numEntities = ByteBufferUtil.getIntL(header);
-        int headerSize = 28 + ByteBufferUtil.getIntL(header);
-
-        EntityNodeStorageMetadata metadata = new EntityNodeStorageMetadata(serializedEntitySize, headerSize, 0);
-        metadata.setCapacity(capacity);
-        metadata.setRootEntityId(rootEntityId);
-        metadata.setFirstDeletedEntityId(firstDeletedId);
-        metadata.setNumEntities(numEntities);
-
-        return metadata;
     }
 
     private static ByteBuffer serializeMetadata(EntityNodeStorageMetadata metadata) {
@@ -99,7 +99,11 @@ class PersistentEntityNodeStorage<T extends Entity & Comparable<T>> extends Enti
         return buffer;
     }
 
-    public void putMetadata(EntityNodeStorageMetadata metadata) throws IOException {
+    @Override
+    synchronized void setMetadata(EntityNodeStorageMetadata metadata) throws IOException {
+        // Update the in-memory metadata cache as well
+        super.setMetadata(metadata);
+
         ByteBuffer buffer = serializeMetadata(metadata);
 
         channel.position(0);
@@ -114,7 +118,7 @@ class PersistentEntityNodeStorage<T extends Entity & Comparable<T>> extends Enti
      * Positions the channel at the start of the specified entityId.
      * Valid positions are between 0 and capacity (to allow for adding new entities)
      * @param entityId the entityId to position to channel against
-     * @throws IOException
+     * @throws IOException if an IO error occurs
      */
     private void positionChannel(int entityId) throws IOException {
         channel.position(headerSize + entityId * (9 + serializedEntitySize));
@@ -122,7 +126,7 @@ class PersistentEntityNodeStorage<T extends Entity & Comparable<T>> extends Enti
 
 
     @Override
-    protected EntityNode<T> getEntityNode(int entityId) throws IOException {
+    protected synchronized EntityNode<T> getEntityNode(int entityId) throws IOException {
         positionChannel(entityId);
         ByteBuffer buf = ByteBuffer.allocate(9 + serializedEntitySize);
         channel.read(buf);
@@ -140,7 +144,7 @@ class PersistentEntityNodeStorage<T extends Entity & Comparable<T>> extends Enti
     /**
      * Gets all entity node in the specified range.
      */
-    protected List<EntityNode<T>> getEntityNodes(int startIdInclusive, int endIdExclusive) throws IOException {
+    protected synchronized List<EntityNode<T>> getEntityNodes(int startIdInclusive, int endIdExclusive) throws IOException {
         if (startIdInclusive >= endIdExclusive) {
             return new ArrayList<>();
         }
@@ -160,7 +164,7 @@ class PersistentEntityNodeStorage<T extends Entity & Comparable<T>> extends Enti
     }
 
     @Override
-    protected void putEntityNode(@NonNull EntityNode<T> node) throws IOException {
+    synchronized protected void putEntityNode(@NonNull EntityNode<T> node) throws IOException {
         positionChannel(node.getEntityId());
         ByteBuffer src = serializeNode(node);
         src.position(0);
@@ -181,7 +185,7 @@ class PersistentEntityNodeStorage<T extends Entity & Comparable<T>> extends Enti
     }
 
     @Override
-    public void close() throws IOException {
+    public synchronized void close() throws IOException {
         channel.close();
     }
 

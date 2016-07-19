@@ -9,17 +9,18 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * A wrapper of an underlying {@link EntityNodeStorageBase}, storing new changes in memory
+ * A wrapper of an underlying {@link EntityNodeStorageBase}, storing new changes in memory.
  */
-public class TransactionalNodeStorage<T extends Entity & Comparable<T>> extends EntityNodeStorageBase<T> {
+class TransactionalNodeStorage<T extends Entity & Comparable<T>> extends EntityNodeStorageBase<T> {
     private EntityNodeStorageBase<T> storage;
     private Map<Integer, EntityNode<T>> changes = new HashMap<>();
 
-    public TransactionalNodeStorage(@NonNull EntityNodeStorageBase<T> storage) {
+    TransactionalNodeStorage(@NonNull EntityNodeStorageBase<T> storage) {
+        super(storage.getMetadata().clone());
         this.storage = storage;
     }
 
-    public Collection<EntityNode<T>> getChanges() {
+    Collection<EntityNode<T>> getChanges() {
         return changes.values();
     }
 
@@ -44,19 +45,30 @@ public class TransactionalNodeStorage<T extends Entity & Comparable<T>> extends 
     }
 
     @Override
-    public EntityNode<T> createNode(int entityId, T entity) {
+    EntityNode<T> createNode(int entityId, T entity) {
         return storage.createNode(entityId, entity);
     }
 
     @Override
-    public void close() throws IOException {
+    void close() throws IOException {
         // Closing the underlying storage for a transaction is not a valid operation
         throw new UnsupportedOperationException();
     }
 
-    @Override
-    public void putMetadata(EntityNodeStorageMetadata metadata) throws IOException {
-        // Updating metadata is handled directly by the transactional commit
-        throw new UnsupportedOperationException();
+
+    void setRootEntityId(int entityId) {
+        getMetadata().setRootEntityId(entityId);
+    }
+
+    void setNumEntities(int numEntities) {
+        getMetadata().setNumEntities(numEntities);
+    }
+
+    void setFirstDeletedEntityId(int firstDeletedEntityId) {
+        getMetadata().setFirstDeletedEntityId(firstDeletedEntityId);
+    }
+
+    void setCapacity(int capacity) {
+        getMetadata().setCapacity(capacity);
     }
 }

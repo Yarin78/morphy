@@ -3,20 +3,19 @@ package se.yarin.cbhlib.entities;
 import lombok.Data;
 
 @Data
-public class EntityNodeStorageMetadata {
-    // The serialized size could be different if opening an existing database,
-    // so it must be possible to change it after construction time
+class EntityNodeStorageMetadata {
     private final int serializedEntitySize;
     private int rootEntityId = -1;
     private int numEntities = 0;
     private int firstDeletedEntityId = -1;
     private int capacity = 0;
     private final int headerSize;
+
     // Number of committed transactions since storage was opened
     // This field is not persisted
     private final int version;
 
-    public EntityNodeStorageMetadata(int serializedEntitySize, int headerSize, int version) {
+    EntityNodeStorageMetadata(int serializedEntitySize, int headerSize, int version) {
         this.serializedEntitySize = serializedEntitySize;
         this.headerSize = headerSize;
         this.version = version;

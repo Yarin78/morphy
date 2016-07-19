@@ -5,7 +5,13 @@ import lombok.NonNull;
 import java.io.IOException;
 import java.util.List;
 
-public abstract class EntityNodeStorageBase<T extends Entity & Comparable<T>> {
+abstract class EntityNodeStorageBase<T extends Entity & Comparable<T>> {
+
+    private EntityNodeStorageMetadata metadata;
+
+    EntityNodeStorageBase(@NonNull EntityNodeStorageMetadata metadata) {
+        this.metadata = metadata;
+    }
 
     /**
      * Gets the entity node for the specified entity id.
@@ -32,14 +38,40 @@ public abstract class EntityNodeStorageBase<T extends Entity & Comparable<T>> {
      */
     protected abstract void putEntityNode(@NonNull EntityNode<T> node) throws IOException;
 
-    public abstract EntityNode<T> createNode(int entityId, T entity);
+    abstract EntityNode<T> createNode(int entityId, T entity);
 
     /**
      * Closes the storage
      */
-    public abstract void close() throws IOException;
+    abstract void close() throws IOException;
 
-    public abstract void putMetadata(EntityNodeStorageMetadata metadata) throws IOException;
+    int getRootEntityId() {
+        return this.metadata.getRootEntityId();
+    }
+
+    int getNumEntities() {
+        return this.metadata.getNumEntities();
+    }
+
+    int getFirstDeletedEntityId() {
+        return this.metadata.getFirstDeletedEntityId();
+    }
+
+    int getCapacity() {
+        return this.metadata.getCapacity();
+    }
+
+    int getVersion() {
+        return this.metadata.getVersion();
+    }
+
+    EntityNodeStorageMetadata getMetadata() {
+        return this.metadata;
+    }
+
+    void setMetadata(EntityNodeStorageMetadata metadata) throws IOException {
+        this.metadata = metadata;
+    }
 
     /**
      * Searches the tree for a specific entity. Returns a path from the root

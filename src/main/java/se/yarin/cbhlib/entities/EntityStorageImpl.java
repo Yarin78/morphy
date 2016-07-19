@@ -19,17 +19,14 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
     private static final int DEFAULT_HEADER_SIZE = 32;
 
     private final EntityNodeStorageBase<T> nodeStorage;
-    private EntityNodeStorageMetadata metadata;
 
     private EntityStorageImpl(@NonNull File file, @NonNull EntitySerializer<T> serializer)
             throws IOException {
         nodeStorage = new PersistentEntityNodeStorage<>(file, serializer);
-        metadata = ((PersistentEntityNodeStorage) nodeStorage).getMetadata();
     }
 
     private EntityStorageImpl() {
         nodeStorage = new InMemoryEntityNodeStorage<>();
-        metadata = new EntityNodeStorageMetadata(0, 0, 0);
     }
 
     public static <T extends Entity & Comparable<T>> EntityStorage<T> open(
@@ -52,17 +49,14 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
             File file, @NonNull EntitySerializer<T> serializer) throws IOException {
         EntityStorageImpl<T> source = new EntityStorageImpl<>(file, serializer);
         EntityStorageImpl<T> target = new EntityStorageImpl<>();
-        int batchSize = 1000, capacity = source.metadata.getCapacity();
+        int batchSize = 1000, capacity = source.getCapacity();
         for (int i = 0; i < capacity; i+=batchSize) {
             List<EntityNode<T>> nodes = source.nodeStorage.getEntityNodes(i, Math.min(i + batchSize, capacity));
             for (EntityNode<T> node : nodes) {
                 target.nodeStorage.putEntityNode(node);
             }
         }
-        target.metadata.setCapacity(capacity);
-        target.metadata.setRootEntityId(source.metadata.getRootEntityId());
-        target.metadata.setFirstDeletedEntityId(source.metadata.getFirstDeletedEntityId());
-        target.metadata.setNumEntities(source.metadata.getNumEntities());
+        target.nodeStorage.setMetadata(source.nodeStorage.getMetadata());
         return target;
     }
 
@@ -72,17 +66,17 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
 
     @Override
     public int getNumEntities() {
-        return metadata.getNumEntities();
+        return nodeStorage.getNumEntities();
     }
 
     @Override
     public int getCapacity() {
-        return metadata.getCapacity();
+        return nodeStorage.getCapacity();
     }
 
     @Override
     public int getVersion() {
-        return metadata.getVersion();
+        return nodeStorage.getVersion();
     }
 
     @Override
@@ -92,7 +86,7 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
 
     @Override
     public T getEntity(int entityId) throws IOException {
-        if (entityId < 0 || entityId >= metadata.getCapacity()) {
+        if (entityId < 0 || entityId >= nodeStorage.getCapacity()) {
             return null;
         }
         return nodeStorage.getEntityNode(entityId).getEntity();
@@ -113,12 +107,7 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
 
     @Override
     public EntityStorageTransaction<T> beginTransaction() {
-        return new EntityStorageTransaction<>(this, nodeStorage, metadata);
-    }
-
-    // TODO: This is ugly. Would be nicer and more consistent to move metadata into nodestorage.
-    void updateMetadata(@NonNull EntityNodeStorageMetadata newMetadata) {
-        this.metadata = newMetadata;
+        return new EntityStorageTransaction<>(this, nodeStorage);
     }
 
     @Override
@@ -164,7 +153,7 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
      * Validates that the entity headers correctly reflects the order of the entities
      */
     public void validateStructure() throws EntityStorageException, IOException {
-        if (metadata.getRootEntityId() == -1) {
+        if (nodeStorage.getRootEntityId() == -1) {
             if (getNumEntities() == 0) {
                 return;
             }
@@ -172,7 +161,7 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
                     "Header says there are %d entities in the storage but the root points to no entity.", getNumEntities()));
         }
 
-        ValidationResult result = validate(metadata.getRootEntityId(), null, null);
+        ValidationResult result = validate(nodeStorage.getRootEntityId(), null, null);
         if (result.getCount() != getNumEntities()) {
             throw new EntityStorageException(String.format(
                     "Found %d entities when traversing the base but the header says there should be %d entities.",
@@ -249,7 +238,7 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
      * @throws IOException if an IO error occurred when searching in the tree
      */
     private TreePath<T> treeSearch(@NonNull T entity) throws IOException {
-        return nodeStorage.treeSearch(metadata.getRootEntityId(), null, entity);
+        return nodeStorage.treeSearch(nodeStorage.getRootEntityId(), null, entity);
     }
 
 
@@ -267,7 +256,7 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
         private int batchPos, nextBatchStart = 0, batchSize = 1000;
 
         private void getNextBatch() {
-            int endId = Math.min(metadata.getCapacity(), nextBatchStart + batchSize);
+            int endId = Math.min(nodeStorage.getCapacity(), nextBatchStart + batchSize);
             if (nextBatchStart >= endId) {
                 batch = null;
             } else {
@@ -359,7 +348,7 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
     private Iterator<T> getOrderedIterator(T startEntity, boolean ascending) throws IOException {
         TreePath<T> treePath = null;
         if (startEntity == null) {
-            int currentId = metadata.getRootEntityId();
+            int currentId = nodeStorage.getRootEntityId();
             while (currentId >= 0) {
                 EntityNode<T> node = nodeStorage.getEntityNode(currentId);
                 treePath = new TreePath<>(ascending ? -1 : 1, node, treePath);

@@ -6,40 +6,36 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 
-public class EntityStorageTransaction<T extends Entity & Comparable<T>> {
+class EntityStorageTransaction<T extends Entity & Comparable<T>> {
     private static final Logger log = LoggerFactory.getLogger(EntityStorageTransaction.class);
 
     private static final int ENTITY_DELETED = -999;
 
     private final TransactionalNodeStorage<T> nodeStorage;
-    private final EntityNodeStorageMetadata metadata;
     private final EntityNodeStorageBase<T> underlyingNodeStorage;
     private final EntityStorage<T> storage;
     private boolean committed = false;
 
     EntityStorageTransaction(@NonNull EntityStorage<T> storage,
-                             @NonNull EntityNodeStorageBase<T> nodeStorage,
-                             @NonNull EntityNodeStorageMetadata metadata) {
+                             @NonNull EntityNodeStorageBase<T> nodeStorage) {
         this.storage = storage;
         this.underlyingNodeStorage = nodeStorage;
         this.nodeStorage = new TransactionalNodeStorage<>(nodeStorage);
-        this.metadata = metadata.clone();
     }
 
-    public synchronized void commit() throws EntityStorageException, IOException {
+    synchronized void commit() throws EntityStorageException, IOException {
         if (committed) {
             throw new IllegalStateException("The transaction has already been committed");
         }
 
-        if (storage.getVersion() + 1 != metadata.getVersion()) {
+        if (storage.getVersion() + 1 != nodeStorage.getVersion()) {
             throw new EntityStorageException("Storage has changed since the transaction was begun");
         }
 
         for (EntityNode<T> node : nodeStorage.getChanges()) {
             underlyingNodeStorage.putEntityNode(node);
         }
-        underlyingNodeStorage.putMetadata(metadata);
-        ((EntityStorageImpl) storage).updateMetadata(metadata);
+        underlyingNodeStorage.setMetadata(this.nodeStorage.getMetadata());
 
         // TODO: flush underlyingNodeStorage?
         if (log.isDebugEnabled()) {
@@ -61,11 +57,11 @@ public class EntityStorageTransaction<T extends Entity & Comparable<T>> {
      * @throws IOException if an IO error occurred when searching in the tree
      */
     private TreePath<T> treeSearch(@NonNull T entity) throws IOException {
-        return nodeStorage.treeSearch(metadata.getRootEntityId(), null, entity);
+        return nodeStorage.treeSearch(nodeStorage.getRootEntityId(), null, entity);
     }
 
     public T getEntity(int entityId) throws IOException {
-        if (entityId < 0 || entityId >= metadata.getCapacity()) {
+        if (entityId < 0 || entityId >= nodeStorage.getCapacity()) {
             return null;
         }
         return nodeStorage.getEntityNode(entityId).getEntity();
@@ -83,13 +79,14 @@ public class EntityStorageTransaction<T extends Entity & Comparable<T>> {
         return null;
     }
 
-    public int getNumEntities() {
-        return metadata.getNumEntities();
+    int getNumEntities() {
+        return nodeStorage.getNumEntities();
     }
 
-    public int getCapacity() {
-        return metadata.getCapacity();
+    int getCapacity() {
+        return nodeStorage.getCapacity();
     }
+
 
     /**
      * Adds a new entity to the storage. The id-field in the entity is ignored.
@@ -97,7 +94,7 @@ public class EntityStorageTransaction<T extends Entity & Comparable<T>> {
      * @return the id of the new entity
      * @throws EntityStorageException if another entity with the same key already exists
      */
-    public int addEntity(@NonNull T entity) throws EntityStorageException, IOException {
+    int addEntity(@NonNull T entity) throws EntityStorageException, IOException {
         if (committed) {
             throw new IllegalStateException("The transaction has already been committed");
         }
@@ -108,19 +105,19 @@ public class EntityStorageTransaction<T extends Entity & Comparable<T>> {
             throw new EntityStorageException("An entity with the same key already exists");
         }
 
-        if (metadata.getFirstDeletedEntityId() >= 0) {
+        if (nodeStorage.getFirstDeletedEntityId() >= 0) {
             // Replace a deleted entity
-            entityId = metadata.getFirstDeletedEntityId();
-            metadata.setFirstDeletedEntityId(nodeStorage.getEntityNode(entityId).getRightEntityId());
+            entityId = nodeStorage.getFirstDeletedEntityId();
+            nodeStorage.setFirstDeletedEntityId(nodeStorage.getEntityNode(entityId).getRightEntityId());
         } else {
             // Appended new entity to the end
-            entityId = metadata.getCapacity();
-            metadata.setCapacity(entityId + 1);
+            entityId = nodeStorage.getCapacity();
+            nodeStorage.setCapacity(entityId + 1);
         }
-        metadata.setNumEntities(metadata.getNumEntities() + 1);
+        nodeStorage.setNumEntities(nodeStorage.getNumEntities() + 1);
 
         if (result == null) {
-            metadata.setRootEntityId(entityId);
+            nodeStorage.setRootEntityId(entityId);
         } else {
             EntityNode<T> node = result.getNode();
             if (result.getCompare() < 0) {
@@ -188,7 +185,7 @@ public class EntityStorageTransaction<T extends Entity & Comparable<T>> {
                 }
                 break;
             } else {
-                metadata.setRootEntityId(n);
+                nodeStorage.setRootEntityId(n);
                 break;
             }
         }
@@ -202,14 +199,14 @@ public class EntityStorageTransaction<T extends Entity & Comparable<T>> {
      * @param entity the new entity. {@link Entity#getId()} will be ignored.
      * @throws EntityStorageException if another entity with the same key already exists
      */
-    public void putEntityById(int entityId, @NonNull T entity) throws EntityStorageException, IOException {
+    void putEntityById(int entityId, @NonNull T entity) throws EntityStorageException, IOException {
         if (committed) {
             throw new IllegalStateException("The transaction has already been committed");
         }
 
-        if (entityId < 0 || entityId >= metadata.getCapacity()) {
+        if (entityId < 0 || entityId >= nodeStorage.getCapacity()) {
             throw new IllegalArgumentException(String.format("Can't put an entity with id %d when capacity is %d",
-                    entityId, metadata.getCapacity()));
+                    entityId, nodeStorage.getCapacity()));
         }
         EntityNode<T> oldNode = nodeStorage.getEntityNode(entityId);
         if (oldNode.isDeleted()) {
@@ -234,7 +231,7 @@ public class EntityStorageTransaction<T extends Entity & Comparable<T>> {
      * @param entity the new entity. {@link Entity#getId()} will be ignored.
      * @throws EntityStorageException if no existing entity with the key exists
      */
-    public void putEntityByKey(@NonNull T entity) throws EntityStorageException, IOException {
+    void putEntityByKey(@NonNull T entity) throws EntityStorageException, IOException {
         if (committed) {
             throw new IllegalStateException("The transaction has already been committed");
         }
@@ -255,7 +252,7 @@ public class EntityStorageTransaction<T extends Entity & Comparable<T>> {
      * @param entityId the id of the entity to delete
      * @return true if an entity was deleted; false if there was no entity with that id
      */
-    public boolean deleteEntity(int entityId) throws IOException, EntityStorageException {
+    boolean deleteEntity(int entityId) throws IOException, EntityStorageException {
         if (committed) {
             throw new IllegalStateException("The transaction has already been committed");
         }
@@ -279,7 +276,7 @@ public class EntityStorageTransaction<T extends Entity & Comparable<T>> {
      * @param entity the entity key to delete
      * @return true if an entity was deleted; false if there was no entity with that key
      */
-    public boolean deleteEntity(T entity) throws IOException, EntityStorageException {
+    boolean deleteEntity(T entity) throws IOException, EntityStorageException {
         if (committed) {
             throw new IllegalStateException("The transaction has already been committed");
         }
@@ -343,11 +340,11 @@ public class EntityStorageTransaction<T extends Entity & Comparable<T>> {
 
         // Nothing should now point to the node we want to delete
         EntityNode<T> deletedNode = nodeStorage.createNode(entityId, null)
-                .update(ENTITY_DELETED, metadata.getFirstDeletedEntityId(), 0);
+                .update(ENTITY_DELETED, nodeStorage.getFirstDeletedEntityId(), 0);
 
         nodeStorage.putEntityNode(deletedNode);
-        metadata.setFirstDeletedEntityId(entityId);
-        metadata.setNumEntities(metadata.getNumEntities() - 1);
+        nodeStorage.setFirstDeletedEntityId(entityId);
+        nodeStorage.setNumEntities(nodeStorage.getNumEntities() - 1);
 
 
         // Retrace and rebalance tree
@@ -393,7 +390,7 @@ public class EntityStorageTransaction<T extends Entity & Comparable<T>> {
             }
 
             if (g == null) {
-                metadata.setRootEntityId(n);
+                nodeStorage.setRootEntityId(n);
             } else {
                 if (nodePath.getParent().getCompare() < 0) {
                     g = g.update(n, g.getRightEntityId(), g.getHeightDif());
@@ -411,7 +408,7 @@ public class EntityStorageTransaction<T extends Entity & Comparable<T>> {
     private void replaceChild(TreePath<T> path, int newChildId) throws IOException {
         if (path == null) {
             // The root node has no parent
-            metadata.setRootEntityId(newChildId);
+            nodeStorage.setRootEntityId(newChildId);
         } else {
             EntityNode<T> node = nodeStorage.getEntityNode(path.getNode().getEntityId());
             if (path.getCompare() < 0) {
