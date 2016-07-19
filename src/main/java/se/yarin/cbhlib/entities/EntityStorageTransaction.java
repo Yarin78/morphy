@@ -37,7 +37,6 @@ class EntityStorageTransaction<T extends Entity & Comparable<T>> {
         }
         underlyingNodeStorage.setMetadata(this.nodeStorage.getMetadata());
 
-        // TODO: flush underlyingNodeStorage?
         if (log.isDebugEnabled()) {
             log.debug(String.format("Committed transaction containing %d node changes",
                     nodeStorage.getChanges().size()));

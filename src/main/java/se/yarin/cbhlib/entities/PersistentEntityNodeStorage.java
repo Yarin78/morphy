@@ -108,6 +108,7 @@ class PersistentEntityNodeStorage<T extends Entity & Comparable<T>> extends Enti
 
         channel.position(0);
         channel.write(buffer);
+        channel.force(false);
 
         log.debug(String.format("Updated %s; capacity = %d, root = %d, numEntities = %d, firstDeletedId = %d",
                 storageName, metadata.getCapacity(), metadata.getRootEntityId(), metadata.getNumEntities(),
