@@ -23,6 +23,9 @@ public class SymbolAnnotation extends Annotation {
         MovePrefix prefix = MovePrefix.NOTHING;
         LineEvaluation eval = LineEvaluation.NO_EVALUATION;
         for (Symbol symbol : symbols) {
+            if (symbol == null) {
+                continue;
+            }
             if (symbol instanceof MoveComment) {
                 comment = (MoveComment) symbol;
             }

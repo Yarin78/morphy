@@ -31,7 +31,7 @@ All strings are ISO-8859-1 encoded. Characters that doesn't exist in that encodi
 
 CBH file
 ========
-46 byte header, 46 byte records
+44 byte header, 46 byte records
 
 Header
 ------
@@ -69,6 +69,7 @@ Ofs 27, Len 1 - 3 = line
                 5 = =:=
                 4 = -:+
                 7 = 0-0
+
 Ofs 28, Len 1 - Line evaluation (only set if byte above is 3)
                 0 = unset
                 18 = +- (white is winning)
@@ -127,7 +128,7 @@ Ofs 42, Len 1 - bit 0: P (game starts from a position different from the initial
                 bit 3: s (contains symbols)
                	bit 4: The game is annotated with colored squares
                 bit 5: The game is annotated with arrows
-                bit 7: The game contains time notifications (??)
+                bit 7: The game contains time notifications
 
 Ofs 43 ?
 

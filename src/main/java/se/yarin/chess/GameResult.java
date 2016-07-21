@@ -1,18 +1,26 @@
 package se.yarin.chess;
 
 public enum GameResult {
-    WHITE_WINS,
-    DRAW,
-    BLACK_WINS,
-    NOT_FINISHED;
+    BLACK_WINS, // 0-1
+    DRAW,  // 1/2-1/2
+    WHITE_WINS,  // 1-0
+    NOT_FINISHED, // Line
+    WHITE_WINS_ON_FORFEIT, // +:-
+    DRAW_ON_FORFEIT, // =:=
+    BLACK_WINS_ON_FORFEIT, // -:+
+    BOTH_LOST; // 0-0
 
     @Override
     public String toString() {
         switch (this) {
-            case WHITE_WINS:   return "1-0";
-            case DRAW:         return "1/2-1/2";
             case BLACK_WINS:   return "0-1";
+            case DRAW:         return "1/2-1/2";
+            case WHITE_WINS:   return "1-0";
             case NOT_FINISHED: return "*";
+            case WHITE_WINS_ON_FORFEIT:   return "+:-";
+            case DRAW_ON_FORFEIT:   return "=:=";
+            case BLACK_WINS_ON_FORFEIT:   return "-:+";
+            case BOTH_LOST:   return "0-0";
         }
         return "";
     }

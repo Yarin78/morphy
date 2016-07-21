@@ -5,6 +5,7 @@ import se.yarin.chess.*;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -22,7 +23,7 @@ public final class CBUtil {
 
     static {
         // TODO: Put in array instead?
-        byteToSymbol.put((byte) 0x00, LineEvaluation.NO_EVALUATION);
+//        byteToSymbol.put((byte) 0x00, LineEvaluation.NO_EVALUATION);
         byteToSymbol.put((byte) 0x0B, LineEvaluation.EQUAL);
         byteToSymbol.put((byte) 0x0D, LineEvaluation.UNCLEAR);
         byteToSymbol.put((byte) 0x0E, LineEvaluation.WHITE_SLIGHT_ADVANTAGE);
@@ -39,7 +40,7 @@ public final class CBUtil {
         byteToSymbol.put((byte) 0x8A, LineEvaluation.ZEITNOT);
         byteToSymbol.put((byte) 0x92, LineEvaluation.THEORETICAL_NOVELTY);
 
-        byteToSymbol.put((byte) 0x00, MovePrefix.NOTHING);
+//        byteToSymbol.put((byte) 0x00, MovePrefix.NOTHING);
         byteToSymbol.put((byte) 0x8C, MovePrefix.WITH_THE_IDEA);
         byteToSymbol.put((byte) 0x8D, MovePrefix.DIRECTED_AGAINST);
         byteToSymbol.put((byte) 0x8E, MovePrefix.BETTER_IS);
@@ -47,7 +48,7 @@ public final class CBUtil {
         byteToSymbol.put((byte) 0x90, MovePrefix.EQUIVALENT_IS);
         byteToSymbol.put((byte) 0x91, MovePrefix.EDITORIAL_ANNOTATION);
 
-        byteToSymbol.put((byte) 0x00, MoveComment.NOTHING);
+//        byteToSymbol.put((byte) 0x00, MoveComment.NOTHING);
         byteToSymbol.put((byte) 0x01, MoveComment.GOOD_MOVE);
         byteToSymbol.put((byte) 0x02, MoveComment.BAD_MOVE);
         byteToSymbol.put((byte) 0x03, MoveComment.EXCELLENT_MOVE);
@@ -124,10 +125,39 @@ public final class CBUtil {
     /**
      * Converts a byte to a {@link Symbol} using the CBH encoding
      * @param data the byte to convert
-     * @return a symbol, or null if no symbol matches the byte
+     * @return a symbol, or null if data is 0 or no symbol matches the byte
      */
     public static Symbol decodeSymbol(byte data) {
+        // If data is 0, we can't determine what kind of symbol we are decoding,
+        // so we have to return null instead.
+        // Maybe it should be a common enum type for all symbols?
         return byteToSymbol.get(data);
+    }
+
+    public static GameResult decodeGameResult(int data) {
+        return GameResult.values()[data];
+    }
+
+    public static int encodeGameResult(GameResult data) {
+        return data.ordinal();
+    }
+
+    public static EnumSet<Medal> decodeMedals(int data) {
+        EnumSet<Medal> medals = EnumSet.noneOf(Medal.class);
+        for (Medal medal : Medal.values()) {
+            if (((1<<medal.ordinal()) & data) > 0) {
+                medals.add(medal);
+            }
+        }
+        return medals;
+    }
+
+    public static int encodeMedals(EnumSet<Medal> medals) {
+        int value = 0;
+        for (Medal medal : medals) {
+            value += (1 << medal.ordinal());
+        }
+        return value;
     }
 
     // Debug code
