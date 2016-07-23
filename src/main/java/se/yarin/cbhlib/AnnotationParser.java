@@ -94,6 +94,7 @@ public final class AnnotationParser {
                 case 0x16 : return WhiteClockAnnotation.deserialize(buf);
                 case 0x17 : return BlackClockAnnotation.deserialize(buf);
                 case 0x18 : return getCriticalPositionAnnotation(buf);
+                case 0x22 : return MedalAnnotation.deserialize(buf);
                 case 0x24 : return TimeControlAnnotation.deserialize(buf);
                 case 0x25 : return VideoStreamTimeAnnotation.deserialize(buf);
                 case 0x82 : return getCommentaryBeforeMoveAnnotation(buf, annotationSize);
@@ -114,21 +115,17 @@ public final class AnnotationParser {
 
                 /*
 Unknown annotation frequency in megabase 2016:
-INFO  LoadAllGames - UnknownAnnotation type 07 occurs 70026 times
 INFO  LoadAllGames - UnknownAnnotation type 08 occurs 1 times
 INFO  LoadAllGames - UnknownAnnotation type 09 occurs 3079 times
 INFO  LoadAllGames - UnknownAnnotation type 13 occurs 12479 times
 INFO  LoadAllGames - UnknownAnnotation type 14 occurs 4930 times
 INFO  LoadAllGames - UnknownAnnotation type 15 occurs 1951 times
-INFO  LoadAllGames - UnknownAnnotation type 16 occurs 7715 times
-INFO  LoadAllGames - UnknownAnnotation type 17 occurs 7664 times
 INFO  LoadAllGames - UnknownAnnotation type 1A occurs 466 times
 INFO  LoadAllGames - UnknownAnnotation type 1C occurs 3 times
 INFO  LoadAllGames - UnknownAnnotation type 20 occurs 22 times
 INFO  LoadAllGames - UnknownAnnotation type 21 occurs 258 times
 INFO  LoadAllGames - UnknownAnnotation type 22 occurs 15679 times
 INFO  LoadAllGames - UnknownAnnotation type 23 occurs 1891 times
-INFO  LoadAllGames - UnknownAnnotation type 24 occurs 7363 times
                  */
                 default :
 //                    log.warn(String.format("Unknown annotation type %d containing %d bytes of data",                            annotationType, noBytes - 6));
