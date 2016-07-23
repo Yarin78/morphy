@@ -5,20 +5,17 @@ import lombok.NonNull;
 import java.util.*;
 
 /**
- * Represents a set of @{@link Annotation} on a @{@link se.yarin.chess.GameMovesModel.Node}.
+ * Represents a set of {@link Annotation} on a {@link se.yarin.chess.GameMovesModel.Node}.
  * A node may have multiple annotations, but only one annotation per class.
  * If an annotation is added that has the same type as an existing annotation,
  * {@link Annotation#combine(Annotation)} is used to determine the resulting annotation.
  */
 public class Annotations {
 
-    private TreeSet<Annotation> annotations = new TreeSet<>(new Comparator<Annotation>() {
-        @Override
-        public int compare(Annotation o1, Annotation o2) {
-            int prioDif = o2.priority() - o1.priority();
-            if (prioDif != 0) return prioDif;
-            return o1.getClass().toString().compareTo(o2.getClass().toString());
-        }
+    private TreeSet<Annotation> annotations = new TreeSet<>((o1, o2) -> {
+        int prioDif = o2.priority() - o1.priority();
+        if (prioDif != 0) return prioDif;
+        return o1.getClass().toString().compareTo(o2.getClass().toString());
     });
 
     /**

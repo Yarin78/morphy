@@ -195,14 +195,16 @@ public class GameHeaderBase implements GameHeaderSerializer {
             if ((b1 & 2) > 0) flags.add(GameHeaderFlags.CORRESPONDENCE_HEADER);
             if ((b1 & 8) > 0) flags.add(GameHeaderFlags.FISCHER_RANDOM);
             if ((b1 & ~11) > 0) log.warn("GameHeaderFlags byte 1 is " + b1 + " in game " + gameId);
+
             if ((b2 & 1) > 0) flags.add(GameHeaderFlags.EMBEDDED_AUDIO);
             if ((b2 & 2) > 0) flags.add(GameHeaderFlags.EMBEDDED_PICTURE);
             if ((b2 & 4) > 0) flags.add(GameHeaderFlags.EMBEDDED_VIDEO);
             if ((b2 & 8) > 0) flags.add(GameHeaderFlags.GAME_QUOTATION);
             if ((b2 & 16) > 0) flags.add(GameHeaderFlags.PATH_STRUCTURE);
             if ((b2 & 32) > 0) flags.add(GameHeaderFlags.PIECE_PATH);
-            // bit 6 and 7 of b2 are set in many games in megabase 2016 but no idea what they are used for
-//            if ((b2 & ~63) > 0) log.warn("GameHeaderFlags byte 2 is " + b2 + " in game " + gameId);
+            if ((b2 & 64) > 0) flags.add(GameHeaderFlags.WHITE_CLOCK);
+            if ((b2 & 128) > 0) flags.add(GameHeaderFlags.BLACK_CLOCK);
+
             // bit 0 in b3 is set in one game (#6161281) in megabase 2016
             if ((b3 & 2) > 0) flags.add(GameHeaderFlags.TRAINING);
             if ((b3 & ~2) > 0) log.warn("GameHeaderFlags byte 3 is " + b3 + " in game " + gameId);
@@ -229,27 +231,27 @@ public class GameHeaderBase implements GameHeaderSerializer {
             // This byte may be contain stray bits set which should probably be ignored
             if (flags.contains(GameHeaderFlags.VARIATIONS)) {
                 builder.variationsMagnitude(1 + (extraAnnotations & 3));
-//                extraAnnotations &= ~3;
+                extraAnnotations &= ~3;
             }
             if (flags.contains(GameHeaderFlags.COMMENTARY)) {
                 builder.commentariesMagnitude(((extraAnnotations & 4) > 0) ? 2 : 1);
-//                extraAnnotations &= ~4;
+                extraAnnotations &= ~4;
             }
             if (flags.contains(GameHeaderFlags.SYMBOLS)) {
                 builder.symbolsMagnitude(((extraAnnotations & 8) > 0) ? 2 : 1);
-//                extraAnnotations &= ~8;
+                extraAnnotations &= ~8;
             }
             if (flags.contains(GameHeaderFlags.GRAPHICAL_SQUARES)) {
                 builder.graphicalSquaresMagnitude(((extraAnnotations & 16) > 0) ? 2 : 1);
-//                extraAnnotations &= ~16;
+                extraAnnotations &= ~16;
             }
             if (flags.contains(GameHeaderFlags.GRAPHICAL_ARROWS)) {
                 builder.graphicalArrowsMagnitude(((extraAnnotations & 32) > 0) ? 2 : 1);
-//                extraAnnotations &= ~32;
+                extraAnnotations &= ~32;
             }
             if (flags.contains(GameHeaderFlags.TIME_NOTIFICATIONS)) {
                 builder.timeAnnotationsMagnitude((extraAnnotations & 128) > 0 ? 2 : 1);
-//                extraAnnotations &= ~128;
+                extraAnnotations &= ~128;
             }
             extraAnnotations &= 64;
             if (extraAnnotations != 0) {

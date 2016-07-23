@@ -21,7 +21,7 @@ public class GameHeader {
     private final boolean deleted; // If true, game has been marked as deleted but no physical deletion has been done yet
     private final boolean guidingText; // If true, this is a text document and not a chess game
     private final int movesOffset; // Position in the .cbg file where the actual moves are stored
-    private final int annotationOffset; // Position in the .cba file where the actual annotation start (0 = no yarin.cbhlib.annotations)
+    private final int annotationOffset; // Position in the .cba file where the actual annotation start (0 = no annotations)
     private final int whitePlayerId;
     private final int blackPlayerId;
     private final int tournamentId;

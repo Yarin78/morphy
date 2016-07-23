@@ -64,6 +64,7 @@ public class PersistentGameHeaderStorage extends GameHeaderStorageBase {
             metadata.setUnknownByte1(ByteBufferUtil.getUnsignedByte(header));
             metadata.setStorageHeaderSize(ByteBufferUtil.getUnsignedShortB(header));
             if (metadata.getStorageHeaderSize() != 0x2C) {
+                // This value can be 0x24 on some old databases!?
                 log.warn("Storage header size (?) = " + metadata.getStorageHeaderSize() + " in " + storageName);
             }
             metadata.setGameHeaderSize(ByteBufferUtil.getUnsignedShortB(header));
@@ -110,6 +111,7 @@ public class PersistentGameHeaderStorage extends GameHeaderStorageBase {
 
             metadata.setNextGameId2(ByteBufferUtil.getIntB(header));
             if (metadata.getNextGameId() != metadata.getNextGameId2()) {
+                // This value can be 0 sometimes on old databases?!
                 log.warn(String.format("Second nextGameId didn't match the first one in %s (%d != %d)",
                         storageName, metadata.getNextGameId(), metadata.getNextGameId2()));
             }

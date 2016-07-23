@@ -120,6 +120,8 @@ Ofs 40          bit 0: 1 = Contains embedded audio
                 bit 3: 1 = Contains game quotation
                 bit 4: 1 = Contains path structure
                 bit 5: 1 = Contains piece path
+                bit 6: 1 = Contains white clock
+                bit 7: 1 = Contains black clock
 Ofs 41:         bit 1: 1 = Contains training annotation
 
 Ofs 42, Len 1 - bit 0: P (game starts from a position different from the initial one)
@@ -174,9 +176,11 @@ Ofs  Type  Len   Description
 
  [At game start]
 
- +0  int     4   bit 0-29: Game size, in number of bytes (including this, excluding trash bytes)
-                 bit 30: If set, the game doesn't start with the initial position.
-                 bit 31: If set, the data is not encoded (iff guiding text?)
+ +0  byte    1   bit 7: If set, the data is not encoded (iff guiding text?)
+                 bit 6: If set, the game doesn't start with the initial position.
+                 bit 0-3: 0xA = fischer random?? can also be 0x4 and 0x5
+                 This whole byte is set to 0x7F if the position is an illegal position!?
+ +0  int     3   Game size, in number of bytes (including this, excluding trash bytes)
  +4  byte   (28) If game does not start with initial position, here that position follows.
   ?  byte   ?    Game data (see below), ends with 0C (=pop position)
 
@@ -599,17 +603,31 @@ Ofs 3, Len 1 - Type of annotation:
                  0x03 = symbols
                  0x04 = graphical squares
                  0x05 = graphical arrows
+                 0x07 = time spent on the move. 4 bytes:
+                         1 byte - hours spent (?)
+                         1 byte - minutes spent
+                         1 byte - seconds spent
+                         1 byte - ?? (1E on first annotation per player, 0 for rest!?)
                  0x09 = training annotation (TODO)
                  0x10 = sound
                  0x11 = picture
                  0x13 = game quotation
                  0x14 = pawn structure (ofs 6 = 3?! TODO)
                  0x15 = piece path (ofs 6-7 = 03 2b?  03 0d? TODO)
+                 0x16 = whiteclock. 4 bytes, number of hundreths of seconds. [WhiteClock] PGN tag
+                 0x17 = blackclock. 4 bytes, number of hundreths of seconds. [BlackClock] PGN tag
                  0x18 = critical position
                  0x19 = correspondence move (header must exist?)
                  0x20 = video
                  0x22 = medal
                  0x23 = variation color
+                 0x24 = Time control in text
+                        33 bytes data, 11 bytes per time serie. For each serie,
+                        4 bytes initial time (in hundredths of seconds)
+                        4 bytes increment time (in hundredths of seconds)
+                        2 bytes number of moves (1000 = rest of the game)
+                        1 byte type of serie (??)  0, 1 and 3 possible values?  3 only on last serie, 1 on intermediatery serie, 0 = !?
+
                  0x61 = correspondence header (always move -1?)
                  0x82 = text before move
 
@@ -835,9 +853,14 @@ Record
 ------
 Ofs 0, Len 4 - Id of white team (-1 = no team)
 Ofs 4, Len 4 - Id of black team (-1 = no team)
+Ofs 8, Len 4 - Some id that seems to be -1 often?
 Ofs 22, Len 1 - ?? Always 0x1a?
 Ofs 39, Len 9: Rating type for White player
 Ofs 55, Len 9: Rating type for Black player
+Ofs 79, Len 4: Version of game
+Ofs 83, Len 5: Game ID
+Ofs 108, Len 8: Time stamp when game was last updated (unknown format, at least microsecond resolution)
+Ofs 116, Len 4: Always 0? Sometimes -1!?
 
 byte 39:
    01 => International Elo Normal
@@ -862,12 +885,9 @@ byte 41:
    90 => National Blitz
    bc => National Rapid
    e8 => National Corresp Chess
-byte 42: Country code for national ratings
+byte 42: Country code for national ratings (
    00 => International
-   5f => Moldova
-   9e => Zimbabwe
-   86 => Swedish
-   87 => Switzerland
+   rest => Same number system as Nations
 byte 43-46: Name of rating
    00 00 00 00  => National
    46 49 44 45  => International ELO ("FIDE")

@@ -14,6 +14,7 @@ import se.yarin.chess.Symbol;
 import se.yarin.chess.annotations.*;
 import se.yarin.chess.annotations.Annotation;
 
+import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
@@ -84,32 +85,56 @@ public final class AnnotationParser {
         int nextPosition = buf.position() + annotationSize;
 
         try {
-            switch (annotationType)
-            {
+            switch (annotationType) {
                 case 0x02 : return getCommentaryAfterMoveAnnotation(buf, annotationSize);
                 case 0x03 : return getSymbolAnnotation(buf, annotationSize);
                 case 0x04 : return getGraphicalSquaresAnnotation(buf, annotationSize);
                 case 0x05 : return getGraphicalArrowsAnnotation(buf, annotationSize);
+                case 0x07 : return TimeSpentAnnotation.deserialize(buf);
+                case 0x16 : return WhiteClockAnnotation.deserialize(buf);
+                case 0x17 : return BlackClockAnnotation.deserialize(buf);
                 case 0x18 : return getCriticalPositionAnnotation(buf);
+                case 0x24 : return TimeControlAnnotation.deserialize(buf);
+                case 0x25 : return VideoStreamTimeAnnotation.deserialize(buf);
                 case 0x82 : return getCommentaryBeforeMoveAnnotation(buf, annotationSize);
-                case 0x25 : return new VideoStreamTimeAnnotation(ByteBufferUtil.getIntB(buf));
 
-//                case 0x14 : return new PawnStructureAnnotation(buf);
-//                case 0x15 : return new PiecePathAnnotation(buf);
+                // TODO: Are these really hex numbers, or decimal?
+//                case 0x09 : return new TrainingAnnotation(buf);
+//                case 0x10 : return new SoundAnnotation(buf);
+//                case 0x11 : return new PictureAnnotation(buf);
 //                case 0x13 : return new GameQuotationAnnotation(buf);
+//                case 0x14 : return new PawnStructureAnnotation(buf); / VERIFIED
+//                case 0x15 : return new PiecePathAnnotation(buf); // VERIFIED
+//                case 0x19 : return new CorrespondenceMoveAnnotation(buf);
+//                case 0x20 : return new VideoAnnotation(buf);
+//                case 0x21 : Reference to a page, chapter or game? 7A 00 00 00 00 00   => 1.22 shown after the move
 //                case 0x22 : return new MedalAnnotation(buf);
 //                case 0x23 : return new VariationColorAnnotation(buf);
-//                case 0x10 : return new SoundAnnotation(buf);
-//                case 0x20 : return new VideoAnnotation(buf);
-//                case 0x11 : return new PictureAnnotation(buf);
-//                case 0x09 : return new TrainingAnnotation(buf);
 //                case 0x61 : return new CorrespondenceHeaderAnnotation(buf);
-//                case 0x19 : return new CorrespondenceMoveAnnotation(buf);
+
+                /*
+Unknown annotation frequency in megabase 2016:
+INFO  LoadAllGames - UnknownAnnotation type 07 occurs 70026 times
+INFO  LoadAllGames - UnknownAnnotation type 08 occurs 1 times
+INFO  LoadAllGames - UnknownAnnotation type 09 occurs 3079 times
+INFO  LoadAllGames - UnknownAnnotation type 13 occurs 12479 times
+INFO  LoadAllGames - UnknownAnnotation type 14 occurs 4930 times
+INFO  LoadAllGames - UnknownAnnotation type 15 occurs 1951 times
+INFO  LoadAllGames - UnknownAnnotation type 16 occurs 7715 times
+INFO  LoadAllGames - UnknownAnnotation type 17 occurs 7664 times
+INFO  LoadAllGames - UnknownAnnotation type 1A occurs 466 times
+INFO  LoadAllGames - UnknownAnnotation type 1C occurs 3 times
+INFO  LoadAllGames - UnknownAnnotation type 20 occurs 22 times
+INFO  LoadAllGames - UnknownAnnotation type 21 occurs 258 times
+INFO  LoadAllGames - UnknownAnnotation type 22 occurs 15679 times
+INFO  LoadAllGames - UnknownAnnotation type 23 occurs 1891 times
+INFO  LoadAllGames - UnknownAnnotation type 24 occurs 7363 times
+                 */
                 default :
 //                    log.warn(String.format("Unknown annotation type %d containing %d bytes of data",                            annotationType, noBytes - 6));
                     return new UnknownAnnotation(annotationType, buf, annotationSize);
             }
-        } catch (ChessBaseAnnotationException | IllegalArgumentException e) {
+        } catch (ChessBaseAnnotationException | IllegalArgumentException | BufferUnderflowException e) {
             buf.position(startPos);
             return new InvalidAnnotation(annotationType, buf, annotationSize);
         } finally {
