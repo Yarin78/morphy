@@ -91,6 +91,9 @@ public final class AnnotationParser {
                 case 0x04 : return getGraphicalSquaresAnnotation(buf, annotationSize);
                 case 0x05 : return getGraphicalArrowsAnnotation(buf, annotationSize);
                 case 0x07 : return TimeSpentAnnotation.deserialize(buf);
+                case 0x13 : return GameQuotationAnnotation.deserialize(buf);
+                case 0x14 : return PawnStructureAnnotation.deserialize(buf);
+                case 0x15 : return PiecePathAnnotation.deserialize(buf);
                 case 0x16 : return WhiteClockAnnotation.deserialize(buf);
                 case 0x17 : return BlackClockAnnotation.deserialize(buf);
                 case 0x18 : return getCriticalPositionAnnotation(buf);
@@ -99,17 +102,12 @@ public final class AnnotationParser {
                 case 0x25 : return VideoStreamTimeAnnotation.deserialize(buf);
                 case 0x82 : return getCommentaryBeforeMoveAnnotation(buf, annotationSize);
 
-                // TODO: Are these really hex numbers, or decimal?
 //                case 0x09 : return new TrainingAnnotation(buf);
 //                case 0x10 : return new SoundAnnotation(buf);
 //                case 0x11 : return new PictureAnnotation(buf);
-//                case 0x13 : return new GameQuotationAnnotation(buf);
-//                case 0x14 : return new PawnStructureAnnotation(buf); / VERIFIED
-//                case 0x15 : return new PiecePathAnnotation(buf); // VERIFIED
 //                case 0x19 : return new CorrespondenceMoveAnnotation(buf);
 //                case 0x20 : return new VideoAnnotation(buf);
 //                case 0x21 : Reference to a page, chapter or game? 7A 00 00 00 00 00   => 1.22 shown after the move
-//                case 0x22 : return new MedalAnnotation(buf);
 //                case 0x23 : return new VariationColorAnnotation(buf);
 //                case 0x61 : return new CorrespondenceHeaderAnnotation(buf);
 
@@ -181,7 +179,7 @@ INFO  LoadAllGames - UnknownAnnotation type 23 occurs 1891 times
     private static CommentaryAfterMoveAnnotation getCommentaryAfterMoveAnnotation(
             ByteBuffer buf, int length) {
         if (buf.get() != 0) {
-            log.warn("First byte in commentary after move annotation was not 0");
+//            log.warn("First byte in commentary after move annotation was not 0");
         }
         getTextLanguage(buf); // This is ignored for now
         String text = ByteBufferUtil.getFixedSizeByteString(buf, length - 2);

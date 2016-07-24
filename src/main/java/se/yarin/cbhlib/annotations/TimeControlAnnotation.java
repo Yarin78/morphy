@@ -13,7 +13,7 @@ public class TimeControlAnnotation extends Annotation {
         private int start;      // In hundredths of seconds
         private int increment;  // In hundredths of seconds
         private int moves;      // 1000 = rest of the game
-        private int type;       // ??
+        private int type;       // ?? 0, 1 or 3. 3 only on last time serie, 1 usually means increment!?
     }
 
     private TimeSerie[] timeSeries;

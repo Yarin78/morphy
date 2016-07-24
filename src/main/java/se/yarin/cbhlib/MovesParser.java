@@ -271,7 +271,7 @@ public final class MovesParser {
         return new Move(board, fromSqi, toSqi, promotedPiece.toStone(playerToMove));
     }
 
-    private static GameMovesModel parseInitialPosition(ByteBuffer buf)
+    public static GameMovesModel parseInitialPosition(ByteBuffer buf)
             throws ChessBaseInvalidDataException {
         int endPosition = buf.position() + 28;
         int b = ByteBufferUtil.getUnsignedByte(buf);
