@@ -91,6 +91,7 @@ public final class AnnotationParser {
                 case 0x16 : return WhiteClockAnnotation.deserialize(buf);
                 case 0x17 : return BlackClockAnnotation.deserialize(buf);
                 case 0x18 : return getCriticalPositionAnnotation(buf);
+                case 0x21 : return ComputerEvaluationAnnotation.deserialize(buf);
                 case 0x22 : return MedalAnnotation.deserialize(buf);
                 case 0x23 : return VariationColorAnnotation.deserialize(buf);
                 case 0x24 : return TimeControlAnnotation.deserialize(buf);
@@ -102,7 +103,6 @@ public final class AnnotationParser {
 //                case 0x11 : return new PictureAnnotation(buf);
 //                case 0x19 : return new CorrespondenceMoveAnnotation(buf);
 //                case 0x20 : return new VideoAnnotation(buf);
-//                case 0x21 : Reference to a page, chapter or game? 7A 00 00 00 00 00   => 1.22 shown after the move
 //                case 0x61 : return new CorrespondenceHeaderAnnotation(buf);
 
                 /*
@@ -112,7 +112,6 @@ INFO  LoadAllGames - UnknownAnnotation type 09 occurs 3079 times
 INFO  LoadAllGames - UnknownAnnotation type 1A occurs 466 times
 INFO  LoadAllGames - UnknownAnnotation type 1C occurs 3 times
 INFO  LoadAllGames - UnknownAnnotation type 20 occurs 22 times
-INFO  LoadAllGames - UnknownAnnotation type 21 occurs 258 times
                  */
                 default :
 //                    log.warn(String.format("Unknown annotation type %d containing %d bytes of data",                            annotationType, noBytes - 6));
