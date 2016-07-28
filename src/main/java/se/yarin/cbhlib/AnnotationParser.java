@@ -4,15 +4,9 @@ import lombok.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.cbhlib.annotations.*;
-import se.yarin.cbhlib.annotations.CriticalPositionAnnotation;
-import se.yarin.cbhlib.annotations.GraphicalArrowsAnnotation;
-import se.yarin.cbhlib.annotations.GraphicalSquaresAnnotation;
-import se.yarin.cbhlib.annotations.InvalidAnnotation;
-import se.yarin.cbhlib.annotations.UnknownAnnotation;
 import se.yarin.chess.GameMovesModel;
 import se.yarin.chess.Symbol;
 import se.yarin.chess.annotations.*;
-import se.yarin.chess.annotations.Annotation;
 
 import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
@@ -98,6 +92,7 @@ public final class AnnotationParser {
                 case 0x17 : return BlackClockAnnotation.deserialize(buf);
                 case 0x18 : return getCriticalPositionAnnotation(buf);
                 case 0x22 : return MedalAnnotation.deserialize(buf);
+                case 0x23 : return VariationColorAnnotation.deserialize(buf);
                 case 0x24 : return TimeControlAnnotation.deserialize(buf);
                 case 0x25 : return VideoStreamTimeAnnotation.deserialize(buf);
                 case 0x82 : return getCommentaryBeforeMoveAnnotation(buf, annotationSize);
@@ -108,22 +103,16 @@ public final class AnnotationParser {
 //                case 0x19 : return new CorrespondenceMoveAnnotation(buf);
 //                case 0x20 : return new VideoAnnotation(buf);
 //                case 0x21 : Reference to a page, chapter or game? 7A 00 00 00 00 00   => 1.22 shown after the move
-//                case 0x23 : return new VariationColorAnnotation(buf);
 //                case 0x61 : return new CorrespondenceHeaderAnnotation(buf);
 
                 /*
 Unknown annotation frequency in megabase 2016:
 INFO  LoadAllGames - UnknownAnnotation type 08 occurs 1 times
 INFO  LoadAllGames - UnknownAnnotation type 09 occurs 3079 times
-INFO  LoadAllGames - UnknownAnnotation type 13 occurs 12479 times
-INFO  LoadAllGames - UnknownAnnotation type 14 occurs 4930 times
-INFO  LoadAllGames - UnknownAnnotation type 15 occurs 1951 times
 INFO  LoadAllGames - UnknownAnnotation type 1A occurs 466 times
 INFO  LoadAllGames - UnknownAnnotation type 1C occurs 3 times
 INFO  LoadAllGames - UnknownAnnotation type 20 occurs 22 times
 INFO  LoadAllGames - UnknownAnnotation type 21 occurs 258 times
-INFO  LoadAllGames - UnknownAnnotation type 22 occurs 15679 times
-INFO  LoadAllGames - UnknownAnnotation type 23 occurs 1891 times
                  */
                 default :
 //                    log.warn(String.format("Unknown annotation type %d containing %d bytes of data",                            annotationType, noBytes - 6));
