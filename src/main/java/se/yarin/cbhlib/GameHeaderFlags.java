@@ -20,6 +20,7 @@ public enum GameHeaderFlags {
     TIME_NOTIFICATIONS, // ?
     WHITE_CLOCK, // has annotation 0x16
     BLACK_CLOCK, // has annotation 0x17
+    WEB_LINK, // has annotation 0x1C
 
     STREAM, // ?
 }

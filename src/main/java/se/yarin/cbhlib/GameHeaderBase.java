@@ -194,7 +194,8 @@ public class GameHeaderBase implements GameHeaderSerializer {
             if ((b1 & 1) > 0) flags.add(GameHeaderFlags.CRITICAL_POSITION);
             if ((b1 & 2) > 0) flags.add(GameHeaderFlags.CORRESPONDENCE_HEADER);
             if ((b1 & 8) > 0) flags.add(GameHeaderFlags.FISCHER_RANDOM);
-            if ((b1 & ~11) > 0) log.warn("GameHeaderFlags byte 1 is " + b1 + " in game " + gameId);
+            if ((b1 & 16) > 0) flags.add(GameHeaderFlags.WEB_LINK);
+            if ((b1 & ~27) > 0) log.warn("GameHeaderFlags byte 1 is " + b1 + " in game " + gameId);
 
             if ((b2 & 1) > 0) flags.add(GameHeaderFlags.EMBEDDED_AUDIO);
             if ((b2 & 2) > 0) flags.add(GameHeaderFlags.EMBEDDED_PICTURE);

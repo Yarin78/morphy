@@ -91,6 +91,7 @@ public final class AnnotationParser {
                 case 0x16 : return WhiteClockAnnotation.deserialize(buf);
                 case 0x17 : return BlackClockAnnotation.deserialize(buf);
                 case 0x18 : return getCriticalPositionAnnotation(buf);
+                case 0x1C : return WebLinkAnnotation.deserialize(buf);
                 case 0x21 : return ComputerEvaluationAnnotation.deserialize(buf);
                 case 0x22 : return MedalAnnotation.deserialize(buf);
                 case 0x23 : return VariationColorAnnotation.deserialize(buf);
@@ -110,7 +111,6 @@ Unknown annotation frequency in megabase 2016:
 INFO  LoadAllGames - UnknownAnnotation type 08 occurs 1 times
 INFO  LoadAllGames - UnknownAnnotation type 09 occurs 3079 times
 INFO  LoadAllGames - UnknownAnnotation type 1A occurs 466 times
-INFO  LoadAllGames - UnknownAnnotation type 1C occurs 3 times
 INFO  LoadAllGames - UnknownAnnotation type 20 occurs 22 times
                  */
                 default :
