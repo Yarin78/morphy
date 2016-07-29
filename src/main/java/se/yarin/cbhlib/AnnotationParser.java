@@ -38,6 +38,7 @@ public final class AnnotationParser {
         int gameId = ByteBufferUtil.getUnsigned24BitB(buf);
         int unknown = ByteBufferUtil.getIntB(buf);
         if (unknown != 0x01000E0E) {
+            // The 0E is probably the length of the annotation header
             log.warn(String.format("Unknown bytes in annotation header for game " + gameId + ": %08X", unknown));
         }
         int noAnnotations = ByteBufferUtil.getUnsigned24BitB(buf) - 1;
@@ -82,16 +83,21 @@ public final class AnnotationParser {
             switch (annotationType) {
                 case 0x02 : return getCommentaryAfterMoveAnnotation(buf, annotationSize);
                 case 0x03 : return getSymbolAnnotation(buf, annotationSize);
-                case 0x04 : return getGraphicalSquaresAnnotation(buf, annotationSize);
-                case 0x05 : return getGraphicalArrowsAnnotation(buf, annotationSize);
+                case 0x04 : return GraphicalSquaresAnnotation.deserialize(buf, annotationSize);
+                case 0x05 : return GraphicalArrowsAnnotation.deserialize(buf, annotationSize);
                 case 0x07 : return TimeSpentAnnotation.deserialize(buf);
+                case 0x09 : return TrainingAnnotation.deserialize(buf, annotationSize);
+                case 0x10 : return SoundAnnotation.deserialize(buf, annotationSize);
+                case 0x11 : return PictureAnnotation.deserialize(buf, annotationSize);
                 case 0x13 : return GameQuotationAnnotation.deserialize(buf);
                 case 0x14 : return PawnStructureAnnotation.deserialize(buf);
                 case 0x15 : return PiecePathAnnotation.deserialize(buf);
                 case 0x16 : return WhiteClockAnnotation.deserialize(buf);
                 case 0x17 : return BlackClockAnnotation.deserialize(buf);
-                case 0x18 : return getCriticalPositionAnnotation(buf);
+                case 0x18 : return CriticalPositionAnnotation.deserialize(buf);
+                case 0x19 : return CorrespondenceMoveAnnotation.deserialize(buf, annotationSize);
                 case 0x1C : return WebLinkAnnotation.deserialize(buf);
+                case 0x20 : return VideoAnnotation.deserialize(buf, annotationSize);
                 case 0x21 : return ComputerEvaluationAnnotation.deserialize(buf);
                 case 0x22 : return MedalAnnotation.deserialize(buf);
                 case 0x23 : return VariationColorAnnotation.deserialize(buf);
@@ -99,20 +105,10 @@ public final class AnnotationParser {
                 case 0x25 : return VideoStreamTimeAnnotation.deserialize(buf);
                 case 0x82 : return getCommentaryBeforeMoveAnnotation(buf, annotationSize);
 
-//                case 0x09 : return new TrainingAnnotation(buf);
-//                case 0x10 : return new SoundAnnotation(buf);
-//                case 0x11 : return new PictureAnnotation(buf);
-//                case 0x19 : return new CorrespondenceMoveAnnotation(buf);
-//                case 0x20 : return new VideoAnnotation(buf);
-//                case 0x61 : return new CorrespondenceHeaderAnnotation(buf);
-
                 /*
-Unknown annotation frequency in megabase 2016:
-INFO  LoadAllGames - UnknownAnnotation type 08 occurs 1 times
-INFO  LoadAllGames - UnknownAnnotation type 09 occurs 3079 times
-INFO  LoadAllGames - UnknownAnnotation type 1A occurs 466 times
-INFO  LoadAllGames - UnknownAnnotation type 20 occurs 22 times
-                 */
+                Annotation type 0x08 and 0x1A occurs in Megabase 2016.
+                They are not visible in the GUI and it's hard to interpret what they mean.
+                */
                 default :
 //                    log.warn(String.format("Unknown annotation type %d containing %d bytes of data",                            annotationType, noBytes - 6));
                     return new UnknownAnnotation(annotationType, buf, annotationSize);
@@ -123,37 +119,6 @@ INFO  LoadAllGames - UnknownAnnotation type 20 occurs 22 times
         } finally {
             buf.position(nextPosition);
         }
-    }
-
-    private static CriticalPositionAnnotation getCriticalPositionAnnotation(ByteBuffer buf) {
-        CriticalPositionAnnotation.CriticalPositionType type = CriticalPositionAnnotation.CriticalPositionType.values()[buf.get()];
-        return new CriticalPositionAnnotation(type);
-    }
-
-    private static GraphicalArrowsAnnotation getGraphicalArrowsAnnotation(ByteBuffer buf, int length) throws ChessBaseAnnotationException {
-        ArrayList<GraphicalArrowsAnnotation.Arrow> arrows = new ArrayList<>();
-        for (int i = 0; i < length / 3; i++) {
-            int color = ByteBufferUtil.getUnsignedByte(buf);
-            int fromSqi = ByteBufferUtil.getUnsignedByte(buf) - 1;
-            int toSqi = ByteBufferUtil.getUnsignedByte(buf) - 1;
-            if (fromSqi < 0 || fromSqi > 63 || toSqi < 0 || toSqi > 63
-                    || color < 0 || color > GraphicalAnnotationColor.maxColor())
-                throw new ChessBaseAnnotationException("Invalid graphical arrows annotation");
-            arrows.add(new GraphicalArrowsAnnotation.Arrow(GraphicalAnnotationColor.fromInt(color), fromSqi, toSqi));
-        }
-        return new GraphicalArrowsAnnotation(arrows);
-    }
-
-    private static GraphicalSquaresAnnotation getGraphicalSquaresAnnotation(ByteBuffer buf, int length) throws ChessBaseAnnotationException {
-        ArrayList<GraphicalSquaresAnnotation.Square> squares = new ArrayList<>();
-        for (int i = 0; i < length / 2; i++) {
-            int color = ByteBufferUtil.getUnsignedByte(buf);
-            int sqi = ByteBufferUtil.getUnsignedByte(buf) - 1;
-            if (sqi < 0 || sqi > 63 || color < 0 || color > GraphicalAnnotationColor.maxColor())
-                throw new ChessBaseAnnotationException("Invalid graphical squares annotation");
-            squares.add(new GraphicalSquaresAnnotation.Square(GraphicalAnnotationColor.fromInt(color), sqi));
-        }
-        return new GraphicalSquaresAnnotation(squares);
     }
 
     private static SymbolAnnotation getSymbolAnnotation(ByteBuffer buf, int length) {
@@ -167,7 +132,7 @@ INFO  LoadAllGames - UnknownAnnotation type 20 occurs 22 times
     private static CommentaryAfterMoveAnnotation getCommentaryAfterMoveAnnotation(
             ByteBuffer buf, int length) {
         if (buf.get() != 0) {
-//            log.warn("First byte in commentary after move annotation was not 0");
+            log.warn("First byte in commentary after move annotation was not 0");
         }
         getTextLanguage(buf); // This is ignored for now
         String text = ByteBufferUtil.getFixedSizeByteString(buf, length - 2);
