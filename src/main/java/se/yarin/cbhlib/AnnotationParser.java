@@ -81,8 +81,9 @@ public final class AnnotationParser {
 
         try {
             switch (annotationType) {
-                case 0x02 : return getCommentaryAfterMoveAnnotation(buf, annotationSize);
-                case 0x03 : return getSymbolAnnotation(buf, annotationSize);
+                case 0x02 : return TextAfterMoveAnnotation.deserialize(buf, annotationSize);
+                case 0x82 : return TextBeforeMoveAnnotation.deserialize(buf, annotationSize);
+                case 0x03 : return deserializeSymbolAnnotation(buf, annotationSize);
                 case 0x04 : return GraphicalSquaresAnnotation.deserialize(buf, annotationSize);
                 case 0x05 : return GraphicalArrowsAnnotation.deserialize(buf, annotationSize);
                 case 0x07 : return TimeSpentAnnotation.deserialize(buf);
@@ -103,7 +104,6 @@ public final class AnnotationParser {
                 case 0x23 : return VariationColorAnnotation.deserialize(buf);
                 case 0x24 : return TimeControlAnnotation.deserialize(buf);
                 case 0x25 : return VideoStreamTimeAnnotation.deserialize(buf);
-                case 0x82 : return getCommentaryBeforeMoveAnnotation(buf, annotationSize);
 
                 /*
                 Annotation type 0x08 and 0x1A occurs in Megabase 2016.
@@ -121,48 +121,11 @@ public final class AnnotationParser {
         }
     }
 
-    private static SymbolAnnotation getSymbolAnnotation(ByteBuffer buf, int length) {
+    private static SymbolAnnotation deserializeSymbolAnnotation(ByteBuffer buf, int length) {
         Symbol[] symbols = new Symbol[length];
         for (int i = 0; i < length; i++) {
             symbols[i] = CBUtil.decodeSymbol(buf.get());
         }
         return new SymbolAnnotation(symbols);
     }
-
-    private static CommentaryAfterMoveAnnotation getCommentaryAfterMoveAnnotation(
-            ByteBuffer buf, int length) {
-        if (buf.get() != 0) {
-            log.warn("First byte in commentary after move annotation was not 0");
-        }
-        getTextLanguage(buf); // This is ignored for now
-        String text = ByteBufferUtil.getFixedSizeByteString(buf, length - 2);
-        return new CommentaryAfterMoveAnnotation(text);
-    }
-
-    private static CommentaryBeforeMoveAnnotation getCommentaryBeforeMoveAnnotation(
-            ByteBuffer buf, int length) {
-        if (buf.get() != 0) {
-            log.warn("First byte in commentary after move annotation was not 0");
-        }
-        getTextLanguage(buf); // This is ignored for now
-        String text = ByteBufferUtil.getFixedSizeByteString(buf, length - 2);
-        return new CommentaryBeforeMoveAnnotation(text);
-    }
-
-    private static byte getTextLanguage(ByteBuffer buf) {
-        // TODO: Implement proper language support
-
-        // 0x00 : ALL
-        // 0x2A : English
-        // 0x35 : German
-        // 0x31 : France
-        // 0x2B : Spanish
-        // 0x46 : Italian
-        // 0x67 : Dutch
-        // 0x75 : Portugese
-        // 0x?? : Polish
-
-        return buf.get();
-    }
-
 }

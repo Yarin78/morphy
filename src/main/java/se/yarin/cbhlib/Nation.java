@@ -1,5 +1,6 @@
 package se.yarin.cbhlib;
 
+// Same numbering scheme is used by ChessBase to enumerate languages, even though only a few are used
 public enum Nation {
     NONE("none"),
     AFGHANISTAN("Afghanistan"), // 1

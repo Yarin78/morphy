@@ -206,9 +206,9 @@ public class GameHeaderBase implements GameHeaderSerializer {
             if ((b2 & 64) > 0) flags.add(GameHeaderFlags.WHITE_CLOCK);
             if ((b2 & 128) > 0) flags.add(GameHeaderFlags.BLACK_CLOCK);
 
-            // bit 0 in b3 is set in one game (#6161281) in megabase 2016, which has annotation type 08
+            if ((b3 & 1) > 0) flags.add(GameHeaderFlags.ANNO_TYPE_8);
             if ((b3 & 2) > 0) flags.add(GameHeaderFlags.TRAINING);
-            if ((b3 & ~2) > 0) log.warn("GameHeaderFlags byte 3 is " + b3 + " in game " + gameId);
+            if ((b3 & ~3) > 0) log.warn("GameHeaderFlags byte 3 is " + b3 + " in game " + gameId);
             if ((b4 & 1) > 0) flags.add(GameHeaderFlags.SETUP_POSITION);
             if ((b4 & 2) > 0) flags.add(GameHeaderFlags.VARIATIONS);
             if ((b4 & 4) > 0) flags.add(GameHeaderFlags.COMMENTARY);

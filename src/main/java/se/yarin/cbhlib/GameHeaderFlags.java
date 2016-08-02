@@ -10,6 +10,7 @@ public enum GameHeaderFlags {
     GAME_QUOTATION, // has annotation 0x13 (?)
     PATH_STRUCTURE, // has annotation 0x14 (?)
     PIECE_PATH, // has annotation 0x15 (?)
+    ANNO_TYPE_8, // has annotation 0x08 (?)
     TRAINING, // has annotation 0x09 (?)
     SETUP_POSITION, // doesn't start from the initial position
     VARIATIONS, // has variations
@@ -22,5 +23,5 @@ public enum GameHeaderFlags {
     BLACK_CLOCK, // has annotation 0x17
     WEB_LINK, // has annotation 0x1C
 
-    STREAM, // ?
+    STREAM, // has annotation 0x25?
 }
