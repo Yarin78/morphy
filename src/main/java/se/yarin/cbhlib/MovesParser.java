@@ -7,6 +7,7 @@ import se.yarin.chess.*;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 import java.util.EnumSet;
 import java.util.Stack;
@@ -88,23 +89,75 @@ public final class MovesParser {
     }
 
     public static GameMovesModel parseMoveData(ByteBuffer buf)
-            throws ChessBaseInvalidDataException {
-
-        int gameSize = ByteBufferUtil.getIntB(buf);
-        boolean setupPosition = (gameSize & 0x40000000) > 0;
-        boolean encoded = (gameSize & 0x80000000) == 0; // Might mean something else
-        gameSize &= 0x3FFFFFFF;
-
+            throws ChessBaseInvalidDataException, ChessBaseUnsupportedException {
         GameMovesModel model;
-        if (setupPosition) {
-            model = parseInitialPosition(buf);
-        } else {
-            model = new GameMovesModel();
-        }
+        boolean encoded;
+        try {
+            // TODO: First byte seems to be flags only, and 7F if illegal position!?
+            int flags = ByteBufferUtil.getUnsignedByte(buf);
+            int moveSize = ByteBufferUtil.getUnsigned24BitB(buf);
+            boolean illegalPosition = flags == 0x7F;
+            boolean setupPosition = (flags & 0x40) > 0;
+            encoded = (flags & 0x80) == 0; // Might mean something else
 
-        if (log.isDebugEnabled()) {
-            log.debug(String.format("Parsing move data at moveData pos %s with %d bytes left",
-                    model.root().position().toString("|"), buf.limit() - buf.position()));
+            if (setupPosition) {
+                model = parseInitialPosition(buf);
+            } else {
+                model = new GameMovesModel();
+            }
+
+            if ((flags & ~0x40) != 0) {
+                log.warn(String.format("Strange moves encoding. Flags: %02X, move size %d, move data %s", flags, moveSize, CBUtil.toHexString(buf)));
+            /*
+
+            Flag 7F: Illegal position
+
+            Distribution in Mega Database 2016:
+            INFO  CheckMoveEncodingFlags - Flag 00: 6470410 games: 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23...
+            INFO  CheckMoveEncodingFlags - Flag 04: 2 games: 2017678, 2769933
+            INFO  CheckMoveEncodingFlags - Flag 05: 2 games: 2870325, 3789643
+            INFO  CheckMoveEncodingFlags - Flag 40: 1308 games: 100, 103, 108, 109, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 137...
+            INFO  CheckMoveEncodingFlags - Flag 4A: 14 games: 3730250, 3730251, 3730252, 3730253, 3730254, 3730255, 3730256, 3730257, 6197425, 6197426, 6197427, 6197428, 6197429, 6197430
+            INFO  CheckMoveEncodingFlags - Flag 80: 1 games: 6161154
+            INFO  CheckMoveEncodingFlags - Flag 85: 1 games: 2017673
+
+            Distribution in Mega Database 2014:
+            INFO  CheckMoveEncodingFlags - Flag 00: 5790403 games: 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23...
+            INFO  CheckMoveEncodingFlags - Flag 04: 2 games: 1994813, 2741165
+            INFO  CheckMoveEncodingFlags - Flag 05: 2 games: 2840226, 3754063
+            INFO  CheckMoveEncodingFlags - Flag 40: 1163 games: 100, 103, 108, 109, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 137...
+            INFO  CheckMoveEncodingFlags - Flag 4A: 8 games: 3695376, 3695377, 3695378, 3695379, 3695380, 3695381, 3695382, 3695383
+            INFO  CheckMoveEncodingFlags - Flag 85: 1 games: 1994808
+
+            Distribution in Mega Database 2009:
+            INFO  CheckMoveEncodingFlags - Flag 00: 4124957 games: 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23...
+            INFO  CheckMoveEncodingFlags - Flag 40: 952 games: 105, 108, 112, 113, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 141...
+            INFO  CheckMoveEncodingFlags - Flag 04: 2 games: 1947639, 2688349
+            INFO  CheckMoveEncodingFlags - Flag 05: 2 games: 2786731, 3680063
+            INFO  CheckMoveEncodingFlags - Flag 85: 1 games: 1947634
+            INFO  CheckMoveEncodingFlags - Flag 4A: 8 games: 3626201, 3626202, 3626203, 3626204, 3626205, 3626206, 3626207, 3626208
+
+
+            Game 94183 in Garry Kasparov - Queens Gambit has flag 05
+            */
+                throw new ChessBaseUnsupportedException(String.format("Unsupported move data format: %02X", flags));
+            }
+
+            if (illegalPosition) {
+                // Seems like there are some bugs in ChessBase 13 for this as well
+                // You can enter illegal moves, but they won't be saved properly!?
+                log.warn("Illegal positions are not supported");
+                log.debug("Move data is " + CBUtil.toHexString(buf));
+                return model;
+            }
+
+            if (log.isDebugEnabled()) {
+                log.debug(String.format("Parsing move data at moveData pos %s with %d bytes left",
+                        model.root().position().toString("|"), buf.limit() - buf.position()));
+            }
+
+        } catch (BufferUnderflowException e) {
+            throw new ChessBaseInvalidDataException("Moves data header ended abruptly");
         }
 
         StonePositions piecePosition = StonePositions.fromPosition(model.root().position());
@@ -114,65 +167,71 @@ public final class MovesParser {
         Stack<StonePositions> piecePositionStack = new Stack<>();
         GameMovesModel.Node currentNode = model.root();
 
-        while (true) {
-            int opcode = ByteBufferUtil.getUnsignedByte(buf);
-            if (encoded) {
-                opcode = decryptMap[(opcode + modifier) % 256];
-            }
-
-            if (opcode == OPCODE_IGNORE) {
-                // Not sure what this opcode does. Just ignoring it seems works fine.
-                // Chessbase 9 removes this opcode when replacing the game.
-                continue;
-            }
-            if (opcode > OPCODE_IGNORE && opcode < OPCODE_START_VARIANT) {
-                throw new ChessBaseInvalidDataException(String.format("Unknown opcode in game data: 0x%02X", opcode));
-            }
-            if (opcode == OPCODE_START_VARIANT) {
-                nodeStack.push(currentNode);
-                piecePositionStack.push(piecePosition);
-                continue;
-            }
-            if (opcode == OPCODE_END_VARIANT) {
-                // Also used as end of game
-                if (nodeStack.size() == 0)
-                    break;
-
-                currentNode = nodeStack.pop();
-                piecePosition = piecePositionStack.pop();
-                continue;
-            }
-
-            // Decode the move
-            Move move;
-            if (opcode == OPCODE_TWO_BYTES) {
-                // In rare cases a move has to be encoded as two bytes
-                // Typically pawn promotions or if a player has more than 3 pieces of some kind
-                int msb = ByteBufferUtil.getUnsignedByte(buf);
-                int lsb = ByteBufferUtil.getUnsignedByte(buf);
+        try {
+            while (true) {
+                int opcode = ByteBufferUtil.getUnsignedByte(buf);
                 if (encoded) {
-                    msb = decryptMap[(msb + modifier) % 256];
-                    lsb = decryptMap[(lsb + modifier) % 256];
+                    opcode = decryptMap[(opcode + modifier) % 256];
                 }
-                opcode = msb * 256 + lsb;
-                move = decodeTwoByteMove(opcode, currentNode.position());
-            } else {
-                move = decodeSingleByteMove(opcode, piecePosition, currentNode.position());
+
+                if (opcode == OPCODE_IGNORE) {
+                    // Not sure what this opcode does. Just ignoring it seems works fine.
+                    // Chessbase 9 removes this opcode when replacing the game.
+                    continue;
+                }
+                if (opcode > OPCODE_IGNORE && opcode < OPCODE_START_VARIANT) {
+//                throw new ChessBaseInvalidDataException(String.format("Unknown opcode in game data: 0x%02X", opcode));
+                    log.warn(String.format("Unknown opcode in game data, ignoring: 0x%02X", opcode));
+                    continue;
+                }
+                if (opcode == OPCODE_START_VARIANT) {
+                    nodeStack.push(currentNode);
+                    piecePositionStack.push(piecePosition);
+                    continue;
+                }
+                if (opcode == OPCODE_END_VARIANT) {
+                    // Also used as end of game
+                    if (nodeStack.size() == 0)
+                        break;
+
+                    currentNode = nodeStack.pop();
+                    piecePosition = piecePositionStack.pop();
+                    continue;
+                }
+
+                // Decode the move
+                Move move;
+                if (opcode == OPCODE_TWO_BYTES) {
+                    // In rare cases a move has to be encoded as two bytes
+                    // Typically pawn promotions or if a player has more than 3 pieces of some kind
+                    int msb = ByteBufferUtil.getUnsignedByte(buf);
+                    int lsb = ByteBufferUtil.getUnsignedByte(buf);
+                    if (encoded) {
+                        msb = decryptMap[(msb + modifier) % 256];
+                        lsb = decryptMap[(lsb + modifier) % 256];
+                    }
+                    opcode = msb * 256 + lsb;
+                    move = decodeTwoByteMove(opcode, currentNode.position());
+                } else {
+                    move = decodeSingleByteMove(opcode, piecePosition, currentNode.position());
+                }
+
+                if (log.isDebugEnabled()) {
+                    log.debug("Parsed move " + move.toLAN());
+                }
+
+                // Update position of the moved piece
+                piecePosition = piecePosition.doMove(move);
+                currentNode = currentNode.addMove(move);
+
+                if (INTEGRITY_CHECKS_ENABLED) {
+                    piecePosition.validate(currentNode.position());
+                }
+
+                modifier = (modifier + 255) % 256;
             }
-
-            if (log.isDebugEnabled()) {
-                log.debug("Parsed move " + move.toLAN());
-            }
-
-            // Update position of the moved piece
-            piecePosition = piecePosition.doMove(move);
-            currentNode = currentNode.addMove(move);
-
-            if (INTEGRITY_CHECKS_ENABLED) {
-                piecePosition.validate(currentNode.position());
-            }
-
-            modifier = (modifier + 255) % 256;
+        } catch (BufferUnderflowException e) {
+            log.warn("Move data ended abruptly. Moves parsed so far: " + model.toString());
         }
 
         return model;
