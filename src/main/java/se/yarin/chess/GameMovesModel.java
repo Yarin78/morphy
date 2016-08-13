@@ -613,11 +613,20 @@ public class GameMovesModel {
         }
 
         /**
-         * Gets the annotation at this position
+         * Gets all annotations at this position
          * @return a set of annotations
          */
         public Annotations getAnnotations() {
             return annotations;
+        }
+
+        /**
+         * Gets an annotation of the specified class at this position
+         * @param clazz the annotation class to get
+         * @return an annotation of the specified class, or null if none existed in this set
+         */
+        public <T extends Annotation> T getAnnotation(Class<T> clazz) {
+            return annotations.getAnnotation(clazz);
         }
 
         /**

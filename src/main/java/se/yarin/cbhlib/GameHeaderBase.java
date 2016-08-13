@@ -186,37 +186,35 @@ public class GameHeaderBase implements GameHeaderSerializer {
                 log.error("Error parsing ECO in game " + gameId + ": " + ecoValue);
             }
             builder.medals(CBUtil.decodeMedals(ByteBufferUtil.getUnsignedShortB(buf)));
-            int b1 = ByteBufferUtil.getUnsignedByte(buf);
-            int b2 = ByteBufferUtil.getUnsignedByte(buf);
-            int b3 = ByteBufferUtil.getUnsignedByte(buf);
-            int b4 = ByteBufferUtil.getUnsignedByte(buf);
+            int flagInt = ByteBufferUtil.getIntB(buf);
+
             EnumSet<GameHeaderFlags> flags = EnumSet.noneOf(GameHeaderFlags.class);
-            if ((b1 & 1) > 0) flags.add(GameHeaderFlags.CRITICAL_POSITION);
-            if ((b1 & 2) > 0) flags.add(GameHeaderFlags.CORRESPONDENCE_HEADER);
-            if ((b1 & 8) > 0) flags.add(GameHeaderFlags.FISCHER_RANDOM);
-            if ((b1 & 16) > 0) flags.add(GameHeaderFlags.WEB_LINK);
-            if ((b1 & ~27) > 0) log.warn("GameHeaderFlags byte 1 is " + b1 + " in game " + gameId);
+            if ((flagInt & 0x00000001) > 0) flags.add(GameHeaderFlags.SETUP_POSITION);
+            if ((flagInt & 0x00000002) > 0) flags.add(GameHeaderFlags.VARIATIONS);
+            if ((flagInt & 0x00000004) > 0) flags.add(GameHeaderFlags.COMMENTARY);
+            if ((flagInt & 0x00000008) > 0) flags.add(GameHeaderFlags.SYMBOLS);
+            if ((flagInt & 0x00000010) > 0) flags.add(GameHeaderFlags.GRAPHICAL_SQUARES);
+            if ((flagInt & 0x00000020) > 0) flags.add(GameHeaderFlags.GRAPHICAL_ARROWS);
+            if ((flagInt & 0x00000080) > 0) flags.add(GameHeaderFlags.TIME_SPENT);
+            if ((flagInt & 0x00000100) > 0) flags.add(GameHeaderFlags.ANNO_TYPE_8);
+            if ((flagInt & 0x00000200) > 0) flags.add(GameHeaderFlags.TRAINING);
+            if ((flagInt & 0x00010000) > 0) flags.add(GameHeaderFlags.EMBEDDED_AUDIO);
+            if ((flagInt & 0x00020000) > 0) flags.add(GameHeaderFlags.EMBEDDED_PICTURE);
+            if ((flagInt & 0x00040000) > 0) flags.add(GameHeaderFlags.EMBEDDED_VIDEO);
+            if ((flagInt & 0x00080000) > 0) flags.add(GameHeaderFlags.GAME_QUOTATION);
+            if ((flagInt & 0x00100000) > 0) flags.add(GameHeaderFlags.PAWN_STRUCTURE);
+            if ((flagInt & 0x00200000) > 0) flags.add(GameHeaderFlags.PIECE_PATH);
+            if ((flagInt & 0x00400000) > 0) flags.add(GameHeaderFlags.WHITE_CLOCK);
+            if ((flagInt & 0x00800000) > 0) flags.add(GameHeaderFlags.BLACK_CLOCK);
+            if ((flagInt & 0x01000000) > 0) flags.add(GameHeaderFlags.CRITICAL_POSITION);
+            if ((flagInt & 0x02000000) > 0) flags.add(GameHeaderFlags.CORRESPONDENCE_HEADER);
+            if ((flagInt & 0x08000000) > 0) flags.add(GameHeaderFlags.FISCHER_RANDOM);
+            if ((flagInt & 0x10000000) > 0) flags.add(GameHeaderFlags.WEB_LINK);
 
-            if ((b2 & 1) > 0) flags.add(GameHeaderFlags.EMBEDDED_AUDIO);
-            if ((b2 & 2) > 0) flags.add(GameHeaderFlags.EMBEDDED_PICTURE);
-            if ((b2 & 4) > 0) flags.add(GameHeaderFlags.EMBEDDED_VIDEO);
-            if ((b2 & 8) > 0) flags.add(GameHeaderFlags.GAME_QUOTATION);
-            if ((b2 & 16) > 0) flags.add(GameHeaderFlags.PATH_STRUCTURE);
-            if ((b2 & 32) > 0) flags.add(GameHeaderFlags.PIECE_PATH);
-            if ((b2 & 64) > 0) flags.add(GameHeaderFlags.WHITE_CLOCK);
-            if ((b2 & 128) > 0) flags.add(GameHeaderFlags.BLACK_CLOCK);
+            if ((flagInt & ~0x1BFF03BF) > 0) {
+                log.warn(String.format("Unknown game header flags in game %d: %08X", gameId, flagInt));
+            }
 
-            if ((b3 & 1) > 0) flags.add(GameHeaderFlags.ANNO_TYPE_8);
-            if ((b3 & 2) > 0) flags.add(GameHeaderFlags.TRAINING);
-            if ((b3 & ~3) > 0) log.warn("GameHeaderFlags byte 3 is " + b3 + " in game " + gameId);
-            if ((b4 & 1) > 0) flags.add(GameHeaderFlags.SETUP_POSITION);
-            if ((b4 & 2) > 0) flags.add(GameHeaderFlags.VARIATIONS);
-            if ((b4 & 4) > 0) flags.add(GameHeaderFlags.COMMENTARY);
-            if ((b4 & 8) > 0) flags.add(GameHeaderFlags.SYMBOLS);
-            if ((b4 & 16) > 0) flags.add(GameHeaderFlags.GRAPHICAL_SQUARES);
-            if ((b4 & 32) > 0) flags.add(GameHeaderFlags.GRAPHICAL_ARROWS);
-            if ((b4 & 128) > 0) flags.add(GameHeaderFlags.TIME_NOTIFICATIONS);
-            if ((b4 & ~191) > 0) log.warn("GameHeaderFlags byte 4 is " + b4 + " in game " + gameId);
             builder.flags(flags);
             // These extra annotation bytes provide extra significance to flags already set
             // If the corresponding flag isn't set, the bit may be dirty and should be ignored
@@ -250,7 +248,7 @@ public class GameHeaderBase implements GameHeaderSerializer {
                 builder.graphicalArrowsMagnitude(((extraAnnotations & 32) > 0) ? 2 : 1);
                 extraAnnotations &= ~32;
             }
-            if (flags.contains(GameHeaderFlags.TIME_NOTIFICATIONS)) {
+            if (flags.contains(GameHeaderFlags.TIME_SPENT)) {
                 builder.timeAnnotationsMagnitude((extraAnnotations & 128) > 0 ? 2 : 1);
                 extraAnnotations &= ~128;
             }

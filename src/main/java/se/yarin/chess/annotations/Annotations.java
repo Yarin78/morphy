@@ -11,6 +11,7 @@ import java.util.*;
  * {@link Annotation#combine(Annotation)} is used to determine the resulting annotation.
  */
 public class Annotations {
+    // TODO: Make this iterable, to get rid of the need for getAll()?
 
     private TreeSet<Annotation> annotations = new TreeSet<>((o1, o2) -> {
         int prioDif = o2.priority() - o1.priority();

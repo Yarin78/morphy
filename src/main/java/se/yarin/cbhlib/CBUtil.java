@@ -1,6 +1,8 @@
 package se.yarin.cbhlib;
 
 import lombok.NonNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import se.yarin.chess.*;
 
 import java.nio.ByteBuffer;
@@ -13,6 +15,8 @@ import java.util.Map;
  * Contains various utility functions for reading and parsing ChessBase data files.
  */
 public final class CBUtil {
+    private static final Logger log = LoggerFactory.getLogger(CBUtil.class);
+
     private CBUtil() { }
 
     // This is the character set that CB uses
@@ -24,6 +28,9 @@ public final class CBUtil {
     static {
         // TODO: Put in array instead?
 //        byteToSymbol.put((byte) 0x00, LineEvaluation.NO_EVALUATION);
+        // Not sure what the difference between 0x0A and 0x0B is, but both are used
+        // TODO: This is the standard NAG encoding! See https://en.wikipedia.org/wiki/Numeric_Annotation_Glyphs
+        byteToSymbol.put((byte) 0x0A, LineEvaluation.EQUAL);
         byteToSymbol.put((byte) 0x0B, LineEvaluation.EQUAL);
         byteToSymbol.put((byte) 0x0D, LineEvaluation.UNCLEAR);
         byteToSymbol.put((byte) 0x0E, LineEvaluation.WHITE_SLIGHT_ADVANTAGE);
@@ -37,6 +44,7 @@ public final class CBUtil {
         byteToSymbol.put((byte) 0x28, LineEvaluation.WITH_ATTACK);
         byteToSymbol.put((byte) 0x2C, LineEvaluation.WITH_COMPENSATION);
         byteToSymbol.put((byte) 0x84, LineEvaluation.WITH_COUNTERPLAY);
+        byteToSymbol.put((byte) 0x88, LineEvaluation.ZEITNOT);
         byteToSymbol.put((byte) 0x8A, LineEvaluation.ZEITNOT);
         byteToSymbol.put((byte) 0x92, LineEvaluation.THEORETICAL_NOVELTY);
 
@@ -131,6 +139,9 @@ public final class CBUtil {
         // If data is 0, we can't determine what kind of symbol we are decoding,
         // so we have to return null instead.
         // Maybe it should be a common enum type for all symbols?
+        if (data != 0 && !byteToSymbol.containsKey(data)) {
+//            log.warn(String.format("Decoding unknown symbol code: %02X", data));
+        }
         return byteToSymbol.get(data);
     }
 

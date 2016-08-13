@@ -28,7 +28,7 @@ public class AnnotationParserTest {
     }
 
     @Test
-    public void parseSimpleAnnotationsWithGame() throws IOException, ChessBaseInvalidDataException {
+    public void parseSimpleAnnotationsWithGame() throws IOException, ChessBaseInvalidDataException, ChessBaseUnsupportedException {
         ByteBuffer annoBuf = ResourceLoader.loadResource("simpleannotations.annotations.bin");
         ByteBuffer movesBuf = ResourceLoader.loadResource("simpleannotations.moves.bin");
         GameMovesModel model = MovesParser.parseMoveData(movesBuf);
@@ -37,7 +37,7 @@ public class AnnotationParserTest {
     }
 
     @Test
-    public void parseCommentsInVariations() throws IOException, ChessBaseInvalidDataException {
+    public void parseCommentsInVariations() throws IOException, ChessBaseInvalidDataException, ChessBaseUnsupportedException {
         ByteBuffer annoBuf = ResourceLoader.loadResource("commentsinvariations.annotations.bin");
         ByteBuffer movesBuf = ResourceLoader.loadResource("commentsinvariations.moves.bin");
         GameMovesModel model = MovesParser.parseMoveData(movesBuf);
