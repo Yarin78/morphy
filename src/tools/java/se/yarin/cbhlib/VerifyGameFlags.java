@@ -22,57 +22,13 @@ import static se.yarin.cbhlib.GameHeaderFlags.*;
 public class VerifyGameFlags {
     private static final Logger log = LoggerFactory.getLogger(VerifyGameFlags.class);
 
-    private static GameMovesModel getMoves(FileChannel movesFiles, int ofs) throws IOException, ChessBaseException {
-        movesFiles.position(ofs);
-        ByteBuffer buf = ByteBuffer.allocate(4);
-        movesFiles.read(buf);
-        buf.position(1);
-        int size = ByteBufferUtil.getUnsigned24BitB(buf);
-        if (size < 0 || size > 100000) throw new RuntimeException("Unreasonable game size: " + size);
-        buf = ByteBuffer.allocate(size);
-        movesFiles.position(ofs);
-        movesFiles.read(buf);
-        buf.position(0);
-        return MovesParser.parseMoveData(buf);
-    }
-
-    private static ByteBuffer getAnnotationData(FileChannel annotationFile, int ofs) throws IOException {
-        annotationFile.position(ofs + 10);
-        ByteBuffer buf = ByteBuffer.allocate(4);
-        annotationFile.read(buf);
-        buf.position(0);
-        int size = ByteBufferUtil.getIntB(buf);
-        if (size < 0 || size > 100000) throw new RuntimeException("Unreasonable annotation size: " + size);
-        buf = ByteBuffer.allocate(size);
-        annotationFile.position(ofs);
-        annotationFile.read(buf);
-        buf.position(0);
-        return buf;
-    }
-
-    private static GameMovesModel getMoves(FileChannel movesChannel, FileChannel annotationChannel, GameHeader gameHeader)
+    private static GameMovesModel getMoves(MovesBase movesBase, AnnotationBase annotationBase, GameHeader gameHeader)
             throws IOException, ChessBaseException {
-        GameMovesModel moves = getMoves(movesChannel, gameHeader.getMovesOffset());
-        List<GameMovesModel.Node> allNodes = moves.getAllNodes();
+        GameMovesModel moves = movesBase.getMoves(gameHeader.getMovesOffset());
         int ofs = gameHeader.getAnnotationOffset();
         if (ofs != 0) {
-            ByteBuffer data = getAnnotationData(annotationChannel, ofs);
-            List<Annotations> annotations = AnnotationParser.parseGameAnnotations(data);
-            int posNo = 0;
-            for (Annotations anno : annotations) {
-                for (Annotation annotation : anno.getAll()) {
-                    if (posNo < allNodes.size()) {
-                        allNodes.get(posNo).addAnnotation(annotation);
-                    } else {
-                        // This happens!
-                        log.info("Annotation " + annotation.toString() + " on position " + posNo + " but highest position index is " + (allNodes.size() - 1) + " in the game");
-                        if (annotation instanceof TextAfterMoveAnnotation) {
-                            log.info("Text: " + ((TextAfterMoveAnnotation) annotation).getText());
-                        }
-                    }
-                }
-                posNo++;
-            }
+            Map<Integer, Annotations> annotations = annotationBase.getAnnotations(ofs);
+            AnnotationParser.decorateMoves(moves, annotations);
         }
         return moves;
     }
@@ -272,10 +228,9 @@ public class VerifyGameFlags {
 //        String fileBase = "testbases/Jimmys bases/My White Openings";
 
         File headerFile = new File(fileBase + ".cbh");
-        File movesFile = new File(fileBase + ".cbg");
-        File annotationFile = new File(fileBase + ".cba");
-        FileChannel movesChannel = FileChannel.open(movesFile.toPath());
-        FileChannel annotationChannel = FileChannel.open(annotationFile.toPath());
+
+        MovesBase movesBase = MovesBase.open(new File(fileBase + ".cbg"));
+        AnnotationBase annotationBase = AnnotationBase.open(new File(fileBase + ".cba"));
 
         GameHeaderBase base = null;
         int noErrors = 0, maxErrors = 10, noUnsupported = 0, noGuidingTexts = 0;
@@ -297,7 +252,7 @@ public class VerifyGameFlags {
                         noGuidingTexts++;
                         continue;
                     }
-                    GameMovesModel model = getMoves(movesChannel, annotationChannel, gameHeader);
+                    GameMovesModel model = getMoves(movesBase, annotationBase, gameHeader);
                     verifyHeader(gameHeader, model);
                     cnt++;
                     if (cnt % 10000 == 0) {

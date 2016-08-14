@@ -11,8 +11,10 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static se.yarin.chess.Chess.*;
 
@@ -20,8 +22,8 @@ public class AnnotationParserTest {
     @Test
     public void parseSimpleAnnotations() throws IOException, ChessBaseInvalidDataException {
         ByteBuffer buf = ResourceLoader.loadResource("simpleannotations.annotations.bin");
-        List<Annotations> anno = AnnotationParser.parseGameAnnotations(buf);
-        assertEquals(0, anno.get(0).size());
+        Map<Integer, Annotations> anno = AnnotationParser.parseGameAnnotations(buf);
+        assertFalse(anno.containsKey(0));
         assertEquals("m!", anno.get(1).format("m", true));
         assertEquals("m?", anno.get(2).format("m", true));
         assertEquals("m { Capture }", anno.get(7).format("m", true));
@@ -48,7 +50,7 @@ public class AnnotationParserTest {
     @Test
     public void parseGraphicalAnnotations() throws IOException, ChessBaseInvalidDataException {
         ByteBuffer buf = ResourceLoader.loadResource("graphicalannotations.annotations.bin");
-        List<Annotations> anno = AnnotationParser.parseGameAnnotations(buf);
+        Map<Integer, Annotations> anno = AnnotationParser.parseGameAnnotations(buf);
 
         GraphicalSquaresAnnotation sqAnno = anno.get(2).getAnnotation(GraphicalSquaresAnnotation.class);
         Collection<GraphicalSquaresAnnotation.Square> sq = sqAnno.getSquares();

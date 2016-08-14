@@ -12,6 +12,8 @@ import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 
 public final class AnnotationParser {
 
@@ -19,19 +21,25 @@ public final class AnnotationParser {
 
     private AnnotationParser() { }
 
-    public static void parseGameAnnotations(@NonNull ByteBuffer buf, @NonNull GameMovesModel model) {
-        List<Annotations> annotations = parseGameAnnotations(buf);
+    public static void decorateMoves(@NonNull GameMovesModel model, @NonNull Map<Integer, Annotations> annotations) {
         List<GameMovesModel.Node> allNodes = model.getAllNodes();
-        if (annotations.size() > allNodes.size()) {
-            log.warn("Annotations set on moves not in the game");
-        }
-        for (int i = 0; i < annotations.size() && i < allNodes.size(); i++) {
-            annotations.get(i).getAll().forEach(allNodes.get(i)::addAnnotation);
+        for (Map.Entry<Integer, Annotations> entry : annotations.entrySet()) {
+            int posNo = entry.getKey();
+            if (posNo >= 0 && posNo < allNodes.size()) {
+                entry.getValue().getAll().forEach(allNodes.get(posNo)::addAnnotation);
+            } else {
+                log.warn("Annotation set on position " + posNo + " which is not a valid position in the game");
+            }
         }
     }
 
-    public static List<Annotations> parseGameAnnotations(@NonNull ByteBuffer buf) {
-        ArrayList<Annotations> annotations = new ArrayList<>();
+    public static void parseGameAnnotations(@NonNull ByteBuffer buf, @NonNull GameMovesModel model) {
+        Map<Integer, Annotations> annotations = parseGameAnnotations(buf);
+        decorateMoves(model, annotations);
+    }
+
+    public static Map<Integer, Annotations> parseGameAnnotations(@NonNull ByteBuffer buf) {
+        Map<Integer, Annotations> annotations = new TreeMap<>();
         if (!buf.hasRemaining()) {
             return annotations;
         }
@@ -54,9 +62,7 @@ public final class AnnotationParser {
                 log.warn("Invalid position for an annotation in game " + gameId + ": " + posNo);
             } else {
                 posNo++;
-                while (annotations.size() <= posNo) {
-                    annotations.add(new Annotations());
-                }
+                annotations.putIfAbsent(posNo, new Annotations());
                 annotations.get(posNo).add(annotation);
             }
         }

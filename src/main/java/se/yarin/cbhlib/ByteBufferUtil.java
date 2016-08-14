@@ -10,6 +10,21 @@ public final class ByteBufferUtil {
     // TODO: Might be clean to create a custom ByteBuffer implementation
     private ByteBufferUtil() {}
 
+    public static ByteBuffer clone(final ByteBuffer original) {
+        // Create clone with same capacity as original.
+        final ByteBuffer clone = ByteBuffer.allocate(original.capacity());
+
+        // Create a read-only copy of the original.
+        // This allows reading from the original without modifying it.
+        final ByteBuffer readOnlyCopy = original.asReadOnlyBuffer();
+
+        // Flip and read from the original.
+        readOnlyCopy.flip();
+        clone.put(readOnlyCopy);
+
+        return clone;
+    }
+
     /**
      * Gets a length-encoded byte string from a {@link ByteBuffer}.
      * @param buf the buffer to read from

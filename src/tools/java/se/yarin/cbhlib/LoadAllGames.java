@@ -18,73 +18,21 @@ import java.util.Map;
 public class LoadAllGames {
     private static final Logger log = LoggerFactory.getLogger(LoadAllGames.class);
 
-    private static int getMovesSize(FileChannel movesFile, int ofs) throws IOException {
-        movesFile.position(ofs);
-        ByteBuffer buf = ByteBuffer.allocate(4);
-        movesFile.read(buf);
-        buf.position(0);
-        return ByteBufferUtil.getIntB(buf);
-    }
-
-    private static GameMovesModel getMoves(FileChannel movesFiles, int ofs) throws IOException, ChessBaseException {
-        movesFiles.position(ofs);
-        ByteBuffer buf = ByteBuffer.allocate(4);
-        movesFiles.read(buf);
-        buf.position(0);
-        int size = ByteBufferUtil.getIntB(buf);
-        buf = ByteBuffer.allocate(size);
-        movesFiles.position(ofs);
-        movesFiles.read(buf);
-        buf.position(0);
-        return MovesParser.parseMoveData(buf);
-    }
-
-    private static int getAnnotationSize(FileChannel annotationFile, int ofs) throws IOException {
-        if (ofs == 0) return 0;
-        annotationFile.position(ofs + 10);
-        ByteBuffer buf = ByteBuffer.allocate(4);
-        annotationFile.read(buf);
-        buf.position(0);
-        return ByteBufferUtil.getIntB(buf);
-    }
-
-    private static ByteBuffer getAnnotationData(FileChannel annotationFile, int ofs) throws IOException {
-        annotationFile.position(ofs + 10);
-        ByteBuffer buf = ByteBuffer.allocate(4);
-        annotationFile.read(buf);
-        buf.position(0);
-        int size = ByteBufferUtil.getIntB(buf);
-        buf = ByteBuffer.allocate(size);
-        annotationFile.position(ofs);
-        annotationFile.read(buf);
-        buf.position(0);
-        return buf;
-    }
-
-    private static String getAnnotationHeader(FileChannel annotationFile, int ofs) throws IOException {
-        if (ofs == 0) return "";
-        annotationFile.position(ofs);
-        ByteBuffer buf = ByteBuffer.allocate(14);
-        annotationFile.read(buf);
-        buf.position(0);
-        return CBUtil.toHexString(buf);
-    }
-
     public static void main(String[] args) throws IOException, ChessBaseInvalidDataException {
 //        String fileBase = "/Users/yarin/chessbasemedia/mediafiles/cbh/tmp/movedatafragmentation";
 //        String fileBase = "/Users/yarin/chessbasemedia/mediafiles/cbh/tmp/tmp3/quotation2";
 //        String fileBase = "/Users/yarin/chessbasemedia/mediafiles/cbh/tmp/re";
 //        String fileBase = "/Users/yarin/chessbasemedia/mediafiles/cbh/tmp/My White Openings";
         String fileBase = "testbases/Mega Database 2016/Mega Database 2016";
-        File headerFile = new File(fileBase + ".cbh");
-        File movesFile = new File(fileBase + ".cbg");
-        File annotationFile = new File(fileBase + ".cba");
-        FileChannel movesChannel = FileChannel.open(movesFile.toPath());
-        FileChannel annotationChannel = FileChannel.open(annotationFile.toPath());
+
+        String headerFile = fileBase + ".cbh";
+        MovesBase movesBase = MovesBase.open(new File(fileBase + ".cbg"));
+        AnnotationBase annotationBase = AnnotationBase.open(new File(fileBase + ".cba"));
+
         GameHeaderBase base = null;
         int[] annotationCount = new int[256];
         try {
-            base = GameHeaderBase.open(headerFile);
+            base = GameHeaderBase.open(new File(headerFile));
 //            int start = 4939, stop = 4939; //  From,Martin Severin-Winawer,Szymon Paris Paris 1867.06.04 0-1
 //            int start = 4489434, stop = base.size();
 //            int start = 4940, stop = base.size(); //  From,Martin Severin-Winawer,Szymon Paris Paris 1867.06.04 0-1
@@ -110,12 +58,11 @@ public class LoadAllGames {
                 int ofs = gameHeader.getAnnotationOffset();
 //                log.info("Annotations start at ofs " + ofs);
                 if (ofs != 0) {
-                    ByteBuffer data = getAnnotationData(annotationChannel, ofs);
+                    Map<Integer, Annotations> annotations = annotationBase.getAnnotations(ofs);
 //                    log.info("Annotation size: " + data.limit());
-                    List<Annotations> annotations = AnnotationParser.parseGameAnnotations(data);
 //                    log.info(String.format("#%d: Found %d annotations", i, annotations.size()));
                     int posNo = 0;
-                    for (Annotations anno : annotations) {
+                    for (Annotations anno : annotations.values()) {
                         for (Annotation annotation : anno.getAll()) {
 //                            log.info(String.format("Annotation type %s found in game %d after position %d", annotation.getClass().getName(), i, posNo));
 //                            log.info(annotation.toString());
