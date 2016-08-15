@@ -172,8 +172,7 @@ class StonePositions {
         return new StonePositions(pieces);
     }
 
-    void validate(@NonNull Position position)
-            throws ChessBaseInvalidDataException {
+    void validate(@NonNull Position position) {
         // Verify that all pieces are accounted for in the given position and vice versa
         // Only for debugging!
         int piecesFound = 0, piecesOnBoard = 0;
@@ -185,10 +184,10 @@ class StonePositions {
                     endReached = true;
                 } else {
                     if (endReached && stone.toPiece() != Piece.PAWN) {
-                        throw new ChessBaseInvalidDataException("Pieces not adjusted correctly");
+                        throw new RuntimeException("Pieces not adjusted correctly");
                     }
                     if (position.stoneAt(sqi) != stone) {
-                        throw new ChessBaseInvalidDataException("Board is in inconsistent state");
+                        throw new RuntimeException("Board is in inconsistent state");
                     }
                     piecesFound++;
                 }
@@ -211,7 +210,7 @@ class StonePositions {
             }
         }
         if (piecesFound != piecesOnBoard) {
-            throw new ChessBaseInvalidDataException("Board is in inconsistent state"); // Some pieces are missing
+            throw new RuntimeException("Board is in inconsistent state"); // Some pieces are missing
         }
     }
 }

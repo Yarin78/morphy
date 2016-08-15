@@ -1,6 +1,7 @@
 package se.yarin.cbhlib;
 
 import lombok.AllArgsConstructor;
+import lombok.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.chess.*;
@@ -48,6 +49,13 @@ public final class MovesParser {
             new OpcodeRange(Piece.KNIGHT,  95, 0),
             new OpcodeRange(Piece.KNIGHT, 103, 1),
             new OpcodeRange(Piece.PAWN,   111, 0),
+            new OpcodeRange(Piece.PAWN,   115, 1),
+            new OpcodeRange(Piece.PAWN,   119, 2),
+            new OpcodeRange(Piece.PAWN,   123, 3),
+            new OpcodeRange(Piece.PAWN,   127, 4),
+            new OpcodeRange(Piece.PAWN,   131, 5),
+            new OpcodeRange(Piece.PAWN,   135, 6),
+            new OpcodeRange(Piece.PAWN,   139, 7),
             new OpcodeRange(Piece.QUEEN,  143, 1),
             new OpcodeRange(Piece.QUEEN,  171, 2),
             new OpcodeRange(Piece.ROOK,   199, 2),
@@ -88,17 +96,209 @@ public final class MovesParser {
         }
     }
 
+    private static class MoveEncoder {
+        private int modifier;
+        private ByteBuffer buf;
+
+        public MoveEncoder(ByteBuffer buf) {
+            this.modifier = 0;
+            this.buf = buf;
+        }
+
+        public void output(int opcode) {
+            buf.put((byte) (encryptMap[opcode] + modifier));
+        }
+
+        public void next() {
+            modifier++;
+        }
+    }
+
+    private static class MoveDecoder {
+        private int modifier;
+        private ByteBuffer buf;
+
+        public MoveDecoder(ByteBuffer buf) {
+            this.modifier = 256;
+            this.buf = buf;
+        }
+
+        public int decode() {
+            return decryptMap[(buf.get() + modifier) % 256];
+        }
+
+        public void next() {
+            modifier = (modifier + 255) % 256;
+        }
+    }
+
+    public static ByteBuffer serializeMoves(@NonNull GameMovesModel model) {
+        // TODO: All serialize method should probably not return a ByteBuffer but write to an existing one
+        ByteBuffer buf = ByteBuffer.allocate(16384);
+
+        int flags = 0;
+        if (model.isSetupPosition()) {
+            flags |= 0x40;
+        }
+
+        buf.put((byte) flags);
+        // We don't know the size yet so skip ahead 3 bytes
+        buf.position(4);
+
+        if (model.isSetupPosition()) {
+            serializeInitialPosition(model, buf);
+        }
+
+        encodeMoves(model.root(), StonePositions.fromPosition(model.root().position()),
+                new MoveEncoder(buf));
+
+        int size = buf.position();
+        buf.position(1);
+        ByteBufferUtil.put24BitB(buf, size);
+        buf.position(size);
+        buf.flip();
+        return buf;
+    }
+
+    private static void encodeMoves(GameMovesModel.Node node, StonePositions piecePosition, MoveEncoder encoder) {
+        if (INTEGRITY_CHECKS_ENABLED) {
+            piecePosition.validate(node.position());
+        }
+
+        if (node.children().size() == 0) {
+            encoder.output(OPCODE_END_VARIANT);
+            return;
+        }
+
+        for (int i = 0; i < node.children().size(); i++) {
+            GameMovesModel.Node child = node.children().get(i);
+            Move move = child.lastMove();
+            try {
+                int opcode = encodeMove(move, piecePosition, node.position());
+                if (i + 1 < node.children().size()) {
+                    encoder.output(OPCODE_START_VARIANT);
+                }
+                encoder.output(opcode);
+
+                if (log.isDebugEnabled()) {
+                    log.debug(String.format("Serialized move %s to opcode %02X", move.toLAN(), opcode));
+                }
+
+                if (opcode == OPCODE_TWO_BYTES) {
+                    opcode = encodeSpecialMove(move);
+                    encoder.output(opcode / 256);
+                    encoder.output(opcode % 256);
+
+                    if (log.isDebugEnabled()) {
+                        log.debug(String.format("Serialized move %s to opcode %04X", move.toLAN(), opcode));
+                    }
+                }
+                encoder.next();
+                encodeMoves(child, piecePosition.doMove(move), encoder);
+            } catch (IllegalArgumentException e) {
+                // Shouldn't happen if the game model contains legal moves
+                // If it does, we don't encode the remainder of this variation
+                // TODO: This needs to be tested
+                log.warn("Failed to encode illegal move", e);
+                encoder.output(OPCODE_END_VARIANT);
+            }
+
+        }
+    }
+
+    private static int encodeMove(Move move, StonePositions stonePositions, Position position) {
+        if (move.isNullMove()) {
+            return OPCODE_NULLMOVE;
+        }
+
+        int stoneNo = stonePositions.getStoneNo(move.movingStone(), move.fromSqi());
+        Piece piece = move.movingStone().toPiece();
+        Player playerToMove = position.playerToMove();
+
+        // TODO: Converts the many loops in this method to lookups
+        int ofs = 0;
+        for (OpcodeRange range : opcodeRanges) {
+            if (range.piece == piece && range.pieceNo == stoneNo) {
+                ofs = range.opcode;
+            }
+        }
+
+        if (ofs == 0 || (piece == Piece.PAWN && !move.promotionStone().isNoStone())) {
+            return OPCODE_TWO_BYTES;
+        }
+
+        if (piece == Piece.PAWN) {
+            int dir = playerToMove == Player.WHITE ? 1 : -1;
+            int delta = move.toSqi() - move.fromSqi();
+            if (delta == dir) return ofs;
+            if (delta == dir * 2) return ofs + 1;
+            if (delta == dir * 9) return ofs + 2;
+            if (delta == dir * -7) return ofs + 3;
+            throw new IllegalArgumentException("Can't encode illegal move: " + move.toString());
+        }
+
+        if (piece == Piece.KING) {
+            if (move.isShortCastle()) return ofs + 8;
+            if (move.isLongCastle()) return ofs + 9;
+            for (int i = 0; i < 8; i++) {
+                if (move.fromSqi() + kingDir[i] == move.toSqi()) return ofs + i;
+            }
+            throw new IllegalArgumentException("Can't encode illegal move: " + move.toString());
+        }
+
+        if (piece == Piece.BISHOP || piece == Piece.ROOK || piece == Piece.QUEEN) {
+            int dx = (move.toCol() - move.fromCol() + 8) % 8;
+            int dy = (move.toRow() - move.fromRow() + 8) % 8;
+            int dir, stride;
+            if (dx == 0 && dy != 0) {
+                dir = 0;
+                stride = (dy + 6) % 7;
+            } else if (dx != 0 && dy == 0) {
+                dir = 1;
+                stride = (dx + 6) % 7;
+            } else if (dx == dy) {
+                dir = 2;
+                stride = (dx + 6) % 7;
+            } else if (dx + dy == 8) {
+                dir = 3;
+                stride = (dx + 6) % 7;
+            } else {
+                throw new IllegalArgumentException("Can't encode illegal move: " + move.toString());
+            }
+            if (piece == Piece.BISHOP) dir -= 2;
+            return ofs + dir * 7 + stride;
+        }
+
+        if (piece == Piece.KNIGHT) {
+            for (int i = 0; i < 8; i++) {
+                if (move.fromSqi() + knightDir[i] == move.toSqi()) return ofs + i;
+            }
+            throw new IllegalArgumentException("Can't encode illegal move: " + move.toString());
+        }
+
+        throw new IllegalArgumentException("Can't encode illegal move: " + move.toString());
+    }
+
+    private static int encodeSpecialMove(Move move) {
+        int code = 0;
+        switch (move.promotionStone().toPiece()) {
+            case QUEEN :code = 0; break;
+            case ROOK  :code = 1; break;
+            case BISHOP:code = 2; break;
+            case KNIGHT:code = 3; break;
+        }
+        return move.fromSqi() + move.toSqi() * 64 + code * 4096;
+    }
+
     public static GameMovesModel parseMoveData(ByteBuffer buf)
             throws ChessBaseInvalidDataException, ChessBaseUnsupportedException {
         GameMovesModel model;
-        boolean encoded;
         try {
             // TODO: First byte seems to be flags only, and 7F if illegal position!?
             int flags = ByteBufferUtil.getUnsignedByte(buf);
             int moveSize = ByteBufferUtil.getUnsigned24BitB(buf);
             boolean illegalPosition = flags == 0x7F;
             boolean setupPosition = (flags & 0x40) > 0;
-            encoded = (flags & 0x80) == 0; // Might mean something else
 
             if (setupPosition) {
                 model = parseInitialPosition(buf);
@@ -162,17 +362,14 @@ public final class MovesParser {
 
         StonePositions piecePosition = StonePositions.fromPosition(model.root().position());
 
-        int modifier = 0;
+        MoveDecoder decoder = new MoveDecoder(buf);
         Stack<GameMovesModel.Node> nodeStack = new Stack<>();
         Stack<StonePositions> piecePositionStack = new Stack<>();
         GameMovesModel.Node currentNode = model.root();
 
         try {
             while (true) {
-                int opcode = ByteBufferUtil.getUnsignedByte(buf);
-                if (encoded) {
-                    opcode = decryptMap[(opcode + modifier) % 256];
-                }
+                int opcode = decoder.decode();
 
                 if (opcode == OPCODE_IGNORE) {
                     // Not sure what this opcode does. Just ignoring it seems works fine.
@@ -180,7 +377,6 @@ public final class MovesParser {
                     continue;
                 }
                 if (opcode > OPCODE_IGNORE && opcode < OPCODE_START_VARIANT) {
-//                throw new ChessBaseInvalidDataException(String.format("Unknown opcode in game data: 0x%02X", opcode));
                     log.warn(String.format("Unknown opcode in game data, ignoring: 0x%02X", opcode));
                     continue;
                 }
@@ -204,20 +400,14 @@ public final class MovesParser {
                 if (opcode == OPCODE_TWO_BYTES) {
                     // In rare cases a move has to be encoded as two bytes
                     // Typically pawn promotions or if a player has more than 3 pieces of some kind
-                    int msb = ByteBufferUtil.getUnsignedByte(buf);
-                    int lsb = ByteBufferUtil.getUnsignedByte(buf);
-                    if (encoded) {
-                        msb = decryptMap[(msb + modifier) % 256];
-                        lsb = decryptMap[(lsb + modifier) % 256];
-                    }
-                    opcode = msb * 256 + lsb;
+                    opcode = decoder.decode() * 256 + decoder.decode();
                     move = decodeTwoByteMove(opcode, currentNode.position());
                 } else {
                     move = decodeSingleByteMove(opcode, piecePosition, currentNode.position());
                 }
 
                 if (log.isDebugEnabled()) {
-                    log.debug("Parsed move " + move.toLAN());
+                    log.debug(String.format("Parsed opcode %02X to move %s", opcode, opcode, move.toLAN()));
                 }
 
                 // Update position of the moved piece
@@ -228,7 +418,7 @@ public final class MovesParser {
                     piecePosition.validate(currentNode.position());
                 }
 
-                modifier = (modifier + 255) % 256;
+                decoder.next();
             }
         } catch (BufferUnderflowException e) {
             log.warn("Move data ended abruptly. Moves parsed so far: " + model.toString());
@@ -251,11 +441,6 @@ public final class MovesParser {
         Piece piece = opcodeMap[opcode].piece;
         int stoneNo = opcodeMap[opcode].pieceNo;
         int ofs = opcodeMap[opcode].ofs;
-
-        if (piece == Piece.PAWN) {
-            stoneNo = ofs / 4;
-            ofs %= 4;
-        }
 
         int sqi = stonePositions.getSqi(piece.toStone(playerToMove), stoneNo);
         if (sqi < 0) {
@@ -378,5 +563,55 @@ public final class MovesParser {
 
         Position startPosition = new Position(stones, sideToMove, castles, epFile);
         return new GameMovesModel(startPosition, Chess.moveNumberToPly(moveNumber, sideToMove));
+    }
+
+    public static ByteBuffer serializeInitialPosition(GameMovesModel moves, ByteBuffer buf) {
+        Position position = moves.root().position();
+        int mark = buf.position() + 28;
+
+        buf.put((byte) 1);
+
+        int b = position.getEnPassantCol() + 1;
+        if (position.playerToMove() == Player.BLACK) b += 16;
+        buf.put((byte) b);
+
+        b = 0;
+        if (position.isCastles(Castles.WHITE_LONG_CASTLE)) b += 1;
+        if (position.isCastles(Castles.WHITE_SHORT_CASTLE)) b += 2;
+        if (position.isCastles(Castles.BLACK_LONG_CASTLE)) b += 4;
+        if (position.isCastles(Castles.BLACK_SHORT_CASTLE)) b += 8;
+        buf.put((byte) b);
+
+        b = Chess.plyToMoveNumber(moves.root().ply());
+        if (b > 255) b = 255;
+        buf.put((byte) b);
+
+        ByteBufferBitWriter byteBufferBitWriter = new ByteBufferBitWriter(buf);
+
+        for (int i = 0; i < 64; i++) {
+            Stone stone = position.stoneAt(i);
+            if (stone.isNoStone()) {
+                byteBufferBitWriter.putBit(0);
+            } else {
+                byteBufferBitWriter.putBit(1);
+                byteBufferBitWriter.putBit(stone.isWhite() ? 0 : 1);
+                int p = 0;
+                switch (stone.toPiece()) {
+                    case KING:   p = 1; break;
+                    case QUEEN:  p = 2; break;
+                    case KNIGHT: p = 3; break;
+                    case BISHOP: p = 4; break;
+                    case ROOK:   p = 5; break;
+                    case PAWN:   p = 6; break;
+                }
+                byteBufferBitWriter.putBits(p, 3);
+            }
+        }
+        if (buf.position() > mark) {
+            // Can only happen if there are more than 32 pieces on the board which we don't support
+            throw new IllegalArgumentException("The initial position contains too many pieces");
+        }
+        buf.position(mark);
+        return buf;
     }
 }
