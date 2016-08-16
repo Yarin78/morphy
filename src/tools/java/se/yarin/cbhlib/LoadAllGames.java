@@ -39,31 +39,16 @@ public class LoadAllGames {
             int start = 1, stop = base.size();
             for (int i = start; i <= stop; i++) {
                 GameHeader gameHeader = base.getGameHeader(i);
-//                int movesSize = getMovesSize(movesChannel, gameHeader.getMovesOffset());
-                /*
-                if ((movesSize & 0x80000000) == 0x80000000) {
-//                    log.info(String.format("#%d: Not encoded (guiding text?)", i));
-                }
-                if ((movesSize & 0x40000000) == 0x40000000) {
-//                    log.info(String.format("#%d: Setup position", i));
-                }
+                GameMovesModel moves = movesBase.getMoves(gameHeader.getMovesOffset());
 
-                if ((movesSize & 0x3F000000) != 0) {
-                    log.info(String.format("#%d: Strange initial byte %08X", i, movesSize));
-                }
-                */
-//                movesSize &= 0xFFFFFF;
-
-//                int annotationSize = getAnnotationSize(annotationChannel, gameHeader.getAnnotationOffset());
                 int ofs = gameHeader.getAnnotationOffset();
-//                log.info("Annotations start at ofs " + ofs);
                 if (ofs != 0) {
-                    Map<Integer, Annotations> annotations = annotationBase.getAnnotations(ofs);
+                    annotationBase.getAnnotations(moves, ofs);
 //                    log.info("Annotation size: " + data.limit());
 //                    log.info(String.format("#%d: Found %d annotations", i, annotations.size()));
                     int posNo = 0;
-                    for (Annotations anno : annotations.values()) {
-                        for (Annotation annotation : anno.getAll()) {
+//                    for (Annotations anno : annotations.values()) {
+//                        for (Annotation annotation : anno.getAll()) {
 //                            log.info(String.format("Annotation type %s found in game %d after position %d", annotation.getClass().getName(), i, posNo));
 //                            log.info(annotation.toString());
                             /*
@@ -123,10 +108,10 @@ public class LoadAllGames {
                             }
                             */
                         }
-                        posNo++;
+//                        posNo++;
 
-                    }
-                }
+//                    }
+//                }
 //                log.info(String.format("#%d: moves offset = %d, moves size = %d, annotation offset = %d, annotation size = %d",
 //                        i,
 //                        gameHeader.getMovesOffset(), movesSize,
@@ -144,6 +129,8 @@ public class LoadAllGames {
 //            }
         } catch (IOException e) {
             log.error("IO error reading " + headerFile, e);
+        } catch (ChessBaseUnsupportedException e) {
+            log.error("Error parsing data", e);
         } finally {
             if (base != null) {
                 try {

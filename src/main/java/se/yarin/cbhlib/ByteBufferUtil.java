@@ -68,6 +68,17 @@ public final class ByteBufferUtil {
     }
 
     /**
+     * Puts a length encoded string to a {@link ByteBuffer}.
+     * @param buf the buffer to write to
+     * @param s the string to put
+     */
+    public static void putByteString(ByteBuffer buf, String s) {
+        ByteBuffer sbuf = CBUtil.cbCharSet.encode(s);
+        putByte(buf, s.length());
+        buf.put(sbuf);
+    }
+
+    /**
      * Puts a fixed-width string to a {@link ByteBuffer}. If the length of the string
      * is longer than the max length, it will get truncated.
      * If it's shorter, it will be padded with zeros.

@@ -1,11 +1,14 @@
 package se.yarin.cbhlib.annotations;
 
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
+import se.yarin.cbhlib.AnnotationSerializer;
 import se.yarin.cbhlib.ByteBufferUtil;
 import se.yarin.chess.annotations.Annotation;
 
 import java.nio.ByteBuffer;
 
+@EqualsAndHashCode(callSuper = false)
 public class ComputerEvaluationAnnotation extends Annotation {
     @Getter
     private int eval; // centipoints
@@ -20,13 +23,6 @@ public class ComputerEvaluationAnnotation extends Annotation {
         this.eval = eval;
         this.evalType = evalType;
         this.ply = ply;
-    }
-
-    public static ComputerEvaluationAnnotation deserialize(ByteBuffer buf) {
-        short eval = ByteBufferUtil.getSignedShortL(buf);
-        short type = ByteBufferUtil.getSignedShortL(buf);
-        short depth = ByteBufferUtil.getSignedShortL(buf);
-        return new ComputerEvaluationAnnotation(eval, type, depth);
     }
 
     @Override
@@ -51,5 +47,33 @@ public class ComputerEvaluationAnnotation extends Annotation {
         }
 
         return sb.toString();
+    }
+
+    public static class Serializer implements AnnotationSerializer {
+        @Override
+        public void serialize(ByteBuffer buf, Annotation annotation) {
+            ComputerEvaluationAnnotation cea = (ComputerEvaluationAnnotation) annotation;
+            ByteBufferUtil.putShortL(buf, cea.getEval());
+            ByteBufferUtil.putShortL(buf, cea.getEvalType());
+            ByteBufferUtil.putShortL(buf, cea.getPly());
+        }
+
+        @Override
+        public ComputerEvaluationAnnotation deserialize(ByteBuffer buf, int length) {
+            short eval = ByteBufferUtil.getSignedShortL(buf);
+            short type = ByteBufferUtil.getSignedShortL(buf);
+            short depth = ByteBufferUtil.getSignedShortL(buf);
+            return new ComputerEvaluationAnnotation(eval, type, depth);
+        }
+
+        @Override
+        public Class getAnnotationClass() {
+            return ComputerEvaluationAnnotation.class;
+        }
+
+        @Override
+        public int getAnnotationType() {
+            return 0x21;
+        }
     }
 }

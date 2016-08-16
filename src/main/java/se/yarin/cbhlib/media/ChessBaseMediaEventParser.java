@@ -2,7 +2,7 @@ package se.yarin.cbhlib.media;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import se.yarin.cbhlib.AnnotationParser;
+import se.yarin.cbhlib.AnnotationsSerializer;
 import se.yarin.cbhlib.ByteBufferUtil;
 import se.yarin.cbhlib.CBUtil;
 import se.yarin.chess.*;
@@ -85,7 +85,7 @@ public class ChessBaseMediaEventParser {
                         // probably since there is no need for it as there is a selected move.
                         throw new ChessBaseMediaException("Three first annotation bytes should be 0");
                     }
-                    annotations.add(AnnotationParser.parseAnnotation(buf));
+                    annotations.add(AnnotationsSerializer.deserializeAnnotation(buf));
                     buf.position(next);
                 }
                 event = new AddAnnotationsEvent(annotations);
@@ -564,7 +564,7 @@ public class ChessBaseMediaEventParser {
                     throw new ChessBaseMediaException("Expected move no to be 0");
                 }
 
-                Annotation annotation = AnnotationParser.parseAnnotation(buf);
+                Annotation annotation = AnnotationsSerializer.deserializeAnnotation(buf);
                 if (log.isDebugEnabled()) {
                     log.debug("Parsed annotation: {}", annotation.toString());
                 }

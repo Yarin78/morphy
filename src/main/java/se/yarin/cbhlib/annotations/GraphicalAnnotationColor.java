@@ -1,5 +1,7 @@
 package se.yarin.cbhlib.annotations;
 
+import lombok.Getter;
+
 public enum GraphicalAnnotationColor {
     NONE(0),
     NOT_USED(1),
@@ -7,6 +9,7 @@ public enum GraphicalAnnotationColor {
     YELLOW(3),
     RED(4);
 
+    @Getter
     private final int colorId;
 
     GraphicalAnnotationColor(int colorId) {

@@ -86,11 +86,7 @@ public class LoadGameVerbose {
     private static GameMovesModel getMoves(MovesBase movesBase, AnnotationBase annotationBase, GameHeader gameHeader)
             throws IOException, ChessBaseException {
         GameMovesModel moves = movesBase.getMoves(gameHeader.getMovesOffset());
-        int ofs = gameHeader.getAnnotationOffset();
-        if (ofs != 0) {
-            Map<Integer, Annotations> annotations = annotationBase.getAnnotations(ofs);
-            AnnotationParser.decorateMoves(moves, annotations);
-        }
+        annotationBase.getAnnotations(moves, gameHeader.getAnnotationOffset());
         return moves;
     }
 }

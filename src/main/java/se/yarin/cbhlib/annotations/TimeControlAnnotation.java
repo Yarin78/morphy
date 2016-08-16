@@ -1,22 +1,34 @@
 package se.yarin.cbhlib.annotations;
 
 import lombok.AllArgsConstructor;
+import lombok.EqualsAndHashCode;
+import se.yarin.cbhlib.AnnotationSerializer;
 import se.yarin.cbhlib.ByteBufferUtil;
 import se.yarin.chess.annotations.Annotation;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
+@EqualsAndHashCode(callSuper = false)
 public class TimeControlAnnotation extends Annotation {
+
     @AllArgsConstructor
-    private static class TimeSerie {
+    @EqualsAndHashCode
+    public static class TimeSerie {
         private int start;      // In hundredths of seconds
         private int increment;  // In hundredths of seconds
         private int moves;      // 1000 = rest of the game
         private int type;       // ?? 0, 1 or 3. 3 only on last time serie, 1 usually means increment!?
     }
 
+
     private TimeSerie[] timeSeries;
+
+    public List<TimeSerie> getTimeSeries() {
+        return Arrays.asList(timeSeries);
+    }
 
     private String hundredthsToString(int hundredths) {
         int seconds = hundredths / 100;
@@ -54,17 +66,43 @@ public class TimeControlAnnotation extends Annotation {
         this.timeSeries = timeSeries.clone();
     }
 
-    public static Annotation deserialize(ByteBuffer buf) {
-        ArrayList<TimeSerie> timeSeries = new ArrayList<>();
-        for (int i = 0; i < 3; i++) {
-            int start = ByteBufferUtil.getIntB(buf);
-            int increment = ByteBufferUtil.getIntB(buf);
-            int moves = ByteBufferUtil.getUnsignedShortB(buf);
-            int type = ByteBufferUtil.getUnsignedByte(buf);
-            timeSeries.add(new TimeSerie(start, increment, moves, type));
-            if (moves == 1000) break;
+    public static class Serializer implements AnnotationSerializer {
+        @Override
+        public void serialize(ByteBuffer buf, Annotation annotation) {
+            TimeControlAnnotation tca = (TimeControlAnnotation) annotation;
+            for (int i = 0; i < 3; i++) {
+                TimeSerie ts = i < tca.timeSeries.length ? tca.timeSeries[i] : new TimeSerie(0, 0, 0, 0);
+                ByteBufferUtil.putIntB(buf, ts.start);
+                ByteBufferUtil.putIntB(buf, ts.increment);
+                ByteBufferUtil.putShortB(buf, ts.moves);
+                ByteBufferUtil.putByte(buf, ts.type);
+            }
         }
 
-        return new TimeControlAnnotation(timeSeries.toArray(new TimeSerie[0]));
+        @Override
+        public Annotation deserialize(ByteBuffer buf, int length) {
+            ArrayList<TimeSerie> timeSeries = new ArrayList<>();
+            for (int i = 0; i < 3; i++) {
+                int start = ByteBufferUtil.getIntB(buf);
+                int increment = ByteBufferUtil.getIntB(buf);
+                int moves = ByteBufferUtil.getUnsignedShortB(buf);
+                int type = ByteBufferUtil.getUnsignedByte(buf);
+                timeSeries.add(new TimeSerie(start, increment, moves, type));
+                if (moves == 1000) break;
+            }
+
+            return new TimeControlAnnotation(timeSeries.toArray(new TimeSerie[0]));
+        }
+
+        @Override
+        public Class getAnnotationClass() {
+            return TimeControlAnnotation.class;
+        }
+
+        @Override
+        public int getAnnotationType() {
+            return 0x24;
+        }
     }
+
 }

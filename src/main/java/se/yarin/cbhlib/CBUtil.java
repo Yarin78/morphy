@@ -65,7 +65,7 @@ public final class CBUtil {
         byteToSymbol.put((byte) 0x06, MoveComment.DUBIOUS_MOVE);
         byteToSymbol.put((byte) 0x08, MoveComment.ONLY_MOVE);
         byteToSymbol.put((byte) 0x16, MoveComment.ZUGZWANG);
-        byteToSymbol.put((byte) 0x18, MoveComment.ZUGZWANG); // Seem to be two different codings for zugzwang
+//        byteToSymbol.put((byte) 0x18, MoveComment.ZUGZWANG); // Seem to be two different codings for zugzwang
 
         for (Map.Entry<Byte, Symbol> entry : byteToSymbol.entrySet()) {
             symbolToByte.put(entry.getValue(), entry.getKey());

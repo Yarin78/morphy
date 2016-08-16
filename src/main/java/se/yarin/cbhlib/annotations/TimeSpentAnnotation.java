@@ -1,11 +1,14 @@
 package se.yarin.cbhlib.annotations;
 
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
+import se.yarin.cbhlib.AnnotationSerializer;
 import se.yarin.cbhlib.ByteBufferUtil;
 import se.yarin.chess.annotations.Annotation;
 
 import java.nio.ByteBuffer;
 
+@EqualsAndHashCode(callSuper = false)
 public class TimeSpentAnnotation extends Annotation {
     @Getter
     private int hours;
@@ -36,11 +39,33 @@ public class TimeSpentAnnotation extends Annotation {
         return "Time spent = " + s;
     }
 
-    public static TimeSpentAnnotation deserialize(ByteBuffer buf) {
-        return new TimeSpentAnnotation(
-                ByteBufferUtil.getUnsignedByte(buf),
-                ByteBufferUtil.getUnsignedByte(buf),
-                ByteBufferUtil.getUnsignedByte(buf),
-                ByteBufferUtil.getUnsignedByte(buf));
+    public static class Serializer implements AnnotationSerializer {
+        @Override
+        public void serialize(ByteBuffer buf, Annotation annotation) {
+            TimeSpentAnnotation tsa = (TimeSpentAnnotation) annotation;
+            ByteBufferUtil.putByte(buf, tsa.getHours());
+            ByteBufferUtil.putByte(buf, tsa.getMinutes());
+            ByteBufferUtil.putByte(buf, tsa.getSeconds());
+            ByteBufferUtil.putByte(buf, tsa.getUnknownByte());
+        }
+
+        @Override
+        public TimeSpentAnnotation deserialize(ByteBuffer buf, int length) {
+            return new TimeSpentAnnotation(
+                    ByteBufferUtil.getUnsignedByte(buf),
+                    ByteBufferUtil.getUnsignedByte(buf),
+                    ByteBufferUtil.getUnsignedByte(buf),
+                    ByteBufferUtil.getUnsignedByte(buf));
+        }
+
+        @Override
+        public Class getAnnotationClass() {
+            return TimeSpentAnnotation.class;
+        }
+
+        @Override
+        public int getAnnotationType() {
+            return 0x07;
+        }
     }
 }

@@ -1,6 +1,7 @@
 package se.yarin.cbhlib.annotations;
 
 import lombok.Builder;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NonNull;
 import org.slf4j.Logger;
@@ -14,6 +15,7 @@ import java.io.InputStream;
 import java.nio.ByteBuffer;
 
 @Builder
+@EqualsAndHashCode(callSuper = false)
 public class GameQuotationAnnotation extends Annotation {
 
     private static final Logger log = LoggerFactory.getLogger(GameQuotationAnnotation.class);
@@ -205,65 +207,134 @@ public class GameQuotationAnnotation extends Annotation {
         return sb.toString();
     }
 
-    public static GameQuotationAnnotation deserialize(ByteBuffer buf) {
-        int startPos = buf.position();
-        int size = ByteBufferUtil.getUnsignedShortB(buf);
-        GameQuotationAnnotationBuilder builder = GameQuotationAnnotation.builder();
-        int type = ByteBufferUtil.getUnsignedShortB(buf);
-        if (type != 1 && type != 2) {
-            log.warn("Unknown game quotation type: " + type);
+    public static class Serializer implements AnnotationSerializer {
+        @Override
+        public void serialize(ByteBuffer buf, Annotation annotation) {
+            GameQuotationAnnotation qa = (GameQuotationAnnotation) annotation;
+            int start = buf.position();
+            ByteBufferUtil.putShortB(buf, 0); // This is the size, will be filled in later
+            ByteBufferUtil.putShortB(buf, qa.getType());
+            if (qa.hasSetupPosition()) {
+                ByteBufferUtil.putShortB(buf, 64);
+                buf.put(qa.setupPositionData);
+                // TODO: use MovesParser.serializeInitialPosition()
+            } else {
+                ByteBufferUtil.putShortB(buf, 0);
+            }
+
+            ByteBufferUtil.putByteString(buf, qa.getWhite());
+            ByteBufferUtil.putByte(buf, 0);
+            ByteBufferUtil.putByteString(buf, qa.getBlack());
+            ByteBufferUtil.putByte(buf, 0);
+            ByteBufferUtil.putShortB(buf, qa.getWhiteElo());
+            ByteBufferUtil.putShortB(buf, qa.getBlackElo());
+            ByteBufferUtil.putShortB(buf, CBUtil.encodeEco(qa.getEco()));
+            ByteBufferUtil.putByteString(buf, qa.getEvent());
+            ByteBufferUtil.putByte(buf, 0);
+            ByteBufferUtil.putByteString(buf, qa.getSite());
+            ByteBufferUtil.putByte(buf, 0);
+            ByteBufferUtil.putIntB(buf, CBUtil.encodeDate(qa.getDate()));
+            int typeValue = 0;
+            switch (qa.getTournamentTimeControl()) {
+                case BLITZ:
+                    typeValue = 32;
+                    break;
+                case RAPID:
+                    typeValue = 64;
+                    break;
+                case CORRESPONDENCE:
+                    typeValue = 128;
+                    break;
+            }
+            typeValue += qa.getTournamentType().ordinal();
+            ByteBufferUtil.putShortB(buf, typeValue);
+            ByteBufferUtil.putShortB(buf, qa.getTournamentCountry().ordinal());
+            ByteBufferUtil.putShortB(buf, qa.getTournamentCategory());
+            ByteBufferUtil.putShortB(buf, qa.getTournamentRounds());
+
+            ByteBufferUtil.putByte(buf, qa.getSubRound());
+            ByteBufferUtil.putByte(buf, qa.getRound());
+            ByteBufferUtil.putByte(buf, CBUtil.encodeGameResult(qa.getResult()));
+            ByteBufferUtil.putShortB(buf, qa.getUnknown());
+
+            buf.put(qa.gameData);
+            int end = buf.position();
+            buf.position(start);
+            ByteBufferUtil.putShortB(buf, end - start);
+            buf.position(end);
         }
-        builder.type(type);
 
-        int flags = ByteBufferUtil.getUnsignedShortB(buf);
-        if ((flags & 64) > 0) {
-            byte[] setupPositionData = new byte[28];
-            buf.get(setupPositionData);
-            flags -= 64;
-            builder.setupPositionData(setupPositionData);
+        @Override
+        public GameQuotationAnnotation deserialize(ByteBuffer buf, int length) {
+            int startPos = buf.position();
+            int size = ByteBufferUtil.getUnsignedShortB(buf);
+            GameQuotationAnnotationBuilder builder = GameQuotationAnnotation.builder();
+            int type = ByteBufferUtil.getUnsignedShortB(buf);
+            if (type != 1 && type != 2) {
+                log.warn("Unknown game quotation type: " + type);
+            }
+            builder.type(type);
+
+            int flags = ByteBufferUtil.getUnsignedShortB(buf);
+            if ((flags & 64) > 0) {
+                byte[] setupPositionData = new byte[28];
+                buf.get(setupPositionData);
+                flags -= 64;
+                builder.setupPositionData(setupPositionData);
+            }
+            if (flags != 0) {
+                log.warn("Unknown flag value parsing game quotation: " + flags);
+            }
+
+            builder.white(ByteBufferUtil.getByteString(buf));
+            buf.get();
+            builder.black(ByteBufferUtil.getByteString(buf));
+            buf.get();
+            builder.whiteElo(ByteBufferUtil.getUnsignedShortB(buf));
+            builder.blackElo(ByteBufferUtil.getUnsignedShortB(buf));
+            Eco eco = CBUtil.decodeEco(ByteBufferUtil.getUnsignedShortB(buf));
+            builder.eco(eco);
+            builder.event(ByteBufferUtil.getByteString(buf));
+            buf.get();
+            builder.site(ByteBufferUtil.getByteString(buf));
+            buf.get();
+            Date date = CBUtil.decodeDate(ByteBufferUtil.getIntB(buf));
+            builder.date(date);
+
+            int typeValue = ByteBufferUtil.getUnsignedShortB(buf);
+            builder.tournamentTimeControl(TournamentTimeControl.NORMAL);
+            if ((typeValue & 32) > 0) builder.tournamentTimeControl(TournamentTimeControl.BLITZ);
+            if ((typeValue & 64) > 0) builder.tournamentTimeControl(TournamentTimeControl.RAPID);
+            if ((typeValue & 128) > 0) builder.tournamentTimeControl(TournamentTimeControl.CORRESPONDENCE);
+            builder.tournamentType(TournamentType.values()[typeValue & 31]);
+            builder.tournamentCountry(Nation.values()[ByteBufferUtil.getUnsignedShortB(buf)]);
+            builder.tournamentCategory(ByteBufferUtil.getUnsignedShortB(buf));
+            builder.tournamentRounds(ByteBufferUtil.getUnsignedShortB(buf));
+
+            builder.subRound(ByteBufferUtil.getUnsignedByte(buf));
+            builder.round(ByteBufferUtil.getUnsignedByte(buf));
+            builder.result(CBUtil.decodeGameResult(ByteBufferUtil.getUnsignedByte(buf)));
+
+            int unknown = ByteBufferUtil.getUnsignedShortB(buf);
+            // This one is always set to some value. No idea what it does though.
+            // log.warn(String.format("Unknown value in game quotation is %d (%04X), type is %d", unknown, unknown, type));
+            builder.unknown(unknown);
+
+            byte[] gameData = new byte[size - (buf.position() - startPos)];
+            buf.get(gameData);
+
+            builder.gameData(gameData);
+            return builder.build();
         }
-        if (flags != 0) {
-            log.warn("Unknown flag value parsing game quotation: " + flags);
+
+        @Override
+        public Class getAnnotationClass() {
+            return GameQuotationAnnotation.class;
         }
 
-        builder.white(ByteBufferUtil.getByteString(buf));
-        buf.get();
-        builder.black(ByteBufferUtil.getByteString(buf));
-        buf.get();
-        builder.whiteElo(ByteBufferUtil.getUnsignedShortB(buf));
-        builder.blackElo(ByteBufferUtil.getUnsignedShortB(buf));
-        Eco eco = CBUtil.decodeEco(ByteBufferUtil.getUnsignedShortB(buf));
-        builder.eco(eco);
-        builder.event(ByteBufferUtil.getByteString(buf));
-        buf.get();
-        builder.site(ByteBufferUtil.getByteString(buf));
-        buf.get();
-        Date date = CBUtil.decodeDate(ByteBufferUtil.getIntB(buf));
-        builder.date(date);
-
-        int typeValue = ByteBufferUtil.getUnsignedShortB(buf);
-        builder.tournamentTimeControl(TournamentTimeControl.NORMAL);
-        if ((typeValue & 32) > 0) builder.tournamentTimeControl(TournamentTimeControl.BLITZ);
-        if ((typeValue & 64) > 0) builder.tournamentTimeControl(TournamentTimeControl.RAPID);
-        if ((typeValue & 128) > 0) builder.tournamentTimeControl(TournamentTimeControl.CORRESPONDENCE);
-        builder.tournamentType(TournamentType.values()[typeValue & 31]);
-        builder.tournamentCountry(Nation.values()[ByteBufferUtil.getUnsignedShortB(buf)]);
-        builder.tournamentCategory(ByteBufferUtil.getUnsignedShortB(buf));
-        builder.tournamentRounds(ByteBufferUtil.getUnsignedShortB(buf));
-
-        builder.subRound(ByteBufferUtil.getUnsignedByte(buf));
-        builder.round(ByteBufferUtil.getUnsignedByte(buf));
-        builder.result(CBUtil.decodeGameResult(ByteBufferUtil.getUnsignedByte(buf)));
-
-        int unknown = ByteBufferUtil.getUnsignedShortB(buf);
-        // This one is always set to some value. No idea what it does though.
-        // log.warn(String.format("Unknown value in game quotation is %d (%04X), type is %d", unknown, unknown, type));
-        builder.unknown(unknown);
-
-        byte[] gameData = new byte[size - (buf.position() - startPos)];
-        buf.get(gameData);
-
-        builder.gameData(gameData);
-        return builder.build();
+        @Override
+        public int getAnnotationType() {
+            return 0x13;
+        }
     }
 }

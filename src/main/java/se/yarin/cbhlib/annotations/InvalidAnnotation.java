@@ -1,16 +1,24 @@
 package se.yarin.cbhlib.annotations;
 
+import lombok.AllArgsConstructor;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import se.yarin.cbhlib.CBUtil;
 import se.yarin.chess.annotations.Annotation;
 
 import java.nio.ByteBuffer;
 
-public class InvalidAnnotation extends Annotation {
+@AllArgsConstructor
+@EqualsAndHashCode(callSuper = false)
+public class InvalidAnnotation extends Annotation implements RawAnnotation {
+    @Getter
     private int annotationType;
+
+    @Getter
     private byte[] rawData;
 
-    public InvalidAnnotation(int annotationType, ByteBuffer annotationData, int length) {
-        this.annotationType = annotationType;
-        this.rawData = new byte[length];
-        annotationData.get(rawData);
+    @Override
+    public String toString() {
+        return String.format("InvalidAnnotation %02x: %s", annotationType, CBUtil.toHexString(rawData));
     }
 }

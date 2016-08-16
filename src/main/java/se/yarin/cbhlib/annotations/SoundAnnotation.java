@@ -1,6 +1,8 @@
 package se.yarin.cbhlib.annotations;
 
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
+import se.yarin.cbhlib.AnnotationSerializer;
 import se.yarin.cbhlib.CBUtil;
 import se.yarin.chess.annotations.Annotation;
 
@@ -11,6 +13,7 @@ import java.nio.ByteBuffer;
  * ChessBase 13 doesn't either - probably a deprecated feature?
  */
 @Deprecated
+@EqualsAndHashCode(callSuper = false)
 public class SoundAnnotation extends Annotation {
     @Getter
     private byte[] rawData;
@@ -19,15 +22,33 @@ public class SoundAnnotation extends Annotation {
         this.rawData = rawData;
     }
 
-    public static SoundAnnotation deserialize(ByteBuffer buf, int length) {
-        byte data[] = new byte[length];
-        buf.get(data);
-
-        return new SoundAnnotation(data);
-    }
-
     @Override
     public String toString() {
         return "SoundAnnotation = " + CBUtil.toHexString(rawData);
+    }
+
+    public static class Serializer implements AnnotationSerializer {
+        @Override
+        public void serialize(ByteBuffer buf, Annotation annotation) {
+            buf.put(((SoundAnnotation) annotation).getRawData());
+        }
+
+        @Override
+        public SoundAnnotation deserialize(ByteBuffer buf, int length) {
+            byte data[] = new byte[length];
+            buf.get(data);
+
+            return new SoundAnnotation(data);
+        }
+
+        @Override
+        public Class getAnnotationClass() {
+            return SoundAnnotation.class;
+        }
+
+        @Override
+        public int getAnnotationType() {
+            return 0x10;
+        }
     }
 }

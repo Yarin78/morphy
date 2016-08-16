@@ -25,11 +25,7 @@ public class VerifyGameFlags {
     private static GameMovesModel getMoves(MovesBase movesBase, AnnotationBase annotationBase, GameHeader gameHeader)
             throws IOException, ChessBaseException {
         GameMovesModel moves = movesBase.getMoves(gameHeader.getMovesOffset());
-        int ofs = gameHeader.getAnnotationOffset();
-        if (ofs != 0) {
-            Map<Integer, Annotations> annotations = annotationBase.getAnnotations(ofs);
-            AnnotationParser.decorateMoves(moves, annotations);
-        }
+        annotationBase.getAnnotations(moves, gameHeader.getAnnotationOffset());
         return moves;
     }
 
@@ -80,7 +76,8 @@ public class VerifyGameFlags {
             if (!node.isMainLine()) noVariationMoves++;
             for (Annotation annotation : node.getAnnotations()) {
                 if (annotation instanceof UnknownAnnotation) {
-                    unknownAnnotations.addAll(((UnknownAnnotation) annotation).getMap().keySet());
+                    UnknownAnnotation ua = (UnknownAnnotation) annotation;
+                    unknownAnnotations.add(ua.getAnnotationType());
                 }
                 if (annotation instanceof TextAfterMoveAnnotation) {
                     textLength += ((TextAfterMoveAnnotation) annotation).getText().length();

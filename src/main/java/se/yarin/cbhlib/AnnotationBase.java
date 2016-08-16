@@ -4,15 +4,12 @@ import lombok.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.chess.GameMovesModel;
-import se.yarin.chess.annotations.Annotation;
-import se.yarin.chess.annotations.Annotations;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.file.StandardOpenOption;
-import java.util.Map;
 
 public class AnnotationBase implements BlobSizeRetriever {
     private static final Logger log = LoggerFactory.getLogger(AnnotationBase.class);
@@ -80,9 +77,11 @@ public class AnnotationBase implements BlobSizeRetriever {
         return size;
     }
 
-    public Map<Integer, Annotations> getAnnotations(int ofs) throws IOException {
-        ByteBuffer blob = storage.getBlob(ofs);
-        return AnnotationParser.parseGameAnnotations(blob);
+    public void getAnnotations(@NonNull GameMovesModel model, int ofs) throws IOException {
+        if (ofs > 0) {
+            ByteBuffer blob = storage.getBlob(ofs);
+            AnnotationsSerializer.deserializeAnnotations(blob, model);
+        }
     }
 
     public void putAnnotations(int ofs, GameMovesModel moves) {

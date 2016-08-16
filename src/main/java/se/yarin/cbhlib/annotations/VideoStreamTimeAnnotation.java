@@ -1,6 +1,7 @@
 package se.yarin.cbhlib.annotations;
 
 import lombok.Getter;
+import se.yarin.cbhlib.AnnotationSerializer;
 import se.yarin.cbhlib.ByteBufferUtil;
 import se.yarin.chess.annotations.Annotation;
 
@@ -23,7 +24,25 @@ public class VideoStreamTimeAnnotation extends Annotation {
         return "VideoStreamTimeAnnotation at " + time;
     }
 
-    public static VideoStreamTimeAnnotation deserialize(ByteBuffer buf) {
-        return new VideoStreamTimeAnnotation(ByteBufferUtil.getIntB(buf));
+    public static class Serializer implements AnnotationSerializer {
+        @Override
+        public void serialize(ByteBuffer buf, Annotation annotation) {
+            ByteBufferUtil.putIntB(buf, ((VideoStreamTimeAnnotation) annotation).getTime());
+        }
+
+        @Override
+        public VideoStreamTimeAnnotation deserialize(ByteBuffer buf, int length) {
+            return new VideoStreamTimeAnnotation(ByteBufferUtil.getIntB(buf));
+        }
+
+        @Override
+        public Class getAnnotationClass() {
+            return VideoStreamTimeAnnotation.class;
+        }
+
+        @Override
+        public int getAnnotationType() {
+            return 0x25;
+        }
     }
 }
