@@ -25,7 +25,7 @@ public class GameQuotationAnnotation extends Annotation {
 
     static {
         // This encryption map exists in the ChessBase executable file
-        InputStream stream = MovesParser.class.getResourceAsStream("gameQuotationEncryptionKey.bin");
+        InputStream stream = MovesSerializer.class.getResourceAsStream("gameQuotationEncryptionKey.bin");
         try {
             stream.read(encryptMap);
             for (int i = 0; i < 256; i++) {
@@ -115,7 +115,7 @@ public class GameQuotationAnnotation extends Annotation {
     public GameMovesModel getMoves() throws ChessBaseInvalidDataException {
         GameMovesModel moves;
         if (hasSetupPosition()) {
-            moves = MovesParser.parseInitialPosition(ByteBuffer.wrap(setupPositionData));
+            moves = MovesSerializer.parseInitialPosition(ByteBuffer.wrap(setupPositionData));
         } else {
             moves = new GameMovesModel();
         }
@@ -217,7 +217,7 @@ public class GameQuotationAnnotation extends Annotation {
             if (qa.hasSetupPosition()) {
                 ByteBufferUtil.putShortB(buf, 64);
                 buf.put(qa.setupPositionData);
-                // TODO: use MovesParser.serializeInitialPosition()
+                // TODO: use MovesSerializer.serializeInitialPosition()
             } else {
                 ByteBufferUtil.putShortB(buf, 0);
             }

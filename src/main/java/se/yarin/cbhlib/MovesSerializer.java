@@ -13,10 +13,10 @@ import java.nio.ByteBuffer;
 import java.util.EnumSet;
 import java.util.Stack;
 
-public final class MovesParser {
-    private static final Logger log = LoggerFactory.getLogger(MovesParser.class);
+public final class MovesSerializer {
+    private static final Logger log = LoggerFactory.getLogger(MovesSerializer.class);
 
-    private MovesParser() {}
+    private MovesSerializer() {}
 
     // Enabling this will integrity check the two parallel position structures after parsing every move
     static boolean INTEGRITY_CHECKS_ENABLED = false;
@@ -76,7 +76,7 @@ public final class MovesParser {
         // This encryption map occurs in in CBase9.exe starting at position 0x7AE4A8
         // Hence it has probably been randomly generated, so no formula exist.
         // In CBase10.exe, it starts at 0x9D6530
-        InputStream stream = MovesParser.class.getResourceAsStream("moveEncryptionKey.bin");
+        InputStream stream = MovesSerializer.class.getResourceAsStream("moveEncryptionKey.bin");
         try {
             stream.read(encryptMap);
             for (int i = 0; i < 256; i++) {
@@ -215,7 +215,7 @@ public final class MovesParser {
         Piece piece = move.movingStone().toPiece();
         Player playerToMove = position.playerToMove();
 
-        // TODO: Converts the many loops in this method to lookups
+        // TODO: Convert the many loops in this method to lookups
         int ofs = 0;
         for (OpcodeRange range : opcodeRanges) {
             if (range.piece == piece && range.pieceNo == stoneNo) {

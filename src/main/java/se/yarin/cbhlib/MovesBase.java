@@ -77,14 +77,28 @@ public class MovesBase implements BlobSizeRetriever {
         return size;
     }
 
+    /**
+     * Gets the moves of a game from the moves database
+     * @param ofs the offset in the database where the game moves data is stored
+     * @return a model of the game
+     * @throws IOException if there was some IO errors when reading the moves
+     */
     public GameMovesModel getMoves(int ofs)
             throws IOException, ChessBaseInvalidDataException, ChessBaseUnsupportedException {
         ByteBuffer blob = storage.getBlob(ofs);
-        return MovesParser.parseMoveData(blob);
+        return MovesSerializer.parseMoveData(blob);
     }
 
-    public void putMoves(int ofs, GameMovesModel moves) {
-        // TODO: Implement this
-        throw new UnsupportedOperationException();
+    /**
+     * Puts the moves of a game into the moves database
+     * @param ofs the old offset where moves of this game was stored,
+     *            or 0 if this is a new game in the database
+     * @param model the game to store
+     * @return The offset where the game moves was stored
+     * @throws IOException if there was some IO errors when storing the moves
+     */
+    public int putMoves(int ofs, GameMovesModel model) throws IOException {
+        ByteBuffer buf = MovesSerializer.serializeMoves(model);
+        return storage.putBlob(ofs, buf);
     }
 }

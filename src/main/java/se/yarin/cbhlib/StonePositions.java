@@ -6,10 +6,10 @@ import se.yarin.chess.*;
 /**
  * An internal representation of where the stones are on the board.
  * This can't be determined from {@link Position} as the internal order of the stones
- * must is important for the {@link MovesParser}.
+ * must is important for the {@link MovesSerializer}.
  * <p>
  * If there are more than 3 knights, bishops, rooks or queens, those piece will silently be ignored.
- * Referring to those pieces are done in a special way in {@link MovesParser}.
+ * Referring to those pieces are done in a special way in {@link MovesSerializer}.
  * </p>
  * <p>
  * This class is immutable.

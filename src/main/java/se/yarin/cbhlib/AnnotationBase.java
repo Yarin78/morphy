@@ -77,6 +77,12 @@ public class AnnotationBase implements BlobSizeRetriever {
         return size;
     }
 
+    /**
+     * Decorates a game with annotations from the annotation database
+     * @param model the game to decorate with annotations
+     * @param ofs the offset in the database where the annotation data is stored
+     * @throws IOException if there was some IO errors when reading the annotations
+     */
     public void getAnnotations(@NonNull GameMovesModel model, int ofs) throws IOException {
         if (ofs > 0) {
             ByteBuffer blob = storage.getBlob(ofs);
@@ -84,8 +90,20 @@ public class AnnotationBase implements BlobSizeRetriever {
         }
     }
 
-    public void putAnnotations(int ofs, GameMovesModel moves) {
-        // TODO: Implement this
-        throw new UnsupportedOperationException();
+    /**
+     * Stores annotations for a game in the annotation database.
+     * @param gameId the id of the game to store annotations for
+     * @param ofs the old offset where annotations of this game was stored,
+     *            or 0 if no annotations were stored for this game before
+     * @param model the game with annotations to store
+     * @return The offset where the annotation was stored. 0 if the game contained no annotations.
+     * @throws IOException if there was some IO errors when storing the annotations
+     */
+    public int putAnnotations(int gameId, int ofs, GameMovesModel model) throws IOException {
+        if (model.countAnnotations() == 0) {
+            return 0;
+        }
+        ByteBuffer buf = AnnotationsSerializer.serializeAnnotations(gameId, model);
+        return storage.putBlob(ofs, buf);
     }
 }
