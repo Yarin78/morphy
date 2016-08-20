@@ -8,7 +8,7 @@ class TestEntitySerializer implements EntitySerializer<TestEntity> {
     @Override
     public ByteBuffer serialize(TestEntity entity) {
         ByteBuffer buf = ByteBuffer.allocate(getSerializedEntityLength());
-        ByteBufferUtil.putByteString(buf, entity.getKey(), 20);
+        ByteBufferUtil.putFixedSizeByteString(buf, entity.getKey(), 20);
         ByteBufferUtil.putIntB(buf, entity.getValue());
         return buf;
     }

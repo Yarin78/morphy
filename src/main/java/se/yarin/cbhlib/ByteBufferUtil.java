@@ -75,7 +75,7 @@ public final class ByteBufferUtil {
      * @param s the string to put
      * @param length the length of the string
      */
-    public static void putByteString(ByteBuffer buf, String s, int length) {
+    public static void putFixedSizeByteString(ByteBuffer buf, String s, int length) {
         ByteBuffer sbuf = CBUtil.cbCharSet.encode(s);
         sbuf.position(0);
         if (sbuf.limit() > length) {

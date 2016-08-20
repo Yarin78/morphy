@@ -54,8 +54,8 @@ public class SourceBase extends EntityBase<SourceEntity> {
 
     public ByteBuffer serialize(@NonNull SourceEntity source) {
         ByteBuffer buf = ByteBuffer.allocate(SERIALIZED_SOURCE_SIZE);
-        ByteBufferUtil.putByteString(buf, source.getTitle(), 25);
-        ByteBufferUtil.putByteString(buf, source.getPublisher(), 16);
+        ByteBufferUtil.putFixedSizeByteString(buf, source.getTitle(), 25);
+        ByteBufferUtil.putFixedSizeByteString(buf, source.getPublisher(), 16);
         ByteBufferUtil.putIntL(buf, CBUtil.encodeDate(source.getPublication()));
         ByteBufferUtil.putIntL(buf, CBUtil.encodeDate(source.getDate()));
         ByteBufferUtil.putByte(buf, source.getVersion());

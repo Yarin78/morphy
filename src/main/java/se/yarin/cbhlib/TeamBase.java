@@ -55,7 +55,7 @@ public class TeamBase extends EntityBase<TeamEntity> {
 
     public ByteBuffer serialize(@NonNull TeamEntity team) {
         ByteBuffer buf = ByteBuffer.allocate(SERIALIZED_TEAM_SIZE);
-        ByteBufferUtil.putByteString(buf, team.getTitle(), 45);
+        ByteBufferUtil.putFixedSizeByteString(buf, team.getTitle(), 45);
         ByteBufferUtil.putIntL(buf, team.getTeamNumber());
         ByteBufferUtil.putByte(buf, team.isSeason() ? 1 : 0);
         ByteBufferUtil.putIntL(buf, team.getYear());

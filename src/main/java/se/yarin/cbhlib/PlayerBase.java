@@ -55,8 +55,8 @@ public class PlayerBase extends EntityBase<PlayerEntity> {
 
     public ByteBuffer serialize(@NonNull PlayerEntity player) {
         ByteBuffer buf = ByteBuffer.allocate(SERIALIZED_PLAYER_SIZE);
-        ByteBufferUtil.putByteString(buf, player.getLastName(), 30);
-        ByteBufferUtil.putByteString(buf, player.getFirstName(), 20);
+        ByteBufferUtil.putFixedSizeByteString(buf, player.getLastName(), 30);
+        ByteBufferUtil.putFixedSizeByteString(buf, player.getFirstName(), 20);
         ByteBufferUtil.putIntL(buf, player.getCount());
         ByteBufferUtil.putIntL(buf, player.getFirstGameId());
         return buf;

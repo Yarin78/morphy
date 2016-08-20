@@ -8,10 +8,10 @@ class TestEntityv2Serializer implements EntitySerializer<TestEntityv2> {
     @Override
     public ByteBuffer serialize(TestEntityv2 entity) {
         ByteBuffer buf = ByteBuffer.allocate(getSerializedEntityLength());
-        ByteBufferUtil.putByteString(buf, entity.getKey(), 20);
+        ByteBufferUtil.putFixedSizeByteString(buf, entity.getKey(), 20);
         ByteBufferUtil.putIntB(buf, entity.getValue());
         ByteBufferUtil.putIntB(buf, entity.getExtraValue());
-        ByteBufferUtil.putByteString(buf, entity.getExtraString(), 20);
+        ByteBufferUtil.putFixedSizeByteString(buf, entity.getExtraString(), 20);
         return buf;
     }
 

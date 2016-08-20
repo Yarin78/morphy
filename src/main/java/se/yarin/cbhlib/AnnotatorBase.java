@@ -55,7 +55,7 @@ public class AnnotatorBase extends EntityBase<AnnotatorEntity> {
 
     public ByteBuffer serialize(@NonNull AnnotatorEntity annotator) {
         ByteBuffer buf = ByteBuffer.allocate(SERIALIZED_ANNOTATOR_SIZE);
-        ByteBufferUtil.putByteString(buf, annotator.getName(), 45);
+        ByteBufferUtil.putFixedSizeByteString(buf, annotator.getName(), 45);
         ByteBufferUtil.putIntL(buf, annotator.getCount());
         ByteBufferUtil.putIntL(buf, annotator.getFirstGameId());
         return buf;

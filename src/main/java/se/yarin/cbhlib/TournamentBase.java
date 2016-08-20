@@ -73,8 +73,8 @@ public class TournamentBase extends EntityBase<TournamentEntity> {
 
 
         ByteBuffer buf = ByteBuffer.allocate(SERIALIZED_TOURNAMENT_SIZE);
-        ByteBufferUtil.putByteString(buf, tournament.getTitle(), 40);
-        ByteBufferUtil.putByteString(buf, tournament.getPlace(), 30);
+        ByteBufferUtil.putFixedSizeByteString(buf, tournament.getTitle(), 40);
+        ByteBufferUtil.putFixedSizeByteString(buf, tournament.getPlace(), 30);
         ByteBufferUtil.putIntL(buf, CBUtil.encodeDate(tournament.getDate()));
         ByteBufferUtil.putByte(buf, typeByte);
         ByteBufferUtil.putByte(buf, tournament.isTeamTournament() ? 1 : 0);
