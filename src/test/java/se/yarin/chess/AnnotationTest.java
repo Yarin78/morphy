@@ -17,35 +17,21 @@ public class AnnotationTest {
         annotations.add(new CommentaryAfterMoveAnnotation("after"));
         annotations.add(new CommentaryBeforeMoveAnnotation("before"));
 
-        CommentaryAfterMoveAnnotation annotation = annotations.getAnnotation(CommentaryAfterMoveAnnotation.class);
+        CommentaryAfterMoveAnnotation annotation = annotations.getByClass(CommentaryAfterMoveAnnotation.class);
         assertEquals("after", annotation.getCommentary());
 
-        assertNull(annotations.getAnnotation(SymbolAnnotation.class));
+        assertNull(annotations.getByClass(SymbolAnnotation.class));
     }
 
     @Test
-    public void testAddEmptyAnnotations() {
-        Annotations annotations = new Annotations();
-
-        annotations.add(new CommentaryAfterMoveAnnotation(" "));
-        annotations.add(new CommentaryBeforeMoveAnnotation(" \n\t  "));
-        annotations.add(new SymbolAnnotation(
-                LineEvaluation.NO_EVALUATION,
-                MovePrefix.NOTHING,
-                MoveComment.NOTHING));
-
-        assertEquals(0, annotations.size());
-    }
-
-    @Test
-    public void testRemoveAnnotation() {
+    public void testRemoveByClassAnnotation() {
         Annotations annotations = new Annotations();
 
         annotations.add(new CommentaryAfterMoveAnnotation("after"));
         annotations.add(new SymbolAnnotation(LineEvaluation.EQUAL));
 
-        assertTrue(annotations.remove(SymbolAnnotation.class));
-        assertFalse(annotations.remove(SymbolAnnotation.class));
+        assertTrue(annotations.removeByClass(SymbolAnnotation.class));
+        assertFalse(annotations.removeByClass(SymbolAnnotation.class));
         assertEquals(1, annotations.size());
     }
 
@@ -62,15 +48,15 @@ public class AnnotationTest {
     }
 
     @Test
-    public void testMergeCommentaryAnnotation() {
+    public void testReplaceCommentaryAnnotation() {
         Annotations annotations = new Annotations();
 
         annotations.add(new CommentaryBeforeMoveAnnotation("old"));
-        annotations.add(new CommentaryBeforeMoveAnnotation("new"));
+        annotations.replace(new CommentaryBeforeMoveAnnotation("new"));
 
         assertEquals(1, annotations.size());
 
-        CommentaryBeforeMoveAnnotation annotation = annotations.getAnnotation(CommentaryBeforeMoveAnnotation.class);
+        CommentaryBeforeMoveAnnotation annotation = annotations.getByClass(CommentaryBeforeMoveAnnotation.class);
         assertEquals("new", annotation.getCommentary());
     }
 
@@ -87,41 +73,6 @@ public class AnnotationTest {
 
         assertEquals(3, annotations.size());
         assertEquals("{ before move } RR 10.Bc4! +- { after move }", annotations.format("10.Bc4", true));
-    }
-
-    @Test
-    public void testImplicitRemoveTextAnnotation() {
-        Annotations annotations = new Annotations();
-
-        annotations.add(new CommentaryAfterMoveAnnotation("after move"));
-        assertEquals(1, annotations.size());
-        annotations.add(new CommentaryAfterMoveAnnotation(""));
-        assertEquals(0, annotations.size());
-    }
-
-    @Test
-    public void testImplicitRemoveSymbolAnnotation() {
-        Annotations annotations = new Annotations();
-
-        annotations.add(new SymbolAnnotation(LineEvaluation.EQUAL));
-        assertEquals(1, annotations.size());
-        annotations.add(new SymbolAnnotation(LineEvaluation.NO_EVALUATION));
-        assertEquals(0, annotations.size());
-    }
-
-    @Test
-    public void testAddAllAnnotations() {
-        Annotations anno1 = new Annotations();
-        Annotations anno2 = new Annotations();
-
-        anno1.add(new SymbolAnnotation(LineEvaluation.EQUAL));
-        anno1.add(new CommentaryAfterMoveAnnotation("after"));
-
-        anno2.add(new CommentaryBeforeMoveAnnotation("test"));
-        anno2.add(new SymbolAnnotation(MovePrefix.DIRECTED_AGAINST));
-
-        anno2.addAll(anno1);
-        assertEquals(3, anno2.size());
     }
 
     private static class DummyAnnotation1 extends Annotation {}

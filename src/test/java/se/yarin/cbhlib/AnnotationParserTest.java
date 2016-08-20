@@ -52,7 +52,7 @@ public class AnnotationParserTest {
         ByteBuffer buf = ResourceLoader.loadResource("graphicalannotations.annotations.bin");
         Map<Integer, Annotations> anno = AnnotationParser.parseGameAnnotations(buf);
 
-        GraphicalSquaresAnnotation sqAnno = anno.get(2).getAnnotation(GraphicalSquaresAnnotation.class);
+        GraphicalSquaresAnnotation sqAnno = anno.get(2).getByClass(GraphicalSquaresAnnotation.class);
         Collection<GraphicalSquaresAnnotation.Square> sq = sqAnno.getSquares();
         assertTrue(sq.contains(new GraphicalSquaresAnnotation.Square(GraphicalAnnotationColor.GREEN, G5)));
         assertTrue(sq.contains(new GraphicalSquaresAnnotation.Square(GraphicalAnnotationColor.GREEN, H5)));
@@ -62,7 +62,7 @@ public class AnnotationParserTest {
         assertTrue(sq.contains(new GraphicalSquaresAnnotation.Square(GraphicalAnnotationColor.RED, E7)));
         assertTrue(sq.contains(new GraphicalSquaresAnnotation.Square(GraphicalAnnotationColor.RED, F7)));
 
-        GraphicalArrowsAnnotation arrowAnno = anno.get(2).getAnnotation(GraphicalArrowsAnnotation.class);
+        GraphicalArrowsAnnotation arrowAnno = anno.get(2).getByClass(GraphicalArrowsAnnotation.class);
         Collection<GraphicalArrowsAnnotation.Arrow> a = arrowAnno.getArrows();
         assertTrue(a.contains(new GraphicalArrowsAnnotation.Arrow(GraphicalAnnotationColor.GREEN, D8, A5)));
         assertTrue(a.contains(new GraphicalArrowsAnnotation.Arrow(GraphicalAnnotationColor.RED, B8, C6)));

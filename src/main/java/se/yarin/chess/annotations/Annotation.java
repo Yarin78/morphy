@@ -33,24 +33,6 @@ public abstract class Annotation {
         return text;
     }
 
-    /**
-     * Combines two annotations of the same type into one.
-     * The default behaviour is to replace the old annotation with the new one.
-     * @param oldAnnotation the old annotation with the same type
-     * @return an instance of the merged annotation.
-     */
-    public @NonNull Annotation combine(Annotation oldAnnotation) {
-        return this;
-    }
-
-    /**
-     * Determines if this annotation is equivalent to no annotation.
-     * @return true if this annotation can just as well be removed
-     */
-    public boolean isEmptyAnnotation() {
-        return false;
-    }
-
     @Override
     public String toString() {
         return this.getClass().getSimpleName();

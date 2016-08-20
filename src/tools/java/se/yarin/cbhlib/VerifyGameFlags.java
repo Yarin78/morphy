@@ -78,7 +78,7 @@ public class VerifyGameFlags {
         HashSet<Integer> unknownAnnotations = new HashSet<>();
         for (GameMovesModel.Node node : moves.getAllNodes()) {
             if (!node.isMainLine()) noVariationMoves++;
-            for (Annotation annotation : node.getAnnotations().getAll()) {
+            for (Annotation annotation : node.getAnnotations()) {
                 if (annotation instanceof UnknownAnnotation) {
                     unknownAnnotations.addAll(((UnknownAnnotation) annotation).getMap().keySet());
                 }

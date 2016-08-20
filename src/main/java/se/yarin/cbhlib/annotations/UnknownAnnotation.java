@@ -25,17 +25,6 @@ public class UnknownAnnotation extends Annotation {
     }
 
     @Override
-    public Annotation combine(Annotation oldAnnotation) {
-        for (Map.Entry<Integer, byte[]> entry : ((UnknownAnnotation) oldAnnotation).getMap().entrySet()) {
-            if (unknown.containsKey(entry.getKey())) {
-                log.warn("Combining two unknown annotations of type " + entry.getKey() + ", one will be overwritten");
-            }
-            unknown.put(entry.getKey(), entry.getValue());
-        }
-        return this;
-    }
-
-    @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
         for (Map.Entry<Integer, byte[]> entry : unknown.entrySet()) {

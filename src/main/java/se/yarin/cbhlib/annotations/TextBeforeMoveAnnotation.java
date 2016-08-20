@@ -70,12 +70,4 @@ public class TextBeforeMoveAnnotation extends CommentaryBeforeMoveAnnotation {
         String comment = ByteBufferUtil.getFixedSizeByteString(buf, length - 2);
         return new TextBeforeMoveAnnotation(unknown, comment, language);
     }
-
-    @Override
-    public Annotation combine(Annotation oldAnnotation) {
-        HashMap<Nation, String> map = new HashMap<>();
-        map.putAll(((TextBeforeMoveAnnotation) oldAnnotation).text);
-        map.putAll(text);
-        return new TextBeforeMoveAnnotation(map);
-    }
 }

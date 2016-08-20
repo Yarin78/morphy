@@ -26,9 +26,4 @@ public class CommentaryAfterMoveAnnotation extends Annotation {
         }
         return text + " { " + s + " }";
     }
-
-    @Override
-    public boolean isEmptyAnnotation() {
-        return commentary.length() == 0;
-    }
 }

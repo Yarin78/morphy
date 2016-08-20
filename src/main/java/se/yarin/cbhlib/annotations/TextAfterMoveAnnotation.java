@@ -72,11 +72,4 @@ public class TextAfterMoveAnnotation extends CommentaryAfterMoveAnnotation {
         return new TextAfterMoveAnnotation(unknown, comment, language);
     }
 
-    @Override
-    public Annotation combine(Annotation oldAnnotation) {
-        HashMap<Nation, String> map = new HashMap<>();
-        map.putAll(((TextAfterMoveAnnotation) oldAnnotation).text);
-        map.putAll(text);
-        return new TextAfterMoveAnnotation(map);
-    }
 }

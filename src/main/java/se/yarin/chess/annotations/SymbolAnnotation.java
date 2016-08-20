@@ -47,13 +47,6 @@ public class SymbolAnnotation extends Annotation {
     }
 
     @Override
-    public boolean isEmptyAnnotation() {
-        return lineEvaluation == LineEvaluation.NO_EVALUATION &&
-                movePrefix == MovePrefix.NOTHING &&
-                moveComment == MoveComment.NOTHING;
-    }
-
-    @Override
     public String format(@NonNull String text, boolean ascii) {
         // First add move comment
         String symbol = ascii ? moveComment.toASCIIString() : moveComment.toUnicodeString();

@@ -74,7 +74,7 @@ public class LoadGameVerbose {
         }
         String mv = node.lastMove() == null ? "" : node.lastMove().toSAN(node.ply() - 1);
         System.out.println(String.format("Node %3d: %s%-10s", nodeId, indent, mv));
-        for (Annotation annotation : node.getAnnotations().getAll()) {
+        for (Annotation annotation : node.getAnnotations()) {
             System.out.println(String.format("%s     %s", indent, annotation.toString()));
             if (annotation instanceof SymbolAnnotation) {
                 SymbolAnnotation sa = (SymbolAnnotation) annotation;

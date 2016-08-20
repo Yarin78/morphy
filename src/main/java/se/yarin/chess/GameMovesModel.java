@@ -623,10 +623,11 @@ public class GameMovesModel {
         /**
          * Gets an annotation of the specified class at this position
          * @param clazz the annotation class to get
-         * @return an annotation of the specified class, or null if none existed in this set
+         * @return an annotation of the specified class, or null if none existed in this set.
+         * If there are multiple annotations with the same class, the first one will be returned.
          */
         public <T extends Annotation> T getAnnotation(Class<T> clazz) {
-            return annotations.getAnnotation(clazz);
+            return annotations.getByClass(clazz);
         }
 
         /**
@@ -690,7 +691,7 @@ public class GameMovesModel {
         }
 
         public int countAnnotations() {
-            int sum = annotations.getAll().size();
+            int sum = annotations.size();
             for (Node child : children) {
                 sum += child.countAnnotations();
             }
