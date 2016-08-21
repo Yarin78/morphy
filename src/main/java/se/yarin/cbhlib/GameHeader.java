@@ -13,9 +13,8 @@ import java.util.EnumSet;
  */
 @Builder(toBuilder = true)
 @Data
-//@AllArgsConstructor(access = AccessLevel.PRIVATE)
+@EqualsAndHashCode
 public class GameHeader {
-    @Getter
     private final int id;
     private final boolean game;
     private final boolean deleted; // If true, game has been marked as deleted but no physical deletion has been done yet
@@ -27,19 +26,19 @@ public class GameHeader {
     private final int tournamentId;
     private final int annotatorId;
     private final int sourceId;
-    private final Date playedDate;
-    private final GameResult result;
+    private final @NonNull Date playedDate;
+    private final @NonNull GameResult result;
     private final int round; // 0 = not set
     private final int subRound; // 0 = not set
     private final int whiteElo; // 0 = not set
     private final int blackElo; // 0 = not set
-    private final Eco eco;
-    private final LineEvaluation lineEvaluation;
+    private final @NonNull Eco eco;
+    private final @NonNull LineEvaluation lineEvaluation;
 
     // The GameHeader may contain medals that's not represented in the moves data
     // But if the moves data contain a medal annotation, that will be reflected in the header medals field
-    private final EnumSet<Medal> medals;
-    private final EnumSet<GameHeaderFlags> flags;
+    private final @NonNull EnumSet<Medal> medals;
+    private final @NonNull EnumSet<GameHeaderFlags> flags;
 
     // Contains info about the quantity of annotation, variations etc
     // These ranges needs to be double checked

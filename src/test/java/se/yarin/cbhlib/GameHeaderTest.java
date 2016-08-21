@@ -13,6 +13,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.ByteBuffer;
 import java.util.EnumSet;
 
 import static org.junit.Assert.assertEquals;
@@ -44,6 +45,51 @@ public class GameHeaderTest {
         }
         fos.close();
         return file;
+    }
+
+    @Test
+    public void testSerializeDeserializeGameHeader() {
+        GameHeaderBase base = new GameHeaderBase();
+        GameHeader before = GameHeader.builder()
+                .id(3)
+                .game(true)
+                .deleted(false)
+                .guidingText(false)
+                .movesOffset(7)
+                .annotationOffset(100)
+                .whitePlayerId(3)
+                .blackPlayerId(7)
+                .tournamentId(10)
+                .annotationOffset(73)
+                .sourceId(1)
+                .playedDate(new Date(2015,3,1))
+                .result(GameResult.BOTH_LOST)
+                .round(2)
+                .subRound(1)
+                .whiteElo(2014)
+                .blackElo(2037)
+                .eco(new Eco("C01"))
+                .lineEvaluation(LineEvaluation.DEVELOPMENT_ADVANTAGE)
+                .medals(EnumSet.of(Medal.MODEL_GAME, Medal.USER))
+                .flags(EnumSet.of(
+                        GameHeaderFlags.VARIATIONS,
+                        GameHeaderFlags.SYMBOLS,
+                        GameHeaderFlags.GRAPHICAL_SQUARES,
+                        GameHeaderFlags.TIME_SPENT))
+                .variationsMagnitude(1)
+                .commentariesMagnitude(0)
+                .symbolsMagnitude(2)
+                .graphicalArrowsMagnitude(0)
+                .graphicalSquaresMagnitude(1)
+                .trainingMagnitude(0)
+                .timeAnnotationsMagnitude(1)
+                .noMoves(13)
+                .build();
+
+        ByteBuffer serialized = base.serialize(before);
+        GameHeader after = base.deserialize(3, serialized);
+
+        assertEquals(before, after);
     }
 
     @Test

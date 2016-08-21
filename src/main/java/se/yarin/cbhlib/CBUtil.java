@@ -112,7 +112,7 @@ public final class CBUtil {
      * @param eco the Eco to encode
      * @return the encoded Eco
      */
-    public static int encodeEco(Eco eco) {
+    public static int encodeEco(@NonNull Eco eco) {
         // TODO: Add support for sub eco when Eco contains that data
         if (!eco.isSet()) {
             return 0;

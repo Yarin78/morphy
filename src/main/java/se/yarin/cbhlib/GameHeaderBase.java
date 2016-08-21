@@ -3,8 +3,8 @@ package se.yarin.cbhlib;
 import lombok.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import se.yarin.chess.LineEvaluation;
-import se.yarin.chess.Symbol;
+import se.yarin.chess.*;
+import yarin.cbhlib.Medals;
 
 import java.io.File;
 import java.io.IOException;
@@ -20,7 +20,10 @@ public class GameHeaderBase implements GameHeaderSerializer {
 
     private GameHeaderStorageBase storage;
 
-    private GameHeaderBase() {
+    /**
+     * Creates a new game header base that is initially empty.
+     */
+    public GameHeaderBase() {
         this.storage = new InMemoryGameHeaderStorage(new GameHeaderStorageMetadata());
     }
 
@@ -70,7 +73,15 @@ public class GameHeaderBase implements GameHeaderSerializer {
      * @return the number of game headers
      */
     public int size() {
-        return storage.getMetadata().getNextGameId() - 1;
+        return getNextGameId() - 1;
+    }
+
+    /**
+     * Gets the id of the next header that will be stored
+     * @return the next game id
+     */
+    int getNextGameId() {
+        return storage.getMetadata().getNextGameId();
     }
 
     /**
@@ -125,6 +136,7 @@ public class GameHeaderBase implements GameHeaderSerializer {
         }
         builder.movesOffset(ByteBufferUtil.getIntB(buf));
         if (guidingText) {
+            // TODO: Test this
             int unknownShort = ByteBufferUtil.getUnsignedShortB(buf);
             if (unknownShort != 0) {
                 log.warn("Unknown short in guiding text: " + unknownShort);
@@ -133,11 +145,14 @@ public class GameHeaderBase implements GameHeaderSerializer {
             builder.sourceId(ByteBufferUtil.getUnsigned24BitB(buf));
             builder.annotatorId(ByteBufferUtil.getUnsigned24BitB(buf));
             builder.round(ByteBufferUtil.getUnsignedByte(buf));
+            builder.subRound(ByteBufferUtil.getUnsignedByte(buf));
 
-            int unknownByte = ByteBufferUtil.getUnsignedByte(buf); // subround?
-            if (unknownByte != 0) {
-                log.warn("Unknown byte in guiding text: " + unknownByte);
-            }
+            // Set some default values since null is not allowed
+            builder.playedDate(new Date(0));
+            builder.result(GameResult.NOT_FINISHED);
+            builder.eco(Eco.unset());
+            builder.lineEvaluation(LineEvaluation.NO_EVALUATION);
+            builder.medals(EnumSet.noneOf(Medal.class));
 
             int b1 = ByteBufferUtil.getUnsignedByte(buf);
             int b2 = ByteBufferUtil.getUnsignedByte(buf);
@@ -148,6 +163,7 @@ public class GameHeaderBase implements GameHeaderSerializer {
             if ((b2 & 2) > 0) flags.add(GameHeaderFlags.EMBEDDED_PICTURE);
             if ((b2 & 4) > 0) flags.add(GameHeaderFlags.EMBEDDED_VIDEO);
             if ((b2 & ~7) > 0) log.warn("GameHeaderFlags byte 2 in guiding text is " + b2);
+            builder.flags(flags);
 
             int i = 0;
             while (buf.hasRemaining()) {
@@ -184,32 +200,17 @@ public class GameHeaderBase implements GameHeaderSerializer {
                 builder.eco(CBUtil.decodeEco(ecoValue));
             } catch (IllegalArgumentException e) {
                 log.error("Error parsing ECO in game " + gameId + ": " + ecoValue);
+                builder.eco(Eco.unset());
             }
             builder.medals(CBUtil.decodeMedals(ByteBufferUtil.getUnsignedShortB(buf)));
             int flagInt = ByteBufferUtil.getIntB(buf);
 
             EnumSet<GameHeaderFlags> flags = EnumSet.noneOf(GameHeaderFlags.class);
-            if ((flagInt & 0x00000001) > 0) flags.add(GameHeaderFlags.SETUP_POSITION);
-            if ((flagInt & 0x00000002) > 0) flags.add(GameHeaderFlags.VARIATIONS);
-            if ((flagInt & 0x00000004) > 0) flags.add(GameHeaderFlags.COMMENTARY);
-            if ((flagInt & 0x00000008) > 0) flags.add(GameHeaderFlags.SYMBOLS);
-            if ((flagInt & 0x00000010) > 0) flags.add(GameHeaderFlags.GRAPHICAL_SQUARES);
-            if ((flagInt & 0x00000020) > 0) flags.add(GameHeaderFlags.GRAPHICAL_ARROWS);
-            if ((flagInt & 0x00000080) > 0) flags.add(GameHeaderFlags.TIME_SPENT);
-            if ((flagInt & 0x00000100) > 0) flags.add(GameHeaderFlags.ANNO_TYPE_8);
-            if ((flagInt & 0x00000200) > 0) flags.add(GameHeaderFlags.TRAINING);
-            if ((flagInt & 0x00010000) > 0) flags.add(GameHeaderFlags.EMBEDDED_AUDIO);
-            if ((flagInt & 0x00020000) > 0) flags.add(GameHeaderFlags.EMBEDDED_PICTURE);
-            if ((flagInt & 0x00040000) > 0) flags.add(GameHeaderFlags.EMBEDDED_VIDEO);
-            if ((flagInt & 0x00080000) > 0) flags.add(GameHeaderFlags.GAME_QUOTATION);
-            if ((flagInt & 0x00100000) > 0) flags.add(GameHeaderFlags.PAWN_STRUCTURE);
-            if ((flagInt & 0x00200000) > 0) flags.add(GameHeaderFlags.PIECE_PATH);
-            if ((flagInt & 0x00400000) > 0) flags.add(GameHeaderFlags.WHITE_CLOCK);
-            if ((flagInt & 0x00800000) > 0) flags.add(GameHeaderFlags.BLACK_CLOCK);
-            if ((flagInt & 0x01000000) > 0) flags.add(GameHeaderFlags.CRITICAL_POSITION);
-            if ((flagInt & 0x02000000) > 0) flags.add(GameHeaderFlags.CORRESPONDENCE_HEADER);
-            if ((flagInt & 0x08000000) > 0) flags.add(GameHeaderFlags.FISCHER_RANDOM);
-            if ((flagInt & 0x10000000) > 0) flags.add(GameHeaderFlags.WEB_LINK);
+            for (GameHeaderFlags flag : GameHeaderFlags.values()) {
+                if ((flagInt & flag.getValue()) > 0) {
+                    flags.add(flag);
+                }
+            }
 
             if ((flagInt & ~0x1BFF03BF) > 0) {
                 log.warn(String.format("Unknown game header flags in game %d: %08X", gameId, flagInt));
@@ -267,9 +268,94 @@ public class GameHeaderBase implements GameHeaderSerializer {
     }
 
     public ByteBuffer serialize(GameHeader header) {
-        ByteBuffer buffer = ByteBuffer.allocate(SERIALIZED_GAME_HEADER_SIZE);
+        ByteBuffer buf = ByteBuffer.allocate(SERIALIZED_GAME_HEADER_SIZE);
+        int type = 0;
+        if (header.isGame()) type += 1;
+        if (header.isGuidingText()) type += 2;
+        if (header.isDeleted()) type += 128;
+        ByteBufferUtil.putByte(buf, type);
+        ByteBufferUtil.putIntB(buf, header.getMovesOffset());
 
-        return buffer;
+        if (header.isGuidingText()) {
+            // TODO: Test this
+            ByteBufferUtil.putShortB(buf, 0);
+            ByteBufferUtil.put24BitB(buf, header.getTournamentId());
+            ByteBufferUtil.put24BitB(buf, header.getSourceId());
+            ByteBufferUtil.put24BitB(buf, header.getAnnotatorId());
+            ByteBufferUtil.putByte(buf, header.getRound());
+            ByteBufferUtil.putByte(buf, header.getSubRound());
+            int b1 = 0, b2 = 0;
+            if (header.getFlags().contains(GameHeaderFlags.STREAM)) b1 += 4;
+            if (header.getFlags().contains(GameHeaderFlags.EMBEDDED_AUDIO)) b2 += 1;
+            if (header.getFlags().contains(GameHeaderFlags.EMBEDDED_PICTURE)) b2 += 2;
+            if (header.getFlags().contains(GameHeaderFlags.EMBEDDED_VIDEO)) b2 += 4;
+            ByteBufferUtil.putByte(buf, b1);
+            ByteBufferUtil.putByte(buf, b2);
+            buf.position(buf.limit());
+        } else {
+            ByteBufferUtil.putIntB(buf, header.getAnnotationOffset());
+            ByteBufferUtil.put24BitB(buf, header.getWhitePlayerId());
+            ByteBufferUtil.put24BitB(buf, header.getBlackPlayerId());
+            ByteBufferUtil.put24BitB(buf, header.getTournamentId());
+            ByteBufferUtil.put24BitB(buf, header.getAnnotatorId());
+            ByteBufferUtil.put24BitB(buf, header.getSourceId());
+            ByteBufferUtil.put24BitB(buf, CBUtil.encodeDate(header.getPlayedDate()));
+            ByteBufferUtil.putByte(buf, CBUtil.encodeGameResult(header.getResult()));
+            ByteBufferUtil.putByte(buf, CBUtil.encodeSymbol(header.getLineEvaluation()));
+            ByteBufferUtil.putByte(buf, header.getRound());
+            ByteBufferUtil.putByte(buf, header.getSubRound());
+            ByteBufferUtil.putShortB(buf, header.getWhiteElo());
+            ByteBufferUtil.putShortB(buf, header.getBlackElo());
+            ByteBufferUtil.putShortB(buf, CBUtil.encodeEco(header.getEco()));
+            ByteBufferUtil.putShortB(buf, CBUtil.encodeMedals(header.getMedals()));
+            int flagInt = 0;
+            for (GameHeaderFlags flag : header.getFlags()) {
+                flagInt += flag.getValue();
+            }
+            ByteBufferUtil.putIntB(buf, flagInt);
+            int extraAnnotations2 = 0, extraAnnotations = 0;
+
+            if (header.getFlags().contains(GameHeaderFlags.TRAINING)) {
+                if (header.getTrainingMagnitude() == 2) {
+                    extraAnnotations2 += 2;
+                }
+            }
+            if (header.getFlags().contains(GameHeaderFlags.VARIATIONS)) {
+                extraAnnotations += (header.getVariationsMagnitude() - 1) & 3;
+            }
+            if (header.getFlags().contains(GameHeaderFlags.COMMENTARY)) {
+                if (header.getCommentariesMagnitude() == 2) {
+                    extraAnnotations += 4;
+                }
+            }
+            if (header.getFlags().contains(GameHeaderFlags.SYMBOLS)) {
+                if (header.getSymbolsMagnitude() == 2) {
+                    extraAnnotations += 8;
+                }
+            }
+            if (header.getFlags().contains(GameHeaderFlags.GRAPHICAL_SQUARES)) {
+                if (header.getGraphicalSquaresMagnitude() == 2) {
+                    extraAnnotations += 16;
+                }
+            }
+            if (header.getFlags().contains(GameHeaderFlags.GRAPHICAL_ARROWS)) {
+                if (header.getGraphicalArrowsMagnitude() == 2) {
+                    extraAnnotations += 32;
+                }
+            }
+            if (header.getFlags().contains(GameHeaderFlags.TIME_SPENT)) {
+                if (header.getTimeAnnotationsMagnitude() == 2) {
+                    extraAnnotations += 128;
+                }
+            }
+            ByteBufferUtil.putByte(buf, extraAnnotations2);
+            ByteBufferUtil.putByte(buf, extraAnnotations);
+            ByteBufferUtil.putByte(buf, header.getNoMoves());
+        }
+
+        assert buf.position() == buf.limit();
+        buf.flip();
+        return buf;
     }
 
     public int getSerializedGameHeaderLength() {
