@@ -91,14 +91,23 @@ public class TournamentBase extends EntityBase<TournamentEntity> {
     }
 
     public TournamentEntity deserialize(int entityId, @NonNull ByteBuffer buf) {
+        String title = ByteBufferUtil.getFixedSizeByteString(buf, 40);
+        String place = ByteBufferUtil.getFixedSizeByteString(buf, 30);
         TournamentEntity.TournamentEntityBuilder builder = TournamentEntity.builder()
             .id(entityId)
-            .title(ByteBufferUtil.getFixedSizeByteString(buf, 40))
-            .place(ByteBufferUtil.getFixedSizeByteString(buf, 30))
+            .title(title)
+            .place(place)
             .date(CBUtil.decodeDate(ByteBufferUtil.getIntL(buf)));
         int typeByte = ByteBufferUtil.getUnsignedByte(buf);
         builder.teamTournament((ByteBufferUtil.getUnsignedByte(buf) & 1) == 1);
-        builder.nation(Nation.values()[ByteBufferUtil.getUnsignedByte(buf)]);
+        int nationId = ByteBufferUtil.getUnsignedByte(buf);
+        if (nationId >= Nation.values().length) {
+            log.error(String.format("Tournament %d (" +  title + ") has unknown nation #%d", entityId, nationId));
+            // TODO: Should save this value raw instead to make it more future proof
+            builder.nation(Nation.NONE);
+        } else {
+            builder.nation(Nation.values()[nationId]);
+        }
         int unknownByte1 = ByteBufferUtil.getUnsignedByte(buf);
         builder.category(ByteBufferUtil.getUnsignedByte(buf));
         int optionByte = ByteBufferUtil.getUnsignedByte(buf);
