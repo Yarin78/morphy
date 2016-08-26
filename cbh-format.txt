@@ -739,8 +739,8 @@ Ofs 4, Len 4 - Right child node (-1 if missing). If record is deleted, contains 
 Ofs 8, Len 1 - Height of right subtree minus height of left subtree. Used to balance the AVL tree. Usually -1, 0 or 1, but may become -2 or 2 temporarily. 0 for deleted records (unused)
 Ofs 9, Len 30 - Last name
 Ofs 39, Len 20 - First name
-Ofs 59, Len 4 - Number of games with this player? (little endian)
-Ofs 63, Len 4 - First game id with this player? (little endian)
+Ofs 59, Len 4 - Number of games with this player (little endian). Deleted games are included. Counted twice if playing against himself.
+Ofs 63, Len 4 - First game id with this player. Deleted games are included (little endian)
 
 All other player information is fetched from the Player Encyclopedia.
 

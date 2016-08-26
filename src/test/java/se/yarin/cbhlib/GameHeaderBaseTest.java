@@ -69,11 +69,11 @@ public class GameHeaderBaseTest {
         int oldSize = base.size();
 
         GameHeader game1 = GameHeader.defaultBuilder().build();
-        assertEquals(oldSize + 1, base.add(game1));
+        assertEquals(oldSize + 1, base.add(game1).getId());
         assertEquals(oldSize + 1, base.size());
 
         GameHeader game2 = GameHeader.defaultBuilder().id(5).build();
-        assertEquals(oldSize + 2, base.add(game2));
+        assertEquals(oldSize + 2, base.add(game2).getId());
         assertEquals(oldSize + 2, base.size());
 
         base.close();

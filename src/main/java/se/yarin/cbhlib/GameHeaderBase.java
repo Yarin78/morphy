@@ -169,12 +169,15 @@ public class GameHeaderBase implements GameHeaderSerializer, Iterable<GameHeader
      * Updates an existing game header
      * @param gameHeaderId the id of the game header to update
      * @param gameHeader the new data of the game header
+     * @return the saved gameHeader
      */
-    public void update(int gameHeaderId, @NonNull GameHeader gameHeader) throws IOException {
+    public GameHeader update(int gameHeaderId, @NonNull GameHeader gameHeader) throws IOException {
+        // The id may not be set in gameHeader, in which case we need to do this now
         if (gameHeader.getId() != gameHeaderId) {
             gameHeader = gameHeader.toBuilder().id(gameHeaderId).build();
         }
         storage.put(gameHeader);
+        return gameHeader;
     }
 
     /**
@@ -182,7 +185,7 @@ public class GameHeaderBase implements GameHeaderSerializer, Iterable<GameHeader
      * @param gameHeader the game header to add
      * @return the id that the game header received
      */
-    public int add(@NonNull GameHeader gameHeader) throws IOException {
+    public GameHeader add(@NonNull GameHeader gameHeader) throws IOException {
         int nextGameId = storage.getMetadata().getNextGameId();
         gameHeader = gameHeader.toBuilder().id(nextGameId).build();
         storage.put(gameHeader);
@@ -191,7 +194,7 @@ public class GameHeaderBase implements GameHeaderSerializer, Iterable<GameHeader
         metadata.setNextGameId(nextGameId + 1);
         metadata.setNextGameId2(nextGameId + 1); // ??
         storage.setMetadata(metadata);
-        return nextGameId;
+        return gameHeader;
     }
 
     public GameHeader deserialize(int gameId, ByteBuffer buf) {

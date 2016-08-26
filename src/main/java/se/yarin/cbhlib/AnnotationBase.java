@@ -75,8 +75,10 @@ public class AnnotationBase implements BlobSizeRetriever {
 
     @Override
     public int getBlobSize(ByteBuffer buf) {
-        int size = ByteBufferUtil.getIntB(buf) & 0xFFFFFF;
-        buf.position(buf.position() - 4);
+        int oldPos = buf.position();
+        buf.position(oldPos + 10);
+        int size = ByteBufferUtil.getIntB(buf);
+        buf.position(oldPos);
         return size;
     }
 
