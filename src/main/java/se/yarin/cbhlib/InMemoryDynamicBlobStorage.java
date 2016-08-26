@@ -12,7 +12,7 @@ public class InMemoryDynamicBlobStorage implements DynamicBlobStorage {
 
     InMemoryDynamicBlobStorage(
             @NonNull BlobSizeRetriever blobSizeRetriever) {
-        this((ByteBuffer) ByteBuffer.allocate(32).limit(0), blobSizeRetriever);
+        this((ByteBuffer) ByteBuffer.allocate(32).limit(1), blobSizeRetriever);
     }
 
     InMemoryDynamicBlobStorage(

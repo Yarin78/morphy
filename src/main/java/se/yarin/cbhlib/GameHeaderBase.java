@@ -4,7 +4,6 @@ import lombok.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.chess.*;
-import yarin.cbhlib.Medals;
 
 import java.io.File;
 import java.io.IOException;
@@ -13,9 +12,10 @@ import java.util.EnumSet;
 
 public class GameHeaderBase implements GameHeaderSerializer {
 
+    // TODO: Add iterator (and search)
     private static final Logger log = LoggerFactory.getLogger(GameHeaderBase.class);
 
-    private static final int DEFAULT_HEADER_SIZE = 46;
+    private static final int DEFAULT_STORAGE_HEADER_SIZE = 46;
     private static final int SERIALIZED_GAME_HEADER_SIZE = 46;
 
     private GameHeaderStorageBase storage;
@@ -24,11 +24,21 @@ public class GameHeaderBase implements GameHeaderSerializer {
      * Creates a new game header base that is initially empty.
      */
     public GameHeaderBase() {
-        this.storage = new InMemoryGameHeaderStorage(new GameHeaderStorageMetadata());
+        this.storage = new InMemoryGameHeaderStorage(emptyMetadata());
     }
 
     private GameHeaderBase(@NonNull GameHeaderStorageBase storage) throws IOException {
         this.storage = storage;
+    }
+
+    private static GameHeaderStorageMetadata emptyMetadata() {
+        GameHeaderStorageMetadata metadata = new GameHeaderStorageMetadata();
+        metadata.setNextGameId(1);
+        metadata.setNextGameId2(1);
+        metadata.setUnknownByte2(1);
+        metadata.setStorageHeaderSize(44);
+        metadata.setGameHeaderSize(SERIALIZED_GAME_HEADER_SIZE);
+        return metadata;
     }
 
     /**
@@ -64,7 +74,7 @@ public class GameHeaderBase implements GameHeaderSerializer {
      * @throws IOException if something went wrong when creating the database
      */
     public static GameHeaderBase create(@NonNull File file) throws IOException {
-        PersistentGameHeaderStorage.createEmptyStorage(file, DEFAULT_HEADER_SIZE);
+        PersistentGameHeaderStorage.createEmptyStorage(file, emptyMetadata());
         return GameHeaderBase.open(file);
     }
 
@@ -73,6 +83,7 @@ public class GameHeaderBase implements GameHeaderSerializer {
      * @return the number of game headers
      */
     public int size() {
+        // TODO: rename to getCount() to make it consistent with other bases?
         return getNextGameId() - 1;
     }
 
@@ -114,8 +125,11 @@ public class GameHeaderBase implements GameHeaderSerializer {
         int nextGameId = storage.getMetadata().getNextGameId();
         gameHeader = gameHeader.toBuilder().id(nextGameId).build();
         storage.put(gameHeader);
-        // TODO: This doesn't save the metadata
-        storage.getMetadata().setNextGameId(nextGameId + 1);
+
+        GameHeaderStorageMetadata metadata = storage.getMetadata();
+        metadata.setNextGameId(nextGameId + 1);
+        metadata.setNextGameId2(nextGameId + 1); // ??
+        storage.setMetadata(metadata);
         return nextGameId;
     }
 
@@ -141,6 +155,8 @@ public class GameHeaderBase implements GameHeaderSerializer {
             if (unknownShort != 0) {
                 log.warn("Unknown short in guiding text: " + unknownShort);
             }
+            builder.whitePlayerId(-1);
+            builder.blackPlayerId(-1);
             builder.tournamentId(ByteBufferUtil.getUnsigned24BitB(buf));
             builder.sourceId(ByteBufferUtil.getUnsigned24BitB(buf));
             builder.annotatorId(ByteBufferUtil.getUnsigned24BitB(buf));

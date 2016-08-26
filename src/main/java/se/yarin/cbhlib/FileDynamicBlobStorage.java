@@ -13,6 +13,7 @@ import static java.nio.file.StandardOpenOption.CREATE_NEW;
 import static java.nio.file.StandardOpenOption.READ;
 import static java.nio.file.StandardOpenOption.WRITE;
 
+// TODO: Rename to PersistentDynamicBlobStorage!?
 public class FileDynamicBlobStorage implements DynamicBlobStorage {
     private static final Logger log = LoggerFactory.getLogger(FileDynamicBlobStorage.class);
 

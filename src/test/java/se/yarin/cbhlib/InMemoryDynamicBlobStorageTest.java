@@ -38,26 +38,26 @@ public class InMemoryDynamicBlobStorageTest {
     @Test
     public void addMultipleBlobs() {
         InMemoryDynamicBlobStorage storage = new InMemoryDynamicBlobStorage(new StringBlobSizeRetriever());
-        Assert.assertEquals(0, storage.addBlob(createBlob("hello")));
-        Assert.assertEquals(7, storage.addBlob(createBlob("world")));
-        Assert.assertEquals(14, storage.addBlob(createBlob("foo")));
-        Assert.assertEquals(19, storage.addBlob(createBlob("bar")));
-        Assert.assertEquals(24, storage.getSize());
+        Assert.assertEquals(1, storage.addBlob(createBlob("hello")));
+        Assert.assertEquals(8, storage.addBlob(createBlob("world")));
+        Assert.assertEquals(15, storage.addBlob(createBlob("foo")));
+        Assert.assertEquals(20, storage.addBlob(createBlob("bar")));
+        Assert.assertEquals(25, storage.getSize());
     }
 
     @Test
     public void replaceBlob() {
         InMemoryDynamicBlobStorage storage = new InMemoryDynamicBlobStorage(new StringBlobSizeRetriever());
-        Assert.assertEquals(0, storage.addBlob(createBlob("foo")));
-        Assert.assertEquals(5, storage.addBlob(createBlob("hello")));
-        Assert.assertEquals(12, storage.getSize());
+        Assert.assertEquals(1, storage.addBlob(createBlob("foo")));
+        Assert.assertEquals(6, storage.addBlob(createBlob("hello")));
+        Assert.assertEquals(13, storage.getSize());
 
-        Assert.assertEquals(12, storage.putBlob(0, createBlob("world")));
-        Assert.assertEquals(5, storage.putBlob(5, createBlob("bar")));
-        Assert.assertEquals(19, storage.getSize());
+        Assert.assertEquals(13, storage.putBlob(0, createBlob("world")));
+        Assert.assertEquals(6, storage.putBlob(6, createBlob("bar")));
+        Assert.assertEquals(20, storage.getSize());
 
-        Assert.assertEquals("world", parseBlob(storage.getBlob(12)));
-        Assert.assertEquals("bar", parseBlob(storage.getBlob(5)));
+        Assert.assertEquals("world", parseBlob(storage.getBlob(13)));
+        Assert.assertEquals("bar", parseBlob(storage.getBlob(6)));
     }
 
     @Test

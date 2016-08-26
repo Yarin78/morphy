@@ -13,6 +13,7 @@ import static java.nio.file.StandardOpenOption.CREATE_NEW;
 import static java.nio.file.StandardOpenOption.READ;
 import static java.nio.file.StandardOpenOption.WRITE;
 
+// TODO: Add tests
 public class PersistentGameHeaderStorage extends GameHeaderStorageBase {
     private static final Logger log = LoggerFactory.getLogger(PersistentGameHeaderStorage.class);
 
@@ -35,13 +36,9 @@ public class PersistentGameHeaderStorage extends GameHeaderStorageBase {
                 storageName, getMetadata().getNextGameId()));
     }
 
-    static void createEmptyStorage(File file, int headerSize)
+    static void createEmptyStorage(File file, GameHeaderStorageMetadata metadata)
             throws IOException {
-        if (headerSize < 44) {
-            throw new IllegalArgumentException("The size of the header must be at least 44 bytes");
-        }
         FileChannel channel = FileChannel.open(file.toPath(), CREATE_NEW, READ, WRITE);
-        GameHeaderStorageMetadata metadata = new GameHeaderStorageMetadata();
         channel.write(serializeMetadata(metadata));
         channel.close();
     }
@@ -126,6 +123,23 @@ public class PersistentGameHeaderStorage extends GameHeaderStorageBase {
         }
     }
 
+    @Override
+    void setMetadata(GameHeaderStorageMetadata metadata) throws IOException {
+        // Update the in-memory metadata cache as well
+        super.setMetadata(metadata);
+
+        ByteBuffer buffer = serializeMetadata(metadata);
+
+        channel.position(0);
+        channel.write(buffer);
+        channel.force(false);
+
+        log.debug(String.format("Updated %s; nextGameId = %d, nextGameId2 = %d, gameHeaderSize = %d, storageHeaderSize = %d",
+                storageName, metadata.getNextGameId(), metadata.getNextGameId2(),
+                metadata.getGameHeaderSize(),
+                metadata.getStorageHeaderSize()));
+    }
+
     private static ByteBuffer serializeMetadata(GameHeaderStorageMetadata metadata) {
         ByteBuffer buffer = ByteBuffer.allocate(metadata.getStorageHeaderSize());
 
@@ -135,7 +149,7 @@ public class PersistentGameHeaderStorage extends GameHeaderStorageBase {
         ByteBufferUtil.putByte(buffer, metadata.getUnknownByte2());
         ByteBufferUtil.putIntB(buffer, metadata.getNextGameId());
         for (int i = 0; i < 15; i++) {
-            ByteBufferUtil.putShortB(buffer, metadata.getGameHeaderSize());
+            ByteBufferUtil.putShortB(buffer, metadata.getUnknownShort()[i]);
         }
         ByteBufferUtil.putIntB(buffer, metadata.getNextGameId2());
 
@@ -150,6 +164,7 @@ public class PersistentGameHeaderStorage extends GameHeaderStorageBase {
      * @throws IOException if an IO error occurs
      */
     private void positionChannel(int gameId) throws IOException {
+        // TODO: storageHeaderSize doesn't seem to be correct, that field is something else
 //        channel.position(storageHeaderSize + (gameId - 1) * (serializedGameHeaderSize));
         channel.position(46 + (gameId - 1) * serializedGameHeaderSize);
     }
