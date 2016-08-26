@@ -16,7 +16,10 @@ public class MovesBase implements BlobSizeRetriever {
 
     private final DynamicBlobStorage storage;
 
-    private MovesBase() {
+    /**
+     * Creates a new moves base that is initially empty.
+     */
+    public MovesBase() {
         this.storage = new InMemoryDynamicBlobStorage(this);
     }
 
@@ -99,6 +102,10 @@ public class MovesBase implements BlobSizeRetriever {
      */
     public int putMoves(int ofs, GameMovesModel model) throws IOException {
         ByteBuffer buf = MovesSerializer.serializeMoves(model);
-        return storage.putBlob(ofs, buf);
+        return ofs > 0 ? storage.putBlob(ofs, buf) : storage.addBlob(buf);
+    }
+
+    public void close() throws IOException {
+        storage.close();
     }
 }

@@ -16,7 +16,10 @@ public class AnnotationBase implements BlobSizeRetriever {
 
     private final DynamicBlobStorage storage;
 
-    private AnnotationBase() {
+    /**
+     * Creates a new annotation base that is initially empty.
+     */
+    public AnnotationBase() {
         this.storage = new InMemoryDynamicBlobStorage(this);
     }
 
@@ -27,7 +30,7 @@ public class AnnotationBase implements BlobSizeRetriever {
     /**
      * Creates an in-memory annotation base initially populated with the data from the file
      * @param file the initial data of the database
-     * @return an in-memory annotaiton base
+     * @return an in-memory annotation base
      */
     public static AnnotationBase openInMemory(@NonNull File file) throws IOException {
         return new AnnotationBase(loadInMemoryStorage(file));
@@ -104,6 +107,10 @@ public class AnnotationBase implements BlobSizeRetriever {
             return 0;
         }
         ByteBuffer buf = AnnotationsSerializer.serializeAnnotations(gameId, model);
-        return storage.putBlob(ofs, buf);
+        return ofs > 0 ? storage.putBlob(ofs, buf) : storage.addBlob(buf);
+    }
+
+    public void close() throws IOException {
+        storage.close();
     }
 }
