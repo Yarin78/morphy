@@ -5,5 +5,8 @@ package se.yarin.cbhlib.entities;
  */
 public interface Entity {
     int getId();
+    int getCount();
+    int getFirstGameId();
     <T extends Entity> T withNewId(int id);
+    <T extends Entity> T withNewStats(int count, int firstGameId);
 }

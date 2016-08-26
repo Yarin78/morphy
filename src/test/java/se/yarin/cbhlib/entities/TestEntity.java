@@ -12,6 +12,9 @@ class TestEntity implements Entity, Comparable<TestEntity> {
     @Getter
     private int value;
 
+    @Getter private int count;
+    @Getter private int firstGameId;
+
     public TestEntity(String key) {
         this.key = key;
     }
@@ -24,6 +27,11 @@ class TestEntity implements Entity, Comparable<TestEntity> {
     @Override
     public TestEntity withNewId(int id) {
         return toBuilder().id(id).build();
+    }
+
+    @Override
+    public TestEntity withNewStats(int count, int firstGameId) {
+        return toBuilder().count(count).firstGameId(firstGameId).build();
     }
 
     @Override

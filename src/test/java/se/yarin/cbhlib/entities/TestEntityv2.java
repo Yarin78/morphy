@@ -16,6 +16,9 @@ class TestEntityv2 implements Entity, Comparable<TestEntityv2> {
     @Getter @NonNull
     private String extraString;
 
+    @Getter private int count;
+    @Getter private int firstGameId;
+
     public TestEntityv2(String key) {
         this.key = key;
     }
@@ -28,6 +31,11 @@ class TestEntityv2 implements Entity, Comparable<TestEntityv2> {
     @Override
     public Entity withNewId(int id) {
         return toBuilder().id(id).build();
+    }
+
+    @Override
+    public Entity withNewStats(int count, int firstGameId) {
+        return toBuilder().count(count).firstGameId(firstGameId).build();
     }
 
     @Override

@@ -52,6 +52,11 @@ public class TeamEntity implements Entity, Comparable<TeamEntity> {
     }
 
     @Override
+    public TeamEntity withNewStats(int count, int firstGameId) {
+        return toBuilder().count(count).firstGameId(firstGameId).build();
+    }
+
+    @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;

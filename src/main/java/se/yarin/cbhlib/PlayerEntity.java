@@ -27,6 +27,17 @@ public class PlayerEntity implements Entity, Comparable<PlayerEntity> {
         this.firstName = firstName;
     }
 
+    public static PlayerEntity fromFullName(@NonNull String fullName) {
+        String firstName = "", lastName = fullName.trim();
+        int comma = lastName.indexOf(",");
+        if (comma > 0) {
+            firstName = lastName.substring(comma + 1).trim();
+            lastName = lastName.substring(0, comma).trim();
+        }
+
+        return new PlayerEntity(lastName, firstName);
+    }
+
     public String getFullName() {
         if (lastName.length() == 0) {
             return firstName;
@@ -52,6 +63,11 @@ public class PlayerEntity implements Entity, Comparable<PlayerEntity> {
     @Override
     public PlayerEntity withNewId(int id) {
         return toBuilder().id(id).build();
+    }
+
+    @Override
+    public PlayerEntity withNewStats(int count, int firstGameId) {
+        return toBuilder().count(count).firstGameId(firstGameId).build();
     }
 
     @Override
