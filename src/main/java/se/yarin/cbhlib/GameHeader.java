@@ -51,4 +51,14 @@ public class GameHeader {
     private final int timeAnnotationsMagnitude; // 1 = [1, 10], 2 = [11,]
 
     private final int noMoves; // -1 = More than 255 moves. Count the exact number upon demand.
+
+    static GameHeader.GameHeaderBuilder defaultBuilder() {
+        return builder()
+                .playedDate(new Date(0))
+                .result(GameResult.NOT_FINISHED)
+                .eco(Eco.unset())
+                .lineEvaluation(LineEvaluation.NO_EVALUATION)
+                .medals(EnumSet.noneOf(Medal.class))
+                .flags(EnumSet.noneOf(GameHeaderFlags.class));
+    }
 }

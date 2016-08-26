@@ -1,19 +1,22 @@
 package se.yarin.cbhlib;
 
+import lombok.Getter;
 import lombok.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import java.util.ArrayList;
+import java.util.List;
 
 import static java.nio.file.StandardOpenOption.CREATE_NEW;
 import static java.nio.file.StandardOpenOption.READ;
 import static java.nio.file.StandardOpenOption.WRITE;
 
-// TODO: Add tests
 public class PersistentGameHeaderStorage extends GameHeaderStorageBase {
     private static final Logger log = LoggerFactory.getLogger(PersistentGameHeaderStorage.class);
 
@@ -21,6 +24,9 @@ public class PersistentGameHeaderStorage extends GameHeaderStorageBase {
     private final GameHeaderSerializer serializer;
     private final String storageName;
     private FileChannel channel;
+
+    @Getter
+    private int version = 0;
 
     PersistentGameHeaderStorage(@NonNull File file, @NonNull GameHeaderSerializer serializer)
             throws IOException {
@@ -174,25 +180,64 @@ public class PersistentGameHeaderStorage extends GameHeaderStorageBase {
         positionChannel(id);
         ByteBuffer buf = ByteBuffer.allocate(serializedGameHeaderSize);
         channel.read(buf);
-        buf.position(0);
-
-        GameHeader gameHeader = serializer.deserialize(id, buf);
-
-        if (log.isTraceEnabled()) {
-            log.trace("Read game header " + id);
+        buf.flip();
+        if (!buf.hasRemaining()) {
+            return null;
         }
 
-        return gameHeader;
+        try {
+            GameHeader gameHeader = serializer.deserialize(id, buf);
+
+            if (log.isTraceEnabled()) {
+                log.trace("Read game header " + id);
+            }
+
+            return gameHeader;
+        } catch (BufferUnderflowException e) {
+            log.warn(String.format("Unexpected end of file reached when reading game header %d", id), e);
+            return null;
+        }
+    }
+
+    @Override
+    List<GameHeader> getRange(int startId, int endId) throws IOException {
+        if (startId < 1) throw new IllegalArgumentException("startId must be 1 or greater");
+        int count = endId - startId;
+        ArrayList<GameHeader> result = new ArrayList<>(count);
+
+        positionChannel(startId);
+        ByteBuffer buf = ByteBuffer.allocate(serializedGameHeaderSize * count);
+        channel.read(buf);
+        buf.flip();
+
+        for (int id = startId; id < endId && buf.hasRemaining(); id++) {
+            byte[] gameHeaderBuf = new byte[serializedGameHeaderSize];
+            try {
+                buf.get(gameHeaderBuf);
+            } catch (BufferUnderflowException e) {
+                log.warn(String.format("Unexpected end of file reached when reading game headers in range [%d, %d)", startId, endId), e);
+                break;
+            }
+            result.add(serializer.deserialize(id, ByteBuffer.wrap(gameHeaderBuf)));
+        }
+
+        return result;
     }
 
     void put(GameHeader gameHeader) throws IOException {
-        positionChannel(gameHeader.getId());
+        int gameId = gameHeader.getId();
+        if (gameId < 1 || gameId > getMetadata().getNextGameId()) {
+            throw new IllegalArgumentException(String.format("gameId outside range (was %d, nextGameId is %d)", gameId, getMetadata().getNextGameId()));
+        }
+        positionChannel(gameId);
         ByteBuffer src = serializer.serialize(gameHeader);
         src.position(0);
         channel.write(src);
 
+        version++;
+
         if (log.isDebugEnabled()) {
-            log.debug(String.format("Successfully put game header %d to %s", gameHeader.getId(), storageName));
+            log.debug(String.format("Successfully put game header %d to %s", gameId, storageName));
         }
     }
 

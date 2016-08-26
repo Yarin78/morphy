@@ -264,7 +264,7 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
                 try {
                     batch = nodeStorage.getEntityNodes(nextBatchStart, endId);
                 } catch (IOException e) {
-                    throw new UncheckedEntityException("AN IO error when iterating entities", e);
+                    throw new UncheckedEntityException("An IO error when iterating entities", e);
                 }
                 nextBatchStart = endId;
             }
@@ -349,7 +349,7 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
                 }
                 return entity;
             } catch (IOException e) {
-                throw new UncheckedEntityException("AN IO error when iterating entities", e);
+                throw new UncheckedEntityException("An IO error when iterating entities", e);
             }
         }
     }

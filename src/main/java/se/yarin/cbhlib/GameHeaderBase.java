@@ -3,16 +3,18 @@ package se.yarin.cbhlib;
 import lombok.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import se.yarin.cbhlib.entities.UncheckedEntityException;
 import se.yarin.chess.*;
+import se.yarin.chess.Date;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.EnumSet;
+import java.util.*;
 
-public class GameHeaderBase implements GameHeaderSerializer {
+public class GameHeaderBase implements GameHeaderSerializer, Iterable<GameHeader> {
 
-    // TODO: Add iterator (and search)
+    // TODO: Add search
     private static final Logger log = LoggerFactory.getLogger(GameHeaderBase.class);
 
     private static final int DEFAULT_STORAGE_HEADER_SIZE = 46;
@@ -31,7 +33,7 @@ public class GameHeaderBase implements GameHeaderSerializer {
         this.storage = storage;
     }
 
-    private static GameHeaderStorageMetadata emptyMetadata() {
+    static GameHeaderStorageMetadata emptyMetadata() {
         GameHeaderStorageMetadata metadata = new GameHeaderStorageMetadata();
         metadata.setNextGameId(1);
         metadata.setNextGameId2(1);
@@ -105,6 +107,65 @@ public class GameHeaderBase implements GameHeaderSerializer {
     }
 
     /**
+     * Gets an iterator over all game headers in the database
+     * @return an iterator
+     */
+    public Iterator<GameHeader> iterator() {
+        return new DefaultIterator(1);
+    }
+
+    private class DefaultIterator implements Iterator<GameHeader> {
+        private List<GameHeader> batch = new ArrayList<>();
+        private int batchPos, nextBatchStart = 0, batchSize = 1000;
+        private final int version;
+
+        private void getNextBatch() {
+            int endId = Math.min(getNextGameId(), nextBatchStart + batchSize);
+            if (nextBatchStart >= endId) {
+                batch = null;
+            } else {
+                try {
+                    batch = storage.getRange(nextBatchStart, endId);
+                } catch (IOException e) {
+                    throw new UncheckedEntityException("An IO error when iterating game headers", e);
+                }
+                nextBatchStart = endId;
+            }
+            batchPos = 0;
+        }
+
+        DefaultIterator(int startId) {
+            version = storage.getVersion();
+            nextBatchStart = startId;
+            prefetchBatch();
+        }
+
+        private void prefetchBatch() {
+            if (batch == null || batchPos == batch.size()) {
+                getNextBatch();
+            }
+        }
+
+        @Override
+        public boolean hasNext() {
+            if (version != storage.getVersion()) {
+                throw new IllegalStateException("The storage has changed since the iterator was created");
+            }
+            return batch != null;
+        }
+
+        @Override
+        public GameHeader next() {
+            if (!hasNext()) {
+                throw new NoSuchElementException("End of game header iteration reached");
+            }
+            GameHeader gameHeader = batch.get(batchPos++);
+            prefetchBatch();
+            return gameHeader;
+        }
+    }
+
+    /**
      * Updates an existing game header
      * @param gameHeaderId the id of the game header to update
      * @param gameHeader the new data of the game header
@@ -117,7 +178,7 @@ public class GameHeaderBase implements GameHeaderSerializer {
     }
 
     /**
-     * Adds a new game header to the base
+     * Adds a new game header to the base. The id field in gameHeader will be ignored.
      * @param gameHeader the game header to add
      * @return the id that the game header received
      */

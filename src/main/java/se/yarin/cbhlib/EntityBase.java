@@ -13,7 +13,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
-public abstract class EntityBase<T extends Entity & Comparable<T>> implements EntitySerializer<T> {
+public abstract class EntityBase<T extends Entity & Comparable<T>> implements EntitySerializer<T>, Iterable<T> {
     private static final Logger log = LoggerFactory.getLogger(EntityBase.class);
 
     private final EntityStorage<T> storage;
@@ -135,6 +135,32 @@ public abstract class EntityBase<T extends Entity & Comparable<T>> implements En
      */
     public List<T> getAll() throws IOException {
         return storage.getAllEntities();
+    }
+
+    /**
+     * Gets an iterator over all entities in the database in id order
+     * @return an iterator
+     */
+    public Iterator<T> iterator() {
+        return storage.iterator();
+    }
+
+    /**
+     * Gets an iterator over all entities in the database in ascending default sort order
+     * @return an iterator
+     * @throws IOException if some IO error occurred reading the database
+     */
+    public Iterator<T> getAscendingIterator() throws IOException {
+        return storage.getOrderedAscendingIterator(null);
+    }
+
+    /**
+     * Gets an iterator over all entities in the database in descending default sort order
+     * @return an iterator
+     * @throws IOException if some IO error occurred reading the database
+     */
+    public Iterator<T> getDescendingIterator() throws IOException {
+        return storage.getOrderedDescendingIterator(null);
     }
 
     /**
