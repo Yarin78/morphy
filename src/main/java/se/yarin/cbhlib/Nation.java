@@ -279,7 +279,8 @@ public enum Nation {
     SERBIA("Serbia"), // 250
 
     CATALONIA("Catalonia"), // 251
-    BASQUE("Basque"); // 252
+    BASQUE("Basque"), // 252
+    KOSOVO("Kosovo"); // 253
 
     private String name;
 
