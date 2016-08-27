@@ -16,6 +16,8 @@ import static java.nio.file.StandardOpenOption.WRITE;
 // TODO: Rename to PersistentDynamicBlobStorage!?
 public class FileDynamicBlobStorage implements DynamicBlobStorage {
     private static final Logger log = LoggerFactory.getLogger(FileDynamicBlobStorage.class);
+    private static final int DEFAULT_CHUNK_SIZE = 1024*1024;
+    private static final int DEFAULT_PREFETCH_SIZE = 4096;
 
     private FileChannel channel;
     private BlobSizeRetriever blobSizeRetriever;
@@ -23,13 +25,23 @@ public class FileDynamicBlobStorage implements DynamicBlobStorage {
     private int size; // Should match channel.size()
     private int headerSize; // The actual header size according to the metadata
 
-    final static int PREFETCH_SIZE = 4096;
+    private final int chunkSize, prefetchSize;
+
 
     FileDynamicBlobStorage(
             @NonNull File file,
             @NonNull BlobSizeRetriever blobSizeRetriever) throws IOException {
+        this(file, blobSizeRetriever, DEFAULT_CHUNK_SIZE, DEFAULT_PREFETCH_SIZE);
+    }
+
+    FileDynamicBlobStorage(
+            @NonNull File file,
+            @NonNull BlobSizeRetriever blobSizeRetriever,
+            int chunkSize, int prefetchSize) throws IOException {
         this.channel = FileChannel.open(file.toPath(), READ, WRITE);
         this.blobSizeRetriever = blobSizeRetriever;
+        this.chunkSize = chunkSize;
+        this.prefetchSize = prefetchSize;
 
         loadMetadata();
     }
@@ -87,11 +99,11 @@ public class FileDynamicBlobStorage implements DynamicBlobStorage {
     @Override
     public ByteBuffer getBlob(int offset) throws IOException {
         channel.position(offset);
-        ByteBuffer buf = ByteBuffer.allocate(PREFETCH_SIZE);
+        ByteBuffer buf = ByteBuffer.allocate(prefetchSize);
         channel.read(buf);
         buf.position(0);
         int size = blobSizeRetriever.getBlobSize(buf);
-        if (size > PREFETCH_SIZE) {
+        if (size > prefetchSize) {
             ByteBuffer newBuf = ByteBuffer.allocate(size);
             newBuf.put(buf);
             channel.read(newBuf);
@@ -128,6 +140,36 @@ public class FileDynamicBlobStorage implements DynamicBlobStorage {
     @Override
     public int getSize() {
         return size;
+    }
+
+    @Override
+    public void insert(int offset, int noBytes) throws IOException {
+        if (noBytes < 0) {
+            throw new IllegalArgumentException("Number of bytes to insert must be non-negative");
+        }
+        if (noBytes == 0) {
+            return;
+        }
+        ByteBuffer buf = ByteBuffer.allocateDirect(chunkSize);
+        int pos = size;
+        while (pos > offset) {
+            // Invariant: All bytes at position pos and after have been shifted noBytes bytes
+            pos -= chunkSize;
+            int length = chunkSize;
+            if (pos < offset) {
+                length -= (offset - pos);
+                pos = offset;
+            }
+            channel.position(pos);
+            buf.limit(length);
+            channel.read(buf);
+            buf.flip();
+            channel.position(pos + noBytes);
+            channel.write(buf);
+            buf.clear();
+        }
+
+        size += noBytes;
     }
 
     @Override

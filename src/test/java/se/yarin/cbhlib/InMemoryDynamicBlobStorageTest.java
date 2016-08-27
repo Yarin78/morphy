@@ -6,6 +6,8 @@ import org.junit.Test;
 import java.nio.ByteBuffer;
 import java.util.Random;
 
+import static org.junit.Assert.assertEquals;
+
 public class InMemoryDynamicBlobStorageTest {
     private ByteBuffer createBlob(String value) {
         ByteBuffer blob = ByteBuffer.allocate(value.length() + 2);
@@ -99,4 +101,19 @@ public class InMemoryDynamicBlobStorageTest {
             }
         }
     }
+
+    @Test
+    public void testInsert() {
+        InMemoryDynamicBlobStorage storage = new InMemoryDynamicBlobStorage(new StringBlobSizeRetriever());
+        int ofs1 = storage.addBlob(createBlob("foo"));
+        int ofs2 = storage.addBlob(createBlob("bar"));
+        int ofs3 = storage.addBlob(createBlob("yo"));
+
+        storage.insert(ofs2, 8);
+
+        assertEquals("foo", parseBlob(storage.getBlob(ofs1)));
+        assertEquals("bar", parseBlob(storage.getBlob(ofs2 + 8)));
+        assertEquals("yo", parseBlob(storage.getBlob(ofs3 + 8)));
+    }
+
 }

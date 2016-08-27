@@ -71,5 +71,17 @@ public class InMemoryDynamicBlobStorage implements DynamicBlobStorage {
     }
 
     @Override
+    public void insert(int offset, int noBytes) {
+        while (data.limit() + noBytes > data.capacity()) {
+            grow();
+        }
+        data.limit(data.limit() + noBytes);
+        for (int i = data.limit() - 1; i >= offset+noBytes; i--) {
+            byte b = data.get(i - noBytes);
+            data.put(i, b);
+        }
+    }
+
+    @Override
     public void close() throws IOException { }
 }

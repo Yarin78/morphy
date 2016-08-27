@@ -42,6 +42,16 @@ public interface DynamicBlobStorage {
     int getSize();
 
     /**
+     * Inserts the specified number of bytes at the given start position.
+     * All data after will be adjusted. It's up to the caller to ensure
+     * that any pointers to positions after start is updated.
+     * @param offset the offset in the file at which to insert empty bytes
+     * @param noBytes the number of empty bytes to insert
+     * @throws IOException if an IO error occurred during the insert
+     */
+    void insert(int offset, int noBytes) throws IOException;
+
+    /**
      * Closes the storage. Any further operations on the storage will cause IO errors.
      * @throws IOException if an IO error occurs
      */
