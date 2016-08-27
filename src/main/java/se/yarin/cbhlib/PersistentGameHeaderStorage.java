@@ -242,6 +242,34 @@ public class PersistentGameHeaderStorage extends GameHeaderStorageBase {
     }
 
     @Override
+    void adjustMovesOffset(int startGameId, int movesOffset, int insertedBytes) throws IOException {
+        final int batchSize = 1000;
+
+        positionChannel(startGameId);
+
+        ByteBuffer buf = ByteBuffer.allocateDirect(batchSize * serializedGameHeaderSize);
+        while (startGameId < getMetadata().getNextGameId()) {
+            int noGames = Math.min(batchSize, getMetadata().getNextGameId() - startGameId);
+            buf.limit(noGames * serializedGameHeaderSize);
+            channel.read(buf);
+            for (int i = 0; i < noGames; i++) {
+                buf.position(i * serializedGameHeaderSize + 1);
+                int oldOfs = ByteBufferUtil.getIntB(buf);
+                if (oldOfs > movesOffset) {
+                    buf.position(i * serializedGameHeaderSize + 1);
+                    ByteBufferUtil.putIntB(buf, oldOfs + insertedBytes);
+                }
+            }
+            buf.position(0);
+
+            positionChannel(startGameId);
+            channel.write(buf);
+
+            startGameId += noGames;
+        }
+    }
+
+    @Override
     void close() throws IOException {
         channel.close();
     }

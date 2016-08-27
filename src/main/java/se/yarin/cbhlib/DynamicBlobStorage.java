@@ -36,6 +36,14 @@ public interface DynamicBlobStorage {
     int putBlob(int oldOffset, @NonNull ByteBuffer blob) throws IOException;
 
     /**
+     * Updates an existing blob in the storage. It's up to the caller
+     * to ensure that the blob doesn't overwrite anything.
+     * @param offset the offset to put the blob
+     * @param blob the blob to put
+     */
+    void forcePutBlob(int offset, @NonNull ByteBuffer blob) throws IOException;
+
+    /**
      * Gets the current size of the storage.
      * @return the size
      */

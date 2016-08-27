@@ -138,6 +138,15 @@ public class FileDynamicBlobStorage implements DynamicBlobStorage {
     }
 
     @Override
+    public void forcePutBlob(int offset, @NonNull ByteBuffer blob) throws IOException {
+        channel.position(offset);
+        channel.write(blob);
+        channel.force(false);
+        size = (int) channel.size();
+        saveMetadata();
+    }
+
+    @Override
     public int getSize() {
         return size;
     }

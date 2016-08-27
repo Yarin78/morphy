@@ -1,14 +1,11 @@
 package se.yarin.cbhlib;
 
 import lombok.Getter;
-import lombok.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.TreeMap;
+import java.util.*;
 
 public class InMemoryGameHeaderStorage extends GameHeaderStorageBase {
     private static final Logger log = LoggerFactory.getLogger(InMemoryGameHeaderStorage.class);
@@ -18,8 +15,8 @@ public class InMemoryGameHeaderStorage extends GameHeaderStorageBase {
     @Getter
     private int version = 0;
 
-    InMemoryGameHeaderStorage(@NonNull GameHeaderStorageMetadata metadata) {
-        super(metadata);
+    InMemoryGameHeaderStorage() {
+        super(GameHeaderBase.emptyMetadata());
     }
 
     @Override
@@ -47,5 +44,17 @@ public class InMemoryGameHeaderStorage extends GameHeaderStorageBase {
         }
         gameHeaders.put(gameId, gameHeader);
         version++;
+    }
+
+    @Override
+    void adjustMovesOffset(int startGameId, int movesOffset, int insertedBytes) throws IOException {
+        List<Integer> gameIds = new ArrayList<>(gameHeaders.tailMap(startGameId).keySet());
+        for (int gameId : gameIds) {
+            GameHeader header = gameHeaders.get(gameId);
+            if (header.getMovesOffset() > movesOffset) {
+                GameHeader newHeader = header.toBuilder().movesOffset(header.getMovesOffset() + insertedBytes).build();
+                gameHeaders.put(gameId, newHeader);
+            }
+        }
     }
 }

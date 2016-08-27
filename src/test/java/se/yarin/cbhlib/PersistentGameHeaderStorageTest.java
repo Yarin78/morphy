@@ -126,4 +126,30 @@ public class PersistentGameHeaderStorageTest {
         storage.put(gameHeader);
         storage.close();
     }
+
+    @Test
+    public void adjustGameHeaders() throws IOException {
+        PersistentGameHeaderStorage storage = new PersistentGameHeaderStorage(gameHeaderFile, new GameHeaderBase());
+
+        int n = storage.getMetadata().getNextGameId();
+
+        int[] oldOffsets = new int[n];
+
+        for (int i = 1; i < n; i++) {
+            GameHeader gameHeader = storage.get(i);
+            oldOffsets[i] = gameHeader.getMovesOffset();
+        }
+
+        int idChanged = 7, deltaSize = 170;
+        storage.adjustMovesOffset(idChanged, oldOffsets[idChanged], deltaSize);
+
+        for (int i = 1; i < n; i++) {
+            GameHeader gameHeader = storage.get(i);
+            int diff = gameHeader.getMovesOffset() - oldOffsets[i];
+            int expected = i <= idChanged ? 0 : deltaSize;
+            assertEquals("Game " + i + " should have diff " + expected, expected, diff);
+        }
+
+        storage.close();
+    }
 }

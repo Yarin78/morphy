@@ -155,6 +155,7 @@ public class DatabaseTest {
                 }
 
                 validator.validateEntityStatistics(true);
+                validator.validateMovesAndAnnotationOffsets();
                 validator.readAllGames();
             }
         }

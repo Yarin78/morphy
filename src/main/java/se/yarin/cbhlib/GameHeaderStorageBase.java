@@ -49,6 +49,15 @@ abstract class GameHeaderStorageBase {
     abstract void put(GameHeader gameHeader) throws IOException;
 
     /**
+     * Adjusts the moves offset of all game headers that have their move offsets
+     * greater than the specified value.
+     * @param startGameId the first gameId to consider
+     * @param movesOffset a game is only affected if its moves offset is greater than this
+     * @param insertedBytes the number of bytes to adjust with
+     */
+    abstract void adjustMovesOffset(int startGameId, int movesOffset, int insertedBytes) throws IOException;
+
+    /**
      * The number of modifying operations to the storage since it was opened.
      * This field is not persisted.
      * @return the version

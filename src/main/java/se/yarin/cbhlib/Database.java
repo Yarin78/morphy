@@ -291,8 +291,21 @@ public final class Database {
             throw new IllegalArgumentException("There is no game with game id " + gameId);
         }
 
+        // Ensure there is enough room to fit the game data
+        // If not, insert bytes and update all game headers
+        int insertedBytes = movesBase.preparePutBlob(oldGameHeader.getMovesOffset(), model.moves());
+        if (insertedBytes > 0) {
+            headerBase.adjustMovesOffset(gameId + 1, oldGameHeader.getMovesOffset(), insertedBytes);
+        }
+
+        // TODO: Implement this for annotations as well (although it's not necessary for CB13 integrity checker to happy)
+        // This is a bit trickier since if there are no annotations for the game,
+        // it doesn't know what offset to put it at (scan to next game having annotations?)
+
         int annotationOfs = annotationBase.putAnnotations(gameId, oldGameHeader.getAnnotationOffset(), model.moves());
-        int movesOfs = movesBase.putMoves(oldGameHeader.getMovesOffset(), model.moves());
+        int oldMovesOffset = oldGameHeader.getMovesOffset();
+        int movesOfs = movesBase.putMoves(oldMovesOffset, model.moves());
+        assert movesOfs == oldMovesOffset; // Since we inserted space above, we should get the same offset
 
         GameHeader gameHeader = createGameHeader(model, movesOfs, annotationOfs);
 

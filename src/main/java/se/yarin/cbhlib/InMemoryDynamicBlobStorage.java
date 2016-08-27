@@ -66,6 +66,15 @@ public class InMemoryDynamicBlobStorage implements DynamicBlobStorage {
     }
 
     @Override
+    public void forcePutBlob(int offset, @NonNull ByteBuffer blob) {
+        while (offset + blob.limit() > data.capacity()) {
+            grow();
+        }
+        data.position(offset);
+        data.put(blob);
+    }
+
+    @Override
     public int getSize() {
         return data.limit();
     }

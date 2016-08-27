@@ -29,6 +29,26 @@ public class EntityStatsValidator {
         }
     }
 
+    public void validateMovesAndAnnotationOffsets() throws ChessBaseException {
+        int lastMovesOfs = 0, lastAnnotationOfs = 0;
+        for (GameHeader gameHeader : db.getHeaderBase()) {
+            if (gameHeader.getMovesOffset() <= lastMovesOfs) {
+                throw new ChessBaseException(String.format("Game %d has moves at offset %d while the previous game had moves at offset %d",
+                        gameHeader.getId(), gameHeader.getMovesOffset(), lastMovesOfs));
+            }
+            lastMovesOfs = gameHeader.getMovesOffset();
+
+            if (gameHeader.getAnnotationOffset() > 0) {
+                if (gameHeader.getAnnotationOffset() <= lastAnnotationOfs) {
+                    throw new ChessBaseException(String.format("Game %d has annotations at offset %d while the last annotated game had annotations at offset %d",
+                            gameHeader.getId(), gameHeader.getAnnotationOffset(), lastAnnotationOfs));
+                }
+                lastAnnotationOfs = gameHeader.getAnnotationOffset();
+            }
+
+        }
+    }
+
     @AllArgsConstructor
     @Data
     private static class EntityStats {

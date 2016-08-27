@@ -14,6 +14,8 @@ import java.util.*;
 
 public class GameHeaderBase implements GameHeaderSerializer, Iterable<GameHeader> {
 
+    // TODO: GameHeaderBase and GameHeaderStorageBase + implementations needs refactoring
+    // It's quite messy right now, could be made cleaner
     // TODO: Add search
     private static final Logger log = LoggerFactory.getLogger(GameHeaderBase.class);
 
@@ -26,7 +28,7 @@ public class GameHeaderBase implements GameHeaderSerializer, Iterable<GameHeader
      * Creates a new game header base that is initially empty.
      */
     public GameHeaderBase() {
-        this.storage = new InMemoryGameHeaderStorage(emptyMetadata());
+        this.storage = new InMemoryGameHeaderStorage();
     }
 
     private GameHeaderBase(@NonNull GameHeaderStorageBase storage) throws IOException {
@@ -436,6 +438,17 @@ public class GameHeaderBase implements GameHeaderSerializer, Iterable<GameHeader
         assert buf.position() == buf.limit();
         buf.flip();
         return buf;
+    }
+
+    /**
+     * Adjusts the moves offset of all game headers that have their move offsets
+     * greater than the specified value.
+     * @param startGameId the first gameId to consider
+     * @param movesOffset a game is only affected if its moves offset is greater than this
+     * @param insertedBytes the number of bytes to adjust with
+     */
+    void adjustMovesOffset(int startGameId, int movesOffset, int insertedBytes) throws IOException {
+        storage.adjustMovesOffset(startGameId, movesOffset, insertedBytes);
     }
 
     public int getSerializedGameHeaderLength() {

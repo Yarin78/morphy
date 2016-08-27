@@ -102,7 +102,23 @@ public class MovesBase implements BlobSizeRetriever {
      */
     public int putMoves(int ofs, GameMovesModel model) throws IOException {
         ByteBuffer buf = MovesSerializer.serializeMoves(model);
-        return ofs > 0 ? storage.putBlob(ofs, buf) : storage.addBlob(buf);
+        if (ofs > 0) {
+            storage.forcePutBlob(ofs, buf);
+            return ofs;
+        }
+        return storage.addBlob(buf);
+    }
+
+    int preparePutBlob(int ofs, GameMovesModel model) throws IOException {
+        ByteBuffer buf = MovesSerializer.serializeMoves(model);
+        int oldGameSize = getBlobSize(storage.getBlob(ofs));
+        int newGameSize = getBlobSize(buf);
+        if (newGameSize <= oldGameSize) {
+            return 0;
+        }
+        int delta = newGameSize - oldGameSize;
+        storage.insert(ofs, delta);
+        return delta;
     }
 
     public void close() throws IOException {
