@@ -41,14 +41,14 @@ public class GameHeader {
     private final @NonNull EnumSet<GameHeaderFlags> flags;
 
     // Contains info about the quantity of annotation, variations etc
-    // These ranges needs to be double checked
+    // TODO: These ranges needs to be double checked
     private final int variationsMagnitude; // 1 = [1,50], 2 = [51,300], 3 = [301, 1000], 4 = [1001,]
     private final int commentariesMagnitude; // 1 = [1,200], 2 = [201,] (number of characters in the text annotations)
     private final int symbolsMagnitude; // 1 = [1,9], 2 = [10,]
     private final int graphicalSquaresMagnitude; // 1 = [1,9], 2 = [10,]
     private final int graphicalArrowsMagnitude; // 1 = [1,5], 2 = [6,]
     private final int trainingMagnitude; // 1 = [1, 10], 2 = [11,]
-    private final int timeAnnotationsMagnitude; // 1 = [1, 10], 2 = [11,]
+    private final int timeSpentMagnitude; // 1 = [1, 10], 2 = [11,]
 
     private final int noMoves; // -1 = More than 255 moves. Count the exact number upon demand.
 

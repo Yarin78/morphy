@@ -4,9 +4,11 @@ import lombok.Getter;
 import lombok.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import se.yarin.cbhlib.annotations.*;
 import se.yarin.cbhlib.entities.Entity;
 import se.yarin.cbhlib.entities.EntityStorageException;
 import se.yarin.chess.*;
+import se.yarin.chess.annotations.Annotation;
 
 import java.io.File;
 import java.io.IOException;
@@ -166,6 +168,8 @@ public final class Database {
         model.setField("annotator", annotator.getName());
         model.setField("annotatorId", annotator.getId());
 
+        model.setField("lineEvaluation", header.getLineEvaluation());
+
         return model;
     }
 
@@ -242,19 +246,57 @@ public final class Database {
         int moves = (model.moves().countPly(false) + 1) / 2;
         builder.noMoves(moves > 255 ? -1 : moves);
 
-        // TODO: Make it possible to set these fields
-        // TODO: builder.lineEvaluation(??);
-        builder.lineEvaluation(LineEvaluation.NO_EVALUATION);
-        // TODO: builder.medals(??);
-        builder.medals(EnumSet.noneOf(Medal.class));
-        // TODO: builder.flags(??);
-        builder.flags(EnumSet.noneOf(GameHeaderFlags.class));
-        // TODO: builder.magnitudes
+        LineEvaluation eval = header.getLineEvaluation();
+        builder.lineEvaluation(eval == null ? LineEvaluation.NO_EVALUATION : eval);
+
+        setInferredData(builder, model.moves());
 
         builder.annotationOffset(annotationOfs);
         builder.movesOffset(movesOfs);
         return builder.build();
     }
+
+    private void setInferredData(GameHeader.GameHeaderBuilder builder, GameMovesModel model) {
+        // TODO: Add tests!!
+        AnnotationStatistics stats = new AnnotationStatistics();
+
+        collectStats(model.root(), stats);
+
+        EnumSet<GameHeaderFlags> gameFlags = stats.getFlags();
+
+        int v = model.countPly(true) - model.countPly(false);
+        if (v > 0) {
+            gameFlags.add(GameHeaderFlags.VARIATIONS);
+            builder.variationsMagnitude(v > 1000 ? 4 : v > 300 ? 3 : v > 50 ? 2 : 1);
+        }
+        if (model.isSetupPosition()) {
+            gameFlags.add(GameHeaderFlags.SETUP_POSITION);
+        }
+
+        // TODO: Fischer random flag
+        // TODO: Stream flag (if it should be kept here!?)
+
+        builder.medals(stats.getMedals());
+        builder.flags(gameFlags);
+        builder.commentariesMagnitude(stats.getCommentariesMagnitude());
+        builder.symbolsMagnitude(stats.getSymbolsMagnitude());
+        builder.graphicalSquaresMagnitude(stats.getGraphicalSquaresMagnitude());
+        builder.graphicalArrowsMagnitude(stats.getGraphicalArrowsMagnitude());
+        builder.trainingMagnitude(stats.getTrainingMagnitude());
+        builder.timeSpentMagnitude(stats.getTimeSpentMagnitude());
+    }
+
+    private void collectStats(GameMovesModel.Node node, AnnotationStatistics stats) {
+        for (Annotation annotation : node.getAnnotations()) {
+            if (annotation instanceof StatisticalAnnotation) {
+                ((StatisticalAnnotation) annotation).updateStatistics(stats);
+            }
+        }
+        for (GameMovesModel.Node child : node.children()) {
+            collectStats(child, stats);
+        }
+    }
+
 
     /**
      * Adds a new game to the database

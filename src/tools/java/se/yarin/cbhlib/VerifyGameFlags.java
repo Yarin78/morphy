@@ -160,7 +160,7 @@ public class VerifyGameFlags {
         }
         int minTime = 0, maxTime = 0;
         int noTime = annotations.getOrDefault(TimeSpentAnnotation.class, 0);
-        switch (header.getTimeAnnotationsMagnitude()) {
+        switch (header.getTimeSpentMagnitude()) {
             case 1: minTime = 1; maxTime = 10; break;
             case 2: minTime = 11; maxTime = 100000; break;
         }

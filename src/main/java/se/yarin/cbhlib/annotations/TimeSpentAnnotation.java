@@ -4,12 +4,13 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import se.yarin.cbhlib.AnnotationSerializer;
 import se.yarin.cbhlib.ByteBufferUtil;
+import se.yarin.cbhlib.GameHeaderFlags;
 import se.yarin.chess.annotations.Annotation;
 
 import java.nio.ByteBuffer;
 
 @EqualsAndHashCode(callSuper = false)
-public class TimeSpentAnnotation extends Annotation {
+public class TimeSpentAnnotation extends Annotation implements StatisticalAnnotation {
     @Getter
     private int hours;
     @Getter
@@ -37,6 +38,12 @@ public class TimeSpentAnnotation extends Annotation {
             s = String.format("%d:%02d:%02d", hours, minutes, seconds);
         }
         return "Time spent = " + s;
+    }
+
+    @Override
+    public void updateStatistics(AnnotationStatistics stats) {
+        stats.noTimeSpent++;
+        stats.flags.add(GameHeaderFlags.TIME_SPENT);
     }
 
     public static class Serializer implements AnnotationSerializer {

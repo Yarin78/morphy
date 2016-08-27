@@ -16,7 +16,7 @@ import java.nio.ByteBuffer;
 
 @Builder
 @EqualsAndHashCode(callSuper = false)
-public class GameQuotationAnnotation extends Annotation {
+public class GameQuotationAnnotation extends Annotation implements StatisticalAnnotation {
 
     private static final Logger log = LoggerFactory.getLogger(GameQuotationAnnotation.class);
 
@@ -205,6 +205,11 @@ public class GameQuotationAnnotation extends Annotation {
         sb.append(" ").append(getResult().toString());
 
         return sb.toString();
+    }
+
+    @Override
+    public void updateStatistics(AnnotationStatistics stats) {
+        stats.flags.add(GameHeaderFlags.GAME_QUOTATION);
     }
 
     public static class Serializer implements AnnotationSerializer {

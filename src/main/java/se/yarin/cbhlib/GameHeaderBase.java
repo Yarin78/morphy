@@ -332,7 +332,7 @@ public class GameHeaderBase implements GameHeaderSerializer, Iterable<GameHeader
                 extraAnnotations &= ~32;
             }
             if (flags.contains(GameHeaderFlags.TIME_SPENT)) {
-                builder.timeAnnotationsMagnitude((extraAnnotations & 128) > 0 ? 2 : 1);
+                builder.timeSpentMagnitude((extraAnnotations & 128) > 0 ? 2 : 1);
                 extraAnnotations &= ~128;
             }
             extraAnnotations &= 64;
@@ -426,7 +426,7 @@ public class GameHeaderBase implements GameHeaderSerializer, Iterable<GameHeader
                 }
             }
             if (header.getFlags().contains(GameHeaderFlags.TIME_SPENT)) {
-                if (header.getTimeAnnotationsMagnitude() == 2) {
+                if (header.getTimeSpentMagnitude() == 2) {
                     extraAnnotations += 128;
                 }
             }

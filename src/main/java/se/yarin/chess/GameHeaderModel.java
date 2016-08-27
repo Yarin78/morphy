@@ -23,6 +23,8 @@ public class GameHeaderModel {
     // Define the standard fields and their types
     // The types must be an immutable type, to avoid the data from being changed outside of the model
     // Can't unfortunately use Lombok @Setter since we need to notify listeners upon change
+    // TODO: Create manual setters for type safety please!!
+
     @HeaderData @Getter private String white;
     @HeaderData @Getter private String black;
     @HeaderData @Getter private Integer whiteElo;
@@ -30,6 +32,7 @@ public class GameHeaderModel {
     @HeaderData @Getter private String whiteTeam;
     @HeaderData @Getter private String blackTeam;
     @HeaderData @Getter private GameResult result;
+    @HeaderData @Getter private LineEvaluation lineEvaluation;
     @HeaderData @Getter private Date date;
     @HeaderData @Getter private Eco eco;
     @HeaderData @Getter private Integer round;

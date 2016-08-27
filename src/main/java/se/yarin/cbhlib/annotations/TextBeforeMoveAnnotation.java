@@ -5,6 +5,7 @@ import lombok.Getter;
 import lombok.NonNull;
 import se.yarin.cbhlib.AnnotationSerializer;
 import se.yarin.cbhlib.ByteBufferUtil;
+import se.yarin.cbhlib.GameHeaderFlags;
 import se.yarin.cbhlib.Nation;
 import se.yarin.chess.annotations.Annotation;
 import se.yarin.chess.annotations.CommentaryBeforeMoveAnnotation;
@@ -13,7 +14,8 @@ import java.nio.ByteBuffer;
 import java.util.*;
 
 @EqualsAndHashCode(callSuper = false)
-public class TextBeforeMoveAnnotation extends CommentaryBeforeMoveAnnotation {
+public class TextBeforeMoveAnnotation extends CommentaryBeforeMoveAnnotation
+        implements StatisticalAnnotation {
 
     @Getter
     private Nation language;
@@ -33,6 +35,12 @@ public class TextBeforeMoveAnnotation extends CommentaryBeforeMoveAnnotation {
         super(commentary);
         this.unknown = unknown;
         this.language = language;
+    }
+
+    @Override
+    public void updateStatistics(AnnotationStatistics stats) {
+        stats.commentariesLength += getText().length();
+        stats.flags.add(GameHeaderFlags.COMMENTARY);
     }
 
     public static class Serializer implements AnnotationSerializer {

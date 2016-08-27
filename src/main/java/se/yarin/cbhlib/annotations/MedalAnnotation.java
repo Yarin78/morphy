@@ -11,7 +11,7 @@ import java.nio.ByteBuffer;
 import java.util.EnumSet;
 
 @EqualsAndHashCode(callSuper = false)
-public class MedalAnnotation extends Annotation {
+public class MedalAnnotation extends Annotation implements StatisticalAnnotation {
     private EnumSet<Medal> medals;
 
     public EnumSet<Medal> getMedals() {
@@ -35,6 +35,11 @@ public class MedalAnnotation extends Annotation {
         }
 
         return "Medals = " + sb.toString();
+    }
+
+    @Override
+    public void updateStatistics(AnnotationStatistics stats) {
+        stats.medals.addAll(medals);
     }
 
     public static class Serializer implements AnnotationSerializer {

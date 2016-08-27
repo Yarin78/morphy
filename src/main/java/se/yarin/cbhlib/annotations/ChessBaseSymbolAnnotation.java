@@ -7,6 +7,7 @@ import lombok.NonNull;
 import se.yarin.cbhlib.AnnotationSerializer;
 import se.yarin.cbhlib.ByteBufferUtil;
 import se.yarin.cbhlib.CBUtil;
+import se.yarin.cbhlib.GameHeaderFlags;
 import se.yarin.chess.LineEvaluation;
 import se.yarin.chess.MoveComment;
 import se.yarin.chess.MovePrefix;
@@ -18,7 +19,7 @@ import java.nio.ByteBuffer;
 // TODO: Should be NAGs annotation
 @AllArgsConstructor
 @EqualsAndHashCode(callSuper = false)
-public class ChessBaseSymbolAnnotation extends Annotation {
+public class ChessBaseSymbolAnnotation extends Annotation implements StatisticalAnnotation {
     @Getter private final MoveComment moveComment;
     @Getter private final MovePrefix movePrefix;
     @Getter private final LineEvaluation lineEvaluation;
@@ -74,6 +75,12 @@ public class ChessBaseSymbolAnnotation extends Annotation {
         }
 
         return text;
+    }
+
+    @Override
+    public void updateStatistics(AnnotationStatistics stats) {
+        stats.noSymbols++;
+        stats.flags.add(GameHeaderFlags.SYMBOLS);
     }
 
     public static class Serializer implements AnnotationSerializer {

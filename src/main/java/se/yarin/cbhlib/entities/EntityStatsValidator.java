@@ -37,7 +37,7 @@ public class EntityStatsValidator {
                         gameHeader.getId(), gameHeader.getMovesOffset(), lastMovesOfs));
             }
             lastMovesOfs = gameHeader.getMovesOffset();
-
+/*
             if (gameHeader.getAnnotationOffset() > 0) {
                 if (gameHeader.getAnnotationOffset() <= lastAnnotationOfs) {
                     throw new ChessBaseException(String.format("Game %d has annotations at offset %d while the last annotated game had annotations at offset %d",
@@ -45,7 +45,7 @@ public class EntityStatsValidator {
                 }
                 lastAnnotationOfs = gameHeader.getAnnotationOffset();
             }
-
+*/
         }
     }
 

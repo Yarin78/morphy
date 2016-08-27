@@ -4,6 +4,7 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import se.yarin.cbhlib.AnnotationSerializer;
 import se.yarin.cbhlib.CBUtil;
+import se.yarin.cbhlib.GameHeaderFlags;
 import se.yarin.chess.annotations.Annotation;
 
 import java.nio.ByteBuffer;
@@ -14,7 +15,7 @@ import java.nio.ByteBuffer;
  */
 @Deprecated
 @EqualsAndHashCode(callSuper = false)
-public class SoundAnnotation extends Annotation {
+public class SoundAnnotation extends Annotation implements StatisticalAnnotation {
     @Getter
     private byte[] rawData;
 
@@ -25,6 +26,11 @@ public class SoundAnnotation extends Annotation {
     @Override
     public String toString() {
         return "SoundAnnotation = " + CBUtil.toHexString(rawData);
+    }
+
+    @Override
+    public void updateStatistics(AnnotationStatistics stats) {
+        stats.flags.add(GameHeaderFlags.EMBEDDED_AUDIO);
     }
 
     public static class Serializer implements AnnotationSerializer {

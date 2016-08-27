@@ -4,6 +4,7 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import se.yarin.cbhlib.AnnotationSerializer;
 import se.yarin.cbhlib.CBUtil;
+import se.yarin.cbhlib.GameHeaderFlags;
 import se.yarin.chess.annotations.Annotation;
 
 import java.nio.ByteBuffer;
@@ -14,7 +15,7 @@ import java.nio.ByteBuffer;
  */
 @Deprecated
 @EqualsAndHashCode(callSuper = false)
-public class PictureAnnotation extends Annotation {
+public class PictureAnnotation extends Annotation implements StatisticalAnnotation {
     @Getter
     private byte[] rawData;
 
@@ -25,6 +26,11 @@ public class PictureAnnotation extends Annotation {
     @Override
     public String toString() {
         return "PictureAnnotation = " + CBUtil.toHexString(rawData);
+    }
+
+    @Override
+    public void updateStatistics(AnnotationStatistics stats) {
+        stats.flags.add(GameHeaderFlags.EMBEDDED_PICTURE);
     }
 
     public static class Serializer implements AnnotationSerializer {

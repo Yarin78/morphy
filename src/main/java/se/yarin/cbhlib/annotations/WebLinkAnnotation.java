@@ -5,12 +5,13 @@ import lombok.Getter;
 import lombok.NonNull;
 import se.yarin.cbhlib.AnnotationSerializer;
 import se.yarin.cbhlib.ByteBufferUtil;
+import se.yarin.cbhlib.GameHeaderFlags;
 import se.yarin.chess.annotations.Annotation;
 
 import java.nio.ByteBuffer;
 
 @EqualsAndHashCode(callSuper = false)
-public class WebLinkAnnotation extends Annotation {
+public class WebLinkAnnotation extends Annotation implements StatisticalAnnotation {
     @Getter @NonNull
     private final String url;
 
@@ -25,6 +26,11 @@ public class WebLinkAnnotation extends Annotation {
     @Override
     public String toString() {
         return "WebLinkAnnotation = " + text + " " + url;
+    }
+
+    @Override
+    public void updateStatistics(AnnotationStatistics stats) {
+        stats.flags.add(GameHeaderFlags.WEB_LINK);
     }
 
     public static class Serializer implements AnnotationSerializer {

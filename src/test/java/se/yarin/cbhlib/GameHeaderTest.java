@@ -82,7 +82,7 @@ public class GameHeaderTest {
                 .graphicalArrowsMagnitude(0)
                 .graphicalSquaresMagnitude(1)
                 .trainingMagnitude(0)
-                .timeAnnotationsMagnitude(1)
+                .timeSpentMagnitude(1)
                 .noMoves(13)
                 .build();
 

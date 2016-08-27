@@ -4,12 +4,13 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import se.yarin.cbhlib.AnnotationSerializer;
 import se.yarin.cbhlib.CBUtil;
+import se.yarin.cbhlib.GameHeaderFlags;
 import se.yarin.chess.annotations.Annotation;
 
 import java.nio.ByteBuffer;
 
 @EqualsAndHashCode(callSuper = false)
-public class TrainingAnnotation extends Annotation {
+public class TrainingAnnotation extends Annotation implements StatisticalAnnotation {
     @Getter
     private byte[] rawData;
 
@@ -20,6 +21,12 @@ public class TrainingAnnotation extends Annotation {
     @Override
     public String toString() {
         return "TrainingAnnotation = " + CBUtil.toHexString(rawData);
+    }
+
+    @Override
+    public void updateStatistics(AnnotationStatistics stats) {
+        stats.noTraining++;
+        stats.flags.add(GameHeaderFlags.TRAINING);
     }
 
     public static class Serializer implements AnnotationSerializer {

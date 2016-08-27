@@ -4,13 +4,19 @@ import lombok.AllArgsConstructor;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import se.yarin.cbhlib.AnnotationSerializer;
+import se.yarin.cbhlib.GameHeaderFlags;
 import se.yarin.chess.annotations.Annotation;
 
 import java.nio.ByteBuffer;
 
 @AllArgsConstructor
 @EqualsAndHashCode(callSuper = false)
-public class CriticalPositionAnnotation extends Annotation {
+public class CriticalPositionAnnotation extends Annotation implements StatisticalAnnotation {
+
+    @Override
+    public void updateStatistics(AnnotationStatistics stats) {
+        stats.flags.add(GameHeaderFlags.CRITICAL_POSITION);
+    }
 
     public enum CriticalPositionType {
         NONE,

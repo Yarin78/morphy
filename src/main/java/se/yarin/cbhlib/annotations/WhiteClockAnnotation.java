@@ -4,12 +4,13 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import se.yarin.cbhlib.AnnotationSerializer;
 import se.yarin.cbhlib.ByteBufferUtil;
+import se.yarin.cbhlib.GameHeaderFlags;
 import se.yarin.chess.annotations.Annotation;
 
 import java.nio.ByteBuffer;
 
 @EqualsAndHashCode(callSuper = false)
-public class WhiteClockAnnotation extends Annotation {
+public class WhiteClockAnnotation extends Annotation implements StatisticalAnnotation {
     @Getter
     private int clockTime;
 
@@ -23,6 +24,11 @@ public class WhiteClockAnnotation extends Annotation {
         int minutes = (clockTime / 100 / 60) % 60;
         int seconds = (clockTime / 100) % 60;
         return String.format("WhiteClock = %02d:%02d:%02d", hours, minutes, seconds);
+    }
+
+    @Override
+    public void updateStatistics(AnnotationStatistics stats) {
+        stats.flags.add(GameHeaderFlags.WHITE_CLOCK);
     }
 
     public static class Serializer implements AnnotationSerializer {

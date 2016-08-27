@@ -6,13 +6,20 @@ import lombok.Getter;
 import lombok.NonNull;
 import se.yarin.cbhlib.AnnotationSerializer;
 import se.yarin.cbhlib.ByteBufferUtil;
+import se.yarin.cbhlib.GameHeaderFlags;
 import se.yarin.chess.annotations.Annotation;
 
 import java.nio.ByteBuffer;
 import java.util.*;
 
 @EqualsAndHashCode(callSuper = false)
-public class GraphicalSquaresAnnotation extends Annotation {
+public class GraphicalSquaresAnnotation extends Annotation implements StatisticalAnnotation {
+
+    @Override
+    public void updateStatistics(AnnotationStatistics stats) {
+        stats.noGraphicalSquares++;
+        stats.flags.add(GameHeaderFlags.GRAPHICAL_SQUARES);
+    }
 
     @AllArgsConstructor
     @EqualsAndHashCode

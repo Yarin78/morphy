@@ -6,11 +6,12 @@ import lombok.Getter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.cbhlib.CBUtil;
+import se.yarin.cbhlib.GameHeaderFlags;
 import se.yarin.chess.annotations.Annotation;
 
 @AllArgsConstructor
 @EqualsAndHashCode(callSuper = false)
-public class UnknownAnnotation extends Annotation implements RawAnnotation {
+public class UnknownAnnotation extends Annotation implements RawAnnotation, StatisticalAnnotation {
     private static final Logger log = LoggerFactory.getLogger(UnknownAnnotation.class);
 
     @Getter
@@ -22,5 +23,12 @@ public class UnknownAnnotation extends Annotation implements RawAnnotation {
     @Override
     public String toString() {
         return String.format("UnknownAnnotation %02x: %s", annotationType, CBUtil.toHexString(rawData));
+    }
+
+    @Override
+    public void updateStatistics(AnnotationStatistics stats) {
+        if (annotationType == 8) {
+            stats.flags.add(GameHeaderFlags.ANNO_TYPE_8);
+        }
     }
 }

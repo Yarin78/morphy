@@ -3,11 +3,12 @@ package se.yarin.cbhlib.annotations;
 import lombok.Getter;
 import se.yarin.cbhlib.AnnotationSerializer;
 import se.yarin.cbhlib.CBUtil;
+import se.yarin.cbhlib.GameHeaderFlags;
 import se.yarin.chess.annotations.Annotation;
 
 import java.nio.ByteBuffer;
 
-public class CorrespondenceMoveAnnotation extends Annotation {
+public class CorrespondenceMoveAnnotation extends Annotation implements StatisticalAnnotation {
     @Getter
     private byte[] rawData;
 
@@ -18,6 +19,11 @@ public class CorrespondenceMoveAnnotation extends Annotation {
     @Override
     public String toString() {
         return "CorrespondenceMoveAnnotation = " + CBUtil.toHexString(rawData);
+    }
+
+    @Override
+    public void updateStatistics(AnnotationStatistics stats) {
+        stats.flags.add(GameHeaderFlags.CORRESPONDENCE_HEADER);
     }
 
     public static class Serializer implements AnnotationSerializer {

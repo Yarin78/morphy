@@ -6,12 +6,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.cbhlib.AnnotationSerializer;
 import se.yarin.cbhlib.ByteBufferUtil;
+import se.yarin.cbhlib.GameHeaderFlags;
 import se.yarin.chess.annotations.Annotation;
 
 import java.nio.ByteBuffer;
 
 @EqualsAndHashCode(callSuper = false)
-public class PawnStructureAnnotation extends Annotation {
+public class PawnStructureAnnotation extends Annotation implements StatisticalAnnotation {
     private static final Logger log = LoggerFactory.getLogger(PawnStructureAnnotation.class);
 
     @Getter
@@ -27,6 +28,11 @@ public class PawnStructureAnnotation extends Annotation {
     @Override
     public String toString() {
         return "PawnStructureAnnotation";
+    }
+
+    @Override
+    public void updateStatistics(AnnotationStatistics stats) {
+        stats.flags.add(GameHeaderFlags.PAWN_STRUCTURE);
     }
 
     public static class Serializer implements AnnotationSerializer {
