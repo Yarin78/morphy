@@ -57,7 +57,7 @@ public class Eco {
      */
     public static Eco fromInt(int eco) {
         if (eco < 0 || eco >= 500) {
-            throw new IllegalArgumentException("Invalid Eco number");
+            throw new IllegalArgumentException("Invalid Eco number: " + eco);
         }
         return new Eco(eco);
     }

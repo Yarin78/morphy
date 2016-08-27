@@ -10,6 +10,7 @@ import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.List;
 
+import static junit.framework.TestCase.assertFalse;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -111,4 +112,47 @@ public class AnnotationsSerializerTest {
         assertTrue(annotation instanceof InvalidAnnotation);
     }
 
+    @Test
+    public void serializeDeserializeGeneratedAnnotations() throws ChessBaseInvalidDataException, ChessBaseUnsupportedException {
+        GameGenerator gameGenerator = new GameGenerator();
+        for (int noMoves = 10; noMoves < 80; noMoves+=3) {
+            // Create a random game, make two copies of it
+            // Then add random annotations to one copy; ensure the annotations are different
+            // Than serialize and deserialize the annotations from the first copy into the second
+            // and ensure the annotations now match
+            GameMovesModel inputMoves = gameGenerator.getRandomGameMoves(noMoves);
+            gameGenerator.addRandomVariationMoves(inputMoves, noMoves*2);
+            GameMovesModel compareMoves = new GameMovesModel(inputMoves);
+            gameGenerator.addRandomAnnotations(inputMoves, noMoves / 2);
+            assertFalse(annotationsEqual(inputMoves.root(), compareMoves.root()));
+
+            ByteBuffer buf = AnnotationsSerializer.serializeAnnotations(1, inputMoves);
+            AnnotationsSerializer.deserializeAnnotations(buf, compareMoves);
+            assertTrue(annotationsEqual(inputMoves.root(), compareMoves.root()));
+        }
+    }
+
+    private boolean annotationsEqual(GameMovesModel.Node node1, GameMovesModel.Node node2) {
+        if (node1.getAnnotations().size() != node2.getAnnotations().size()) {
+            return false;
+        }
+
+        for (int i = 0; i < node1.getAnnotations().size(); i++) {
+            Annotation a1 = node1.getAnnotations().get(i);
+            Annotation a2 = node2.getAnnotations().get(i);
+            assertTrue(a1.equals(a2));
+        }
+
+        if (node1.children().size() != node2.children().size()) {
+            return false;
+        }
+
+        for (int i = 0; i < node1.children().size(); i++) {
+            if (!annotationsEqual(node1.children().get(i), node2.children().get(i))) {
+                return false;
+            }
+        }
+
+        return true;
+    }
 }

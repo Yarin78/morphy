@@ -119,12 +119,12 @@ public final class MovesSerializer {
         private ByteBuffer buf;
 
         public MoveDecoder(ByteBuffer buf) {
-            this.modifier = 256;
+            this.modifier = 0;
             this.buf = buf;
         }
 
         public int decode() {
-            return decryptMap[(buf.get() + modifier) % 256];
+            return decryptMap[(ByteBufferUtil.getUnsignedByte(buf) + modifier) % 256];
         }
 
         public void next() {
@@ -407,7 +407,7 @@ public final class MovesSerializer {
                 }
 
                 if (log.isDebugEnabled()) {
-                    log.debug(String.format("Parsed opcode %02X to move %s", opcode, opcode, move.toLAN()));
+                    log.debug(String.format("Parsed opcode %02X to move %s", opcode, move.toLAN()));
                 }
 
                 // Update position of the moved piece
@@ -562,7 +562,7 @@ public final class MovesSerializer {
         buf.position(endPosition);
 
         Position startPosition = new Position(stones, sideToMove, castles, epFile);
-        return new GameMovesModel(startPosition, Chess.moveNumberToPly(moveNumber, sideToMove));
+        return new GameMovesModel(startPosition, moveNumber);
     }
 
     public static ByteBuffer serializeInitialPosition(GameMovesModel moves, ByteBuffer buf) {

@@ -112,6 +112,18 @@ public class MovesSerializerTest {
     }
 
     @Test
+    public void serializeDeserializeGeneratedGames() throws ChessBaseInvalidDataException, ChessBaseUnsupportedException {
+        GameGenerator gameGenerator = new GameGenerator();
+        for (int noMoves = 0; noMoves < 150; noMoves+=3) {
+            GameMovesModel inputMoves = gameGenerator.getRandomGameMoves(noMoves);
+            gameGenerator.addRandomVariationMoves(inputMoves, noMoves*2);
+            ByteBuffer buf = MovesSerializer.serializeMoves(inputMoves);
+            GameMovesModel outputMoves = MovesSerializer.parseMoveData(buf);
+            assertEquals(inputMoves.toString(), outputMoves.toString());
+        }
+    }
+
+    @Test
     @Ignore
     public void parseSpecialEncoding() throws IOException, ChessBaseException {
         GameMovesModel model = MovesSerializer.parseMoveData(ResourceLoader.loadResource("specialencoding.moves.bin"));

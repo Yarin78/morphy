@@ -134,12 +134,8 @@ public class DatabaseTest {
 
     @Test
     public void randomlyAddAndReplaceGames() throws IOException, EntityStorageException, ChessBaseException {
-        String[] players = {"Mardell", "Carlsen", "Kasparov", "Fischer", "Karpov", "Nakamura", "Giri", "Caruana", "Aronian"};
-        String[] events = {"Wijk an Zee", "London Classic", "Hastings", "Linares", "Dortmund"};
-        String[] annotators = {"", "a1", "a2", "a3", "a4"};
-        String[] sources = {"", "s1", "s2"};
-
         Random random = new Random(0);
+        GameGenerator gameGenerator = new GameGenerator();
 
         for (int iter = 0; iter < 10; iter++) {
             Database db = new Database();
@@ -149,19 +145,12 @@ public class DatabaseTest {
 
             for (int i = 0; i < noOps; i++) {
                 int gameId = random.nextInt(maxGames) + 1;
-                String white = players[random.nextInt(players.length)];
-                String black = players[random.nextInt(players.length)];
-                String event = events[random.nextInt(events.length)];
-                String annotator = annotators[random.nextInt(annotators.length)];
-                String source = sources[random.nextInt(sources.length)];
-//                String desc = String.format("%s %s %s %s %s", white, black, event, annotator, source);
-                GameModel game = getSimpleGame(white, black, event, annotator, source);
+                GameModel game = gameGenerator.getRandomGame();
+
 
                 if (gameId <= db.getHeaderBase().size()) {
-//                    log.info(String.format("Replacing game %d with %s", gameId, desc));
                     db.replaceGame(gameId, game);
                 } else {
-//                    log.info(String.format("Adding game %d with %s", db.getHeaderBase().getNextGameId(), desc));
                     db.addGame(game);
                 }
 
@@ -169,7 +158,5 @@ public class DatabaseTest {
                 validator.readAllGames();
             }
         }
-
-        // Verify stats in sync
     }
 }
