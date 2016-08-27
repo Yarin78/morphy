@@ -4,7 +4,10 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import se.yarin.cbhlib.annotations.TextAfterMoveAnnotation;
 import se.yarin.chess.annotations.*;
+
+import java.util.EnumSet;
 
 import static org.junit.Assert.*;
 import static se.yarin.chess.Chess.*;
@@ -36,6 +39,24 @@ public class GameMovesModelTest {
         assertTrue(moves.root().isRoot());
         assertFalse(moves.isSetupPosition());
         assertEquals(0, numFiredChanges);
+    }
+
+    @Test
+    public void testSetupPositionWhiteToMove() {
+        String startPos = "rnb.kbnr\nppp.pppp\n........\n...q....\n........\n........\nPPPP.PPP\nRNBQKBNR\n";
+        GameMovesModel model = new GameMovesModel(Position.fromString(startPos, Player.WHITE, EnumSet.allOf(Castles.class), -1), 3);
+
+        assertEquals(startPos, model.root().position().toString("\n"));
+        assertEquals(4, model.root().ply());
+    }
+
+    @Test
+    public void testSetupPositionBlackToMove() {
+        String startPos = "rnb.kbnr\nppp.pppp\n........\n...q....\n........\nP.......\n.PPP.PPP\nRNBQKBNR\n";
+        GameMovesModel model = new GameMovesModel(Position.fromString(startPos, Player.BLACK, EnumSet.allOf(Castles.class), -1), 3);
+
+        assertEquals(startPos, model.root().position().toString("\n"));
+        assertEquals(5, model.root().ply());
     }
 
     @Test
@@ -351,5 +372,36 @@ public class GameMovesModelTest {
 
         assertEquals("1.e4 d6 { Pirc } 2.d4", moves.toString());
         assertEquals(1, numFiredChanges);
+    }
+
+    @Test
+    public void testCloneModel() {
+        moves.root()
+                .addMove(E2, E4)
+                .addAnnotation(new SymbolAnnotation(MoveComment.GOOD_MOVE))
+                .addMove(E7, E5)
+                .addMove(G1, F3)
+                .parent()
+                .addMove(B1, C3)
+                .addAnnotation(new SymbolAnnotation(MoveComment.INTERESTING_MOVE));
+
+        // Test that there are no shared nodes in the original and clone by
+        // performing various operations on the cloned version
+        GameMovesModel clone = new GameMovesModel(moves);
+        assertEquals(moves.toString(), clone.toString());
+        clone.root().addMove(D2, D4);
+        assertNotEquals(moves.toString(), clone.toString());
+
+        clone = new GameMovesModel(moves);
+        clone.root().mainNode().addMove(E7, E6);
+        assertNotEquals(moves.toString(), clone.toString());
+
+        clone = new GameMovesModel(moves);
+        clone.root().mainNode().deleteAnnotations();
+        assertNotEquals(moves.toString(), clone.toString());
+
+        clone = new GameMovesModel(moves);
+        clone.root().mainNode().mainNode().children().get(1).addAnnotation(new TextAfterMoveAnnotation("variant"));
+        assertNotEquals(moves.toString(), clone.toString());
     }
 }

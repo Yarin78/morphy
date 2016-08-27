@@ -29,12 +29,32 @@ public class GameMovesModel {
     private Node root;
     private List<GameMovesModelChangeListener> changeListeners = new ArrayList<>();
 
+    /**
+     * Creates an empty {@link GameMovesModel} with the default chess starting position.
+     */
     public GameMovesModel() {
         this.root = new Node(Position.start(), 0);
     }
 
-    public GameMovesModel(Position startPosition, int startPly) {
-        this.root = new Node(startPosition, startPly);
+    /**
+     * Creates a {@link GameMovesModel} with a custom starting position.
+     * @param startPosition the start position of the game
+     * @param moveNumber the current move number
+     */
+    public GameMovesModel(@NonNull Position startPosition, int moveNumber) {
+        if (moveNumber < 1) {
+            throw new IllegalArgumentException("Move number must be 1 or greater");
+        }
+        this.root = new Node(startPosition, Chess.moveNumberToPly(moveNumber, startPosition.playerToMove()));
+    }
+
+    /**
+     * Creates a duplicate {@link GameMovesModel} by performing a deep clone of the game tree.
+     * The listeners are not copied.
+     * @param model
+     */
+    public GameMovesModel(@NonNull GameMovesModel model) {
+        this.root = new Node(model.root(), (Node) null);
     }
 
     /**
@@ -45,7 +65,9 @@ public class GameMovesModel {
     }
 
     /**
-     * Gets the number of half moves in the game
+     * Gets the number of half moves in the game. This only takes into account moves
+     * in the actual stored game tree, not the specified number of moves at the
+     * given starting position.
      * @param includeVariations if true, count all moves in all variations;
      *                          otherwise only the main line will be counted
      * @return the total number of half moves in the game
