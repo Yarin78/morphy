@@ -273,7 +273,7 @@ public final class Database {
             gameFlags.add(GameHeaderFlags.SETUP_POSITION);
         }
 
-        // TODO: Fischer random flag
+        // TODO: Chess960 flag
         // TODO: Stream flag (if it should be kept here!?)
 
         builder.medals(stats.getMedals());

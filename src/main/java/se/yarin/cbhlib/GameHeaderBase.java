@@ -274,15 +274,18 @@ public class GameHeaderBase implements GameHeaderSerializer, Iterable<GameHeader
             builder.subRound(ByteBufferUtil.getUnsignedByte(buf));
             builder.whiteElo(ByteBufferUtil.getUnsignedShortB(buf));
             builder.blackElo(ByteBufferUtil.getUnsignedShortB(buf));
-            // TODO: Support subeco
-            // TODO: In Fischer random games, this value probably indicates the starting position instead
-            // But Chessbase 13 doesn't seem to support this!?
+
             int ecoValue = ByteBufferUtil.getUnsignedShortB(buf);
-            try {
-                builder.eco(CBUtil.decodeEco(ecoValue));
-            } catch (IllegalArgumentException e) {
-                log.error("Error parsing ECO in game " + gameId + ": " + ecoValue);
+            if (ecoValue >= 65536 - 960) {
+                builder.chess960StartPosition(ecoValue - 65536 + 960);
                 builder.eco(Eco.unset());
+            } else {
+                try {
+                    builder.eco(CBUtil.decodeEco(ecoValue));
+                } catch (IllegalArgumentException e) {
+                    log.error("Error parsing ECO in game " + gameId + ": " + ecoValue);
+                    builder.eco(Eco.unset());
+                }
             }
             builder.medals(CBUtil.decodeMedals(ByteBufferUtil.getUnsignedShortB(buf)));
             int flagInt = ByteBufferUtil.getIntB(buf);
@@ -388,7 +391,11 @@ public class GameHeaderBase implements GameHeaderSerializer, Iterable<GameHeader
             ByteBufferUtil.putByte(buf, header.getSubRound());
             ByteBufferUtil.putShortB(buf, header.getWhiteElo());
             ByteBufferUtil.putShortB(buf, header.getBlackElo());
-            ByteBufferUtil.putShortB(buf, CBUtil.encodeEco(header.getEco()));
+            if (header.getFlags().contains(GameHeaderFlags.CHESS960)) {
+                ByteBufferUtil.putShortB(buf, header.getChess960StartPosition() + 65536 - 960);
+            } else {
+                ByteBufferUtil.putShortB(buf, CBUtil.encodeEco(header.getEco()));
+            }
             ByteBufferUtil.putShortB(buf, CBUtil.encodeMedals(header.getMedals()));
             int flagInt = 0;
             for (GameHeaderFlags flag : header.getFlags()) {

@@ -204,4 +204,20 @@ public class GameHeaderTest {
         assertEquals(1, header.getAnnotatorId());
         assertEquals(2, header.getRound());
     }
+
+    @Test
+    public void testSerializeDeserializeChess960GameHeader() {
+        GameHeaderBase base = new GameHeaderBase();
+        GameHeader before = GameHeader.defaultBuilder()
+                .id(7)
+                .game(true)
+                .flags(EnumSet.of(GameHeaderFlags.CHESS960))
+                .chess960StartPosition(123)
+                .build();
+
+        ByteBuffer serialized = base.serialize(before);
+        GameHeader after = base.deserialize(7, serialized);
+
+        assertEquals(before, after);
+    }
 }

@@ -91,8 +91,12 @@ Ofs 30, Len 1 - subround (0 = unset)
 Ofs 31, Len 2 - white rating (0 = unset)
 Ofs 33, Len 2 - black rating (0 = unset)
 
-Ofs 35, Len 2 - bit 0-6: Sub ECO (00-99)
+Ofs 35, Len 2 - Eco code (if normal chess game)
+                bit 0-6: Sub ECO (00-99)
                 bit 7-15: ECO (0 = unset, 1 = A00, 500 = E99)
+
+                OR Chess960 starting position (https://en.wikipedia.org/wiki/Chess960_numbering_scheme)
+                Value = 65536 - 960 + x -> position x
 
 Ofs 37, Len 2 - Medals:
                 bit 0: Best game
@@ -178,7 +182,7 @@ Ofs  Type  Len   Description
 
  +0  byte    1   bit 7: If set, the data is not encoded (iff guiding text?)
                  bit 6: If set, the game doesn't start with the initial position.
-                 bit 0-3: 0xA = fischer random?? can also be 0x4 and 0x5
+                 bit 0-3: 0xA = chess960?? can also be 0x4 and 0x5
                  This whole byte is set to 0x7F if the position is an illegal position!?
  +0  int     3   Game size, in number of bytes (including this, excluding trash bytes)
  +4  byte   (28) If game does not start with initial position, here that position follows.

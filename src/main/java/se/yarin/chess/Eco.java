@@ -6,23 +6,7 @@ import lombok.NonNull;
  * Represents an Eco classification
  */
 public class Eco {
-    // TODO: Perhaps support Random Fischer start positions!?
-    /*
-    ERROR GameHeaderBase - Error parsing ECO in game 3730250: 65361
-    ERROR GameHeaderBase - Error parsing ECO in game 3730251: 65361
-    ERROR GameHeaderBase - Error parsing ECO in game 3730252: 65361
-    ERROR GameHeaderBase - Error parsing ECO in game 3730253: 65361
-    ERROR GameHeaderBase - Error parsing ECO in game 3730254: 65361
-    ERROR GameHeaderBase - Error parsing ECO in game 3730255: 65361
-    ERROR GameHeaderBase - Error parsing ECO in game 3730256: 65361
-    ERROR GameHeaderBase - Error parsing ECO in game 3730257: 65361
-    ERROR GameHeaderBase - Error parsing ECO in game 6197425: 65155
-    ERROR GameHeaderBase - Error parsing ECO in game 6197426: 65155
-    ERROR GameHeaderBase - Error parsing ECO in game 6197427: 65472
-    ERROR GameHeaderBase - Error parsing ECO in game 6197428: 65472
-    ERROR GameHeaderBase - Error parsing ECO in game 6197429: 65011
-    ERROR GameHeaderBase - Error parsing ECO in game 6197430: 65011
-     */
+
     private int eco;
     private int subEco;
 

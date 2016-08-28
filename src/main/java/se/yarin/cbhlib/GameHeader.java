@@ -32,6 +32,7 @@ public class GameHeader {
     private final int subRound; // 0 = not set
     private final int whiteElo; // 0 = not set
     private final int blackElo; // 0 = not set
+    private final int chess960StartPosition; // According to the official Chess960 numbering scheme
     private final @NonNull Eco eco;
     private final @NonNull LineEvaluation lineEvaluation;
 
