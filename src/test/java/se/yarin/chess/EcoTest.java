@@ -46,4 +46,15 @@ public class EcoTest {
     public void testCreateInvalidEco4() {
         new Eco("F03");
     }
+
+    @Test
+    public void testSubEcoFromString() {
+        assertEquals("B09/57", new Eco("B09/57").toString());
+        assertEquals("D37/02", new Eco("D37/02").toString());
+    }
+
+    @Test
+    public void testSubEcoFromInt() {
+        assertEquals("C23/45", Eco.fromInt(223, 45).toString());
+    }
 }

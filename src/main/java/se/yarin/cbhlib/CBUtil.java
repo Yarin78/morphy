@@ -101,10 +101,9 @@ public final class CBUtil {
      * @return the decoded Eco
      */
     public static Eco decodeEco(int ecoValue) {
-        // TODO: This will ignore the sub eco as Eco doesn't support it yet
         int eco = ecoValue / 128 - 1;
         int subEco = ecoValue % 128;
-        return eco < 0 ? Eco.unset() : Eco.fromInt(eco);
+        return eco < 0 ? Eco.unset() : Eco.fromInt(eco, subEco);
     }
 
     /**
@@ -113,11 +112,10 @@ public final class CBUtil {
      * @return the encoded Eco
      */
     public static int encodeEco(@NonNull Eco eco) {
-        // TODO: Add support for sub eco when Eco contains that data
         if (!eco.isSet()) {
             return 0;
         }
-        return (eco.getInt() + 1) * 128;
+        return (eco.getInt() + 1) * 128 + eco.getSubEco();
     }
 
     /**
