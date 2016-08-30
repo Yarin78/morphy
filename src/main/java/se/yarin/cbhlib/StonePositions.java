@@ -23,10 +23,14 @@ class StonePositions {
         this.pieceSqi = pieceSqi;
     }
 
+    public static StonePositions fromPosition(Position position) {
+        return fromPosition(position, false);
+    }
+
     /**
      * Initializes a {@link StonePositions} from a board position.
      */
-    public static StonePositions fromPosition(Position position) {
+    public static StonePositions fromPosition(Position position, boolean reverse) {
         int[][] pps = new int[13][];
         for (Stone stone : Stone.values()) {
             int cnt;
@@ -41,7 +45,8 @@ class StonePositions {
             }
         }
 
-        for (int i = 0; i < 64; i++) {
+        for (int ii = 0; ii < 64; ii++) {
+            int i = reverse ? 63 - ii : ii;
             Stone stone = position.stoneAt(i);
             if (!stone.isNoStone()) {
                 int[] pp = pps[stone.index()];

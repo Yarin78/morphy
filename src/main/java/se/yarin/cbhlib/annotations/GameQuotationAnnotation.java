@@ -20,22 +20,9 @@ public class GameQuotationAnnotation extends Annotation implements StatisticalAn
 
     private static final Logger log = LoggerFactory.getLogger(GameQuotationAnnotation.class);
 
-    private static final byte[] encryptMap = new byte[256];
-    private static final int[] decryptMap = new int[256];
-
-    static {
-        // This encryption map exists in the ChessBase executable file
-        InputStream stream = MovesSerializer.class.getResourceAsStream("gameQuotationEncryptionKey.bin");
-        try {
-            stream.read(encryptMap);
-            for (int i = 0; i < 256; i++) {
-                decryptMap[(encryptMap[i] + 256) % 256] = i;
-            }
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to load resource gameQuotationEncryptionKey.bin");
-        }
-    }
-
+    // TODO: Move serialization to MovesSerializer
+    private static final short[] encryptMap = KeyProvider.getMoveSerializationKey(8);
+    private static final short[] decryptMap = KeyProvider.getMoveSerializationKey(9);
 
     @Getter
     private int type; // 1 = link to game in same database, 2 = contains game data

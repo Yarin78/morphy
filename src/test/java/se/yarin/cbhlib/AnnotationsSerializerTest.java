@@ -42,7 +42,7 @@ public class AnnotationsSerializerTest {
     public void serializeSimpleAnnotationsWithGame() throws IOException, ChessBaseInvalidDataException, ChessBaseUnsupportedException {
         ByteBuffer annoBuf = ResourceLoader.loadResource("simpleannotations.annotations.bin");
         ByteBuffer movesBuf = ResourceLoader.loadResource("simpleannotations.moves.bin");
-        GameMovesModel model = MovesSerializer.parseMoveData(movesBuf);
+        GameMovesModel model = MovesSerializer.deserializeMoves(movesBuf);
         AnnotationsSerializer.deserializeAnnotations(annoBuf, model);
         assertEquals("1.e4! c5? 2.Nf3 zugzwang d6 only move 3.d4 unclear cxd4 w/ initiative 4.Nxd4 { Capture } Nf6 5.Nc3 { Fianchetto } g6 6.Be3 +- Better is... Bg7 7.f3 O-O 8.Qd2 Nc6 9.O-O-O d5", model.toString());
 
@@ -56,7 +56,7 @@ public class AnnotationsSerializerTest {
     public void serializeCommentsInVariations() throws IOException, ChessBaseInvalidDataException, ChessBaseUnsupportedException {
         ByteBuffer annoBuf = ResourceLoader.loadResource("commentsinvariations.annotations.bin");
         ByteBuffer movesBuf = ResourceLoader.loadResource("commentsinvariations.moves.bin");
-        GameMovesModel model = MovesSerializer.parseMoveData(movesBuf);
+        GameMovesModel model = MovesSerializer.deserializeMoves(movesBuf);
         AnnotationsSerializer.deserializeAnnotations(annoBuf, model);
         assertEquals("{ Pre-game comment } 1.e4 { After first move comment } e5 2.Nf3 Nc6 3.Bb5 ({ Pre-variant comment } 3.Bc4 d6 4.O-O Nf6 { bla bla } 5.Ng5!) 3...a6 4.Ba4 Nf6 5.O-O Be7 (5...Nxe4!? { may lead to open spanish }) 6.Re1 O-O { This is a really long comment that should cause multiple line overflows to be necessary. This is only to test the robustness of the move generator in opencbm. But it should handle it very easily. Otherwise I'm not much of a programmer! } 7.d3 { Game is over }", model.toString());
 

@@ -1,5 +1,6 @@
 package se.yarin.cbhlib;
 
+import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NonNull;
 import org.slf4j.Logger;
@@ -30,12 +31,14 @@ public final class Database {
     public static final String SOURCE_ID = "sourceId";
 
     @Getter @NonNull private GameHeaderBase headerBase;
-    @NonNull private MovesBase movesBase;
+    @Getter(AccessLevel.PACKAGE) @NonNull private MovesBase movesBase;
     @NonNull private AnnotationBase annotationBase;
     @Getter @NonNull private PlayerBase playerBase;
     @Getter @NonNull private TournamentBase tournamentBase;
     @Getter @NonNull private AnnotatorBase annotatorBase;
     @Getter @NonNull private SourceBase sourceBase;
+
+
 
     /**
      * Creates a new in-memory ChessBase database
@@ -309,6 +312,23 @@ public final class Database {
 
         int annotationOfs = annotationBase.putAnnotations(gameId, 0, model.moves());
         int movesOfs = movesBase.putMoves(0, model.moves());
+
+        GameHeader gameHeader = createGameHeader(model, movesOfs, annotationOfs);
+
+        gameHeader = headerBase.add(gameHeader);
+        assert gameHeader.getId() == gameId;
+
+        updateEntityStats(null, gameHeader);
+
+        return gameHeader;
+    }
+
+    // TODO: This is only for easy experimentation
+    public GameHeader addGameRawMoves(@NonNull GameModel model, int flag, byte[] raw) throws IOException {
+        int gameId = headerBase.getNextGameId();
+
+        int annotationOfs = annotationBase.putAnnotations(gameId, 0, model.moves());
+        int movesOfs = movesBase.putMovesRaw(0, flag, raw);
 
         GameHeader gameHeader = createGameHeader(model, movesOfs, annotationOfs);
 

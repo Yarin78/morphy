@@ -15,6 +15,11 @@ public class MovesBase implements BlobSizeRetriever {
     private static final Logger log = LoggerFactory.getLogger(MovesBase.class);
 
     private final DynamicBlobStorage storage;
+    private int encodingMode = 0; // The encoding mode to use when writing games
+
+    void setEncodingMode(int encodingMode) {
+        this.encodingMode = encodingMode;
+    }
 
     /**
      * Creates a new moves base that is initially empty.
@@ -89,7 +94,7 @@ public class MovesBase implements BlobSizeRetriever {
     public GameMovesModel getMoves(int ofs)
             throws IOException, ChessBaseInvalidDataException, ChessBaseUnsupportedException {
         ByteBuffer blob = storage.getBlob(ofs);
-        return MovesSerializer.parseMoveData(blob);
+        return MovesSerializer.deserializeMoves(blob);
     }
 
     /**
@@ -101,7 +106,21 @@ public class MovesBase implements BlobSizeRetriever {
      * @throws IOException if there was some IO errors when storing the moves
      */
     public int putMoves(int ofs, GameMovesModel model) throws IOException {
-        ByteBuffer buf = MovesSerializer.serializeMoves(model);
+        ByteBuffer buf = MovesSerializer.serializeMoves(model, encodingMode);
+        if (ofs > 0) {
+            storage.forcePutBlob(ofs, buf);
+            return ofs;
+        }
+        return storage.addBlob(buf);
+    }
+
+    // TODO: This is only for easy experimentation
+    public int putMovesRaw(int ofs, int flag, byte[] raw) throws IOException {
+        ByteBuffer buf = ByteBuffer.allocate(raw.length + 4);
+        ByteBufferUtil.putByte(buf, flag);
+        ByteBufferUtil.put24BitB(buf, raw.length + 4);
+        buf.put(raw);
+        buf.flip();
         if (ofs > 0) {
             storage.forcePutBlob(ofs, buf);
             return ofs;
@@ -110,7 +129,7 @@ public class MovesBase implements BlobSizeRetriever {
     }
 
     int preparePutBlob(int ofs, GameMovesModel model) throws IOException {
-        ByteBuffer buf = MovesSerializer.serializeMoves(model);
+        ByteBuffer buf = MovesSerializer.serializeMoves(model, encodingMode);
         int oldGameSize = getBlobSize(storage.getBlob(ofs));
         int newGameSize = getBlobSize(buf);
         if (newGameSize <= oldGameSize) {
