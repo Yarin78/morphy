@@ -7,7 +7,7 @@ import se.yarin.chess.ShortMove;
 
 /**
  * Event that inserts a move at the current position,
- * see {@link se.yarin.chess.GameMovesModel.Node#insertMove(ShortMove)} )}
+ * see {@link se.yarin.chess.GameMovesModel.Node#insertMove(se.yarin.chess.Move)} )}
  */
 public class InsertMoveEvent extends GameEvent {
 
@@ -20,7 +20,7 @@ public class InsertMoveEvent extends GameEvent {
     @Override
     public void apply(@NonNull NavigableGameModel model) throws GameEventException {
         try {
-            model.insertMove(move);
+            model.insertMove(move.toMove(model.cursor().position()));
         } catch (IllegalMoveException e) {
             throw new GameEventException(this, model, "Illegal move: " + move.toString());
         }

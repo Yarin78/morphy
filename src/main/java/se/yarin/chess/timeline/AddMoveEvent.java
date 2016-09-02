@@ -20,7 +20,7 @@ public class AddMoveEvent extends GameEvent {
     @Override
     public void apply(@NonNull NavigableGameModel model) throws GameEventException {
         try {
-            model.addMove(move);
+            model.addMove(move.toMove(model.cursor().position()));
         } catch (IllegalMoveException e) {
             throw new GameEventException(this, model, "Illegal move: " + move.toString());
         }

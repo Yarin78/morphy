@@ -214,7 +214,8 @@ public final class MovesSerializer {
 
         buf.position(endPosition);
 
-        Position startPosition = new Position(stones, sideToMove, castles, epFile);
+        // TODO: Set Chess960 start position
+        Position startPosition = new Position(stones, sideToMove, castles, epFile, Chess960.REGULAR_CHESS_SP);
         return new GameMovesModel(startPosition, moveNumber);
     }
 

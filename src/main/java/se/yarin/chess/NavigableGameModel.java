@@ -127,10 +127,10 @@ public class NavigableGameModel {
      * @param move the move to add
      * @throws IllegalMoveException if the move is illegal
      */
-    public void addMove(@NonNull ShortMove move) {
+    public void addMove(@NonNull Move move) {
         setCursor(cursor().addMove(move));
     }
-
+    
     /**
      * Adds a new main move at the current position and updates the cursor,
      * The old main move becomes a variation (the last one, in case other
@@ -138,7 +138,7 @@ public class NavigableGameModel {
      * @param move the move to add
      * @throws IllegalMoveException if the move is illegal
      */
-    public void addMainMove(@NonNull ShortMove move) {
+    public void addMainMove(@NonNull Move move) {
         addMove(move);
         promoteVariation();
     }
@@ -148,17 +148,17 @@ public class NavigableGameModel {
      * @param move the move to overwrite with
      * @throws IllegalMoveException if the move is illegal
      */
-    public void overwriteMove(@NonNull ShortMove move) {
+    public void overwriteMove(@NonNull Move move) {
         setCursor(cursor().overwriteMove(move));
     }
 
     /**
      * Inserts a move at the current position and updates the cursor,
-     * see {@link se.yarin.chess.GameMovesModel.Node#insertMove(ShortMove)} )}
+     * see {@link se.yarin.chess.GameMovesModel.Node#insertMove(Move)} )}
      * @param move the move to insert
      * @throws IllegalMoveException if the move is illegal
      */
-    public void insertMove(@NonNull ShortMove move) {
+    public void insertMove(@NonNull Move move) {
         setCursor(cursor().insertMove(move));
     }
 

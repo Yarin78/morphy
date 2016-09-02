@@ -22,7 +22,7 @@ public class TestGames {
                 .addMove(F8, G7)
                 .addMove(B6, B7)
                 .addMove(E8, G8)
-                .addMove(new ShortMove(B7, A8, Stone.WHITE_ROOK))
+                .addMove(B7, A8, Stone.WHITE_ROOK)
                 .addMove(C8, A6)
                 .addMove(B1, C3)
                 .addMove(H7, H5)
@@ -41,12 +41,12 @@ public class TestGames {
                 .addMove(D3, D4)
                 .addMove(G3, F2)
                 .addMove(D4, E5)
-                .addMove(new ShortMove(F2, G1, Stone.BLACK_BISHOP))
+                .addMove(F2, G1, Stone.BLACK_BISHOP)
                 .addMove(E5, F6)
                 .addMove(G1, E3)
                 .addMove(F6, E7)
                 .addMove(A6, C4)
-                .addMove(new ShortMove(E7, D8, Stone.WHITE_ROOK))
+                .addMove(E7, D8, Stone.WHITE_ROOK)
                 .addMove(A7, A5)
                 .addMove(A8, A6)
                 .addMove(A5, A4)
@@ -55,7 +55,7 @@ public class TestGames {
                 .addMove(D8, D7)
                 .addMove(A3, B2)
                 .addMove(C1, C2)
-                .addMove(new ShortMove(B2, B1, Stone.BLACK_BISHOP))
+                .addMove(B2, B1, Stone.BLACK_BISHOP)
                 .addMove(C2, B2)
                 .addMove(B1, F5)
                 .addMove(D1, E1)
@@ -115,7 +115,7 @@ public class TestGames {
                 .addMove(C4, B5)
                 .addMove(F3, F2)
                 .addMove(B5, C4)
-                .addMove(new ShortMove(F2, F1, Stone.BLACK_QUEEN));
+                .addMove(F2, F1, Stone.BLACK_QUEEN);
 
         return moves;
     }

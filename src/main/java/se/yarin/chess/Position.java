@@ -15,6 +15,8 @@ import static se.yarin.chess.Castles.*;
  * Enough information is contained generate all legal moves.
  *
  * If the position is invalid, the behaviour of some methods are undefined.
+ *
+ * Supports Chess960
  */
 public class Position {
 
@@ -57,7 +59,8 @@ public class Position {
         for (int i = 0; i < 9; i++) zobristKeyEnPassant[i] = getNonzeroLong(r);
         for (int i = 0; i < 2; i++) zobristKeyToMove[i] = getNonzeroLong(r);
 
-        startPosition = new Position(startBoard, WHITE, EnumSet.allOf(Castles.class), Chess.NO_COL);
+        startPosition = new Position(startBoard, WHITE, EnumSet.allOf(Castles.class),
+                Chess.NO_COL, Chess960.REGULAR_CHESS_SP);
         emptyBoard = new Stone[64];
         for (int i = 0; i < 64; i++) {
             emptyBoard[i] = NO_STONE;
@@ -68,6 +71,8 @@ public class Position {
     private final Player toMove;
     private final int enPassantCol; // Chess.NO_COL if EP not possible;
     private final EnumSet<Castles> castlesSet; // This set must not be modified nor exposed
+    private final int chess960sp; // Start position id (518 = ordinary chess)
+
     private int whiteKingSqi, blackKingSqi;
     private long hash; // Cached hash value of the position
     private Boolean isCheck, canCaptureKing; // cached values
@@ -89,6 +94,8 @@ public class Position {
         return toMove;
     }
 
+    public int chess960StartPosition() { return chess960sp; }
+
     public int getEnPassantCol() {
         return enPassantCol;
     }
@@ -105,6 +112,14 @@ public class Position {
     }
 
     /**
+     * Determines if this is a regular chess game
+     * @return true if it's a regular chess game, false if it's a Chess960 game
+     */
+    public boolean isRegularChess() {
+        return chess960sp == Chess960.REGULAR_CHESS_SP;
+    }
+
+    /**
      * Creates a new position
      * @param board an 64-element array of the stones on the board
      * @param playerToMove the player to move
@@ -112,15 +127,38 @@ public class Position {
      * @param epFile the file which an en-passant is possible; -1 if no file
      */
     public Position(Stone[] board, Player playerToMove, EnumSet<Castles> castles, int epFile) {
+        this(board, playerToMove, castles, epFile, Chess960.REGULAR_CHESS_SP);
+    }
+
+    /**
+     * Creates a new position
+     * @param board an 64-element array of the stones on the board
+     * @param playerToMove the player to move
+     * @param castles castle rights
+     * @param epFile the file which an en-passant is possible; -1 if no file
+     * @param chess960sp the Chess960 start position number
+     */
+    public Position(Stone[] board, Player playerToMove, EnumSet<Castles> castles, int epFile, int chess960sp) {
         this.board = board.clone();
         locateKings();
         this.toMove = playerToMove;
         this.castlesSet = castles.clone();
-        if (!(whiteKingSqi == E1 && this.board[H1] == WHITE_ROOK)) this.castlesSet.remove(WHITE_SHORT_CASTLE);
-        if (!(whiteKingSqi == E1 && this.board[A1] == WHITE_ROOK)) this.castlesSet.remove(WHITE_LONG_CASTLE);
-        if (!(blackKingSqi == E8 && this.board[H8] == BLACK_ROOK)) this.castlesSet.remove(BLACK_SHORT_CASTLE);
-        if (!(blackKingSqi == E8 && this.board[A8] == BLACK_ROOK)) this.castlesSet.remove(BLACK_LONG_CASTLE);
+        int wk = Chess960.getKingSqi(chess960sp, WHITE);
+        int bk = Chess960.getKingSqi(chess960sp, BLACK);
+        if (!(whiteKingSqi == wk && this.board[Chess960.getHRookSqi(chess960sp, WHITE)] == WHITE_ROOK)) {
+            this.castlesSet.remove(WHITE_SHORT_CASTLE);
+        }
+        if (!(whiteKingSqi == wk && this.board[Chess960.getARookSqi(chess960sp, WHITE)] == WHITE_ROOK)) {
+            this.castlesSet.remove(WHITE_LONG_CASTLE);
+        }
+        if (!(blackKingSqi == bk && this.board[Chess960.getHRookSqi(chess960sp, BLACK)] == BLACK_ROOK)) {
+            this.castlesSet.remove(BLACK_SHORT_CASTLE);
+        }
+        if (!(blackKingSqi == bk && this.board[Chess960.getARookSqi(chess960sp, BLACK)] == BLACK_ROOK)) {
+            this.castlesSet.remove(BLACK_LONG_CASTLE);
+        }
         this.enPassantCol = epFile;
+        this.chess960sp = chess960sp;
     }
 
     public static Position fromString(String boardStr, Player playerToMove) {
@@ -128,6 +166,10 @@ public class Position {
     }
 
     public static Position fromString(String boardStr, Player playerToMove, EnumSet<Castles> castles, int epFile) {
+        return fromString(boardStr, playerToMove, castles, epFile, Chess960.REGULAR_CHESS_SP);
+    }
+
+    public static Position fromString(String boardStr, Player playerToMove, EnumSet<Castles> castles, int epFile, int chess960sp) {
         Stone[] board = emptyBoard.clone();
         boardStr = boardStr.trim();
         int x = 0, y = 7;
@@ -146,7 +188,7 @@ public class Position {
             }
         }
 
-        return new Position(board, playerToMove, castles, epFile);
+        return new Position(board, playerToMove, castles, epFile, chess960sp);
     }
 
     private void locateKings() {
@@ -345,22 +387,68 @@ public class Position {
             throw new IllegalArgumentException("There is no king of color " + toMove + " at the square " + Chess.sqiToStr(sqi));
         }
         List<Move> moveList = genericMoves(sqi, 0, 8, false);
-        int x = Chess.sqiToCol(sqi), y = Chess.sqiToRow(sqi);
-        if (x == 4) {
-            if ((castlesSet.contains(WHITE_SHORT_CASTLE) && toMove == WHITE) || (castlesSet.contains(BLACK_SHORT_CASTLE) && toMove == BLACK)) {
-                if (stoneAt(5, y).isNoStone() && stoneAt(6, y).isNoStone() && !isCheck() &&
-                        !isAttacked(Chess.coorToSqi(5, y), toMove.otherPlayer())) {
-                    moveList.add(new Move(this, x, y, x + 2, y));
-                }
-            }
-            if ((castlesSet.contains(WHITE_LONG_CASTLE) && toMove == WHITE) || (castlesSet.contains(BLACK_LONG_CASTLE) && toMove == BLACK)) {
-                if (stoneAt(3, y).isNoStone() && stoneAt(2, y).isNoStone() && stoneAt(1, y).isNoStone() &&
-                        !isCheck() && !isAttacked(Chess.coorToSqi(3, y), toMove.otherPlayer())) {
-                    moveList.add(new Move(this, x, y, x - 2, y));
-                }
-            }
+        if (canCastleShort()) {
+            moveList.add(Move.shortCastles(this));
+        }
+        if (canCastleLong()) {
+            moveList.add(Move.longCastles(this));
         }
         return moveList;
+    }
+
+    private boolean canCastleShort() {
+        // returns true if castling short is pseudolegal
+        if (toMove == WHITE && !castlesSet.contains(WHITE_SHORT_CASTLE)) return false;
+        if (toMove == BLACK && !castlesSet.contains(BLACK_SHORT_CASTLE)) return false;
+        if (isCheck()) return false;
+        int rookFromSqi = Chess960.getHRookSqi(chess960sp, toMove);
+        int kingFromSqi = Chess960.getKingSqi(chess960sp, toMove);
+        if (toMove == WHITE) {
+            assert kingFromSqi == whiteKingSqi;
+            return canCastle(whiteKingSqi, G1, rookFromSqi, F1);
+        } else {
+            assert kingFromSqi == blackKingSqi;
+            return canCastle(blackKingSqi, G8, rookFromSqi, F8);
+        }
+    }
+
+    private boolean canCastleLong() {
+        // returns true if castling long is pseudolegal
+        if (toMove == WHITE && !castlesSet.contains(WHITE_LONG_CASTLE)) return false;
+        if (toMove == BLACK && !castlesSet.contains(BLACK_LONG_CASTLE)) return false;
+        if (isCheck()) return false;
+        int rookFromSqi = Chess960.getARookSqi(chess960sp, toMove);
+        int kingFromSqi = Chess960.getKingSqi(chess960sp, toMove);
+        if (toMove == WHITE) {
+            assert kingFromSqi == whiteKingSqi;
+            return canCastle(whiteKingSqi, C1, rookFromSqi, D1);
+        } else {
+            assert kingFromSqi == blackKingSqi;
+            return canCastle(blackKingSqi, C8, rookFromSqi, D8);
+        }
+    }
+
+    private boolean canCastle(int k1, int k2, int r1, int r2) {
+        // None of the squares between the kings start and end square (exclusive)
+        // must be covered by a piece (except the castling rook) or by under attack
+        int kdir = k1 < k2 ? 8 : -8, rdir = r1 < r2 ? 8 : -8;
+
+        if (k1 != k2) {
+            for (int i = k1 + kdir; i != k2; i += kdir) {
+                if (i != r1 && !stoneAt(i).isNoStone()) return false;
+                if (isAttacked(i, toMove.otherPlayer())) return false;
+            }
+        }
+
+        // None of the squares between the rooks start (exclusive) and end square (inclusive) must
+        // contain another piece, except the king
+        if (r1 != r2) {
+            for (int i = r2; i != r1; i -= rdir) {
+                if (i != k1 && !stoneAt(i).isNoStone()) return false;
+            }
+        }
+
+        return true;
     }
 
     /**
@@ -372,7 +460,7 @@ public class Position {
      * @return the position after the move has been made
      */
     public Position doMove(int fromSqi, int toSqi) {
-        return doMove(new ShortMove(fromSqi, toSqi));
+        return doMove(new Move(this, fromSqi, toSqi));
     }
 
     /**
@@ -382,42 +470,49 @@ public class Position {
      * @param move the move
      * @return the position after the move has been made
      */
-    public Position doMove(ShortMove move) {
+    public Position doMove(Move move) {
         if (move.isNullMove()) {
-            return new Position(board, playerToMove().otherPlayer(), castlesSet, NO_COL);
+            return new Position(board, playerToMove().otherPlayer(), castlesSet, NO_COL, chess960sp);
         }
 
         Stone[] newBoard = board.clone();
 
         Piece movingPiece = stoneAt(move.fromSqi()).toPiece();
 
-        if (movingPiece == KING && Math.abs(Chess.deltaCol(move.fromSqi(), move.toSqi())) == 2) {
+        if (move.isCastle()) {
             // Castles; update the position of the rook
-            int sqiBetween = (move.toSqi() + move.fromSqi()) / 2;
-            newBoard[sqiBetween] = Piece.ROOK.toStone(toMove);
-            switch (sqiBetween) {
-                case F1 : newBoard[H1] = NO_STONE; break;
-                case D1 : newBoard[A1] = NO_STONE; break;
-                case F8 : newBoard[H8] = NO_STONE; break;
-                case D8 : newBoard[A8] = NO_STONE; break;
+            int rookFromSqi, rookToSqi;
+            if (move.isLongCastle()) {
+                rookFromSqi = Chess960.getARookSqi(chess960sp, toMove);
+                rookToSqi = D1 + (toMove == WHITE ? 0 : 7);
+            } else {
+                rookFromSqi = Chess960.getHRookSqi(chess960sp, toMove);
+                rookToSqi = F1 + (toMove == WHITE ? 0 : 7);
             }
-        }
 
-        if (movingPiece == PAWN && Chess.deltaCol(move.fromSqi(), move.toSqi()) != 0
-                && board[move.toSqi()] == NO_STONE) {
-            // En passant
-            newBoard[coorToSqi(move.toCol(), move.fromRow())] = NO_STONE;
-        }
-
-        newBoard[move.toSqi()] = newBoard[move.fromSqi()];
-        newBoard[move.fromSqi()] = NO_STONE;
-
-        if (movingPiece == PAWN && (move.toRow() == 0 || move.toRow() == 7)) {
-            Stone promotionStone = move.promotionStone();
-            if (promotionStone == NO_STONE) {
-                promotionStone = toMove == WHITE ? WHITE_QUEEN : BLACK_QUEEN;
+            newBoard[rookFromSqi] = NO_STONE;
+            newBoard[move.fromSqi()] = NO_STONE;
+            newBoard[rookToSqi] = Piece.ROOK.toStone(toMove);
+            newBoard[move.toSqi()] = Piece.KING.toStone(toMove);
+        } else {
+            if (movingPiece == PAWN && Chess.deltaCol(move.fromSqi(), move.toSqi()) != 0
+                    && board[move.toSqi()] == NO_STONE) {
+                // En passant
+                newBoard[coorToSqi(move.toCol(), move.fromRow())] = NO_STONE;
             }
-            newBoard[move.toSqi()] = promotionStone;
+
+            newBoard[move.toSqi()] = newBoard[move.fromSqi()];
+            if (move.toSqi() != move.fromSqi()) {
+                newBoard[move.fromSqi()] = NO_STONE;
+            }
+
+            if (movingPiece == PAWN && (move.toRow() == 0 || move.toRow() == 7)) {
+                Stone promotionStone = move.promotionStone();
+                if (promotionStone == NO_STONE) {
+                    promotionStone = toMove == WHITE ? WHITE_QUEEN : BLACK_QUEEN;
+                }
+                newBoard[move.toSqi()] = promotionStone;
+            }
         }
 
         EnumSet<Castles> newCastlesSet = this.castlesSet.clone();
@@ -433,10 +528,10 @@ public class Position {
         }
 
         if (movingPiece == ROOK) {
-            if (move.fromSqi() == A1) newCastlesSet.remove(WHITE_LONG_CASTLE);
-            if (move.fromSqi() == H1) newCastlesSet.remove(WHITE_SHORT_CASTLE);
-            if (move.fromSqi() == A8) newCastlesSet.remove(BLACK_LONG_CASTLE);
-            if (move.fromSqi() == H8) newCastlesSet.remove(BLACK_SHORT_CASTLE);
+            if (move.fromSqi() == Chess960.getARookSqi(chess960sp, WHITE)) newCastlesSet.remove(WHITE_LONG_CASTLE);
+            if (move.fromSqi() == Chess960.getHRookSqi(chess960sp, WHITE)) newCastlesSet.remove(WHITE_SHORT_CASTLE);
+            if (move.fromSqi() == Chess960.getARookSqi(chess960sp, BLACK)) newCastlesSet.remove(BLACK_LONG_CASTLE);
+            if (move.fromSqi() == Chess960.getHRookSqi(chess960sp, BLACK)) newCastlesSet.remove(BLACK_SHORT_CASTLE);
         }
 
         int enPassantFile = NO_COL;
@@ -444,7 +539,7 @@ public class Position {
             enPassantFile = move.fromCol();
         }
 
-        return new Position(newBoard, toMove.otherPlayer(), newCastlesSet, enPassantFile);
+        return new Position(newBoard, toMove.otherPlayer(), newCastlesSet, enPassantFile, chess960sp);
     }
 
     public List<Move> generateAllPseudoLegalMoves() {
@@ -491,10 +586,10 @@ public class Position {
     }
 
     public boolean isMoveLegal(int fromSqi, int toSqi) {
-        return isMoveLegal(new ShortMove(fromSqi, toSqi));
+        return isMoveLegal(new Move(this, fromSqi, toSqi));
     }
 
-    public boolean isMoveLegal(ShortMove move) {
+    public boolean isMoveLegal(Move move) {
         if (move.isNullMove()) {
             return !isCheck();
         }
@@ -549,6 +644,7 @@ public class Position {
             hash ^= zobristKeyCastle[castleStatus];
             hash ^= zobristKeyEnPassant[enPassantCol + 1];
             hash ^= zobristKeyToMove[toMove == WHITE ? 1 : 0];
+            hash ^= chess960sp;
         }
         return hash;
     }

@@ -17,7 +17,7 @@ import java.util.stream.Collectors;
  * the move the lead to this position.
  *
  * The moves model is mutable and can be inspected or changed using methods such as
- * {@link Node#addMove(ShortMove)}, {@link Node#promoteVariation()}, {@link Node#mainMove()} etc
+ * {@link Node#addMove(Move)}, {@link Node#promoteVariation()}, {@link Node#mainMove()} etc
  *
  * To access the first node in the tree (typically the starting position of the game), use {@link #root()}.
  *
@@ -214,8 +214,8 @@ public class GameMovesModel {
                     .collect(Collectors.toList());
         }
 
-        private void validateMove(ShortMove move) {
-            if (!position.isMoveLegal(move)) {
+        private void validateMove(Move move) {
+            if (move.position() != position() || !position.isMoveLegal(move)) {
                 throw new IllegalMoveException(position, move);
             }
         }
@@ -228,8 +228,8 @@ public class GameMovesModel {
          * @param silent if true, don't notify listeners
          * @return the new node
          */
-        private Node internalAddNode(ShortMove move, boolean silent) {
-            Node node = new Node(this, move.toMove(position));
+        private Node internalAddNode(Move move, boolean silent) {
+            Node node = new Node(this, move);
             this.children.add(node);
             if (!silent) notifyMovesChanged(this);
             return node;
@@ -461,7 +461,7 @@ public class GameMovesModel {
          * @return the node representing the position after the added move has been made
          * @throws IllegalMoveException if the move is illegal from this position
          */
-        public Node addMove(@NonNull ShortMove move) {
+        public Node addMove(@NonNull Move move) {
             validateMove(move);
             return internalAddNode(move, false);
         }
@@ -475,7 +475,20 @@ public class GameMovesModel {
          * @throws IllegalMoveException if the move is illegal from this position
          */
         public Node addMove(int fromSqi, int toSqi) {
-            return addMove(new ShortMove(fromSqi, toSqi));
+            return addMove(new Move(position, fromSqi, toSqi));
+        }
+
+        /**
+         * Adds a move to this node.
+         * If the node already contains moves (possibly the same move), a new variation is created.
+         * @param fromSqi the from square
+         * @param toSqi the to square
+         * @param promotionStone the new promoted piece
+         * @return the node representing the position after the added move has been made
+         * @throws IllegalMoveException if the move is illegal from this position
+         */
+        public Node addMove(int fromSqi, int toSqi, Stone promotionStone) {
+            return addMove(new Move(position, fromSqi, toSqi, promotionStone));
         }
 
         /**
@@ -485,7 +498,7 @@ public class GameMovesModel {
          * @throws IllegalMoveException if the move is illegal from this position.
          * No change will be made to the game tree in this case.
          */
-        public Node overwriteMove(@NonNull ShortMove move) {
+        public Node overwriteMove(@NonNull Move move) {
             validateMove(move);
             internalRemoveAllChildren(true);
             Node node = internalAddNode(move, true);
@@ -502,7 +515,7 @@ public class GameMovesModel {
          * No change will be made to the game tree in this case.
          */
         public Node overwriteMove(int fromSqi, int toSqi) {
-            return overwriteMove(new ShortMove(fromSqi, toSqi));
+            return overwriteMove(new Move(position, fromSqi, toSqi));
         }
 
         /**
@@ -514,7 +527,7 @@ public class GameMovesModel {
          * @throws IllegalMoveException if the move is illegal from this position.
          * No change will be made to the game tree in this case.
          */
-        public Node insertMove(@NonNull ShortMove move) {
+        public Node insertMove(@NonNull Move move) {
             validateMove(move);
 
             Node oldNode = mainNode();

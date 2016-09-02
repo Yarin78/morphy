@@ -107,7 +107,7 @@ public class SimpleMoveEncoder implements MoveEncoder {
                 toSqi = value % 64;
                 fromSqi = (value / 64) % 64;
             }
-            ShortMove move = new ShortMove(fromSqi, toSqi);
+            Move move = new Move(current.position(), fromSqi, toSqi);
 
             int toRow = Chess.sqiToRow(toSqi);
             if ((toRow == 0 || toRow == 7) && current.position().stoneAt(fromSqi).toPiece() == Piece.PAWN) {
@@ -127,7 +127,7 @@ public class SimpleMoveEncoder implements MoveEncoder {
                         break;
                 }
                 Stone promotionStone = promotionPiece.toStone(current.position().playerToMove());
-                move = new ShortMove(fromSqi, toSqi, promotionStone);
+                move = new Move(current.position(), fromSqi, toSqi, promotionStone);
             }
 
             if (log.isDebugEnabled()) {

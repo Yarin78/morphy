@@ -8,14 +8,14 @@ package se.yarin.chess;
 public class IllegalMoveException extends RuntimeException {
 
     private final Position position;
-    private final ShortMove move;
+    private final Move move;
 
-    public IllegalMoveException(Position position, ShortMove move) {
+    public IllegalMoveException(Position position, Move move) {
         this.position = position;
         this.move = move;
     }
 
-    public IllegalMoveException(Position position, ShortMove move, String message) {
+    public IllegalMoveException(Position position, Move move, String message) {
         super(message);
         this.position = position;
         this.move = move;

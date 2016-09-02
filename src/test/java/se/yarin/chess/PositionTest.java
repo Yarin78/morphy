@@ -2,6 +2,7 @@ package se.yarin.chess;
 
 import org.junit.Test;
 
+import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
 
@@ -134,10 +135,10 @@ public class PositionTest {
 
         List<Move> moves = position.generatePawnMoves(D7);
         assertEquals(8, moves.size());
-        assertTrue(moves.contains(new ShortMove(D7, D8, Stone.WHITE_BISHOP)));
-        assertTrue(moves.contains(new ShortMove(D7, D8, Stone.WHITE_ROOK)));
-        assertTrue(moves.contains(new ShortMove(D7, C8, Stone.WHITE_QUEEN)));
-        assertTrue(moves.contains(new ShortMove(D7, C8, Stone.WHITE_KNIGHT)));
+        assertTrue(moves.contains(new Move(position, D7, D8, Stone.WHITE_BISHOP)));
+        assertTrue(moves.contains(new Move(position, D7, D8, Stone.WHITE_ROOK)));
+        assertTrue(moves.contains(new Move(position, D7, C8, Stone.WHITE_QUEEN)));
+        assertTrue(moves.contains(new Move(position, D7, C8, Stone.WHITE_KNIGHT)));
     }
 
     @Test
@@ -158,10 +159,10 @@ public class PositionTest {
 
         List<Move> moves = position.generatePawnMoves(B2);
         assertEquals(4, moves.size());
-        assertTrue(moves.contains(new ShortMove(B2, B1, Stone.BLACK_BISHOP)));
-        assertTrue(moves.contains(new ShortMove(B2, B1, Stone.BLACK_ROOK)));
-        assertTrue(moves.contains(new ShortMove(B2, B1, Stone.BLACK_QUEEN)));
-        assertTrue(moves.contains(new ShortMove(B2, B1, Stone.BLACK_KNIGHT)));
+        assertTrue(moves.contains(new Move(position, B2, B1, Stone.BLACK_BISHOP)));
+        assertTrue(moves.contains(new Move(position, B2, B1, Stone.BLACK_ROOK)));
+        assertTrue(moves.contains(new Move(position, B2, B1, Stone.BLACK_QUEEN)));
+        assertTrue(moves.contains(new Move(position, B2, B1, Stone.BLACK_KNIGHT)));
     }
 
     @Test
@@ -230,7 +231,7 @@ public class PositionTest {
                 "........\n" +
                 "R...K..R\n", WHITE, EnumSet.allOf(Castles.class), -1);
 
-        Position newPos = position.doMove(new ShortMove(A1, B1));
+        Position newPos = position.doMove(A1, B1);
         assertEquals(BLACK, newPos.playerToMove());
         assertEquals(WHITE_ROOK, newPos.stoneAt(B1));
         assertEquals(NO_STONE, newPos.stoneAt(A1));
@@ -249,7 +250,7 @@ public class PositionTest {
                 "K.......\n", WHITE);
         assertEquals(WHITE, position.playerToMove());
 
-        position = position.doMove(ShortMove.nullMove());
+        position = position.doMove(Move.nullMove(position));
         assertEquals(BLACK, position.playerToMove());
     }
 
@@ -265,7 +266,7 @@ public class PositionTest {
                 "....P...\n" +
                 "R...K..R\n", BLACK, EnumSet.allOf(Castles.class), 1);
 
-        Position newPos = position.doMove(new ShortMove(E8, C8));
+        Position newPos = position.doMove(Move.longCastles(position));
         assertTrue(newPos.stoneAt(D8) == BLACK_ROOK);
         assertTrue(newPos.stoneAt(C8) == BLACK_KING);
         assertTrue(newPos.isCastles(WHITE_SHORT_CASTLE));
@@ -286,13 +287,13 @@ public class PositionTest {
                 "....P...\n" +
                 "R...K..R\n", WHITE, EnumSet.allOf(Castles.class), 1);
 
-        Position newPos = position.doMove(new ShortMove(E2, E4));
+        Position newPos = position.doMove(E2, E4);
         assertEquals(4, newPos.getEnPassantCol());
 
-        newPos = position.doMove(new ShortMove(F3, F4));
+        newPos = position.doMove(F3, F4);
         assertEquals(NO_COL, newPos.getEnPassantCol());
 
-        newPos = position.doMove(new ShortMove(C5, B6));
+        newPos = position.doMove(C5, B6);
         assertEquals(NO_COL, newPos.getEnPassantCol());
         assertEquals(NO_STONE, newPos.stoneAt(B5));
     }
@@ -304,10 +305,10 @@ public class PositionTest {
                 ".......P\n" +
                 ".K......\n", WHITE);
 
-        Position newPos = position.doMove(new ShortMove(H7, H8));
+        Position newPos = position.doMove(H7, H8);
         assertEquals(WHITE_QUEEN, newPos.stoneAt(H8));
 
-        newPos = position.doMove(new ShortMove(H7, H8, WHITE_ROOK));
+        newPos = position.doMove(new Move(position, H7, H8, WHITE_ROOK));
         assertEquals(WHITE_ROOK, newPos.stoneAt(H8));
     }
 
@@ -364,16 +365,16 @@ public class PositionTest {
 
         List<Move> moves = position.generateAllLegalMoves();
         assertEquals(10, moves.size());
-        assertTrue(moves.contains(new ShortMove(B1, A1)));
-        assertTrue(moves.contains(new ShortMove(B1, C1)));
-        assertTrue(moves.contains(new ShortMove(B1, D1)));
-        assertTrue(moves.contains(new ShortMove(E1, D1)));
-        assertTrue(moves.contains(new ShortMove(E1, F1)));
-        assertTrue(moves.contains(new ShortMove(E1, E2)));
-        assertTrue(moves.contains(new ShortMove(H1, G1)));
-        assertTrue(moves.contains(new ShortMove(H1, F1)));
-        assertTrue(moves.contains(new ShortMove(H2, H3)));
-        assertTrue(moves.contains(new ShortMove(H2, H4)));
+        assertTrue(moves.contains(new Move(position, B1, A1)));
+        assertTrue(moves.contains(new Move(position, B1, C1)));
+        assertTrue(moves.contains(new Move(position, B1, D1)));
+        assertTrue(moves.contains(new Move(position, E1, D1)));
+        assertTrue(moves.contains(new Move(position, E1, F1)));
+        assertTrue(moves.contains(new Move(position, E1, E2)));
+        assertTrue(moves.contains(new Move(position, H1, G1)));
+        assertTrue(moves.contains(new Move(position, H1, F1)));
+        assertTrue(moves.contains(new Move(position, H2, H3)));
+        assertTrue(moves.contains(new Move(position, H2, H4)));
     }
 
     @Test
@@ -401,12 +402,12 @@ public class PositionTest {
         assertFalse(position.isMoveLegal(E2, B7));
         assertTrue(position.isMoveLegal(A8, B6));
         assertTrue(position.isMoveLegal(A8, C7));
-        assertTrue(position.isMoveLegal(new ShortMove(H7, H8, WHITE_QUEEN)));
-        assertTrue(position.isMoveLegal(new ShortMove(H7, H8, WHITE_KNIGHT)));
-        assertFalse(position.isMoveLegal(new ShortMove(H7, H8, WHITE_PAWN)));
-        assertFalse(position.isMoveLegal(new ShortMove(H7, H8, WHITE_KING)));
-        assertFalse(position.isMoveLegal(new ShortMove(H7, H8, BLACK_QUEEN)));
-        assertFalse(position.isMoveLegal(new ShortMove(H7, H8, NO_STONE)));
+        assertTrue(position.isMoveLegal(new Move(position, H7, H8, WHITE_QUEEN)));
+        assertTrue(position.isMoveLegal(new Move(position, H7, H8, WHITE_KNIGHT)));
+        assertFalse(position.isMoveLegal(new Move(position, H7, H8, WHITE_PAWN)));
+        assertFalse(position.isMoveLegal(new Move(position, H7, H8, WHITE_KING)));
+        assertFalse(position.isMoveLegal(new Move(position, H7, H8, BLACK_QUEEN)));
+        assertFalse(position.isMoveLegal(new Move(position, H7, H8, NO_STONE)));
 
         position = Position.fromString(
                 "r...k..r\n" +
@@ -428,11 +429,11 @@ public class PositionTest {
         assertTrue(position.isMoveLegal(C4, C3));
         assertFalse(position.isMoveLegal(D4, D5));
 
-        assertTrue(position.isMoveLegal(ShortMove.nullMove())); // special case
+        assertTrue(position.isMoveLegal(Move.nullMove(position))); // special case
 
         position = Position.fromString("r.K.k\n", WHITE);
         assertTrue(position.isMoveLegal(C8, C7));
-        assertFalse(position.isMoveLegal(ShortMove.nullMove())); // can't do null move if in check
+        assertFalse(position.isMoveLegal(Move.nullMove(position))); // can't do null move if in check
     }
 
     @Test
@@ -484,6 +485,75 @@ public class PositionTest {
         assertFalse(position.isStaleMate());
     }
 
+    @Test
+    public void testChess960Castles() {
+        Position position = Position.fromString(
+                "r.k.r...\n" +
+                "........\n" +
+                "......K.\n", BLACK, EnumSet.of(BLACK_SHORT_CASTLE, BLACK_LONG_CASTLE), NO_COL, 575);
+
+        verifyToSquares(position.generateKingMoves(C8), C8, B8, C8, D8, B7, C7, D7, G8);
+        assertEquals("..krr...", position.doMove(Move.longCastles(position)).toString().substring(0, 8));
+        assertEquals("r....rk.", position.doMove(Move.shortCastles(position)).toString().substring(0, 8));
+
+        position = Position.fromString(
+                "rnknr...\n" +
+                "........\n" +
+                "......K.\n", BLACK, EnumSet.of(BLACK_SHORT_CASTLE, BLACK_LONG_CASTLE), NO_COL, 575);
+
+        verifyToSquares(position.generateKingMoves(C8), C8, B7, C7, D7);
+
+        position = Position.fromString(
+                "r.k.r...\n" +
+                "........\n" +
+                "....R.K.\n", BLACK, EnumSet.of(BLACK_SHORT_CASTLE, BLACK_LONG_CASTLE), NO_COL, 575);
+
+        verifyToSquares(position.generateKingMoves(C8), C8, B8, C8, D8, B7, C7, D7);
+
+        position = Position.fromString(
+                "r.k.r...\n" +
+                "........\n" +
+                "......K.\n", BLACK, EnumSet.of(BLACK_SHORT_CASTLE, BLACK_LONG_CASTLE), NO_COL, 879);
+
+        verifyToSquares(position.generateKingMoves(C8), C8, B8, D8, B7, C7, D7);
+
+        position = Position.fromString(
+                "nn...rkr\n" +
+                "K.......\n" +
+                "........\n", BLACK, EnumSet.of(BLACK_SHORT_CASTLE, BLACK_LONG_CASTLE), NO_COL, 0);
+
+        verifyToSquares(position.generateKingMoves(G8), G8, F7, G7, H7, C8);
+        assertEquals("nnkr...r", position.doMove(Move.longCastles(position)).toString().substring(0, 8));
+
+        position = Position.fromString(
+                "r....qkr\n" +
+                "........\n" +
+                ".K......\n", BLACK, EnumSet.of(BLACK_SHORT_CASTLE, BLACK_LONG_CASTLE), NO_COL, 436);
+
+        verifyToSquares(position.generateKingMoves(G8), G8, F7, G7, H7);
+
+        position = Position.fromString(
+                "r....k.r\n" +
+                "........\n" +
+                ".K......\n", BLACK, EnumSet.of(BLACK_SHORT_CASTLE), NO_COL, 208);
+
+        List<Move> moves = position.generateKingMoves(F8);
+        verifyToSquares(moves, F8, E8, G8, G8, E7, F7, G7);
+        Move mv1 = new Move(position, F8, G8);
+        Move mv2 = Move.shortCastles(position);
+        assertNotEquals(mv1, mv2); // Same king move, but one castles and one without
+        assertTrue(moves.contains(mv1));
+        assertTrue(moves.contains(mv2));
+
+
+        position = Position.fromString(
+                "r....kr.\n" +
+                "........\n" +
+                ".K......\n", BLACK, EnumSet.of(BLACK_SHORT_CASTLE), NO_COL,
+                Chess960.getStartPositionNo("rbbnnkrq"));
+        assertEquals("r....rk.", position.doMove(Move.shortCastles(position)).toString().substring(0, 8));
+    }
+
     private int numEmptySquares(Position position) {
         int cnt = 0;
         for (int i = 0; i < 64; i++) {
@@ -493,10 +563,18 @@ public class PositionTest {
     }
 
     private void verifyToSquares(List<Move> moves, int fromSqi, int... toSqis) {
+        // toSqis may contain duplicates
         assertEquals(moves.size(), toSqis.length);
-        for (int toSqi : toSqis) {
-            assertTrue(moves.contains(new ShortMove(fromSqi, toSqi)));
+
+        int[] actualToSqis = new int[moves.size()];
+        for (int i = 0; i < moves.size(); i++) {
+            assertEquals(fromSqi, moves.get(i).fromSqi());
+            actualToSqis[i] = moves.get(i).toSqi();
         }
+
+        Arrays.sort(toSqis);
+        Arrays.sort(actualToSqis);
+        assertTrue(Arrays.equals(toSqis, actualToSqis));
     }
 
 }

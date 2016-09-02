@@ -222,7 +222,13 @@ public class ChessBaseMediaEventParser {
             move = ShortMove.nullMove();
         } else {
             Stone promotionStone = promotionPiece.toStone(Chess.sqiToRow(toSquare) == 7 ? Player.WHITE : Player.BLACK);
-            move = new ShortMove(fromSquare, toSquare, promotionStone);
+            if ((moveFlags & 0x0005) > 0) {
+                move = ShortMove.longCastles();
+            } else if ((moveFlags & 0x000A) > 0) {
+                move = ShortMove.shortCastles();
+            } else {
+                move = new ShortMove(fromSquare, toSquare, promotionStone);
+            }
         }
 
         if ((actionFlags & ~0x0FCF) != 0)
@@ -406,8 +412,8 @@ public class ChessBaseMediaEventParser {
                 throw new ChessBaseMediaException("Unknown last value in setup position: " + b);
             }
 
-            // TODO: Figure out castling rights and en passant file
-            Position position = new Position(stones, toMove, EnumSet.noneOf(Castles.class), -1);
+            // TODO: Figure out castling rights and en passant file and Chess960 start position
+            Position position = new Position(stones, toMove, EnumSet.noneOf(Castles.class), -1, Chess960.REGULAR_CHESS_SP);
 
             int ply = Chess.moveNumberToPly(moveNo, toMove);
             model.moves().setupPosition(position, ply);

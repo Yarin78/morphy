@@ -69,7 +69,7 @@ public class GameMovesModelTest {
         assertEquals(1, numFiredChanges);
 
         assertEquals(1, moves.root().children().size());
-        assertEquals(new ShortMove(E2, E4), moves.root().children().get(0).lastMove());
+        assertTrue(new ShortMove(E2, E4).moveEquals(moves.root().children().get(0).lastMove()));
     }
 
     @Test(expected = IllegalMoveException.class)
@@ -114,9 +114,9 @@ public class GameMovesModelTest {
         moves.root().addMove(E2, E4).parent().addMove(D2, D4);
         moves.root().addMove(E2, E4);
         assertEquals(3, moves.root().children().size());
-        assertEquals(new ShortMove(E2, E4), moves.root().children().get(0).lastMove());
-        assertEquals(new ShortMove(D2, D4), moves.root().children().get(1).lastMove());
-        assertEquals(new ShortMove(E2, E4), moves.root().children().get(2).lastMove());
+        assertTrue(new ShortMove(E2, E4).moveEquals(moves.root().children().get(0).lastMove()));
+        assertTrue(new ShortMove(D2, D4).moveEquals(moves.root().children().get(1).lastMove()));
+        assertTrue(new ShortMove(E2, E4).moveEquals(moves.root().children().get(2).lastMove()));
         assertNotEquals(moves.root().children().get(0), moves.root().children().get(2));
     }
 
@@ -162,7 +162,7 @@ public class GameMovesModelTest {
         moves.root().addMove(D2, D4);
         moves.root().mainNode().deleteNode();
         assertEquals(1, moves.root().numMoves());
-        assertEquals(new ShortMove(D2, D4), moves.root().mainMove());
+        assertTrue(new ShortMove(D2, D4).moveEquals(moves.root().mainMove()));
     }
 
     @Test
@@ -174,16 +174,16 @@ public class GameMovesModelTest {
         GameMovesModel.Node promotedNode = node.addMove(G8, F6);
         node.addMove(D7, D6);
 
-        assertEquals(new ShortMove(F8, C5), node.children().get(0).lastMove());
-        assertEquals(new ShortMove(A7, A6), node.children().get(1).lastMove());
-        assertEquals(new ShortMove(G8, F6), node.children().get(2).lastMove());
-        assertEquals(new ShortMove(D7, D6), node.children().get(3).lastMove());
+        assertTrue(new ShortMove(F8, C5).moveEquals(node.children().get(0).lastMove()));
+        assertTrue(new ShortMove(A7, A6).moveEquals(node.children().get(1).lastMove()));
+        assertTrue(new ShortMove(G8, F6).moveEquals(node.children().get(2).lastMove()));
+        assertTrue(new ShortMove(D7, D6).moveEquals(node.children().get(3).lastMove()));
 
         promotedNode.promoteMove();
-        assertEquals(new ShortMove(G8, F6), node.children().get(0).lastMove());
-        assertEquals(new ShortMove(A7, A6), node.children().get(1).lastMove());
-        assertEquals(new ShortMove(F8, C5), node.children().get(2).lastMove());
-        assertEquals(new ShortMove(D7, D6), node.children().get(3).lastMove());
+        assertTrue(new ShortMove(G8, F6).moveEquals(node.children().get(0).lastMove()));
+        assertTrue(new ShortMove(A7, A6).moveEquals(node.children().get(1).lastMove()));
+        assertTrue(new ShortMove(F8, C5).moveEquals(node.children().get(2).lastMove()));
+        assertTrue(new ShortMove(D7, D6).moveEquals(node.children().get(3).lastMove()));
     }
 
     @Test
@@ -195,7 +195,7 @@ public class GameMovesModelTest {
         assertEquals(2, node.children().size());
         node.overwriteMove(G8, F6);
         assertEquals(1, node.children().size());
-        assertEquals(new ShortMove(G8, F6), node.children().get(0).lastMove());
+        assertEquals(new Move(node.position(), G8, F6), node.children().get(0).lastMove());
     }
 
     @Test
@@ -276,8 +276,8 @@ public class GameMovesModelTest {
         retNode = deleteVar.deleteVariation();
         assertSame(node, retNode);
         assertEquals(2, node.numMoves());
-        assertEquals(new ShortMove(F8, C5), node.moves().get(0));
-        assertEquals(new ShortMove(G8, F6), node.moves().get(1));
+        assertTrue(new ShortMove(F8, C5).moveEquals(node.moves().get(0)));
+        assertTrue(new ShortMove(G8, F6).moveEquals(node.moves().get(1)));
     }
 
     @Test

@@ -139,7 +139,7 @@ public class GameQuotationAnnotation extends Annotation implements StatisticalAn
                 }
             }
             Stone promotionStone = promotionPiece.toStone(current.position().playerToMove());
-            ShortMove move = new ShortMove(fromSqi, toSqi, promotionStone);
+            Move move = new Move(current.position(), fromSqi, toSqi, promotionStone);
             try {
                 current = current.addMove(move);
             } catch (IllegalMoveException e) {

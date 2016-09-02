@@ -62,7 +62,7 @@ public class NavigableGameModelTest {
         assertTrue(model2.cursor().isValid());
 
         assertEquals("1.d4 d5", model1.moves().toString());
-        assertEquals(new ShortMove(D7, D5), model1.cursor().lastMove());
+        assertTrue(new ShortMove(D7, D5).moveEquals(model1.cursor().lastMove()));
 
         model1.replaceAll(model2);
 
@@ -71,13 +71,13 @@ public class NavigableGameModelTest {
         // Test that the cursor has been replaced correctly
         assertNotSame(model1.cursor(), model2.cursor());
         assertTrue(model1.cursor().isValid());
-        assertEquals(new ShortMove(G1, F3), model1.cursor().lastMove());
+        assertTrue(new ShortMove(G1, F3).moveEquals(model1.cursor().lastMove()));
     }
 
     @Test
     public void testListeners() {
-        model.addMove(new ShortMove(E2, E4));
-        model.addMove(new ShortMove(E7, E5));
+        model.addMove(new Move(model.cursor().position(), E2, E4));
+        model.addMove(new Move(model.cursor().position(), E7, E5));
 
         assertEquals(2, numCursorChanges);
         assertEquals(2, numMovesChanges);

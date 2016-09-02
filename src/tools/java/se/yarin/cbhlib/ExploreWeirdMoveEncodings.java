@@ -117,7 +117,7 @@ public class ExploreWeirdMoveEncodings {
             moves.root()
                     .addMove(A2, A4).addMove(G8, F6).addMove(A4, A5).addMove(F6, G8)
                     .addMove(A5, A6).addMove(G8, F6).addMove(A6, B7).addMove(F6, G8)
-                    .addMove(new ShortMove(B7, A8, stone));
+                    .addMove(B7, A8, stone);
 
 
             GameHeaderModel header = new GameHeaderModel();

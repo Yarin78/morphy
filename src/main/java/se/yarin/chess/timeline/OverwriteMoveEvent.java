@@ -2,6 +2,7 @@ package se.yarin.chess.timeline;
 
 import lombok.NonNull;
 import se.yarin.chess.IllegalMoveException;
+import se.yarin.chess.Move;
 import se.yarin.chess.NavigableGameModel;
 import se.yarin.chess.ShortMove;
 
@@ -19,7 +20,7 @@ public class OverwriteMoveEvent extends GameEvent {
     @Override
     public void apply(@NonNull NavigableGameModel model) throws GameEventException {
         try {
-            model.overwriteMove(move);
+            model.overwriteMove(move.toMove(model.cursor().position()));
         } catch (IllegalMoveException e) {
             throw new GameEventException(this, model, "Illegal move: " + move.toString());
         }

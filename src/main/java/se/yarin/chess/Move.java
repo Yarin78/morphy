@@ -5,44 +5,112 @@ import lombok.NonNull;
 import static se.yarin.chess.Piece.*;
 
 /**
- * A more complete version of a chess move, containing information to
+ * A complete version of a chess move, containing information to
  * generate the SAN and LAN notation of the move.
  *
- * Move is immutable.
+ * Move is immutable. It's possible to construct illegal moves.
  */
-public class Move extends ShortMove {
+public class Move {
     private final Position fromPosition; // Not used in equals or hashcode
+    private final int fromSqi, toSqi;
+    private final Stone promotionStone;
+    // Specifies if the move was castles. Must be set explicitly for Chess960 castles.
+    private final boolean castles;
 
     // These are caches
     private Boolean isCapture, isCheck, isMate;
     private String sanCache;
 
     public Move(@NonNull Position fromPosition, int fromCol, int fromRow, int toCol, int toRow) {
-        super(fromCol, fromRow, toCol, toRow);
-        this.fromPosition = fromPosition;
+        this(fromPosition, Chess.coorToSqi(fromCol, fromRow), Chess.coorToSqi(toCol, toRow));
     }
 
     public Move(@NonNull Position fromPosition, int fromCol, int fromRow, int toCol, int toRow, @NonNull Stone promotionStone) {
-        super(fromCol, fromRow, toCol, toRow, promotionStone);
-        this.fromPosition = fromPosition;
+        this(fromPosition, Chess.coorToSqi(fromCol, fromRow), Chess.coorToSqi(toCol, toRow), promotionStone);
     }
 
     public Move(@NonNull Position fromPosition, int fromSqi, int toSqi) {
-        super(fromSqi, toSqi);
-        this.fromPosition = fromPosition;
+        this(fromPosition, fromSqi, toSqi, Stone.NO_STONE);
     }
 
     public Move(@NonNull Position fromPosition, int fromSqi, int toSqi, Stone promotionStone) {
-        super(fromSqi, toSqi, promotionStone);
+        if (fromSqi < 0 || fromSqi >= 64 || toSqi < 0 || toSqi >= 64) {
+            // Check if the null move
+            if (!(fromSqi == Chess.NO_SQUARE && toSqi == Chess.NO_SQUARE && promotionStone == Stone.NO_STONE)) {
+                throw new IllegalArgumentException("Not a valid move");
+            }
+        }
+
+        this.fromSqi = fromSqi;
+        this.toSqi = toSqi;
+        this.promotionStone = promotionStone;
+
         this.fromPosition = fromPosition;
+        this.castles = Math.abs(fromSqi - toSqi) == 16 && fromPosition.stoneAt(fromSqi).toPiece() == KING;
     }
 
+    private Move(@NonNull Position fromPosition, int fromSqi, int toSqi, boolean castles) {
+        this.fromSqi = fromSqi;
+        this.toSqi = toSqi;
+        this.promotionStone = Stone.NO_STONE;
+
+        this.fromPosition = fromPosition;
+        this.castles = castles;
+    }
+
+    /**
+     * Creates a move representing long (queenside, a-side) castles
+     * @param fromPosition the position to castle in
+     * @return a long castle move
+     */
+    public static Move longCastles(@NonNull Position fromPosition) {
+        int sp = fromPosition.chess960StartPosition();
+        Player player = fromPosition.playerToMove();
+        return new Move(fromPosition, Chess960.getKingSqi(sp, player),
+                16 + (player == Player.WHITE ? 0 : 7), true);
+    }
+
+    /**
+     * Creates a move representing short (kingside, h-side) castles
+     * @param fromPosition the position to castle in
+     * @return a short castle move
+     */
+    public static Move shortCastles(@NonNull Position fromPosition) {
+        int sp = fromPosition.chess960StartPosition();
+        Player player = fromPosition.playerToMove();
+        return new Move(fromPosition, Chess960.getKingSqi(sp, player),
+                48 + (player == Player.WHITE ? 0 : 7), true);
+    }
+
+    /**
+     * Creates a null move
+     * @param fromPosition the position to to a null move
+     * @return a null move
+     */
     public static Move nullMove(@NonNull Position fromPosition) {
         return new Move(fromPosition, Chess.NO_SQUARE, Chess.NO_SQUARE);
     }
 
+    public int fromSqi() {
+        return fromSqi;
+    }
+    public int toSqi() { return toSqi; }
+    public int fromCol() { return Chess.sqiToCol(fromSqi); }
+    public int fromRow() { return Chess.sqiToRow(fromSqi); }
+    public int toCol() { return Chess.sqiToCol(toSqi); }
+    public int toRow() { return Chess.sqiToRow(toSqi); }
+    public Stone promotionStone() {
+        return promotionStone;
+    }
+
+    public Position position() { return fromPosition; }
+
+    public boolean isNullMove() {
+        return fromSqi == Chess.NO_SQUARE;
+    }
+
     public boolean isCapture() {
-        if (isNullMove()) return false;
+        if (isNullMove() || isCastle()) return false;
         if (isCapture == null) {
             isCapture = !fromPosition.stoneAt(toSqi()).isNoStone() || isEnPassant();
         }
@@ -73,15 +141,15 @@ public class Move extends ShortMove {
     }
 
     public boolean isShortCastle() {
-        return movingPiece() == KING && Chess.deltaCol(fromSqi(), toSqi()) == 2;
+        return castles && Chess.sqiToCol(toSqi) == 6;
     }
 
     public boolean isLongCastle() {
-        return movingPiece() == KING && Chess.deltaCol(fromSqi(), toSqi()) == -2;
+        return castles && Chess.sqiToCol(toSqi) == 2;
     }
 
     public boolean isCastle() {
-        return isShortCastle() || isLongCastle();
+        return castles;
     }
 
     public boolean isEnPassant() {
@@ -198,6 +266,30 @@ public class Move extends ShortMove {
         }
         sb2.append(sb.toString());
         return sb2.toString();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || !(o instanceof Move)) return false;
+
+        Move move = (Move) o;
+
+        if (fromSqi != move.fromSqi) return false;
+        if (toSqi != move.toSqi) return false;
+        if (castles != move.castles) return false;
+        return promotionStone == move.promotionStone;
+
+    }
+
+    @Override
+    public int hashCode() {
+        int result = fromPosition.hashCode();
+        result = 31 * result + fromSqi;
+        result = 31 * result + toSqi;
+        result = 31 * result + promotionStone.hashCode();
+        result = 31 * result + (castles ? 1 : 0);
+        return result;
     }
 
     @Override

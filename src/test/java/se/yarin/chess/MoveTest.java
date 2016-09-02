@@ -134,7 +134,7 @@ public class MoveTest {
         assertEquals("37.Nc6-b8", new Move(position, C6, B8).toLAN(72));
         assertEquals("37.Nb8", new Move(position, C6, B8).toSAN(72));
 
-        position = position.doMove(Move.nullMove());
+        position = position.doMove(Move.nullMove(position));
         assertEquals("3...Ke8-d8", new Move(position, E8, D8).toLAN(5));
         assertEquals("3...Kd8", new Move(position, E8, D8).toSAN(5));
     }
@@ -155,7 +155,7 @@ public class MoveTest {
         assertEquals("O-O-O", new Move(position, E1, C1).toSAN());
         assertEquals("O-O-O", new Move(position, E1, C1).toLAN());
 
-        position = position.doMove(Move.nullMove());
+        position = position.doMove(Move.nullMove(position));
         assertEquals("O-O", new Move(position, E8, G8).toSAN());
         assertEquals("O-O", new Move(position, E8, G8).toLAN());
         assertEquals("O-O-O", new Move(position, E8, C8).toSAN());
@@ -202,46 +202,48 @@ public class MoveTest {
         Move move = new Move(position, E8, G8);
         assertTrue(move.isCastle());
         assertEquals("O-O", move.toString());
+
+        position = Position.fromString(
+                "r.k.....\n" +
+                "........\n" +
+                "...K....\n", BLACK, EnumSet.allOf(Castles.class), -1, 639);
+        move = Move.longCastles(position);
+        assertTrue(move.isCastle());
+        assertEquals("O-O-O+", move.toString());
     }
 
     @Test
-    public void testShortMove() {
-        assertEquals("a7a8=B", new ShortMove(A7, A8, Stone.WHITE_BISHOP).toString());
-        assertEquals("e6d6", new ShortMove(E6, D6).toString());
-    }
-
-    @Test
-    public void testEqualsAndHashCode() {
+    public void testCastleEquals() {
         Position position = Position.fromString(
-                "....k...\n" +
-                "P.....R.\n" +
-                ".K......\n", WHITE);
-        ShortMove mv1 = new ShortMove(G7, G8);
-        Move mv2 = new Move(position, G7, G8);
-        Move mv3 = new Move(position, G7, H7);
-        assertEquals(mv1.hashCode(), mv2.hashCode());
-        assertTrue(mv1.equals(mv2));
-        assertFalse(mv2.equals(mv3));
-
-        ShortMove mv4 = new ShortMove(A7, A8, Stone.WHITE_BISHOP);
-        Move mv5 = new Move(position, A7, A8, Stone.WHITE_KNIGHT);
-        assertNotEquals(mv4.hashCode(), mv5.hashCode());
+            "r...k..r\n" +
+            "........\n" +
+            ".K......\n", BLACK, EnumSet.of(Castles.BLACK_LONG_CASTLE, Castles.BLACK_SHORT_CASTLE), -1);
+        Move mv1 = new Move(position, E8, G8);
+        Move mv2 = Move.shortCastles(position);
+        Move mv3 = Move.longCastles(position);
+        assertEquals(mv1, mv2);
+        assertNotEquals(mv2, mv3);
+        assertNotEquals(mv1, mv3);
     }
 
     @Test
-    public void testConstructMoveFromShortMove() {
-        ShortMove shortMove = new ShortMove(G1, F3);
-        Move move = shortMove.toMove(Position.start());
-        assertEquals("Nf3", move.toSAN());
+    public void testCastlesIn960NotCapture() {
+        Position position = Position.fromString(
+                "..r...kr\n" +
+                "........\n" +
+                ".K......\n", BLACK, EnumSet.of(Castles.BLACK_LONG_CASTLE, Castles.BLACK_SHORT_CASTLE), -1,
+                Chess960.getStartPositionNo("bbrnnqkr"));
+        assertFalse(Move.shortCastles(position).isCapture());
+        assertFalse(Move.longCastles(position).isCapture());
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void testCreateIllegalMove() {
-        new ShortMove(-10, 1);
+        new Move(Position.start(), -10, 1);
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void testCreateIllegalMove2() {
-        new ShortMove(-1, -1, WHITE_QUEEN);
+        new Move(Position.start(), -1, -1, WHITE_QUEEN);
     }
 }
