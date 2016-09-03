@@ -114,7 +114,7 @@ public class VerifyGameFlags {
         verifyFlag(id, flags, SETUP_POSITION, moves.isSetupPosition());
 
         // The first bytes in moves data is 0x4A if it's a Chess960 game but we don't support it yet
-//        verifyFlag(id, "Chess960 ", flags.contains(CHESS960), moves.isChess960());
+//        verifyFlag(id, "Chess960 ", flags.contains(UNORTHODOX), moves.isChess960());
 
         int minTextLength = 0, maxTextLength = 0;
 //        int noText = annotations.getOrDefault(TextAfterMoveAnnotation.class, 0) + annotations.getOrDefault(TextBeforeMoveAnnotation.class, 0);

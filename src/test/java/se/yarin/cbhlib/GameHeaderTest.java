@@ -69,6 +69,7 @@ public class GameHeaderTest {
                 .whiteElo(2014)
                 .blackElo(2037)
                 .eco(new Eco("C01"))
+                .chess960StartPosition(-1)
                 .lineEvaluation(LineEvaluation.DEVELOPMENT_ADVANTAGE)
                 .medals(EnumSet.of(Medal.MODEL_GAME, Medal.USER))
                 .flags(EnumSet.of(
@@ -211,7 +212,7 @@ public class GameHeaderTest {
         GameHeader before = GameHeader.defaultBuilder()
                 .id(7)
                 .game(true)
-                .flags(EnumSet.of(GameHeaderFlags.CHESS960))
+                .flags(EnumSet.of(GameHeaderFlags.UNORTHODOX))
                 .chess960StartPosition(123)
                 .build();
 

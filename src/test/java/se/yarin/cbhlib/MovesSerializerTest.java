@@ -3,7 +3,9 @@ package se.yarin.cbhlib;
 import org.junit.Before;
 import org.junit.Test;
 import se.yarin.chess.Castles;
+import se.yarin.chess.Chess960;
 import se.yarin.chess.GameMovesModel;
+import se.yarin.chess.ShortMove;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -11,6 +13,7 @@ import java.nio.ByteBuffer;
 import static junit.framework.TestCase.assertFalse;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static se.yarin.chess.Chess.*;
 
 public class MovesSerializerTest {
 
@@ -191,5 +194,32 @@ public class MovesSerializerTest {
             GameMovesModel outputMoves = MovesSerializer.deserializeMoves(buf);
             assertEquals(inputMoves.toString(), outputMoves.toString());
         }
+    }
+
+    @Test
+    public void deserializeBrokenChess960Game() throws IOException, ChessBaseMoveDecodingException {
+        // Game 3730252 in Mega Database 2016
+        GameMovesModel model = MovesSerializer.deserializeMoves(ResourceLoader.loadResource("brokenchess960.moves.bin"));
+        String expected = "1.b3 b6 2.e4 e5 3.Nf3 f6 4.Bc4 Bc5 5.Qf1 Ne7 6.O-O-O Nbc6 7.Ba6 Rb8 8.Bc4 Qf8 9.Nc3 Nd4 10.Nxd4 Bxd4 11.Kb1 Nc8 12.f4 Nd6 13.Bd3 b5 14.Nxb5 Nxb5 15.Bxb5 Bxa1 16.Kxa1 exf4 17.Qd3 Qd6 18.Qxd6 cxd6 19.Bd3 f5 20.exf5 Bxg2 21.Rg1 f3 22.Bf1 O-O 23.Bxg2 fxg2 24.Rxg2 Rxf5 25.Rg4 Kf7 26.Kb2 g5 27.Rd4 Rb6 28.h4 h6 29.hxg5 hxg5 30.Rh1 Kg7 31.c4 d5 32.c5 Rc6 33.b4 d6 34.cxd6 Rxd6 35.a4 a6 36.Kc3 Rb6 37.b5 axb5 38.a5 Rc6+ 39.Kb4 Rc4+ 40.Rxc4 bxc4 41.a6 Rf8 42.Kc5 Kg6 43.a7 g4 44.Kxd5 Ra8 45.Ra1 g3 46.Kc6 Kf5 47.Kb7 Rxa7+ 48.Rxa7 Ke4 49.Ra3 Kf4 50.Rc3";
+        assertEquals(expected, model.toString());
+
+        // Game 3730254 in Mega Database 2016
+        model = MovesSerializer.deserializeMoves(ResourceLoader.loadResource("brokenchess960_2.moves.bin"));
+        expected = "1.c4 c5 2.b3 b6 3.Nf3 e6 4.d4 cxd4 5.Nxd4 Nc6 6.Nf3 Be7 7.Nc3 O-O 8.g3 Nf6 9.Bg2 Nb4 10.O-O d5 11.a3 Na6 12.cxd5 Nxd5 13.b4 Nxc3 14.Bxc3 Rxd1 15.Rxd1 Rd8 16.Rxd8+ Bxd8 17.Qb2 f6 18.Bh3 Nc7 19.Nd4 Qd7 20.Bg4 f5 21.Bf3 Nd5 22.Qb3 Nxc3 23.Qxc3 Bf6 24.Bxa8 Bxd4 25.Qd3 Qd8 26.Bb7 Kf7 27.Ba6 Bf6 28.Qb3 Ke7 29.Bc4 Qd6 30.Qf3 Be5 31.Bb3 Kf6 32.h4 Bb2 33.g4 Bxa3 34.Qc3+ Kg6 35.h5+ Kh6 36.g5+ Kxh5 37.Qxg7 Kg4 38.g6 h5 39.Qc3";
+        assertEquals(expected, model.toString());
+    }
+
+    @Test
+    public void serializeDeserializeChess960Game() throws ChessBaseMoveDecodingException {
+        int sp = Chess960.getStartPositionNo("BNRKRBNQ");
+        GameMovesModel moves = new GameMovesModel(Chess960.getStartPosition(sp), 1);
+        moves.root().addMove(B2, B3).addMove(B7, B6).addMove(E2, E4).addMove(E7, E5)
+                .addMove(G1, F3).addMove(F7, F6).addMove(F1, C4).addMove(F8, C5)
+                .addMove(H1, F1).addMove(G8, E7).addMove(ShortMove.longCastles())
+                .addMove(B8, C6);
+
+        ByteBuffer buf = MovesSerializer.serializeMoves(moves);
+        GameMovesModel outputMoves = MovesSerializer.deserializeMoves(buf);
+        assertEquals(moves.toString(), outputMoves.toString());
     }
 }

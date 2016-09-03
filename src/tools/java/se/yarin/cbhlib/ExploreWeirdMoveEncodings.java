@@ -10,18 +10,6 @@ import java.nio.ByteBuffer;
 import static se.yarin.chess.Chess.*;
 
 public class ExploreWeirdMoveEncodings {
-/*
-    "1. e4 Nc6 2. e5 f5 3. exf6 Nxf6 4. c4 g6 5. c5 b5 6. cxb6 Bg7 7. b7 O-O 8.\n"+
-            "bxa8=R Ba6 9. Nc3 h5 10. d3 h4 11. Bf4 g5 12. Qd2 gxf4 13. O-O-O Ne5 14. g3\n"+
-            "hxg3 15. hxg3 fxg3 16. d4 gxf2 17. dxe5 fxg1=B 18. exf6 Be3 19. fxe7 Bc4 20.\n"+
-            "exd8=R a5 21. Ra6 a4 22. Rah6 a3 23. Rxd7 axb2+ 24. Kc2 b1=B+ 25. Kb2 Bf5 26.\n"+
-            "Re1 Rb8+ 27. Ka1 Bxd2 28. Rh8+ Bxh8 29. Rxh8+ Kxh8 30. Ree7 Bxc3# *\n"+
-            "\n"
-            */
-
-    public static void main(String[] args) throws IOException {
-        Database db = Database.create(new File("testbases/tmp/Weird Move Encodings/.cbh"));
-    }
 
     public static void main2(String[] args) throws IOException {
         Database db = Database.create(new File("testbases/tmp/Weird Move Encodings/multimodes2.cbh"));
@@ -79,24 +67,45 @@ public class ExploreWeirdMoveEncodings {
 
     }
 
-    public static void maina(String[] args) throws IOException {
-        Database db = Database.create(new File("testbases/tmp/Weird Move Encodings/var2.cbh"));
-        db.getMovesBase().setEncodingMode(3);
-        GameMovesModel moves = new GameMovesModel();
-//        moves.root().addMove(E2, E4).addMove(D7, D5).addMove(G1, F3).parent().addMove(B1, C3).parent().addMove(E4, D5).addMove(D8, D5);
-        moves.root().addMove(E2, E4).addMove(E7, E5).addMove(G1, F3).addMove(B8, C6)
-                .parent().parent().addMove(B1, C3).addMove(B8, C6);
+    public static void mainx(String[] args) throws IOException {
+        Database db = Database.create(new File("testbases/tmp/Weird Move Encodings/mode11_2.cbh"));
 
-        GameHeaderModel header = new GameHeaderModel();
-        GameModel gameModel = new GameModel(header, moves);
-        db.addGame(gameModel);
+//        for (int mode = 0; mode < 32; mode++) {
+        int mode = 11;
+            db.getMovesBase().setEncodingMode(mode);
+
+            GameMovesModel moves = new GameMovesModel(Chess960.getStartPosition(3), 1);
+            moves.root().addMove(C1, B3).addMove(A7, A6).addMove(H2, H4);
+            GameHeaderModel header = new GameHeaderModel();
+            header.setField("white", "mode " + mode);
+            GameModel gameModel = new GameModel(header, moves);
+            db.addGame(gameModel);
+//        }
+//        db.getMovesBase().setEncodingMode(9);
+//        GameMovesModel moves = new GameMovesModel();
+//        moves.root().addMove(E2, E4).addMove(D7, D5).addMove(G1, F3);
+//        moves.root().addMove(E2, E4).addMove(D7, D5).addMove(G1, F3).parent().addMove(B1, C3).parent().addMove(E4, D5).addMove(D8, D5);
+//        moves.root().addMove(E2, E4).addMove(E7, E5).addMove(G1, F3).addMove(B8, C6)
+//                .parent().parent().addMove(B1, C3).addMove(B8, C6);
+
+//        GameHeaderModel header = new GameHeaderModel();
+//        GameModel gameModel = new GameModel(header, moves);
+//        db.addGame(gameModel);
         db.close();
     }
 
-    public static void mainx(String[] args) throws IOException, ChessBaseException {
-        Database db = Database.open(new File("testbases/tmp/Weird Move Encodings/mode1var15.cbh"));
-        GameModel gameModel = db.getGameModel(1);
-        System.out.println(gameModel.moves());
+    public static void main(String[] args) throws IOException, ChessBaseException {
+        CompactMoveEncoder.INTEGRITY_CHECKS_ENABLED = true;
+        Database db = Database.open(new File("testbases/tmp/Weird Move Encodings/mode11.cbh"));
+        try {
+            GameModel gameModel = db.getGameModel(1);
+            System.out.println(gameModel.moves());
+        } catch (ChessBaseMoveDecodingException e) {
+            System.err.println("Error parsing game: " + e);
+            e.printStackTrace();
+//            System.out.println(e.getModel());
+        }
+
         db.close();
     }
 

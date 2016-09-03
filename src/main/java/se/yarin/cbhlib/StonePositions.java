@@ -3,6 +3,9 @@ package se.yarin.cbhlib;
 import lombok.NonNull;
 import se.yarin.chess.*;
 
+import static se.yarin.chess.Chess.*;
+import static se.yarin.chess.Player.WHITE;
+
 /**
  * An internal representation of where the stones are on the board.
  * This can't be determined from {@link Position} as the internal order of the stones
@@ -132,12 +135,17 @@ class StonePositions {
 
         // In case of castle, we need to update the rook position as well
         if (move.isCastle()) {
-            int rookX1 = move.toCol() == 6 ? 7 : 0;
-            int rookX2 = (move.fromCol() + move.toCol()) / 2;
-            int rookY = stone.hasPlayer(Player.WHITE) ? 0 : 7;
-            int rookFromSqi = Chess.coorToSqi(rookX1, rookY);
-            int rookToSqi = Chess.coorToSqi(rookX2, rookY);
-            Stone rook = Piece.ROOK.toStone(stone.toPlayer());
+            int rookFromSqi, rookToSqi, sp = move.position().chess960StartPosition();
+            Player toMove = stone.toPlayer();
+            if (move.isShortCastle()) {
+                rookFromSqi = Chess960.getHRookSqi(sp, toMove);
+                rookToSqi = toMove == WHITE ? F1 : F8;
+            } else {
+                rookFromSqi = Chess960.getARookSqi(sp, toMove);
+                rookToSqi = toMove == WHITE ? D1 : D8;
+            }
+
+            Stone rook = Piece.ROOK.toStone(toMove);
             int rookNo = getStoneNo(rook, rookFromSqi);
             // This can probably be -1 in case of a setup position with more than 3 rooks and castling still allowed...
             if (rookNo >= 0) {

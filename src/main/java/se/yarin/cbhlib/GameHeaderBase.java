@@ -233,6 +233,7 @@ public class GameHeaderBase implements GameHeaderSerializer, Iterable<GameHeader
             builder.playedDate(new Date(0));
             builder.result(GameResult.NOT_FINISHED);
             builder.eco(Eco.unset());
+            builder.chess960StartPosition(-1);
             builder.lineEvaluation(LineEvaluation.NO_EVALUATION);
             builder.medals(EnumSet.noneOf(Medal.class));
 
@@ -286,6 +287,7 @@ public class GameHeaderBase implements GameHeaderSerializer, Iterable<GameHeader
                     log.error("Error parsing ECO in game " + gameId + ": " + ecoValue);
                     builder.eco(Eco.unset());
                 }
+                builder.chess960StartPosition(-1);
             }
             builder.medals(CBUtil.decodeMedals(ByteBufferUtil.getUnsignedShortB(buf)));
             int flagInt = ByteBufferUtil.getIntB(buf);
@@ -391,7 +393,7 @@ public class GameHeaderBase implements GameHeaderSerializer, Iterable<GameHeader
             ByteBufferUtil.putByte(buf, header.getSubRound());
             ByteBufferUtil.putShortB(buf, header.getWhiteElo());
             ByteBufferUtil.putShortB(buf, header.getBlackElo());
-            if (header.getFlags().contains(GameHeaderFlags.CHESS960)) {
+            if (header.getFlags().contains(GameHeaderFlags.UNORTHODOX)) {
                 ByteBufferUtil.putShortB(buf, header.getChess960StartPosition() + 65536 - 960);
             } else {
                 ByteBufferUtil.putShortB(buf, CBUtil.encodeEco(header.getEco()));

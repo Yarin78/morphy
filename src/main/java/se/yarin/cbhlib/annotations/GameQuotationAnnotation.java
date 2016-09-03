@@ -102,7 +102,8 @@ public class GameQuotationAnnotation extends Annotation implements StatisticalAn
     public GameMovesModel getMoves() throws ChessBaseInvalidDataException {
         GameMovesModel moves;
         if (hasSetupPosition()) {
-            moves = MovesSerializer.parseInitialPosition(ByteBuffer.wrap(setupPositionData));
+            // TODO: Support Chess960 quotations
+            moves = MovesSerializer.parseInitialPosition(ByteBuffer.wrap(setupPositionData), false);
         } else {
             moves = new GameMovesModel();
         }

@@ -22,7 +22,7 @@ public enum GameHeaderFlags {
     BLACK_CLOCK(0x00800000), // has annotation 0x17
     CRITICAL_POSITION(0x01000000),  // has annotation 0x18
     CORRESPONDENCE_HEADER(0x02000000), // has annotation 0x61 (?)
-    CHESS960(0x08000000), // is a Chess960 game
+    UNORTHODOX(0x08000000), // if the game is an unorthodox chess game (e.g. Chess 960)
     WEB_LINK(0x10000000), // has annotation 0x1C
 
     STREAM(0x80000000); // Only in guiding text (TODO: Move to separate flags enum?)

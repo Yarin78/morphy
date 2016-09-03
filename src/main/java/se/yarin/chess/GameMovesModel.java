@@ -85,7 +85,8 @@ public class GameMovesModel {
     }
 
     /**
-     * @return true if the game tree doesn't start at the beginning of an ordinary chess game
+     * @return true if the game tree doesn't start at the beginning of an ordinary chess game.
+     * Also returns true for Chess960 games.
      */
     public boolean isSetupPosition() {
         return !(root().position().equals(Position.start()) && root().ply == 0);
@@ -464,6 +465,17 @@ public class GameMovesModel {
         public Node addMove(@NonNull Move move) {
             validateMove(move);
             return internalAddNode(move, false);
+        }
+
+        /**
+         * Adds a move to this node.
+         * If the node already contains moves (possibly the same move), a new variation is created.
+         * @param move the move to add
+         * @return the node representing the position after the added move has been made
+         * @throws IllegalMoveException if the move is illegal from this position
+         */
+        public Node addMove(@NonNull ShortMove move) {
+            return addMove(move.toMove(position));
         }
 
         /**

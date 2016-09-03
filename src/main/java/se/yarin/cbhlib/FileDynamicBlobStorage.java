@@ -68,6 +68,7 @@ public class FileDynamicBlobStorage implements DynamicBlobStorage {
         int unknown3 = ByteBufferUtil.getIntB(buf);
         int unknown4 = ByteBufferUtil.getIntB(buf);
 
+        // TODO: unknown1 and unknown4 might be number of trash bytes at the end of the file
         if (unknown1 != 0) log.warn(String.format("Unknown int1 is %08X", unknown1));
         if (unknown2 != 0) log.warn(String.format("Unknown int2 is %08X", unknown2));
         if (unknown3 != 0) log.warn(String.format("Unknown int3 is %08X", unknown3));

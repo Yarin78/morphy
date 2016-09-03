@@ -2,7 +2,9 @@ package se.yarin.cbhlib;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import se.yarin.chess.Chess960;
 import se.yarin.chess.GameModel;
+import se.yarin.chess.Position;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -21,24 +23,31 @@ public class ScanAllGameHeaders {
 
     public static void main(String[] args) throws IOException {
 //        Files.walk(Paths.get("testbases/tmp/Move data fragmentation/annotest.cbh")).forEach(filePath -> {
-//        Files.walk(Paths.get("testbases/tmp/Weird Move Encodings/gen3.cbh")).forEach(filePath -> {
-        Files.walk(Paths.get("testbases/tmp/Weird Move Encodings/WeirdEncodings.cbh")).forEach(filePath -> {
-//        Files.walk(Paths.get("testbases/Mega Database 2016")).forEach(filePath -> {
+//        Files.walk(Paths.get("testbases/tmp/Weird Move Encodings/chess960.cbh")).forEach(filePath -> {
+//        Files.walk(Paths.get("testbases/tmp/Weird Move Encodings/WeirdEncodings.cbh")).forEach(filePath -> {
+        Files.walk(Paths.get("testbases/Mega Database 2016")).forEach(filePath -> {
             if (Files.isRegularFile(filePath) && filePath.toString().endsWith(".cbh")) {
                 log.info("Reading " + filePath);
                 Database base = null;
                 try {
                     base = Database.open(filePath.toFile());
                     GameHeaderBase headerBase = base.getHeaderBase();
-//                    for (int i = 1; i <= headerBase.size(); i++) {
-                    for (int i = 18; i <= 18; i++) {
+                    for (int i = 1; i <= headerBase.size(); i++) {
+//                    for (int i = 3730250; i <= headerBase.size(); i++) {
                         try {
                             GameHeader gameHeader = headerBase.getGameHeader(i);
-
-                            GameModel gameModel = base.getGameModel(i);
-                            System.out.println(gameModel.moves());
+                            int chess960id = gameHeader.getChess960StartPosition();
+                            if (chess960id >= 0) {
+                                GameModel gameModel = base.getGameModel(i);
+                                Position sp = Chess960.getStartPosition(chess960id);
+                                log.info(String.format("Game #%d: Start pos no %d, matches = %s",
+                                        i, chess960id, sp.equals(gameModel.moves().root().position())));
+                            }
                         } catch (ChessBaseException e) {
                             e.printStackTrace();
+                        } catch (RuntimeException e) {
+                            log.error("Error reading game " + i, e);
+                            break;
                         }
                         /*
                         if (gameHeader.getAnnotationOffset() != 0) {

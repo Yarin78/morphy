@@ -275,10 +275,11 @@ public final class Database {
         if (model.isSetupPosition()) {
             gameFlags.add(GameHeaderFlags.SETUP_POSITION);
         }
+        if (!model.root().position().isRegularChess()) {
+            gameFlags.add(GameHeaderFlags.UNORTHODOX);
+        }
 
-        // TODO: Chess960 flag
         // TODO: Stream flag (if it should be kept here!?)
-
         builder.medals(stats.getMedals());
         builder.flags(gameFlags);
         builder.commentariesMagnitude(stats.getCommentariesMagnitude());

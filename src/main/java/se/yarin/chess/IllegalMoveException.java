@@ -1,5 +1,7 @@
 package se.yarin.chess;
 
+import lombok.Getter;
+
 /**
  * Thrown when an illegal move is being added to a {@link GameMovesModel}
  *
@@ -7,7 +9,10 @@ package se.yarin.chess;
  */
 public class IllegalMoveException extends RuntimeException {
 
+    @Getter
     private final Position position;
+
+    @Getter
     private final Move move;
 
     public IllegalMoveException(Position position, Move move) {

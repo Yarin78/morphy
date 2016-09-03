@@ -8,6 +8,8 @@ import se.yarin.chess.*;
 import java.nio.ByteBuffer;
 import java.util.Stack;
 
+import static se.yarin.chess.Chess.*;
+
 /**
  * This is the default encoder used to encode moves of a ChessBase game.
  * Most moves are encoded as a single byte.
@@ -148,6 +150,10 @@ public class CompactMoveEncoder implements MoveEncoder {
             return OPCODE_NULLMOVE;
         }
 
+        if (!position.isRegularChess() && move.isCastle()) {
+            return OPCODE_TWO_BYTES;
+        }
+
         int stoneNo = stonePositions.getStoneNo(move.movingStone(), move.fromSqi());
         Piece piece = move.movingStone().toPiece();
         Player playerToMove = position.playerToMove();
@@ -217,6 +223,12 @@ public class CompactMoveEncoder implements MoveEncoder {
     }
 
     private int encodeSpecialMove(Move move) {
+        if (!move.position().isRegularChess() && move.isCastle()) {
+            boolean isWhite = move.position().playerToMove() == Player.WHITE;
+            int sqi = isWhite ? move.isShortCastle() ? G1 : C1 : move.isShortCastle() ? G8 : C8;
+            return sqi * 64 + sqi;
+        }
+
         int code = 0;
         switch (move.promotionStone().toPiece()) {
             case QUEEN :code = 0; break;
@@ -353,6 +365,17 @@ public class CompactMoveEncoder implements MoveEncoder {
             throws ChessBaseMoveDecodingException {
         Player playerToMove = board.playerToMove();
         int fromSqi = opcode % 64, toSqi = (opcode / 64) % 64;
+
+        if (fromSqi == toSqi) {
+            // Castles in Chess960 games are encoded like this
+            if (fromSqi == G1 || fromSqi == G8) {
+                return Move.shortCastles(board);
+            }
+            if (fromSqi == C1 || fromSqi == C8) {
+                return Move.longCastles(board);
+            }
+        }
+
         Piece piece = board.stoneAt(fromSqi).toPiece();
         if (piece == Piece.NO_PIECE) {
             throw new ChessBaseMoveDecodingException("No piece at source square: " + Chess.sqiToStr(fromSqi));
