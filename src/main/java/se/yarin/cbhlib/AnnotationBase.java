@@ -109,10 +109,40 @@ public class AnnotationBase implements BlobSizeRetriever {
             return 0;
         }
         ByteBuffer buf = AnnotationsSerializer.serializeAnnotations(gameId, model);
-        return ofs > 0 ? storage.putBlob(ofs, buf) : storage.addBlob(buf);
+        if (ofs > 0) {
+            storage.forcePutBlob(ofs, buf);
+            return ofs;
+        }
+        return storage.addBlob(buf);
+    }
+
+    int preparePutBlob(int currentAnnotationOffset, int targetAnnotationOffset, GameMovesModel model)
+            throws IOException {
+        if (model.countAnnotations() == 0 || targetAnnotationOffset == 0) {
+            return 0;
+        }
+        ByteBuffer buf = AnnotationsSerializer.serializeAnnotations(0, model);
+        int newAnnotationSize = getBlobSize(buf);
+        if (currentAnnotationOffset == 0) {
+            storage.insert(targetAnnotationOffset, newAnnotationSize);
+            return newAnnotationSize;
+        } else {
+            assert currentAnnotationOffset == targetAnnotationOffset;
+            int oldAnnotationSize = getBlobSize(storage.getBlob(currentAnnotationOffset));
+            if (newAnnotationSize <= oldAnnotationSize) {
+                return 0;
+            }
+            int delta = newAnnotationSize - oldAnnotationSize;
+            storage.insert(currentAnnotationOffset, delta);
+            return delta;
+        }
     }
 
     public void close() throws IOException {
         storage.close();
+    }
+
+    public FileDynamicBlobStorage getStorage() {
+        return (FileDynamicBlobStorage) storage;
     }
 }

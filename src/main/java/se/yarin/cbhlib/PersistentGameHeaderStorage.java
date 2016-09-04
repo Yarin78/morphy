@@ -240,10 +240,41 @@ public class PersistentGameHeaderStorage extends GameHeaderStorageBase {
             buf.limit(noGames * serializedGameHeaderSize);
             channel.read(buf);
             for (int i = 0; i < noGames; i++) {
+                // 1 = offset into game header storing moves offset
                 buf.position(i * serializedGameHeaderSize + 1);
                 int oldOfs = ByteBufferUtil.getIntB(buf);
                 if (oldOfs > movesOffset) {
                     buf.position(i * serializedGameHeaderSize + 1);
+                    ByteBufferUtil.putIntB(buf, oldOfs + insertedBytes);
+                }
+            }
+            buf.position(0);
+
+            positionChannel(startGameId);
+            channel.write(buf);
+
+            startGameId += noGames;
+        }
+    }
+
+    @Override
+    void adjustAnnotationOffset(int startGameId, int annotationOffset, int insertedBytes) throws IOException {
+        final int batchSize = 1000;
+
+        positionChannel(startGameId);
+
+        ByteBuffer buf = ByteBuffer.allocateDirect(batchSize * serializedGameHeaderSize);
+        while (startGameId < getMetadata().getNextGameId()) {
+            int noGames = Math.min(batchSize, getMetadata().getNextGameId() - startGameId);
+            buf.limit(noGames * serializedGameHeaderSize);
+            channel.read(buf);
+            for (int i = 0; i < noGames; i++) {
+                // 5 = offset into game header storing annotation offset
+                buf.position(i * serializedGameHeaderSize + 5);
+                int oldOfs = ByteBufferUtil.getIntB(buf);
+                // This check will also work on games that doesn't have annotations (where it's 0)
+                if (oldOfs > annotationOffset) {
+                    buf.position(i * serializedGameHeaderSize + 5);
                     ByteBufferUtil.putIntB(buf, oldOfs + insertedBytes);
                 }
             }

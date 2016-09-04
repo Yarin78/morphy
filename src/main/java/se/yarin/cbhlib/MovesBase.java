@@ -114,20 +114,6 @@ public class MovesBase implements BlobSizeRetriever {
         return storage.addBlob(buf);
     }
 
-    // TODO: This is only for easy experimentation
-    public int putMovesRaw(int ofs, int flag, byte[] raw) throws IOException {
-        ByteBuffer buf = ByteBuffer.allocate(raw.length + 4);
-        ByteBufferUtil.putByte(buf, flag);
-        ByteBufferUtil.put24BitB(buf, raw.length + 4);
-        buf.put(raw);
-        buf.flip();
-        if (ofs > 0) {
-            storage.forcePutBlob(ofs, buf);
-            return ofs;
-        }
-        return storage.addBlob(buf);
-    }
-
     int preparePutBlob(int ofs, GameMovesModel model) throws IOException {
         ByteBuffer buf = MovesSerializer.serializeMoves(model, encodingMode);
         int oldGameSize = getBlobSize(storage.getBlob(ofs));
@@ -142,5 +128,9 @@ public class MovesBase implements BlobSizeRetriever {
 
     public void close() throws IOException {
         storage.close();
+    }
+
+    public FileDynamicBlobStorage getStorage() {
+        return (FileDynamicBlobStorage) storage;
     }
 }

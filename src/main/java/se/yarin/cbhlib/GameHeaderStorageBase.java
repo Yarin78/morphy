@@ -58,6 +58,15 @@ abstract class GameHeaderStorageBase {
     abstract void adjustMovesOffset(int startGameId, int movesOffset, int insertedBytes) throws IOException;
 
     /**
+     * Adjusts the annotation offset of all game headers that have their annotation offsets
+     * greater than the specified value.
+     * @param startGameId the first gameId to consider
+     * @param annotationOffset a game is only affected if its annotation offset is greater than this
+     * @param insertedBytes the number of bytes to adjust with
+     */
+    abstract void adjustAnnotationOffset(int startGameId, int annotationOffset, int insertedBytes) throws IOException;
+
+    /**
      * The number of modifying operations to the storage since it was opened.
      * This field is not persisted.
      * @return the version

@@ -15,6 +15,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.function.BiPredicate;
 
@@ -32,7 +33,7 @@ public final class Database {
 
     @Getter @NonNull private GameHeaderBase headerBase;
     @Getter(AccessLevel.PACKAGE) @NonNull private MovesBase movesBase;
-    @NonNull private AnnotationBase annotationBase;
+    @Getter(AccessLevel.PACKAGE) @NonNull private AnnotationBase annotationBase;
     @Getter @NonNull private PlayerBase playerBase;
     @Getter @NonNull private TournamentBase tournamentBase;
     @Getter @NonNull private AnnotatorBase annotatorBase;
@@ -324,23 +325,6 @@ public final class Database {
         return gameHeader;
     }
 
-    // TODO: This is only for easy experimentation
-    public GameHeader addGameRawMoves(@NonNull GameModel model, int flag, byte[] raw) throws IOException {
-        int gameId = headerBase.getNextGameId();
-
-        int annotationOfs = annotationBase.putAnnotations(gameId, 0, model.moves());
-        int movesOfs = movesBase.putMovesRaw(0, flag, raw);
-
-        GameHeader gameHeader = createGameHeader(model, movesOfs, annotationOfs);
-
-        gameHeader = headerBase.add(gameHeader);
-        assert gameHeader.getId() == gameId;
-
-        updateEntityStats(null, gameHeader);
-
-        return gameHeader;
-    }
-
     /**
      * Replaces a game in the database
      * @param gameId the id of the game to replace
@@ -354,28 +338,79 @@ public final class Database {
             throw new IllegalArgumentException("There is no game with game id " + gameId);
         }
 
-        // Ensure there is enough room to fit the game data
-        // If not, insert bytes and update all game headers
-        int insertedBytes = movesBase.preparePutBlob(oldGameHeader.getMovesOffset(), model.moves());
-        if (insertedBytes > 0) {
-            headerBase.adjustMovesOffset(gameId + 1, oldGameHeader.getMovesOffset(), insertedBytes);
-        }
+        // If necessary, first insert space in the moves and annotation base
+        // In case the previous game didn't have annotations, we will know where to store them
+        int oldAnnotationOfs = prepareReplace(oldGameHeader, model.moves());
 
-        // TODO: Implement this for annotations as well (although it's not necessary for CB13 integrity checker to happy)
-        // This is a bit trickier since if there are no annotations for the game,
-        // it doesn't know what offset to put it at (scan to next game having annotations?)
-
-        int annotationOfs = annotationBase.putAnnotations(gameId, oldGameHeader.getAnnotationOffset(), model.moves());
         int oldMovesOffset = oldGameHeader.getMovesOffset();
-        int movesOfs = movesBase.putMoves(oldMovesOffset, model.moves());
-        assert movesOfs == oldMovesOffset; // Since we inserted space above, we should get the same offset
 
-        GameHeader gameHeader = createGameHeader(model, movesOfs, annotationOfs);
+        int movesOfs = movesBase.putMoves(oldMovesOffset, model.moves());
+        int annotationOfs = annotationBase.putAnnotations(gameId, oldAnnotationOfs, model.moves());
+
+        assert movesOfs == oldMovesOffset; // Since we inserted space above, we should get the same offset
+        assert oldAnnotationOfs == 0 || annotationOfs == 0 || annotationOfs == oldAnnotationOfs;
+
+        GameHeader gameHeader = createGameHeader(model, oldGameHeader.getMovesOffset(), annotationOfs);
 
         gameHeader = headerBase.update(gameId, gameHeader);
         updateEntityStats(oldGameHeader, gameHeader);
 
         return gameHeader;
+    }
+
+    /**
+     * Allocates enough space in the moves and annotation database to fit the new game
+     * @param gameHeader the header of the game to replace
+     * @param moves the model containing the new moves and annotations
+     * @return the new offset to store the annotations
+     * @throws IOException if there was an IO error when preparing the replace
+     */
+    private int prepareReplace(@NonNull GameHeader gameHeader, @NonNull GameMovesModel moves)
+            throws IOException {
+        int gameId = gameHeader.getId();
+
+        // This code is a bit messy. In the worst case, it does three sweeps over
+        // the game header base to update all the information. It could be done
+        // in one sweep, but then it gets even messier. Probably not worth the effort.
+
+        // Also, if something goes wrong here, the database might be in an inconsistent state!
+        // The game (and annotation) data is bulk moved first, then all game headers are updated.
+        // This is fast, but unsafe...
+
+
+        // Ensure there is enough room to fit the game data.
+        // If not, insert bytes and update all game headers.
+        int insertedGameBytes = movesBase.preparePutBlob(gameHeader.getMovesOffset(), moves);
+        if (insertedGameBytes > 0) {
+            headerBase.adjustMovesOffset(gameId + 1, gameHeader.getMovesOffset(), insertedGameBytes);
+        }
+
+        // Ensure there is enough room to fit the annotation data.
+        // If not, insert bytes and update all game headers.
+        // This is a bit trickier since the game might not have had annotations before,
+        // in which case we must find the next game that did have annotations and use that offset.
+        int insertedAnnotationBytes = 0, oldAnnotationOfs = gameHeader.getAnnotationOffset();
+        if (oldAnnotationOfs == 0) {
+            // This game has no annotations. Find first game after this one that does
+            // and use that annotation offset.
+            Iterator<GameHeader> iterator = headerBase.iterator(gameId + 1);
+            while (iterator.hasNext() && oldAnnotationOfs == 0) {
+                GameHeader header = iterator.next();
+                oldAnnotationOfs = header.getAnnotationOffset();
+            }
+            if (oldAnnotationOfs != 0) {
+                insertedAnnotationBytes = annotationBase.preparePutBlob(0, oldAnnotationOfs, moves);
+            }
+        } else {
+            // This game already has annotations, so we know the annotation offset
+            insertedAnnotationBytes = annotationBase.preparePutBlob(gameHeader.getAnnotationOffset(),
+                    gameHeader.getAnnotationOffset(), moves);
+        }
+        if (insertedAnnotationBytes > 0) {
+            headerBase.adjustAnnotationOffset(gameId + 1, gameHeader.getAnnotationOffset(), insertedAnnotationBytes);
+        }
+
+        return oldAnnotationOfs;
     }
 
     private class DeltaMap<T extends Entity & Comparable<T>> {

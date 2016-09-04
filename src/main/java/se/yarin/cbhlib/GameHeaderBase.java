@@ -115,6 +115,15 @@ public class GameHeaderBase implements GameHeaderSerializer, Iterable<GameHeader
     public Iterator<GameHeader> iterator() {
         return new DefaultIterator(1);
     }
+    /**
+     * Gets an iterator over all game headers in the database starting at the specified id
+     * @param gameId the id to start the iteration at (inclusive)
+     * @return an iterator
+     */
+    public Iterator<GameHeader> iterator(int gameId) {
+        return new DefaultIterator(gameId);
+    }
+
 
     private class DefaultIterator implements Iterator<GameHeader> {
         private List<GameHeader> batch = new ArrayList<>();
@@ -458,6 +467,17 @@ public class GameHeaderBase implements GameHeaderSerializer, Iterable<GameHeader
      */
     void adjustMovesOffset(int startGameId, int movesOffset, int insertedBytes) throws IOException {
         storage.adjustMovesOffset(startGameId, movesOffset, insertedBytes);
+    }
+
+    /**
+     * Adjusts the annotation offset of all game headers that have their annotation offsets
+     * greater than the specified value.
+     * @param startGameId the first gameId to consider
+     * @param annotationOffset a game is only affected if its annotation offset is greater than this
+     * @param insertedBytes the number of bytes to adjust with
+     */
+    void adjustAnnotationOffset(int startGameId, int annotationOffset, int insertedBytes) throws IOException {
+        storage.adjustAnnotationOffset(startGameId, annotationOffset, insertedBytes);
     }
 
     public int getSerializedGameHeaderLength() {

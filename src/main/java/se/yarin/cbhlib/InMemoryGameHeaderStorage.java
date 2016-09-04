@@ -57,4 +57,16 @@ public class InMemoryGameHeaderStorage extends GameHeaderStorageBase {
             }
         }
     }
+
+    @Override
+    void adjustAnnotationOffset(int startGameId, int annotationOffset, int insertedBytes) throws IOException {
+        List<Integer> gameIds = new ArrayList<>(gameHeaders.tailMap(startGameId).keySet());
+        for (int gameId : gameIds) {
+            GameHeader header = gameHeaders.get(gameId);
+            if (header.getAnnotationOffset() > annotationOffset) {
+                GameHeader newHeader = header.toBuilder().annotationOffset(header.getAnnotationOffset() + insertedBytes).build();
+                gameHeaders.put(gameId, newHeader);
+            }
+        }
+    }
 }

@@ -21,7 +21,7 @@ public class FileDynamicBlobStorage implements DynamicBlobStorage {
 
     private FileChannel channel;
     private BlobSizeRetriever blobSizeRetriever;
-    private static final int HEADER_SIZE = 26; // The number of header bytes this implementation understands
+    private static final int DEFAULT_SERIALIZED_HEADER_SIZE = 26; // Size of header to create for new storages
     private int size; // Should match channel.size()
     private int headerSize; // The actual header size according to the metadata
     private int trashBytes; // The number of bytes in the storage that's not used for any data
@@ -50,14 +50,14 @@ public class FileDynamicBlobStorage implements DynamicBlobStorage {
     static void createEmptyStorage(@NonNull File file)
             throws IOException {
         FileChannel channel = FileChannel.open(file.toPath(), CREATE_NEW, READ, WRITE);
-        channel.write(serializeMetadata(HEADER_SIZE, HEADER_SIZE));
+        channel.write(serializeMetadata(DEFAULT_SERIALIZED_HEADER_SIZE, DEFAULT_SERIALIZED_HEADER_SIZE, 0));
         channel.close();
     }
 
     private void loadMetadata() throws IOException {
         channel.position(0);
 
-        ByteBuffer buf = ByteBuffer.allocate(HEADER_SIZE);
+        ByteBuffer buf = ByteBuffer.allocate(DEFAULT_SERIALIZED_HEADER_SIZE);
         channel.read(buf);
         buf.flip();
 
@@ -79,21 +79,21 @@ public class FileDynamicBlobStorage implements DynamicBlobStorage {
         if (channel.size() != size) log.warn(String.format("File size doesn't match size in header (%d != %d)", channel.size(), size));
     }
 
-    private static ByteBuffer serializeMetadata(int size, int headerSize) {
-        ByteBuffer buf = ByteBuffer.allocate(HEADER_SIZE);
+    private static ByteBuffer serializeMetadata(int size, int headerSize, int trashBytes) {
+        ByteBuffer buf = ByteBuffer.allocate(DEFAULT_SERIALIZED_HEADER_SIZE);
         ByteBufferUtil.putShortB(buf, headerSize);
         ByteBufferUtil.putIntB(buf, size);
-        ByteBufferUtil.putIntB(buf, 0);
+        ByteBufferUtil.putIntB(buf, trashBytes);
         ByteBufferUtil.putIntB(buf, 0);
         ByteBufferUtil.putIntB(buf, size);
         ByteBufferUtil.putIntB(buf, 0);
-        ByteBufferUtil.putIntB(buf, 0);
+        ByteBufferUtil.putIntB(buf, trashBytes);
         buf.flip();
         return buf;
     }
 
     private void saveMetadata() throws IOException {
-        ByteBuffer buf = serializeMetadata(size, headerSize);
+        ByteBuffer buf = serializeMetadata(size, headerSize, trashBytes);
         channel.position(0);
         channel.write(buf);
         channel.force(false);
@@ -128,6 +128,7 @@ public class FileDynamicBlobStorage implements DynamicBlobStorage {
 
     @Override
     public int putBlob(int oldOffset, @NonNull ByteBuffer blob) throws IOException {
+        // TODO: This method is no longer used, can probably be removed!?
         ByteBuffer oldBlob = getBlob(oldOffset);
         int oldSize = blobSizeRetriever.getBlobSize(oldBlob);
         int newSize = blobSizeRetriever.getBlobSize(blob);
