@@ -299,7 +299,7 @@ public class GameHeaderBase implements GameHeaderSerializer, Iterable<GameHeader
                 }
             }
 
-            if ((flagInt & ~0x1BFF03BF) > 0) {
+            if ((flagInt & ~0x1FFF03BF) > 0) {
                 log.warn(String.format("Unknown game header flags in game %d: %08X", gameId, flagInt));
             }
 

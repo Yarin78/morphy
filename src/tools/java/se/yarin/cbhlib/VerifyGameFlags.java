@@ -109,12 +109,11 @@ public class VerifyGameFlags {
         verifyFlag(id, flags, WHITE_CLOCK, annotations.containsKey(WhiteClockAnnotation.class));
         verifyFlag(id, flags, BLACK_CLOCK, annotations.containsKey(BlackClockAnnotation.class));
         verifyFlag(id, flags, WEB_LINK, annotations.containsKey(WebLinkAnnotation.class));
-        verifyFlag(id, flags, ANNO_TYPE_8, unknownAnnotations.contains(8));
+        verifyFlag(id, flags, ANNO_TYPE_8, unknownAnnotations.contains(0x08));
+        verifyFlag(id, flags, ANNO_TYPE_1A, unknownAnnotations.contains(0x1A));
         verifyFlag(id, flags, VARIATIONS, !moves.root().isSingleLine());
         verifyFlag(id, flags, SETUP_POSITION, moves.isSetupPosition());
-
-        // The first bytes in moves data is 0x4A if it's a Chess960 game but we don't support it yet
-//        verifyFlag(id, "Chess960 ", flags.contains(UNORTHODOX), moves.isChess960());
+        verifyFlag(id, flags, UNORTHODOX, !moves.root().position().isRegularChess());
 
         int minTextLength = 0, maxTextLength = 0;
 //        int noText = annotations.getOrDefault(TextAfterMoveAnnotation.class, 0) + annotations.getOrDefault(TextBeforeMoveAnnotation.class, 0);

@@ -27,8 +27,11 @@ public class UnknownAnnotation extends Annotation implements RawAnnotation, Stat
 
     @Override
     public void updateStatistics(AnnotationStatistics stats) {
-        if (annotationType == 8) {
+        if (annotationType == 0x08) {
             stats.flags.add(GameHeaderFlags.ANNO_TYPE_8);
+        }
+        if (annotationType == 0x1A) {
+            stats.flags.add(GameHeaderFlags.ANNO_TYPE_1A);
         }
     }
 }

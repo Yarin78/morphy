@@ -22,6 +22,7 @@ public enum GameHeaderFlags {
     BLACK_CLOCK(0x00800000), // has annotation 0x17
     CRITICAL_POSITION(0x01000000),  // has annotation 0x18
     CORRESPONDENCE_HEADER(0x02000000), // has annotation 0x61 (?)
+    ANNO_TYPE_1A(0x04000000), // has annotation 0x1a (media? denoted with M in the AIT column)
     UNORTHODOX(0x08000000), // if the game is an unorthodox chess game (e.g. Chess 960)
     WEB_LINK(0x10000000), // has annotation 0x1C
 
