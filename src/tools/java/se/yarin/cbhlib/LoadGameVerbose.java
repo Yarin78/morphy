@@ -26,15 +26,16 @@ public class LoadGameVerbose {
     private static final Logger log = LoggerFactory.getLogger(LoadGameVerbose.class);
 
     public static void main(String[] args) throws IOException, ChessBaseException {
-        String fileBase = "testbases/Mega Database 2016/Mega Database 2016";
+//        String fileBase = "testbases/Mega Database 2016/Mega Database 2016";
+//        String fileBase = "testbases/CHESS LITERATURE 3/OPENINGS/Chessbase - Pirc Defence - Complete Cd/Chessbase - Pirc Defence - Complete Cd/B06-Base";
+        String fileBase = "testbases/tmp/Texts/codepage";
 //        String fileBase = "testbases/tmp/re/re";
         GameHeaderBase base = GameHeaderBase.open(new File(fileBase + ".cbh"));
         MovesBase movesBase = MovesBase.open(new File(fileBase + ".cbg"));
         AnnotationBase annotationBase = AnnotationBase.open(new File(fileBase + ".cba"));
 
-//        int gameId = 757812;
-        int gameId = 4342308;
-
+        int gameId = 2;
+//
         GameHeader gameHeader = base.getGameHeader(gameId);
         GameMovesModel model = getMoves(movesBase, annotationBase, gameHeader);
 
@@ -79,6 +80,9 @@ public class LoadGameVerbose {
             if (annotation instanceof SymbolAnnotation) {
                 SymbolAnnotation sa = (SymbolAnnotation) annotation;
                 System.out.println("Symbol: " + sa.getLineEvaluation() + " " + sa.getMoveComment() + " " + sa.getMovePrefix());
+            }
+            if (annotation instanceof TextAfterMoveAnnotation) {
+                System.out.println("Text: " + ((TextAfterMoveAnnotation) annotation).getText());
             }
         }
     }

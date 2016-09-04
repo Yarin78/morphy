@@ -23,7 +23,8 @@ public class LoadAllGames {
 //        String fileBase = "/Users/yarin/chessbasemedia/mediafiles/cbh/tmp/tmp3/quotation2";
 //        String fileBase = "/Users/yarin/chessbasemedia/mediafiles/cbh/tmp/re";
 //        String fileBase = "/Users/yarin/chessbasemedia/mediafiles/cbh/tmp/My White Openings";
-        String fileBase = "testbases/Mega Database 2016/Mega Database 2016";
+//        String fileBase = "testbases/Mega Database 2016/Mega Database 2016";
+        String fileBase = "testbases/tmp/Texts/codepage";
 
         String headerFile = fileBase + ".cbh";
         MovesBase movesBase = MovesBase.open(new File(fileBase + ".cbg"));
@@ -39,8 +40,10 @@ public class LoadAllGames {
             int start = 1, stop = base.size();
             for (int i = start; i <= stop; i++) {
                 GameHeader gameHeader = base.getGameHeader(i);
+                if (gameHeader.isGuidingText()) continue;
                 GameMovesModel moves = movesBase.getMoves(gameHeader.getMovesOffset());
 
+                log.info("Game #" + i);
                 int ofs = gameHeader.getAnnotationOffset();
                 if (ofs != 0) {
                     annotationBase.getAnnotations(moves, ofs);

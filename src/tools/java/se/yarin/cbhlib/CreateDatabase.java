@@ -1,12 +1,10 @@
 package se.yarin.cbhlib;
 
-import se.yarin.chess.Eco;
 import se.yarin.chess.GameModel;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.Comparator;
 import java.util.Random;
 
 /**
@@ -15,7 +13,7 @@ import java.util.Random;
 public class CreateDatabase {
 
     public static void main(String[] args) throws IOException {
-        Database db = Database.create(new File("testbases/tmp/Created/subeco.cbh"));
+        Database db = Database.create(new File("testbases/tmp/Created/random3.cbh"));
         GameGenerator gameGenerator = new GameGenerator();
 
         Random random = new Random();
@@ -25,7 +23,6 @@ public class CreateDatabase {
         for (int i = 0; i < noOps; i++) {
             int gameId = random.nextInt(maxGames) + 1;
             GameModel game = gameGenerator.getRandomGame();
-            game.header().setField("eco", Eco.fromInt(123, 45));
 
             if (gameId <= db.getHeaderBase().size()) {
                 db.replaceGame(gameId, game);
