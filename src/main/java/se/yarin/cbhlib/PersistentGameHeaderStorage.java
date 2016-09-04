@@ -20,7 +20,7 @@ import static java.nio.file.StandardOpenOption.WRITE;
 public class PersistentGameHeaderStorage extends GameHeaderStorageBase {
     private static final Logger log = LoggerFactory.getLogger(PersistentGameHeaderStorage.class);
 
-    private int storageHeaderSize, serializedGameHeaderSize;
+    private int serializedGameHeaderSize;
     private final GameHeaderSerializer serializer;
     private final String storageName;
     private FileChannel channel;
@@ -32,8 +32,7 @@ public class PersistentGameHeaderStorage extends GameHeaderStorageBase {
             throws IOException {
         super(loadMetadata(file));
 
-        this.serializedGameHeaderSize = getMetadata().getGameHeaderSize();
-        this.storageHeaderSize = getMetadata().getStorageHeaderSize();
+        this.serializedGameHeaderSize = getMetadata().getSerializedHeaderSize();
         this.storageName = file.getName();
         this.serializer = serializer;
         channel = FileChannel.open(file.toPath(), READ, WRITE);
@@ -65,12 +64,11 @@ public class PersistentGameHeaderStorage extends GameHeaderStorageBase {
             GameHeaderStorageMetadata metadata = new GameHeaderStorageMetadata();
 
             metadata.setUnknownByte1(ByteBufferUtil.getUnsignedByte(header));
-            metadata.setStorageHeaderSize(ByteBufferUtil.getUnsignedShortB(header));
-            if (metadata.getStorageHeaderSize() != 0x2C) {
-                // This value can be 0x24 on some old databases!?
-                log.warn("Storage header size (?) = " + metadata.getStorageHeaderSize() + " in " + storageName);
+            metadata.setUnknownFlags(ByteBufferUtil.getUnsignedShortB(header));
+            if (metadata.getUnknownFlags() != 0x24 && metadata.getUnknownFlags() != 0x2C) {
+                log.warn("Header unknown flags = " + metadata.getUnknownFlags() + " in " + storageName);
             }
-            metadata.setGameHeaderSize(ByteBufferUtil.getUnsignedShortB(header));
+            metadata.setSerializedHeaderSize(ByteBufferUtil.getUnsignedShortB(header));
             metadata.setUnknownByte2(ByteBufferUtil.getUnsignedByte(header));
 
             if (metadata.getUnknownByte1() != 0) {
@@ -81,48 +79,36 @@ public class PersistentGameHeaderStorage extends GameHeaderStorageBase {
             }
 
             metadata.setNextGameId(ByteBufferUtil.getIntB(header));
-            for (int i = 0; i < 15; i++) {
+            metadata.setNextEmbeddedSoundId(ByteBufferUtil.getIntB(header));
+            metadata.setNextEmbeddedPictureId(ByteBufferUtil.getIntB(header));
+            metadata.setNextEmbeddedVideoId(ByteBufferUtil.getIntB(header));
+            for (int i = 0; i < 9; i++) {
                 int value = ByteBufferUtil.getUnsignedShortB(header);
                 metadata.getUnknownShort()[i] = value;
                 if (value != 0) {
-                    /*
-                    INFO  ScanAllGameHeaders - Reading /Users/yarin/chessbasemedia/mediafiles/TEXT/Alexei Shirov - My Best Games in the Najdorf (only audio)/My best games in the Sicilian Najdorf.cbh
-                    WARN  PersistentGameHeaderStorage - Unknown header short 6 = 12 in My best games in the Sicilian Najdorf.cbh
-                    INFO  ScanAllGameHeaders - Reading /Users/yarin/chessbasemedia/mediafiles/TEXT/Andrew Martin - The ABC of the Caro-Kann/Caro-Kann.cbh
-                    WARN  PersistentGameHeaderStorage - Unknown header short 6 = 26 in Caro-Kann.cbh
-                    INFO  ScanAllGameHeaders - Reading /Users/yarin/chessbasemedia/mediafiles/TEXT/Andrew Martin - The ABC of the King's Indian/The ABC of the King's Indian.cbh
-                    WARN  PersistentGameHeaderStorage - Unknown header short 6 = 27 in The ABC of the King's Indian.cbh
-                    INFO  ScanAllGameHeaders - Reading /Users/yarin/chessbasemedia/mediafiles/TEXT/Andrew Martin - The ABC of the Ruy Lopez/TheRuyLopez.cbh
-                    WARN  PersistentGameHeaderStorage - Unknown header short 6 = 42 in TheRuyLopez.cbh
-                    INFO  ScanAllGameHeaders - Reading /Users/yarin/chessbasemedia/mediafiles/TEXT/Andrew Martin - The Basics of Winning Chess/The Basics of Winning Chess.cbh
-                    WARN  PersistentGameHeaderStorage - Unknown header short 6 = 27 in The Basics of Winning Chess.cbh
-                    INFO  ScanAllGameHeaders - Reading /Users/yarin/chessbasemedia/mediafiles/TEXT/Jacob Aagaard - Queen's Indian Defence/Queen's Indian Defence.cbh
-                    WARN  PersistentGameHeaderStorage - Unknown header short 6 = 15 in Queen's Indian Defence.cbh
-                    INFO  ScanAllGameHeaders - Reading /Users/yarin/chessbasemedia/mediafiles/TEXT/Karsten Müller - Chess Endgames 1 (only audio)/Grundlagen für Einsteiger - Teil 1 - Fundamentels for beginners - Vol.1.cbh
-                    WARN  PersistentGameHeaderStorage - Unknown header short 6 = 86 in Grundlagen für Einsteiger - Teil 1 - Fundamentels for beginners - Vol.1.cbh
-                    INFO  ScanAllGameHeaders - Reading /Users/yarin/chessbasemedia/mediafiles/TEXT/Viktor Kortchnoi - My Life for Chess - vol 1/My Life for Chess Vol. 1.cbh
-                    WARN  PersistentGameHeaderStorage - Unknown header short 6 = 12 in My Life for Chess Vol. 1.cbh
-                    INFO  ScanAllGameHeaders - Reading /Users/yarin/chessbasemedia/mediafiles/TEXT/Viktor Kortchnoi - My Life for Chess - vol 2/My Life for Chess Vol. 2.cbh
-                    WARN  PersistentGameHeaderStorage - Unknown header short 6 = 17 in My Life for Chess Vol. 2.cbh
-                     */
-                    if (i != 6) {
-                        // short 4 = 276 in megabase 2014 and megabase 2016
-                        log.warn("Unknown header short " + i + " = " + value + " in " + storageName);
-                    }
+//                    INFO  ScanAllGameHeaders - Reading testbases/CHESS LITERATURE 3/TECHNICAL PLAY AND ENDGAME/Endgame Databases - Karsten Mueller/113Endgame.cbh
+//                    WARN  PersistentGameHeaderStorage - Unknown header short 0 = 9 in 113Endgame.cbh
+//                    INFO  ScanAllGameHeaders - Reading testbases/CHESS LITERATURE 3/TECHNICAL PLAY AND ENDGAME/Endgame Databases - Karsten Mueller/114Endgame.cbh
+//                    WARN  PersistentGameHeaderStorage - Unknown header short 0 = 30 in 114Endgame.cbh
+//                    INFO  ScanAllGameHeaders - Reading testbases/CHESS LITERATURE 3/TECHNICAL PLAY AND ENDGAME/Endgame Databases - Karsten Mueller/115Endgame.cbh
+//                    INFO  ScanAllGameHeaders - Reading testbases/CHESS LITERATURE 3/TECHNICAL PLAY AND ENDGAME/Endgame Databases - Karsten Mueller/116Endgame.cbh
+//                    WARN  PersistentGameHeaderStorage - Unknown header short 0 = 13 in 116Endgame.cbh
+
+                    log.warn("Unknown header short " + i + " = " + value + " in " + storageName);
                 }
             }
 
             metadata.setNextGameId2(ByteBufferUtil.getIntB(header));
-            if (metadata.getNextGameId() != metadata.getNextGameId2()) {
-                // This value can be 0 sometimes on old databases?!
+            if (metadata.getNextGameId() != metadata.getNextGameId2() && metadata.getNextGameId2() != 0) {
+                // This value can be 0 sometimes on old databases
                 log.warn(String.format("Second nextGameId didn't match the first one in %s (%d != %d)",
                         storageName, metadata.getNextGameId(), metadata.getNextGameId2()));
             }
 
             int value = ByteBufferUtil.getUnsignedShortB(header);
-            metadata.getUnknownShort()[15] = value;
+            metadata.getUnknownShort()[9] = value;
             if (value != 0) {
-                log.warn("Unknown header short " + 15 + " = " + value + " in " + storageName);
+                log.warn("Unknown header short " + 9 + " = " + value + " in " + storageName);
             }
 
             return metadata;
@@ -140,24 +126,25 @@ public class PersistentGameHeaderStorage extends GameHeaderStorageBase {
         channel.write(buffer);
         channel.force(false);
 
-        log.debug(String.format("Updated %s; nextGameId = %d, nextGameId2 = %d, gameHeaderSize = %d, storageHeaderSize = %d",
-                storageName, metadata.getNextGameId(), metadata.getNextGameId2(),
-                metadata.getGameHeaderSize(),
-                metadata.getStorageHeaderSize()));
+        log.debug(String.format("Updated %s; nextGameId = %d", storageName, metadata.getNextGameId()));
     }
 
     private static ByteBuffer serializeMetadata(GameHeaderStorageMetadata metadata) {
-        ByteBuffer buffer = ByteBuffer.allocate(metadata.getStorageHeaderSize());
+        ByteBuffer buffer = ByteBuffer.allocate(metadata.getSerializedHeaderSize());
 
         ByteBufferUtil.putByte(buffer, metadata.getUnknownByte1());
-        ByteBufferUtil.putShortB(buffer, metadata.getStorageHeaderSize());
-        ByteBufferUtil.putShortB(buffer, metadata.getGameHeaderSize());
+        ByteBufferUtil.putShortB(buffer, metadata.getUnknownFlags());
+        ByteBufferUtil.putShortB(buffer, metadata.getSerializedHeaderSize());
         ByteBufferUtil.putByte(buffer, metadata.getUnknownByte2());
         ByteBufferUtil.putIntB(buffer, metadata.getNextGameId());
-        for (int i = 0; i < 15; i++) {
+        ByteBufferUtil.putIntB(buffer, metadata.getNextEmbeddedSoundId());
+        ByteBufferUtil.putIntB(buffer, metadata.getNextEmbeddedPictureId());
+        ByteBufferUtil.putIntB(buffer, metadata.getNextEmbeddedVideoId());
+        for (int i = 0; i < 9; i++) {
             ByteBufferUtil.putShortB(buffer, metadata.getUnknownShort()[i]);
         }
         ByteBufferUtil.putIntB(buffer, metadata.getNextGameId2());
+        ByteBufferUtil.putShortB(buffer, metadata.getUnknownShort()[9]);
 
         buffer.position(0);
         return buffer;
@@ -170,9 +157,9 @@ public class PersistentGameHeaderStorage extends GameHeaderStorageBase {
      * @throws IOException if an IO error occurs
      */
     private void positionChannel(int gameId) throws IOException {
-        // TODO: storageHeaderSize doesn't seem to be correct, that field is something else
-//        channel.position(storageHeaderSize + (gameId - 1) * (serializedGameHeaderSize));
-        channel.position(46 + (gameId - 1) * serializedGameHeaderSize);
+        // serializedGameHeaderSize is both the size of the header of the file,
+        // and the size of each game header.
+        channel.position(gameId * serializedGameHeaderSize);
     }
 
     @Override

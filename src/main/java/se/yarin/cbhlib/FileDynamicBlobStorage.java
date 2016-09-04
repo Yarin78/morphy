@@ -24,6 +24,7 @@ public class FileDynamicBlobStorage implements DynamicBlobStorage {
     private static final int HEADER_SIZE = 26; // The number of header bytes this implementation understands
     private int size; // Should match channel.size()
     private int headerSize; // The actual header size according to the metadata
+    private int trashBytes; // The number of bytes in the storage that's not used for any data
 
     private final int chunkSize, prefetchSize;
 
@@ -62,18 +63,19 @@ public class FileDynamicBlobStorage implements DynamicBlobStorage {
 
         headerSize = ByteBufferUtil.getUnsignedShortB(buf);
         size = ByteBufferUtil.getIntB(buf);
-        int unknown1 = ByteBufferUtil.getIntB(buf);
-        int unknown2 = ByteBufferUtil.getIntB(buf);
-        int size2 = ByteBufferUtil.getIntB(buf);
-        int unknown3 = ByteBufferUtil.getIntB(buf);
-        int unknown4 = ByteBufferUtil.getIntB(buf);
+        trashBytes = ByteBufferUtil.getIntB(buf);
+        int unknown2 = 0, unknown3 = 0, trashBytes2 = trashBytes, size2 = size;
 
-        // TODO: unknown1 and unknown4 might be number of trash bytes at the end of the file
-        if (unknown1 != 0) log.warn(String.format("Unknown int1 is %08X", unknown1));
+        if (headerSize >= 14) unknown2 = ByteBufferUtil.getIntB(buf);
+        if (headerSize >= 18) size2 = ByteBufferUtil.getIntB(buf);
+        if (headerSize >= 22) unknown3 = ByteBufferUtil.getIntB(buf);
+        if (headerSize >= 26) trashBytes2 = ByteBufferUtil.getIntB(buf);
+
         if (unknown2 != 0) log.warn(String.format("Unknown int2 is %08X", unknown2));
         if (unknown3 != 0) log.warn(String.format("Unknown int3 is %08X", unknown3));
-        if (unknown4 != 0) log.warn(String.format("Unknown int4 is %08X", unknown4));
-        if (size != size2) log.warn(String.format("Second size int is not the same as first (%08X != %08X)", size, size2));
+
+        if (trashBytes != trashBytes2) log.warn(String.format("Second trash bytes int is not same as the first (%d != %d)", trashBytes, trashBytes2));
+        if (size != size2) log.warn(String.format("Second size int is not the same as first (%d != %d)", size, size2));
         if (channel.size() != size) log.warn(String.format("File size doesn't match size in header (%d != %d)", channel.size(), size));
     }
 
@@ -150,6 +152,10 @@ public class FileDynamicBlobStorage implements DynamicBlobStorage {
     @Override
     public int getSize() {
         return size;
+    }
+
+    public int getHeaderSize() {
+        return headerSize;
     }
 
     @Override

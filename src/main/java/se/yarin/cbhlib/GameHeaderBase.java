@@ -19,8 +19,8 @@ public class GameHeaderBase implements GameHeaderSerializer, Iterable<GameHeader
     // TODO: Add search
     private static final Logger log = LoggerFactory.getLogger(GameHeaderBase.class);
 
-    private static final int DEFAULT_STORAGE_HEADER_SIZE = 46;
-    private static final int SERIALIZED_GAME_HEADER_SIZE = 46;
+    private static final int DEFAULT_UNKNOWN_FLAGS = 0x2C;
+    private static final int DEFAULT_SERIALIZED_GAME_HEADER_SIZE = 46;
 
     private GameHeaderStorageBase storage;
 
@@ -40,8 +40,8 @@ public class GameHeaderBase implements GameHeaderSerializer, Iterable<GameHeader
         metadata.setNextGameId(1);
         metadata.setNextGameId2(1);
         metadata.setUnknownByte2(1);
-        metadata.setStorageHeaderSize(44);
-        metadata.setGameHeaderSize(SERIALIZED_GAME_HEADER_SIZE);
+        metadata.setUnknownFlags(DEFAULT_UNKNOWN_FLAGS);
+        metadata.setSerializedHeaderSize(DEFAULT_SERIALIZED_GAME_HEADER_SIZE);
         return metadata;
     }
 
@@ -355,7 +355,7 @@ public class GameHeaderBase implements GameHeaderSerializer, Iterable<GameHeader
     }
 
     public ByteBuffer serialize(GameHeader header) {
-        ByteBuffer buf = ByteBuffer.allocate(SERIALIZED_GAME_HEADER_SIZE);
+        ByteBuffer buf = ByteBuffer.allocate(getSerializedGameHeaderLength());
         int type = 0;
         if (header.isGame()) type += 1;
         if (header.isGuidingText()) type += 2;
@@ -461,6 +461,6 @@ public class GameHeaderBase implements GameHeaderSerializer, Iterable<GameHeader
     }
 
     public int getSerializedGameHeaderLength() {
-        return SERIALIZED_GAME_HEADER_SIZE;
+        return storage.getMetadata().getSerializedHeaderSize();
     }
 }
