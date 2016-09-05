@@ -4,7 +4,7 @@ import lombok.*;
 import se.yarin.chess.Date;
 import se.yarin.chess.Eco;
 import se.yarin.chess.GameResult;
-import se.yarin.chess.LineEvaluation;
+import se.yarin.chess.NAG;
 
 import java.util.EnumSet;
 
@@ -34,7 +34,7 @@ public class GameHeader {
     private final int blackElo; // 0 = not set
     private final int chess960StartPosition; // According to the official Chess960 numbering scheme, -1 if regular chess
     private final @NonNull Eco eco;
-    private final @NonNull LineEvaluation lineEvaluation;
+    private final @NonNull NAG lineEvaluation;
 
     // The GameHeader may contain medals that's not represented in the moves data
     // But if the moves data contain a medal annotation, that will be reflected in the header medals field
@@ -58,7 +58,7 @@ public class GameHeader {
                 .playedDate(new Date(0))
                 .result(GameResult.NOT_FINISHED)
                 .eco(Eco.unset())
-                .lineEvaluation(LineEvaluation.NO_EVALUATION)
+                .lineEvaluation(NAG.NONE)
                 .medals(EnumSet.noneOf(Medal.class))
                 .flags(EnumSet.noneOf(GameHeaderFlags.class));
     }

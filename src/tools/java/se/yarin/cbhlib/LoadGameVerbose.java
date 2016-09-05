@@ -2,22 +2,16 @@ package se.yarin.cbhlib;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import se.yarin.cbhlib.annotations.SymbolAnnotation;
 import se.yarin.cbhlib.annotations.TextAfterMoveAnnotation;
-import se.yarin.chess.Chess;
 import se.yarin.chess.GameMovesModel;
-import se.yarin.chess.Move;
 import se.yarin.chess.annotations.Annotation;
-import se.yarin.chess.annotations.Annotations;
-import se.yarin.chess.annotations.SymbolAnnotation;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Loads a single game from a database, prints verbose output

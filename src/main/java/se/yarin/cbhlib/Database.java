@@ -250,8 +250,8 @@ public final class Database {
         int moves = (model.moves().countPly(false) + 1) / 2;
         builder.noMoves(moves > 255 ? -1 : moves);
 
-        LineEvaluation eval = header.getLineEvaluation();
-        builder.lineEvaluation(eval == null ? LineEvaluation.NO_EVALUATION : eval);
+        NAG eval = header.getLineEvaluation();
+        builder.lineEvaluation(eval == null ? NAG.NONE : eval);
 
         setInferredData(builder, model.moves());
 

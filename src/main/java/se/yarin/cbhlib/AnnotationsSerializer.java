@@ -23,7 +23,7 @@ public final class AnnotationsSerializer {
     static {
         Arrays.asList(
             new BlackClockAnnotation.Serializer(),
-            new ChessBaseSymbolAnnotation.Serializer(),
+            new SymbolAnnotation.Serializer(),
             new ComputerEvaluationAnnotation.Serializer(),
             new CorrespondenceMoveAnnotation.Serializer(),
             new CriticalPositionAnnotation.Serializer(),

@@ -6,7 +6,7 @@ public enum GameHeaderFlags {
     SETUP_POSITION(0x00000001), // doesn't start from the initial position
     VARIATIONS(0x00000002), // has variations
     COMMENTARY(0x00000004), // has annotation 0x02 and/or 0x82
-    SYMBOLS(0x00000008), // has annotation 0x03 (TODO: rename to nags)
+    SYMBOLS(0x00000008), // has annotation 0x03
     GRAPHICAL_SQUARES(0x00000010), // has annotation 0x04
     GRAPHICAL_ARROWS(0x00000020), // has annotation 0x05
     TIME_SPENT(0x00000080), // has annotation 0x07

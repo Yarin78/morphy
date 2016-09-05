@@ -30,12 +30,12 @@ public class AnnotationSerializerTest {
 
     @Test
     public void testChessBaseSymbolAnnotation() {
-        ChessBaseSymbolAnnotation before = new ChessBaseSymbolAnnotation(
-                MoveComment.DUBIOUS_MOVE,
-                MovePrefix.EDITORIAL_ANNOTATION,
-                LineEvaluation.BLACK_SLIGHT_ADVANTAGE
+        SymbolAnnotation before = new SymbolAnnotation(
+                NAG.DUBIOUS_MOVE,
+                NAG.EDITORIAL_COMMENT,
+                NAG.BLACK_SLIGHT_ADVANTAGE
         );
-        ChessBaseSymbolAnnotation after = serialize(before);
+        SymbolAnnotation after = serialize(before);
         assertEquals(before, after);
     }
 

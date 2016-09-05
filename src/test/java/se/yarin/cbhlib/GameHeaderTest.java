@@ -7,7 +7,7 @@ import org.junit.rules.TemporaryFolder;
 import se.yarin.chess.Date;
 import se.yarin.chess.Eco;
 import se.yarin.chess.GameResult;
-import se.yarin.chess.LineEvaluation;
+import se.yarin.chess.NAG;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -70,7 +70,7 @@ public class GameHeaderTest {
                 .blackElo(2037)
                 .eco(new Eco("C01"))
                 .chess960StartPosition(-1)
-                .lineEvaluation(LineEvaluation.DEVELOPMENT_ADVANTAGE)
+                .lineEvaluation(NAG.WHITE_MODERATE_DEVELOPMENT_ADANTAGE)
                 .medals(EnumSet.of(Medal.MODEL_GAME, Medal.USER))
                 .flags(EnumSet.of(
                         GameHeaderFlags.VARIATIONS,
@@ -115,7 +115,7 @@ public class GameHeaderTest {
         assertEquals(0, header.getWhiteElo());
         assertEquals(0, header.getBlackElo());
         assertEquals(new Eco("C20"), header.getEco());
-        assertEquals(LineEvaluation.NO_EVALUATION, header.getLineEvaluation());
+        assertEquals(NAG.NONE, header.getLineEvaluation());
         assertEquals(0, header.getMedals().size());
         assertEquals(0, header.getFlags().size());
         assertEquals(0, header.getVariationsMagnitude());
@@ -147,7 +147,7 @@ public class GameHeaderTest {
         assertEquals(2150, header.getWhiteElo());
         assertEquals(2000, header.getBlackElo());
         assertEquals(new Eco("A00"), header.getEco());
-        assertEquals(LineEvaluation.WITH_COMPENSATION, header.getLineEvaluation());
+        assertEquals(NAG.WHITE_ENOUGH_COMPENSATION, header.getLineEvaluation());
         assertEquals(0, header.getMedals().size());
         assertEquals(0, header.getFlags().size());
         assertEquals(0, header.getVariationsMagnitude());
@@ -169,7 +169,7 @@ public class GameHeaderTest {
         assertEquals(26, header.getAnnotationOffset());
         assertEquals(new Date(2016, 5, 9), header.getPlayedDate());
         assertEquals(GameResult.NOT_FINISHED, header.getResult());
-        assertEquals(LineEvaluation.NO_EVALUATION, header.getLineEvaluation());
+        assertEquals(NAG.NONE, header.getLineEvaluation());
         assertEquals(0, header.getMedals().size());
         assertEquals(EnumSet.of(GameHeaderFlags.COMMENTARY, GameHeaderFlags.SYMBOLS), header.getFlags());
         assertEquals(0, header.getVariationsMagnitude());

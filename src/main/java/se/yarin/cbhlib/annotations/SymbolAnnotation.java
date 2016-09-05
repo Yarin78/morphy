@@ -6,40 +6,37 @@ import lombok.Getter;
 import lombok.NonNull;
 import se.yarin.cbhlib.AnnotationSerializer;
 import se.yarin.cbhlib.ByteBufferUtil;
-import se.yarin.cbhlib.CBUtil;
 import se.yarin.cbhlib.GameHeaderFlags;
-import se.yarin.chess.LineEvaluation;
-import se.yarin.chess.MoveComment;
-import se.yarin.chess.MovePrefix;
-import se.yarin.chess.Symbol;
+import se.yarin.chess.NAG;
 import se.yarin.chess.annotations.Annotation;
 
 import java.nio.ByteBuffer;
 
-// TODO: Should be NAGs annotation
 @AllArgsConstructor
 @EqualsAndHashCode(callSuper = false)
-public class ChessBaseSymbolAnnotation extends Annotation implements StatisticalAnnotation {
-    @Getter private final MoveComment moveComment;
-    @Getter private final MovePrefix movePrefix;
-    @Getter private final LineEvaluation lineEvaluation;
+public class SymbolAnnotation extends Annotation implements StatisticalAnnotation {
+    @Getter private final NAG moveComment;
+    @Getter private final NAG movePrefix;
+    @Getter private final NAG lineEvaluation;
 
-    public ChessBaseSymbolAnnotation(@NonNull Symbol... symbols) {
-        MoveComment comment = MoveComment.NOTHING;
-        MovePrefix prefix = MovePrefix.NOTHING;
-        LineEvaluation eval = LineEvaluation.NO_EVALUATION;
-        for (Symbol symbol : symbols) {
-            if (symbol == null) {
+    public SymbolAnnotation(@NonNull NAG... nags) {
+        NAG comment = NAG.NONE;
+        NAG prefix = NAG.NONE;
+        NAG eval = NAG.NONE;
+        for (NAG nag : nags) {
+            if (nag == null) {
                 continue;
             }
-            if (symbol instanceof MoveComment) {
-                comment = (MoveComment) symbol;
-            }
-            if (symbol instanceof MovePrefix) {
-                prefix = (MovePrefix) symbol;
-            }
-            if (symbol instanceof LineEvaluation) {
-                eval = (LineEvaluation) symbol;
+            switch (nag.getType()) {
+                case MOVE_COMMENT:
+                    comment = nag;
+                    break;
+                case LINE_EVALUATION:
+                    eval = nag;
+                    break;
+                case MOVE_PREFIX:
+                    prefix = nag;
+                    break;
             }
         }
         moveComment = comment;
@@ -86,19 +83,19 @@ public class ChessBaseSymbolAnnotation extends Annotation implements Statistical
     public static class Serializer implements AnnotationSerializer {
         @Override
         public Annotation deserialize(ByteBuffer buf, int length) {
-            Symbol[] symbols = new Symbol[length];
+            NAG[] symbols = new NAG[length];
             for (int i = 0; i < length; i++) {
-                symbols[i] = CBUtil.decodeSymbol(buf.get());
+                symbols[i] = NAG.values()[ByteBufferUtil.getUnsignedByte(buf)];
             }
-            return new ChessBaseSymbolAnnotation(symbols);
+            return new SymbolAnnotation(symbols);
         }
 
         @Override
         public void serialize(ByteBuffer buf, Annotation annotation) {
-            ChessBaseSymbolAnnotation symbolAnnotation = (ChessBaseSymbolAnnotation) annotation;
-            int b1 = CBUtil.encodeSymbol(symbolAnnotation.getMoveComment());
-            int b2 = CBUtil.encodeSymbol(symbolAnnotation.getLineEvaluation());
-            int b3 = CBUtil.encodeSymbol(symbolAnnotation.getMovePrefix());
+            SymbolAnnotation symbolAnnotation = (SymbolAnnotation) annotation;
+            int b1 = symbolAnnotation.getMoveComment().ordinal();
+            int b2 = symbolAnnotation.getLineEvaluation().ordinal();
+            int b3 = symbolAnnotation.getMovePrefix().ordinal();
             ByteBufferUtil.putByte(buf, b1);
             if (b2 != 0 || b3 !=0) ByteBufferUtil.putByte(buf, b2);
             if (b3 != 0) ByteBufferUtil.putByte(buf, b3);
@@ -111,9 +108,7 @@ public class ChessBaseSymbolAnnotation extends Annotation implements Statistical
 
         @Override
         public Class getAnnotationClass() {
-            return ChessBaseSymbolAnnotation.class;
+            return SymbolAnnotation.class;
         }
     }
-
-
 }

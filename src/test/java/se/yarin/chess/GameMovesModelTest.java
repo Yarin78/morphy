@@ -205,13 +205,13 @@ public class GameMovesModelTest {
         GameMovesModel.Node node2 = node.addMove(F8, C5);
         GameMovesModel.Node a = node2.addMove(E1, G1).addMove(G8, F6)
                 .addMove(D2, D3)
-                .addAnnotation(new SymbolAnnotation(MovePrefix.DIRECTED_AGAINST))
+                .addAnnotation(new NAGAnnotation(NAG.DIRECTED_AGAINST))
                 .addMove(C5, B6)
-                .addAnnotation(new SymbolAnnotation(MoveComment.BLUNDER))
+                .addAnnotation(new NAGAnnotation(NAG.BLUNDER))
                 .addMove(C2, C3);
         GameMovesModel.Node b = node2.addMove(B1, C3).addMove(C5, B6)
                 .addMove(D2, D3)
-                .addAnnotation(new SymbolAnnotation(LineEvaluation.UNCLEAR));
+                .addAnnotation(new NAGAnnotation(NAG.UNCLEAR));
 
         numFiredChanges = 0;
         assertEquals("3...Bc5 4.O-O (4.Nc3 Bb6 5.d3 unclear) 4...Nf6 Directed against... 5.d3 Bb6?? 6.c3", node.toSAN());
@@ -319,13 +319,14 @@ public class GameMovesModelTest {
             .addMove(E2, E4)
             .addAnnotation(new CommentaryAfterMoveAnnotation("Good start!"))
             .addMove(A7, A6)
-            .addAnnotation(new SymbolAnnotation(MoveComment.BAD_MOVE, LineEvaluation.WHITE_SLIGHT_ADVANTAGE));
+            .addAnnotation(new NAGAnnotation(NAG.BAD_MOVE))
+            .addAnnotation(new NAGAnnotation(NAG.WHITE_SLIGHT_ADVANTAGE));
 
-        assertEquals(2, moves.countAnnotations());
+        assertEquals(3, moves.countAnnotations());
         assertEquals("1.e4 { Good start! } a6? +/=", moves.toString());
 
         moves.root().mainNode().deleteAnnotations();
-        assertEquals(1, moves.countAnnotations());
+        assertEquals(2, moves.countAnnotations());
         assertEquals("1.e4 a6? +/=", moves.toString());
     }
 
@@ -334,12 +335,12 @@ public class GameMovesModelTest {
         moves.root()
                 .addAnnotation(new CommentaryAfterMoveAnnotation("start of game"))
                 .addMove(E2, E4)
-                .addAnnotation(new SymbolAnnotation(MoveComment.GOOD_MOVE))
+                .addAnnotation(new NAGAnnotation(NAG.GOOD_MOVE))
                 .addMove(E7, E5)
                 .addMove(G1, F3)
                 .parent()
                 .addMove(B1, C3)
-                .addAnnotation(new SymbolAnnotation(MoveComment.INTERESTING_MOVE));
+                .addAnnotation(new NAGAnnotation(NAG.INTERESTING_MOVE));
 
         numFiredChanges = 0;
         moves.deleteAllAnnotations();
@@ -352,12 +353,12 @@ public class GameMovesModelTest {
         moves.root()
                 .addAnnotation(new CommentaryAfterMoveAnnotation("start of game"))
                 .addMove(E2, E4)
-                .addAnnotation(new SymbolAnnotation(MoveComment.GOOD_MOVE))
+                .addAnnotation(new NAGAnnotation(NAG.GOOD_MOVE))
                 .addMove(E7, E5)
                 .addMove(G1, F3)
                 .parent()
                     .addMove(B1, C3)
-                    .addAnnotation(new SymbolAnnotation(MoveComment.INTERESTING_MOVE));
+                    .addAnnotation(new NAGAnnotation(NAG.INTERESTING_MOVE));
 
         numFiredChanges = 0;
 
@@ -378,12 +379,12 @@ public class GameMovesModelTest {
     public void testCloneModel() {
         moves.root()
                 .addMove(E2, E4)
-                .addAnnotation(new SymbolAnnotation(MoveComment.GOOD_MOVE))
+                .addAnnotation(new NAGAnnotation(NAG.GOOD_MOVE))
                 .addMove(E7, E5)
                 .addMove(G1, F3)
                 .parent()
                 .addMove(B1, C3)
-                .addAnnotation(new SymbolAnnotation(MoveComment.INTERESTING_MOVE));
+                .addAnnotation(new NAGAnnotation(NAG.INTERESTING_MOVE));
 
         // Test that there are no shared nodes in the original and clone by
         // performing various operations on the cloned version

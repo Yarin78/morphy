@@ -5,14 +5,12 @@ import org.slf4j.LoggerFactory;
 import se.yarin.cbhlib.annotations.*;
 import se.yarin.chess.GameMovesModel;
 import se.yarin.chess.annotations.Annotation;
-import se.yarin.chess.annotations.Annotations;
-import se.yarin.chess.annotations.SymbolAnnotation;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
-import java.util.*;
+import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.HashSet;
 
 import static se.yarin.cbhlib.GameHeaderFlags.*;
 

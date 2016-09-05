@@ -151,7 +151,7 @@ public class GameGenerator {
                     annotation = new TextBeforeMoveAnnotation(randomString(random.nextInt(15) + 3));
                     break;
                 case 5 :case 6:case 7:case 8:
-                    annotation = new ChessBaseSymbolAnnotation(MoveComment.values()[1 + random.nextInt(6)]);
+                    annotation = new SymbolAnnotation(NAG.values()[1 + random.nextInt(6)]);
                     break;
                 case 9:
                     ArrayList<GraphicalSquaresAnnotation.Square> squares = new ArrayList<>();

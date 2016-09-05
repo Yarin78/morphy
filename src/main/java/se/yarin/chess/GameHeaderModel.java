@@ -32,7 +32,7 @@ public class GameHeaderModel {
     @HeaderData @Getter private String whiteTeam;
     @HeaderData @Getter private String blackTeam;
     @HeaderData @Getter private GameResult result;
-    @HeaderData @Getter private LineEvaluation lineEvaluation;
+    @HeaderData @Getter private NAG lineEvaluation;
     @HeaderData @Getter private Date date;
     @HeaderData @Getter private Eco eco;
     @HeaderData @Getter private Integer round;

@@ -20,7 +20,7 @@ public class AnnotationTest {
         CommentaryAfterMoveAnnotation annotation = annotations.getByClass(CommentaryAfterMoveAnnotation.class);
         assertEquals("after", annotation.getCommentary());
 
-        assertNull(annotations.getByClass(SymbolAnnotation.class));
+        assertNull(annotations.getByClass(NAGAnnotation.class));
     }
 
     @Test
@@ -28,10 +28,10 @@ public class AnnotationTest {
         Annotations annotations = new Annotations();
 
         annotations.add(new CommentaryAfterMoveAnnotation("after"));
-        annotations.add(new SymbolAnnotation(LineEvaluation.EQUAL));
+        annotations.add(new NAGAnnotation(NAG.EQUAL));
 
-        assertTrue(annotations.removeByClass(SymbolAnnotation.class));
-        assertFalse(annotations.removeByClass(SymbolAnnotation.class));
+        assertTrue(annotations.removeByClass(NAGAnnotation.class));
+        assertFalse(annotations.removeByClass(NAGAnnotation.class));
         assertEquals(1, annotations.size());
     }
 
@@ -40,7 +40,7 @@ public class AnnotationTest {
         Annotations annotations = new Annotations();
 
         annotations.add(new CommentaryAfterMoveAnnotation("after"));
-        annotations.add(new SymbolAnnotation(LineEvaluation.EQUAL));
+        annotations.add(new NAGAnnotation(NAG.EQUAL));
 
         assertEquals(2, annotations.size());
         annotations.clear();
@@ -66,12 +66,11 @@ public class AnnotationTest {
 
         annotations.add(new CommentaryAfterMoveAnnotation("after move"));
         annotations.add(new CommentaryBeforeMoveAnnotation("before move"));
-        annotations.add(new SymbolAnnotation(
-                LineEvaluation.WHITE_DECISIVE_ADVANTAGE,
-                MovePrefix.EDITORIAL_ANNOTATION,
-                MoveComment.GOOD_MOVE));
+        annotations.add(new NAGAnnotation(NAG.WHITE_DECISIVE_ADVANTAGE));
+        annotations.add(new NAGAnnotation(NAG.EDITORIAL_COMMENT));
+        annotations.add(new NAGAnnotation(NAG.GOOD_MOVE));
 
-        assertEquals(3, annotations.size());
+        assertEquals(5, annotations.size());
         assertEquals("{ before move } RR 10.Bc4! +- { after move }", annotations.format("10.Bc4", true));
     }
 

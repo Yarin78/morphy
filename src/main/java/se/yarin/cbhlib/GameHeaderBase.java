@@ -243,7 +243,7 @@ public class GameHeaderBase implements GameHeaderSerializer, Iterable<GameHeader
             builder.result(GameResult.NOT_FINISHED);
             builder.eco(Eco.unset());
             builder.chess960StartPosition(-1);
-            builder.lineEvaluation(LineEvaluation.NO_EVALUATION);
+            builder.lineEvaluation(NAG.NONE);
             builder.medals(EnumSet.noneOf(Medal.class));
 
             int b1 = ByteBufferUtil.getUnsignedByte(buf);
@@ -274,11 +274,11 @@ public class GameHeaderBase implements GameHeaderSerializer, Iterable<GameHeader
             builder.sourceId(ByteBufferUtil.getUnsigned24BitB(buf));
             builder.playedDate(CBUtil.decodeDate(ByteBufferUtil.getUnsigned24BitB(buf)));
             builder.result(CBUtil.decodeGameResult(ByteBufferUtil.getUnsignedByte(buf)));
-            Symbol symbol = CBUtil.decodeSymbol((byte) ByteBufferUtil.getUnsignedByte(buf));
-            if (symbol instanceof LineEvaluation) {
-                builder.lineEvaluation((LineEvaluation) symbol);
+            NAG nag = NAG.values()[ByteBufferUtil.getUnsignedByte(buf)];
+            if (nag.getType() == NAGType.LINE_EVALUATION) {
+                builder.lineEvaluation(nag);
             } else {
-                builder.lineEvaluation(LineEvaluation.NO_EVALUATION);
+                builder.lineEvaluation(NAG.NONE);
             }
             builder.round(ByteBufferUtil.getUnsignedByte(buf));
             builder.subRound(ByteBufferUtil.getUnsignedByte(buf));
@@ -397,7 +397,7 @@ public class GameHeaderBase implements GameHeaderSerializer, Iterable<GameHeader
             ByteBufferUtil.put24BitB(buf, header.getSourceId());
             ByteBufferUtil.put24BitB(buf, CBUtil.encodeDate(header.getPlayedDate()));
             ByteBufferUtil.putByte(buf, CBUtil.encodeGameResult(header.getResult()));
-            ByteBufferUtil.putByte(buf, CBUtil.encodeSymbol(header.getLineEvaluation()));
+            ByteBufferUtil.putByte(buf, header.getLineEvaluation().ordinal());
             ByteBufferUtil.putByte(buf, header.getRound());
             ByteBufferUtil.putByte(buf, header.getSubRound());
             ByteBufferUtil.putShortB(buf, header.getWhiteElo());
