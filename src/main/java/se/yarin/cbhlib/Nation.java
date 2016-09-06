@@ -1,5 +1,10 @@
 package se.yarin.cbhlib;
 
+import lombok.NonNull;
+
+import java.util.HashMap;
+import java.util.Map;
+
 // Same numbering scheme is used by ChessBase to enumerate languages, even though only a few are used
 public enum Nation {
     NONE("none"),
@@ -290,5 +295,26 @@ public enum Nation {
 
     Nation(String name) {
         this.name = name;
+    }
+
+    static Map<String,Nation> nationByName = new HashMap<>(256);
+
+    static {
+        for (Nation nation : Nation.values()) {
+            nationByName.put(nation.getName().toLowerCase(), nation);
+        }
+    }
+
+    /**
+     * Gets the Nation that matches the specified name
+     * @param name the name of the nation, case insensitive
+     * @return a Nation, or {@link Nation#NONE} if there is no match
+     */
+    public static Nation fromName(@NonNull String name) {
+        Nation nation = nationByName.get(name.toLowerCase());
+        if (nation == null) {
+            nation = Nation.NONE;
+        }
+        return nation;
     }
 }

@@ -1,5 +1,6 @@
 package se.yarin.cbhlib;
 
+// TODO: Human readable text
 public enum TournamentType {
     NONE,
     SINGLE_GAME,

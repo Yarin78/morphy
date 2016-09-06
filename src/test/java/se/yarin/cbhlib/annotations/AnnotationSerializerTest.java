@@ -55,29 +55,29 @@ public class AnnotationSerializerTest {
 
     @Test
     public void testGameQuotationAnnotationSerialization() {
-        GameQuotationAnnotation before = GameQuotationAnnotation.builder()
-                .type(2)
-                .white("Mardell, Jimmy")
-                .black("Kasparov, Garry")
-                .whiteElo(2100)
-                .blackElo(2830)
-                .date(new Date(2016, 8, 20))
-                .eco(new Eco("A57"))
-                .event("unit test")
-                .gameData(new byte[] { 0x7C, 0x32 })
-                .result(GameResult.BLACK_WINS)
-                .round(1)
-                .subRound(2)
-                .site("source code")
-                .setupPositionData(null)
-                .tournamentCategory(3)
-                .tournamentCountry(Nation.SWEDEN)
-                .tournamentRounds(5)
-                .tournamentTimeControl(TournamentTimeControl.BLITZ)
-                .tournamentType(TournamentType.MATCH)
-                .unknown(7)
-                .build();
+        GameHeaderModel header = new GameHeaderModel();
+        header.setField("white", "Mardell, Jimmy");
+        header.setField("black", "Kasparov, Garry");
+        header.setField("whiteElo", 2100);
+        header.setField("blackElo", 2830);
+        header.setField("date", new Date(2016, 8, 20));
+        header.setField("eco", new Eco("A57"));
+        header.setField("event", "unit test");
+        header.setField("result", GameResult.BLACK_WINS);
+        header.setField("round", 1);
+        header.setField("subRound", 2);
+        header.setField("eventSite", "source code");
+        header.setField("eventCategory", 3);
+        header.setField("eventCountry", "Sweden");
+        header.setField("eventRounds", 5);
+        header.setField("eventTimeControl", TournamentTimeControl.BLITZ);
+        header.setField("eventType", TournamentType.MATCH);
+
+        GameQuotationAnnotation before = new GameQuotationAnnotation(header);
         GameQuotationAnnotation after = serialize(before);
+
+        System.out.println(before.getHeader());
+
         assertEquals(before, after);
     }
 

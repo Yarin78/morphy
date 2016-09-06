@@ -1,7 +1,5 @@
 package se.yarin.cbhlib.annotations;
 
-import lombok.Builder;
-import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NonNull;
 import org.slf4j.Logger;
@@ -10,146 +8,102 @@ import se.yarin.cbhlib.*;
 import se.yarin.chess.*;
 import se.yarin.chess.annotations.Annotation;
 
-import java.io.IOException;
-import java.io.InputStream;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 
-@Builder
-@EqualsAndHashCode(callSuper = false)
 public class GameQuotationAnnotation extends Annotation implements StatisticalAnnotation {
 
     private static final Logger log = LoggerFactory.getLogger(GameQuotationAnnotation.class);
 
-    // TODO: Move serialization to MovesSerializer
-    private static final short[] encryptMap = KeyProvider.getMoveSerializationKey(8);
-    private static final short[] decryptMap = KeyProvider.getMoveSerializationKey(9);
-
+    // TODO: The model should be read-only since annotations must be immutable
     @Getter
-    private int type; // 1 = link to game in same database, 2 = contains game data
+    private final GameHeaderModel header;
 
-    @Getter
-    @NonNull
-    private String white;
-
-    @Getter
-    @NonNull
-    private String black;
-
-    @Getter
-    private int whiteElo;
-
-    @Getter
-    private int blackElo;
-
-    @Getter
-    @NonNull
-    private Eco eco;
-
-    @Getter
-    @NonNull
-    private String event;
-
-    @Getter
-    @NonNull
-    private String site;
-
-    @Getter
-    @NonNull
-    private Date date;
-
-    @Getter
-    @NonNull
-    private TournamentType tournamentType;
-
-    @Getter
-    @NonNull
-    private TournamentTimeControl tournamentTimeControl;
-
-    @Getter
-    @NonNull
-    private Nation tournamentCountry;
-
-    @Getter
-    private int tournamentCategory;
-
-    @Getter
-    private int tournamentRounds;
-
-    @Getter
-    private int round;
-
-    @Getter
-    private int subRound;
-
-    @Getter
-    private GameResult result;
+    // Deserialization is done lazily
+    private byte[] setupPositionData;
+    private byte[] gameData;
 
     @Getter
     private int unknown;
 
-    private byte[] setupPositionData;
-    private byte[] gameData;
+    /**
+     * Creates a new GameQuotation annotation that only contains the header information about the game.
+     * @param header the header model of the game to quote
+     */
+    public GameQuotationAnnotation(@NonNull GameHeaderModel header) {
+        this.header = header;
+        this.setupPositionData = null;
+        this.gameData = null;
+        this.unknown = 0;
+    }
 
-    public boolean hasSetupPosition() {
-        return setupPositionData != null;
+    /**
+     * Creates a new GameQuotation annotation that contains both header and game moves
+     * Annotations and variations will be stripped
+     * @param game the game model of the game to quote
+     */
+    public GameQuotationAnnotation(@NonNull GameModel game) {
+        this.header = game.header();
+
+        // Only embed moves data if it's a regular chess game.
+        // ChessBase doesn't seem to support embedding unorthodox games
+        if (game.moves().root().position().isRegularChess()) {
+            if (game.moves().isSetupPosition()) {
+                this.setupPositionData = new byte[28];
+                MovesSerializer.serializeInitialPosition(game.moves(),
+                        ByteBuffer.wrap(this.setupPositionData), false);
+            }
+
+            MoveEncoder moveEncoder = new GameQuotationMoveEncoder();
+            // This allocation is a bit ugly since it uses knowledge of the underlying encoder
+            ByteBuffer buf = ByteBuffer.allocate(game.moves().countPly(false) * 2 + 2);
+            moveEncoder.encode(buf, game.moves());
+            gameData = buf.array();
+        }
+    }
+
+    private GameQuotationAnnotation(
+            @NonNull GameHeaderModel header,
+            byte[] setupPositionData,
+            byte[] gameData,
+            int unknown) {
+        this.setupPositionData = setupPositionData;
+        this.gameData = gameData;
+        this.header = header;
+        this.unknown = unknown;
     }
 
     public boolean hasGame() {
-        return type == 2;
+        return gameData != null;
     }
 
-    // TODO: Should return a GameModel
-    public GameMovesModel getMoves() throws ChessBaseInvalidDataException {
+    public GameModel getGameModel()  {
+        if (hasGame()) {
+            return new GameModel(getHeader(), getMoves());
+        }
+        return new GameModel(getHeader(), new GameMovesModel());
+    }
+
+    private GameMovesModel getMoves() {
         GameMovesModel moves;
-        if (hasSetupPosition()) {
-            // TODO: Support Chess960 quotations
-            moves = MovesSerializer.parseInitialPosition(ByteBuffer.wrap(setupPositionData), false);
-        } else {
-            moves = new GameMovesModel();
+        try {
+            if (setupPositionData != null) {
+                moves = MovesSerializer.parseInitialPosition(ByteBuffer.wrap(setupPositionData), false);
+            } else {
+                moves = new GameMovesModel();
+            }
+        }
+        catch (ChessBaseMoveDecodingException e) {
+            log.warn("Error parsing initial position in game quotation", e);
+            return new GameMovesModel();
         }
 
-        GameMovesModel.Node current = moves.root();
-
-        int modifier = 0;
-        for (int i = 0; i < gameData.length; i+=2) {
-            int b1 = decryptMap[(gameData[i] + modifier + 256) % 256];
-            int b2 = decryptMap[(gameData[i+1] + modifier + 256) % 256];
-            int op = b1 * 256 + b2;
-            int fromSqi = op % 64, toSqi = (op / 64) % 64;
-            int code = op / (64 * 64); // 0 = queen, 1 = rook, 2 = bishop, 3 = knight
-            if (fromSqi == 0 && toSqi == 0 && code == 4) {
-                // End marker
-                break;
-            }
-            Piece promotionPiece = Piece.NO_PIECE;
-            int row = Chess.sqiToRow(toSqi);
-            if ((row == 0 || row == 7) && current.position().stoneAt(fromSqi).toPiece() == Piece.PAWN) {
-                switch (code) {
-                    case 0:
-                        promotionPiece = Piece.QUEEN;
-                        break;
-                    case 1:
-                        promotionPiece = Piece.ROOK;
-                        break;
-                    case 2:
-                        promotionPiece = Piece.BISHOP;
-                        break;
-                    case 3:
-                        promotionPiece = Piece.KNIGHT;
-                        break;
-                }
-            }
-            Stone promotionStone = promotionPiece.toStone(current.position().playerToMove());
-            Move move = new Move(current.position(), fromSqi, toSqi, promotionStone);
-            try {
-                current = current.addMove(move);
-            } catch (IllegalMoveException e) {
-                // Happens in game 359942 in megabase 2016, quotation Uhlmann,W (2535)-Kortschnoj,V (2665)
-                log.warn("Illegal move in game quotation", e);
-                break;
-            }
-
-            modifier = (modifier + 255) % 256;
+        try {
+            MoveEncoder encoder = new GameQuotationMoveEncoder();
+            encoder.decode(ByteBuffer.wrap(gameData), moves);
+        } catch (ChessBaseMoveDecodingException e) {
+            log.warn("Error parsing move in game quotation", e);
+            moves = e.getModel();
         }
 
         return moves;
@@ -157,47 +111,30 @@ public class GameQuotationAnnotation extends Annotation implements StatisticalAn
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
-        if (getWhite().length() > 0) {
-            sb.append(getWhite());
-            if (getWhiteElo() > 0) {
-                sb.append(String.format(" (%d)", getWhiteElo()));
-            }
-        }
-        if (getWhite().length() > 0 && getBlack().length() > 0) {
-            sb.append("-");
-        }
-        if (getBlack().length() > 0) {
-            sb.append(getBlack());
-            if (getBlackElo() > 0) {
-                sb.append(String.format(" (%d)", getBlackElo()));
-            }
-        }
-        if (getEvent().length() > 0) {
-            sb.append(" ").append(getEvent());
-        }
-        if (getSite().length() > 0) {
-            sb.append(" ").append(getSite());
-        }
-        if (getDate().year() > 0) {
-            sb.append(" ").append(getDate().toString());
-        }
-
-        if (getRound() > 0) {
-            if (getSubRound() > 0) {
-                sb.append(String.format(" (%d.%d)", getRound(), getSubRound()));
-            } else {
-                sb.append(String.format(" (%d)", getRound()));
-            }
-        }
-        sb.append(" ").append(getResult().toString());
-
-        return sb.toString();
+        return "GameQuotationAnnotation: " + header.toString();
     }
 
     @Override
     public void updateStatistics(AnnotationStatistics stats) {
         stats.flags.add(GameHeaderFlags.GAME_QUOTATION);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        GameQuotationAnnotation that = (GameQuotationAnnotation) o;
+
+        if (unknown != that.unknown) return false;
+        if (!header.equals(that.header)) return false;
+        if (!Arrays.equals(setupPositionData, that.setupPositionData)) return false;
+        return Arrays.equals(gameData, that.gameData);
+    }
+
+    @Override
+    public int hashCode() {
+        return header.hashCode() * 31 + unknown;
     }
 
     public static class Serializer implements AnnotationSerializer {
@@ -206,51 +143,89 @@ public class GameQuotationAnnotation extends Annotation implements StatisticalAn
             GameQuotationAnnotation qa = (GameQuotationAnnotation) annotation;
             int start = buf.position();
             ByteBufferUtil.putShortB(buf, 0); // This is the size, will be filled in later
-            ByteBufferUtil.putShortB(buf, qa.getType());
-            if (qa.hasSetupPosition()) {
+            ByteBufferUtil.putShortB(buf, qa.hasGame() ? 2 : 1);
+            if (qa.setupPositionData != null) {
                 ByteBufferUtil.putShortB(buf, 64);
                 buf.put(qa.setupPositionData);
-                // TODO: use MovesSerializer.serializeInitialPosition()
             } else {
                 ByteBufferUtil.putShortB(buf, 0);
             }
 
-            ByteBufferUtil.putByteString(buf, qa.getWhite());
+            // TODO: Lots of stuff can be null here, fix it!
+            ByteBufferUtil.putByteString(buf, qa.header.getWhite());
             ByteBufferUtil.putByte(buf, 0);
-            ByteBufferUtil.putByteString(buf, qa.getBlack());
+            ByteBufferUtil.putByteString(buf, qa.header.getBlack());
             ByteBufferUtil.putByte(buf, 0);
-            ByteBufferUtil.putShortB(buf, qa.getWhiteElo());
-            ByteBufferUtil.putShortB(buf, qa.getBlackElo());
-            ByteBufferUtil.putShortB(buf, CBUtil.encodeEco(qa.getEco()));
-            ByteBufferUtil.putByteString(buf, qa.getEvent());
+            ByteBufferUtil.putShortB(buf, qa.header.getWhiteElo());
+            ByteBufferUtil.putShortB(buf, qa.header.getBlackElo());
+            ByteBufferUtil.putShortB(buf, CBUtil.encodeEco(qa.header.getEco()));
+            ByteBufferUtil.putByteString(buf, qa.header.getEvent());
             ByteBufferUtil.putByte(buf, 0);
-            ByteBufferUtil.putByteString(buf, qa.getSite());
+            ByteBufferUtil.putByteString(buf, qa.header.getEventSite());
             ByteBufferUtil.putByte(buf, 0);
-            ByteBufferUtil.putIntB(buf, CBUtil.encodeDate(qa.getDate()));
+            ByteBufferUtil.putIntB(buf, CBUtil.encodeDate(qa.header.getDate()));
+            // TODO: Code below is soo ugly, please make headers typesafe!!
             int typeValue = 0;
-            switch (qa.getTournamentTimeControl()) {
-                case BLITZ:
-                    typeValue = 32;
-                    break;
-                case RAPID:
-                    typeValue = 64;
-                    break;
-                case CORRESPONDENCE:
-                    typeValue = 128;
-                    break;
+            // TODO: Fix casting issues
+            TournamentTimeControl tournamentTimeControl = (TournamentTimeControl) qa.header.getField("eventTimeControl");
+            if (tournamentTimeControl != null) {
+                switch (tournamentTimeControl) {
+                    case BLITZ:
+                        typeValue = 32;
+                        break;
+                    case RAPID:
+                        typeValue = 64;
+                        break;
+                    case CORRESPONDENCE:
+                        typeValue = 128;
+                        break;
+                }
             }
-            typeValue += qa.getTournamentType().ordinal();
+            // TODO: Fix casting issues
+            TournamentType type = (TournamentType) qa.header.getField("eventType");
+            if (type != null) {
+                typeValue += type.ordinal();
+            }
             ByteBufferUtil.putShortB(buf, typeValue);
-            ByteBufferUtil.putShortB(buf, qa.getTournamentCountry().ordinal());
-            ByteBufferUtil.putShortB(buf, qa.getTournamentCategory());
-            ByteBufferUtil.putShortB(buf, qa.getTournamentRounds());
+            String eventCountry = qa.header.getEventCountry();
+            if (eventCountry == null) {
+                ByteBufferUtil.putShortB(buf, 0);
+            } else {
+                ByteBufferUtil.putShortB(buf, Nation.fromName(eventCountry).ordinal());
+            }
+            Object tournamentCategory = qa.header.getField("eventCategory");
+            if (tournamentCategory != null) {
+                ByteBufferUtil.putShortB(buf, (int) tournamentCategory);
+            } else {
+                ByteBufferUtil.putShortB(buf, 0);
+            }
+            Object tournamentRounds = qa.header.getField("eventRounds");
+            if (tournamentRounds != null) {
+                ByteBufferUtil.putShortB(buf, (int) tournamentRounds);
+            } else {
+                ByteBufferUtil.putShortB(buf, 0);
+            }
 
-            ByteBufferUtil.putByte(buf, qa.getSubRound());
-            ByteBufferUtil.putByte(buf, qa.getRound());
-            ByteBufferUtil.putByte(buf, CBUtil.encodeGameResult(qa.getResult()));
+            Integer subRound = qa.header.getSubRound();
+            if (subRound == null) {
+                subRound = 0;
+            }
+            ByteBufferUtil.putByte(buf, subRound);
+            Integer round = qa.header.getRound();
+            if (round == null) {
+                round = 0;
+            }
+            ByteBufferUtil.putByte(buf, round);
+            GameResult result = qa.header.getResult();
+            if (result == null) {
+                result = GameResult.NOT_FINISHED;
+            }
+            ByteBufferUtil.putByte(buf, CBUtil.encodeGameResult(result));
             ByteBufferUtil.putShortB(buf, qa.getUnknown());
 
-            buf.put(qa.gameData);
+            if (qa.gameData != null) {
+                buf.put(qa.gameData);
+            }
             int end = buf.position();
             buf.position(start);
             ByteBufferUtil.putShortB(buf, end - start);
@@ -261,63 +236,67 @@ public class GameQuotationAnnotation extends Annotation implements StatisticalAn
         public GameQuotationAnnotation deserialize(ByteBuffer buf, int length) {
             int startPos = buf.position();
             int size = ByteBufferUtil.getUnsignedShortB(buf);
-            GameQuotationAnnotationBuilder builder = GameQuotationAnnotation.builder();
+
             int type = ByteBufferUtil.getUnsignedShortB(buf);
             if (type != 1 && type != 2) {
                 log.warn("Unknown game quotation type: " + type);
             }
-            builder.type(type);
+
+            byte[] setupPositionData = null;
 
             int flags = ByteBufferUtil.getUnsignedShortB(buf);
             if ((flags & 64) > 0) {
-                byte[] setupPositionData = new byte[28];
+                setupPositionData = new byte[28];
                 buf.get(setupPositionData);
                 flags -= 64;
-                builder.setupPositionData(setupPositionData);
             }
             if (flags != 0) {
                 log.warn("Unknown flag value parsing game quotation: " + flags);
             }
 
-            builder.white(ByteBufferUtil.getByteString(buf));
+            GameHeaderModel header = new GameHeaderModel();
+            header.setField("white", ByteBufferUtil.getByteString(buf));
             buf.get();
-            builder.black(ByteBufferUtil.getByteString(buf));
+            header.setField("black", ByteBufferUtil.getByteString(buf));
             buf.get();
-            builder.whiteElo(ByteBufferUtil.getUnsignedShortB(buf));
-            builder.blackElo(ByteBufferUtil.getUnsignedShortB(buf));
+            header.setField("whiteElo", ByteBufferUtil.getUnsignedShortB(buf));
+            header.setField("blackElo", ByteBufferUtil.getUnsignedShortB(buf));
             Eco eco = CBUtil.decodeEco(ByteBufferUtil.getUnsignedShortB(buf));
-            builder.eco(eco);
-            builder.event(ByteBufferUtil.getByteString(buf));
+            header.setField("eco", eco);
+            header.setField("event", ByteBufferUtil.getByteString(buf));
             buf.get();
-            builder.site(ByteBufferUtil.getByteString(buf));
+            header.setField("eventSite", ByteBufferUtil.getByteString(buf));
             buf.get();
             Date date = CBUtil.decodeDate(ByteBufferUtil.getIntB(buf));
-            builder.date(date);
+            header.setField("date", date);
 
             int typeValue = ByteBufferUtil.getUnsignedShortB(buf);
-            builder.tournamentTimeControl(TournamentTimeControl.NORMAL);
-            if ((typeValue & 32) > 0) builder.tournamentTimeControl(TournamentTimeControl.BLITZ);
-            if ((typeValue & 64) > 0) builder.tournamentTimeControl(TournamentTimeControl.RAPID);
-            if ((typeValue & 128) > 0) builder.tournamentTimeControl(TournamentTimeControl.CORRESPONDENCE);
-            builder.tournamentType(TournamentType.values()[typeValue & 31]);
-            builder.tournamentCountry(Nation.values()[ByteBufferUtil.getUnsignedShortB(buf)]);
-            builder.tournamentCategory(ByteBufferUtil.getUnsignedShortB(buf));
-            builder.tournamentRounds(ByteBufferUtil.getUnsignedShortB(buf));
+            TournamentTimeControl timeControl = TournamentTimeControl.NORMAL;
+            if ((typeValue & 32) > 0) timeControl = TournamentTimeControl.BLITZ;
+            if ((typeValue & 64) > 0) timeControl = TournamentTimeControl.RAPID;
+            if ((typeValue & 128) > 0) timeControl = TournamentTimeControl.CORRESPONDENCE;
+            header.setField("eventTimeControl", timeControl);
+            header.setField("eventType", TournamentType.values()[typeValue & 31]);
+            header.setField("eventCountry", Nation.values()[ByteBufferUtil.getUnsignedShortB(buf)].getName());
+            header.setField("eventCategory", ByteBufferUtil.getUnsignedShortB(buf));
+            header.setField("eventRounds", ByteBufferUtil.getUnsignedShortB(buf));
 
-            builder.subRound(ByteBufferUtil.getUnsignedByte(buf));
-            builder.round(ByteBufferUtil.getUnsignedByte(buf));
-            builder.result(CBUtil.decodeGameResult(ByteBufferUtil.getUnsignedByte(buf)));
+            header.setField("subRound", ByteBufferUtil.getUnsignedByte(buf));
+            header.setField("round", ByteBufferUtil.getUnsignedByte(buf));
+            header.setField("result", CBUtil.decodeGameResult(ByteBufferUtil.getUnsignedByte(buf)));
 
             int unknown = ByteBufferUtil.getUnsignedShortB(buf);
             // This one is always set to some value. No idea what it does though.
             // log.warn(String.format("Unknown value in game quotation is %d (%04X), type is %d", unknown, unknown, type));
-            builder.unknown(unknown);
 
             byte[] gameData = new byte[size - (buf.position() - startPos)];
             buf.get(gameData);
 
-            builder.gameData(gameData);
-            return builder.build();
+            if (gameData.length == 0) {
+                gameData = null;
+            }
+
+            return new GameQuotationAnnotation(header, setupPositionData, gameData, unknown);
         }
 
         @Override

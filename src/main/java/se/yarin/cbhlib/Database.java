@@ -166,6 +166,18 @@ public final class Database {
         if (tournament.getNation() != Nation.NONE) {
             model.setField("eventCountry", tournament.getNation().getName());
         }
+        if (tournament.getType() != TournamentType.NONE) {
+            model.setField("eventType", tournament.getType());
+        }
+        if (tournament.getTimeControl() != TournamentTimeControl.NORMAL) {
+            model.setField("eventTimeControl", tournament.getTimeControl());
+        }
+        if (tournament.getCategory() > 0) {
+            model.setField("eventCategory", tournament.getCategory());
+        }
+        if (tournament.getRounds() > 0) {
+            model.setField("eventRounds", tournament.getRounds());
+        }
 
         model.setField("source", source.getTitle());
         model.setField("sourceId", source.getId());

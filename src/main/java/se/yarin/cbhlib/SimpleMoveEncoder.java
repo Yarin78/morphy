@@ -43,7 +43,9 @@ public class SimpleMoveEncoder implements MoveEncoder {
             GameMovesModel.Node child = children.get(i);
             Move move = child.lastMove();
             int value;
-            if (!inverseSquareOrder) {
+            if (move.isNullMove()) {
+                value = 0;
+            } else if (!inverseSquareOrder) {
                 value = move.fromSqi() + move.toSqi() * 64;
             } else {
                 value = move.toSqi() + move.fromSqi() * 64;
@@ -107,7 +109,13 @@ public class SimpleMoveEncoder implements MoveEncoder {
                 toSqi = value % 64;
                 fromSqi = (value / 64) % 64;
             }
-            Move move = new Move(current.position(), fromSqi, toSqi);
+
+            Move move;
+            if (fromSqi == 0 && toSqi == 0) {
+                move = Move.nullMove(current.position());
+            } else {
+                move = new Move(current.position(), fromSqi, toSqi);
+            }
 
             int toRow = Chess.sqiToRow(toSqi);
             if ((toRow == 0 || toRow == 7) && current.position().stoneAt(fromSqi).toPiece() == Piece.PAWN) {

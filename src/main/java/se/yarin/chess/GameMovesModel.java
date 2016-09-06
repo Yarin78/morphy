@@ -134,6 +134,24 @@ public class GameMovesModel {
     }
 
     /**
+     * Deletes all variations in the game.
+     */
+    public void deleteAllVariations() {
+        // TODO: Test this
+        Node current = root();
+        while (current != null) {
+            if (current.hasVariations()) {
+                ArrayList<Node> children = new ArrayList<>(current.children());
+                for (int i = 1; i < children.size(); i++) {
+                    children.get(i).internalRemoveNode(true);
+                }
+            }
+            current = current.mainNode();
+        }
+        notifyMovesChanged(this.root);
+    }
+
+    /**
      * Replaces the game tree with a copy of the game tree in the specified model.
      * @param moves the moves model to copy the game tree from
      */

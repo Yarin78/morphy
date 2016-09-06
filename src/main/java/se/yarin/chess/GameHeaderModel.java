@@ -24,6 +24,8 @@ public class GameHeaderModel {
     // The types must be an immutable type, to avoid the data from being changed outside of the model
     // Can't unfortunately use Lombok @Setter since we need to notify listeners upon change
     // TODO: Create manual setters for type safety please!!
+    // TODO: Also, ensure standardization of field names in GameQuotationAnnotation, PGN
+    // TODO: Ensure all fields are set when getting a game header, inclusive tournament details
 
     @HeaderData @Getter private String white;
     @HeaderData @Getter private String black;
@@ -185,5 +187,48 @@ public class GameHeaderModel {
         for (GameHeaderModelChangeListener changeListener : changeListeners) {
             changeListener.headerModelChanged(this);
         }
+    }
+
+    @Override
+    public int hashCode() {
+        int result = 0;
+        // We xor all the result since the order of the hash set is non-deterministic
+        for (String field : fields.keySet()) {
+            Object value = fields.get(field);
+            int hc1 = field.hashCode();
+            int hc2 = value == null ? 0 : value.hashCode();
+            result ^= (hc1 * 37 + hc2);
+        }
+        return result;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        GameHeaderModel that = (GameHeaderModel) o;
+        if (getAllFields().size() != that.getAllFields().size()) return false;
+        for (String field : getAllFields().keySet()) {
+            Object v1 = getField(field);
+            Object v2 = that.getField(field);
+            if (v1 == null && v2 != null) return false;
+            if (v1 != null && !v1.equals(v2)) return false;
+        }
+
+        return true;
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder("{ ");
+        for (String field : getAllFields().keySet()) {
+            if (sb.length() > 2) {
+                sb.append(", ");
+            }
+            sb.append(field).append(" = ").append(getField(field));
+        }
+        sb.append(" }");
+        return sb.toString();
     }
 }

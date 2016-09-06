@@ -2,10 +2,7 @@ package se.yarin.cbhlib;
 
 import org.junit.Before;
 import org.junit.Test;
-import se.yarin.chess.Castles;
-import se.yarin.chess.Chess960;
-import se.yarin.chess.GameMovesModel;
-import se.yarin.chess.ShortMove;
+import se.yarin.chess.*;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -221,5 +218,20 @@ public class MovesSerializerTest {
         ByteBuffer buf = MovesSerializer.serializeMoves(moves);
         GameMovesModel outputMoves = MovesSerializer.deserializeMoves(buf);
         assertEquals(moves.toString(), outputMoves.toString());
+    }
+
+    @Test
+    public void serializeDeserializeGameWithNullMove() throws ChessBaseMoveDecodingException {
+        GameMovesModel moves = new GameMovesModel();
+        moves.root().addMove(E2, E4)
+                .addMove(Move.nullMove(moves.root().mainNode().position()))
+                .addMove(D2, D4)
+                .addMove(ShortMove.nullMove());
+
+        for (int encodingMode = 0; encodingMode < 8; encodingMode++) {
+            ByteBuffer buf = MovesSerializer.serializeMoves(moves, encodingMode);
+            GameMovesModel outputMoves = MovesSerializer.deserializeMoves(buf);
+            assertEquals(moves.toString(), outputMoves.toString());
+        }
     }
 }
