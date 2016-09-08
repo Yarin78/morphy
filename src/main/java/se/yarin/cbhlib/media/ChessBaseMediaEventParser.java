@@ -2,15 +2,10 @@ package se.yarin.cbhlib.media;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import se.yarin.cbhlib.AnnotationsSerializer;
-import se.yarin.cbhlib.ByteBufferUtil;
-import se.yarin.cbhlib.CBUtil;
+import se.yarin.cbhlib.*;
 import se.yarin.chess.*;
 import se.yarin.chess.annotations.Annotation;
 import se.yarin.chess.timeline.*;
-import yarin.cbhlib.GameResult;
-import yarin.cbhlib.TournamentTimeControls;
-import yarin.cbhlib.TournamentType;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -270,38 +265,28 @@ public class ChessBaseMediaEventParser {
         String blackLast = ByteBufferUtil.getByteString(buf), blackFirst = ByteBufferUtil.getByteString(buf);
         String whiteDelim = whiteLast.length() > 0 && whiteFirst.length() > 0 ? ", " : "";
         String blackDelim = blackLast.length() > 0 && blackFirst.length() > 0 ? ", " : "";
-        model.header().setField("white",  whiteLast + whiteDelim + whiteFirst);
-        model.header().setField("black",  blackLast + blackDelim + blackFirst);
-        model.header().setField("eventSite", ByteBufferUtil.getByteString(buf));
-        model.header().setField("eventName", ByteBufferUtil.getByteString(buf));
-        model.header().setField("eventDate", CBUtil.decodeDate(ByteBufferUtil.getIntL(buf)));
+        model.header().setWhite(whiteLast + whiteDelim + whiteFirst);
+        model.header().setBlack(blackLast + blackDelim + blackFirst);
+        model.header().setEventSite(ByteBufferUtil.getByteString(buf));
+        model.header().setEvent(ByteBufferUtil.getByteString(buf));
+        model.header().setEventDate(CBUtil.decodeDate(ByteBufferUtil.getIntL(buf)));
 
         int eventTypeValue = ByteBufferUtil.getUnsignedByte(buf);
-        if ((eventTypeValue & 31) < 0 || (eventTypeValue & 31) >= TournamentType.values().length)
-            throw new ChessBaseMediaException("Invalid event type value " + eventTypeValue);
-        TournamentType eventType = TournamentType.values()[eventTypeValue & 31];
-        model.header().setField("eventType", eventType.toString());
 
-        TournamentTimeControls timeControl = new TournamentTimeControls();
-        if ((eventTypeValue & 0x20) > 0)
-            timeControl.add(TournamentTimeControls.TournamentTimeControl.Blitz);
-        if ((eventTypeValue & 0x40) > 0)
-            timeControl.add(TournamentTimeControls.TournamentTimeControl.Rapid);
-        if ((eventTypeValue & 0x80) > 0)
-            timeControl.add(TournamentTimeControls.TournamentTimeControl.Corresp);
-        model.header().setField("timeControl", timeControl.toString());
+        model.header().setEventType(CBUtil.decodeTournamentType(eventTypeValue).getName());
+        model.header().setEventTimeControl(CBUtil.decodeTournamentTimeControl(eventTypeValue).getName());
 
         int eventValue2 = ByteBufferUtil.getUnsignedByte(buf);
-        model.header().setField("eventCountry", "#" + ByteBufferUtil.getUnsignedShortL(buf)); // TODO: Resolve country name
-        model.header().setField("eventCategory", Integer.toString(ByteBufferUtil.getUnsignedByte(buf)));
+        model.header().setEventCountry(Nation.values()[ByteBufferUtil.getUnsignedShortL(buf)].getName());
+        model.header().setEventCategory(ByteBufferUtil.getUnsignedByte(buf));
         int eventValue = ByteBufferUtil.getUnsignedByte(buf); // Not sure what this is? Not always 0, can be 3
-        // TODO: Huh, why is eventCategory set twice here!?
-        model.header().setField("eventCategory", Integer.toString(ByteBufferUtil.getUnsignedShortL(buf)));
+        // TODO: Huh, why is eventCategory set twice here!? Double check all these fields!!
+        model.header().setEventCategory(ByteBufferUtil.getUnsignedShortL(buf));
 
-        model.header().setField("sourceTitle", ByteBufferUtil.getByteString(buf));
-        model.header().setField("source", ByteBufferUtil.getByteString(buf));
+        model.header().setSourceTitle(ByteBufferUtil.getByteString(buf));
+        model.header().setSource(ByteBufferUtil.getByteString(buf));
 
-        model.header().setField("sourceDate", CBUtil.decodeDate(ByteBufferUtil.getIntL(buf)));
+        model.header().setSourceDate(CBUtil.decodeDate(ByteBufferUtil.getIntL(buf)));
 
         Date someOtherDate = CBUtil.decodeDate(ByteBufferUtil.getIntL(buf));
 
@@ -313,34 +298,19 @@ public class ChessBaseMediaEventParser {
         // 01 01 in ?
         // 00 01 in ?
 
-        model.header().setField("annotator", ByteBufferUtil.getByteString(buf));
+        model.header().setAnnotator(ByteBufferUtil.getByteString(buf));
 
-        model.header().setField("whiteElo", ByteBufferUtil.getUnsignedShortL(buf));
-        model.header().setField("blackElo", ByteBufferUtil.getUnsignedShortL(buf));
+        model.header().setWhiteElo(ByteBufferUtil.getUnsignedShortL(buf));
+        model.header().setBlackElo(ByteBufferUtil.getUnsignedShortL(buf));
 
-        model.header().setField("eco", CBUtil.decodeEco(ByteBufferUtil.getUnsignedShortL(buf)));
-
-        GameResult result = GameResult.values()[ByteBufferUtil.getUnsignedByte(buf)];
-        switch (result) {
-            case BlackWon:
-            case BlackWonOnForfeit:
-                model.header().setField("result", se.yarin.chess.GameResult.BLACK_WINS);
-                break;
-            case Draw:
-                model.header().setField("result", se.yarin.chess.GameResult.DRAW);
-                break;
-            case WhiteWon:
-            case WhiteWonOnForfeit:
-                model.header().setField("result", se.yarin.chess.GameResult.WHITE_WINS);
-                break;
-            default:
-        }
+        model.header().setEco(CBUtil.decodeEco(ByteBufferUtil.getUnsignedShortL(buf)));
+        model.header().setResult(GameResult.values()[ByteBufferUtil.getUnsignedByte(buf)]);
 
         int unknownShort = ByteBufferUtil.getUnsignedShortL(buf); // 0 or 13!?
-        model.header().setField("date", CBUtil.decodeDate(ByteBufferUtil.getIntL(buf)));
+        model.header().setDate(CBUtil.decodeDate(ByteBufferUtil.getIntL(buf)));
         int lastMoveNumber = ByteBufferUtil.getUnsignedShortL(buf);
-        model.header().setField("round", ByteBufferUtil.getUnsignedByte(buf));
-        model.header().setField("subRound", ByteBufferUtil.getUnsignedByte(buf));
+        model.header().setRound(ByteBufferUtil.getUnsignedByte(buf));
+        model.header().setSubRound(ByteBufferUtil.getUnsignedByte(buf));
 
         int unknown1 = ByteBufferUtil.getIntL(buf);
         int unknown2 = ByteBufferUtil.getIntL(buf);

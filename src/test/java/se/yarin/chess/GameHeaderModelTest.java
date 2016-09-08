@@ -44,12 +44,18 @@ public class GameHeaderModelTest {
     public void testSetBlackElo() {
         header.setField("blackElo", 2100);
         assertEquals(2100, (int) header.getBlackElo());
+
+        header.setBlackElo(2300);
+        assertEquals(2300, (int) header.getBlackElo());
     }
 
     @Test
     public void testSetResult() {
         header.setField("result", GameResult.DRAW);
         assertEquals(GameResult.DRAW, header.getResult());
+
+        header.setResult(GameResult.WHITE_WINS_ON_FORFEIT);
+        assertEquals(GameResult.WHITE_WINS_ON_FORFEIT, header.getResult());
     }
 
     @Test

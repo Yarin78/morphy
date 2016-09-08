@@ -28,7 +28,7 @@ public class ExploreWeirdMoveEncodings {
             GameHeaderModel header = new GameHeaderModel();
             GameModel gameModel = new GameModel(header, new GameMovesModel());
 
-            gameModel.header().setField("white", "Mode " + i);
+            gameModel.header().setWhite("Mode " + i);
 
             gameModel.moves().root()
                     .addMove(E2, E4).addMove(C7, C5).addMove(G1, F3).addMove(D7, D6)
@@ -77,7 +77,7 @@ public class ExploreWeirdMoveEncodings {
             GameMovesModel moves = new GameMovesModel(Chess960.getStartPosition(3), 1);
             moves.root().addMove(C1, B3).addMove(A7, A6).addMove(H2, H4);
             GameHeaderModel header = new GameHeaderModel();
-            header.setField("white", "mode " + mode);
+            header.setWhite("mode " + mode);
             GameModel gameModel = new GameModel(header, moves);
             db.addGame(gameModel);
 //        }
@@ -130,7 +130,7 @@ public class ExploreWeirdMoveEncodings {
 
 
             GameHeaderModel header = new GameHeaderModel();
-            header.setField("white", stone.toString());
+            header.setWhite(stone.toString());
             GameModel gameModel = new GameModel(header, moves);
             db.addGame(gameModel);
         }

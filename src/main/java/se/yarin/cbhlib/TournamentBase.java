@@ -58,14 +58,9 @@ public class TournamentBase extends EntityBase<TournamentEntity> {
     }
 
     public ByteBuffer serialize(@NonNull TournamentEntity tournament) {
-        int typeByte = tournament.getType().ordinal();
-        switch (tournament.getTimeControl()) {
-            case BLITZ:           typeByte += 32; break;
-            case RAPID:           typeByte += 64; break;
-            case CORRESPONDENCE:  typeByte += 128; break;
-        }
+        int typeByte = CBUtil.encodeTournamentType(tournament.getType(), tournament.getTimeControl());
 
-        // TODO: The purpose of bit 0 is not yet known
+        // The purpose of bit 0 is not yet known
         int optionByte =
                 (tournament.isComplete() ? 2 : 0) +
                 (tournament.isBoardPoints() ? 4 : 0) +
@@ -100,14 +95,7 @@ public class TournamentBase extends EntityBase<TournamentEntity> {
             .date(CBUtil.decodeDate(ByteBufferUtil.getIntL(buf)));
         int typeByte = ByteBufferUtil.getUnsignedByte(buf);
         builder.teamTournament((ByteBufferUtil.getUnsignedByte(buf) & 1) == 1);
-        int nationId = ByteBufferUtil.getUnsignedByte(buf);
-        if (nationId >= Nation.values().length) {
-            log.error(String.format("Tournament %d (" +  title + ") has unknown nation #%d", entityId, nationId));
-            // TODO: Should save this value raw instead to make it more future proof
-            builder.nation(Nation.NONE);
-        } else {
-            builder.nation(Nation.values()[nationId]);
-        }
+        builder.nation(CBUtil.decodeNation(ByteBufferUtil.getUnsignedByte(buf)));
         int unknownByte1 = ByteBufferUtil.getUnsignedByte(buf);
         builder.category(ByteBufferUtil.getUnsignedByte(buf));
         int optionByte = ByteBufferUtil.getUnsignedByte(buf);
@@ -116,13 +104,8 @@ public class TournamentBase extends EntityBase<TournamentEntity> {
         builder.count(ByteBufferUtil.getIntL(buf));
         builder.firstGameId(ByteBufferUtil.getIntL(buf));
 
-        builder.type(TournamentType.values()[typeByte & 31]);
-        // Only one of these bits ought to be set
-        builder.timeControl(TournamentTimeControl.NORMAL);
-        if ((typeByte & 32) > 0) builder.timeControl(TournamentTimeControl.BLITZ);
-        if ((typeByte & 64) > 0) builder.timeControl(TournamentTimeControl.RAPID);
-        if ((typeByte & 128) > 0) builder.timeControl(TournamentTimeControl.CORRESPONDENCE);
-
+        builder.type(CBUtil.decodeTournamentType(typeByte));
+        builder.timeControl(CBUtil.decodeTournamentTimeControl(typeByte));
         builder.complete((optionByte & 2) > 0);
         builder.boardPoints((optionByte & 4) > 0);
         builder.threePointsWin((optionByte & 8) > 0);

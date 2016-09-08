@@ -23,9 +23,33 @@ public class GameHeaderModel {
     // Define the standard fields and their types
     // The types must be an immutable type, to avoid the data from being changed outside of the model
     // Can't unfortunately use Lombok @Setter since we need to notify listeners upon change
-    // TODO: Create manual setters for type safety please!!
-    // TODO: Also, ensure standardization of field names in GameQuotationAnnotation, PGN
-    // TODO: Ensure all fields are set when getting a game header, inclusive tournament details
+
+    private static final String FIELD_WHITE = "white";
+    private static final String FIELD_BLACK = "black";
+    private static final String FIELD_WHITE_ELO = "whiteElo";
+    private static final String FIELD_BLACK_ELO = "blackElo";
+    private static final String FIELD_WHITE_TEAM = "whiteTeam";
+    private static final String FIELD_BLACK_TEAM = "blackTeam";
+    private static final String FIELD_RESULT = "result";
+    private static final String FIELD_LINE_EVALUATION = "lineEvaluation";
+    private static final String FIELD_DATE = "date";
+    private static final String FIELD_ECO = "eco";
+    private static final String FIELD_ROUND = "round";
+    private static final String FIELD_SUB_ROUND = "subRound";
+
+    private static final String FIELD_EVENT = "event";
+    private static final String FIELD_EVENT_DATE = "eventDate";
+    private static final String FIELD_EVENT_SITE = "eventSite";
+    private static final String FIELD_EVENT_COUNTRY = "eventCountry";
+    private static final String FIELD_EVENT_CATEGORY = "eventCategory";
+    private static final String FIELD_EVENT_ROUNDS = "eventRounds";
+    private static final String FIELD_EVENT_TYPE = "eventType";
+    private static final String FIELD_EVENT_TIME_CONTROL = "eventTimeControl";
+
+    private static final String FIELD_SOURCE = "source";
+    private static final String FIELD_SOURCE_TITLE = "sourceTitle";
+    private static final String FIELD_SOURCE_DATE= "sourceDate";
+    private static final String FIELD_ANNOTATOR = "annotator";
 
     @HeaderData @Getter private String white;
     @HeaderData @Getter private String black;
@@ -44,9 +68,40 @@ public class GameHeaderModel {
     @HeaderData @Getter private Date eventDate;
     @HeaderData @Getter private String eventSite;
     @HeaderData @Getter private String eventCountry;
+    @HeaderData @Getter private Integer eventCategory;
+    @HeaderData @Getter private Integer eventRounds;
+    @HeaderData @Getter private String eventType;
+    @HeaderData @Getter private String eventTimeControl;
 
+    @HeaderData @Getter private String sourceTitle;
     @HeaderData @Getter private String source;
+    @HeaderData @Getter private Date sourceDate;
     @HeaderData @Getter private String annotator;
+
+    public void setWhite(String name) { setField(FIELD_WHITE, name); }
+    public void setBlack(String name) { setField(FIELD_BLACK, name); }
+    public void setWhiteElo(int elo) { setField(FIELD_WHITE_ELO, elo); }
+    public void setBlackElo(int elo) { setField(FIELD_BLACK_ELO, elo); }
+    public void setWhiteTeam(String name) { setField(FIELD_WHITE_TEAM, name); }
+    public void setBlackTeam(String name) { setField(FIELD_BLACK_TEAM, name); }
+    public void setResult(GameResult result) { setField(FIELD_RESULT, result); }
+    public void setLineEvaluation(NAG evaluation) { setField(FIELD_LINE_EVALUATION, evaluation); }
+    public void setDate(Date date) { setField(FIELD_DATE, date); }
+    public void setEco(Eco eco) { setField(FIELD_ECO, eco); }
+    public void setRound(int round) { setField(FIELD_ROUND, round); }
+    public void setSubRound(int subRound) { setField(FIELD_SUB_ROUND, subRound); }
+    public void setEvent(String name) { setField(FIELD_EVENT, name); }
+    public void setEventDate(Date date) { setField(FIELD_EVENT_DATE, date); }
+    public void setEventSite(String site) { setField(FIELD_EVENT_SITE, site); }
+    public void setEventCountry(String country) { setField(FIELD_EVENT_COUNTRY, country); }
+    public void setEventRounds(int rounds) { setField(FIELD_EVENT_ROUNDS, rounds); }
+    public void setEventCategory(int category) { setField(FIELD_EVENT_CATEGORY, category); }
+    public void setEventType(String type) { setField(FIELD_EVENT_TYPE, type); }
+    public void setEventTimeControl(String timeControl) { setField(FIELD_EVENT_TIME_CONTROL, timeControl); }
+    public void setSourceTitle(String title) { setField(FIELD_SOURCE_TITLE, title); }
+    public void setSource(String name) { setField(FIELD_SOURCE, name); }
+    public void setSourceDate(Date date) { setField(FIELD_SOURCE_DATE, date); }
+    public void setAnnotator(String annotator) { setField(FIELD_ANNOTATOR, annotator); }
 
     // This map contains all the fields, including the standard ones
     private Map<String, Object> fields = new ConcurrentHashMap<>();

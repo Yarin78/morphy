@@ -137,54 +137,56 @@ public final class Database {
         SourceEntity source = sourceBase.get(header.getSourceId());
         TournamentEntity tournament = tournamentBase.get(header.getTournamentId());
 
-        model.setField("white", whitePlayer.getFullName());
-        model.setField("whiteId", whitePlayer.getId());
+        model.setWhite(whitePlayer.getFullName());
+        model.setField(WHITE_ID, whitePlayer.getId());
         if (header.getWhiteElo() > 0) {
-            model.setField("whiteElo", header.getWhiteElo());
+            model.setWhiteElo(header.getWhiteElo());
         }
         // TODO: whiteTeam
-        model.setField("black", blackPlayer.getFullName());
-        model.setField("blackId", blackPlayer.getId());
+        model.setBlack(blackPlayer.getFullName());
+        model.setField(BLACK_ID, blackPlayer.getId());
         if (header.getBlackElo() > 0) {
-            model.setField("blackElo", header.getBlackElo());
+            model.setBlackElo(header.getBlackElo());
         }
         // TODO: blackTeam
-        model.setField("result", header.getResult());
-        model.setField("date", header.getPlayedDate());
-        model.setField("eco", header.getEco());
+        model.setResult(header.getResult());
+        model.setDate(header.getPlayedDate());
+        model.setEco(header.getEco());
         if (header.getRound() > 0) {
-            model.setField("round", header.getRound());
+            model.setRound(header.getRound());
         }
         if (header.getSubRound() > 0) {
-            model.setField("subRound", header.getRound());
+            model.setSubRound(header.getRound());
         }
 
-        model.setField("event", tournament.getTitle());
-        model.setField("eventId", tournament.getId());
-        model.setField("eventDate", tournament.getDate());
-        model.setField("eventSite", tournament.getPlace());
+        model.setEvent(tournament.getTitle());
+        model.setField(EVENT_ID, tournament.getId());
+        model.setEventDate(tournament.getDate());
+        model.setEventSite(tournament.getPlace());
         if (tournament.getNation() != Nation.NONE) {
-            model.setField("eventCountry", tournament.getNation().getName());
+            model.setEventCountry(tournament.getNation().getName());
         }
         if (tournament.getType() != TournamentType.NONE) {
-            model.setField("eventType", tournament.getType());
+            model.setEventType(tournament.getType().getName());
         }
         if (tournament.getTimeControl() != TournamentTimeControl.NORMAL) {
-            model.setField("eventTimeControl", tournament.getTimeControl());
+            model.setEventTimeControl(tournament.getTimeControl().getName());
         }
         if (tournament.getCategory() > 0) {
-            model.setField("eventCategory", tournament.getCategory());
+            model.setEventCategory(tournament.getCategory());
         }
         if (tournament.getRounds() > 0) {
-            model.setField("eventRounds", tournament.getRounds());
+            model.setEventRounds(tournament.getRounds());
         }
 
-        model.setField("source", source.getTitle());
-        model.setField("sourceId", source.getId());
-        model.setField("annotator", annotator.getName());
-        model.setField("annotatorId", annotator.getId());
+        model.setSourceTitle(source.getTitle());
+        model.setSource(source.getPublisher());
+        model.setSourceDate(source.getPublication());
+        model.setField(SOURCE_ID, source.getId());
+        model.setAnnotator(annotator.getName());
+        model.setField(ANNOTATOR_ID, annotator.getId());
 
-        model.setField("lineEvaluation", header.getLineEvaluation());
+        model.setLineEvaluation(header.getLineEvaluation());
 
         return model;
     }
@@ -230,7 +232,7 @@ public final class Database {
             annotator = resolveEntity((Integer) header.getField(ANNOTATOR_ID),
                     new AnnotatorEntity(defaultName(header.getAnnotator())), annotatorBase);
             source = resolveEntity((Integer) header.getField(SOURCE_ID),
-                    new SourceEntity(defaultName(header.getSource())), sourceBase);
+                    new SourceEntity(defaultName(header.getSourceTitle())), sourceBase);
         } catch (RuntimeException e) {
             throw new IllegalArgumentException("Some argument were not set in the game header model", e);
         }

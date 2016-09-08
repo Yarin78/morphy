@@ -24,6 +24,10 @@ public final class Date {
         this.day = day;
     }
 
+    public static Date unset() {
+        return new Date(0, 0, 0);
+    }
+
     public static Date today() {
         Calendar cal = Calendar.getInstance();
         return new Date(

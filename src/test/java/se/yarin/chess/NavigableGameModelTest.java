@@ -87,7 +87,7 @@ public class NavigableGameModelTest {
         assertEquals(3, numCursorChanges);
         assertEquals(2, numMovesChanges);
 
-        model.header().setField("blackTeam", "some team");
+        model.header().setBlackTeam("some team");
         assertEquals(3, numCursorChanges);
         assertEquals(2, numMovesChanges);
         assertEquals(1, numHeaderChanges);

@@ -60,20 +60,20 @@ public class CreateDatabase {
                 .parent().addMove(D7, D6).addMove(D2, D4)
                 .parent().parent().addMove(G8, F6);
         quoted.moves().root().mainNode().addAnnotation(new SymbolAnnotation(NAG.GOOD_MOVE));
-        quoted.header().setField("white", "Mardell");
-        quoted.header().setField("whiteElo", 2100);
-        quoted.header().setField("black", "Kasparov");
-        quoted.header().setField("blackElo", 2800);
-        quoted.header().setField("event", "test");
-        quoted.header().setField("eventSite", "Stockholm");
-        quoted.header().setField("eco", new Eco("A01"));
-        quoted.header().setField("date", new Date(2016, 9, 1));
+        quoted.header().setWhite("Mardell");
+        quoted.header().setWhiteElo(2100);
+        quoted.header().setBlack("Kasparov");
+        quoted.header().setBlackElo(2800);
+        quoted.header().setEvent("test");
+        quoted.header().setEventSite("Stockholm");
+        quoted.header().setEco(new Eco("A01"));
+        quoted.header().setDate(new Date(2016, 9, 1));
 
         GameModel game = new GameModel();
         game.moves().root().addMove(D2, D4).addMove(G8, F6).addMove(C2, C4);
         game.moves().root().mainNode().addAnnotation(new GameQuotationAnnotation(quoted));
-        game.header().setField("white", "Carlsen");
-        game.header().setField("black", "Caruana");
+        game.header().setWhite("Carlsen");
+        game.header().setBlack("Caruana");
 
         Database db = Database.create(new File("testbases/tmp/Created/withquot3.cbh"));
         db.addGame(game);

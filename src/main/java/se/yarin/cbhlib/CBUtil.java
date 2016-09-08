@@ -76,6 +76,43 @@ public final class CBUtil {
         return data.ordinal();
     }
 
+    public static int encodeTournamentType(TournamentType type, TournamentTimeControl timeControl) {
+        // bit 0-3: type
+        // bit 5: blitz
+        // bit 6: rapid
+        // bit 7: correspondence
+        // But only one of bit 5-7 is actually set
+        int typeValue = 0;
+        switch (timeControl) {
+            case BLITZ: typeValue = 32; break;
+            case RAPID: typeValue = 64; break;
+            case CORRESPONDENCE: typeValue = 128; break;
+        }
+        typeValue += type.ordinal();
+        return typeValue;
+    }
+
+    public static TournamentType decodeTournamentType(int data) {
+        // TODO: Out of range
+        return TournamentType.values()[data & 31];
+    }
+
+    public static TournamentTimeControl decodeTournamentTimeControl(int data) {
+        if ((data & 32) > 0) return TournamentTimeControl.BLITZ;
+        if ((data & 64) > 0) return TournamentTimeControl.RAPID;
+        if ((data & 128) > 0) return TournamentTimeControl.CORRESPONDENCE;
+        return TournamentTimeControl.NORMAL;
+    }
+
+    public static Nation decodeNation(int data) {
+        // TODO: Should save this value raw instead to make it more future proof
+        return Nation.values()[data];
+    }
+
+    public static int encodeNation(Nation nation) {
+        return nation.ordinal();
+    }
+
     public static EnumSet<Medal> decodeMedals(int data) {
         EnumSet<Medal> medals = EnumSet.noneOf(Medal.class);
         for (Medal medal : Medal.values()) {

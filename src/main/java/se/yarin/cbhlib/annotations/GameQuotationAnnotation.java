@@ -138,6 +138,11 @@ public class GameQuotationAnnotation extends Annotation implements StatisticalAn
     }
 
     public static class Serializer implements AnnotationSerializer {
+
+        private <T> T valueOrDefault(T value, T defaultValue) {
+            return value == null ? defaultValue : value;
+        }
+
         @Override
         public void serialize(ByteBuffer buf, Annotation annotation) {
             GameQuotationAnnotation qa = (GameQuotationAnnotation) annotation;
@@ -151,76 +156,30 @@ public class GameQuotationAnnotation extends Annotation implements StatisticalAn
                 ByteBufferUtil.putShortB(buf, 0);
             }
 
-            // TODO: Lots of stuff can be null here, fix it!
-            ByteBufferUtil.putByteString(buf, qa.header.getWhite());
+            ByteBufferUtil.putByteString(buf, valueOrDefault(qa.header.getWhite(), ""));
             ByteBufferUtil.putByte(buf, 0);
-            ByteBufferUtil.putByteString(buf, qa.header.getBlack());
+            ByteBufferUtil.putByteString(buf, valueOrDefault(qa.header.getBlack(), ""));
             ByteBufferUtil.putByte(buf, 0);
-            ByteBufferUtil.putShortB(buf, qa.header.getWhiteElo());
-            ByteBufferUtil.putShortB(buf, qa.header.getBlackElo());
-            ByteBufferUtil.putShortB(buf, CBUtil.encodeEco(qa.header.getEco()));
-            ByteBufferUtil.putByteString(buf, qa.header.getEvent());
+            ByteBufferUtil.putShortB(buf, valueOrDefault(qa.header.getWhiteElo(), 0));
+            ByteBufferUtil.putShortB(buf, valueOrDefault(qa.header.getBlackElo(), 0));
+            ByteBufferUtil.putShortB(buf, CBUtil.encodeEco(valueOrDefault(qa.header.getEco(), Eco.unset())));
+            ByteBufferUtil.putByteString(buf, valueOrDefault(qa.header.getEvent(), ""));
             ByteBufferUtil.putByte(buf, 0);
-            ByteBufferUtil.putByteString(buf, qa.header.getEventSite());
+            ByteBufferUtil.putByteString(buf, valueOrDefault(qa.header.getEventSite(), ""));
             ByteBufferUtil.putByte(buf, 0);
-            ByteBufferUtil.putIntB(buf, CBUtil.encodeDate(qa.header.getDate()));
-            // TODO: Code below is soo ugly, please make headers typesafe!!
-            int typeValue = 0;
-            // TODO: Fix casting issues
-            TournamentTimeControl tournamentTimeControl = (TournamentTimeControl) qa.header.getField("eventTimeControl");
-            if (tournamentTimeControl != null) {
-                switch (tournamentTimeControl) {
-                    case BLITZ:
-                        typeValue = 32;
-                        break;
-                    case RAPID:
-                        typeValue = 64;
-                        break;
-                    case CORRESPONDENCE:
-                        typeValue = 128;
-                        break;
-                }
-            }
-            // TODO: Fix casting issues
-            TournamentType type = (TournamentType) qa.header.getField("eventType");
-            if (type != null) {
-                typeValue += type.ordinal();
-            }
-            ByteBufferUtil.putShortB(buf, typeValue);
-            String eventCountry = qa.header.getEventCountry();
-            if (eventCountry == null) {
-                ByteBufferUtil.putShortB(buf, 0);
-            } else {
-                ByteBufferUtil.putShortB(buf, Nation.fromName(eventCountry).ordinal());
-            }
-            Object tournamentCategory = qa.header.getField("eventCategory");
-            if (tournamentCategory != null) {
-                ByteBufferUtil.putShortB(buf, (int) tournamentCategory);
-            } else {
-                ByteBufferUtil.putShortB(buf, 0);
-            }
-            Object tournamentRounds = qa.header.getField("eventRounds");
-            if (tournamentRounds != null) {
-                ByteBufferUtil.putShortB(buf, (int) tournamentRounds);
-            } else {
-                ByteBufferUtil.putShortB(buf, 0);
-            }
+            ByteBufferUtil.putIntB(buf, CBUtil.encodeDate(valueOrDefault(qa.header.getDate(), Date.unset())));
 
-            Integer subRound = qa.header.getSubRound();
-            if (subRound == null) {
-                subRound = 0;
-            }
-            ByteBufferUtil.putByte(buf, subRound);
-            Integer round = qa.header.getRound();
-            if (round == null) {
-                round = 0;
-            }
-            ByteBufferUtil.putByte(buf, round);
-            GameResult result = qa.header.getResult();
-            if (result == null) {
-                result = GameResult.NOT_FINISHED;
-            }
-            ByteBufferUtil.putByte(buf, CBUtil.encodeGameResult(result));
+            TournamentTimeControl ttc = TournamentTimeControl.fromName(qa.header.getEventTimeControl());
+            TournamentType tt = TournamentType.fromName(qa.header.getEventType());
+            ByteBufferUtil.putShortB(buf, CBUtil.encodeTournamentType(tt, ttc));
+            ByteBufferUtil.putShortB(buf, CBUtil.encodeNation(Nation.fromName(valueOrDefault(
+                    qa.header.getEventCountry(), ""))));
+
+            ByteBufferUtil.putShortB(buf, valueOrDefault(qa.header.getEventCategory(), 0));
+            ByteBufferUtil.putShortB(buf, valueOrDefault(qa.header.getEventRounds(), 0));
+            ByteBufferUtil.putByte(buf, valueOrDefault(qa.header.getSubRound(), 0));
+            ByteBufferUtil.putByte(buf, valueOrDefault(qa.header.getRound(), 0));
+            ByteBufferUtil.putByte(buf, CBUtil.encodeGameResult(valueOrDefault(qa.header.getResult(), GameResult.NOT_FINISHED)));
             ByteBufferUtil.putShortB(buf, qa.getUnknown());
 
             if (qa.gameData != null) {
@@ -255,35 +214,35 @@ public class GameQuotationAnnotation extends Annotation implements StatisticalAn
             }
 
             GameHeaderModel header = new GameHeaderModel();
-            header.setField("white", ByteBufferUtil.getByteString(buf));
+            header.setWhite(ByteBufferUtil.getByteString(buf));
             buf.get();
-            header.setField("black", ByteBufferUtil.getByteString(buf));
+            header.setBlack(ByteBufferUtil.getByteString(buf));
             buf.get();
-            header.setField("whiteElo", ByteBufferUtil.getUnsignedShortB(buf));
-            header.setField("blackElo", ByteBufferUtil.getUnsignedShortB(buf));
+            header.setWhiteElo(ByteBufferUtil.getUnsignedShortB(buf));
+            header.setBlackElo(ByteBufferUtil.getUnsignedShortB(buf));
             Eco eco = CBUtil.decodeEco(ByteBufferUtil.getUnsignedShortB(buf));
-            header.setField("eco", eco);
-            header.setField("event", ByteBufferUtil.getByteString(buf));
+            header.setEco(eco);
+            header.setEvent(ByteBufferUtil.getByteString(buf));
             buf.get();
-            header.setField("eventSite", ByteBufferUtil.getByteString(buf));
+            header.setEventSite(ByteBufferUtil.getByteString(buf));
             buf.get();
             Date date = CBUtil.decodeDate(ByteBufferUtil.getIntB(buf));
-            header.setField("date", date);
+            header.setDate(date);
 
             int typeValue = ByteBufferUtil.getUnsignedShortB(buf);
-            TournamentTimeControl timeControl = TournamentTimeControl.NORMAL;
-            if ((typeValue & 32) > 0) timeControl = TournamentTimeControl.BLITZ;
-            if ((typeValue & 64) > 0) timeControl = TournamentTimeControl.RAPID;
-            if ((typeValue & 128) > 0) timeControl = TournamentTimeControl.CORRESPONDENCE;
-            header.setField("eventTimeControl", timeControl);
-            header.setField("eventType", TournamentType.values()[typeValue & 31]);
-            header.setField("eventCountry", Nation.values()[ByteBufferUtil.getUnsignedShortB(buf)].getName());
-            header.setField("eventCategory", ByteBufferUtil.getUnsignedShortB(buf));
-            header.setField("eventRounds", ByteBufferUtil.getUnsignedShortB(buf));
+            TournamentTimeControl timeControl = CBUtil.decodeTournamentTimeControl(typeValue);
+            TournamentType tournamentType = CBUtil.decodeTournamentType(typeValue);
+            Nation nation = CBUtil.decodeNation(ByteBufferUtil.getUnsignedShortB(buf));
 
-            header.setField("subRound", ByteBufferUtil.getUnsignedByte(buf));
-            header.setField("round", ByteBufferUtil.getUnsignedByte(buf));
-            header.setField("result", CBUtil.decodeGameResult(ByteBufferUtil.getUnsignedByte(buf)));
+            header.setEventTimeControl(timeControl.getName());
+            header.setEventType(tournamentType.getName());
+            header.setEventCountry(nation.getName());
+            header.setEventCategory(ByteBufferUtil.getUnsignedShortB(buf));
+            header.setEventRounds(ByteBufferUtil.getUnsignedShortB(buf));
+
+            header.setSubRound(ByteBufferUtil.getUnsignedByte(buf));
+            header.setRound(ByteBufferUtil.getUnsignedByte(buf));
+            header.setResult(CBUtil.decodeGameResult(ByteBufferUtil.getUnsignedByte(buf)));
 
             int unknown = ByteBufferUtil.getUnsignedShortB(buf);
             // This one is always set to some value. No idea what it does though.

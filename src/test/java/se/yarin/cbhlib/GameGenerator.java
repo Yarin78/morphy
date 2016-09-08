@@ -72,20 +72,20 @@ public class GameGenerator {
      */
     public GameHeaderModel getRandomGameHeader() {
         GameHeaderModel model = new GameHeaderModel();
-        model.setField("white", players[random.nextInt(players.length)]);
-        model.setField("black", players[random.nextInt(players.length)]);
-        model.setField("event", tournaments[random.nextInt(tournaments.length)]);
-        model.setField("annotator", annotators[random.nextInt(annotators.length)]);
-        model.setField("source", sources[random.nextInt(sources.length)]);
-        model.setField("whiteTeam", teams[random.nextInt(teams.length)]);
-        model.setField("blackTeam", teams[random.nextInt(teams.length)]);
-        model.setField("date", new Date(2016, random.nextInt(12) + 1, random.nextInt(28) + 1));
-        model.setField("eco", Eco.fromInt(random.nextInt(500)));
-        model.setField("round", random.nextInt(11) + 1);
-        model.setField("subRound", random.nextInt(10) == 0 ? (random.nextInt(3) + 1) : 0);
-        model.setField("whiteElo", random.nextInt(100) + 2750);
-        model.setField("blackElo", random.nextInt(100) + 2750);
-        model.setField("result", GameResult.values()[random.nextInt(3)]);
+        model.setWhite(players[random.nextInt(players.length)]);
+        model.setBlack(players[random.nextInt(players.length)]);
+        model.setEvent(tournaments[random.nextInt(tournaments.length)]);
+        model.setAnnotator(annotators[random.nextInt(annotators.length)]);
+        model.setSourceTitle(sources[random.nextInt(sources.length)]);
+        model.setWhiteTeam(teams[random.nextInt(teams.length)]);
+        model.setBlackTeam(teams[random.nextInt(teams.length)]);
+        model.setDate(new Date(2016, random.nextInt(12) + 1, random.nextInt(28) + 1));
+        model.setEco(Eco.fromInt(random.nextInt(500)));
+        model.setRound(random.nextInt(11) + 1);
+        model.setSubRound(random.nextInt(10) == 0 ? (random.nextInt(3) + 1) : 0);
+        model.setWhiteElo(random.nextInt(100) + 2750);
+        model.setBlackElo(random.nextInt(100) + 2750);
+        model.setResult(GameResult.values()[random.nextInt(3)]);
         return model;
     }
 

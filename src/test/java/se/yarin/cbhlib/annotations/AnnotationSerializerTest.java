@@ -56,27 +56,25 @@ public class AnnotationSerializerTest {
     @Test
     public void testGameQuotationAnnotationSerialization() {
         GameHeaderModel header = new GameHeaderModel();
-        header.setField("white", "Mardell, Jimmy");
-        header.setField("black", "Kasparov, Garry");
-        header.setField("whiteElo", 2100);
-        header.setField("blackElo", 2830);
-        header.setField("date", new Date(2016, 8, 20));
-        header.setField("eco", new Eco("A57"));
-        header.setField("event", "unit test");
-        header.setField("result", GameResult.BLACK_WINS);
-        header.setField("round", 1);
-        header.setField("subRound", 2);
-        header.setField("eventSite", "source code");
-        header.setField("eventCategory", 3);
-        header.setField("eventCountry", "Sweden");
-        header.setField("eventRounds", 5);
-        header.setField("eventTimeControl", TournamentTimeControl.BLITZ);
-        header.setField("eventType", TournamentType.MATCH);
+        header.setWhite("Mardell, Jimmy");
+        header.setBlack("Kasparov, Garry");
+        header.setWhiteElo(2100);
+        header.setBlackElo(2830);
+        header.setDate(new Date(2016, 8, 20));
+        header.setEco(new Eco("A57"));
+        header.setEvent("unit test");
+        header.setResult(GameResult.BLACK_WINS);
+        header.setRound(1);
+        header.setSubRound(2);
+        header.setEventSite("source code");
+        header.setEventCategory(3);
+        header.setEventCountry("Sweden");
+        header.setEventRounds(5);
+        header.setEventTimeControl(TournamentTimeControl.BLITZ.getName());
+        header.setEventType(TournamentType.MATCH.getName());
 
         GameQuotationAnnotation before = new GameQuotationAnnotation(header);
         GameQuotationAnnotation after = serialize(before);
-
-        System.out.println(before.getHeader());
 
         assertEquals(before, after);
     }

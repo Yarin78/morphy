@@ -30,7 +30,7 @@ public class CreateDiverseMoveEncodingBase {
             GameHeaderModel header = new GameHeaderModel();
             GameModel gameModel = new GameModel(header, moves);
 
-            gameModel.header().setField("white", title + ", mode " + i);
+            gameModel.header().setWhite(title + ", mode " + i);
 
             db.addGame(gameModel);
         }

@@ -23,13 +23,13 @@ public class DatabaseTest {
 
     private GameModel getSimpleGame(String white, String black, String event, String source, String annotator) {
         GameHeaderModel header = new GameHeaderModel();
-        header.setField("white", white);
-        header.setField("black", black);
-        header.setField("result", GameResult.DRAW);
-        header.setField("date", new Date(2016, 8, 10));
-        header.setField("event", event);
-        header.setField("source", source);
-        header.setField("annotator", annotator);
+        header.setWhite(white);
+        header.setBlack(black);
+        header.setResult(GameResult.DRAW);
+        header.setDate(new Date(2016, 8, 10));
+        header.setEvent(event);
+        header.setSourceTitle(source);
+        header.setAnnotator(annotator);
         GameMovesModel movesModel = new GameMovesModel();
         movesModel.root().addMove(E2, E4).addMove(C7, C5);
         movesModel.root().addAnnotation(new TextAfterMoveAnnotation("Interesting game!"));

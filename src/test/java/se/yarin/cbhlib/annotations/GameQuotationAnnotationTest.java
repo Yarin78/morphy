@@ -56,18 +56,18 @@ public class GameQuotationAnnotationTest {
     @Test
     public void testSerializeDeserializeGameQuotation() {
         GameModel model = new GameModel();
-        model.header().setField("white", "Mårdell, Jimmy");
-        model.header().setField("black", "Carlsen, Magnus");
-        model.header().setField("whiteElo", 2100);
-        model.header().setField("blackElo", 2800);
-        model.header().setField("event", "my event");
-        model.header().setField("eco", new Eco("A33"));
-        model.header().setField("date", new Date(2016, 9, 5));
-        model.header().setField("eventTimeControl", TournamentTimeControl.BLITZ);
-        model.header().setField("eventType", TournamentType.MATCH);
-        model.header().setField("eventCategory", 15);
-        model.header().setField("eventSite", "Stockholm");
-        model.header().setField("result", GameResult.DRAW);
+        model.header().setWhite("Mårdell, Jimmy");
+        model.header().setBlack("Carlsen, Magnus");
+        model.header().setWhiteElo(2100);
+        model.header().setBlackElo(2800);
+        model.header().setEvent("my event");
+        model.header().setEco(new Eco("A33"));
+        model.header().setDate(new Date(2016, 9, 5));
+        model.header().setEventTimeControl(TournamentTimeControl.BLITZ.getName());
+        model.header().setEventType(TournamentType.MATCH.getName());
+        model.header().setEventCategory(15);
+        model.header().setEventSite("Stockholm");
+        model.header().setResult(GameResult.DRAW);
 
         model.moves().root().addMove(E2, E4).addMove(E7, E6).addMove(D2, D4)
                 .addMove(D7, D5).parent().addMove(C7, C5);
@@ -92,9 +92,9 @@ public class GameQuotationAnnotationTest {
         assertEquals("my event", modelAfter.header().getEvent());
         assertEquals("A33", modelAfter.header().getEco().toString());
         assertEquals(new Date(2016, 9, 5), modelAfter.header().getDate());
-        assertEquals(TournamentTimeControl.BLITZ, modelAfter.header().getField("eventTimeControl"));
-        assertEquals(TournamentType.MATCH, modelAfter.header().getField("eventType"));
-        assertEquals(15, modelAfter.header().getField("eventCategory"));
+        assertEquals("blitz", modelAfter.header().getEventTimeControl());
+        assertEquals("match", modelAfter.header().getEventType());
+        assertEquals(15, (int) modelAfter.header().getEventCategory());
         assertEquals("Stockholm", modelAfter.header().getEventSite());
         assertEquals(GameResult.DRAW, modelAfter.header().getResult());
     }
