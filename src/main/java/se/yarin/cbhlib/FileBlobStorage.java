@@ -13,15 +13,14 @@ import static java.nio.file.StandardOpenOption.CREATE_NEW;
 import static java.nio.file.StandardOpenOption.READ;
 import static java.nio.file.StandardOpenOption.WRITE;
 
-// TODO: Rename to PersistentDynamicBlobStorage!?
-public class FileDynamicBlobStorage implements DynamicBlobStorage {
-    private static final Logger log = LoggerFactory.getLogger(FileDynamicBlobStorage.class);
+public class FileBlobStorage implements BlobStorage {
+    private static final Logger log = LoggerFactory.getLogger(FileBlobStorage.class);
     private static final int DEFAULT_CHUNK_SIZE = 1024*1024;
     private static final int DEFAULT_PREFETCH_SIZE = 4096;
 
     private FileChannel channel;
     private BlobSizeRetriever blobSizeRetriever;
-    private static final int DEFAULT_SERIALIZED_HEADER_SIZE = 26; // Size of header to create for new storages
+    private static final int DEFAULT_SERIALIZED_HEADER_SIZE = 26; // Size of header to create for a new storage
     private int size; // Should match channel.size()
     private int headerSize; // The actual header size according to the metadata
     private int trashBytes; // The number of bytes in the storage that's not used for any data
@@ -29,13 +28,13 @@ public class FileDynamicBlobStorage implements DynamicBlobStorage {
     private final int chunkSize, prefetchSize;
 
 
-    FileDynamicBlobStorage(
+    FileBlobStorage(
             @NonNull File file,
             @NonNull BlobSizeRetriever blobSizeRetriever) throws IOException {
         this(file, blobSizeRetriever, DEFAULT_CHUNK_SIZE, DEFAULT_PREFETCH_SIZE);
     }
 
-    FileDynamicBlobStorage(
+    FileBlobStorage(
             @NonNull File file,
             @NonNull BlobSizeRetriever blobSizeRetriever,
             int chunkSize, int prefetchSize) throws IOException {
@@ -100,7 +99,7 @@ public class FileDynamicBlobStorage implements DynamicBlobStorage {
     }
 
     @Override
-    public ByteBuffer getBlob(int offset) throws IOException {
+    public ByteBuffer readBlob(int offset) throws IOException {
         channel.position(offset);
         ByteBuffer buf = ByteBuffer.allocate(prefetchSize);
         channel.read(buf);
@@ -118,7 +117,7 @@ public class FileDynamicBlobStorage implements DynamicBlobStorage {
     }
 
     @Override
-    public int addBlob(@NonNull ByteBuffer blob) throws IOException {
+    public int writeBlob(@NonNull ByteBuffer blob) throws IOException {
         int offset = size;
         channel.position(size);
         size += channel.write(blob);
@@ -127,22 +126,7 @@ public class FileDynamicBlobStorage implements DynamicBlobStorage {
     }
 
     @Override
-    public int putBlob(int oldOffset, @NonNull ByteBuffer blob) throws IOException {
-        // TODO: This method is no longer used, can probably be removed!?
-        ByteBuffer oldBlob = getBlob(oldOffset);
-        int oldSize = blobSizeRetriever.getBlobSize(oldBlob);
-        int newSize = blobSizeRetriever.getBlobSize(blob);
-        if (newSize > oldSize) {
-            return addBlob(blob);
-        }
-        channel.position(oldOffset);
-        channel.write(blob);
-        channel.force(false);
-        return oldOffset;
-    }
-
-    @Override
-    public void forcePutBlob(int offset, @NonNull ByteBuffer blob) throws IOException {
+    public void writeBlob(int offset, @NonNull ByteBuffer blob) throws IOException {
         channel.position(offset);
         channel.write(blob);
         channel.force(false);

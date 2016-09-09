@@ -12,16 +12,16 @@ import java.util.Random;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-public class FileDynamicBlobStorageTest {
+public class FileBlobStorageTest {
     private static final int CHUNK_SIZE = 4096;
     @Rule
     public TemporaryFolder folder = new TemporaryFolder();
 
-    private DynamicBlobStorage createStorage() throws IOException {
+    private BlobStorage createStorage() throws IOException {
         File file = folder.newFile();
         file.delete();
-        FileDynamicBlobStorage.createEmptyStorage(file);
-        return new FileDynamicBlobStorage(file, new StringBlobSizeRetriever(), CHUNK_SIZE, CHUNK_SIZE);
+        FileBlobStorage.createEmptyStorage(file);
+        return new FileBlobStorage(file, new StringBlobSizeRetriever(), CHUNK_SIZE, CHUNK_SIZE);
     }
 
     private ByteBuffer createBlob(String value) {
@@ -52,34 +52,19 @@ public class FileDynamicBlobStorageTest {
 
     @Test
     public void addAndRetrieveBlobToStorage() throws IOException {
-        DynamicBlobStorage storage = createStorage();
-        int ofs = storage.addBlob(createBlob("hello world"));
-        assertEquals("hello world", parseBlob(storage.getBlob(ofs)));
+        BlobStorage storage = createStorage();
+        int ofs = storage.writeBlob(createBlob("hello world"));
+        assertEquals("hello world", parseBlob(storage.readBlob(ofs)));
     }
 
     @Test
     public void addMultipleBlobs() throws IOException {
-        DynamicBlobStorage storage = createStorage();
-        assertEquals(26, storage.addBlob(createBlob("hello")));
-        assertEquals(35, storage.addBlob(createBlob("world")));
-        assertEquals(44, storage.addBlob(createBlob("foo")));
-        assertEquals(51, storage.addBlob(createBlob("bar")));
+        BlobStorage storage = createStorage();
+        assertEquals(26, storage.writeBlob(createBlob("hello")));
+        assertEquals(35, storage.writeBlob(createBlob("world")));
+        assertEquals(44, storage.writeBlob(createBlob("foo")));
+        assertEquals(51, storage.writeBlob(createBlob("bar")));
         assertEquals(58, storage.getSize());
-    }
-
-    @Test
-    public void replaceBlob() throws IOException {
-        DynamicBlobStorage storage = createStorage();
-        assertEquals(26, storage.addBlob(createBlob("foo")));
-        assertEquals(33, storage.addBlob(createBlob("hello")));
-        assertEquals(42, storage.getSize());
-
-        assertEquals(42, storage.putBlob(26, createBlob("world")));
-        assertEquals(33, storage.putBlob(33, createBlob("bar")));
-        assertEquals(51, storage.getSize());
-
-        assertEquals("world", parseBlob(storage.getBlob(42)));
-        assertEquals("bar", parseBlob(storage.getBlob(33)));
     }
 
     @Test
@@ -98,7 +83,8 @@ public class FileDynamicBlobStorageTest {
             strings[i] = sb.toString();
         }
 
-        DynamicBlobStorage storage = createStorage();
+        BlobStorage storage = createStorage();
+        StringBlobSizeRetriever sizeRetriever = new StringBlobSizeRetriever();
         int[] ofs = new int[positions], expected = new int[positions];
         for (int i = 0; i < positions; i++) {
             ofs[i] = -1;
@@ -106,16 +92,24 @@ public class FileDynamicBlobStorageTest {
         for (int i = 0; i < iter; i++) {
             ByteBuffer blob = createBlob(strings[i]);
             if (i < positions) {
-                ofs[i] = storage.addBlob(blob);
+                ofs[i] = storage.writeBlob(blob);
                 expected[i] = i;
             } else {
-                ofs[i % positions] = storage.putBlob(ofs[i % positions], blob);
+                int oldSize = sizeRetriever.getBlobSize(storage.readBlob(ofs[i % positions]));
+                int delta = sizeRetriever.getBlobSize(blob) - oldSize;
+                if (delta > 0) {
+                    storage.insert(ofs[i % positions], delta);
+                    for (int j = i % positions + 1; j < positions; j++) {
+                        if (ofs[j] >= 0) ofs[j] += delta;
+                    }
+                }
+                storage.writeBlob(ofs[i % positions], blob);
                 expected[i % positions] = i;
             }
 
             for (int j = 0; j < positions; j++) {
                 if (ofs[j] >= 0) {
-                    String actual = parseBlob(storage.getBlob(ofs[j]));
+                    String actual = parseBlob(storage.readBlob(ofs[j]));
                     assertEquals(strings[expected[j]], actual);
                 }
             }
@@ -124,16 +118,16 @@ public class FileDynamicBlobStorageTest {
 
     @Test
     public void testInsert() throws IOException {
-        DynamicBlobStorage storage = createStorage();
-        int ofs1 = storage.addBlob(createBlob("foo"));
-        int ofs2 = storage.addBlob(createBlob("bar"));
-        int ofs3 = storage.addBlob(createBlob("yo"));
+        BlobStorage storage = createStorage();
+        int ofs1 = storage.writeBlob(createBlob("foo"));
+        int ofs2 = storage.writeBlob(createBlob("bar"));
+        int ofs3 = storage.writeBlob(createBlob("yo"));
 
         storage.insert(ofs2, 8);
 
-        assertEquals("foo", parseBlob(storage.getBlob(ofs1)));
-        assertEquals("bar", parseBlob(storage.getBlob(ofs2 + 8)));
-        assertEquals("yo", parseBlob(storage.getBlob(ofs3 + 8)));
+        assertEquals("foo", parseBlob(storage.readBlob(ofs1)));
+        assertEquals("bar", parseBlob(storage.readBlob(ofs2 + 8)));
+        assertEquals("yo", parseBlob(storage.readBlob(ofs3 + 8)));
     }
 
     @Test
@@ -153,10 +147,10 @@ public class FileDynamicBlobStorageTest {
         // Ensure strings are larger than the chunk the data is moved with
         assertTrue(largeStrings[0].length() > CHUNK_SIZE);
 
-        DynamicBlobStorage storage = createStorage();
+        BlobStorage storage = createStorage();
         int[] ofs = new int[n];
         for (int i = 0; i < n; i++) {
-            ofs[i] = storage.addBlob(createBlob(largeStrings[i]));
+            ofs[i] = storage.writeBlob(createBlob(largeStrings[i]));
         }
 
         // Do 100 random insert operations, and update the affected offsets
@@ -170,7 +164,7 @@ public class FileDynamicBlobStorageTest {
 
         // Ensure all strings match still
         for (int i = 0; i < n; i++) {
-            assertEquals("String " + i + " mismatches", largeStrings[i], parseBlob(storage.getBlob(ofs[i])));
+            assertEquals("String " + i + " mismatches", largeStrings[i], parseBlob(storage.readBlob(ofs[i])));
         }
     }
 }

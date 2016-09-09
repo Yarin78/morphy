@@ -14,16 +14,16 @@ import java.nio.file.StandardOpenOption;
 public class AnnotationBase implements BlobSizeRetriever {
     private static final Logger log = LoggerFactory.getLogger(AnnotationBase.class);
 
-    private final DynamicBlobStorage storage;
+    private final BlobStorage storage;
 
     /**
      * Creates a new annotation base that is initially empty.
      */
     public AnnotationBase() {
-        this.storage = new InMemoryDynamicBlobStorage(this);
+        this.storage = new InMemoryBlobStorage(this);
     }
 
-    private AnnotationBase(@NonNull DynamicBlobStorage storage) {
+    private AnnotationBase(@NonNull BlobStorage storage) {
         this.storage = storage;
     }
 
@@ -43,7 +43,7 @@ public class AnnotationBase implements BlobSizeRetriever {
      * @throws IOException if something went wrong when opening the database
      */
     public static AnnotationBase open(@NonNull File file) throws IOException {
-        return new AnnotationBase(new FileDynamicBlobStorage(file, new AnnotationBase()));
+        return new AnnotationBase(new FileBlobStorage(file, new AnnotationBase()));
     }
 
     /**
@@ -54,7 +54,7 @@ public class AnnotationBase implements BlobSizeRetriever {
      * @throws IOException if something went wrong when creating the database
      */
     public static AnnotationBase create(@NonNull File file) throws IOException {
-        FileDynamicBlobStorage.createEmptyStorage(file);
+        FileBlobStorage.createEmptyStorage(file);
         return open(file);
     }
 
@@ -64,13 +64,13 @@ public class AnnotationBase implements BlobSizeRetriever {
      * @param file the file to populate the in-memory database with
      * @return an open in-memory storage
      */
-    protected static DynamicBlobStorage loadInMemoryStorage(@NonNull File file) throws IOException {
+    protected static BlobStorage loadInMemoryStorage(@NonNull File file) throws IOException {
         FileChannel channel = FileChannel.open(file.toPath(), StandardOpenOption.READ);
         ByteBuffer buf = ByteBuffer.allocate((int) channel.size());
         channel.read(buf);
         channel.close();
         buf.flip();
-        return new InMemoryDynamicBlobStorage(buf, new AnnotationBase());
+        return new InMemoryBlobStorage(buf, new AnnotationBase());
     }
 
     @Override
@@ -90,7 +90,7 @@ public class AnnotationBase implements BlobSizeRetriever {
      */
     public void getAnnotations(@NonNull GameMovesModel model, int ofs) throws IOException {
         if (ofs > 0) {
-            ByteBuffer blob = storage.getBlob(ofs);
+            ByteBuffer blob = storage.readBlob(ofs);
             AnnotationsSerializer.deserializeAnnotations(blob, model);
         }
     }
@@ -110,10 +110,10 @@ public class AnnotationBase implements BlobSizeRetriever {
         }
         ByteBuffer buf = AnnotationsSerializer.serializeAnnotations(gameId, model);
         if (ofs > 0) {
-            storage.forcePutBlob(ofs, buf);
+            storage.writeBlob(ofs, buf);
             return ofs;
         }
-        return storage.addBlob(buf);
+        return storage.writeBlob(buf);
     }
 
     int preparePutBlob(int currentAnnotationOffset, int targetAnnotationOffset, GameMovesModel model)
@@ -128,7 +128,7 @@ public class AnnotationBase implements BlobSizeRetriever {
             return newAnnotationSize;
         } else {
             assert currentAnnotationOffset == targetAnnotationOffset;
-            int oldAnnotationSize = getBlobSize(storage.getBlob(currentAnnotationOffset));
+            int oldAnnotationSize = getBlobSize(storage.readBlob(currentAnnotationOffset));
             if (newAnnotationSize <= oldAnnotationSize) {
                 return 0;
             }
@@ -142,7 +142,7 @@ public class AnnotationBase implements BlobSizeRetriever {
         storage.close();
     }
 
-    public FileDynamicBlobStorage getStorage() {
-        return (FileDynamicBlobStorage) storage;
+    public FileBlobStorage getStorage() {
+        return (FileBlobStorage) storage;
     }
 }

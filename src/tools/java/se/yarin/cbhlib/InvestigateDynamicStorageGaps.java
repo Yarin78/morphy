@@ -45,7 +45,7 @@ public class InvestigateDynamicStorageGaps {
 
     private static void checkMoves(Database base) throws IOException {
         GameHeaderBase headerBase = base.getHeaderBase();
-        FileDynamicBlobStorage movesStorage = base.getMovesBase().getStorage();
+        FileBlobStorage movesStorage = base.getMovesBase().getStorage();
 
         int lastMoves = movesStorage.getHeaderSize();
         for (int i = 1; i <= headerBase.size(); i++) {
@@ -55,7 +55,7 @@ public class InvestigateDynamicStorageGaps {
                 int movesOffset = gameHeader.getMovesOffset();
 //                            int movesOffset = gameHeader.getAnnotationOffset();
 
-                ByteBuffer movesRaw = movesStorage.getBlob(movesOffset);
+                ByteBuffer movesRaw = movesStorage.readBlob(movesOffset);
                 int movesLen = base.getMovesBase().getBlobSize(movesRaw);
 
                 if (lastMoves > movesOffset) {
@@ -81,7 +81,7 @@ public class InvestigateDynamicStorageGaps {
     private static void checkAnnos(Database base) throws IOException {
 
         GameHeaderBase headerBase = base.getHeaderBase();
-        FileDynamicBlobStorage annoStorage = base.getAnnotationBase().getStorage();
+        FileBlobStorage annoStorage = base.getAnnotationBase().getStorage();
         int lastAnnos = annoStorage.getHeaderSize();
         for (int i = 1; i <= headerBase.size(); i++) {
             try {
@@ -90,7 +90,7 @@ public class InvestigateDynamicStorageGaps {
                 int annosOffset = gameHeader.getAnnotationOffset();
                 if (annosOffset == 0) continue;
 
-                ByteBuffer annosRaw = annoStorage.getBlob(annosOffset);
+                ByteBuffer annosRaw = annoStorage.readBlob(annosOffset);
                 int movesLen = base.getAnnotationBase().getBlobSize(annosRaw);
 //                System.out.println(CBUtil.toHexString(annosRaw));
 

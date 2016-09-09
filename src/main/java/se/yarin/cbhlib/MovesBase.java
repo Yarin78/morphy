@@ -14,7 +14,7 @@ import java.nio.file.StandardOpenOption;
 public class MovesBase implements BlobSizeRetriever {
     private static final Logger log = LoggerFactory.getLogger(MovesBase.class);
 
-    private final DynamicBlobStorage storage;
+    private final BlobStorage storage;
     private int encodingMode = 0; // The encoding mode to use when writing games
 
     void setEncodingMode(int encodingMode) {
@@ -25,10 +25,10 @@ public class MovesBase implements BlobSizeRetriever {
      * Creates a new moves base that is initially empty.
      */
     public MovesBase() {
-        this.storage = new InMemoryDynamicBlobStorage(this);
+        this.storage = new InMemoryBlobStorage(this);
     }
 
-    private MovesBase(@NonNull DynamicBlobStorage storage) {
+    private MovesBase(@NonNull BlobStorage storage) {
         this.storage = storage;
     }
 
@@ -48,7 +48,7 @@ public class MovesBase implements BlobSizeRetriever {
      * @throws IOException if something went wrong when opening the database
      */
     public static MovesBase open(@NonNull File file) throws IOException {
-        return new MovesBase(new FileDynamicBlobStorage(file, new MovesBase()));
+        return new MovesBase(new FileBlobStorage(file, new MovesBase()));
     }
 
     /**
@@ -59,7 +59,7 @@ public class MovesBase implements BlobSizeRetriever {
      * @throws IOException if something went wrong when creating the database
      */
     public static MovesBase create(@NonNull File file) throws IOException {
-        FileDynamicBlobStorage.createEmptyStorage(file);
+        FileBlobStorage.createEmptyStorage(file);
         return open(file);
     }
 
@@ -69,13 +69,13 @@ public class MovesBase implements BlobSizeRetriever {
      * @param file the file to populate the in-memory database with
      * @return an open in-memory storage
      */
-    protected static DynamicBlobStorage loadInMemoryStorage(@NonNull File file) throws IOException {
+    protected static BlobStorage loadInMemoryStorage(@NonNull File file) throws IOException {
         FileChannel channel = FileChannel.open(file.toPath(), StandardOpenOption.READ);
         ByteBuffer buf = ByteBuffer.allocate((int) channel.size());
         channel.read(buf);
         channel.close();
         buf.flip();
-        return new InMemoryDynamicBlobStorage(buf, new MovesBase());
+        return new InMemoryBlobStorage(buf, new MovesBase());
     }
 
     @Override
@@ -93,7 +93,7 @@ public class MovesBase implements BlobSizeRetriever {
      */
     public GameMovesModel getMoves(int ofs)
             throws IOException, ChessBaseInvalidDataException, ChessBaseUnsupportedException {
-        ByteBuffer blob = storage.getBlob(ofs);
+        ByteBuffer blob = storage.readBlob(ofs);
         return MovesSerializer.deserializeMoves(blob);
     }
 
@@ -108,15 +108,15 @@ public class MovesBase implements BlobSizeRetriever {
     public int putMoves(int ofs, GameMovesModel model) throws IOException {
         ByteBuffer buf = MovesSerializer.serializeMoves(model, encodingMode);
         if (ofs > 0) {
-            storage.forcePutBlob(ofs, buf);
+            storage.writeBlob(ofs, buf);
             return ofs;
         }
-        return storage.addBlob(buf);
+        return storage.writeBlob(buf);
     }
 
     int preparePutBlob(int ofs, GameMovesModel model) throws IOException {
         ByteBuffer buf = MovesSerializer.serializeMoves(model, encodingMode);
-        int oldGameSize = getBlobSize(storage.getBlob(ofs));
+        int oldGameSize = getBlobSize(storage.readBlob(ofs));
         int newGameSize = getBlobSize(buf);
         if (newGameSize <= oldGameSize) {
             return 0;
@@ -130,7 +130,7 @@ public class MovesBase implements BlobSizeRetriever {
         storage.close();
     }
 
-    public FileDynamicBlobStorage getStorage() {
-        return (FileDynamicBlobStorage) storage;
+    public FileBlobStorage getStorage() {
+        return (FileBlobStorage) storage;
     }
 }

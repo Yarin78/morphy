@@ -5,17 +5,17 @@ import lombok.NonNull;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-public class InMemoryDynamicBlobStorage implements DynamicBlobStorage {
+public class InMemoryBlobStorage implements BlobStorage {
 
     private ByteBuffer data;
     private BlobSizeRetriever blobSizeRetriever;
 
-    InMemoryDynamicBlobStorage(
+    InMemoryBlobStorage(
             @NonNull BlobSizeRetriever blobSizeRetriever) {
         this((ByteBuffer) ByteBuffer.allocate(32).limit(1), blobSizeRetriever);
     }
 
-    InMemoryDynamicBlobStorage(
+    InMemoryBlobStorage(
             @NonNull ByteBuffer data,
             @NonNull BlobSizeRetriever blobSizeRetriever) {
         this.data = data;
@@ -34,7 +34,7 @@ public class InMemoryDynamicBlobStorage implements DynamicBlobStorage {
     }
 
     @Override
-    public ByteBuffer getBlob(int offset) {
+    public ByteBuffer readBlob(int offset) {
         data.position(offset);
         byte[] result = new byte[blobSizeRetriever.getBlobSize(data)];
         data.get(result);
@@ -42,7 +42,7 @@ public class InMemoryDynamicBlobStorage implements DynamicBlobStorage {
     }
 
     @Override
-    public int addBlob(@NonNull ByteBuffer blob) {
+    public int writeBlob(@NonNull ByteBuffer blob) {
         while (data.limit() + blob.limit() > data.capacity()) {
             grow();
         }
@@ -54,19 +54,7 @@ public class InMemoryDynamicBlobStorage implements DynamicBlobStorage {
     }
 
     @Override
-    public int putBlob(int oldOffset, @NonNull ByteBuffer blob) {
-        data.position(oldOffset);
-        int oldSize = blobSizeRetriever.getBlobSize(data);
-        int newSize = blobSizeRetriever.getBlobSize(blob);
-        if (newSize > oldSize) {
-            return addBlob(blob);
-        }
-        data.put(blob);
-        return oldOffset;
-    }
-
-    @Override
-    public void forcePutBlob(int offset, @NonNull ByteBuffer blob) {
+    public void writeBlob(int offset, @NonNull ByteBuffer blob) {
         while (offset + blob.limit() > data.capacity()) {
             grow();
         }

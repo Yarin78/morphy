@@ -8,7 +8,7 @@ import java.util.Random;
 
 import static org.junit.Assert.assertEquals;
 
-public class InMemoryDynamicBlobStorageTest {
+public class InMemoryBlobStorageTest {
     private ByteBuffer createBlob(String value) {
         ByteBuffer blob = ByteBuffer.allocate(value.length() + 2);
         blob.putShort((short) (value.length() + 2));
@@ -32,34 +32,19 @@ public class InMemoryDynamicBlobStorageTest {
 
     @Test
     public void addAndRetrieveBlobToStorage() {
-        InMemoryDynamicBlobStorage storage = new InMemoryDynamicBlobStorage(new StringBlobSizeRetriever());
-        int ofs = storage.addBlob(createBlob("hello world"));
-        Assert.assertEquals("hello world", parseBlob(storage.getBlob(ofs)));
+        InMemoryBlobStorage storage = new InMemoryBlobStorage(new StringBlobSizeRetriever());
+        int ofs = storage.writeBlob(createBlob("hello world"));
+        Assert.assertEquals("hello world", parseBlob(storage.readBlob(ofs)));
     }
 
     @Test
     public void addMultipleBlobs() {
-        InMemoryDynamicBlobStorage storage = new InMemoryDynamicBlobStorage(new StringBlobSizeRetriever());
-        Assert.assertEquals(1, storage.addBlob(createBlob("hello")));
-        Assert.assertEquals(8, storage.addBlob(createBlob("world")));
-        Assert.assertEquals(15, storage.addBlob(createBlob("foo")));
-        Assert.assertEquals(20, storage.addBlob(createBlob("bar")));
+        InMemoryBlobStorage storage = new InMemoryBlobStorage(new StringBlobSizeRetriever());
+        Assert.assertEquals(1, storage.writeBlob(createBlob("hello")));
+        Assert.assertEquals(8, storage.writeBlob(createBlob("world")));
+        Assert.assertEquals(15, storage.writeBlob(createBlob("foo")));
+        Assert.assertEquals(20, storage.writeBlob(createBlob("bar")));
         Assert.assertEquals(25, storage.getSize());
-    }
-
-    @Test
-    public void replaceBlob() {
-        InMemoryDynamicBlobStorage storage = new InMemoryDynamicBlobStorage(new StringBlobSizeRetriever());
-        Assert.assertEquals(1, storage.addBlob(createBlob("foo")));
-        Assert.assertEquals(6, storage.addBlob(createBlob("hello")));
-        Assert.assertEquals(13, storage.getSize());
-
-        Assert.assertEquals(13, storage.putBlob(0, createBlob("world")));
-        Assert.assertEquals(6, storage.putBlob(6, createBlob("bar")));
-        Assert.assertEquals(20, storage.getSize());
-
-        Assert.assertEquals("world", parseBlob(storage.getBlob(13)));
-        Assert.assertEquals("bar", parseBlob(storage.getBlob(6)));
     }
 
     @Test
@@ -78,7 +63,8 @@ public class InMemoryDynamicBlobStorageTest {
             strings[i] = sb.toString();
         }
 
-        InMemoryDynamicBlobStorage storage = new InMemoryDynamicBlobStorage(new StringBlobSizeRetriever());
+        StringBlobSizeRetriever sizeRetriever = new StringBlobSizeRetriever();
+        InMemoryBlobStorage storage = new InMemoryBlobStorage(sizeRetriever);
         int[] ofs = new int[positions], expected = new int[positions];
         for (int i = 0; i < positions; i++) {
             ofs[i] = -1;
@@ -86,16 +72,24 @@ public class InMemoryDynamicBlobStorageTest {
         for (int i = 0; i < iter; i++) {
             ByteBuffer blob = createBlob(strings[i]);
             if (i < positions) {
-                ofs[i] = storage.addBlob(blob);
+                ofs[i] = storage.writeBlob(blob);
                 expected[i] = i;
             } else {
-                ofs[i % positions] = storage.putBlob(ofs[i % positions], blob);
+                int oldSize = sizeRetriever.getBlobSize(storage.readBlob(ofs[i % positions]));
+                int delta = sizeRetriever.getBlobSize(blob) - oldSize;
+                if (delta > 0) {
+                    storage.insert(ofs[i % positions], delta);
+                    for (int j = i % positions + 1; j < positions; j++) {
+                        if (ofs[j] >= 0) ofs[j] += delta;
+                    }
+                }
+                storage.writeBlob(ofs[i % positions], blob);
                 expected[i % positions] = i;
             }
 
             for (int j = 0; j < positions; j++) {
                 if (ofs[j] >= 0) {
-                    String actual = parseBlob(storage.getBlob(ofs[j]));
+                    String actual = parseBlob(storage.readBlob(ofs[j]));
                     Assert.assertEquals(strings[expected[j]], actual);
                 }
             }
@@ -104,16 +98,16 @@ public class InMemoryDynamicBlobStorageTest {
 
     @Test
     public void testInsert() {
-        InMemoryDynamicBlobStorage storage = new InMemoryDynamicBlobStorage(new StringBlobSizeRetriever());
-        int ofs1 = storage.addBlob(createBlob("foo"));
-        int ofs2 = storage.addBlob(createBlob("bar"));
-        int ofs3 = storage.addBlob(createBlob("yo"));
+        InMemoryBlobStorage storage = new InMemoryBlobStorage(new StringBlobSizeRetriever());
+        int ofs1 = storage.writeBlob(createBlob("foo"));
+        int ofs2 = storage.writeBlob(createBlob("bar"));
+        int ofs3 = storage.writeBlob(createBlob("yo"));
 
         storage.insert(ofs2, 8);
 
-        assertEquals("foo", parseBlob(storage.getBlob(ofs1)));
-        assertEquals("bar", parseBlob(storage.getBlob(ofs2 + 8)));
-        assertEquals("yo", parseBlob(storage.getBlob(ofs3 + 8)));
+        assertEquals("foo", parseBlob(storage.readBlob(ofs1)));
+        assertEquals("bar", parseBlob(storage.readBlob(ofs2 + 8)));
+        assertEquals("yo", parseBlob(storage.readBlob(ofs3 + 8)));
     }
 
 }

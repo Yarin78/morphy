@@ -2,12 +2,8 @@ package se.yarin.cbhlib;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import se.yarin.chess.Chess960;
-import se.yarin.chess.GameModel;
-import se.yarin.chess.Position;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Paths;
@@ -40,7 +36,7 @@ public class ScanAllGameHeaders {
 
                     GameHeaderBase headerBase = base.getHeaderBase();
 
-                    FileDynamicBlobStorage storage = base.getMovesBase().getStorage();
+                    FileBlobStorage storage = base.getMovesBase().getStorage();
                     int lastMoves = 0, lastAnno = 0;
                     for (int i = 1; i <= headerBase.size(); i++) {
                         try {
