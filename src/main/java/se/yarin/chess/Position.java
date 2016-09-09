@@ -542,29 +542,46 @@ public class Position {
         return new Position(newBoard, toMove.otherPlayer(), newCastlesSet, enPassantFile, chess960sp);
     }
 
+    /**
+     * Generates all "pseudo legal" moves in the position. A pseudo legal move is a legal
+     * move in all respects except that the king might be captured after the move has been made.
+     * @return a list of all pseudo legal moves
+     */
     public List<Move> generateAllPseudoLegalMoves() {
+        return generateAllPseudoLegalMoves(EnumSet.allOf(Piece.class));
+    }
+
+    /**
+     * Generates all "pseudo legal" moves in the position by specific pieces. A pseudo legal move is a legal
+     * move in all respects except that the king might be captured after the move has been made.
+     * @param pieces the set of pieces to generate moves for
+     * @return a list of all pseudo legal moves
+     */
+    public List<Move> generateAllPseudoLegalMoves(EnumSet<Piece> pieces) {
         ArrayList<Move> moves = new ArrayList<>();
         for (int i = 0; i < 64; i++) {
             if (board[i].hasPlayer(toMove)) {
-                switch (board[i].toPiece()) {
-                    case PAWN:
-                        moves.addAll(generatePawnMoves(i));
-                        break;
-                    case KNIGHT:
-                        moves.addAll(generateKnightMoves(i));
-                        break;
-                    case BISHOP:
-                        moves.addAll(generateBishopMoves(i));
-                        break;
-                    case ROOK:
-                        moves.addAll(generateRookMoves(i));
-                        break;
-                    case QUEEN:
-                        moves.addAll(generateQueenMoves(i));
-                        break;
-                    case KING:
-                        moves.addAll(generateKingMoves(i));
-                        break;
+                if (pieces.contains(board[i].toPiece())) {
+                    switch (board[i].toPiece()) {
+                        case PAWN:
+                            moves.addAll(generatePawnMoves(i));
+                            break;
+                        case KNIGHT:
+                            moves.addAll(generateKnightMoves(i));
+                            break;
+                        case BISHOP:
+                            moves.addAll(generateBishopMoves(i));
+                            break;
+                        case ROOK:
+                            moves.addAll(generateRookMoves(i));
+                            break;
+                        case QUEEN:
+                            moves.addAll(generateQueenMoves(i));
+                            break;
+                        case KING:
+                            moves.addAll(generateKingMoves(i));
+                            break;
+                    }
                 }
             }
         }

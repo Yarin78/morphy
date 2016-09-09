@@ -2,6 +2,8 @@ package se.yarin.chess;
 
 import lombok.NonNull;
 
+import java.util.EnumSet;
+
 import static se.yarin.chess.Piece.*;
 
 /**
@@ -206,29 +208,45 @@ public class Move {
                         }
                     } else {
                         sb.append(piece.toChar());
-                        // TODO: A bit overkill to generate all legal moves; could be made faster
-                        boolean colUnique = true, rowUnique = true, destUnique = true;
-                        for (Move move : fromPosition.generateAllLegalMoves()) {
-                            if (move.equals(this)) continue;
-                            if (move.movingPiece() == piece && move.toSqi() == toSqi()) {
+                        // We need to check if there is only one legal move to the target square
+                        // Start by checking if there's only one pseudo legal move to the square
+                        // This is almost always good enough
+                        boolean destUnique = true;
+                        for (Move move : fromPosition.generateAllPseudoLegalMoves(EnumSet.of(piece))) {
+                            if (!move.equals(this) &&  move.movingPiece() == piece && move.toSqi() == toSqi()) {
                                 destUnique = false;
-                                if (Chess.sqiToCol(move.fromSqi()) == Chess.sqiToCol(fromSqi())) {
-                                    colUnique = false;
-                                }
-                                if (Chess.sqiToRow(move.fromSqi()) == Chess.sqiToRow(fromSqi())) {
-                                    rowUnique = false;
-                                }
                             }
                         }
                         if (!destUnique) {
-                            if (colUnique) {
-                                sb.append(Chess.colToChar(Chess.sqiToCol(fromSqi())));
-                            } else if (rowUnique) {
-                                sb.append(Chess.rowToChar(Chess.sqiToRow(fromSqi())));
-                            } else {
-                                sb.append(Chess.sqiToStr(fromSqi()));
+                            // We were unlucky and there are two or more pseudo legal moves
+                            // with the moving piece to the target square. Do a full blown search
+                            // of all legal moves in the position.
+                            boolean colUnique = true, rowUnique = true;
+                            destUnique = true;
+
+                            for (Move move : fromPosition.generateAllLegalMoves()) {
+                                if (move.equals(this)) continue;
+                                if (move.movingPiece() == piece && move.toSqi() == toSqi()) {
+                                    destUnique = false;
+                                    if (Chess.sqiToCol(move.fromSqi()) == Chess.sqiToCol(fromSqi())) {
+                                        colUnique = false;
+                                    }
+                                    if (Chess.sqiToRow(move.fromSqi()) == Chess.sqiToRow(fromSqi())) {
+                                        rowUnique = false;
+                                    }
+                                }
+                            }
+                            if (!destUnique) {
+                                if (colUnique) {
+                                    sb.append(Chess.colToChar(Chess.sqiToCol(fromSqi())));
+                                } else if (rowUnique) {
+                                    sb.append(Chess.rowToChar(Chess.sqiToRow(fromSqi())));
+                                } else {
+                                    sb.append(Chess.sqiToStr(fromSqi()));
+                                }
                             }
                         }
+
                     }
                     sanCache = sb.toString();
                 } else {
