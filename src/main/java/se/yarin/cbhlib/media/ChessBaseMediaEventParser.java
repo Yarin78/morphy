@@ -277,7 +277,7 @@ public class ChessBaseMediaEventParser {
         model.header().setEventTimeControl(CBUtil.decodeTournamentTimeControl(eventTypeValue).getName());
 
         int eventValue2 = ByteBufferUtil.getUnsignedByte(buf);
-        model.header().setEventCountry(Nation.values()[ByteBufferUtil.getUnsignedShortL(buf)].getName());
+        model.header().setEventCountry(Nation.values()[ByteBufferUtil.getUnsignedShortL(buf)].getIocCode());
         model.header().setEventCategory(ByteBufferUtil.getUnsignedByte(buf));
         int eventValue = ByteBufferUtil.getUnsignedByte(buf); // Not sure what this is? Not always 0, can be 3
         // TODO: Huh, why is eventCategory set twice here!? Double check all these fields!!

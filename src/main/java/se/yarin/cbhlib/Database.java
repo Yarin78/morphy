@@ -164,7 +164,7 @@ public final class Database {
         model.setEventDate(tournament.getDate());
         model.setEventSite(tournament.getPlace());
         if (tournament.getNation() != Nation.NONE) {
-            model.setEventCountry(tournament.getNation().getName());
+            model.setEventCountry(tournament.getNation().getIocCode());
         }
         if (tournament.getType() != TournamentType.NONE) {
             model.setEventType(tournament.getType().getName());

@@ -244,6 +244,9 @@ public class GameHeaderModel {
         }
     }
 
+
+
+
     @Override
     public int hashCode() {
         int result = 0;

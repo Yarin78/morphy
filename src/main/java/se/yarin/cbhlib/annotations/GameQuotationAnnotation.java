@@ -172,7 +172,7 @@ public class GameQuotationAnnotation extends Annotation implements StatisticalAn
             TournamentTimeControl ttc = TournamentTimeControl.fromName(qa.header.getEventTimeControl());
             TournamentType tt = TournamentType.fromName(qa.header.getEventType());
             ByteBufferUtil.putShortB(buf, CBUtil.encodeTournamentType(tt, ttc));
-            ByteBufferUtil.putShortB(buf, CBUtil.encodeNation(Nation.fromName(valueOrDefault(
+            ByteBufferUtil.putShortB(buf, CBUtil.encodeNation(Nation.fromIOC(valueOrDefault(
                     qa.header.getEventCountry(), ""))));
 
             ByteBufferUtil.putShortB(buf, valueOrDefault(qa.header.getEventCategory(), 0));
@@ -236,7 +236,7 @@ public class GameQuotationAnnotation extends Annotation implements StatisticalAn
 
             header.setEventTimeControl(timeControl.getName());
             header.setEventType(tournamentType.getName());
-            header.setEventCountry(nation.getName());
+            header.setEventCountry(nation.getIocCode());
             header.setEventCategory(ByteBufferUtil.getUnsignedShortB(buf));
             header.setEventRounds(ByteBufferUtil.getUnsignedShortB(buf));
 

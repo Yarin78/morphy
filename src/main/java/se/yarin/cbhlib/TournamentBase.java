@@ -73,7 +73,7 @@ public class TournamentBase extends EntityBase<TournamentEntity> {
         ByteBufferUtil.putIntL(buf, CBUtil.encodeDate(tournament.getDate()));
         ByteBufferUtil.putByte(buf, typeByte);
         ByteBufferUtil.putByte(buf, tournament.isTeamTournament() ? 1 : 0);
-        ByteBufferUtil.putByte(buf, tournament.getNation().ordinal());
+        ByteBufferUtil.putByte(buf, CBUtil.encodeNation(tournament.getNation()));
         ByteBufferUtil.putByte(buf, 0); // Or is nation 2 bytes?
         ByteBufferUtil.putByte(buf, tournament.getCategory());
         ByteBufferUtil.putByte(buf, optionByte);

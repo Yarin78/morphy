@@ -68,7 +68,7 @@ public class AnnotationSerializerTest {
         header.setSubRound(2);
         header.setEventSite("source code");
         header.setEventCategory(3);
-        header.setEventCountry("Sweden");
+        header.setEventCountry("SWE");
         header.setEventRounds(5);
         header.setEventTimeControl(TournamentTimeControl.BLITZ.getName());
         header.setEventType(TournamentType.MATCH.getName());
