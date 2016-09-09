@@ -63,10 +63,15 @@ public class CompactMoveEncoder implements MoveEncoder {
             new OpcodeRange(Piece.NO_PIECE, OPCODE_TWO_BYTES, 0)
     };
 
+    private static int opcodeOffsets[][];
+
     private static final OpcodeMap[] opcodeMap = new OpcodeMap[256];
 
     private static final int[] kingDir = new int[] { 1, 9, 8, 7, -1, -9, -8, -7};
     private static final int[] knightDir = new int[] { 17, 10, -6, -15, -17, -10, 6, 15 };
+
+    private static int[] kingDelta;
+    private static int[] knightDelta;
 
     static {
         // Map the opcode ranges into lookup tables for each opcode
@@ -76,6 +81,25 @@ public class CompactMoveEncoder implements MoveEncoder {
                 ofs=0;
             }
             opcodeMap[op] = new OpcodeMap(opcodeRanges[rangeNo].piece, ofs, opcodeRanges[rangeNo].pieceNo);
+        }
+
+        // Create inverse map of opcodeRanges
+        opcodeOffsets = new int[7][8];
+        for (OpcodeRange range : opcodeRanges) {
+            opcodeOffsets[range.piece.ordinal()][range.pieceNo] = range.opcode;
+        }
+
+        // Create inverses of kingDir and knightDir
+        kingDelta = new int[64];
+        knightDelta = new int[64];
+        for (int i = 0; i < 64; i++) {
+            kingDelta[i] = knightDelta[i] = -1;
+        }
+        for (int i = 0; i < kingDir.length; i++) {
+            kingDelta[kingDir[i] + 32] = i;
+        }
+        for (int i = 0; i < knightDir.length; i++) {
+            knightDelta[knightDir[i] + 32] = i;
         }
     }
 
@@ -137,7 +161,8 @@ public class CompactMoveEncoder implements MoveEncoder {
             } catch (IllegalArgumentException e) {
                 // Shouldn't happen if the game model contains legal moves
                 // If it does, we don't encode the remainder of this variation
-                // TODO: This needs to be tested
+                // This is not tested since it shouldn't be possible to
+                // construct a GameMovesModel with illegal moves...
                 log.warn("Failed to encode illegal move", e);
                 put(buf, OPCODE_END_VARIANT);
             }
@@ -158,13 +183,7 @@ public class CompactMoveEncoder implements MoveEncoder {
         Piece piece = move.movingStone().toPiece();
         Player playerToMove = position.playerToMove();
 
-        // TODO: Convert the many loops in this method to lookups for some performance gain
-        int ofs = 0;
-        for (OpcodeRange range : opcodeRanges) {
-            if (range.piece == piece && range.pieceNo == stoneNo) {
-                ofs = range.opcode;
-            }
-        }
+        int ofs = stoneNo >= 0 && stoneNo < 8 ? opcodeOffsets[piece.ordinal()][stoneNo] : 0;
 
         if (ofs == 0 || (piece == Piece.PAWN && !move.promotionStone().isNoStone())) {
             return OPCODE_TWO_BYTES;
@@ -183,9 +202,8 @@ public class CompactMoveEncoder implements MoveEncoder {
         if (piece == Piece.KING) {
             if (move.isShortCastle()) return ofs + 8;
             if (move.isLongCastle()) return ofs + 9;
-            for (int i = 0; i < 8; i++) {
-                if (move.fromSqi() + kingDir[i] == move.toSqi()) return ofs + i;
-            }
+            int dif = move.toSqi() - move.fromSqi() + 32;
+            if (dif >= 0 && dif < 64 && kingDelta[dif] >= 0) return ofs + kingDelta[dif];
             throw new IllegalArgumentException("Can't encode illegal move: " + move.toString());
         }
 
@@ -213,9 +231,8 @@ public class CompactMoveEncoder implements MoveEncoder {
         }
 
         if (piece == Piece.KNIGHT) {
-            for (int i = 0; i < 8; i++) {
-                if (move.fromSqi() + knightDir[i] == move.toSqi()) return ofs + i;
-            }
+            int dif = move.toSqi() - move.fromSqi() + 32;
+            if (dif >= 0 && dif < 64 && knightDelta[dif] >= 0) return ofs + knightDelta[dif];
             throw new IllegalArgumentException("Can't encode illegal move: " + move.toString());
         }
 
