@@ -137,7 +137,6 @@ public class GameMovesModel {
      * Deletes all variations in the game.
      */
     public void deleteAllVariations() {
-        // TODO: Test this
         Node current = root();
         while (current != null) {
             if (current.hasVariations()) {

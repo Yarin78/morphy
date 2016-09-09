@@ -349,6 +349,30 @@ public class GameMovesModelTest {
     }
 
     @Test
+    public void testDeleteAllVariations() {
+        moves.root()
+                .addMove(E2, E4)
+                    .addMove(E7, E5)
+                        .addMove(G1, F3)
+                            .addMove(G8, F6)
+                                .parent()
+                            .parent()
+                        .addMove(B1, C3)
+                            .addMove(G8, F6)
+                                .parent()
+                            .addMove(B8, C6)
+                                .parent()
+                            .parent()
+                        .addMove(F1, C4)
+                            .addMove(F8, C5);
+
+        numFiredChanges = 0;
+        moves.deleteAllVariations();
+        assertEquals(4, moves.countPly(true));
+        assertEquals(1, numFiredChanges);
+    }
+
+    @Test
     public void testReplaceAll() {
         moves.root()
                 .addAnnotation(new CommentaryAfterMoveAnnotation("start of game"))
