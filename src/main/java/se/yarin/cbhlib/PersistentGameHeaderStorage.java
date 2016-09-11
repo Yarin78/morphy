@@ -151,7 +151,7 @@ public class PersistentGameHeaderStorage extends GameHeaderStorageBase {
     }
 
     /**
-     * Positions the channel at the start of the specified entityId.
+     * Positions the channel at the start of the specified gameId.
      * Valid positions are between 1 and nextGameId
      * @param gameId the gameId (1-indexed) to position to channel against
      * @throws IOException if an IO error occurs

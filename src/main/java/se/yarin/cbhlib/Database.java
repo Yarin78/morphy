@@ -396,6 +396,7 @@ public final class Database {
         // If not, insert bytes and update all game headers.
         int insertedGameBytes = movesBase.preparePutBlob(gameHeader.getMovesOffset(), moves);
         if (insertedGameBytes > 0) {
+            // TODO: This must be done in the extended header base as well
             headerBase.adjustMovesOffset(gameId + 1, gameHeader.getMovesOffset(), insertedGameBytes);
         }
 
@@ -421,6 +422,7 @@ public final class Database {
                     gameHeader.getAnnotationOffset(), moves);
         }
         if (insertedAnnotationBytes > 0) {
+            // TODO: This must be done in the extended header base as well
             headerBase.adjustAnnotationOffset(gameId + 1, gameHeader.getAnnotationOffset(), insertedAnnotationBytes);
         }
 

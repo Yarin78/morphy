@@ -106,6 +106,9 @@ public final class CBUtil {
 
     public static Nation decodeNation(int data) {
         // TODO: Should save this value raw instead to make it more future proof
+        if (data < 0 || data >= Nation.values().length) {
+            return Nation.NONE;
+        }
         return Nation.values()[data];
     }
 
@@ -129,6 +132,38 @@ public final class CBUtil {
             value += (1 << medal.ordinal());
         }
         return value;
+    }
+
+    public static FinalMaterial decodeFinalMaterial(int value) {
+        int numPawns = (value >> 12) & 15;
+        int numQueens = (value >> 9) & 7;
+        int numKnights = (value >> 6) & 7;
+        int numBishops = (value >> 3) & 7;
+        int numRooks = (value >> 3) & 7;
+        return new FinalMaterial(numPawns, numQueens, numKnights, numBishops, numRooks);
+    }
+
+    public static int encodeFinalMaterial(FinalMaterial material) {
+        if (material == null) {
+            return 0;
+        }
+        int value = (material.getNumPawns() & 15) << 12;
+        value += Math.max(material.getNumQueens(), 7) << 9;
+        value += Math.max(material.getNumKnights(), 7) << 6;
+        value += Math.max(material.getNumBishops(), 7) << 3;
+        value += Math.max(material.getNumRooks(), 7);
+        return value;
+    }
+
+    public static EndgameType decodeEndgameType(int value) {
+        if (value < 0 || value >= EndgameType.values().length) {
+            return EndgameType.TODO_00;
+        }
+        return EndgameType.values()[value];
+    }
+
+    public static int encodeEndgameType(@NonNull EndgameType endgameType) {
+        return endgameType.ordinal();
     }
 
     // Debug code

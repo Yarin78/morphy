@@ -115,6 +115,7 @@ public class GameHeaderBase implements GameHeaderSerializer, Iterable<GameHeader
     public Iterator<GameHeader> iterator() {
         return new DefaultIterator(1);
     }
+
     /**
      * Gets an iterator over all game headers in the database starting at the specified id
      * @param gameId the id to start the iteration at (inclusive)
@@ -364,7 +365,7 @@ public class GameHeaderBase implements GameHeaderSerializer, Iterable<GameHeader
     }
 
     public ByteBuffer serialize(GameHeader header) {
-        ByteBuffer buf = ByteBuffer.allocate(getSerializedGameHeaderLength());
+            ByteBuffer buf = ByteBuffer.allocate(getSerializedGameHeaderLength());
         int type = 0;
         if (header.isGame()) type += 1;
         if (header.isGuidingText()) type += 2;

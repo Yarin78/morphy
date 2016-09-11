@@ -846,7 +846,7 @@ CBJ file (secondary game header)
 
 Header
 ------
-Ofs 0, Len 4 - ?? 0b in cb13, 08 in cb12 (version number?)
+Ofs 0, Len 4 - ?? 0b in cb13, 08 in cb12 (version number?), 07 also possible
 Ofs 4, Len 4 - Length of a record
 Ofs 8, Len 4 - Number of records
 Ofs 12, Len 4 - ?? 3a

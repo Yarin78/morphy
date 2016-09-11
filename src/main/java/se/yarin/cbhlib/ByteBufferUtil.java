@@ -141,6 +141,15 @@ public final class ByteBufferUtil {
         return (b1 << 24) + (b2 << 16) + (b3 << 8) + b4;
     }
 
+    public static long getLongB(ByteBuffer buf) {
+        long b1 = getUnsignedByte(buf), b2 = getUnsignedByte(buf);
+        long b3 = getUnsignedByte(buf), b4 = getUnsignedByte(buf);
+        long b5 = getUnsignedByte(buf), b6 = getUnsignedByte(buf);
+        long b7 = getUnsignedByte(buf), b8 = getUnsignedByte(buf);
+        return (b1 << 56) + (b2 << 48) + (b3 << 40) + (b4 << 32) +
+                (b5 << 24) + (b6 << 16) + (b7 << 8) + b8;
+    }
+
     public static void putShortB(ByteBuffer buf, int value) {
         buf.put((byte) (value >> 8));
         buf.put((byte) value);
@@ -153,6 +162,17 @@ public final class ByteBufferUtil {
     }
 
     public static void putIntB(ByteBuffer buf, int value) {
+        buf.put((byte) (value >> 24));
+        buf.put((byte) (value >> 16));
+        buf.put((byte) (value >> 8));
+        buf.put((byte) value);
+    }
+
+    public static void putLongB(ByteBuffer buf, long value) {
+        buf.put((byte) (value >> 56));
+        buf.put((byte) (value >> 48));
+        buf.put((byte) (value >> 40));
+        buf.put((byte) (value >> 32));
         buf.put((byte) (value >> 24));
         buf.put((byte) (value >> 16));
         buf.put((byte) (value >> 8));
@@ -193,6 +213,15 @@ public final class ByteBufferUtil {
         return (b4 << 24) + (b3 << 16) + (b2 << 8) + b1;
     }
 
+    public static long getLongL(ByteBuffer buf) {
+        long b1 = getUnsignedByte(buf), b2 = getUnsignedByte(buf);
+        long b3 = getUnsignedByte(buf), b4 = getUnsignedByte(buf);
+        long b5 = getUnsignedByte(buf), b6 = getUnsignedByte(buf);
+        long b7 = getUnsignedByte(buf), b8 = getUnsignedByte(buf);
+        return  (b8 << 56) + (b7 << 48) + (b6 << 40) + (b5 << 32) +
+                (b4 << 24) + (b3 << 16) + (b2 << 8) + b1;
+    }
+
     public static void putShortL(ByteBuffer buf, int value) {
         buf.put((byte) value);
         buf.put((byte) (value >> 8));
@@ -209,5 +238,16 @@ public final class ByteBufferUtil {
         buf.put((byte) (value >> 8));
         buf.put((byte) (value >> 16));
         buf.put((byte) (value >> 24));
+    }
+
+    public static void putLongL(ByteBuffer buf, long value) {
+        buf.put((byte) value);
+        buf.put((byte) (value >> 8));
+        buf.put((byte) (value >> 16));
+        buf.put((byte) (value >> 24));
+        buf.put((byte) (value >> 32));
+        buf.put((byte) (value >> 40));
+        buf.put((byte) (value >> 48));
+        buf.put((byte) (value >> 56));
     }
 }
