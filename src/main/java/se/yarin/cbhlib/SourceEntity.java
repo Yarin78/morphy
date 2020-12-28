@@ -16,14 +16,17 @@ public class SourceEntity implements Entity, Comparable<SourceEntity> {
 
     @Getter
     @NonNull
+    @Builder.Default
     private String publisher = "";
 
     @Getter
     @NonNull
+    @Builder.Default
     private Date publication = Date.today();
 
     @Getter
     @NonNull
+    @Builder.Default
     private Date date = Date.today();
 
     @Getter
@@ -31,6 +34,7 @@ public class SourceEntity implements Entity, Comparable<SourceEntity> {
 
     @Getter
     @NonNull
+    @Builder.Default
     private SourceQuality quality = SourceQuality.UNSET;
 
     @Getter
@@ -41,6 +45,10 @@ public class SourceEntity implements Entity, Comparable<SourceEntity> {
 
     public SourceEntity(@NonNull String title) {
         this.title = title;
+        this.publisher = "";
+        this.publication = Date.today();
+        this.date = Date.today();
+        this.quality = SourceQuality.UNSET;
     }
 
     @Override

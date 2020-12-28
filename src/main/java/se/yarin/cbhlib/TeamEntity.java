@@ -24,6 +24,7 @@ public class TeamEntity implements Entity, Comparable<TeamEntity> {
 
     @Getter
     @NonNull
+    @Builder.Default
     private Nation nation = Nation.NONE;
 
     @Getter
@@ -34,6 +35,7 @@ public class TeamEntity implements Entity, Comparable<TeamEntity> {
 
     public TeamEntity(@NonNull String title) {
         this.title = title;
+        this.nation = Nation.NONE;
     }
 
     @Override

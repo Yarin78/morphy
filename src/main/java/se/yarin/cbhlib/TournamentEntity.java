@@ -16,6 +16,7 @@ public class TournamentEntity implements Entity, Comparable<TournamentEntity> {
 
     @Getter
     @NonNull
+    @Builder.Default
     private Date date = Date.today();
 
     @Getter
@@ -26,6 +27,7 @@ public class TournamentEntity implements Entity, Comparable<TournamentEntity> {
 
     @Getter
     @NonNull
+    @Builder.Default
     private TournamentType type = TournamentType.NONE;
 
     @Getter
@@ -42,14 +44,17 @@ public class TournamentEntity implements Entity, Comparable<TournamentEntity> {
 
     @Getter
     @NonNull
+    @Builder.Default
     private TournamentTimeControl timeControl = TournamentTimeControl.NORMAL;
 
     @Getter
     @NonNull
+    @Builder.Default
     private String place = "";
 
     @Getter
     @NonNull
+    @Builder.Default
     private Nation nation = Nation.NONE;
 
     // Missing here is City, latitude, longitude
@@ -64,6 +69,11 @@ public class TournamentEntity implements Entity, Comparable<TournamentEntity> {
 
     public TournamentEntity(@NonNull String title) {
         this.title = title;
+        this.date = Date.today();
+        this.type = TournamentType.NONE;
+        this.timeControl = TournamentTimeControl.NORMAL;
+        this.place = "";
+        this.nation = Nation.NONE;
     }
 
     @Override
