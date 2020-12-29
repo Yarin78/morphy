@@ -19,22 +19,20 @@ public class ExtendedGameHeader {
     private final int whiteTeamId;
     private final int blackTeamId;
     private final int mediaOffset; // Offset into the .cbm file. Only used by guiding texts
-    // There are cases where these two differs, which is probably a bug in ChessBase
-    // TODO: Check which of the two values are actually used by ChessBase. And if the CB validator detects the errors
-    private final long annotationOffset; // Same as GameHeader#annotationOffset
+    private final long annotationOffset; // Should be same as GameHeader#annotationOffset. If different, the GH one will be used.
     private final boolean finalMaterial; // If false, the FinalMaterial values below are undefined
     private final FinalMaterial materialPlayer1; // Not necessarily the white player!
     private final FinalMaterial materialPlayer2; // Sorted by encoding order: pawns, queens and so on
     private final FinalMaterial materialTotal;
-    private final long movesOffset; // Same as GameHeader#movesOffset
+    private final long movesOffset; // Same as GameHeader#movesOffset. If different, the GH one will be used.
     private final @NonNull RatingType whiteRatingType;
     private final @NonNull RatingType blackRatingType;
     private final int unknown1; // Quite often set, no idea for what. Probably something encoded.
     private final int unknown2; // Quite often set, no idea for what. Probably something encoded.
     private final int gameVersion;
     private final long creationTimestamp; // 1/1024th seconds since December 1st 2008
-    private final @NonNull Endgame endgame;
-    private final long lastChangedTimestamp;
+    private final EndgameInfo endgameInfo;
+    private final long lastChangedTimestamp; // 1/10,000,000th seconds since October 15th 1582
 
     /**
      * Gets the date and time when this game was first created.

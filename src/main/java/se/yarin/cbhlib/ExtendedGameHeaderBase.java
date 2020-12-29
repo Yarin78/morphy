@@ -240,7 +240,11 @@ public class ExtendedGameHeaderBase implements ExtendedGameHeaderSerializer, Ite
         // End of version 8 (78 bytes)
         ByteBufferUtil.putIntB(buf, header.getGameVersion());
         ByteBufferUtil.putLongB(buf, header.getCreationTimestamp());
-        header.getEndgame().serialize(buf);
+        if (header.getEndgameInfo() != null) {
+            header.getEndgameInfo().serialize(buf);
+        } else {
+            buf.put(new byte[20]);
+        }
         ByteBufferUtil.putLongB(buf, header.getLastChangedTimestamp());
 
         ByteBufferUtil.putIntB(buf, 0);
@@ -307,7 +311,7 @@ public class ExtendedGameHeaderBase implements ExtendedGameHeaderSerializer, Ite
                     creationTimestamp = 0;
                 }
                 int position = buf.position();
-                builder.endgame(Endgame.deserialize(buf));
+                builder.endgameInfo(EndgameInfo.deserialize(buf));
                 buf.position(position + 20);
 
                 builder.lastChangedTimestamp(ByteBufferUtil.getLongB(buf));
@@ -319,8 +323,6 @@ public class ExtendedGameHeaderBase implements ExtendedGameHeaderSerializer, Ite
                     creationTimestamp = 0;
                 }
                 builder.creationTimestamp(creationTimestamp);
-            } else {
-                builder.endgame(new Endgame());
             }
         } catch (BufferUnderflowException e) {
             log.warn("Unexpected end of extended game header buffer", e);

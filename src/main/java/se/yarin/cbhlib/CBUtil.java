@@ -157,7 +157,7 @@ public final class CBUtil {
 
     public static EndgameType decodeEndgameType(int value) {
         if (value < 0 || value >= EndgameType.values().length) {
-            return EndgameType.TODO_00;
+            return EndgameType.NONE;
         }
         return EndgameType.values()[value];
     }

@@ -2,6 +2,7 @@ package se.yarin.cbhlib;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import se.yarin.chess.GameMovesModel;
 
 import java.io.File;
 import java.io.IOException;
@@ -15,8 +16,9 @@ public class InvestigateSecondaryHeader {
 
     public static void main(String[] args) throws IOException {
 //        Files.walk(Paths.get("testbases/CHESS LITERATURE 3")).forEach(filePath -> {
+        Files.walk(Paths.get("testbases/CHESS LITERATURE 3/DYNAMICS AND TACTICS/Enciclopedia de Combinaciones Inforchess/Enciclopedia de Combinaciones Inforchess/Intermedia.cbj")).forEach(filePath -> {
 //        Files.walk(Paths.get("testmediafiles")).forEach(filePath -> {
-        Files.walk(Paths.get("testbases/Mega Database 2016")).forEach(filePath -> {
+//        Files.walk(Paths.get("testbases/Mega Database 2016")).forEach(filePath -> {
 //        Files.walk(Paths.get("testbases/Jimmys bases/jimmy.cbj")).forEach(filePath -> {
 //        Files.walk(Paths.get("testbases/tmp/cbjtest/timestamp.cbj")).forEach(filePath -> {
             if (Files.isRegularFile(filePath) && filePath.toString().endsWith(".cbj")) {
@@ -25,6 +27,21 @@ public class InvestigateSecondaryHeader {
                     ExtendedGameHeaderBase xbase = ExtendedGameHeaderBase.open(filePath.toFile());
                     GameHeaderBase base = GameHeaderBase.open(new File(filePath.toString().replace(".cbj", ".cbh")));
                     log.info("Reading " + filePath.toFile().toString() + " " + xbase.version());
+                    if (base.size() != xbase.size() && xbase.size() != 0) {
+                        log.info("Size mismatch: " + base.size() + " != " + xbase.size());
+                    }
+
+/*
+                    for (int i = 1; i <= base.size(); i++) {
+                        GameHeader gh = base.getGameHeader(i);
+                        log.info(String.format("Game #%d: moves = %d, annotations = %d", i, gh.getMovesOffset(), gh.getAnnotationOffset()));
+                    }
+                    for (int i = 1; i <= xbase.size(); i++) {
+                        ExtendedGameHeader gh = xbase.getExtendedGameHeader(i);
+                        log.info(String.format("Game #%d: moves = %d, annotations = %d", i, gh.getMovesOffset(), gh.getAnnotationOffset()));
+                    }
+*/
+                    /*
 //                    log.info(xbase.size() + " " + base.getNextGameId());
                     for (int gameId = 1; gameId < base.getNextGameId(); gameId++) {
 //                    for (int gameId = 1; gameId <= 1000; gameId++) {
@@ -34,8 +51,8 @@ public class InvestigateSecondaryHeader {
 //                        if (xheader.getGameVersion() < 1 || xheader.getGameVersion() > 1000) continue;
 //                        if (xheader.getCreationTimestamp() == 0) continue;
 
-                        Endgame e = xheader.getEndgame();
-                        if (e.isSet()) {
+                        EndgameInfo e = xheader.getEndgameInfo();
+                        if (e != null) {
                             EndgameType type = e.getLongestType();
                             if (!seen.contains(type)) {
                                 seen.add(type);
@@ -46,6 +63,7 @@ public class InvestigateSecondaryHeader {
                         }
 
                     }
+                    */
                     xbase.close();
                     base.close();
                 } catch (NoSuchFileException ignored) {
