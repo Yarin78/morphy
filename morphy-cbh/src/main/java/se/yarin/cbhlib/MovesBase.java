@@ -88,13 +88,14 @@ public class MovesBase implements BlobSizeRetriever {
     /**
      * Gets the moves of a game from the moves database
      * @param ofs the offset in the database where the game moves data is stored
+     * @param gameId the id of the game to load; only used in logging statements
      * @return a model of the game
      * @throws IOException if there was some IO errors when reading the moves
      */
-    public GameMovesModel getMoves(int ofs)
+    public GameMovesModel getMoves(int ofs, int gameId)
             throws IOException, ChessBaseInvalidDataException, ChessBaseUnsupportedException {
         ByteBuffer blob = storage.readBlob(ofs);
-        return MovesSerializer.deserializeMoves(blob);
+        return MovesSerializer.deserializeMoves(blob, gameId);
     }
 
     /**

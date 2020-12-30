@@ -88,7 +88,7 @@ public class GameQuotationAnnotation extends Annotation implements StatisticalAn
         GameMovesModel moves;
         try {
             if (setupPositionData != null) {
-                moves = MovesSerializer.parseInitialPosition(ByteBuffer.wrap(setupPositionData), false);
+                moves = MovesSerializer.parseInitialPosition(ByteBuffer.wrap(setupPositionData), false, 0);
             } else {
                 moves = new GameMovesModel();
             }

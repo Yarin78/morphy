@@ -139,6 +139,9 @@ public class Position {
      * @param chess960sp the Chess960 start position number
      */
     public Position(Stone[] board, Player playerToMove, EnumSet<Castles> castles, int epFile, int chess960sp) {
+        if (chess960sp < 0 || chess960sp >= 960) {
+            throw new IllegalArgumentException("Illegal Chess960 start position: " + chess960sp);
+        }
         this.board = board.clone();
         locateKings();
         this.toMove = playerToMove;

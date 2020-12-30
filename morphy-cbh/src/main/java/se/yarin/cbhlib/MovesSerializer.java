@@ -89,13 +89,25 @@ public final class MovesSerializer {
      * @throws ChessBaseMoveDecodingException if there was an error deserializing the moves
      */
     public static GameMovesModel deserializeMoves(ByteBuffer buf) throws ChessBaseMoveDecodingException {
+        return deserializeMoves(buf, 0);
+    }
+
+    /**
+     * Deserializes the moves of a ChessBase encoded chess game.
+     * If there was some error decoding the game
+     * @param buf a buffer containing the serialized game
+     * @param gameId the id of the game to load; only used in logging statements
+     * @return a model of the game
+     * @throws ChessBaseMoveDecodingException if there was an error deserializing the moves
+     */
+    public static GameMovesModel deserializeMoves(ByteBuffer buf, int gameId) throws ChessBaseMoveDecodingException {
         GameMovesModel model;
         int flags, moveSize;
         try {
             flags = ByteBufferUtil.getUnsignedByte(buf);
             moveSize = ByteBufferUtil.getUnsigned24BitB(buf);
         } catch (BufferUnderflowException e) {
-            throw new ChessBaseMoveDecodingException("Moves data header ended abruptly", e);
+            throw new ChessBaseMoveDecodingException("Moves data header ended abruptly in game " + gameId, e);
         }
         // Ensure we don't read too many bytes if the data would be broken
         ByteBuffer moveBuf = buf.slice();
@@ -108,7 +120,7 @@ public final class MovesSerializer {
             // INFO  CheckMoveEncodingFlags - Flag 80: 1 games: 6161154
             // INFO  CheckMoveEncodingFlags - Flag 85: 1 games: 2017673
 
-            log.warn("Bit 7 set in first byte in move data");
+            log.warn("Bit 7 set in first byte in move data in game " + gameId);
         }
         boolean setupPosition = (flags & 0x40) > 0;
 
@@ -116,17 +128,17 @@ public final class MovesSerializer {
         validateEncodingMode(encodingMode);
 
         if (setupPosition) {
-            model = parseInitialPosition(moveBuf, encodingMode == 10 || encodingMode == 11);
+            model = parseInitialPosition(moveBuf, encodingMode == 10 || encodingMode == 11, gameId);
         } else {
             model = new GameMovesModel();
         }
 
-        if (encodingMode != 0) {
-            log.warn(String.format("Deserializing game with unusual encoding: %02X", encodingMode));
+        if (encodingMode != 0 && encodingMode != 10) {
+            log.warn(String.format("Move data in game " + gameId + " has an unusual encoding: %02X", encodingMode));
         }
 
         if (log.isDebugEnabled()) {
-            log.debug(String.format("Parsing move data at moveData pos %s with %d bytes left",
+            log.debug(String.format("Parsing move data for game " + gameId + " at moveData pos %s with %d bytes left",
                     model.root().position().toString("|"), moveBuf.limit() - moveBuf.position()));
         }
 
@@ -138,50 +150,33 @@ public final class MovesSerializer {
         } catch (ChessBaseMoveDecodingException e) {
             // TODO: Add tests for this
             e.setModel(model);
-            log.warn("Parsed illegal move; aborting. Moves parsed so far: " + model.toString(), e);
+            log.warn("Parsed illegal move in game " + gameId + "; aborting. Moves parsed so far: " + model.toString(), e);
         } catch (IllegalMoveException e) {
-            throw new ChessBaseMoveDecodingException("Parsed illegal move: " + e.toString(), e, model);
+            throw new ChessBaseMoveDecodingException("Parsed illegal move in game " + gameId + ": " + e.toString(), e, model);
         } catch (BufferUnderflowException e) {
-            log.warn("Move data ended abruptly. Moves parsed so far: " + model.toString());
-            throw new ChessBaseMoveDecodingException("Move data ended abruptly", e, model);
+            log.warn("Move data ended abruptly in game " + gameId + ". Moves parsed so far: " + model.toString());
+            throw new ChessBaseMoveDecodingException("Move data ended abruptly in game " + gameId, e, model);
         }
 
         return model;
     }
 
     private static MoveEncoder getMoveEncoder(int encodingMode) {
-        switch (encodingMode) {
-            case 0x00 :
-                return new CompactMoveEncoder(FLAG0_ENCRYPTION_KEY, true, false);
-            case 0x01:
-                return new SimpleMoveEncoder(FLAG1_ENCRYPTION_KEY, true, false);
-            case 0x02 :
-                return new CompactMoveEncoder(FLAG2_ENCRYPTION_KEY, true, true);
-            case 0x03 :
-                return new SimpleMoveEncoder(FLAG3_ENCRYPTION_KEY, true, true);
-            case 0x04 :
-                return new CompactMoveEncoder(FLAG4_ENCRYPTION_KEY, false, false);
-            case 0x05 :
-                return new SimpleMoveEncoder(FLAG5_ENCRYPTION_KEY, false, false);
-            case 0x06 :
-                return new CompactMoveEncoder(FLAG6_ENCRYPTION_KEY, false, true);
-            case 0x07 :
-                return new SimpleMoveEncoder(FLAG7_ENCRYPTION_KEY, false, true);
-            case 0x08:
-                // Give away chess
-                return new CompactMoveEncoder(FLAG8_ENCRYPTION_KEY, false, false);
-            case 0x09:
-                // Give away chess
-                return new CompactMoveEncoder(FLAG9_ENCRYPTION_KEY, false, true);
-            case 0x0A:
-                // Chess960
-                return new CompactMoveEncoder(FLAG10_ENCRYPTION_KEY, false, false);
-            case 0x0B:
-                // Chess960
-                return new CompactMoveEncoder(FLAG11_ENCRYPTION_KEY, false, true);
-            default :
-                throw new UnsupportedOperationException(String.format("Unsupported move encoder: %02X", encodingMode));
-        }
+        return switch (encodingMode) {
+            case 0x00 -> new CompactMoveEncoder(FLAG0_ENCRYPTION_KEY, true, false);
+            case 0x01 -> new SimpleMoveEncoder(FLAG1_ENCRYPTION_KEY, true, false);
+            case 0x02 -> new CompactMoveEncoder(FLAG2_ENCRYPTION_KEY, true, true);
+            case 0x03 -> new SimpleMoveEncoder(FLAG3_ENCRYPTION_KEY, true, true);
+            case 0x04 -> new CompactMoveEncoder(FLAG4_ENCRYPTION_KEY, false, false);
+            case 0x05 -> new SimpleMoveEncoder(FLAG5_ENCRYPTION_KEY, false, false);
+            case 0x06 -> new CompactMoveEncoder(FLAG6_ENCRYPTION_KEY, false, true);
+            case 0x07 -> new SimpleMoveEncoder(FLAG7_ENCRYPTION_KEY, false, true);
+            case 0x08 -> new CompactMoveEncoder(FLAG8_ENCRYPTION_KEY, false, false); // Give away chess
+            case 0x09 -> new CompactMoveEncoder(FLAG9_ENCRYPTION_KEY, false, true); // Give away chess
+            case 0x0A -> new CompactMoveEncoder(FLAG10_ENCRYPTION_KEY, false, false); // Chess960
+            case 0x0B -> new CompactMoveEncoder(FLAG11_ENCRYPTION_KEY, false, true); // Chess960
+            default -> throw new UnsupportedOperationException(String.format("Unsupported move encoder: %02X", encodingMode));
+        };
     }
 
     private static void validateEncodingMode(int mode) {
@@ -213,18 +208,18 @@ public final class MovesSerializer {
         throw new UnsupportedOperationException("Unknown encoding mode " + mode + " not supported");
     }
 
-    public static GameMovesModel parseInitialPosition(ByteBuffer buf, boolean hasExtraInfo)
+    public static GameMovesModel parseInitialPosition(ByteBuffer buf, boolean hasExtraInfo, int gameId)
             throws ChessBaseMoveDecodingException {
         int endPosition = buf.position() + 28;
         int b = ByteBufferUtil.getUnsignedByte(buf);
         if (b != 1) {
-            log.warn(String.format("Unexpected first byte in setup position: %02X", b));
+            log.warn(String.format("Unexpected first byte in setup position in game " + gameId + ": %02X", b));
         }
         b = ByteBufferUtil.getUnsignedByte(buf);
         int epFile = (b & 15) - 1;
         Player sideToMove = (b & 16) == 0 ? Player.WHITE : Player.BLACK;
         if ((b & ~31) != 0) {
-            log.warn("Unknown bits set in second byte in setup position: " + b);
+            log.warn("Unknown bits set in second byte in setup position in game " + gameId + ": " + b);
         }
         b = ByteBufferUtil.getUnsignedByte(buf);
         EnumSet<Castles> castles = EnumSet.noneOf(Castles.class);
@@ -233,7 +228,7 @@ public final class MovesSerializer {
         if ((b & 4) > 0) castles.add(Castles.BLACK_LONG_CASTLE);
         if ((b & 8) > 0) castles.add(Castles.BLACK_SHORT_CASTLE);
         if ((b & ~15) != 0) {
-            log.warn("Unknown bits set in third byte in setup position: " + b);
+            log.warn("Unknown bits set in third byte in setup position in game " + gameId + ": " + b);
         }
         int moveNumber = ByteBufferUtil.getUnsignedByte(buf);
         if (moveNumber == 0) {
@@ -250,29 +245,32 @@ public final class MovesSerializer {
                 Player color = byteBufferBitReader.getBit() == 0 ? Player.WHITE : Player.BLACK;
                 Piece piece;
                 int pieceNo = byteBufferBitReader.getInt(3);
-                switch (pieceNo) {
-                    case 1 : piece = Piece.KING; break;
-                    case 2 : piece = Piece.QUEEN; break;
-                    case 3 : piece = Piece.KNIGHT; break;
-                    case 4 : piece = Piece.BISHOP; break;
-                    case 5 : piece = Piece.ROOK; break;
-                    case 6 : piece = Piece.PAWN; break;
-                    default :
-                        throw new ChessBaseMoveDecodingException("Invalid piece in setup position: " + pieceNo);
-                }
+                piece = switch (pieceNo) {
+                    case 1 -> Piece.KING;
+                    case 2 -> Piece.QUEEN;
+                    case 3 -> Piece.KNIGHT;
+                    case 4 -> Piece.BISHOP;
+                    case 5 -> Piece.ROOK;
+                    case 6 -> Piece.PAWN;
+                    default -> throw new ChessBaseMoveDecodingException("Invalid piece in setup position in game " + gameId + ": " + pieceNo);
+                };
                 stones[i] = piece.toStone(color);
             }
         }
 
         buf.position(endPosition);
 
-        int sp = hasExtraInfo ? deserializeChess960StartingPosition(buf, stones) : Chess960.REGULAR_CHESS_SP;
+        int sp = hasExtraInfo ? deserializeChess960StartingPosition(buf, stones, gameId) : Chess960.REGULAR_CHESS_SP;
+
+        if (sp < 0 || sp >= 960) {
+            throw new ChessBaseMoveDecodingException("Invalid Chess960 position " + sp + " in game " + gameId);
+        }
 
         Position startPosition = new Position(stones, sideToMove, castles, epFile, sp);
         return new GameMovesModel(startPosition, moveNumber);
     }
 
-    private static int deserializeChess960StartingPosition(ByteBuffer buf, Stone[] stones) {
+    private static int deserializeChess960StartingPosition(ByteBuffer buf, Stone[] stones, int gameId) {
         // The following 6 bytes contains the start square indices for
         // the white king, black king, white h-rook, white a-rook, black h-rook and black a-rook
         // They determine how the castles move is encoded
@@ -287,21 +285,16 @@ public final class MovesSerializer {
         // However, this value is wrong in some database (probably due to a ChessBase bug)
         int spNo = ByteBufferUtil.getUnsignedShortB(buf);
 
-        boolean valid = true;
         if (spNo < 0 || spNo >= 960) {
-            log.warn("Invalid Chess960 start position: " + spNo);
-            valid = false;
-        }
-        Position sp = Chess960.getStartPosition(spNo);
+            log.warn("Invalid Chess960 start position in game " + gameId + ": " + spNo);
+        } else {
+            Position sp = Chess960.getStartPosition(spNo);
 
-        if (!chess960Matches(sp, wkSqi, bkSqi, wkrSqi, wqrSqi, bkrSqi, bqrSqi)) {
-            log.warn("The specific positions of the kings and rooks doesn't match the Chess960 start position number");
+            if (chess960Matches(sp, wkSqi, bkSqi, wkrSqi, wqrSqi, bkrSqi, bqrSqi)) {
+                return spNo;
+            }
             // This happens on some games in Mega Database 2016 and is probably due to a bug in an earlier Chessbase version
-            valid = false;
-        }
-
-        if (valid) {
-            return spNo;
+            log.warn("The specific positions of the kings and rooks doesn't match the Chess960 start position number in game " + gameId);
         }
 
         // The encoded start position is wrong, so we need to figure out what it should have been.
@@ -315,20 +308,23 @@ public final class MovesSerializer {
         int originalSpNo = spNo;
         try {
             spNo = Chess960.getStartPositionNo(stones);
-            sp = Chess960.getStartPosition(spNo);
+            Position sp = Chess960.getStartPosition(spNo);
             if (chess960Matches(sp, wkSqi, bkSqi, wkrSqi, wqrSqi, bkrSqi, bqrSqi)) {
-                log.info("Deduced the Chess960 starting position number to be " + spNo);
+                log.debug("Deduced the Chess960 starting position number in game " + gameId + " to be " + spNo);
                 return spNo;
             }
         } catch (IllegalArgumentException ignored) {
         }
 
-        for (int i = 0; i < 960; i++) {
-            sp = Chess960.getStartPosition(i);
-            if (chess960Matches(sp, wkSqi, bkSqi, wkrSqi, wqrSqi, bkrSqi, bqrSqi)) {
-                log.info("Using Chess960 starting position number " + i);
-                return i;
+        try {
+            for (int i = 0; i < 960; i++) {
+                Position sp = Chess960.getStartPosition(i);
+                if (chess960Matches(sp, wkSqi, bkSqi, wkrSqi, wqrSqi, bkrSqi, bqrSqi)) {
+                    log.debug("Using Chess960 starting position number " + i + " in game " + gameId);
+                    return i;
+                }
             }
+        } catch (IllegalArgumentException ignored) {
         }
 
         // Can't do so much here; return the original encoded (faulty) position
@@ -371,15 +367,15 @@ public final class MovesSerializer {
             } else {
                 byteBufferBitWriter.putBit(1);
                 byteBufferBitWriter.putBit(stone.isWhite() ? 0 : 1);
-                int p = 0;
-                switch (stone.toPiece()) {
-                    case KING:   p = 1; break;
-                    case QUEEN:  p = 2; break;
-                    case KNIGHT: p = 3; break;
-                    case BISHOP: p = 4; break;
-                    case ROOK:   p = 5; break;
-                    case PAWN:   p = 6; break;
-                }
+                int p = switch (stone.toPiece()) {
+                    case KING -> 1;
+                    case QUEEN -> 2;
+                    case KNIGHT -> 3;
+                    case BISHOP -> 4;
+                    case ROOK -> 5;
+                    case PAWN -> 6;
+                    default -> 0;
+                };
                 byteBufferBitWriter.putBits(p, 3);
             }
         }

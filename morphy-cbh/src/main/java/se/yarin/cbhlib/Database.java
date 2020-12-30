@@ -128,8 +128,12 @@ public final class Database {
         sourceBase.close();
     }
 
-    private GameHeaderModel getHeaderModel(GameHeader header) throws IOException {
+    public GameHeaderModel getHeaderModel(GameHeader header) throws IOException {
         GameHeaderModel model = new GameHeaderModel();
+
+        if (header.isGuidingText()) {
+            throw new IllegalArgumentException("Can't get game header model for a guiding text (id " + header.getId() + ")");
+        }
 
         PlayerEntity whitePlayer = playerBase.get(header.getWhitePlayerId());
         PlayerEntity blackPlayer = playerBase.get(header.getBlackPlayerId());
@@ -197,7 +201,7 @@ public final class Database {
 
         GameHeaderModel headerModel = getHeaderModel(gameHeader);
 
-        GameMovesModel moves = movesBase.getMoves(gameHeader.getMovesOffset());
+        GameMovesModel moves = movesBase.getMoves(gameHeader.getMovesOffset(), gameId);
         annotationBase.getAnnotations(moves, gameHeader.getAnnotationOffset());
 
         GameModel model = new GameModel(headerModel, moves);
