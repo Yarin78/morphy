@@ -7,8 +7,10 @@ import se.yarin.cbhlib.entities.*;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
@@ -17,6 +19,11 @@ public abstract class EntityBase<T extends Entity & Comparable<T>> implements En
     private static final Logger log = LoggerFactory.getLogger(EntityBase.class);
 
     private final EntityStorage<T> storage;
+
+    // Cache entities by id to avoid having to deserialize the same entity again and again.
+    // Only used when doing direct lookups, not when iterating over ranges.
+    // TODO: Proper LRU cache to save memory
+    private Map<Integer, T> cacheById = new HashMap<>();
 
     /**
      * Gets the underlying storage of the database.
@@ -58,7 +65,12 @@ public abstract class EntityBase<T extends Entity & Comparable<T>> implements En
      * @throws IOException if there was an IO error reading the entity
      */
     public T get(int id) throws IOException {
-        return storage.getEntity(id);
+        if (cacheById.containsKey(id)) {
+            return cacheById.get(id);
+        }
+        T entity = storage.getEntity(id);
+        cacheById.put(id, entity);
+        return entity;
     }
 
     /**
@@ -94,6 +106,7 @@ public abstract class EntityBase<T extends Entity & Comparable<T>> implements En
         if (entity.getId() == -1) {
             throw new IllegalArgumentException("The id of the entity to update must be set");
         }
+        cacheById.remove(id);
         storage.putEntityById(id, entity);
     }
 
@@ -105,6 +118,7 @@ public abstract class EntityBase<T extends Entity & Comparable<T>> implements En
      * @throws IOException if some IO error occurred
      */
     public boolean delete(int entityId) throws IOException, EntityStorageException {
+        cacheById.remove(entityId);
         return storage.deleteEntity(entityId);
     }
 
@@ -116,6 +130,7 @@ public abstract class EntityBase<T extends Entity & Comparable<T>> implements En
      * @throws IOException if some IO error occurred
      */
     public boolean delete(T entity) throws IOException, EntityStorageException {
+        cacheById.remove(entity.getId());
         return storage.deleteEntity(entity);
     }
 
