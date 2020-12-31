@@ -86,9 +86,10 @@ public interface EntityStorage<T extends Entity & Comparable<T>> extends Iterabl
     /**
      * Returns all entities. There will be no null entries in the output.
      * If there are a large number of entities, consider using {@link #iterator()} instead.
+     * @param sortByKey if false, sort by id; otherwise sort by default sorting order
      * @return a list of all entities
      */
-    List<T> getAllEntities() throws IOException;
+    List<T> getAllEntities(boolean sortByKey) throws IOException;
 
     /**
      * Gets an iterator over the entities in ascending id order.

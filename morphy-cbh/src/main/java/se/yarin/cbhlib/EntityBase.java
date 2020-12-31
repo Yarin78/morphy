@@ -51,11 +51,20 @@ public abstract class EntityBase<T extends Entity & Comparable<T>> implements En
     }
 
     /**
-     * Gets the number of entites in the database
+     * Gets the number of entities in the database
      * @return the number of entities
      */
     public int getCount() {
         return storage.getNumEntities();
+    }
+
+    /**
+     * Gets the allocated number of entities in the database; expanded on demand,
+     * but typically not decreased when entities are deleted.
+     * @return the number of entity entries
+     */
+    public int getCapacity() {
+        return storage.getCapacity();
     }
 
     /**
@@ -149,7 +158,7 @@ public abstract class EntityBase<T extends Entity & Comparable<T>> implements En
      * @throws IOException if some IO error occurred reading the entities
      */
     public List<T> getAll() throws IOException {
-        return storage.getAllEntities();
+        return storage.getAllEntities(false);
     }
 
     /**

@@ -182,7 +182,7 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
             throw new EntityStorageException(String.format(
                     "Reached deleted element %d when validating the storage structure.", entityId));
         }
-        if ((min != null && min.compareTo(entity) >= 0) || (max != null && max.compareTo(entity) <= 0)) {
+        if ((min != null && min.compareTo(entity) > 0) || (max != null && max.compareTo(entity) < 0)) {
             throw new EntityStorageException(String.format(
                     "Entity %d out of order when validating the storage structure", entityId));
         }
@@ -220,10 +220,17 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
      * @return a list of all entities
      * @throws IOException if there was an error getting any entity
      */
-    public List<T> getAllEntities() throws IOException {
+    public List<T> getAllEntities(boolean sortByKey) throws IOException {
         ArrayList<T> result = new ArrayList<>(getNumEntities());
-        for (T entity : this) {
-            result.add(entity);
+        if (sortByKey) {
+            Iterator<T> iterator = getOrderedAscendingIterator(null);
+            while (iterator.hasNext()) {
+                result.add(iterator.next());
+            }
+        } else {
+            for (T entity : this) {
+                result.add(entity);
+            }
         }
         return result;
     }
@@ -335,16 +342,30 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
             }
             try {
                 T entity = treePath.getNode().getEntity();
-                if (ascending && treePath.getNode().getRightEntityId() >= 0) {
-                    treePath = new TreePath<>(1, treePath.getNode(), treePath.getParent());
-                    treePath = nodeStorage.treeSearch(treePath.getNode().getRightEntityId(), treePath, entity);
-                } else if (!ascending && treePath.getNode().getLeftEntityId() >= 0) {
-                    treePath = new TreePath<>(-1, treePath.getNode(), treePath.getParent());
-                    treePath = nodeStorage.treeSearch(treePath.getNode().getLeftEntityId(), treePath, entity);
-                } else {
-                    treePath = treePath.getParent();
-                    while (treePath != null && treePath.getCompare() * (ascending ? 1 : -1) > 0) {
+                if (ascending) {
+                    int rightEntityId = treePath.getNode().getRightEntityId();
+                    if (rightEntityId >= 0) {
+                        // In ascending traversal, the next node is the leftmost child in the right subtree
+                        treePath = new TreePath<>(1, treePath.getNode(), treePath.getParent());
+                        treePath = traverseLeftMost(rightEntityId, treePath);
+                    } else {
                         treePath = treePath.getParent();
+                        while (treePath != null && treePath.getCompare() > 0) {
+                            treePath = treePath.getParent();
+                        }
+                    }
+                } else {
+                    int leftEntityId = treePath.getNode().getLeftEntityId();
+                    if (leftEntityId >= 0) {
+                        // In descending traversal, the next node is the rightmost child in the left subtree
+                        treePath = new TreePath<>(-1, treePath.getNode(), treePath.getParent());
+                        treePath = traverseRightMost(leftEntityId, treePath);
+                    } else {
+                        // If no child tree in the right direction exist, go to parent
+                        treePath = treePath.getParent();
+                        while (treePath != null && treePath.getCompare() < 0) {
+                            treePath = treePath.getParent();
+                        }
                     }
                 }
                 return entity;
@@ -354,15 +375,28 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
         }
     }
 
+    TreePath<T> traverseLeftMost(int currentId, TreePath<T> path) throws IOException {
+        if (currentId < 0) {
+            return path;
+        }
+        EntityNode<T> node = nodeStorage.getEntityNode(currentId);
+        return traverseLeftMost(node.getLeftEntityId(), new TreePath<>(-1, node, path));
+    }
+
+    TreePath<T> traverseRightMost(int currentId, TreePath<T> path) throws IOException {
+        if (currentId < 0) {
+            return path;
+        }
+        EntityNode<T> node = nodeStorage.getEntityNode(currentId);
+        return traverseRightMost(node.getRightEntityId(), new TreePath<>(1, node, path));
+    }
+
+
     private Iterator<T> getOrderedIterator(T startEntity, boolean ascending) throws IOException {
-        TreePath<T> treePath = null;
+        TreePath<T> treePath;
         if (startEntity == null) {
             int currentId = nodeStorage.getRootEntityId();
-            while (currentId >= 0) {
-                EntityNode<T> node = nodeStorage.getEntityNode(currentId);
-                treePath = new TreePath<>(ascending ? -1 : 1, node, treePath);
-                currentId = ascending ? node.getLeftEntityId() : node.getRightEntityId();
-            }
+            treePath = ascending ? traverseLeftMost(currentId, null) : traverseRightMost(currentId, null);
         } else {
             treePath = treeSearch(startEntity);
             while (treePath != null && treePath.getCompare() * (ascending ? 1 : -1) > 0) {
