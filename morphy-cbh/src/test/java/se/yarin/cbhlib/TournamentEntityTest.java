@@ -84,7 +84,7 @@ public class TournamentEntityTest {
     @Test
     public void testGetTournamentByKey() throws IOException {
         TournamentBase tournamentBase = TournamentBase.open(tournamentIndexFile);
-        TournamentEntity tournament = tournamentBase.get(new TournamentEntity("London Classic 7th"));
+        TournamentEntity tournament = tournamentBase.get(new TournamentEntity("London Classic 7th", new Date(2015)));
         assertEquals("London", tournament.getPlace());
     }
 

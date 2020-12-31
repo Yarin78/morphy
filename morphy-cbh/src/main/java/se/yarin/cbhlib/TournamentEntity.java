@@ -17,7 +17,7 @@ public class TournamentEntity implements Entity, Comparable<TournamentEntity> {
     @Getter
     @NonNull
     @Builder.Default
-    private Date date = Date.today();
+    private Date date;
 
     @Getter
     private int category;
@@ -67,9 +67,10 @@ public class TournamentEntity implements Entity, Comparable<TournamentEntity> {
     @Getter
     private int firstGameId;
 
-    public TournamentEntity(@NonNull String title) {
+    public TournamentEntity(@NonNull String title, @NonNull Date date) {
+        // Tournaments are keyed (and sorted) by year + title
         this.title = title;
-        this.date = Date.today();
+        this.date = date;
         this.type = TournamentType.NONE;
         this.timeControl = TournamentTimeControl.NORMAL;
         this.place = "";
@@ -78,12 +79,18 @@ public class TournamentEntity implements Entity, Comparable<TournamentEntity> {
 
     @Override
     public String toString() {
-        return title;
+        return this.date.year() + ": " + this.title;
     }
 
     @Override
     public int compareTo(TournamentEntity o) {
-        return title.compareTo(o.title);
+        if (this.date.year() != o.date.year()) {
+            return o.date.year() - this.date.year();
+        }
+        if (!this.title.equals(o.title)) {
+            return title.compareTo(o.title);
+        }
+        return 0;
     }
 
     @Override
@@ -103,11 +110,11 @@ public class TournamentEntity implements Entity, Comparable<TournamentEntity> {
 
         TournamentEntity that = (TournamentEntity) o;
 
-        return title.equals(that.title);
+        return title.equals(that.title) && this.date.year() == that.date.year();
     }
 
     @Override
     public int hashCode() {
-        return title.hashCode();
+        return title.hashCode() + this.date.year();
     }
 }

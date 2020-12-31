@@ -232,7 +232,7 @@ public final class Database {
             black = resolveEntity((Integer) header.getField(BLACK_ID),
                     PlayerEntity.fromFullName(defaultName(header.getBlack())), playerBase);
             tournament = resolveEntity((Integer) header.getField(EVENT_ID),
-                    new TournamentEntity(defaultName(header.getEvent())), tournamentBase);
+                    new TournamentEntity(defaultName(header.getEvent()), Date.today()), tournamentBase);
             annotator = resolveEntity((Integer) header.getField(ANNOTATOR_ID),
                     new AnnotatorEntity(defaultName(header.getAnnotator())), annotatorBase);
             source = resolveEntity((Integer) header.getField(SOURCE_ID),
