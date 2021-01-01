@@ -4,6 +4,7 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import se.yarin.cbhlib.entities.EntityStorageDuplicateKeyException;
 import se.yarin.cbhlib.entities.EntityStorageException;
 
 import java.io.File;
@@ -92,14 +93,14 @@ public class PlayerEntityTest {
     }
 
     @Test
-    public void testGetPlayerByKey() throws IOException {
+    public void testGetPlayerByKey() throws IOException, EntityStorageDuplicateKeyException {
         PlayerBase playerBase = PlayerBase.open(playerIndexFile);
         PlayerEntity player = playerBase.get(new PlayerEntity("Carlsen", "Magnus"));
         assertEquals(22, player.getCount());
     }
 
     @Test
-    public void testGetMissingPlayerByKey() throws IOException {
+    public void testGetMissingPlayerByKey() throws IOException, EntityStorageDuplicateKeyException {
         PlayerBase playerBase = PlayerBase.open(playerIndexFile);
         PlayerEntity player = playerBase.get(new PlayerEntity("Mardell", "Jimmy"));
         assertNull(player);

@@ -540,7 +540,7 @@ public final class Database {
                 throw new IllegalArgumentException("No entity with id " + id);
             }
         } else {
-            entity = base.get(key);
+            entity = base.getAny(key);
             if (entity == null) {
                 try {
                     entity = base.add(key);

@@ -4,6 +4,7 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import se.yarin.cbhlib.entities.EntityStorageDuplicateKeyException;
 import se.yarin.cbhlib.entities.EntityStorageException;
 
 import java.io.File;
@@ -60,7 +61,7 @@ public class TeamEntityTest {
     }
 
     @Test
-    public void testGetTeamByKey() throws IOException {
+    public void testGetTeamByKey() throws IOException, EntityStorageDuplicateKeyException {
         TeamBase teamBase = TeamBase.open(teamIndexFile);
         TeamEntity team = teamBase.get(new TeamEntity("Hamburger SK"));
         assertEquals(2015, team.getYear());

@@ -4,6 +4,7 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import se.yarin.cbhlib.entities.EntityStorageDuplicateKeyException;
 import se.yarin.cbhlib.entities.EntityStorageException;
 import se.yarin.chess.Date;
 
@@ -63,7 +64,7 @@ public class SourceEntityTest {
     }
 
     @Test
-    public void testGetSourceByKey() throws IOException {
+    public void testGetSourceByKey() throws IOException, EntityStorageDuplicateKeyException {
         SourceBase sourceBase = SourceBase.open(sourceIndexFile);
         SourceEntity source = sourceBase.get(new SourceEntity("CBM 171"));
         assertEquals(2, source.getVersion());

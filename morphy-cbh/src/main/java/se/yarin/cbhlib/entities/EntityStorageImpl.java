@@ -93,7 +93,7 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
     }
 
     @Override
-    public T getEntity(@NonNull T entity) throws IOException {
+    public T getAnyEntity(@NonNull T entity) throws IOException {
         TreePath<T> treePath = treeSearch(entity);
         if (treePath == null) {
             return null;
@@ -103,6 +103,41 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
             return foundEntity;
         }
         return null;
+    }
+
+    @Override
+    public T getEntity(@NonNull T entity) throws IOException, EntityStorageDuplicateKeyException {
+        Iterator<T> iterator = getOrderedAscendingIterator(entity);
+        ArrayList<T> result = new ArrayList<>();
+        while (iterator.hasNext() && result.size() < 2) {
+            T e = iterator.next();
+            if (e.compareTo(entity) != 0) {
+                break;
+            }
+            result.add(e);
+        }
+        if (result.size() == 0) {
+            return null;
+        }
+        if (result.size() == 1) {
+            return result.get(0);
+        }
+        throw new EntityStorageDuplicateKeyException(String.format("Id %d and %d have a matching key",
+                result.get(0).getId(), result.get(1).getId()));
+    }
+
+    @Override
+    public List<T> getEntities(@NonNull T entity) throws IOException {
+        Iterator<T> iterator = getOrderedAscendingIterator(entity);
+        ArrayList<T> result = new ArrayList<>();
+        while (iterator.hasNext()) {
+            T e = iterator.next();
+            if (e.compareTo(entity) != 0) {
+                break;
+            }
+            result.add(e);
+        }
+        return result;
     }
 
     @Override
@@ -240,6 +275,7 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
      * to the searched entity.
      * If the entity doesn't exist in the tree, the path ends at the node in the
      * tree where the entity can be inserted.
+     * If there are multiple matching entities, the leftmost will be returned.
      * @param entity the entity to search for
      * @return the most recent node in the path
      * @throws IOException if an IO error occurred when searching in the tree
@@ -257,6 +293,8 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
     public Iterator<T> iterator(int startId) {
         return new DefaultIterator(startId);
     }
+
+
 
     private class DefaultIterator implements Iterator<T> {
         private List<EntityNode<T>> batch = new ArrayList<>();

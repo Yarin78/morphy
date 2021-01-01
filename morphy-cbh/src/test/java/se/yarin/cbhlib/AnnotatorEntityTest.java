@@ -4,6 +4,7 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import se.yarin.cbhlib.entities.EntityStorageDuplicateKeyException;
 import se.yarin.cbhlib.entities.EntityStorageException;
 
 import java.io.File;
@@ -59,7 +60,7 @@ public class AnnotatorEntityTest {
     }
 
     @Test
-    public void testGetAnnotatorByKey() throws IOException {
+    public void testGetAnnotatorByKey() throws IOException, EntityStorageDuplicateKeyException {
         AnnotatorBase annotatorBase = AnnotatorBase.open(annotatorIndexFile);
         AnnotatorEntity annotator = annotatorBase.get(new AnnotatorEntity("Marin,M"));
         assertEquals(9, annotator.getCount());

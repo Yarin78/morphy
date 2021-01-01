@@ -7,10 +7,7 @@ import se.yarin.cbhlib.entities.*;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
@@ -87,9 +84,30 @@ public abstract class EntityBase<T extends Entity & Comparable<T>> implements En
      * @param entityKey the key of the entity
      * @return the entity, or null if there was no entity with that key
      * @throws IOException if there was an IO error reading the entity
+     * @throws EntityStorageDuplicateKeyException if there are multiple entities with the given key
      */
-    public T get(@NonNull T entityKey) throws IOException {
+    public T get(@NonNull T entityKey) throws IOException, EntityStorageDuplicateKeyException {
         return storage.getEntity(entityKey);
+    }
+
+    /**
+     * Gets an entity by key. If there are multiple entities matching, returns one of them.
+     * @param entityKey the key of the entity
+     * @return the entity, or null if there was no entity with that key
+     * @throws IOException if there was an IO error reading the entity
+     */
+    public T getAny(@NonNull T entityKey) throws IOException {
+        return storage.getAnyEntity(entityKey);
+    }
+
+    /**
+     * Gets all entities by key. Almost always this will be 0 or 1.
+     * @param entityKey the key of the entity
+     * @return all entities in the base with the given key
+     * @throws IOException if there was an IO error reading the entity
+     */
+    public List<T> getAll(@NonNull T entityKey) throws IOException {
+        return storage.getEntities(entityKey);
     }
 
     /**

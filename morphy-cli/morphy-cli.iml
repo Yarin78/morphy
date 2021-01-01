@@ -16,5 +16,7 @@
     <orderEntry type="library" name="Maven: info.picocli:picocli:4.5.2" level="project" />
     <orderEntry type="library" name="Maven: org.slf4j:slf4j-log4j12:1.7.30" level="project" />
     <orderEntry type="library" name="Maven: log4j:log4j:1.2.17" level="project" />
+    <orderEntry type="library" name="Maven: me.tongfei:progressbar:0.9.0" level="project" />
+    <orderEntry type="library" name="Maven: org.jline:jline:3.16.0" level="project" />
   </component>
 </module>

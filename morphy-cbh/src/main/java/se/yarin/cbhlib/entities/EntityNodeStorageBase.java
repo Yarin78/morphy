@@ -95,6 +95,11 @@ abstract class EntityNodeStorageBase<T extends Entity & Comparable<T>> {
 
         path = new TreePath<>(comp, node, path);
         if (comp == 0) {
+            // We got a hit, but we must check if there are more hits in the left subtree
+            TreePath<T> leftPath = treeSearch(node.getLeftEntityId(), path, entity);
+            if (leftPath.getCompare() == 0) {
+                return leftPath;
+            }
             return path;
         } else if (comp < 0) {
             return treeSearch(node.getLeftEntityId(), path, entity);

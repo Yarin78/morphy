@@ -1,6 +1,8 @@
 File contents
 =============
-This text file contains the result of many hours work trying to figure out how the Chessbase CBH file format (and related files) work. Some file extensions, such as the search booster and the archive format CBV, are completely ignored for now. All data was derived from ChessBase 9.0.
+This text file contains the result of many hours work trying to figure out how the Chessbase CBH file format
+(and related files) work. Some file extensions, such as the search booster and the archive format CBV, are completely
+ignored for now. All data was derived from ChessBase 9.0.
 
 The following files contain the minimal game information in a database:
 

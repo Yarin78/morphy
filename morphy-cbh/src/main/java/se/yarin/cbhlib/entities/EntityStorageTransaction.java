@@ -100,7 +100,12 @@ class EntityStorageTransaction<T extends Entity & Comparable<T>> {
 
         TreePath<T> result = treeSearch(entity);
         if (result != null && result.getCompare() == 0) {
-            throw new EntityStorageException("An entity with the same key already exists");
+            // Inserting duplicate elements is fine, but need to find a successor node in the tree
+            // in case the matching element is not a leaf
+            while (result.getCompare() == 0) {
+                result = new TreePath<>(-1, result.getNode(), result.getParent());
+                result = nodeStorage.treeSearch(result.getNode().getLeftEntityId(), result, entity);
+            }
         }
 
         int entityId;
@@ -246,9 +251,16 @@ class EntityStorageTransaction<T extends Entity & Comparable<T>> {
         }
 
         // Find the node we want to delete in the tree
+        //nodeStorage.
+
         TreePath<T> nodePath = treeSearch(node.getEntity());
         if (nodePath == null || nodePath.getCompare() != 0) {
             throw new EntityStorageException("Broken database structure; couldn't find the node to delete.");
+        }
+        if (nodePath.getNode().getEntityId() != entityId) {
+            // Can happen if there are multiple entities with the same key
+            // TODO: Add tests to ensure this might happen and support this properly
+            throw new EntityStorageException("Oops, tried to delete the wrong entry due to multiple key issue.");
         }
         return internalDeleteEntity(nodePath);
     }
@@ -257,8 +269,9 @@ class EntityStorageTransaction<T extends Entity & Comparable<T>> {
      * Deletes an entity from the storage.
      * @param entity the entity key to delete
      * @return true if an entity was deleted; false if there was no entity with that key
+     * @throws EntityStorageDuplicateKeyException if there are multiple entities with the given key
      */
-    boolean deleteEntity(T entity) throws IOException, EntityStorageException {
+    boolean deleteEntity(T entity) throws IOException, EntityStorageDuplicateKeyException {
         if (committed) {
             throw new IllegalStateException("The transaction has already been committed");
         }

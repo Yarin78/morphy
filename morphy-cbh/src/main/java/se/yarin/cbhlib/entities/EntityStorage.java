@@ -27,11 +27,26 @@ public interface EntityStorage<T extends Entity & Comparable<T>> extends Iterabl
     T getEntity(int entityId) throws IOException;
 
     /**
-     * Gets an entity by the unique key
-     * @param entity an entity populated with the unique key fields
+     * Gets an entity by its key. If there are multiple matching the key, one of them will be returned.
+     * @param entity an entity populated with the key fields
      * @return the entity, or null if there was no entity with that key
      */
-    T getEntity(T entity) throws IOException;
+    T getAnyEntity(T entity) throws IOException;
+
+    /**
+     * Gets an entity by its key.
+     * @param entity an entity populated with the key fields
+     * @return the entity, or null if there was no entity with that key
+     * @throws EntityStorageDuplicateKeyException if there are multiple entities in the storage having the same key
+     */
+    T getEntity(T entity) throws IOException, EntityStorageDuplicateKeyException;
+
+    /**
+     * Gets all entities matching the key.
+     * @param entity an entity populated with the key fields
+     * @return all entities in the base with the given key
+     */
+    List<T> getEntities(T entity) throws IOException;
 
     /**
      * Begins a new transaction
@@ -43,7 +58,6 @@ public interface EntityStorage<T extends Entity & Comparable<T>> extends Iterabl
      * Adds a new entity to the storage. The id-field in the entity is ignored.
      * @param entity the entity to add
      * @return the id of the new entity
-     * @throws EntityStorageException if another entity with the same key already exists
      */
     int addEntity(@NonNull T entity) throws EntityStorageException, IOException;
 
@@ -51,7 +65,6 @@ public interface EntityStorage<T extends Entity & Comparable<T>> extends Iterabl
      * Updates an entity in the storage.
      * @param id the entity id to update.
      * @param entity the new entity. {@link Entity#getId()} will be ignored.
-     * @throws EntityStorageException if another entity with the same key already exists
      */
     void putEntityById(int id, @NonNull T entity) throws EntityStorageException, IOException;
 
@@ -60,6 +73,7 @@ public interface EntityStorage<T extends Entity & Comparable<T>> extends Iterabl
      * determine which entity in the storage to update.
      * @param entity the new entity. {@link Entity#getId()} will be ignored.
      * @throws EntityStorageException if no existing entity with the key exists
+     * @throws EntityStorageDuplicateKeyException if more than one entity with the key exists
      */
     void putEntityByKey(@NonNull T entity) throws EntityStorageException, IOException;
 
@@ -74,6 +88,8 @@ public interface EntityStorage<T extends Entity & Comparable<T>> extends Iterabl
      * Deletes an entity from the storage.
      * @param entity the entity key to delete
      * @return true if an entity was deleted; false if there was no entity with that key
+     * @throws EntityStorageDuplicateKeyException if there are multiple entities with the key
+     * @throws EntityStorageException if the delete operation failed
      */
     boolean deleteEntity(@NonNull T entity) throws IOException, EntityStorageException;
 

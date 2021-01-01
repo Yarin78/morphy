@@ -8,6 +8,7 @@ import org.junit.rules.TemporaryFolder;
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static org.junit.Assert.*;
 
@@ -134,6 +135,66 @@ public class EntityStorageTest {
     }
 
     @Test
+    public void testGetAnyEntityByKey() throws IOException, EntityStorageException {
+        EntityStorage<TestEntity> storage = createStorage();
+        storage.addEntity(TestEntity.builder().key("foo").value(7).build());
+        storage.addEntity(TestEntity.builder().key("x").value(2).build());
+        storage.addEntity(TestEntity.builder().key("bar").value(5).build());
+        storage.addEntity(TestEntity.builder().key("y").value(9).build());
+        storage.addEntity(TestEntity.builder().key("foo").value(11).build());
+        TestEntity foo = storage.getAnyEntity(new TestEntity("foo"));
+        assertTrue(foo.getValue() == 7 || foo.getValue() == 11);
+    }
+
+    @Test(expected = EntityStorageDuplicateKeyException.class)
+    public void testGetDuplicateEntityByKey() throws IOException, EntityStorageException {
+        EntityStorage<TestEntity> storage = createStorage();
+        storage.addEntity(TestEntity.builder().key("foo").value(7).build());
+        storage.addEntity(TestEntity.builder().key("x").value(2).build());
+        storage.addEntity(TestEntity.builder().key("bar").value(5).build());
+        storage.addEntity(TestEntity.builder().key("y").value(9).build());
+        storage.addEntity(TestEntity.builder().key("foo").value(11).build());
+        storage.getEntity(new TestEntity("foo"));
+    }
+
+    @Test
+    public void testGetDuplicateEntitiesByKey() throws EntityStorageException, IOException {
+        EntityStorage<TestEntity> storage = createStorage();
+        storage.addEntity(TestEntity.builder().key("foo").value(7).build());
+        storage.addEntity(TestEntity.builder().key("x").value(2).build());
+        storage.addEntity(TestEntity.builder().key("bar").value(5).build());
+        storage.addEntity(TestEntity.builder().key("y").value(9).build());
+        storage.addEntity(TestEntity.builder().key("foo").value(11).build());
+        List<TestEntity> result = storage.getEntities(new TestEntity("foo"));
+        assertEquals(2, result.size());
+
+        int v1 = result.get(0).getValue();
+        int v2 = result.get(1).getValue();
+        assertTrue(Math.min(v1, v2) == 7 && Math.max(v1, v2) == 11);
+    }
+
+    @Test
+    public void testGetDuplicateEntitiesByKeyRandomInserts() throws IOException, EntityStorageException {
+        // Add 1000 random entities and ensure that when fetching entities by key, we get the correct amount each time.
+        // Since all entities will have 1 of the 5 candidate keys, there will be lots and lots of duplicates.
+        int noOps = 1000;
+        String[] candidates = new String[] {"foo", "bar", "xyz", "a", "zzz"};
+        int[] expectedCount = new int[candidates.length];
+        EntityStorage<TestEntity> storage = createStorage();
+        Random random = new Random();
+        for (int i = 0; i < noOps; i++) {
+            int x = random.nextInt(candidates.length);
+            storage.addEntity(new TestEntity(candidates[x]));
+            expectedCount[x] += 1;
+
+            for (int j = 0; j < candidates.length; j++) {
+                int actual = storage.getEntities(new TestEntity(candidates[j])).size();
+                assertEquals(expectedCount[j], actual);
+            }
+        }
+    }
+
+    @Test
     public void testAddMultipleEntities() throws IOException, EntityStorageException {
         for (int iter = 0; iter < 100; iter++) {
             EntityStorage<TestEntity> storage = createStorage();
@@ -204,6 +265,16 @@ public class EntityStorageTest {
         assertNotNull(storage.getEntity(id1));
 
         storage.validateStructure();
+    }
+
+    @Test(expected = EntityStorageDuplicateKeyException.class)
+    public void testDeleteDuplicatedEntityByKey() throws EntityStorageException, IOException {
+        EntityStorage<TestEntity> storage = createStorage();
+        storage.addEntity(new TestEntity("foo"));
+        storage.addEntity(new TestEntity("bar"));
+        storage.addEntity(new TestEntity("foo"));
+
+        storage.deleteEntity(new TestEntity("foo"));
     }
 
     @Test
@@ -296,6 +367,43 @@ public class EntityStorageTest {
             }
         }
     }
+
+    @Test
+    public void testAddRemoveDuplicateEntities() throws IOException, EntityStorageException {
+        // Test that adding and removing a lot of entities with duplicate keys don't cause problems
+        // There was earlier assumptions in the code that all keys had to be unique
+        int noOps = 200;
+        EntityStorage<TestEntity> storage = createStorage();
+        String[] candidates = {"foo", "bar", "abcde", "xyz", "test"};
+        ArrayList<String> expected = new ArrayList<>();
+        ArrayList<Integer> expectedIds = new ArrayList<>();
+        for (int ops = 0; ops < noOps; ops++) {
+            String key = candidates[random.nextInt(candidates.length)];
+            int id = storage.addEntity(new TestEntity(key));
+            expected.add(key);
+            expectedIds.add(id);
+            Collections.sort(expected);
+
+            storage.validateStructure();
+            List<String> actual = storage.getAllEntities(true).stream().map(TestEntity::getKey).collect(Collectors.toList());
+            assertEquals(expected, actual);
+        }
+
+        while (expectedIds.size() > 0) {
+            int i = random.nextInt(expectedIds.size());
+            int id = expectedIds.get(i);
+            expectedIds.remove(i);
+            storage.deleteEntity(id);
+
+            storage.validateStructure();
+            List<Integer> actual = storage.getAllEntities(true).stream().map(TestEntity::getId).collect(Collectors.toList());
+            assertEquals(expectedIds, actual);
+        }
+    }
+
+    // TODO: Make sure update fails if there are duplicate matches
+    // TODO: test when putEntityByKey is used to replace something that exists multiple times; or causes something to exist multiple times
+    // TODO: test putEntityById when duplicate keys exists
 
     @Test
     public void testReplaceNodeWithSameKey() throws IOException, EntityStorageException {
@@ -443,6 +551,30 @@ public class EntityStorageTest {
             sb.append(iterator.next().getKey());
         }
         assertEquals("qledcba", sb.toString());
+    }
+
+    @Test
+    public void testIteratorsWithDuplicateEntries() throws IOException, EntityStorageException {
+        EntityStorage<TestEntity> storage = createStorage();
+        String[] values = {"d", "e", "b", "e", "q", "w", "a", "l", "c", "v", "x", "e", "b", "t" };
+        for (String value : values) {
+            storage.addEntity(new TestEntity(value));
+        }
+
+        Iterator<TestEntity> iterator = storage.getOrderedAscendingIterator(null);
+        StringBuilder sb = new StringBuilder();
+        while (iterator.hasNext()) {
+            sb.append(iterator.next().getKey());
+        }
+        assertEquals("abbcdeeelqtvwx", sb.toString());
+
+        iterator = storage.getOrderedDescendingIterator(null);
+        sb = new StringBuilder();
+        while (iterator.hasNext()) {
+            sb.append(iterator.next().getKey());
+        }
+        sb.reverse();
+        assertEquals("abbcdeeelqtvwx", sb.toString());
     }
 
     @Test

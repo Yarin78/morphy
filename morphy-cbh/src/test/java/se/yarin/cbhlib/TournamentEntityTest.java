@@ -4,6 +4,7 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import se.yarin.cbhlib.entities.EntityStorageDuplicateKeyException;
 import se.yarin.cbhlib.entities.EntityStorageException;
 import se.yarin.chess.Date;
 
@@ -82,7 +83,7 @@ public class TournamentEntityTest {
     }
 
     @Test
-    public void testGetTournamentByKey() throws IOException {
+    public void testGetTournamentByKey() throws IOException, EntityStorageDuplicateKeyException {
         TournamentBase tournamentBase = TournamentBase.open(tournamentIndexFile);
         TournamentEntity tournament = tournamentBase.get(new TournamentEntity("London Classic 7th", new Date(2015)));
         assertEquals("London", tournament.getPlace());
