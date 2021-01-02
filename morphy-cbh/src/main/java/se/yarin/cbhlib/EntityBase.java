@@ -4,6 +4,9 @@ import lombok.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.cbhlib.entities.*;
+import se.yarin.cbhlib.entities.storage.EntitySerializer;
+import se.yarin.cbhlib.entities.transaction.EntityStorage;
+import se.yarin.cbhlib.entities.transaction.EntityStorageImpl;
 
 import java.io.File;
 import java.io.IOException;

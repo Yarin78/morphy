@@ -1,7 +1,8 @@
-package se.yarin.cbhlib.entities;
+package se.yarin.cbhlib.entities.storage;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import se.yarin.cbhlib.entities.Entity;
 
 @AllArgsConstructor
 class EntityNodeImpl<T extends Entity & Comparable<T>> implements EntityNode<T> {

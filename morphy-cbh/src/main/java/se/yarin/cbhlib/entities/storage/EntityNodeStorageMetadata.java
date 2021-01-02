@@ -1,9 +1,9 @@
-package se.yarin.cbhlib.entities;
+package se.yarin.cbhlib.entities.storage;
 
 import lombok.Data;
 
 @Data
-class EntityNodeStorageMetadata {
+public class EntityNodeStorageMetadata {
     private final int serializedEntitySize;
     private int rootEntityId = -1;
     private int numEntities = 0;
@@ -15,7 +15,7 @@ class EntityNodeStorageMetadata {
     // This field is not persisted
     private final int version;
 
-    EntityNodeStorageMetadata(int serializedEntitySize, int headerSize, int version) {
+    public EntityNodeStorageMetadata(int serializedEntitySize, int headerSize, int version) {
         this.serializedEntitySize = serializedEntitySize;
         this.headerSize = headerSize;
         this.version = version;

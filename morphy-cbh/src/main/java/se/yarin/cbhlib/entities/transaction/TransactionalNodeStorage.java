@@ -1,6 +1,9 @@
-package se.yarin.cbhlib.entities;
+package se.yarin.cbhlib.entities.transaction;
 
 import lombok.NonNull;
+import se.yarin.cbhlib.entities.Entity;
+import se.yarin.cbhlib.entities.storage.EntityNode;
+import se.yarin.cbhlib.entities.storage.EntityNodeStorageBase;
 
 import java.io.IOException;
 import java.util.Collection;
@@ -11,11 +14,11 @@ import java.util.Map;
 /**
  * A wrapper of an underlying {@link EntityNodeStorageBase}, storing new changes in memory.
  */
-class TransactionalNodeStorage<T extends Entity & Comparable<T>> extends EntityNodeStorageBase<T> {
+public class TransactionalNodeStorage<T extends Entity & Comparable<T>> extends EntityNodeStorageBase<T> {
     private EntityNodeStorageBase<T> storage;
     private Map<Integer, EntityNode<T>> changes = new HashMap<>();
 
-    TransactionalNodeStorage(@NonNull EntityNodeStorageBase<T> storage) {
+    public TransactionalNodeStorage(@NonNull EntityNodeStorageBase<T> storage) {
         super(storage.getMetadata().clone());
         this.storage = storage;
     }
@@ -25,7 +28,7 @@ class TransactionalNodeStorage<T extends Entity & Comparable<T>> extends EntityN
     }
 
     @Override
-    protected EntityNode<T> getEntityNode(int entityId) throws IOException {
+    public EntityNode<T> getEntityNode(int entityId) throws IOException {
         EntityNode<T> node = changes.get(entityId);
         if (node != null) {
             return node;
@@ -34,23 +37,23 @@ class TransactionalNodeStorage<T extends Entity & Comparable<T>> extends EntityN
     }
 
     @Override
-    protected List<EntityNode<T>> getEntityNodes(int startIdInclusive, int endIdExclusive) throws IOException {
+    public List<EntityNode<T>> getEntityNodes(int startIdInclusive, int endIdExclusive) throws IOException {
         // Transactional operations don't need this method
         throw new UnsupportedOperationException();
     }
 
     @Override
-    protected void putEntityNode(@NonNull EntityNode<T> node) throws IOException {
+    public void putEntityNode(@NonNull EntityNode<T> node) throws IOException {
         changes.put(node.getEntityId(), node);
     }
 
     @Override
-    EntityNode<T> createNode(int entityId, T entity) {
+    public EntityNode<T> createNode(int entityId, T entity) {
         return storage.createNode(entityId, entity);
     }
 
     @Override
-    void close() throws IOException {
+    public void close() throws IOException {
         // Closing the underlying storage for a transaction is not a valid operation
         throw new UnsupportedOperationException();
     }

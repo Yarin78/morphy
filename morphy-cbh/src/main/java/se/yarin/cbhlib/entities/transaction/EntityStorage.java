@@ -1,6 +1,10 @@
-package se.yarin.cbhlib.entities;
+package se.yarin.cbhlib.entities.transaction;
 
 import lombok.NonNull;
+import se.yarin.cbhlib.entities.Entity;
+import se.yarin.cbhlib.entities.EntityStorageDuplicateKeyException;
+import se.yarin.cbhlib.entities.EntityStorageException;
+import se.yarin.cbhlib.entities.storage.TreePath;
 
 import java.io.IOException;
 import java.util.Iterator;
@@ -115,6 +119,10 @@ public interface EntityStorage<T extends Entity & Comparable<T>> extends Iterabl
      * @throws IOException if an IO error occurs
      */
     Iterator<T> iterator(int startId) throws IOException;
+
+    TreePath<T> lowerBound(@NonNull T entity) throws IOException;
+
+    TreePath<T> upperBound(@NonNull T entity) throws IOException;
 
     /**
      * Gets an iterator over the entities in ascending primary key sorting order

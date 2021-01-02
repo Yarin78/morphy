@@ -4,6 +4,8 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import se.yarin.cbhlib.entities.transaction.EntityStorage;
+import se.yarin.cbhlib.entities.transaction.EntityStorageImpl;
 
 import java.io.File;
 import java.io.IOException;
@@ -334,11 +336,20 @@ public class EntityStorageTest {
         for (int iter = 0; iter < 100; iter++) {
             EntityStorage<TestEntity> storage = createStorage();
             int count = 100;
+            ArrayList<Integer> idsLeft = new ArrayList<>();
             for (int i = 0; i < count; i++) {
                 storage.addEntity(new TestEntity(nextRandomString()));
+                idsLeft.add(i);
             }
+            Random random = new Random(0);
             for (int i = 0; i < count; i++) {
-                storage.deleteEntity(i);
+                int j = random.nextInt(idsLeft.size());
+                int ix = idsLeft.get(j);
+                idsLeft.remove(j);
+
+                storage.deleteEntity(ix);
+                List<Integer> actualLeft = storage.getAllEntities(false).stream().map(TestEntity::getId).collect(Collectors.toList());
+                assertEquals(idsLeft, actualLeft);
                 assertEquals(count - i - 1, storage.getNumEntities());
                 storage.validateStructure();
             }
@@ -377,9 +388,11 @@ public class EntityStorageTest {
         String[] candidates = {"foo", "bar", "abcde", "xyz", "test"};
         ArrayList<String> expected = new ArrayList<>();
         ArrayList<Integer> expectedIds = new ArrayList<>();
+        HashMap<Integer, String> idEntityMap = new HashMap<>();
         for (int ops = 0; ops < noOps; ops++) {
             String key = candidates[random.nextInt(candidates.length)];
             int id = storage.addEntity(new TestEntity(key));
+            idEntityMap.put(id, key);
             expected.add(key);
             expectedIds.add(id);
             Collections.sort(expected);
@@ -392,18 +405,19 @@ public class EntityStorageTest {
         while (expectedIds.size() > 0) {
             int i = random.nextInt(expectedIds.size());
             int id = expectedIds.get(i);
+            expected.remove(expected.indexOf(idEntityMap.get(id)));
             expectedIds.remove(i);
+            // System.out.println("Deleting id " + id);
             storage.deleteEntity(id);
 
             storage.validateStructure();
-            List<Integer> actual = storage.getAllEntities(true).stream().map(TestEntity::getId).collect(Collectors.toList());
-            assertEquals(expectedIds, actual);
+            List<Integer> actualIds = storage.getAllEntities(false).stream().map(TestEntity::getId).collect(Collectors.toList());
+            assertEquals(expectedIds, actualIds);
+
+            List<String> actual = storage.getAllEntities(true).stream().map(TestEntity::getKey).collect(Collectors.toList());
+            assertEquals(expected, actual);
         }
     }
-
-    // TODO: Make sure update fails if there are duplicate matches
-    // TODO: test when putEntityByKey is used to replace something that exists multiple times; or causes something to exist multiple times
-    // TODO: test putEntityById when duplicate keys exists
 
     @Test
     public void testReplaceNodeWithSameKey() throws IOException, EntityStorageException {
@@ -415,6 +429,32 @@ public class EntityStorageTest {
         storage.putEntityByKey(new TestEntity("b"));
         assertEquals(3, storage.getNumEntities());
         storage.validateStructure();
+    }
+
+    @Test(expected = EntityStorageDuplicateKeyException.class)
+    public void testReplaceNodeWithDuplicateKey() throws IOException, EntityStorageException {
+        EntityStorage<TestEntity> storage = createStorage();
+        storage.addEntity(new TestEntity("b"));
+        storage.addEntity(new TestEntity("a"));
+        storage.addEntity(new TestEntity("b"));
+        storage.addEntity(new TestEntity("c"));
+
+        assertEquals(4, storage.getNumEntities());
+        storage.putEntityByKey(new TestEntity("b"));
+    }
+
+    @Test
+    public void testReplaceDuplicateKeyNodeById() throws IOException, EntityStorageException {
+        EntityStorage<TestEntity> storage = createStorage();
+        storage.addEntity(new TestEntity("b"));
+        storage.addEntity(new TestEntity("a"));
+        int id = storage.addEntity(new TestEntity("b"));
+        storage.addEntity(new TestEntity("c"));
+
+        assertEquals(4, storage.getNumEntities());
+        storage.putEntityById(id, new TestEntity("e"));
+        List<String> result = storage.getAllEntities(true).stream().map(TestEntity::getKey).collect(Collectors.toList());
+        assertEquals(Arrays.asList("a", "b", "c", "e"), result);
     }
 
     @Test(expected = EntityStorageException.class)
@@ -438,7 +478,7 @@ public class EntityStorageTest {
         storage.validateStructure();
     }
 
-    @Test(expected = EntityStorageException.class)
+    @Test
     public void testReplaceNodeWithNewKeyThatAlreadyExists() throws EntityStorageException, IOException {
         EntityStorage<TestEntity> storage = createStorage();
         int id = storage.addEntity(new TestEntity("b"));
@@ -446,6 +486,9 @@ public class EntityStorageTest {
 
         TestEntity replaceEntity = TestEntity.builder().id(id).key("a").build();
         storage.putEntityById(id, replaceEntity);
+
+        List<String> result = storage.getAllEntities(false).stream().map(TestEntity::getKey).collect(Collectors.toList());
+        assertEquals(Arrays.asList("a", "a"), result);
     }
 
     @Test(expected = NullPointerException.class)
@@ -453,6 +496,7 @@ public class EntityStorageTest {
         EntityStorage<TestEntityv2> storage = EntityStorageImpl.createInMemory();
         storage.addEntity(TestEntityv2.builder().key("b").build());
     }
+
 
     @Test
     public void testOrderedAscendingIterator() throws IOException, EntityStorageException {

@@ -3,8 +3,8 @@ package se.yarin.cbhlib;
 import lombok.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import se.yarin.cbhlib.entities.EntityStorage;
-import se.yarin.cbhlib.entities.EntityStorageImpl;
+import se.yarin.cbhlib.entities.transaction.EntityStorage;
+import se.yarin.cbhlib.entities.transaction.EntityStorageImpl;
 
 import java.io.File;
 import java.io.IOException;

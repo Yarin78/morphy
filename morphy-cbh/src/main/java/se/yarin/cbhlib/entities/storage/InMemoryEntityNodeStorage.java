@@ -1,28 +1,29 @@
-package se.yarin.cbhlib.entities;
+package se.yarin.cbhlib.entities.storage;
 
 import lombok.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import se.yarin.cbhlib.entities.Entity;
 
 import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
 
-class InMemoryEntityNodeStorage<T extends Entity & Comparable<T>> extends EntityNodeStorageBase<T> {
+public class InMemoryEntityNodeStorage<T extends Entity & Comparable<T>> extends EntityNodeStorageBase<T> {
     private static final Logger log = LoggerFactory.getLogger(InMemoryEntityNodeStorage.class);
 
     private TreeMap<Integer, EntityNode<T>> nodes = new TreeMap<>();
 
-    InMemoryEntityNodeStorage() {
+    public InMemoryEntityNodeStorage() {
         this(new EntityNodeStorageMetadata(0, 0, 0));
     }
 
-    InMemoryEntityNodeStorage(@NonNull EntityNodeStorageMetadata metadata) {
+    public InMemoryEntityNodeStorage(@NonNull EntityNodeStorageMetadata metadata) {
         super(metadata);
     }
 
     @Override
-    protected EntityNode<T> getEntityNode(int entityId) throws IOException {
+    public EntityNode<T> getEntityNode(int entityId) throws IOException {
         EntityNode<T> entityNode = nodes.get(entityId);
         if (log.isTraceEnabled()) {
             log.trace("Read entity node: " + entityNode);
@@ -31,7 +32,7 @@ class InMemoryEntityNodeStorage<T extends Entity & Comparable<T>> extends Entity
     }
 
     @Override
-    protected List<EntityNode<T>> getEntityNodes(int startIdInclusive, int endIdExclusive)
+    public List<EntityNode<T>> getEntityNodes(int startIdInclusive, int endIdExclusive)
             throws IOException {
         return nodes.subMap(startIdInclusive, true, endIdExclusive, false)
                 .values()
@@ -40,7 +41,7 @@ class InMemoryEntityNodeStorage<T extends Entity & Comparable<T>> extends Entity
     }
 
     @Override
-    protected void putEntityNode(@NonNull EntityNode<T> node) throws IOException {
+    public void putEntityNode(@NonNull EntityNode<T> node) throws IOException {
         nodes.put(node.getEntityId(), node);
         if (log.isDebugEnabled()) {
             log.debug(String.format("Put entity node: %s", node));
@@ -48,10 +49,10 @@ class InMemoryEntityNodeStorage<T extends Entity & Comparable<T>> extends Entity
     }
 
     @Override
-    EntityNode<T> createNode(int entityId, T entity) {
+    public EntityNode<T> createNode(int entityId, T entity) {
         return new EntityNodeImpl<>(entityId, entity, -1, -1, 0);
     }
 
     @Override
-    void close() throws IOException { }
+    public void close() throws IOException { }
 }

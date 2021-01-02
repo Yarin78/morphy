@@ -4,7 +4,7 @@ import lombok.*;
 
 @Builder(toBuilder = true)
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
-class TestEntity implements Entity, Comparable<TestEntity> {
+public class TestEntity implements Entity, Comparable<TestEntity> {
     @Getter
     private int id;
     @Getter @NonNull

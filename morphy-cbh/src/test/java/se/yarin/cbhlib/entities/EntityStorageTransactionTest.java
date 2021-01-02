@@ -1,6 +1,9 @@
 package se.yarin.cbhlib.entities;
 
 import org.junit.Test;
+import se.yarin.cbhlib.entities.transaction.EntityStorage;
+import se.yarin.cbhlib.entities.transaction.EntityStorageImpl;
+import se.yarin.cbhlib.entities.transaction.EntityStorageTransaction;
 
 import java.io.IOException;
 
@@ -102,9 +105,9 @@ public class EntityStorageTransactionTest {
 
 
         assertEquals("b", txn.getEntity(1).getKey());
-        assertNotNull(txn.getEntity(new TestEntity("c")));
-        assertNull(txn.getEntity(new TestEntity("a")));
-        assertNull(txn.getEntity(new TestEntity("d")));
+        assertNotNull(txn.getAnyEntity(new TestEntity("c")));
+        assertNull(txn.getAnyEntity(new TestEntity("a")));
+        assertNull(txn.getAnyEntity(new TestEntity("d")));
 
         assertEquals(3, txn.getNumEntities());
         assertEquals(4, txn.getCapacity());

@@ -1,10 +1,11 @@
-package se.yarin.cbhlib.entities;
+package se.yarin.cbhlib.entities.storage;
 
 import lombok.Getter;
 import lombok.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.cbhlib.ByteBufferUtil;
+import se.yarin.cbhlib.entities.Entity;
 
 import java.io.File;
 import java.io.IOException;
@@ -15,7 +16,7 @@ import java.util.List;
 
 import static java.nio.file.StandardOpenOption.*;
 
-class PersistentEntityNodeStorage<T extends Entity & Comparable<T>> extends EntityNodeStorageBase<T> {
+public class PersistentEntityNodeStorage<T extends Entity & Comparable<T>> extends EntityNodeStorageBase<T> {
     private static final Logger log = LoggerFactory.getLogger(PersistentEntityNodeStorage.class);
 
     private static final int MAGIC_CONSTANT = 1234567890;
@@ -27,7 +28,7 @@ class PersistentEntityNodeStorage<T extends Entity & Comparable<T>> extends Enti
 
     private FileChannel channel;
 
-    PersistentEntityNodeStorage(File file, EntitySerializer<T> serializer)
+    public PersistentEntityNodeStorage(File file, EntitySerializer<T> serializer)
             throws IOException {
         super(loadMetadata(file));
 
@@ -41,7 +42,7 @@ class PersistentEntityNodeStorage<T extends Entity & Comparable<T>> extends Enti
                 storageName, getCapacity(), getRootEntityId(), getNumEntities(), getFirstDeletedEntityId()));
     }
 
-    static <T extends Entity> void createEmptyStorage(File file, EntitySerializer<T> serializer, int headerSize)
+    public static <T extends Entity> void createEmptyStorage(File file, EntitySerializer<T> serializer, int headerSize)
             throws IOException {
         if (headerSize < 28) {
             throw new IllegalArgumentException("The size of the header must be at least 28 bytes");
@@ -100,7 +101,7 @@ class PersistentEntityNodeStorage<T extends Entity & Comparable<T>> extends Enti
     }
 
     @Override
-    synchronized void setMetadata(EntityNodeStorageMetadata metadata) throws IOException {
+    public synchronized void setMetadata(EntityNodeStorageMetadata metadata) throws IOException {
         // Update the in-memory metadata cache as well
         super.setMetadata(metadata);
 
@@ -127,7 +128,7 @@ class PersistentEntityNodeStorage<T extends Entity & Comparable<T>> extends Enti
 
 
     @Override
-    protected synchronized EntityNode<T> getEntityNode(int entityId) throws IOException {
+    public synchronized EntityNode<T> getEntityNode(int entityId) throws IOException {
         positionChannel(entityId);
         ByteBuffer buf = ByteBuffer.allocate(9 + serializedEntitySize);
         channel.read(buf);
@@ -145,7 +146,7 @@ class PersistentEntityNodeStorage<T extends Entity & Comparable<T>> extends Enti
     /**
      * Gets all entity node in the specified range.
      */
-    protected synchronized List<EntityNode<T>> getEntityNodes(int startIdInclusive, int endIdExclusive) throws IOException {
+    public synchronized List<EntityNode<T>> getEntityNodes(int startIdInclusive, int endIdExclusive) throws IOException {
         if (startIdInclusive >= endIdExclusive) {
             return new ArrayList<>();
         }
@@ -165,7 +166,7 @@ class PersistentEntityNodeStorage<T extends Entity & Comparable<T>> extends Enti
     }
 
     @Override
-    synchronized protected void putEntityNode(@NonNull EntityNode<T> node) throws IOException {
+    public synchronized void putEntityNode(@NonNull EntityNode<T> node) throws IOException {
         positionChannel(node.getEntityId());
         ByteBuffer src = serializeNode(node);
         src.position(0);

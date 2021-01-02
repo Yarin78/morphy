@@ -1,4 +1,6 @@
-package se.yarin.cbhlib.entities;
+package se.yarin.cbhlib.entities.storage;
+
+import se.yarin.cbhlib.entities.Entity;
 
 /**
  * An entity node. This class is immutable.
