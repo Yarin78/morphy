@@ -87,10 +87,9 @@ public class TournamentEntity implements Entity, Comparable<TournamentEntity> {
         if (this.date.year() != o.date.year()) {
             return o.date.year() - this.date.year();
         }
-        if (!this.title.equals(o.title)) {
-            return title.compareTo(o.title);
-        }
-        return 0;
+        // Ordering is done on byte level
+        return CBUtil.cbCharSet.encode(title).compareTo(CBUtil.cbCharSet.encode(o.title));
+        //return title.compareTo(o.title);
     }
 
     @Override
