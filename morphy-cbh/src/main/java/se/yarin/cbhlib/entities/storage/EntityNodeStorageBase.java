@@ -75,7 +75,7 @@ public abstract class EntityNodeStorageBase<T extends Entity & Comparable<T>> {
     }
 
     /**
-     * Returns a TreePath to the first node which does not compare less than entity, or null if no such node exists
+     * Returns a TreePath to the first node which does not compare less than entity, or null if no such node exists.
      * If nodes exists with that compares equally to entity, the first of those nodes will be returned.
      */
     public TreePath<T> lowerBound(@NonNull T entity) throws IOException {
@@ -91,7 +91,7 @@ public abstract class EntityNodeStorageBase<T extends Entity & Comparable<T>> {
         T current = node.getEntity();
         int comp = entity.compareTo(current);
 
-        path = new TreePath<>(this, node, path);
+        path = new TreePath<>(this, currentId, path);
         if (comp <= 0) {
             TreePath<T> left = lowerBound(entity, node.getLeftEntityId(), path);
             return left == null ? path : left;
@@ -101,7 +101,7 @@ public abstract class EntityNodeStorageBase<T extends Entity & Comparable<T>> {
     }
 
     /**
-     * Returns a TreePath to the first node which compares greater than entity, or null if no such node exists
+     * Returns a TreePath to the first node which compares greater than entity, or null if no such node exists.
      */
     public TreePath<T> upperBound(@NonNull T entity) throws IOException {
         return upperBound(entity, getRootEntityId(), null);
@@ -116,7 +116,7 @@ public abstract class EntityNodeStorageBase<T extends Entity & Comparable<T>> {
         T current = node.getEntity();
         int comp = entity.compareTo(current);
 
-        path = new TreePath<>(this, node, path);
+        path = new TreePath<>(this, currentId, path);
         if (comp < 0) {
             TreePath<T> left = upperBound(entity, node.getLeftEntityId(), path);
             return left == null ? path : left;
