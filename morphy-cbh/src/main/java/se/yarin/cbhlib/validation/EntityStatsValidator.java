@@ -127,7 +127,8 @@ public class EntityStatsValidator {
             if (checks.contains(Validator.Checks.ENTITY_SORT_ORDER)) {
                 if (numEntities > 0) {
                     if (current.compareTo(last) < 0) {
-                        String msg = "Wrong order: (%d) %s  (%d) %s".formatted(last.getId(), last, current.getId(), current);
+                        String msg = "Wrong order in %s: was (%d) '%s' < (%d) '%s' but expected opposite".formatted(
+                                entityType, last.getId(), last, current.getId(), current);
                         if (throwOnError) {
                             throw new EntityStorageException(msg);
                         }

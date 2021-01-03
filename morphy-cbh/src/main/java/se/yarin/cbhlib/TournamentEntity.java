@@ -10,6 +10,8 @@ public class TournamentEntity implements Entity, Comparable<TournamentEntity> {
     @Getter
     private int id;
 
+    @Getter private byte[] raw;  // For debugging purposes
+
     @Getter
     @NonNull
     private String title;

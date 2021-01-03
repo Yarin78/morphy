@@ -58,8 +58,7 @@ public class SourceEntity implements Entity, Comparable<SourceEntity> {
 
     @Override
     public int compareTo(SourceEntity o) {
-        // Ordering is done on byte level
-        return CBUtil.cbCharSet.encode(title).compareTo(CBUtil.cbCharSet.encode(o.title));
+        return CBUtil.compareString(title, o.title);
     }
 
     @Override

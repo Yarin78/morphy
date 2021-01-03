@@ -10,6 +10,8 @@ public class PlayerEntity implements Entity, Comparable<PlayerEntity> {
     @Getter
     private int id;
 
+    @Getter private byte[] raw;  // For debugging purposes
+
     @Getter @NonNull
     private String lastName;
 
@@ -55,11 +57,9 @@ public class PlayerEntity implements Entity, Comparable<PlayerEntity> {
 
     @Override
     public int compareTo(PlayerEntity o) {
-        // The sorting order in older databases is slightly different, causing validation failures
-        // See for instance Mega Database 2017
-        int comp = lastName.compareTo(o.lastName);
+        int comp = CBUtil.compareStringUnsigned(lastName, o.lastName);
         if (comp != 0) return comp;
-        return firstName.compareTo(o.firstName);
+        return CBUtil.compareStringUnsigned(firstName, o.firstName);
     }
 
     @Override

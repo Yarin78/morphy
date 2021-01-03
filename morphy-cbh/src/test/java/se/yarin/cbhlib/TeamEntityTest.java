@@ -99,4 +99,23 @@ public class TeamEntityTest {
         assertEquals(15, team.getCount());
         assertEquals(123, team.getFirstGameId());
     }
+
+    @Test
+    public void testTeamSortingOrder() {
+        // Tested in ChessBase 16
+        String[] teamNames = {
+                "123",
+                "Bar",
+                "ar",
+                "moo",
+                "åäö",
+                "èbasd",
+        };
+
+        for (int i = 0; i < teamNames.length - 1; i++) {
+            TeamEntity t1 = new TeamEntity(teamNames[i]);
+            TeamEntity t2 = new TeamEntity(teamNames[i + 1]);
+            assertTrue(String.format("Expected '%s' < '%s'", teamNames[i], teamNames[i + 1]), t1.compareTo(t2) < 0);
+        }
+    }
 }

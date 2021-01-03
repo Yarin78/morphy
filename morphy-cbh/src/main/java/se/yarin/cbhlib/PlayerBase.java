@@ -63,8 +63,10 @@ public class PlayerBase extends EntityBase<PlayerEntity> {
     }
 
     public PlayerEntity deserialize(int entityId, @NonNull ByteBuffer buf) {
+        byte[] raw = buf.array().clone();
         return PlayerEntity.builder()
             .id(entityId)
+            .raw(raw)
             .lastName(ByteBufferUtil.getFixedSizeByteString(buf, 30))
             .firstName(ByteBufferUtil.getFixedSizeByteString(buf, 20))
             .count(ByteBufferUtil.getIntL(buf))

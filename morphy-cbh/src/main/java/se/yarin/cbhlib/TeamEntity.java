@@ -45,7 +45,7 @@ public class TeamEntity implements Entity, Comparable<TeamEntity> {
 
     @Override
     public int compareTo(TeamEntity o) {
-        return title.compareTo(o.title);
+        return CBUtil.compareStringUnsigned(title, o.title);
     }
 
     @Override

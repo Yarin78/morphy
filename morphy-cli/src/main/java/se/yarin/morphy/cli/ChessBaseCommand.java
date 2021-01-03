@@ -1,11 +1,9 @@
 package se.yarin.morphy.cli;
 
-import me.tongfei.progressbar.ProgressBar;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
 import se.yarin.cbhlib.*;
-import se.yarin.cbhlib.entities.Entity;
 import se.yarin.cbhlib.entities.EntityStorageException;
 import se.yarin.cbhlib.validation.Validator;
 
@@ -16,7 +14,7 @@ import java.util.concurrent.Callable;
 
 @CommandLine.Command(name = "cb", description = "Performs an operation on a ChessBase file",
         mixinStandardHelpOptions = true,
-        subcommands = { Games.class, Players.class, Check.class})
+        subcommands = { Games.class, Players.class, Tournaments.class, Check.class})
 class ChessBaseCommand implements Runnable {
 
     @Override
@@ -45,21 +43,80 @@ class Games implements Callable<Integer> {
     }
 }
 
+
 @CommandLine.Command(name = "players", mixinStandardHelpOptions = true)
 class Players implements Callable<Integer> {
 
     @CommandLine.Parameters(index = "0", description = "The ChessBase file to load")
     private File cbhFile;
 
+    @CommandLine.Option(names = "--count", description = "Max number of players to list")
+    int maxPlayers = 20;
+
+    @CommandLine.Option(names = "--hex", description = "Show player key in hexadecimal")
+    boolean hex = false;
+
     @Override
     public Integer call() throws IOException {
         Database db = Database.open(cbhFile);
-        System.out.println(db.getPlayerBase().getCount() + " players");
+
+        PlayerBase players = db.getPlayerBase();
+        Iterator<PlayerEntity> iterator = players.getAscendingIterator();
+        int count = 0;
+        while (iterator.hasNext() && count < maxPlayers) {
+            PlayerEntity player = iterator.next();
+            String line;
+            if (hex) {
+                line = String.format("%7d:  %-30s %-30s %6d", player.getId(), CBUtil.toHexString(player.getRaw()).substring(0, 30), player.getFullName(), player.getCount());
+            } else {
+                line = String.format("%7d:  %-30s %6d", player.getId(), player.getFullName(), player.getCount());
+            }
+            System.out.println(line);
+        }
+        System.out.println();
+        System.out.println("Total: " + players.getCount());
+
         db.close();
         return 0;
     }
 }
 
+@CommandLine.Command(name = "tournaments", mixinStandardHelpOptions = true)
+class Tournaments implements Callable<Integer> {
+
+    @CommandLine.Parameters(index = "0", description = "The ChessBase file to load")
+    private File cbhFile;
+
+    @CommandLine.Option(names = "--count", description = "Max number of tournaments to list")
+    int maxTournaments = 20;
+
+    @CommandLine.Option(names = "--hex", description = "Show tournament key in hexadecimal")
+    boolean hex = false;
+
+    @Override
+    public Integer call() throws IOException {
+        Database db = Database.open(cbhFile);
+
+        TournamentBase tournaments = db.getTournamentBase();
+        Iterator<TournamentEntity> iterator = tournaments.getAscendingIterator();
+        int count = 0;
+        while (iterator.hasNext() && count < maxTournaments) {
+            TournamentEntity tournament = iterator.next();
+            String line;
+            if (hex) {
+                line = String.format("%7d:  %-30s %-30s %6d", tournament.getId(), CBUtil.toHexString(tournament.getRaw()).substring(0, 30), tournament.getTitle(), tournament.getCount());
+            } else {
+                line = String.format("%7d:  %-30s %6d", tournament.getId(), tournament.getTitle(), tournament.getCount());
+            }
+            System.out.println(line);
+        }
+        System.out.println();
+        System.out.println("Total: " + tournaments.getCount());
+
+        db.close();
+        return 0;
+    }
+}
 
 @CommandLine.Command(name = "check", mixinStandardHelpOptions = true)
 class Check implements Callable<Integer> {

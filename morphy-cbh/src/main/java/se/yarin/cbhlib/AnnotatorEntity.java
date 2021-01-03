@@ -30,7 +30,7 @@ public class AnnotatorEntity implements Entity, Comparable<AnnotatorEntity> {
 
     @Override
     public int compareTo(AnnotatorEntity o) {
-        return name.compareTo(o.name);
+        return CBUtil.compareString(name, o.name);
     }
 
     @Override

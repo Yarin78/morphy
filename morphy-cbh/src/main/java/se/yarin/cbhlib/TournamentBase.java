@@ -86,10 +86,13 @@ public class TournamentBase extends EntityBase<TournamentEntity> {
     }
 
     public TournamentEntity deserialize(int entityId, @NonNull ByteBuffer buf) {
+        byte[] raw = buf.array().clone();
+
         String title = ByteBufferUtil.getFixedSizeByteString(buf, 40);
         String place = ByteBufferUtil.getFixedSizeByteString(buf, 30);
         TournamentEntity.TournamentEntityBuilder builder = TournamentEntity.builder()
             .id(entityId)
+            .raw(raw)
             .title(title)
             .place(place)
             .date(CBUtil.decodeDate(ByteBufferUtil.getIntL(buf)));

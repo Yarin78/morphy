@@ -89,4 +89,22 @@ public class AnnotatorEntityTest {
         assertEquals(2, annotator.getCount());
         assertEquals(34, annotator.getFirstGameId());
     }
+
+    @Test
+    public void testAnnotatorSortingOrder() {
+        // Tested in ChessBase 16
+        String[] annotators = {
+                "È",
+                "ågren",
+                "ûrgh",
+                "",
+                "Foo",
+        };
+
+        for (int i = 0; i < annotators.length - 1; i++) {
+            AnnotatorEntity a1 = new AnnotatorEntity(annotators[i]);
+            AnnotatorEntity a2 = new AnnotatorEntity(annotators[i + 1]);
+            assertTrue(String.format("Expected '%s' < '%s'", annotators[i], annotators[i + 1]), a1.compareTo(a2) < 0);
+        }
+    }
 }

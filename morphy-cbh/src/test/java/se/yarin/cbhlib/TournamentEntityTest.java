@@ -134,4 +134,38 @@ public class TournamentEntityTest {
         assertEquals(3, tournament.getCount());
         assertEquals(100, tournament.getFirstGameId());
     }
+
+    @Test
+    public void testTournamentSortingOrder() {
+        // Tested in ChessBase 16
+        String[] tournamentTitles = {
+                "¤",
+                "Ärgh",
+                "Åre",
+                "öde",
+                "",
+                "ABC",
+                "Foo",
+                "Zoo",
+                "tjoss",
+        };
+
+        for (int i = 0; i < tournamentTitles.length - 1; i++) {
+            TournamentEntity t1 = new TournamentEntity(tournamentTitles[i], Date.unset());
+            TournamentEntity t2 = new TournamentEntity(tournamentTitles[i+1], Date.unset());
+            assertTrue(String.format("Expected '%s' < '%s'", tournamentTitles[i], tournamentTitles[i+1]), t1.compareTo(t2) < 0);
+        }
+
+        TournamentEntity[] tournaments = {
+                new TournamentEntity("foo", new Date(1980)),
+                new TournamentEntity("tjoss", new Date(1980)),
+                new TournamentEntity("abc", new Date(1975)),
+                new TournamentEntity("def", new Date(1975)),
+                new TournamentEntity("foo", Date.unset()),
+        };
+
+        for (int i = 0; i < tournaments.length - 1; i++) {
+            assertTrue(String.format("Expected '%s' < '%s'", tournaments[i], tournaments[i+1]), tournaments[i].compareTo(tournaments[i+1]) < 0);
+        }
+    }
 }

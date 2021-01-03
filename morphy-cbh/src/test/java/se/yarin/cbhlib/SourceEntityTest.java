@@ -103,4 +103,22 @@ public class SourceEntityTest {
         assertEquals(1, source.getCount());
         assertEquals(10, source.getFirstGameId());
     }
+
+    @Test
+    public void testSourceSortingOrder() {
+        // Tested in ChessBase 16
+        String[] sourceTitles = {
+                "Öhh",
+                "äsch",
+                "",
+                "TE",
+                "fooBar",
+        };
+
+        for (int i = 0; i < sourceTitles.length - 1; i++) {
+            SourceEntity s1 = new SourceEntity(sourceTitles[i]);
+            SourceEntity s2 = new SourceEntity(sourceTitles[i + 1]);
+            assertTrue(String.format("Expected '%s' < '%s'", sourceTitles[i], sourceTitles[i + 1]), s1.compareTo(s2) < 0);
+        }
+    }
 }

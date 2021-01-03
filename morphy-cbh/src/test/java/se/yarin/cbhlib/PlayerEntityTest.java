@@ -298,4 +298,32 @@ public class PlayerEntityTest {
         PlayerEntity player = playerBase.get(1);
         assertEquals(new PlayerEntity("Karjakin", "Sergey"), player);
     }
+
+    @Test
+    public void testPlayerSortingOrder() {
+        // Tested in ChessBase 16
+        String[] playerNames = new String[] {
+                "",
+                "A",
+                "B",
+                "Blo",
+                "Blö",
+                "Jimmy",
+                "Zoo",
+                "ceasar",
+                "moo",
+                "tjo",
+                "¤",
+                "Åland",
+                "É",
+                "Öland",
+                "Û"
+        };
+
+        for (int i = 0; i < playerNames.length - 1; i++) {
+            PlayerEntity p1 = new PlayerEntity(playerNames[i], "");
+            PlayerEntity p2 = new PlayerEntity(playerNames[i+1], "");
+            assertTrue(String.format("Expected '%s' < '%s'", playerNames[i], playerNames[i+1]), p1.compareTo(p2) < 0);
+        }
+    }
 }

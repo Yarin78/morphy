@@ -24,11 +24,17 @@ public final class CBUtil {
 
     public static int compareString(String s1, String s2) {
         // Ordering is done on byte level
-        ByteBuffer b1 = CBUtil.cbCharSet.encode(s1);
-        ByteBuffer b2 = CBUtil.cbCharSet.encode(s2);
+        ByteBuffer b1 = CBUtil.cbCharSet.encode(s1 + "\0");
+        ByteBuffer b2 = CBUtil.cbCharSet.encode(s2 + "\0");
 
         return b1.compareTo(b2);
-/*
+    }
+
+    public static int compareStringUnsigned(String s1, String s2) {
+        // Same as compareString but treat each byte as unsigned instead of signed
+        ByteBuffer b1 = CBUtil.cbCharSet.encode(s1 + "\0");
+        ByteBuffer b2 = CBUtil.cbCharSet.encode(s2 + "\0");
+
         int thisPos = b1.position();
         int thisRem = b1.limit() - thisPos;
         int thatPos = b2.position();
@@ -39,12 +45,12 @@ public final class CBUtil {
         int i = b1.mismatch(b2);
         if (i >= 0) {
             if (i < thisRem && i < thatRem) {
-                return Byte.compare(b1.get(thisPos + i), b2.get(thatPos + i));
+                // This is the only real difference compared to compareString above
+                return Byte.compareUnsigned(b1.get(thisPos + i), b2.get(thatPos + i));
             }
             return thisRem - thatRem;
         }
         return 0;
- */
     }
 
     /**
