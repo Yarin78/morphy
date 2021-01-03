@@ -216,7 +216,7 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
     }
 
     private ValidationResult validate(int entityId, T min, T max, int depth) throws IOException, EntityStorageException {
-        if (depth > 20) {
+        if (depth > 40) {
             throw new EntityStorageException("Infinite loop when verifying storage structure");
         }
         EntityNode<T> node = nodeStorage.getEntityNode(entityId);

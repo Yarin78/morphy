@@ -29,7 +29,7 @@ public abstract class EntityBase<T extends Entity & Comparable<T>> implements En
      * Gets the underlying storage of the database.
      * @return an entity storage
      */
-    protected EntityStorage<T> getStorage() {
+    public EntityStorage<T> getStorage() {
         return storage;
     }
 

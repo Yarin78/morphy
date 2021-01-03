@@ -6,15 +6,12 @@ import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
 import se.yarin.cbhlib.*;
 import se.yarin.cbhlib.entities.Entity;
-import se.yarin.chess.GameModel;
+import se.yarin.cbhlib.entities.EntityStorageException;
+import se.yarin.cbhlib.validation.Validator;
 
 import java.io.File;
 import java.io.IOException;
-import java.security.PrivilegedAction;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.Locale;
-import java.util.TreeSet;
+import java.util.*;
 import java.util.concurrent.Callable;
 
 @CommandLine.Command(name = "cb", description = "Performs an operation on a ChessBase file",
@@ -70,152 +67,59 @@ class Check implements Callable<Integer> {
     private static final Logger log = LoggerFactory.getLogger(Check.class);
 
     @CommandLine.Parameters(index = "0", description = "The ChessBase file to load")
-    private File cbhFile;
+    File cbhFile;
 
-    private <T extends Entity & Comparable<T>> void loadEntities(EntityBase<T> entities, String entityType) throws IOException {
-        int numEntities = 0, numEqual = 0, numWrongOrder = 0, numEmpty = 0;
+    @CommandLine.Option(names = "--no-players", negatable = true, description = "Check Player entities (true by default)")
+    boolean checkPlayers = true;
 
-        TreeSet<Integer> existingIds = new TreeSet<>();
+    @CommandLine.Option(names = "--no-tournaments", negatable = true, description = "Check Tournament entities (true by default)")
+    boolean checkTournaments = true;
 
-        String entityTypeCapitalized = entityType.substring(0, 1).toUpperCase() + entityType.substring(1);
-        try (ProgressBar progressBar = new ProgressBar(entityTypeCapitalized, entities.getCount())) {
-            T last = null;
-            Iterator<T> iterator = entities.getAscendingIterator();
-            while (iterator.hasNext()) {
-                progressBar.step();
-                T current = iterator.next();
-                existingIds.add(current.getId());
+    @CommandLine.Option(names = "--no-annotators", negatable = true, description = "Check Annotator entities (true by default)")
+    boolean checkAnnotators = true;
 
-                entities.get(current.getId()); // Sanity check that we can do this lookup as well
-                if (current.getCount() == 0) {
-                    numEmpty += 0;
-                }
+    @CommandLine.Option(names = "--no-sources", negatable = true, description = "Check Source entities (true by default)")
+    boolean checkSources = true;
 
-                if (numEntities > 0) {
-                    if (current.compareTo(last) < 0) {
-                        if (log.isDebugEnabled()) {
-                            log.debug("Wrong order: (%d) %s  (%d) %s".formatted(last.getId(), last, current.getId(), current));
-                        }
-                        numWrongOrder += 1;
-                    }
-                    if (current.compareTo(last) == 0) {
-                        numEqual += 1;
-                    }
-                }
-                last = current;
-                numEntities += 1;
-            }
-        }
+    @CommandLine.Option(names = "--no-entity-stats", negatable = true, description = "Check entity statistics (true by default)")
+    boolean checkEntityStats = true;
 
-        if (existingIds.size() != numEntities) {
-            log.warn(String.format("Found %d unique %s during sorted iteration, expected to find %d %s",
-                    existingIds.size(), entityType, numEntities, entityType));
-        }
-        if (numEntities != entities.getCount()) {
-            log.warn(String.format("Iterated over %d %s in ascending order, expected to find %d %s",
-                    numEntities, entityType, entities.getCount(), entityType));
-        }
-        if (numWrongOrder > 0) {
-            log.warn(String.format("%d %s were in the wrong order", numWrongOrder, entityType));
-        }
-        if (numEqual > 0) {
-            log.warn(String.format("%d %s with the same key as the previous entity", numEqual, entityType));
-        }
-        if (numEmpty > 0) {
-            log.warn(String.format("%d %s have count 0", numEmpty, entityType));
-        }
-        if (entities.getCapacity() > numEntities) {
-            log.info(String.format("Database has additional capacity for %d %s",
-                    entities.getCapacity() - numEntities, entityType));
-        }
-        if (existingIds.size() > 0) {
-            if (existingIds.first() != 0) {
-                log.warn(String.format("First id in %s was %d, expected 0", entityType, existingIds.first()));
-            }
-            if (existingIds.last() != entities.getCount() - 1) {
-                log.warn(String.format("Last id in %s was %d, expected %d",
-                        entityType, existingIds.last(), entities.getCount() - 1));
-            }
-        }
-    }
+    @CommandLine.Option(names = "--no-entity-sort-order", negatable = true, description = "Check entity sort order (true by default)")
+    boolean checkEntitySortOrder = true;
 
-    private void loadGames(Database db, boolean loadMoves) {
-        GameHeaderBase headerBase = db.getHeaderBase();
+    @CommandLine.Option(names = "--no-entity-integrity", negatable = true, description = "Check entity file integrity (true by default)")
+    boolean checkEntityFileIntegrity = true;
 
-        // System.out.println("Loading all " + headerBase.size() + " games...");
-        int numGames = 0, numDeleted = 0, numAnnotated = 0, numText = 0, numErrors = 0, numChess960 = 0;
-        int lastAnnotationOfs = 0, lastMovesOfs = 0, numBadAnnotationsOrder = 0, numBadMovesOrder = 0;
+    @CommandLine.Option(names = "--no-games", negatable = true, description = "Check game headers (true by default)")
+    boolean checkGameHeaders = true;
 
-        String task = "Integrity checking game headers";
-        if (loadMoves) {
-            task += ", moves and annotations";
-        }
-        System.out.println(task + "...");
-        try (ProgressBar progressBar = new ProgressBar("Games", headerBase.size())) {
-            Iterable<GameHeader> iterable = () -> headerBase.iterator();
-            for (GameHeader header : iterable) {
-                if (header.getAnnotationOffset() > 0) {
-                    if (header.getAnnotationOffset() < lastAnnotationOfs) {
-                        numBadAnnotationsOrder += 1;
-                    }
-                    lastAnnotationOfs = header.getAnnotationOffset();
-                }
-                if (header.getMovesOffset() < lastMovesOfs) {
-                    numBadMovesOrder += 1;
-                }
-                lastMovesOfs = header.getMovesOffset();
-
-                try {
-                    if (header.getChess960StartPosition() >= 0) {
-                        numChess960 += 1;
-                    }
-                    if (header.getAnnotationOffset() > 0) {
-                        numAnnotated += 1;
-                    }
-                    if (header.isDeleted()) {
-                        numDeleted += 1;
-                    }
-                    if (header.isGuidingText()) {
-                        numText += 1;
-                    }
-                    if (!header.isGuidingText()) {
-                        if (loadMoves) {
-                            // Deserialize all the moves and annotations
-                            db.getGameModel(header.getId());
-                        } else {
-                            // Only deserialize the game header (and lookup player, team, source, commentator)
-                            db.getHeaderModel(header);
-                        }
-                        numGames += 1;
-                    }
-                } catch (ChessBaseException | IOException e) {
-                    numErrors += 1;
-                } finally {
-                    progressBar.step();
-                }
-            }
-        }
-        System.out.println(String.format("%d games loaded (%d deleted, %d annotated, %d guiding texts, %d Chess960)", numGames, numDeleted, numAnnotated, numText, numChess960));
-        if (numErrors > 0) {
-            System.out.println(String.format("%d errors encountered", numErrors));
-        }
-        if (numBadMovesOrder > 0) {
-            System.out.println(String.format("%d games had their move data before that of the previous game", numBadMovesOrder));
-        }
-        if (numBadAnnotationsOrder > 0) {
-            System.out.println(String.format("%d games had their annotation data before that of the previous game", numBadAnnotationsOrder));
-        }
-    }
+    @CommandLine.Option(names = "--no-load-games", negatable = true, description = "Check all moves, annotations etc in game data (true by default)")
+    boolean loadGames = true;
 
     @Override
-    public Integer call() throws IOException {
+    public Integer call() throws IOException, EntityStorageException {
+        Map<Validator.Checks, Boolean> checkFlags = Map.of(
+            Validator.Checks.ENTITY_PLAYERS, checkPlayers,
+            Validator.Checks.ENTITY_TOURNAMENTS, checkTournaments,
+            Validator.Checks.ENTITY_ANNOTATORS, checkAnnotators,
+            Validator.Checks.ENTITY_SOURCES, checkSources,
+            Validator.Checks.ENTITY_STATISTICS, checkEntityStats,
+            Validator.Checks.ENTITY_SORT_ORDER, checkEntitySortOrder,
+            Validator.Checks.ENTITY_DB_INTEGRITY, checkEntityFileIntegrity,
+            Validator.Checks.GAMES, checkGameHeaders,
+            Validator.Checks.GAMES_LOAD, loadGames
+        );
+
+        EnumSet<Validator.Checks> checks = EnumSet.allOf(Validator.Checks.class);
+        checks.removeIf(flag -> !checkFlags.get(flag));
+
         Database db = Database.open(cbhFile);
-        loadEntities(db.getPlayerBase(), "players");
-        loadEntities(db.getTournamentBase(), "tournaments");
-        loadEntities(db.getSourceBase(), "sources");
-        loadEntities(db.getAnnotatorBase(), "annotators");
-        //loadGames(db, true);
+
+        Validator validator = new Validator();
+        validator.validate(db, checks, false);
+
         db.close();
+
         return 0;
     }
 }

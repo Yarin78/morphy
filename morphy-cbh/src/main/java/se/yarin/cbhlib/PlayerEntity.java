@@ -55,6 +55,8 @@ public class PlayerEntity implements Entity, Comparable<PlayerEntity> {
 
     @Override
     public int compareTo(PlayerEntity o) {
+        // The sorting order in older databases is slightly different, causing validation failures
+        // See for instance Mega Database 2017
         int comp = lastName.compareTo(o.lastName);
         if (comp != 0) return comp;
         return firstName.compareTo(o.firstName);

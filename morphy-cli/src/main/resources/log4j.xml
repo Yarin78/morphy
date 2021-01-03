@@ -9,6 +9,10 @@
         </layout>
     </appender>
 
+    <logger name="se.yarin.morphy.cli">
+        <level value="debug" />
+    </logger>
+
     <root>
         <priority value="info"/>
         <appender-ref ref="console"/>

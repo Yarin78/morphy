@@ -4,8 +4,9 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.cbhlib.annotations.TextAfterMoveAnnotation;
-import se.yarin.cbhlib.entities.EntityStatsValidator;
+import se.yarin.cbhlib.validation.EntityStatsValidator;
 import se.yarin.cbhlib.entities.EntityStorageException;
+import se.yarin.cbhlib.validation.GamesValidator;
 import se.yarin.chess.*;
 
 import java.io.IOException;
@@ -102,7 +103,7 @@ public class DatabaseTest {
 
         EntityStatsValidator validator = new EntityStatsValidator(db);
         validator.validateEntityStatistics(true);
-        validator.readAllGames();
+        new GamesValidator(db).readAllGames();
 
         db.close();
     }
@@ -139,7 +140,6 @@ public class DatabaseTest {
 
         for (int iter = 0; iter < 10; iter++) {
             Database db = new Database();
-            EntityStatsValidator validator = new EntityStatsValidator(db);
 
             int noOps = 100, maxGames = 20;
 
@@ -154,9 +154,12 @@ public class DatabaseTest {
                     db.addGame(game);
                 }
 
+                EntityStatsValidator validator = new EntityStatsValidator(db);
+                GamesValidator gamesValidator = new GamesValidator(db);
+
                 validator.validateEntityStatistics(true);
-                validator.validateMovesAndAnnotationOffsets();
-                validator.readAllGames();
+                gamesValidator.validateMovesAndAnnotationOffsets();
+                gamesValidator.readAllGames();
             }
         }
     }

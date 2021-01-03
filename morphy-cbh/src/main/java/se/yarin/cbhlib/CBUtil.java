@@ -22,6 +22,31 @@ public final class CBUtil {
     // This is the character set that CB uses
     static Charset cbCharSet = Charset.forName("ISO-8859-1");
 
+    public static int compareString(String s1, String s2) {
+        // Ordering is done on byte level
+        ByteBuffer b1 = CBUtil.cbCharSet.encode(s1);
+        ByteBuffer b2 = CBUtil.cbCharSet.encode(s2);
+
+        return b1.compareTo(b2);
+/*
+        int thisPos = b1.position();
+        int thisRem = b1.limit() - thisPos;
+        int thatPos = b2.position();
+        int thatRem = b2.limit() - thatPos;
+        int length = Math.min(thisRem, thatRem);
+        if (length < 0)
+            return -1;
+        int i = b1.mismatch(b2);
+        if (i >= 0) {
+            if (i < thisRem && i < thatRem) {
+                return Byte.compare(b1.get(thisPos + i), b2.get(thatPos + i));
+            }
+            return thisRem - thatRem;
+        }
+        return 0;
+ */
+    }
+
     /**
      * Decodes a 21 bit CBH encoded date to a {@link Date}.
      * @param dateValue an integer containing an encoded date value
