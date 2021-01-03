@@ -32,8 +32,8 @@ public final class Database {
     public static final String SOURCE_ID = "sourceId";
 
     @Getter @NonNull private GameHeaderBase headerBase;
-    @Getter(AccessLevel.PACKAGE) @NonNull private MovesBase movesBase;
-    @Getter(AccessLevel.PACKAGE) @NonNull private AnnotationBase annotationBase;
+    @Getter @NonNull private MovesBase movesBase;
+    @Getter @NonNull private AnnotationBase annotationBase;
     @Getter @NonNull private PlayerBase playerBase;
     @Getter @NonNull private TournamentBase tournamentBase;
     @Getter @NonNull private AnnotatorBase annotatorBase;

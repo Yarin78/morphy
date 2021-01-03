@@ -20,7 +20,7 @@ public class FileBlobStorage implements BlobStorage {
 
     private FileChannel channel;
     private BlobSizeRetriever blobSizeRetriever;
-    private static final int DEFAULT_SERIALIZED_HEADER_SIZE = 26; // Size of header to create for a new storage
+    public static final int DEFAULT_SERIALIZED_HEADER_SIZE = 26; // Size of header to create for a new storage
     private int size; // Should match channel.size()
     private int headerSize; // The actual header size according to the metadata
     private int trashBytes; // The number of bytes in the storage that's not used for any data

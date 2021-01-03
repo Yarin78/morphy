@@ -2,10 +2,7 @@ package se.yarin.cbhlib.validation;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import se.yarin.cbhlib.ChessBaseException;
-import se.yarin.cbhlib.Database;
-import se.yarin.cbhlib.GameHeader;
-import se.yarin.cbhlib.GameHeaderBase;
+import se.yarin.cbhlib.*;
 
 import java.io.IOException;
 
@@ -43,24 +40,44 @@ public class GamesValidator {
         }
     }
 
-    public void processGames(boolean loadMoves, Runnable progressCallback) {
+    public void processGames(boolean loadMoves, Runnable progressCallback) throws IOException {
         GameHeaderBase headerBase = db.getHeaderBase();
 
         // System.out.println("Loading all " + headerBase.size() + " games...");
         int numGames = 0, numDeleted = 0, numAnnotated = 0, numText = 0, numErrors = 0, numChess960 = 0;
-        int lastAnnotationOfs = 0, lastMovesOfs = 0, numBadAnnotationsOrder = 0, numBadMovesOrder = 0;
+        int lastAnnotationOfs = FileBlobStorage.DEFAULT_SERIALIZED_HEADER_SIZE, lastMovesOfs = FileBlobStorage.DEFAULT_SERIALIZED_HEADER_SIZE;
+        int numOverlappingAnnotations = 0, numOverlappingMoves = 0;
+        int numAnnotationGaps = 0, numMoveGaps = 0;
+        int annotationFreeSpace = 0, moveFreeSpace = 0;
 
         for (GameHeader header : headerBase) {
             if (header.getAnnotationOffset() > 0) {
-                if (header.getAnnotationOffset() < lastAnnotationOfs) {
-                    numBadAnnotationsOrder += 1;
+                int annotationSize = db.getAnnotationBase().getStorage().readBlob(header.getAnnotationOffset()).limit();
+                int annotationEnd = header.getAnnotationOffset() + annotationSize;
+                if (log.isDebugEnabled()) {
+                    log.debug(String.format("Game %5d: Annotation [%d, %d)", header.getId(), header.getAnnotationOffset(), annotationEnd));
                 }
-                lastAnnotationOfs = header.getAnnotationOffset();
+                if (header.getAnnotationOffset() < lastAnnotationOfs) {
+                    numOverlappingAnnotations += 1;
+                } else if (header.getAnnotationOffset() > lastAnnotationOfs) {
+                    numAnnotationGaps += 1;
+                    annotationFreeSpace += header.getAnnotationOffset() - lastAnnotationOfs;
+                }
+                lastAnnotationOfs = annotationEnd;
+            }
+
+            int movesSize = db.getMovesBase().getStorage().readBlob(header.getMovesOffset()).limit();
+            int movesEnd = header.getMovesOffset() + movesSize;
+            if (log.isDebugEnabled()) {
+                log.debug(String.format("Game %5d: Moves [%d, %d)", header.getId(), header.getMovesOffset(), movesEnd));
             }
             if (header.getMovesOffset() < lastMovesOfs) {
-                numBadMovesOrder += 1;
+                numOverlappingMoves += 1;
+            } else if (header.getMovesOffset() > lastMovesOfs) {
+                numMoveGaps += 1;
+                moveFreeSpace += header.getMovesOffset() - lastMovesOfs;
             }
-            lastMovesOfs = header.getMovesOffset();
+            lastMovesOfs = movesEnd;
 
             try {
                 if (header.getChess960StartPosition() >= 0) {
@@ -96,11 +113,17 @@ public class GamesValidator {
         if (numErrors > 0) {
             log.warn(String.format("%d errors encountered", numErrors));
         }
-        if (numBadMovesOrder > 0) {
-            log.warn(String.format("%d games had their move data before that of the previous game", numBadMovesOrder));
+        if (numOverlappingMoves > 0) {
+            log.warn(String.format("%d games had overlapping move data", numOverlappingMoves));
         }
-        if (numBadAnnotationsOrder > 0) {
-            log.warn(String.format("%d games had their annotation data before that of the previous game", numBadAnnotationsOrder));
+        if (numOverlappingAnnotations > 0) {
+            log.warn(String.format("%d games had overlapping annotation data", numOverlappingAnnotations));
+        }
+        if (numAnnotationGaps > 0) {
+            log.info(String.format("There were %d gaps in the annotation data (total %d bytes)", numAnnotationGaps, annotationFreeSpace));
+        }
+        if (numMoveGaps > 0) {
+            log.info(String.format("There were %d gaps in the moves data (total %d bytes)", numMoveGaps, moveFreeSpace));
         }
     }
 }
