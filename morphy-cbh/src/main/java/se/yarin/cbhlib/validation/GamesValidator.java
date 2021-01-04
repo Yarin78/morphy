@@ -9,10 +9,12 @@ import java.io.IOException;
 public class GamesValidator {
     private static final Logger log = LoggerFactory.getLogger(GamesValidator.class);
 
-    private Database db;
+    private final Database db;
+    private final GameLoader loader;
 
     public GamesValidator(Database db) {
         this.db = db;
+        this.loader = new GameLoader(db);
     }
 
     public void readAllGames() throws IOException, ChessBaseException {
@@ -95,10 +97,10 @@ public class GamesValidator {
                 if (!header.isGuidingText()) {
                     if (loadMoves) {
                         // Deserialize all the moves and annotations
-                        db.getGameModel(header.getId());
+                        loader.getGameModel(header.getId());
                     } else {
                         // Only deserialize the game header (and lookup player, team, source, commentator)
-                        db.getHeaderModel(header);
+                        loader.getHeaderModel(header);
                     }
                     numGames += 1;
                 }

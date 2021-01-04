@@ -36,9 +36,9 @@ class Games implements Callable<Integer> {
 
     @Override
     public Integer call() throws IOException {
-        Database db = Database.open(cbhFile);
-        System.out.println(db.getHeaderBase().size() + " games");
-        db.close();
+        try (Database db = Database.open(cbhFile)) {
+            System.out.println(db.getHeaderBase().size() + " games");
+        }
         return 0;
     }
 }
@@ -58,25 +58,25 @@ class Players implements Callable<Integer> {
 
     @Override
     public Integer call() throws IOException {
-        Database db = Database.open(cbhFile);
+        try (Database db = Database.open(cbhFile)) {
 
-        PlayerBase players = db.getPlayerBase();
-        Iterator<PlayerEntity> iterator = players.getAscendingIterator();
-        int count = 0;
-        while (iterator.hasNext() && count < maxPlayers) {
-            PlayerEntity player = iterator.next();
-            String line;
-            if (hex) {
-                line = String.format("%7d:  %-30s %-30s %6d", player.getId(), CBUtil.toHexString(player.getRaw()).substring(0, 30), player.getFullName(), player.getCount());
-            } else {
-                line = String.format("%7d:  %-30s %6d", player.getId(), player.getFullName(), player.getCount());
+            PlayerBase players = db.getPlayerBase();
+            Iterator<PlayerEntity> iterator = players.getAscendingIterator();
+            int count = 0;
+            while (iterator.hasNext() && count < maxPlayers) {
+                PlayerEntity player = iterator.next();
+                String line;
+                if (hex) {
+                    line = String.format("%7d:  %-30s %-30s %6d", player.getId(), CBUtil.toHexString(player.getRaw()).substring(0, 30), player.getFullName(), player.getCount());
+                } else {
+                    line = String.format("%7d:  %-30s %6d", player.getId(), player.getFullName(), player.getCount());
+                }
+                System.out.println(line);
             }
-            System.out.println(line);
+            System.out.println();
+            System.out.println("Total: " + players.getCount());
         }
-        System.out.println();
-        System.out.println("Total: " + players.getCount());
 
-        db.close();
         return 0;
     }
 }
@@ -95,25 +95,23 @@ class Tournaments implements Callable<Integer> {
 
     @Override
     public Integer call() throws IOException {
-        Database db = Database.open(cbhFile);
-
-        TournamentBase tournaments = db.getTournamentBase();
-        Iterator<TournamentEntity> iterator = tournaments.getAscendingIterator();
-        int count = 0;
-        while (iterator.hasNext() && count < maxTournaments) {
-            TournamentEntity tournament = iterator.next();
-            String line;
-            if (hex) {
-                line = String.format("%7d:  %-30s %-30s %6d", tournament.getId(), CBUtil.toHexString(tournament.getRaw()).substring(0, 30), tournament.getTitle(), tournament.getCount());
-            } else {
-                line = String.format("%7d:  %-30s %6d", tournament.getId(), tournament.getTitle(), tournament.getCount());
+        try (Database db = Database.open(cbhFile)) {
+            TournamentBase tournaments = db.getTournamentBase();
+            Iterator<TournamentEntity> iterator = tournaments.getAscendingIterator();
+            int count = 0;
+            while (iterator.hasNext() && count < maxTournaments) {
+                TournamentEntity tournament = iterator.next();
+                String line;
+                if (hex) {
+                    line = String.format("%7d:  %-30s %-30s %6d", tournament.getId(), CBUtil.toHexString(tournament.getRaw()).substring(0, 30), tournament.getTitle(), tournament.getCount());
+                } else {
+                    line = String.format("%7d:  %-30s %6d", tournament.getId(), tournament.getTitle(), tournament.getCount());
+                }
+                System.out.println(line);
             }
-            System.out.println(line);
+            System.out.println();
+            System.out.println("Total: " + tournaments.getCount());
         }
-        System.out.println();
-        System.out.println("Total: " + tournaments.getCount());
-
-        db.close();
         return 0;
     }
 }
@@ -170,12 +168,10 @@ class Check implements Callable<Integer> {
         EnumSet<Validator.Checks> checks = EnumSet.allOf(Validator.Checks.class);
         checks.removeIf(flag -> !checkFlags.get(flag));
 
-        Database db = Database.open(cbhFile);
-
-        Validator validator = new Validator();
-        validator.validate(db, checks, false);
-
-        db.close();
+        try (Database db = Database.open(cbhFile)) {
+            Validator validator = new Validator();
+            validator.validate(db, checks, false);
+        }
 
         return 0;
     }
