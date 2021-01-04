@@ -3,6 +3,7 @@ package se.yarin.cbhlib;
 import lombok.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import se.yarin.cbhlib.util.ByteBufferUtil;
 import se.yarin.chess.GameMovesModel;
 
 import java.io.File;

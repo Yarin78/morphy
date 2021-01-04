@@ -2,6 +2,7 @@ package se.yarin.cbhlib;
 
 import lombok.*;
 import se.yarin.cbhlib.entities.Entity;
+import se.yarin.cbhlib.util.CBUtil;
 
 @Builder(toBuilder = true)
 @AllArgsConstructor(access = AccessLevel.PRIVATE)

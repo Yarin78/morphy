@@ -1,8 +1,9 @@
-package se.yarin.cbhlib;
+package se.yarin.cbhlib.util;
 
 import lombok.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import se.yarin.cbhlib.*;
 import se.yarin.chess.Date;
 import se.yarin.chess.Eco;
 import se.yarin.chess.GameResult;

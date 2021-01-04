@@ -5,7 +5,7 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NonNull;
 import se.yarin.cbhlib.AnnotationSerializer;
-import se.yarin.cbhlib.ByteBufferUtil;
+import se.yarin.cbhlib.util.ByteBufferUtil;
 import se.yarin.cbhlib.GameHeaderFlags;
 import se.yarin.chess.annotations.Annotation;
 

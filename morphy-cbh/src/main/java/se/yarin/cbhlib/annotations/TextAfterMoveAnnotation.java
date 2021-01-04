@@ -4,11 +4,11 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NonNull;
 import se.yarin.cbhlib.*;
+import se.yarin.cbhlib.util.ByteBufferUtil;
 import se.yarin.chess.annotations.Annotation;
 import se.yarin.chess.annotations.CommentaryAfterMoveAnnotation;
 
 import java.nio.ByteBuffer;
-import java.util.*;
 
 @EqualsAndHashCode(callSuper = false)
 public class TextAfterMoveAnnotation extends CommentaryAfterMoveAnnotation

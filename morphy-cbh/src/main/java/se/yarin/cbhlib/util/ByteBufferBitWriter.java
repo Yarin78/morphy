@@ -1,4 +1,4 @@
-package se.yarin.cbhlib;
+package se.yarin.cbhlib.util;
 
 import java.nio.ByteBuffer;
 

@@ -2,6 +2,7 @@ package se.yarin.cbhlib;
 
 import lombok.*;
 import se.yarin.cbhlib.entities.Entity;
+import se.yarin.cbhlib.util.CBUtil;
 import se.yarin.chess.Date;
 
 @Builder(toBuilder = true)

@@ -3,6 +3,7 @@ package se.yarin.cbhlib;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import se.yarin.cbhlib.util.CBUtil;
 
 import java.io.File;
 import java.io.IOException;

@@ -3,6 +3,7 @@ package se.yarin.cbhlib;
 import lombok.NonNull;
 import se.yarin.cbhlib.entities.transaction.EntityStorage;
 import se.yarin.cbhlib.entities.transaction.EntityStorageImpl;
+import se.yarin.cbhlib.util.ByteBufferUtil;
 
 import java.io.File;
 import java.io.IOException;

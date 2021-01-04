@@ -1,6 +1,8 @@
 package se.yarin.cbhlib;
 
 import lombok.Data;
+import se.yarin.cbhlib.util.ByteBufferUtil;
+import se.yarin.cbhlib.util.CBUtil;
 
 import java.nio.ByteBuffer;
 

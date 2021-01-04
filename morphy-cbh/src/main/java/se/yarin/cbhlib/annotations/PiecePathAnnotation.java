@@ -5,7 +5,7 @@ import lombok.Getter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.cbhlib.AnnotationSerializer;
-import se.yarin.cbhlib.ByteBufferUtil;
+import se.yarin.cbhlib.util.ByteBufferUtil;
 import se.yarin.cbhlib.GameHeaderFlags;
 import se.yarin.chess.Chess;
 import se.yarin.chess.annotations.Annotation;

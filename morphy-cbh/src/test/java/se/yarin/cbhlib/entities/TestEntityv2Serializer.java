@@ -1,6 +1,6 @@
 package se.yarin.cbhlib.entities;
 
-import se.yarin.cbhlib.ByteBufferUtil;
+import se.yarin.cbhlib.util.ByteBufferUtil;
 import se.yarin.cbhlib.entities.storage.EntitySerializer;
 
 import java.nio.ByteBuffer;

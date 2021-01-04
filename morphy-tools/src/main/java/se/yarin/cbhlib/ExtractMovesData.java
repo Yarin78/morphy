@@ -2,6 +2,7 @@ package se.yarin.cbhlib;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import se.yarin.cbhlib.util.ByteBufferUtil;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -20,7 +21,7 @@ public class ExtractMovesData {
         ByteBuffer buf = ByteBuffer.allocate(4);
         movesFiles.read(buf);
         buf.position(1);
-        int size = se.yarin.cbhlib.ByteBufferUtil.getUnsigned24BitB(buf);
+        int size = ByteBufferUtil.getUnsigned24BitB(buf);
         if (size < 0 || size > 100000) throw new RuntimeException("Unreasonable game size: " + size);
         buf = ByteBuffer.allocate(size);
         movesFiles.position(ofs);

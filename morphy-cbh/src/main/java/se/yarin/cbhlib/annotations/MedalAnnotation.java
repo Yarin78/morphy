@@ -2,8 +2,8 @@ package se.yarin.cbhlib.annotations;
 
 import lombok.EqualsAndHashCode;
 import se.yarin.cbhlib.AnnotationSerializer;
-import se.yarin.cbhlib.ByteBufferUtil;
-import se.yarin.cbhlib.CBUtil;
+import se.yarin.cbhlib.util.ByteBufferUtil;
+import se.yarin.cbhlib.util.CBUtil;
 import se.yarin.cbhlib.Medal;
 import se.yarin.chess.annotations.Annotation;
 

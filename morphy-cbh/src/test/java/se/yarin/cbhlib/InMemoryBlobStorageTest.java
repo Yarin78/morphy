@@ -2,6 +2,7 @@ package se.yarin.cbhlib;
 
 import org.junit.Assert;
 import org.junit.Test;
+import se.yarin.cbhlib.util.CBUtil;
 
 import java.nio.ByteBuffer;
 import java.util.Random;

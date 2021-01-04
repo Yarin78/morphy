@@ -3,10 +3,8 @@ package se.yarin.cbhlib.annotations;
 import lombok.AllArgsConstructor;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
-import se.yarin.cbhlib.CBUtil;
+import se.yarin.cbhlib.util.CBUtil;
 import se.yarin.chess.annotations.Annotation;
-
-import java.nio.ByteBuffer;
 
 @AllArgsConstructor
 @EqualsAndHashCode(callSuper = false)

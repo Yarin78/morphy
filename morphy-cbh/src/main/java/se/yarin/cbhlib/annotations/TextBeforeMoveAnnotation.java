@@ -4,14 +4,13 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NonNull;
 import se.yarin.cbhlib.AnnotationSerializer;
-import se.yarin.cbhlib.ByteBufferUtil;
+import se.yarin.cbhlib.util.ByteBufferUtil;
 import se.yarin.cbhlib.GameHeaderFlags;
 import se.yarin.cbhlib.Nation;
 import se.yarin.chess.annotations.Annotation;
 import se.yarin.chess.annotations.CommentaryBeforeMoveAnnotation;
 
 import java.nio.ByteBuffer;
-import java.util.*;
 
 @EqualsAndHashCode(callSuper = false)
 public class TextBeforeMoveAnnotation extends CommentaryBeforeMoveAnnotation

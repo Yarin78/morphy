@@ -3,6 +3,9 @@ package se.yarin.cbhlib;
 import lombok.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import se.yarin.cbhlib.util.ByteBufferBitReader;
+import se.yarin.cbhlib.util.ByteBufferBitWriter;
+import se.yarin.cbhlib.util.ByteBufferUtil;
 import se.yarin.chess.*;
 
 import java.nio.BufferUnderflowException;

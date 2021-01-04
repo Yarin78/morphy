@@ -5,6 +5,7 @@ import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
 import se.yarin.cbhlib.*;
 import se.yarin.cbhlib.entities.EntityStorageException;
+import se.yarin.cbhlib.util.CBUtil;
 import se.yarin.cbhlib.validation.Validator;
 
 import java.io.File;
