@@ -2,6 +2,8 @@ package se.yarin.cbhlib;
 
 import org.junit.Before;
 import org.junit.Test;
+import se.yarin.cbhlib.util.GameGenerator;
+import se.yarin.cbhlib.util.TestGames;
 import se.yarin.chess.*;
 
 import java.io.IOException;

@@ -22,7 +22,7 @@ public class VerifyGameFlags {
 
     private static GameMovesModel getMoves(MovesBase movesBase, AnnotationBase annotationBase, GameHeader gameHeader)
             throws IOException, ChessBaseException {
-        GameMovesModel moves = movesBase.getMoves(gameHeader.getMovesOffset());
+        GameMovesModel moves = movesBase.getMoves(gameHeader.getMovesOffset(), gameHeader.getId());
         annotationBase.getAnnotations(moves, gameHeader.getAnnotationOffset());
         return moves;
     }

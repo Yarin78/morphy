@@ -1,11 +1,11 @@
-package se.yarin.cbhlib;
+package se.yarin.cbhlib.util;
 
 import se.yarin.chess.*;
 
 import static se.yarin.chess.Chess.*;
 
 public class TestGames {
-    static GameMovesModel getCrazyGame() {
+    public static GameMovesModel getCrazyGame() {
         GameMovesModel moves = new GameMovesModel();
         moves.root()
                 .addMove(E2, E4)
@@ -72,7 +72,7 @@ public class TestGames {
         return moves;
     }
 
-    static GameMovesModel getVariationGame() {
+    public static GameMovesModel getVariationGame() {
         GameMovesModel moves = new GameMovesModel();
 
         moves.root()
@@ -89,7 +89,7 @@ public class TestGames {
         return moves;
     }
 
-    static GameMovesModel getEndGame() {
+    public static GameMovesModel getEndGame() {
         String s = "........\n....kr..\n..p.....\n.p.n..p.\n.P......\n.KPB.P..\n..R.....\n........";
         Position start = Position.fromString(s, Player.WHITE);
         GameMovesModel moves = new GameMovesModel(start, 45);

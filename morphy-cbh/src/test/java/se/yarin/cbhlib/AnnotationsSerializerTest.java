@@ -2,6 +2,7 @@ package se.yarin.cbhlib;
 
 import org.junit.Test;
 import se.yarin.cbhlib.annotations.*;
+import se.yarin.cbhlib.util.GameGenerator;
 import se.yarin.chess.GameMovesModel;
 import se.yarin.chess.annotations.Annotation;
 

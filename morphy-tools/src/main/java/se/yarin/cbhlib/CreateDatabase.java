@@ -2,6 +2,7 @@ package se.yarin.cbhlib;
 
 import se.yarin.cbhlib.annotations.GameQuotationAnnotation;
 import se.yarin.cbhlib.annotations.SymbolAnnotation;
+import se.yarin.cbhlib.util.GameGenerator;
 import se.yarin.chess.*;
 
 import java.io.File;

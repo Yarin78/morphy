@@ -11,6 +11,7 @@
     <modules>
         <module>morphy-cbh</module>
         <module>morphy-cli</module>
+        <module>morphy-tools</module>
     </modules>
     <name>morphy-parent</name>
     <properties>

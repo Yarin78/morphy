@@ -1,5 +1,6 @@
 package se.yarin.cbhlib;
 
+import se.yarin.cbhlib.util.TestGames;
 import se.yarin.chess.GameHeaderModel;
 import se.yarin.chess.GameModel;
 import se.yarin.chess.GameMovesModel;

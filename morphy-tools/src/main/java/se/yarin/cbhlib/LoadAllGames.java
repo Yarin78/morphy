@@ -9,10 +9,6 @@ import se.yarin.chess.annotations.Annotations;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
-import java.util.List;
-import java.util.Map;
 
 public class LoadAllGames {
     private static final Logger log = LoggerFactory.getLogger(LoadAllGames.class);
@@ -40,7 +36,7 @@ public class LoadAllGames {
             for (int i = start; i <= stop; i++) {
                 GameHeader gameHeader = base.getGameHeader(i);
                 if (gameHeader.isGuidingText()) continue;
-                GameMovesModel moves = movesBase.getMoves(gameHeader.getMovesOffset());
+                GameMovesModel moves = movesBase.getMoves(gameHeader.getMovesOffset(), i);
 
                 log.info("Game #" + i);
                 int ofs = gameHeader.getAnnotationOffset();
