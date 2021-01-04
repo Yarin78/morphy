@@ -6,7 +6,7 @@ import lombok.Getter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.cbhlib.util.CBUtil;
-import se.yarin.cbhlib.GameHeaderFlags;
+import se.yarin.cbhlib.games.GameHeaderFlags;
 import se.yarin.chess.annotations.Annotation;
 
 @AllArgsConstructor

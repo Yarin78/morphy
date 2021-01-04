@@ -4,9 +4,12 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.cbhlib.annotations.TextAfterMoveAnnotation;
+import se.yarin.cbhlib.entities.PlayerEntity;
+import se.yarin.cbhlib.entities.TournamentEntity;
+import se.yarin.cbhlib.exceptions.ChessBaseException;
 import se.yarin.cbhlib.util.GameGenerator;
 import se.yarin.cbhlib.validation.EntityStatsValidator;
-import se.yarin.cbhlib.entities.EntityStorageException;
+import se.yarin.cbhlib.storage.EntityStorageException;
 import se.yarin.cbhlib.validation.GamesValidator;
 import se.yarin.chess.*;
 

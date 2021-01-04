@@ -2,6 +2,9 @@ package se.yarin.cbhlib;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import se.yarin.cbhlib.games.GameHeader;
+import se.yarin.cbhlib.games.GameHeaderBase;
+import se.yarin.cbhlib.storage.FileBlobStorage;
 
 import java.io.IOException;
 import java.nio.file.Files;

@@ -1,5 +1,12 @@
 package se.yarin.cbhlib;
 
+import se.yarin.cbhlib.entities.TournamentBase;
+import se.yarin.cbhlib.entities.TournamentEntity;
+import se.yarin.cbhlib.games.GameHeader;
+import se.yarin.cbhlib.games.GameHeaderBase;
+import se.yarin.cbhlib.entities.PlayerBase;
+import se.yarin.cbhlib.entities.PlayerEntity;
+
 import java.io.*;
 import java.util.Iterator;
 

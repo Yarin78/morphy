@@ -2,10 +2,13 @@ package se.yarin.cbhlib;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import se.yarin.cbhlib.annotations.*;
+import se.yarin.cbhlib.annotations.AnnotationBase;
+import se.yarin.cbhlib.exceptions.ChessBaseInvalidDataException;
+import se.yarin.cbhlib.exceptions.ChessBaseUnsupportedException;
+import se.yarin.cbhlib.games.GameHeader;
+import se.yarin.cbhlib.games.GameHeaderBase;
+import se.yarin.cbhlib.moves.MovesBase;
 import se.yarin.chess.GameMovesModel;
-import se.yarin.chess.annotations.Annotation;
-import se.yarin.chess.annotations.Annotations;
 
 import java.io.File;
 import java.io.IOException;

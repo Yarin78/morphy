@@ -1,10 +1,8 @@
 package se.yarin.cbhlib.annotations;
 
 import lombok.EqualsAndHashCode;
-import se.yarin.cbhlib.AnnotationSerializer;
 import se.yarin.cbhlib.util.ByteBufferUtil;
-import se.yarin.cbhlib.util.CBUtil;
-import se.yarin.cbhlib.Medal;
+import se.yarin.cbhlib.games.Medal;
 import se.yarin.chess.annotations.Annotation;
 
 import java.nio.ByteBuffer;
@@ -45,12 +43,12 @@ public class MedalAnnotation extends Annotation implements StatisticalAnnotation
     public static class Serializer implements AnnotationSerializer {
         @Override
         public void serialize(ByteBuffer buf, Annotation annotation) {
-            ByteBufferUtil.putIntB(buf, CBUtil.encodeMedals(((MedalAnnotation) annotation).getMedals()));
+            ByteBufferUtil.putIntB(buf, Medal.encode(((MedalAnnotation) annotation).getMedals()));
         }
 
         @Override
         public MedalAnnotation deserialize(ByteBuffer buf, int length) {
-            return new MedalAnnotation(CBUtil.decodeMedals(ByteBufferUtil.getIntB(buf)));
+            return new MedalAnnotation(Medal.decode(ByteBufferUtil.getIntB(buf)));
         }
 
         @Override

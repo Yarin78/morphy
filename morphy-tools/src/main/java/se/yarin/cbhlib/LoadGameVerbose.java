@@ -2,8 +2,13 @@ package se.yarin.cbhlib;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import se.yarin.cbhlib.annotations.AnnotationBase;
 import se.yarin.cbhlib.annotations.SymbolAnnotation;
 import se.yarin.cbhlib.annotations.TextAfterMoveAnnotation;
+import se.yarin.cbhlib.exceptions.ChessBaseException;
+import se.yarin.cbhlib.games.GameHeader;
+import se.yarin.cbhlib.games.GameHeaderBase;
+import se.yarin.cbhlib.moves.MovesBase;
 import se.yarin.chess.GameMovesModel;
 import se.yarin.chess.annotations.Annotation;
 

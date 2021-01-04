@@ -3,9 +3,8 @@ package se.yarin.cbhlib.annotations;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NonNull;
-import se.yarin.cbhlib.AnnotationSerializer;
 import se.yarin.cbhlib.util.ByteBufferUtil;
-import se.yarin.cbhlib.GameHeaderFlags;
+import se.yarin.cbhlib.games.GameHeaderFlags;
 import se.yarin.chess.annotations.Annotation;
 
 import java.nio.ByteBuffer;

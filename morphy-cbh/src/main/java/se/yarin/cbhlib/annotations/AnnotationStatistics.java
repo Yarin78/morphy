@@ -1,8 +1,8 @@
 package se.yarin.cbhlib.annotations;
 
 import lombok.Getter;
-import se.yarin.cbhlib.GameHeaderFlags;
-import se.yarin.cbhlib.Medal;
+import se.yarin.cbhlib.games.GameHeaderFlags;
+import se.yarin.cbhlib.games.Medal;
 
 import java.util.EnumSet;
 

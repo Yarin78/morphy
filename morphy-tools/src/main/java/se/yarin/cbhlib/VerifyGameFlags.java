@@ -3,6 +3,13 @@ package se.yarin.cbhlib;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.cbhlib.annotations.*;
+import se.yarin.cbhlib.exceptions.ChessBaseException;
+import se.yarin.cbhlib.exceptions.ChessBaseUnsupportedException;
+import se.yarin.cbhlib.games.GameHeader;
+import se.yarin.cbhlib.games.GameHeaderBase;
+import se.yarin.cbhlib.games.GameHeaderFlags;
+import se.yarin.cbhlib.games.Medal;
+import se.yarin.cbhlib.moves.MovesBase;
 import se.yarin.chess.GameMovesModel;
 import se.yarin.chess.annotations.Annotation;
 
@@ -12,7 +19,7 @@ import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 
-import static se.yarin.cbhlib.GameHeaderFlags.*;
+import static se.yarin.cbhlib.games.GameHeaderFlags.*;
 
 /**
  * Iterate through all games in a database and ensure that the correct GameHeader flags are set

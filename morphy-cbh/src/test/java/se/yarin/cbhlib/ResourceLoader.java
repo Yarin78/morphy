@@ -5,7 +5,7 @@ import java.io.InputStream;
 import java.nio.ByteBuffer;
 
 public class ResourceLoader {
-    static ByteBuffer loadResource(String resourceName) throws IOException {
+    public static ByteBuffer loadResource(String resourceName) throws IOException {
         InputStream stream = ResourceLoader.class.getResourceAsStream(resourceName);
 
         int bufSize = 8192;

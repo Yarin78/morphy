@@ -1,10 +1,9 @@
 package se.yarin.cbhlib.annotations;
 
 import org.junit.Test;
-import se.yarin.cbhlib.AnnotationsSerializer;
-import se.yarin.cbhlib.ChessBaseInvalidDataException;
-import se.yarin.cbhlib.TournamentTimeControl;
-import se.yarin.cbhlib.TournamentType;
+import se.yarin.cbhlib.exceptions.ChessBaseInvalidDataException;
+import se.yarin.cbhlib.entities.TournamentTimeControl;
+import se.yarin.cbhlib.entities.TournamentType;
 import se.yarin.chess.*;
 
 import java.io.IOException;

@@ -5,10 +5,10 @@ import lombok.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.cbhlib.Database;
-import se.yarin.cbhlib.EntityBase;
-import se.yarin.cbhlib.GameHeader;
+import se.yarin.cbhlib.entities.EntityBase;
+import se.yarin.cbhlib.games.GameHeader;
 import se.yarin.cbhlib.entities.Entity;
-import se.yarin.cbhlib.entities.EntityStorageException;
+import se.yarin.cbhlib.storage.EntityStorageException;
 
 import java.io.IOException;
 import java.util.EnumSet;

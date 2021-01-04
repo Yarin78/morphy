@@ -3,14 +3,15 @@ package se.yarin.cbhlib.util;
 import lombok.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import se.yarin.cbhlib.*;
+import se.yarin.cbhlib.entities.Nation;
+import se.yarin.cbhlib.entities.TournamentTimeControl;
+import se.yarin.cbhlib.entities.TournamentType;
 import se.yarin.chess.Date;
 import se.yarin.chess.Eco;
 import se.yarin.chess.GameResult;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
-import java.util.EnumSet;
 
 /**
  * Contains various utility functions for reading and parsing ChessBase data files.
@@ -21,7 +22,7 @@ public final class CBUtil {
     private CBUtil() { }
 
     // This is the character set that CB uses
-    static Charset cbCharSet = Charset.forName("ISO-8859-1");
+    public static Charset cbCharSet = Charset.forName("ISO-8859-1");
 
     public static int compareString(String s1, String s2) {
         // Ordering is done on byte level
@@ -148,55 +149,8 @@ public final class CBUtil {
         return nation.ordinal();
     }
 
-    public static EnumSet<Medal> decodeMedals(int data) {
-        EnumSet<Medal> medals = EnumSet.noneOf(Medal.class);
-        for (Medal medal : Medal.values()) {
-            if (((1<<medal.ordinal()) & data) > 0) {
-                medals.add(medal);
-            }
-        }
-        return medals;
-    }
 
-    public static int encodeMedals(EnumSet<Medal> medals) {
-        int value = 0;
-        for (Medal medal : medals) {
-            value += (1 << medal.ordinal());
-        }
-        return value;
-    }
 
-    public static FinalMaterial decodeFinalMaterial(int value) {
-        int numPawns = (value >> 12) & 15;
-        int numQueens = (value >> 9) & 7;
-        int numKnights = (value >> 6) & 7;
-        int numBishops = (value >> 3) & 7;
-        int numRooks = (value >> 3) & 7;
-        return new FinalMaterial(numPawns, numQueens, numKnights, numBishops, numRooks);
-    }
-
-    public static int encodeFinalMaterial(FinalMaterial material) {
-        if (material == null) {
-            return 0;
-        }
-        int value = (material.getNumPawns() & 15) << 12;
-        value += Math.max(material.getNumQueens(), 7) << 9;
-        value += Math.max(material.getNumKnights(), 7) << 6;
-        value += Math.max(material.getNumBishops(), 7) << 3;
-        value += Math.max(material.getNumRooks(), 7);
-        return value;
-    }
-
-    public static EndgameType decodeEndgameType(int value) {
-        if (value < 0 || value >= EndgameType.values().length) {
-            return EndgameType.NONE;
-        }
-        return EndgameType.values()[value];
-    }
-
-    public static int encodeEndgameType(@NonNull EndgameType endgameType) {
-        return endgameType.ordinal();
-    }
 
     // Debug code
 

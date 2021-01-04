@@ -4,7 +4,8 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import me.tongfei.progressbar.ProgressBar;
 import se.yarin.cbhlib.*;
-import se.yarin.cbhlib.entities.EntityStorageException;
+import se.yarin.cbhlib.entities.EntityBase;
+import se.yarin.cbhlib.storage.EntityStorageException;
 
 import java.io.IOException;
 import java.util.*;

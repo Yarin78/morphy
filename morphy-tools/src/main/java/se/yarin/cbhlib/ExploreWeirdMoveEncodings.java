@@ -1,5 +1,11 @@
 package se.yarin.cbhlib;
 
+import se.yarin.cbhlib.exceptions.ChessBaseException;
+import se.yarin.cbhlib.exceptions.ChessBaseInvalidDataException;
+import se.yarin.cbhlib.exceptions.ChessBaseUnsupportedException;
+import se.yarin.cbhlib.moves.ChessBaseMoveDecodingException;
+import se.yarin.cbhlib.moves.CompactMoveEncoder;
+import se.yarin.cbhlib.moves.MovesSerializer;
 import se.yarin.chess.*;
 
 import java.io.File;

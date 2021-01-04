@@ -2,7 +2,9 @@ package se.yarin.cbhlib;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import se.yarin.chess.GameMovesModel;
+import se.yarin.cbhlib.games.EndgameType;
+import se.yarin.cbhlib.games.ExtendedGameHeaderBase;
+import se.yarin.cbhlib.games.GameHeaderBase;
 
 import java.io.File;
 import java.io.IOException;

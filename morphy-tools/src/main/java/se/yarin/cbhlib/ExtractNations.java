@@ -1,6 +1,9 @@
 package se.yarin.cbhlib;
 
-import se.yarin.cbhlib.entities.EntityStorageException;
+import se.yarin.cbhlib.storage.EntityStorageException;
+import se.yarin.cbhlib.entities.Nation;
+import se.yarin.cbhlib.entities.TournamentBase;
+import se.yarin.cbhlib.entities.TournamentEntity;
 
 import java.io.BufferedInputStream;
 import java.io.File;

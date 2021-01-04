@@ -1,7 +1,10 @@
 package se.yarin.cbhlib.annotations;
 
 import org.junit.Test;
-import se.yarin.cbhlib.*;
+import se.yarin.cbhlib.entities.Nation;
+import se.yarin.cbhlib.entities.TournamentTimeControl;
+import se.yarin.cbhlib.entities.TournamentType;
+import se.yarin.cbhlib.games.Medal;
 import se.yarin.chess.*;
 import se.yarin.chess.annotations.Annotation;
 

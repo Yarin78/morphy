@@ -3,6 +3,11 @@ package se.yarin.cbhlib.validation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.cbhlib.*;
+import se.yarin.cbhlib.exceptions.ChessBaseException;
+import se.yarin.cbhlib.games.GameHeader;
+import se.yarin.cbhlib.games.GameHeaderBase;
+import se.yarin.cbhlib.games.GameLoader;
+import se.yarin.cbhlib.storage.FileBlobStorage;
 
 import java.io.IOException;
 

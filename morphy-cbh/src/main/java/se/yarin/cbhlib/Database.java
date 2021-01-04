@@ -4,6 +4,16 @@ import lombok.Getter;
 import lombok.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import se.yarin.cbhlib.annotations.AnnotationBase;
+import se.yarin.cbhlib.entities.AnnotatorBase;
+import se.yarin.cbhlib.entities.TournamentBase;
+import se.yarin.cbhlib.exceptions.ChessBaseException;
+import se.yarin.cbhlib.games.GameHeader;
+import se.yarin.cbhlib.games.GameHeaderBase;
+import se.yarin.cbhlib.games.GameLoader;
+import se.yarin.cbhlib.moves.MovesBase;
+import se.yarin.cbhlib.entities.PlayerBase;
+import se.yarin.cbhlib.entities.SourceBase;
 import se.yarin.chess.GameModel;
 
 import java.io.File;
@@ -19,7 +29,7 @@ import java.io.IOException;
  * common database operations that underneath performs complex logic to update the database structures.
  *
  * More low-level functionality can be performed by invoking methods on the classes representing
- * the different files, such as {@link se.yarin.cbhlib.GameHeaderBase}, {@link se.yarin.cbhlib.PlayerBase} etc
+ * the different files, such as {@link GameHeaderBase}, {@link PlayerBase} etc
  * But beware that invoking write operations on these may cause the database to end up in an inconsistent state.
  */
 

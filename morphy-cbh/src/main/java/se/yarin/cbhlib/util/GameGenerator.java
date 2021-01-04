@@ -1,6 +1,6 @@
 package se.yarin.cbhlib.util;
 
-import se.yarin.cbhlib.Medal;
+import se.yarin.cbhlib.games.Medal;
 import se.yarin.cbhlib.annotations.*;
 import se.yarin.chess.*;
 import se.yarin.chess.annotations.Annotation;

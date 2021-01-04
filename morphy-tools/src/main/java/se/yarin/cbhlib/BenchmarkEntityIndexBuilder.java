@@ -1,5 +1,7 @@
 package se.yarin.cbhlib;
 
+import se.yarin.cbhlib.entities.PlayerBase;
+
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
