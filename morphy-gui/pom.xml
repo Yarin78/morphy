@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <parent>
+        <artifactId>morphy-parent</artifactId>
+        <groupId>se.yarin</groupId>
+        <version>0.1-SNAPSHOT</version>
+    </parent>
+    <modelVersion>4.0.0</modelVersion>
+
+    <artifactId>morphy-gui</artifactId>
+
+    <properties>
+        <maven.compiler.source>15</maven.compiler.source>
+        <maven.compiler.target>15</maven.compiler.target>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-slf4j-impl</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-controls</artifactId>
+            <version>15.0.1</version>
+        </dependency>
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-fxml</artifactId>
+            <version>15.0.1</version>
+        </dependency>
+        <dependency>
+            <groupId>se.yarin</groupId>
+            <artifactId>morphy-cbh</artifactId>
+            <version>0.1-SNAPSHOT</version>
+        </dependency>
+
+        <dependency>
+            <groupId>de.codecentric.centerdevice</groupId>
+            <artifactId>javafxsvg</artifactId>
+            <version>1.1.0</version>
+        </dependency>
+
+        <dependency>
+            <groupId>uk.co.caprica</groupId>
+            <artifactId>vlcj</artifactId>
+            <version>3.10.1</version>
+        </dependency>
+
+        <!-- MigLayout -->
+
+        <dependency>
+            <groupId>com.miglayout</groupId>
+            <artifactId>miglayout-javafx</artifactId>
+            <version>5.0</version>
+        </dependency>
+
+        <!-- Apache Commons -->
+
+        <dependency>
+            <groupId>commons-lang</groupId>
+            <artifactId>commons-lang</artifactId>
+            <version>2.6</version>
+        </dependency>
+
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.openjfx</groupId>
+                <artifactId>javafx-maven-plugin</artifactId>
+                <version>0.0.5</version>
+                <configuration>
+                    <mainClass>se.yarin.morphy.gui.Main</mainClass>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>
