@@ -51,11 +51,11 @@ public class EntityStorageTransaction<T extends Entity & Comparable<T>> {
         committed = true;
     }
 
-    private TreePath<T> lowerBound(@NonNull T entity) throws IOException {
+    private @NonNull TreePath<T> lowerBound(@NonNull T entity) throws IOException {
         return nodeStorage.lowerBound(entity);
     }
 
-    private TreePath<T> upperBound(@NonNull T entity) throws IOException {
+    private @NonNull TreePath<T> upperBound(@NonNull T entity) throws IOException {
         return nodeStorage.upperBound(entity);
     }
 
@@ -68,7 +68,7 @@ public class EntityStorageTransaction<T extends Entity & Comparable<T>> {
 
     public T getAnyEntity(@NonNull T entity) throws IOException {
         TreePath<T> treePath = lowerBound(entity);
-        if (treePath == null) {
+        if (treePath.isEnd()) {
             return null;
         }
         T foundEntity = treePath.getNode().getEntity();
@@ -97,23 +97,7 @@ public class EntityStorageTransaction<T extends Entity & Comparable<T>> {
             throw new IllegalStateException("The transaction has already been committed");
         }
 
-        TreePath<T> path = lowerBound(entity);
-        boolean replaceLeft;
-        if (path == null) {
-            // The element to add should go last in the tree.
-            path = TreePath.last(nodeStorage);
-            replaceLeft = false;
-        } else {
-            // Insert to the left of the lower bound.
-            // If we already have a left child, insert it to the right of the predecessor instead.
-            if (!path.hasLeftChild()) {
-                replaceLeft = true;
-            } else {
-                path = path.predecessor();
-                replaceLeft = false;
-            }
-        }
-
+        // Determine the id of the added entity
         int entityId;
         if (nodeStorage.getFirstDeletedEntityId() >= 0) {
             // Replace a deleted entity
@@ -126,7 +110,30 @@ public class EntityStorageTransaction<T extends Entity & Comparable<T>> {
         }
         nodeStorage.setNumEntities(nodeStorage.getNumEntities() + 1);
 
-        replaceChild(path, path != null && replaceLeft, entityId);
+        TreePath<T> path = null;
+        if (nodeStorage.getRootEntityId() < 0) {
+            // Special case, storage has no root node and is empty
+            nodeStorage.setRootEntityId(entityId);
+        } else {
+            path = lowerBound(entity);
+            boolean replaceLeft;
+            if (path.isEnd()) {
+                // The element to add should go last in the tree.
+                path = TreePath.last(nodeStorage);
+                replaceLeft = false;
+            } else {
+                // Insert to the left of the lower bound.
+                // If we already have a left child, insert it to the right of the predecessor instead.
+                if (!path.hasLeftChild()) {
+                    replaceLeft = true;
+                } else {
+                    path = path.predecessor();
+                    replaceLeft = false;
+                }
+            }
+
+            replaceChild(path, path != null && replaceLeft, entityId);
+        }
 
         EntityNode<T> z = nodeStorage.createNode(entityId, entity);
         nodeStorage.putEntityNode(z);
@@ -219,7 +226,7 @@ public class EntityStorageTransaction<T extends Entity & Comparable<T>> {
         }
 
         TreePath<T> treePath = lowerBound(entity);
-        if (treePath == null || treePath.getEntity().compareTo(entity) != 0) {
+        if (treePath.isEnd() || treePath.getEntity().compareTo(entity) != 0) {
             throw new EntityStorageException("The entity doesn't exist in the storage");
         }
         TreePath<T> successor = treePath.successor();
@@ -253,7 +260,7 @@ public class EntityStorageTransaction<T extends Entity & Comparable<T>> {
         // We need to do this by a tree search since the nodes themselves don't have parent reference
         TreePath<T> nodePath = lowerBound(node.getEntity());
 
-        if (nodePath == null || nodePath.getEntity().compareTo(node.getEntity()) != 0) {
+        if (nodePath.isEnd() || nodePath.getEntity().compareTo(node.getEntity()) != 0) {
             // When doing a search by key, we ended up at a node that didn't match which shouldn't happen
             throw new EntityStorageException("Broken database structure; couldn't find the node to delete.");
         }
@@ -262,7 +269,7 @@ public class EntityStorageTransaction<T extends Entity & Comparable<T>> {
         // by traversing the successors in a linear fashion.
         while (nodePath.getEntityId() != entityId) {
             nodePath = nodePath.successor();
-            if (nodePath == null || nodePath.getEntity().compareTo(node.getEntity()) != 0) {
+            if (nodePath.isEnd() || nodePath.getEntity().compareTo(node.getEntity()) != 0) {
                 // We found some matching node, but not with the correct id!?
                 throw new EntityStorageException("Broken database structure; couldn't find the node to delete.");
             }
@@ -283,15 +290,16 @@ public class EntityStorageTransaction<T extends Entity & Comparable<T>> {
         }
 
         TreePath<T> nodePath = lowerBound(entity);
-        if (nodePath == null || nodePath.getEntity().compareTo(entity) != 0) {
+        if (nodePath.isEnd() || nodePath.getEntity().compareTo(entity) != 0) {
             log.debug("Deleted entity didn't exist");
             return false;
         }
 
         TreePath<T> successor = nodePath.successor();
-        if (successor != null && successor.getEntity().compareTo(entity) == 0) {
+        if (!successor.isEnd() && successor.getEntity().compareTo(entity) == 0) {
             throw new EntityStorageDuplicateKeyException("Multiple matching entities");
         }
+
         return internalDeleteEntity(nodePath);
     }
 

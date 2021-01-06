@@ -100,7 +100,7 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
     @Override
     public T getAnyEntity(@NonNull T entity) throws IOException {
         TreePath<T> treePath = lowerBound(entity);
-        if (treePath == null) {
+        if (treePath.isEnd()) {
             return null;
         }
         T foundEntity = treePath.getNode().getEntity();
@@ -266,7 +266,7 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
     public List<T> getAllEntities(boolean sortByKey) throws IOException {
         ArrayList<T> result = new ArrayList<>(getNumEntities());
         if (sortByKey) {
-            Iterator<T> iterator = getOrderedAscendingIterator(null);
+            Iterator<T> iterator = getOrderedAscendingIterator();
             while (iterator.hasNext()) {
                 result.add(iterator.next());
             }
@@ -285,7 +285,6 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
     public TreePath<T> upperBound(@NonNull T entity) throws IOException {
         return nodeStorage.upperBound(entity);
     }
-
 
     public Iterator<T> iterator() {
         return iterator(0);
@@ -353,17 +352,17 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
         }
     }
 
-    private class OrderedIterator implements Iterator<T> {
+    private class OrderedAscendingIterator implements Iterator<T> {
 
-        // Invariant: treePath.node is the next entity to be returned
-        // If treePath == null, there are no more entities to be returned
-        private TreePath<T> treePath;
-        private final boolean ascending;
+        // Invariant: current.node is the next entity to be returned
+        // If current.isEnd(), there are no more entities to be returned
+        private @NonNull TreePath<T> current;
+        private final int stopId;
         private final int version;
 
-        OrderedIterator(TreePath<T> treePath, boolean ascending) throws IOException {
-            this.treePath = treePath;
-            this.ascending = ascending;
+        OrderedAscendingIterator(@NonNull TreePath<T> start, int stopId) {
+            this.current = start;
+            this.stopId = stopId;
             this.version = getVersion();
         }
 
@@ -372,7 +371,7 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
             if (this.version != getVersion()) {
                 throw new IllegalStateException("The storage has changed since the iterator was created");
             }
-            return treePath != null;
+            return !current.isEnd() && current.getEntityId() != stopId;
         }
 
         @Override
@@ -381,8 +380,8 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
                 throw new NoSuchElementException("End of entity iteration reached");
             }
             try {
-                T entity = treePath.getNode().getEntity();
-                this.treePath = ascending ? this.treePath.successor() : this.treePath.predecessor();
+                T entity = current.getNode().getEntity();
+                this.current = this.current.successor();
                 return entity;
             } catch (IOException e) {
                 throw new UncheckedEntityException("An IO error when iterating entities", e);
@@ -390,26 +389,61 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
         }
     }
 
-    private Iterator<T> getOrderedIterator(T startEntity, boolean ascending) throws IOException {
-        TreePath<T> treePath;
-        if (startEntity == null) {
-            treePath = ascending ? TreePath.first(nodeStorage) : TreePath.last(nodeStorage);
-        } else {
-            if (ascending) {
-                return new OrderedIterator(lowerBound(startEntity), true);
-            } else {
-                TreePath<T> path = upperBound(startEntity);
-                return new OrderedIterator(path == null ? TreePath.last(nodeStorage) : path.predecessor(), false);
+    private class OrderedDescendingIterator implements Iterator<T> {
+
+        // Invariant: current.node is the next entity to be returned
+        // If current.isBegin(), there are no more entities to be returned
+        private @NonNull TreePath<T> current;
+        private final int version;
+
+        OrderedDescendingIterator(@NonNull TreePath<T> start) {
+            this.current = start;
+            this.version = getVersion();
+        }
+
+        @Override
+        public boolean hasNext() {
+            if (this.version != getVersion()) {
+                throw new IllegalStateException("The storage has changed since the iterator was created");
+            }
+            try {
+                return !this.current.isBegin();
+            } catch (IOException e) {
+                throw new UncheckedEntityException("An IO error when iterating entities", e);
             }
         }
-        return new OrderedIterator(treePath, ascending);
+
+        @Override
+        public T next() {
+            if (!hasNext()) {
+                throw new NoSuchElementException("End of entity iteration reached");
+            }
+            try {
+                this.current = this.current.predecessor();
+                return current.getNode().getEntity();
+            } catch (IOException e) {
+                throw new UncheckedEntityException("An IO error when iterating entities", e);
+            }
+        }
+    }
+
+    public Iterator<T> getOrderedAscendingIterator() throws IOException {
+        return getOrderedAscendingIterator(TreePath.begin(nodeStorage), TreePath.end(nodeStorage));
     }
 
     public Iterator<T> getOrderedAscendingIterator(T startEntity) throws IOException {
-        return getOrderedIterator(startEntity, true);
+        return getOrderedAscendingIterator(startEntity == null ? TreePath.begin(nodeStorage) : lowerBound(startEntity));
+    }
+
+    public Iterator<T> getOrderedAscendingIterator(@NonNull TreePath<T> start) {
+        return getOrderedAscendingIterator(start, TreePath.end(nodeStorage));
+    }
+
+    public Iterator<T> getOrderedAscendingIterator(@NonNull TreePath<T> start, @NonNull TreePath<T> end) {
+        return new OrderedAscendingIterator(start, end.getEntityId());
     }
 
     public Iterator<T> getOrderedDescendingIterator(T startEntity) throws IOException {
-        return getOrderedIterator(startEntity, false);
+        return new OrderedDescendingIterator(startEntity == null ? TreePath.end(nodeStorage) : upperBound(startEntity));
     }
 }

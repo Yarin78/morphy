@@ -506,7 +506,7 @@ public class EntityStorageTest {
             storage.addEntity(new TestEntity(value));
         }
 
-        Iterator<TestEntity> iterator = storage.getOrderedAscendingIterator(null);
+        Iterator<TestEntity> iterator = storage.getOrderedAscendingIterator();
         StringBuilder sb = new StringBuilder();
         while (iterator.hasNext()) {
             sb.append(iterator.next().getKey());
@@ -532,7 +532,7 @@ public class EntityStorageTest {
     public void testAscendingIterateOverEmptyStorage() throws IOException, EntityStorageException {
         EntityStorage<TestEntity> storage = createStorage();
 
-        Iterator<TestEntity> iterator = storage.getOrderedAscendingIterator(null);
+        Iterator<TestEntity> iterator = storage.getOrderedAscendingIterator();
         assertFalse(iterator.hasNext());
 
         iterator = storage.getOrderedAscendingIterator(new TestEntity("a"));
@@ -545,7 +545,7 @@ public class EntityStorageTest {
         storage.addEntity(new TestEntity("e"));
 
         // No start marker
-        Iterator<TestEntity> iterator = storage.getOrderedAscendingIterator(null);
+        Iterator<TestEntity> iterator = storage.getOrderedAscendingIterator();
         assertTrue(iterator.hasNext());
         assertEquals("e", iterator.next().getKey());
         assertFalse(iterator.hasNext());
@@ -605,7 +605,7 @@ public class EntityStorageTest {
             storage.addEntity(new TestEntity(value));
         }
 
-        Iterator<TestEntity> iterator = storage.getOrderedAscendingIterator(null);
+        Iterator<TestEntity> iterator = storage.getOrderedAscendingIterator();
         StringBuilder sb = new StringBuilder();
         while (iterator.hasNext()) {
             sb.append(iterator.next().getKey());
@@ -673,7 +673,7 @@ public class EntityStorageTest {
         EntityStorage<TestEntity> storage = createStorage();
         storage.addEntity(new TestEntity("a"));
         storage.addEntity(new TestEntity("b"));
-        Iterator<TestEntity> iterator = storage.getOrderedAscendingIterator(null);
+        Iterator<TestEntity> iterator = storage.getOrderedAscendingIterator();
         assertEquals("a", iterator.next().getKey());
         storage.addEntity(new TestEntity("c"));
         iterator.next();

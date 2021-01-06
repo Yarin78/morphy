@@ -126,11 +126,33 @@ public interface EntityStorage<T extends Entity & Comparable<T>> extends Iterabl
 
     /**
      * Gets an iterator over the entities in ascending primary key sorting order
-     * @param startEntity the first entity (inclusive), or null to start from the first entity
+     * @return an entity iterator
+     * @throws IOException if an IO error occurs
+     */
+    Iterator<T> getOrderedAscendingIterator() throws IOException;
+
+    /**
+     * Gets an iterator over the entities in ascending primary key sorting order
+     * @param startEntity the first entity (inclusive); null to start at the beginning
      * @return an entity iterator
      * @throws IOException if an IO error occurs
      */
     Iterator<T> getOrderedAscendingIterator(T startEntity) throws IOException;
+
+    /**
+     * Gets an iterator over the entities in ascending primary key sorting order
+     * @param start the start path (inclusive); null to start at the beginning
+     * @return an entity iterator
+     */
+    Iterator<T> getOrderedAscendingIterator(@NonNull TreePath<T> start);
+
+    /**
+     * Gets an iterator over the entities in ascending primary key sorting order
+     * @param start the start path (inclusive); null to start at the beginning
+     * @param end the end path (exclusive); null for no end condition
+     * @return an entity iterator
+     */
+    Iterator<T> getOrderedAscendingIterator(@NonNull TreePath<T> start, TreePath<T> end);
 
     /**
      * Gets an iterator over the entities in descending primary key sorting order

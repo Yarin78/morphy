@@ -198,7 +198,7 @@ public abstract class EntityBase<T extends Entity & Comparable<T>> implements En
      * @throws IOException if some IO error occurred reading the database
      */
     public Iterator<T> getAscendingIterator() throws IOException {
-        return storage.getOrderedAscendingIterator(null);
+        return storage.getOrderedAscendingIterator();
     }
 
     /**
@@ -216,7 +216,7 @@ public abstract class EntityBase<T extends Entity & Comparable<T>> implements En
      * @throws IOException if some IO error occurred reading the database
      */
     public T getFirst() throws IOException {
-        Iterator<T> iterator = storage.getOrderedAscendingIterator(null);
+        Iterator<T> iterator = storage.getOrderedAscendingIterator();
         return iterator.hasNext() ? iterator.next() : null;
     }
 
