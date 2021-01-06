@@ -7,7 +7,7 @@ import java.util.Calendar;
  *
  * Date is immutable.
  */
-public final class Date {
+public final class Date implements Comparable<Date> {
     private int year, month, day;
 
     public Date(int year) {
@@ -34,6 +34,10 @@ public final class Date {
                 cal.get(Calendar.YEAR),
                 cal.get(Calendar.MONTH) + 1,
                 cal.get(Calendar.DAY_OF_MONTH));
+    }
+
+    public boolean isUnset() {
+        return this.year == 0;
     }
 
     public int year() {
@@ -76,6 +80,17 @@ public final class Date {
         return sb.toString();
     }
 
+    public String toPrettyString() {
+        // Either "YYYY" or "YYYY-MM-DD"
+        if (year > 0 && month > 0 && day > 0) {
+            return String.format("%04d-%02d-%02d", year, month, day);
+        } else if (year > 0) {
+            return String.format("%04d", year);
+        } else {
+            return "";
+        }
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -94,5 +109,26 @@ public final class Date {
         result = 31 * result + month;
         result = 31 * result + day;
         return result;
+    }
+
+    @Override
+    public int compareTo(Date that) {
+        // If some part of the date is missing from one side, we treat it as equal
+        // This it to ensure that when searching for "play date >= 1970"
+        // we will find games that say "October 1970".
+
+        if (this.year != that.year) {
+            return this.year - that.year;
+        }
+        if (this.month == 0 || that.month == 0) {
+            return 0;
+        }
+        if (this.month != that.month) {
+            return this.month - that.month;
+        }
+        if (this.day == 0 || that.day == 0) {
+            return 0;
+        }
+        return this.day - that.day;
     }
 }

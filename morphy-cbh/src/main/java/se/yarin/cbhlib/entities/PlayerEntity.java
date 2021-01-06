@@ -50,6 +50,16 @@ public class PlayerEntity implements Entity, Comparable<PlayerEntity> {
         return lastName + ", " + firstName;
     }
 
+    public String getFullNameShort() {
+        if (lastName.length() == 0) {
+            return firstName;
+        }
+        if (firstName.length() == 0) {
+            return lastName;
+        }
+        return lastName + ", " + firstName.charAt(0);
+    }
+
     @Override
     public String toString() {
         return getFullName();

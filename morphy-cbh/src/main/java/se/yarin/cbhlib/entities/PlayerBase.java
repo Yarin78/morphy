@@ -1,6 +1,7 @@
 package se.yarin.cbhlib.entities;
 
 import lombok.NonNull;
+import se.yarin.cbhlib.storage.TreePath;
 import se.yarin.cbhlib.storage.transaction.EntityStorage;
 import se.yarin.cbhlib.storage.transaction.EntityStorageImpl;
 import se.yarin.cbhlib.util.ByteBufferUtil;
@@ -8,6 +9,7 @@ import se.yarin.cbhlib.util.ByteBufferUtil;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.Iterator;
 
 public class PlayerBase extends EntityBase<PlayerEntity> {
 
@@ -52,6 +54,35 @@ public class PlayerBase extends EntityBase<PlayerEntity> {
      */
     public static PlayerBase create(@NonNull File file) throws IOException {
         return new PlayerBase(EntityStorageImpl.create(file, new PlayerBase()));
+    }
+
+    /**
+     * Searches for players using a case sensitive prefix search.
+     * @param name a prefix of the last name of the player; first name can be specified after a comma
+     * @return an iterator over matching players
+     */
+    public Iterator<PlayerEntity> prefixSearch(@NonNull String name) throws IOException {
+        if (name.contains(",")) {
+            String[] parts = name.split(",", 2);
+            return prefixSearch(parts[0].strip(), parts[1].strip());
+        }
+        return prefixSearch(name, null);
+    }
+
+    /**
+     * Searches for players using a case sensitive prefix search.
+     * If first name is specified, last name will have to match exactly.
+     * @param lastName a prefix of the last name of the player
+     * @param firstName a prefix of the first name of the player (or null/empty).
+     * @return an iterator over matching players
+     */
+    public Iterator<PlayerEntity> prefixSearch(@NonNull String lastName, String firstName) throws IOException {
+        PlayerEntity startKey = new PlayerEntity(lastName, firstName == null ? "" : firstName);
+        PlayerEntity endKey = firstName == null ? new PlayerEntity(lastName + "zzz", "") :
+                new PlayerEntity(lastName, firstName + "zzz");
+        TreePath<PlayerEntity> start = getStorage().lowerBound(startKey);
+        TreePath<PlayerEntity> end = getStorage().upperBound(endKey);
+        return getStorage().getOrderedAscendingIterator(start, end);
     }
 
     public ByteBuffer serialize(@NonNull PlayerEntity player) {

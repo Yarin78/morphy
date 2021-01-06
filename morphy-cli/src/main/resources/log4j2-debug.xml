@@ -6,6 +6,12 @@
         </Console>
     </Appenders>
     <Loggers>
+        <Logger name="se.yarin.morphy" level="debug">
+        </Logger>
+
+        <Logger name="se.yarin.cbhlib" level="debug">
+        </Logger>
+
         <Root level="warn">
             <AppenderRef ref="Console"/>
         </Root>
