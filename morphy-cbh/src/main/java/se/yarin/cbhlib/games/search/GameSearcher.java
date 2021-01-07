@@ -1,7 +1,8 @@
 package se.yarin.cbhlib.games.search;
 
+import lombok.AllArgsConstructor;
+import lombok.Data;
 import lombok.Getter;
-import lombok.SneakyThrows;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.cbhlib.Database;
@@ -13,10 +14,11 @@ import se.yarin.cbhlib.games.GameLoader;
 import se.yarin.cbhlib.games.SerializedGameHeaderFilter;
 import se.yarin.chess.GameModel;
 
-import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.Random;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
+import java.util.stream.Stream;
 
 /**
  * Class responsible for searching for games in a database that matches one or more search filters.
@@ -42,7 +44,7 @@ public class GameSearcher {
      * This function can only be called once per instance.
      * @return an iterable over all hits.
      */
-    public Iterable<Hit> search() throws IOException {
+    public Stream<Hit> streamSearch() {
         if (hasSearched) {
             throw new IllegalStateException("A search has already been executed");
         }
@@ -69,13 +71,62 @@ public class GameSearcher {
         }
 
         log.info("Starting game search from game id " + firstGameId);
-        Iterator<GameHeader> iterator = this.database.getHeaderBase().iterator(firstGameId, rawFilter);
 
-        return () -> new HitIterator(iterator);
+        return this.database.getHeaderBase()
+                .stream(firstGameId, rawFilter)
+                .filter(this::matches)
+                .map(Hit::new);
     }
 
     /**
-     * Adds a new filter to the searcher. This can only be done before {@link #search()} has been called.
+     * Performs the actual search.
+     * @return the search result
+     */
+    public SearchResult search() {
+        return search(0, true);
+    }
+
+    /**
+     * Performs the actual search.
+     * @param limit maximum number of hits to return
+     * @param countAll if true, also count the total number of hits
+     * @return the search result
+     */
+    public SearchResult search(int limit, boolean countAll) {
+        return search(limit, countAll, null);
+    }
+
+    /**
+     * Performs the actual search.
+     * @param limit maximum number of hits to return
+     * @param countAll if true, also count the total number of hits
+     * @param hitConsumer an optional consumer of each hit, called as soon as a hit is found
+     * @return the search result
+     */
+    public SearchResult search(int limit, boolean countAll, Consumer<Hit> hitConsumer) {
+        AtomicInteger hitsFound = new AtomicInteger(0);
+        long startTime = System.currentTimeMillis();
+
+        Stream<Hit> searchStream = streamSearch();
+        if (!countAll && limit > 0) {
+            searchStream = searchStream.limit(limit);
+        }
+
+        ArrayList<Hit> result = new ArrayList<>();
+        searchStream.forEachOrdered(hit -> {
+            if (hitsFound.incrementAndGet() <= limit || limit == 0) {
+                result.add(hit);
+                if (hitConsumer != null) {
+                    hitConsumer.accept(hit);
+                }
+            }
+        });
+
+        return new SearchResult(hitsFound.get(), result, System.currentTimeMillis() - startTime);
+    }
+
+    /**
+     * Adds a new filter to the searcher. This can only be done before {@link #search(int, boolean, Consumer)} ()} has been called.
      * @param filter the filter to add
      */
     public void addFilter(SearchFilter filter) {
@@ -95,79 +146,37 @@ public class GameSearcher {
         return database.getHeaderBase().size();
     }
 
+    private boolean matches(GameHeader current) {
+        return !current.isDeleted() && filters.stream().allMatch(filter -> filter.matches(current));
+    }
 
-    private class HitIterator implements Iterator<Hit> {
-
-        private Iterator<GameHeader> iterator;
-        private Hit nextHit;
-
-        private Random random = new Random();
-
-        public HitIterator(Iterator<GameHeader> iterator) {
-            this.iterator = iterator;
-        }
-
-        private void searchNext() throws IOException {
-            while (this.iterator.hasNext()) {
-                GameHeader current = this.iterator.next();
-                if (current.isDeleted()) continue;
-
-                boolean matches = true;
-                for (SearchFilter filter : filters) {
-                    if (!filter.matches(current)) {
-                        matches = false;
-                        break;
-                    }
-                }
-
-                //if (current.isGuidingText()) continue;
-
-                if (matches) {
-                    this.nextHit = new Hit(current);
-                    break;
-                }
-            }
-        }
-
-        @SneakyThrows  // TODO: fix
-        @Override
-        public boolean hasNext() {
-            if (nextHit != null) {
-                return true;
-            }
-            searchNext();
-            return nextHit != null;
-        }
-
-        @SneakyThrows  // TODO: fix
-        @Override
-        public Hit next() {
-            if (nextHit == null) {
-                searchNext();
-            }
-
-            Hit hit = nextHit;
-            nextHit = null;
-            return hit;
-        }
+    @Data
+    @AllArgsConstructor
+    public class SearchResult {
+        @Getter
+        private int totalHits;
+        @Getter
+        private List<Hit> hits;
+        @Getter
+        private long elapsedTime;
     }
 
     public class Hit {
         @Getter private final GameHeader gameHeader;
 
-        public PlayerEntity getWhite() throws IOException {
+        public PlayerEntity getWhite() {
             return database.getPlayerBase().get(gameHeader.getWhitePlayerId());
         }
 
-        public PlayerEntity getBlack() throws IOException {
+        public PlayerEntity getBlack() {
             return database.getPlayerBase().get(gameHeader.getBlackPlayerId());
         }
 
-        public TournamentEntity getTournament() throws IOException {
+        public TournamentEntity getTournament() {
             return database.getTournamentBase().get(gameHeader.getTournamentId());
         }
 
-        public GameModel getModel() throws IOException, ChessBaseException {
+        public GameModel getModel() throws ChessBaseException {
             return gameLoader.getGameModel(gameHeader.getId());
         }
 

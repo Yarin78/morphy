@@ -11,6 +11,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static org.junit.Assert.*;
 
@@ -499,149 +500,95 @@ public class EntityStorageTest {
 
 
     @Test
-    public void testOrderedAscendingIterator() throws IOException, EntityStorageException {
+    public void testStreamOrderedAscending() throws IOException, EntityStorageException {
         EntityStorage<TestEntity> storage = createStorage();
         String[] values = {"d", "t", "b", "e", "q", "w", "a", "l", "c", "v"};
         for (String value : values) {
             storage.addEntity(new TestEntity(value));
         }
 
-        Iterator<TestEntity> iterator = storage.getOrderedAscendingIterator();
-        StringBuilder sb = new StringBuilder();
-        while (iterator.hasNext()) {
-            sb.append(iterator.next().getKey());
-        }
-        assertEquals("abcdelqtvw", sb.toString());
+        String result = storage.streamOrderedAscending()
+                .map(TestEntity::getKey)
+                .collect(Collectors.joining());
+        assertEquals("abcdelqtvw", result);
 
-        iterator = storage.getOrderedAscendingIterator(new TestEntity("f"));
-        sb = new StringBuilder();
-        while (iterator.hasNext()) {
-            sb.append(iterator.next().getKey());
-        }
-        assertEquals("lqtvw", sb.toString());
+        result = storage.streamOrderedAscending(new TestEntity("f"))
+                .map(TestEntity::getKey)
+                .collect(Collectors.joining());
+        assertEquals("lqtvw", result);
 
-        iterator = storage.getOrderedAscendingIterator(new TestEntity("q"));
-        sb = new StringBuilder();
-        while (iterator.hasNext()) {
-            sb.append(iterator.next().getKey());
-        }
-        assertEquals("qtvw", sb.toString());
+        result = storage.streamOrderedAscending(new TestEntity("q"))
+                .map(TestEntity::getKey)
+                .collect(Collectors.joining());
+        assertEquals("qtvw", result);
     }
 
     @Test
-    public void testAscendingIterateOverEmptyStorage() throws IOException, EntityStorageException {
+    public void testAscendingStreamOverEmptyStorage() throws IOException, EntityStorageException {
         EntityStorage<TestEntity> storage = createStorage();
 
-        Iterator<TestEntity> iterator = storage.getOrderedAscendingIterator();
-        assertFalse(iterator.hasNext());
-
-        iterator = storage.getOrderedAscendingIterator(new TestEntity("a"));
-        assertFalse(iterator.hasNext());
+        assertEquals(0, storage.streamOrderedAscending().count());
+        assertEquals(0, storage.streamOrderedAscending(new TestEntity("a")).count());
     }
 
     @Test
-    public void testAscendingIterateOverSingleNodeStorage() throws IOException, EntityStorageException {
+    public void testAscendingStreamOverSingleNodeStorage() throws IOException, EntityStorageException {
         EntityStorage<TestEntity> storage = createStorage();
         storage.addEntity(new TestEntity("e"));
 
         // No start marker
-        Iterator<TestEntity> iterator = storage.getOrderedAscendingIterator();
-        assertTrue(iterator.hasNext());
-        assertEquals("e", iterator.next().getKey());
-        assertFalse(iterator.hasNext());
+        assertEquals("e", storage.streamOrderedAscending().map(TestEntity::getKey).collect(Collectors.joining()));
 
         // Start before first
-        iterator = storage.getOrderedAscendingIterator(new TestEntity("b"));
-        assertTrue(iterator.hasNext());
-        assertEquals("e", iterator.next().getKey());
-        assertFalse(iterator.hasNext());
+        assertEquals("e", storage.streamOrderedAscending(new TestEntity("b")).map(TestEntity::getKey).collect(Collectors.joining()));
 
         // Start same as first
-        iterator = storage.getOrderedAscendingIterator(new TestEntity("e"));
-        assertTrue(iterator.hasNext());
-        assertEquals("e", iterator.next().getKey());
-        assertFalse(iterator.hasNext());
+        assertEquals("e", storage.streamOrderedAscending(new TestEntity("e")).map(TestEntity::getKey).collect(Collectors.joining()));
 
         // Start after as first
-        iterator = storage.getOrderedAscendingIterator(new TestEntity("g"));
-        assertFalse(iterator.hasNext());
+        assertEquals("", storage.streamOrderedAscending(new TestEntity("g")).map(TestEntity::getKey).collect(Collectors.joining()));
     }
 
     @Test
-    public void testOrderedDescendingIterator() throws IOException, EntityStorageException {
+    public void testOrderedDescendingStream() throws IOException, EntityStorageException {
         EntityStorage<TestEntity> storage = createStorage();
         String[] values = {"d", "t", "b", "e", "q", "w", "a", "l", "c", "v"};
         for (String value : values) {
             storage.addEntity(new TestEntity(value));
         }
 
-        Iterator<TestEntity> iterator = storage.getOrderedDescendingIterator(null);
-        StringBuilder sb = new StringBuilder();
-        while (iterator.hasNext()) {
-            sb.append(iterator.next().getKey());
-        }
-        assertEquals("wvtqledcba", sb.toString());
+        assertEquals("wvtqledcba", storage.streamOrderedDescending(null).map(TestEntity::getKey).collect(Collectors.joining()));
 
-        iterator = storage.getOrderedDescendingIterator(new TestEntity("f"));
-        sb = new StringBuilder();
-        while (iterator.hasNext()) {
-            sb.append(iterator.next().getKey());
-        }
-        assertEquals("edcba", sb.toString());
+        assertEquals("edcba", storage.streamOrderedDescending(new TestEntity("f")).map(TestEntity::getKey).collect(Collectors.joining()));
 
-        iterator = storage.getOrderedDescendingIterator(new TestEntity("q"));
-        sb = new StringBuilder();
-        while (iterator.hasNext()) {
-            sb.append(iterator.next().getKey());
-        }
-        assertEquals("qledcba", sb.toString());
+        assertEquals("qledcba", storage.streamOrderedDescending(new TestEntity("q")).map(TestEntity::getKey).collect(Collectors.joining()));
     }
 
     @Test
-    public void testIteratorsWithDuplicateEntries() throws IOException, EntityStorageException {
+    public void testStreamWithDuplicateEntries() throws IOException, EntityStorageException {
         EntityStorage<TestEntity> storage = createStorage();
         String[] values = {"d", "e", "b", "e", "q", "w", "a", "l", "c", "v", "x", "e", "b", "t" };
         for (String value : values) {
             storage.addEntity(new TestEntity(value));
         }
 
-        Iterator<TestEntity> iterator = storage.getOrderedAscendingIterator();
-        StringBuilder sb = new StringBuilder();
-        while (iterator.hasNext()) {
-            sb.append(iterator.next().getKey());
-        }
-        assertEquals("abbcdeeelqtvwx", sb.toString());
-
-        iterator = storage.getOrderedDescendingIterator(null);
-        sb = new StringBuilder();
-        while (iterator.hasNext()) {
-            sb.append(iterator.next().getKey());
-        }
-        sb.reverse();
-        assertEquals("abbcdeeelqtvwx", sb.toString());
+        assertEquals("abbcdeeelqtvwx", storage.streamOrderedAscending().map(TestEntity::getKey).collect(Collectors.joining()));
+        assertEquals("xwvtqleeedcbba", storage.streamOrderedDescending(null).map(TestEntity::getKey).collect(Collectors.joining()));
     }
 
     @Test
-    public void testIteratorOverEmptyStorage() throws EntityStorageException, IOException {
+    public void testStreamOverEmptyStorage() throws EntityStorageException, IOException {
         EntityStorage<TestEntity> storage = createStorage();
-        int count = 0;
-        for (TestEntity ignored : storage) {
-            count++;
-        }
-        assertEquals(0, count);
+        assertEquals(0, storage.stream().count());
 
         storage.addEntity(new TestEntity("hello"));
         storage.deleteEntity(0);
 
-        count = 0;
-        for (TestEntity ignored : storage) {
-            count++;
-        }
-        assertEquals(0, count);
+        assertEquals(0, storage.stream().count());
     }
 
     @Test
-    public void testIterator() throws EntityStorageException, IOException {
+    public void testStream() throws EntityStorageException, IOException {
         EntityStorage<TestEntity> storage = createStorage();
         String[] values = {"d", "t", "b", "e", "q", "w", "a", "l", "c", "v"};
         for (String value : values) {
@@ -650,11 +597,7 @@ public class EntityStorageTest {
         storage.deleteEntity(3);
         storage.deleteEntity(8);
 
-        StringBuilder sb = new StringBuilder();
-        for (TestEntity testEntity : storage) {
-            sb.append(testEntity.getKey());
-        }
-        assertEquals("dtbqwalv", sb.toString());
+        assertEquals("dtbqwalv", storage.stream().map(TestEntity::getKey).collect(Collectors.joining()));
     }
 
     @Test(expected = IllegalStateException.class)
@@ -662,7 +605,7 @@ public class EntityStorageTest {
         EntityStorage<TestEntity> storage = createStorage();
         storage.addEntity(new TestEntity("a"));
         storage.addEntity(new TestEntity("b"));
-        Iterator<TestEntity> iterator = storage.iterator();
+        Iterator<TestEntity> iterator = storage.iterable().iterator();
         assertEquals("a", iterator.next().getKey());
         storage.addEntity(new TestEntity("c"));
         iterator.next();
@@ -673,7 +616,7 @@ public class EntityStorageTest {
         EntityStorage<TestEntity> storage = createStorage();
         storage.addEntity(new TestEntity("a"));
         storage.addEntity(new TestEntity("b"));
-        Iterator<TestEntity> iterator = storage.getOrderedAscendingIterator();
+        Iterator<TestEntity> iterator = storage.streamOrderedAscending().iterator();
         assertEquals("a", iterator.next().getKey());
         storage.addEntity(new TestEntity("c"));
         iterator.next();
@@ -687,11 +630,7 @@ public class EntityStorageTest {
             storage.addEntity(new TestEntity(nextRandomString()));
         }
 
-        int count = 0;
-        for (TestEntity ignored : storage) {
-            count++;
-        }
-        assertEquals(expected, count);
+        assertEquals(expected, storage.stream().count());
     }
 
     @Test

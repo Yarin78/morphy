@@ -10,8 +10,6 @@ import se.yarin.cbhlib.games.GameHeaderBase;
 import se.yarin.cbhlib.games.GameLoader;
 import se.yarin.cbhlib.storage.FileBlobStorage;
 
-import java.io.IOException;
-
 public class GamesValidator {
     private static final Logger log = LoggerFactory.getLogger(GamesValidator.class);
 
@@ -24,14 +22,14 @@ public class GamesValidator {
     }
 
     public void readAllGames() throws ChessBaseException {
-        for (GameHeader gameHeader : db.getHeaderBase()) {
+        for (GameHeader gameHeader : db.getHeaderBase().iterable()) {
             db.getGameModel(gameHeader.getId());
         }
     }
 
     public void validateMovesAndAnnotationOffsets() throws ChessBaseException {
         int lastMovesOfs = 0, lastAnnotationOfs = 0;
-        for (GameHeader gameHeader : db.getHeaderBase()) {
+        for (GameHeader gameHeader : db.getHeaderBase().iterable()) {
             if (gameHeader.getMovesOffset() <= lastMovesOfs) {
                 throw new ChessBaseException(String.format("Game %d has moves at offset %d while the previous game had moves at offset %d",
                         gameHeader.getId(), gameHeader.getMovesOffset(), lastMovesOfs));
@@ -58,7 +56,7 @@ public class GamesValidator {
         int numAnnotationGaps = 0, numMoveGaps = 0;
         int annotationFreeSpace = 0, moveFreeSpace = 0;
 
-        for (GameHeader header : headerBase) {
+        for (GameHeader header : headerBase.iterable()) {
             if (header.getAnnotationOffset() > 0) {
                 int annotationSize = db.getAnnotationBase().getStorage().readBlob(header.getAnnotationOffset()).limit();
                 int annotationEnd = header.getAnnotationOffset() + annotationSize;

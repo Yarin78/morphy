@@ -5,16 +5,13 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import se.yarin.cbhlib.ResourceLoader;
-import se.yarin.cbhlib.games.GameHeader;
-import se.yarin.cbhlib.games.GameHeaderBase;
-import se.yarin.cbhlib.games.search.PlayerFilter;
 import se.yarin.cbhlib.util.ByteBufferUtil;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static org.junit.Assert.assertEquals;
 
@@ -92,9 +89,9 @@ public class GameHeaderBaseTest {
     }
 
     @Test
-    public void testIterator() throws IOException {
+    public void testIterable() throws IOException {
         GameHeaderBase base = GameHeaderBase.open(gameHeaderFile);
-        Iterator<GameHeader> iterator = base.iterator();
+        Iterator<GameHeader> iterator = base.iterable().iterator();
         int id = 0;
         while (iterator.hasNext()) {
             assertEquals(++id, iterator.next().getId());
@@ -106,7 +103,7 @@ public class GameHeaderBaseTest {
     @Test(expected = IllegalStateException.class)
     public void testIteratorWhileUpdating() throws IOException {
         GameHeaderBase base = GameHeaderBase.open(gameHeaderFile);
-        Iterator<GameHeader> iterator = base.iterator();
+        Iterator<GameHeader> iterator = base.iterable().iterator();
         iterator.next();
         iterator.next();
         base.add(GameHeader.defaultBuilder().build());
@@ -122,14 +119,11 @@ public class GameHeaderBaseTest {
         // Create an iterator that will use the raw level filter to pick a handful of headers
         // The sparsity of this will cause some batches in the internal iterator to be empty
         List<Integer> lookupIds = Arrays.asList(1024, 5191, 5192, 5195, 5823, 9015);
-        Iterable<GameHeader> iterable = () -> headerBase.iterator(1, serializedGameHeader -> {
+        Stream<GameHeader> stream = headerBase.stream(1, serializedGameHeader -> {
             int id = ByteBufferUtil.getUnsigned24BitB(serializedGameHeader, 9); // id of white player offset
             return lookupIds.contains(id);
         });
-        ArrayList<Integer> found = new ArrayList<>();
-        for (GameHeader gameHeader : iterable) {
-            found.add(gameHeader.getId());
-        }
+        List<Integer> found = stream.map(GameHeader::getId).collect(Collectors.toList());
         assertEquals(lookupIds, found);
     }
 

@@ -5,17 +5,14 @@ import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.config.Configuration;
 import org.apache.logging.log4j.core.config.ConfigurationFactory;
 import org.apache.logging.log4j.core.config.ConfigurationSource;
-import org.apache.logging.log4j.core.config.xml.XmlConfiguration;
-import org.apache.logging.log4j.spi.LoggerContext;
 import picocli.CommandLine;
-import se.yarin.cbhlib.*;
+import se.yarin.cbhlib.Database;
 import se.yarin.cbhlib.entities.*;
 import se.yarin.cbhlib.exceptions.ChessBaseException;
 import se.yarin.cbhlib.games.GameHeader;
 import se.yarin.cbhlib.games.search.DateRangeFilter;
 import se.yarin.cbhlib.games.search.GameSearcher;
 import se.yarin.cbhlib.games.search.PlayerFilter;
-import se.yarin.cbhlib.games.search.SinglePlayerFilter;
 import se.yarin.cbhlib.storage.EntityStorageException;
 import se.yarin.cbhlib.util.CBUtil;
 import se.yarin.cbhlib.validation.Validator;
@@ -23,7 +20,9 @@ import se.yarin.chess.GameResult;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.*;
+import java.util.EnumSet;
+import java.util.Locale;
+import java.util.Map;
 import java.util.concurrent.Callable;
 
 @CommandLine.Command(name = "cb", description = "Performs an operation on a ChessBase file",
@@ -88,39 +87,22 @@ class Games implements Callable<Integer> {
                 gameSearcher.addFilter(new DateRangeFilter(db, dateRange));
             }
 
-            int totalHits = 0, shownHits = 0;
-            long startTime = System.currentTimeMillis();
             outputHeader();
             //try (ProgressBar pb = new ProgressBar("Games", gameSearcher.getTotal())) {
-                for (GameSearcher.Hit hit : gameSearcher.search()) {
-                    if (shownHits < limit) {
-                        shownHits += 1;
-                        outputHit(hit);
-
-                        if (shownHits == limit && !showTotal) {
-                            break;
-                        }
-                    }
-                    totalHits += 1;
-                }
-            //}
-            double elapsedTime = (System.currentTimeMillis() - startTime) / 1000.0;
+            GameSearcher.SearchResult result = gameSearcher.search(limit, showTotal, this::outputHit);
 
             if (showTotal) {
-                if (totalHits == 0) {
-                    System.out.printf("No hits (%.2f s)%n", elapsedTime);
+                if (result.getTotalHits() == 0) {
+                    System.out.printf("No hits (%.2f s)%n", result.getElapsedTime() / 1000.0);
                 } else {
                     System.out.println();
-                    if (shownHits < totalHits) {
-                        System.out.printf("%d out of %d hits displayed (%.2f s)%n", shownHits, totalHits, elapsedTime);
+                    if (result.getHits().size() < result.getTotalHits()) {
+                        System.out.printf("%d out of %d hits displayed (%.2f s)%n", result.getHits().size(), result.getTotalHits(), result.getElapsedTime() / 1000.0);
                     } else {
-                        System.out.printf("%d hits  (%.2f ms)%n", totalHits, elapsedTime);
+                        System.out.printf("%d hits  (%.2f ms)%n", result.getTotalHits(), result.getElapsedTime() / 1000.0);
                     }
-
                 }
             }
-
-
         }
         return 0;
     }
@@ -143,7 +125,7 @@ class Games implements Callable<Integer> {
         System.out.printf("%8s  %-20s %4s  %-20s %4s  %3s %3s  %3s  %-30s  %10s%n", (Object[]) columns);
     }
 
-    private void outputHit(GameSearcher.Hit hit) throws IOException, ChessBaseException {
+    private void outputHit(GameSearcher.Hit hit) {
         GameHeader header = hit.getGameHeader();
 
         int gameId = header.getId();
@@ -216,10 +198,9 @@ class Players implements Callable<Integer> {
         try (Database db = Database.open(cbhFile)) {
 
             PlayerBase players = db.getPlayerBase();
-            Iterator<PlayerEntity> iterator = players.getAscendingIterator();
             int count = 0;
-            while (iterator.hasNext() && count < maxPlayers) {
-                PlayerEntity player = iterator.next();
+            for (PlayerEntity player : players.iterable()) {
+                if (count >= maxPlayers) break;
                 String line;
                 if (hex) {
                     line = String.format("%7d:  %-30s %-30s %6d", player.getId(), CBUtil.toHexString(player.getRaw()).substring(0, 30), player.getFullName(), player.getCount());
@@ -252,10 +233,9 @@ class Tournaments implements Callable<Integer> {
     public Integer call() throws IOException {
         try (Database db = Database.open(cbhFile)) {
             TournamentBase tournaments = db.getTournamentBase();
-            Iterator<TournamentEntity> iterator = tournaments.getAscendingIterator();
             int count = 0;
-            while (iterator.hasNext() && count < maxTournaments) {
-                TournamentEntity tournament = iterator.next();
+            for (TournamentEntity tournament : tournaments.iterable()) {
+                if (count >= maxTournaments) break;
                 String line;
                 if (hex) {
                     line = String.format("%7d:  %-30s %-30s %6d", tournament.getId(), CBUtil.toHexString(tournament.getRaw()).substring(0, 30), tournament.getTitle(), tournament.getCount());

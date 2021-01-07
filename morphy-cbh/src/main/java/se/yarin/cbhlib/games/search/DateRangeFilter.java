@@ -9,7 +9,6 @@ import se.yarin.cbhlib.util.ByteBufferUtil;
 import se.yarin.cbhlib.util.CBUtil;
 import se.yarin.chess.Date;
 
-import java.io.IOException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -53,7 +52,7 @@ public class DateRangeFilter extends SearchFilterBase implements SearchFilter, S
     }
 
     @Override
-    public boolean matches(GameHeader gameHeader) throws IOException {
+    public boolean matches(GameHeader gameHeader) {
         return matches(gameHeader.getPlayedDate());
     }
 

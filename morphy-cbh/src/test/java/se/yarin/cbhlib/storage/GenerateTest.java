@@ -2,12 +2,12 @@ package se.yarin.cbhlib.storage;
 
 import se.yarin.cbhlib.entities.AnnotatorBase;
 import se.yarin.cbhlib.entities.AnnotatorEntity;
-import se.yarin.cbhlib.storage.EntityStorageException;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Random;
+import java.util.stream.Collectors;
 
 import static org.junit.Assert.assertEquals;
 
@@ -25,7 +25,7 @@ public class GenerateTest {
 
     public static void main(String[] args) throws IOException {
         AnnotatorBase ab = AnnotatorBase.open(new File("/Users/yarin/chessbasemedia/mediafiles/cbh/generate_test.cbc"));
-        for (AnnotatorEntity annotatorEntity : ab.getAscendingList(1000)) {
+        for (AnnotatorEntity annotatorEntity : ab.streamOrderedAscending().limit(1000).collect(Collectors.toList())) {
             System.out.println(annotatorEntity);
         }
     }

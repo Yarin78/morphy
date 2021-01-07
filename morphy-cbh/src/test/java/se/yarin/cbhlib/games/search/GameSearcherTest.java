@@ -32,7 +32,7 @@ public class GameSearcherTest {
     }
 
     @Test
-    public void testSingleFilter() throws IOException {
+    public void testSingleFilter() {
         GameSearcher searcher = new GameSearcher(database);
 
         searcher.addFilter(new SearchFilterBase(database) {
@@ -42,17 +42,14 @@ public class GameSearcherTest {
             }
         });
 
-        Iterable<GameSearcher.Hit> search = searcher.search();
-        int count = 0;
-        for (GameSearcher.Hit hit : search) {
-            assertEquals(2018, hit.getGameHeader().getPlayedDate().year());
-            count += 1;
-        }
-        assertEquals(15, count);
+        GameSearcher.SearchResult result = searcher.search(0, true);
+        assertTrue(result.getHits().stream().allMatch(hit -> hit.getGameHeader().getPlayedDate().year() == 2018));
+        assertEquals(15, result.getHits().size());
+        assertEquals(15, result.getTotalHits());
     }
 
     @Test
-    public void testCombinedFilters() throws IOException {
+    public void testCombinedFilters() {
         GameSearcher searcher = new GameSearcher(database);
 
         searcher.addFilter(new SearchFilterBase(database) {
@@ -69,15 +66,12 @@ public class GameSearcherTest {
             }
         });
 
-        Iterable<GameSearcher.Hit> search = searcher.search();
+        GameSearcher.SearchResult result = searcher.search(30, true);
+        assertTrue(result.getHits().stream()
+                .map(GameSearcher.Hit::getGameHeader)
+                .allMatch(game -> game.getResult() != GameResult.DRAW && game.getPlayedDate().year() >= 2000));
 
-        int count = 0;
-        for (GameSearcher.Hit hit : search) {
-            assertTrue(hit.getGameHeader().getResult() != GameResult.DRAW);
-            assertTrue(hit.getGameHeader().getPlayedDate().year() >= 2000);
-            // System.out.println(hit.getGameHeader().getPlayedDate() + ": " + hit.getWhite() + " - " + hit.getBlack() + "  " + hit.getGameHeader().getResult());
-            count += 1;
-        }
-        assertEquals(61, count);
+        assertEquals(30, result.getHits().size());
+        assertEquals(61, result.getTotalHits());
     }
 }

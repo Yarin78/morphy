@@ -9,7 +9,7 @@ import se.yarin.cbhlib.util.ByteBufferUtil;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.Iterator;
+import java.util.stream.Stream;
 
 public class PlayerBase extends EntityBase<PlayerEntity> {
 
@@ -59,9 +59,9 @@ public class PlayerBase extends EntityBase<PlayerEntity> {
     /**
      * Searches for players using a case sensitive prefix search.
      * @param name a prefix of the last name of the player; first name can be specified after a comma
-     * @return an iterator over matching players
+     * @return a stream over matching players
      */
-    public Iterator<PlayerEntity> prefixSearch(@NonNull String name) {
+    public Stream<PlayerEntity> prefixSearch(@NonNull String name) {
         if (name.contains(",")) {
             String[] parts = name.split(",", 2);
             return prefixSearch(parts[0].strip(), parts[1].strip());
@@ -74,15 +74,16 @@ public class PlayerBase extends EntityBase<PlayerEntity> {
      * If first name is specified, last name will have to match exactly.
      * @param lastName a prefix of the last name of the player
      * @param firstName a prefix of the first name of the player (or null/empty).
-     * @return an iterator over matching players
+     * @return a stream of matching players
      */
-    public Iterator<PlayerEntity> prefixSearch(@NonNull String lastName, String firstName) {
+    public Stream<PlayerEntity> prefixSearch(@NonNull String lastName, String firstName) {
         PlayerEntity startKey = new PlayerEntity(lastName, firstName == null ? "" : firstName);
         PlayerEntity endKey = firstName == null ? new PlayerEntity(lastName + "zzz", "") :
                 new PlayerEntity(lastName, firstName + "zzz");
+
         TreePath<PlayerEntity> start = getStorage().lowerBound(startKey);
         TreePath<PlayerEntity> end = getStorage().upperBound(endKey);
-        return getStorage().getOrderedAscendingIterator(start, end);
+        return getStorage().streamOrderedAscending(start, end);
     }
 
     public ByteBuffer serialize(@NonNull PlayerEntity player) {

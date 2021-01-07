@@ -12,12 +12,12 @@ import se.yarin.cbhlib.storage.transaction.EntityStorageImpl;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
 
-public abstract class EntityBase<T extends Entity & Comparable<T>> implements EntitySerializer<T>, Iterable<T> {
+public abstract class EntityBase<T extends Entity & Comparable<T>> implements EntitySerializer<T> {
     private static final Logger log = LoggerFactory.getLogger(EntityBase.class);
 
     private final EntityStorage<T> storage;
@@ -167,12 +167,41 @@ public abstract class EntityBase<T extends Entity & Comparable<T>> implements En
     }
 
     /**
-     * Gets a stream of all entities in the database, sorted by id.
+     * Returns an iterable of all entities in the database, sorted by id.
+     * If an error occurs while processing the stream, a {@link ChessBaseIOException} is thrown.
+     * @return an iterable of all entities
+     */
+    public Iterable<T> iterable() {
+        return storage.iterable();
+    }
+
+    /**
+     * Returns an iterable of all entities in the database, sorted by id.
+     * If an error occurs while processing the stream, a {@link ChessBaseIOException} is thrown.
+     * @param startId the first id in the iterable
+     * @return an iterable of all entities
+     */
+    public Iterable<T> iterable(int startId) {
+        return storage.iterable(startId);
+    }
+
+    /**
+     * Returns a stream of all entities in the database, sorted by id.
      * If an error occurs while processing the stream, a {@link ChessBaseIOException} is thrown.
      * @return a stream of all entities
      */
-    public Stream<T> streamAll() {
-        return StreamSupport.stream(storage.spliterator(), false);
+    public Stream<T> stream() {
+        return storage.stream();
+    }
+
+    /**
+     * Returns a stream of all entities in the database, sorted by id.
+     * If an error occurs while processing the stream, a {@link ChessBaseIOException} is thrown.
+     * @param startId the first id in the stream
+     * @return a stream of all entities
+     */
+    public Stream<T> stream(int startId) {
+        return storage.stream(startId);
     }
 
     /**
@@ -185,39 +214,14 @@ public abstract class EntityBase<T extends Entity & Comparable<T>> implements En
     }
 
     /**
-     * Gets an iterator over all entities in the database in id order
-     * @return an iterator
-     */
-    public Iterator<T> iterator() {
-        return storage.iterator();
-    }
-
-    /**
-     * Gets an iterator over all entities in the database in ascending default sort order
-     * @return an iterator
-     * @throws ChessBaseIOException if some IO error occurred reading the database
-     */
-    public Iterator<T> getAscendingIterator() {
-        return storage.getOrderedAscendingIterator();
-    }
-
-    /**
-     * Gets an iterator over all entities in the database in descending default sort order
-     * @return an iterator
-     * @throws ChessBaseIOException if some IO error occurred reading the database
-     */
-    public Iterator<T> getDescendingIterator() {
-        return storage.getOrderedDescendingIterator(null);
-    }
-
-    /**
      * Gets the first entity in the database according to the default sort order
      * @return the first entity, or null if there are no entities in the database
      * @throws ChessBaseIOException if some IO error occurred reading the database
      */
     public T getFirst() {
-        Iterator<T> iterator = storage.getOrderedAscendingIterator();
-        return iterator.hasNext() ? iterator.next() : null;
+        return streamOrderedAscending()
+                .findFirst()
+                .orElse(null);
     }
 
     /**
@@ -226,8 +230,9 @@ public abstract class EntityBase<T extends Entity & Comparable<T>> implements En
      * @throws ChessBaseIOException if some IO error occurred reading the database
      */
     public T getLast() {
-        Iterator<T> iterator = storage.getOrderedDescendingIterator(null);
-        return iterator.hasNext() ? iterator.next() : null;
+        return streamOrderedDescending()
+                .findFirst()
+                .orElse(null);
     }
 
     /**
@@ -238,12 +243,10 @@ public abstract class EntityBase<T extends Entity & Comparable<T>> implements En
      * @throws ChessBaseIOException if some IO error occurred reading the database
      */
     public T getNext(@NonNull T entity) {
-        Iterator<T> iterator = storage.getOrderedAscendingIterator(entity);
-        if (!iterator.hasNext()) return null;
-        T next = iterator.next();
-        if (!next.equals(entity)) return next;
-        if (!iterator.hasNext()) return null;
-        return iterator.next();
+        return streamOrderedAscending(entity)
+                .filter(e -> !e.equals(entity))
+                .findFirst()
+                .orElse(null);
     }
 
     /**
@@ -254,12 +257,10 @@ public abstract class EntityBase<T extends Entity & Comparable<T>> implements En
      * @throws ChessBaseIOException if some IO error occurred reading the database
      */
     public T getPrevious(@NonNull T entity) {
-        Iterator<T> iterator = storage.getOrderedDescendingIterator(entity);
-        if (!iterator.hasNext()) return null;
-        T next = iterator.next();
-        if (!next.equals(entity)) return next;
-        if (!iterator.hasNext()) return null;
-        return iterator.next();
+        return streamOrderedDescending(entity)
+                .filter(e -> !e.equals(entity))
+                .findFirst()
+                .orElse(null);
     }
 
     /**
@@ -268,8 +269,8 @@ public abstract class EntityBase<T extends Entity & Comparable<T>> implements En
      * @return a stream of all entities
      * @throws ChessBaseIOException if an IO error occurs
      */
-    public Stream<T> getAscendingStream() {
-        return getAscendingStream(null);
+    public Stream<T> streamOrderedAscending() {
+        return streamOrderedAscending(null);
     }
 
     /**
@@ -280,10 +281,8 @@ public abstract class EntityBase<T extends Entity & Comparable<T>> implements En
      * @return a stream of entities
      * @throws ChessBaseIOException if an IO error occurs
      */
-    public Stream<T> getAscendingStream(T start) {
-        Iterator<T> iterator = storage.getOrderedAscendingIterator(start);
-        Iterable<T> iterable = () -> iterator;
-        return StreamSupport.stream(iterable.spliterator(), false);
+    public Stream<T> streamOrderedAscending(T start) {
+        return storage.streamOrderedAscending(start);
     }
 
     /**
@@ -292,8 +291,8 @@ public abstract class EntityBase<T extends Entity & Comparable<T>> implements En
      * @return a stream of all entities
      * @throws ChessBaseIOException if an IO error occurs
      */
-    public Stream<T> getDescendingStream() {
-        return getDescendingStream(null);
+    public Stream<T> streamOrderedDescending() {
+        return streamOrderedDescending(null);
     }
 
     /**
@@ -304,55 +303,47 @@ public abstract class EntityBase<T extends Entity & Comparable<T>> implements En
      * @return a stream of entities
      * @throws ChessBaseIOException if an IO error occurs
      */
-    public Stream<T> getDescendingStream(T start) {
-        Iterator<T> iterator = storage.getOrderedDescendingIterator(start);
-        Iterable<T> iterable = () -> iterator;
-        return StreamSupport.stream(iterable.spliterator(), false);
+    public Stream<T> streamOrderedDescending(T start) {
+        return storage.streamOrderedDescending(start);
     }
 
     /**
-     * Gets a list of entities in the database, sorted by the default sorting order.
-     * @param limit the maximum number of entities to return
-     * @return a list of entities
-     * @throws ChessBaseIOException if an error occurred reading the entities
-     */
-    public List<T> getAscendingList(int limit) {
-        return getAscendingStream().limit(limit).collect(Collectors.toList());
-    }
-
-    /**
-     * Gets a list of entities in the database starting at the specified key,
+     * Gets an iterable of all entities in the database
      * sorted by the default sorting order.
-     * @param limit the maximum number of entities to return
+     * If an error occurs while iterating, a {@link ChessBaseIOException} is thrown.
+     * @return an iterable of entities
+     * @throws ChessBaseIOException if an IO error occurs
+     */
+    public Iterable<T> iterableOrderedAscending() { return iterableOrderedAscending(null); }
+
+    /**
+     * Gets an iterable of all entities in the database starting at the given key (inclusive),
+     * sorted by the default sorting order.
+     * If an error occurs while iterating, a {@link ChessBaseIOException} is thrown.
      * @param start the starting key
-     * @return a list of entities
-     * @throws ChessBaseIOException if an error occurred reading the entities
+     * @return an iterable of entities
+     * @throws ChessBaseIOException if an IO error occurs
      */
-    public List<T> getAscendingList(@NonNull T start, int limit) {
-        return getAscendingStream(start).limit(limit).collect(Collectors.toList());
-    }
+    public Iterable<T> iterableOrderedAscending(T start) { return storage.iterableOrderedAscending(start); }
 
     /**
-     * Gets a list of entities in the database in reverse default sorting order.
-     * @param limit the maximum number of entities to return
-     * @return a list of entities
-     * @throws ChessBaseIOException if an error occurred reading the entities
-     */
-    public List<T> getDescendingList(int limit) {
-        return getDescendingStream().limit(limit).collect(Collectors.toList());
-    }
-
-    /**
-     * Gets a list of entities in the database starting at the specified key
+     * Gets an iterable of all entities in the database
      * in reverse default sorting order.
-     * @param limit the maximum number of entities to return
-     * @param start the starting key
-     * @return a list of entities
-     * @throws ChessBaseIOException if an error occurred reading the entities
+     * If an error occurs while iterating, a {@link ChessBaseIOException} is thrown.
+     * @return an iterable of entities
+     * @throws ChessBaseIOException if an IO error occurs
      */
-    public List<T> getDescendingList(@NonNull T start, int limit) {
-        return getDescendingStream(start).limit(limit).collect(Collectors.toList());
-    }
+    public Iterable<T> iterableOrderedDescending() { return iterableOrderedDescending(null); }
+
+    /**
+     * Gets an iterable of all entities in the database starting at the given key (inclusive),
+     * in reverse default sorting order.
+     * If an error occurs while iterating, a {@link ChessBaseIOException} is thrown.
+     * @param start the starting key
+     * @return an iterable of entities
+     * @throws ChessBaseIOException if an IO error occurs
+     */
+    public Iterable<T> iterableOrderedDescending(T start) { return storage.iterableOrderedDescending(start); }
 
     /**
      * Closes the entity database

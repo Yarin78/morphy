@@ -25,7 +25,7 @@ public interface SearchFilter {
      * in some database; operations that are not suitable to be done in a constructor.
      * @throws IOException
      */
-    void initSearch() throws IOException;
+    void initSearch();
 
     /**
      * Gets an estimate on how many search hits this filter by itself would return.     *
@@ -40,5 +40,5 @@ public interface SearchFilter {
     /**
      * Determines if a specific game in the database matches this filter.
      */
-    boolean matches(GameHeader gameHeader) throws IOException;
+    boolean matches(GameHeader gameHeader);
 }

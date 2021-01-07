@@ -11,7 +11,6 @@ import se.yarin.chess.Date;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Iterator;
 
 import static org.junit.Assert.assertEquals;
 
@@ -51,47 +50,25 @@ public class DateRangeFilterTest {
     }
 
     @Test
-    public void testFromRange() throws IOException {
+    public void testFromRange() {
         DateRangeFilter filter = new DateRangeFilter(database, "1950-");
 
-        int count = 0;
-        Iterator<GameHeader> iterator = database.getHeaderBase().iterator();
-        while (iterator.hasNext()) {
-            GameHeader game = iterator.next();
-            if (filter.matches(game)) count += 1;
-        }
-
+        long count = database.getHeaderBase().stream().filter(filter::matches).count();
         assertEquals(649, count);
 
-        count = 0;
-        iterator = database.getHeaderBase().iterator(1, filter);
-        while (iterator.hasNext()) {
-            iterator.next();
-            count += 1;
-        }
+        count = database.getHeaderBase().stream(1, filter).count();
         assertEquals(649, count);  // Same count expected when using serialized filtering
     }
 
     @Test
-    public void testRange() throws IOException {
+    public void testRange() {
         DateRangeFilter filter = new DateRangeFilter(database, "1921-04-1927-10-13");
 
-        int count = 0;
-        Iterator<GameHeader> iterator = database.getHeaderBase().iterator();
-        while (iterator.hasNext()) {
-            GameHeader game = iterator.next();
-            if (filter.matches(game)) count += 1;
-        }
-
+        long count = database.getHeaderBase().stream().filter(filter::matches).count();
         // Some games from the 1921 WCh match, some games from the 1927 WCh match
         assertEquals(21, count);
 
-        count = 0;
-        iterator = database.getHeaderBase().iterator(1, filter);
-        while (iterator.hasNext()) {
-            iterator.next();
-            count += 1;
-        }
+        count = database.getHeaderBase().stream(1, filter).count();
         assertEquals(21, count);  // Same count expected when using serialized filtering
     }
 }

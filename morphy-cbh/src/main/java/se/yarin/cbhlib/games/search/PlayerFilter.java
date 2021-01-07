@@ -7,7 +7,6 @@ import se.yarin.cbhlib.games.GameHeader;
 import se.yarin.cbhlib.games.SerializedGameHeaderFilter;
 import se.yarin.cbhlib.util.ByteBufferUtil;
 
-import java.io.IOException;
 import java.util.HashSet;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -35,7 +34,7 @@ public class PlayerFilter extends SearchFilterBase implements SearchFilter, Seri
         this.color = color;
     }
 
-    public void initSearch() throws IOException {
+    public void initSearch() {
         // If we can quickly determine if there are few enough players in the database that matches the search string,
         // we can get an improved searched
         List<PlayerEntity> players = playerSearcher.quickSearch();
@@ -76,7 +75,7 @@ public class PlayerFilter extends SearchFilterBase implements SearchFilter, Seri
     }
 
     @Override
-    public boolean matches(GameHeader gameHeader) throws IOException {
+    public boolean matches(GameHeader gameHeader) {
         if (gameHeader.isGuidingText()) {
             return false;
         }

@@ -5,32 +5,29 @@ import lombok.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.cbhlib.Database;
+import se.yarin.cbhlib.entities.Entity;
 import se.yarin.cbhlib.entities.EntityBase;
 import se.yarin.cbhlib.games.GameHeader;
-import se.yarin.cbhlib.entities.Entity;
 import se.yarin.cbhlib.storage.EntityStorageException;
 
-import java.io.IOException;
 import java.util.EnumSet;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.TreeSet;
 
 public class EntityStatsValidator {
     private static final Logger log = LoggerFactory.getLogger(EntityStatsValidator.class);
 
-    private Database db;
+    private final Database db;
     @Getter
-    private EntityStats stats;
+    private final EntityStats stats;
 
     public EntityStatsValidator(@NonNull Database db) {
         this.db = db;
         this.stats = new EntityStats();
     }
 
-
     public void calculateEntityStats(Runnable progressCallback) {
-        for (GameHeader gameHeader : db.getHeaderBase()) {
+        for (GameHeader gameHeader : db.getHeaderBase().iterable()) {
             int gameId = gameHeader.getId();
             if (!gameHeader.isGuidingText()) {
                 updateEntityStats(stats.players, gameHeader.getWhitePlayerId(), gameId);
@@ -56,7 +53,7 @@ public class EntityStatsValidator {
             String entityType,
             EntityBase<T> entities,
             Map<Integer, EntityStats.Stats> expectedStats,
-            boolean throwOnError) throws IOException, EntityStorageException {
+            boolean throwOnError) throws EntityStorageException {
         processEntities(entityType, entities, expectedStats, () -> {}, EnumSet.allOf(Validator.Checks.class), 100000, throwOnError);
     }
 
@@ -67,16 +64,16 @@ public class EntityStatsValidator {
             Runnable progressCallback,
             EnumSet<Validator.Checks> checks,
             int maxInvalid,
-            boolean throwOnError) throws IOException, EntityStorageException {
+            boolean throwOnError) throws EntityStorageException {
         int numEntities = 0, numEqual = 0;
 
         TreeSet<Integer> existingIds = new TreeSet<>();
 
         int numInvalid = 0;
         T last = null;
-        Iterator<T> iterator = entities.getAscendingIterator();
-        while (iterator.hasNext() && numInvalid < maxInvalid) {
-            T current = iterator.next();
+
+        for (T current : entities.iterableOrderedAscending()) {
+            if (numInvalid >= maxInvalid) break;
             existingIds.add(current.getId());
 
             entities.get(current.getId()); // Sanity check that we can do this lookup as well
@@ -160,7 +157,7 @@ public class EntityStatsValidator {
                         existingIds.size(), entityType, expectedStats.size(), entityType));
             }
             if (expectedStats.containsKey(-1)) {
-                log.warn(String.format("Invalid reference to id -1 was found"));
+                log.warn("Invalid reference to id -1 was found");
             }
         }
         if (numEntities != entities.getCount()) {
@@ -187,7 +184,7 @@ public class EntityStatsValidator {
         }
     }
 
-    public void validateEntityStatistics(boolean throwOnError) throws IOException, EntityStorageException {
+    public void validateEntityStatistics(boolean throwOnError) throws EntityStorageException {
         // Used in unit tests
         calculateEntityStats(() -> {});
         processEntities("players", db.getPlayerBase(), stats.players, throwOnError);

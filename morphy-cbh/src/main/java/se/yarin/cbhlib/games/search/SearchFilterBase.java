@@ -19,7 +19,7 @@ public abstract class SearchFilterBase implements SearchFilter {
     }
 
     @Override
-    public void initSearch() throws IOException {
+    public void initSearch() {
     }
 
     @Override
@@ -33,5 +33,5 @@ public abstract class SearchFilterBase implements SearchFilter {
     }
 
     @Override
-    public abstract boolean matches(GameHeader gameHeader) throws IOException;
+    public abstract boolean matches(GameHeader gameHeader);
 }

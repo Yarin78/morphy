@@ -3,7 +3,6 @@ package se.yarin.cbhlib.games;
 import lombok.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import se.yarin.cbhlib.exceptions.ChessBaseIOException;
 import se.yarin.cbhlib.util.ByteBufferUtil;
 import se.yarin.cbhlib.util.CBUtil;
 import se.yarin.chess.*;
@@ -13,8 +12,10 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.*;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
-public class GameHeaderBase implements GameHeaderSerializer, Iterable<GameHeader> {
+public class GameHeaderBase implements GameHeaderSerializer {
 
     // TODO: GameHeaderBase and GameHeaderStorageBase + implementations needs refactoring
     // It's quite messy right now, could be made cleaner
@@ -110,37 +111,56 @@ public class GameHeaderBase implements GameHeaderSerializer, Iterable<GameHeader
         return storage.get(gameHeaderId);
     }
 
+
     /**
-     * Gets an iterator over all game headers in the database
-     * @return an iterator
+     * Returns an Iterable over all game headers in the database
+     * @return an iterable
      */
-    public Iterator<GameHeader> iterator() {
-        return iterator(1, null);
+    public Iterable<GameHeader> iterable() {
+        return iterable(1);
     }
 
     /**
-     * Gets an iterator over all game headers in the database starting at the specified id
-     * @param gameId the id to start the iteration at (inclusive)
-     * @return an iterator
+     * Returns an Iterable over all game headers in the database
+     * @param gameId the id to start the iterable at (inclusive)
+     * @return an iterable
      */
-    public Iterator<GameHeader> iterator(int gameId) {
-        return iterator(gameId, null);
+    public Iterable<GameHeader> iterable(int gameId) {
+        return () -> new DefaultIterator(gameId, null);
     }
 
     /**
-     * Gets an iterator over all game headers in the database starting at the specified id
-     * @param gameId the id to start the iteration at (inclusive)
+     * Returns a stream over all game headers in the database
+     * @return a stream
+     */
+    public Stream<GameHeader> stream() {
+        return stream(1, null);
+    }
+
+    /**
+     * Returns a stream over all game headers in the database starting at the specified id
+     * @param gameId the id to start the stream at (inclusive)
+     * @return a stream
+     */
+    public Stream<GameHeader> stream(int gameId) {
+        return stream(gameId, null);
+    }
+
+    /**
+     * Returns a stream over all game headers in the database starting at the specified id
+     * @param gameId the id to start the stream at (inclusive)
      * @param filter a optional low level filter that _may_ filter out games at the ByteBuffer level.
      *               The filter has no effect if the data has already been deserialized, so a proper
      *               {@link se.yarin.cbhlib.games.search.SearchFilter} should be used as well.
      *               However, since it's much faster to filter things out at this level, it's a nice performance boost.
-     * @return an iterator
+     * @return a stream
      */
-    public Iterator<GameHeader> iterator(int gameId, SerializedGameHeaderFilter filter) {
+    public Stream<GameHeader> stream(int gameId, SerializedGameHeaderFilter filter) {
         if (filter != null && !(storage instanceof PersistentGameHeaderStorage)) {
             log.warn("A serialized GameHeader filter was specified in iteration but the underlying storage doesn't support it");
         }
-        return new DefaultIterator(gameId, filter);
+        Iterable<GameHeader> iterable = () -> new DefaultIterator(gameId, filter);
+        return StreamSupport.stream(iterable.spliterator(), false);
     }
 
 

@@ -10,7 +10,6 @@ import se.yarin.cbhlib.games.GameHeader;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -20,12 +19,11 @@ public class PlayerSearcherTest {
     @Rule
     public TemporaryFolder folder = new TemporaryFolder();
 
-    private File playerFile;
     private PlayerBase playerBase;
 
     @Before
     public void setupEntityTest() throws IOException {
-        playerFile = ResourceLoader.materializeStream(
+        File playerFile = ResourceLoader.materializeStream(
                 GameHeader.class.getResourceAsStream("World-ch/World-ch.cbp"),
                 folder.newFile("World-ch.cp"));
         playerBase = PlayerBase.openInMemory(playerFile);
@@ -105,21 +103,15 @@ public class PlayerSearcherTest {
     }
 
     @Test
-    public void testSearch() throws IOException {
+    public void testSearch() {
         PlayerSearcher searcher = new PlayerSearcher(playerBase, "Car", true, false);
-        Iterator<PlayerSearcher.Hit> iterator = searcher.search();
 
-        int count = 0;
-        while (iterator.hasNext()) {
-            PlayerSearcher.Hit hit = iterator.next();
-            assertTrue(hit.getPlayer().getLastName().startsWith("Car"));
-            count += 1;
-        }
-        assertEquals(2, count);  // Carlsen, Caruana
+        assertEquals(2, searcher.search().count());  // Carlsen, Caruana
+        assertTrue(searcher.search().allMatch(hit -> hit.getPlayer().getLastName().startsWith("Car")));
     }
 
     @Test
-    public void testQuickSearch() throws IOException {
+    public void testQuickSearch() {
         PlayerSearcher searcher = new PlayerSearcher(playerBase, "Car", true, false);
         List<PlayerEntity> playerEntities = searcher.quickSearch();
         assertEquals(2, playerEntities.size());

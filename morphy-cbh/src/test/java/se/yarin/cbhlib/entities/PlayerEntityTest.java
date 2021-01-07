@@ -7,14 +7,13 @@ import org.junit.rules.TemporaryFolder;
 import se.yarin.cbhlib.exceptions.ChessBaseIOException;
 import se.yarin.cbhlib.storage.EntityStorageDuplicateKeyException;
 import se.yarin.cbhlib.storage.EntityStorageException;
-import se.yarin.cbhlib.entities.PlayerBase;
-import se.yarin.cbhlib.entities.PlayerEntity;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static org.junit.Assert.*;
 
@@ -112,7 +111,9 @@ public class PlayerEntityTest {
     @Test
     public void testGetAscendingRangeOfPlayers() throws IOException {
         PlayerBase playerBase = PlayerBase.open(playerIndexFile);
-        List<PlayerEntity> list = playerBase.getAscendingList(new PlayerEntity("M", ""), 3);
+        List<PlayerEntity> list = playerBase.streamOrderedAscending(new PlayerEntity("M", ""))
+                .limit(3)
+                .collect(Collectors.toList());
         assertEquals(3, list.size());
         assertEquals(new PlayerEntity("Machelett", "Heiko"), list.get(0));
         assertEquals(new PlayerEntity("Mainka", "Romuald"), list.get(1));
@@ -122,7 +123,9 @@ public class PlayerEntityTest {
     @Test
     public void testGetDescendingRangeOfPlayers() throws IOException {
         PlayerBase playerBase = PlayerBase.open(playerIndexFile);
-        List<PlayerEntity> list = playerBase.getDescendingList(new PlayerEntity("Sp", ""), 3);
+        List<PlayerEntity> list = playerBase.streamOrderedDescending(new PlayerEntity("Sp", ""))
+                .limit(3)
+                .collect(Collectors.toList());
         assertEquals(3, list.size());
         assertEquals(new PlayerEntity("Socko", "Bartosz"), list.get(0));
         assertEquals(new PlayerEntity("So", "Wesley"), list.get(1));
@@ -159,8 +162,8 @@ public class PlayerEntityTest {
     public void testStreamAllPlayers() throws IOException {
         PlayerBase playerBase = PlayerBase.open(playerIndexFile);
 
-        assertEquals(playerBase.getCount(), playerBase.getAscendingStream().count());
-        assertEquals(playerBase.getCount(), playerBase.getDescendingStream().count());
+        assertEquals(playerBase.getCount(), playerBase.streamOrderedAscending().count());
+        assertEquals(playerBase.getCount(), playerBase.streamOrderedDescending().count());
     }
 
     @Test
@@ -174,14 +177,14 @@ public class PlayerEntityTest {
             .count(10)
             .firstGameId(7)
             .build();
-        assertTrue(playerBase.streamAll().noneMatch(e -> e.equals(newPlayer)));
+        assertTrue(playerBase.stream().noneMatch(e -> e.equals(newPlayer)));
 
         PlayerEntity entity = playerBase.add(newPlayer);
 
         assertEquals(oldCount + 1, playerBase.getCount());
         assertTrue(entity.getId() >= 0);
 
-        assertTrue(playerBase.streamAll().anyMatch(e -> e.equals(newPlayer)));
+        assertTrue(playerBase.stream().anyMatch(e -> e.equals(newPlayer)));
     }
 
     @Test
@@ -231,12 +234,12 @@ public class PlayerEntityTest {
         int oldCount = playerBase.getCount();
 
         PlayerEntity player = playerBase.get(new PlayerEntity("Carlsen", "Magnus"));
-        assertTrue(playerBase.streamAll().anyMatch(e -> e.equals(player)));
+        assertTrue(playerBase.stream().anyMatch(e -> e.equals(player)));
 
         assertTrue(playerBase.delete(player.getId()));
 
         assertEquals(oldCount - 1, playerBase.getCount());
-        assertTrue(playerBase.streamAll().noneMatch(e -> e.equals(player)));
+        assertTrue(playerBase.stream().noneMatch(e -> e.equals(player)));
     }
 
     @Test

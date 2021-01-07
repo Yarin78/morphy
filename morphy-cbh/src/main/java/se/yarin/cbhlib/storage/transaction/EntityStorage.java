@@ -8,10 +8,10 @@ import se.yarin.cbhlib.storage.EntityStorageException;
 import se.yarin.cbhlib.storage.TreePath;
 
 import java.io.IOException;
-import java.util.Iterator;
 import java.util.List;
+import java.util.stream.Stream;
 
-public interface EntityStorage<T extends Entity & Comparable<T>> extends Iterable<T> {
+public interface EntityStorage<T extends Entity & Comparable<T>> {
     /**
      * Gets the number of entities in the storage.
      * @return the number of entities
@@ -106,62 +106,103 @@ public interface EntityStorage<T extends Entity & Comparable<T>> extends Iterabl
 
     /**
      * Returns all entities. There will be no null entries in the output.
-     * If there are a large number of entities, consider using {@link #iterator()} instead.
+     * If there are a large number of entities, consider using {@link #stream()} instead.
      * @param sortByKey if false, sort by id; otherwise sort by default sorting order
      * @return a list of all entities
      */
     List<T> getAllEntities(boolean sortByKey);
 
     /**
-     * Gets an iterator over the entities in ascending id order.
+     * Returns an iterable over the entities in ascending id order.
      * Entities will be read in batches to improve performance.
-     * @param startId the first entity id, inclusive
-     * @return an entity iterator
+     * @return an iterable of entities
      * @throws ChessBaseIOException if an IO error occurs
      */
-    Iterator<T> iterator(int startId);
+    Iterable<T> iterable();
+
+    /**
+     * Returns an iterable over the entities in ascending id order.
+     * Entities will be read in batches to improve performance.
+     * @param startId the first entity id, inclusive
+     * @return an iterable of entities
+     * @throws ChessBaseIOException if an IO error occurs
+     */
+    Iterable<T> iterable(int startId);
+
+    /**
+     * Returns a stream over the entities in ascending id order.
+     * Entities will be read in batches to improve performance.
+     * @return a stream of entities
+     * @throws ChessBaseIOException if an IO error occurs
+     */
+    Stream<T> stream();
+
+    /**
+     * Returns a stream over the entities in ascending id order.
+     * Entities will be read in batches to improve performance.
+     * @param startId the first entity id, inclusive
+     * @return a stream of entities
+     * @throws ChessBaseIOException if an IO error occurs
+     */
+    Stream<T> stream(int startId);
 
     TreePath<T> lowerBound(@NonNull T entity);
 
     TreePath<T> upperBound(@NonNull T entity);
 
     /**
-     * Gets an iterator over the entities in ascending primary key sorting order
-     * @return an entity iterator
+     * Returns a stream over the entities in ascending primary key sorting order
+     * @return an entity stream
      * @throws ChessBaseIOException if an IO error occurs
      */
-    Iterator<T> getOrderedAscendingIterator();
+    Stream<T> streamOrderedAscending();
 
     /**
-     * Gets an iterator over the entities in ascending primary key sorting order
+     * Returns a stream over the entities in ascending primary key sorting order
      * @param startEntity the first entity (inclusive); null to start at the beginning
-     * @return an entity iterator
+     * @return an entity stream
      * @throws ChessBaseIOException if an IO error occurs
      */
-    Iterator<T> getOrderedAscendingIterator(T startEntity);
+    Stream<T> streamOrderedAscending(T startEntity);
 
     /**
-     * Gets an iterator over the entities in ascending primary key sorting order
+     * Returns a stream over the entities in ascending primary key sorting order
      * @param start the start path (inclusive); null to start at the beginning
-     * @return an entity iterator
+     * @return an entity stream
      */
-    Iterator<T> getOrderedAscendingIterator(@NonNull TreePath<T> start);
+    Stream<T> streamOrderedAscending(@NonNull TreePath<T> start);
 
     /**
-     * Gets an iterator over the entities in ascending primary key sorting order
+     * Returns a stream over the entities in ascending primary key sorting order
      * @param start the start path (inclusive); null to start at the beginning
      * @param end the end path (exclusive); null for no end condition
-     * @return an entity iterator
+     * @return an entity stream
      */
-    Iterator<T> getOrderedAscendingIterator(@NonNull TreePath<T> start, TreePath<T> end);
+    Stream<T> streamOrderedAscending(@NonNull TreePath<T> start, TreePath<T> end);
 
     /**
-     * Gets an iterator over the entities in descending primary key sorting order
+     * Returns a stream over the entities in descending primary key sorting order
      * @param startEntity the first entity (inclusive), or null to start from the last entity
-     * @return an entity iterator
+     * @return an entity stream
      * @throws ChessBaseIOException if an IO error occurs
      */
-    Iterator<T> getOrderedDescendingIterator(T startEntity);
+    Stream<T> streamOrderedDescending(T startEntity);
+
+    /**
+     * Returns an iterable over the entities in ascending primary key sorting order
+     * @param startEntity the first entity (inclusive), or null to start from the last entity
+     * @return an iterable
+     * @throws ChessBaseIOException if an IO error occurs
+     */
+    Iterable<T> iterableOrderedAscending(T startEntity);
+
+    /**
+     * Returns an iterable over the entities in descending primary key sorting order
+     * @param startEntity the first entity (inclusive), or null to start from the last entity
+     * @return an iterable
+     * @throws ChessBaseIOException if an IO error occurs
+     */
+    Iterable<T> iterableOrderedDescending(T startEntity);
 
     /**
      * Validates the integrity of the entity storage.

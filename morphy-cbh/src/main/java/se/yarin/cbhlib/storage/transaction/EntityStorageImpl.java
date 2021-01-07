@@ -6,9 +6,6 @@ import lombok.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.cbhlib.entities.Entity;
-import se.yarin.cbhlib.exceptions.ChessBaseIOException;
-import se.yarin.cbhlib.storage.EntityStorageDuplicateKeyException;
-import se.yarin.cbhlib.storage.EntityStorageException;
 import se.yarin.cbhlib.storage.*;
 
 import java.io.File;
@@ -17,6 +14,9 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 public class EntityStorageImpl<T extends Entity & Comparable<T>> implements EntityStorage<T> {
     private static final Logger log = LoggerFactory.getLogger(EntityStorageImpl.class);
@@ -112,37 +112,24 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
 
     @Override
     public T getEntity(@NonNull T entity) throws EntityStorageDuplicateKeyException {
-        Iterator<T> iterator = getOrderedAscendingIterator(entity);
-        ArrayList<T> result = new ArrayList<>();
-        while (iterator.hasNext() && result.size() < 2) {
-            T e = iterator.next();
-            if (e.compareTo(entity) != 0) {
-                break;
-            }
-            result.add(e);
-        }
-        if (result.size() == 0) {
-            return null;
-        }
-        if (result.size() == 1) {
-            return result.get(0);
-        }
-        throw new EntityStorageDuplicateKeyException(String.format("Id %d and %d have a matching key",
-                result.get(0).getId(), result.get(1).getId()));
+        List<T> result = streamOrderedAscending(entity)
+                .takeWhile(e -> e.compareTo(entity) == 0)
+                .limit(2)
+                .collect(Collectors.toList());
+
+        return switch (result.size()) {
+            case 0 -> null;
+            case 1 -> result.get(0);
+            default -> throw new EntityStorageDuplicateKeyException(
+                    String.format("Id %d and %d have a matching key", result.get(0).getId(), result.get(1).getId()));
+        };
     }
 
     @Override
     public List<T> getEntities(@NonNull T entity) {
-        Iterator<T> iterator = getOrderedAscendingIterator(entity);
-        ArrayList<T> result = new ArrayList<>();
-        while (iterator.hasNext()) {
-            T e = iterator.next();
-            if (e.compareTo(entity) != 0) {
-                break;
-            }
-            result.add(e);
-        }
-        return result;
+        return streamOrderedAscending(entity)
+                .takeWhile(e -> e.compareTo(entity) == 0)
+                .collect(Collectors.toList());
     }
 
     @Override
@@ -259,23 +246,12 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
 
     /**
      * Returns all entities. There will be no null entries in the output.
-     * If there are a large number of entities, consider using {@link #iterator()} instead.
+     * If there are a large number of entities, consider using {@link #stream()} instead.
+     * @param sortByKey if false, sort by id; otherwise sort by default sorting order
      * @return a list of all entities
-     * @throws ChessBaseIOException if there was an error getting any entity
      */
     public List<T> getAllEntities(boolean sortByKey) {
-        ArrayList<T> result = new ArrayList<>(getNumEntities());
-        if (sortByKey) {
-            Iterator<T> iterator = getOrderedAscendingIterator();
-            while (iterator.hasNext()) {
-                result.add(iterator.next());
-            }
-        } else {
-            for (T entity : this) {
-                result.add(entity);
-            }
-        }
-        return result;
+        return (sortByKey ? streamOrderedAscending() : stream(0)).collect(Collectors.toList());
     }
 
     public TreePath<T> lowerBound(@NonNull T entity) {
@@ -286,16 +262,23 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
         return nodeStorage.upperBound(entity);
     }
 
-    public Iterator<T> iterator() {
-        return iterator(0);
+    public Iterable<T> iterable() {
+        return iterable(0);
+    }
+
+    public Iterable<T> iterable(int startId) {
+        return () -> new DefaultIterator(startId);
     }
 
     @Override
-    public Iterator<T> iterator(int startId) {
-        return new DefaultIterator(startId);
+    public Stream<T> stream() {
+        return stream(0);
     }
 
-
+    @Override
+    public Stream<T> stream(int startId) {
+        return StreamSupport.stream(iterable(startId).spliterator(), false);
+    }
 
     private class DefaultIterator implements Iterator<T> {
         private List<EntityNode<T>> batch = new ArrayList<>();
@@ -412,23 +395,35 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
         }
     }
 
-    public Iterator<T> getOrderedAscendingIterator() {
-        return getOrderedAscendingIterator(TreePath.begin(nodeStorage), TreePath.end(nodeStorage));
+    public Stream<T> streamOrderedAscending() {
+        return streamOrderedAscending(TreePath.begin(nodeStorage), TreePath.end(nodeStorage));
     }
 
-    public Iterator<T> getOrderedAscendingIterator(T startEntity) {
-        return getOrderedAscendingIterator(startEntity == null ? TreePath.begin(nodeStorage) : lowerBound(startEntity));
+    public Stream<T> streamOrderedAscending(T startEntity) {
+        return streamOrderedAscending(startEntity == null ? TreePath.begin(nodeStorage) : lowerBound(startEntity));
     }
 
-    public Iterator<T> getOrderedAscendingIterator(@NonNull TreePath<T> start) {
-        return getOrderedAscendingIterator(start, TreePath.end(nodeStorage));
+    public Stream<T> streamOrderedAscending(@NonNull TreePath<T> start) {
+        return streamOrderedAscending(start, TreePath.end(nodeStorage));
     }
 
-    public Iterator<T> getOrderedAscendingIterator(@NonNull TreePath<T> start, @NonNull TreePath<T> end) {
-        return new OrderedAscendingIterator(start, end.getEntityId());
+    public Stream<T> streamOrderedAscending(@NonNull TreePath<T> start, @NonNull TreePath<T> end) {
+        Iterable<T> iterable = () -> new OrderedAscendingIterator(start, end.getEntityId());
+        return StreamSupport.stream(iterable.spliterator(), false);
     }
 
-    public Iterator<T> getOrderedDescendingIterator(T startEntity) {
-        return new OrderedDescendingIterator(startEntity == null ? TreePath.end(nodeStorage) : upperBound(startEntity));
+    public Stream<T> streamOrderedDescending(T startEntity) {
+        Iterable<T> iterable = () -> new OrderedDescendingIterator(startEntity == null ? TreePath.end(nodeStorage) : upperBound(startEntity));
+        return StreamSupport.stream(iterable.spliterator(), false);
+    }
+
+    public Iterable<T> iterableOrderedAscending(T startEntity) {
+        TreePath<T> start = startEntity == null ? TreePath.begin(nodeStorage) : lowerBound(startEntity);
+        return () -> new OrderedAscendingIterator(start, -1);
+    }
+
+    public Iterable<T> iterableOrderedDescending(T startEntity) {
+        TreePath<T> start = startEntity == null ? TreePath.end(nodeStorage) : upperBound(startEntity);
+        return () -> new OrderedDescendingIterator(start);
     }
 }

@@ -4,10 +4,10 @@ import lombok.Getter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.stream.Stream;
 
 /**
  * Class responsible for searching and matching players in a database given a partial name
@@ -59,16 +59,16 @@ public class PlayerSearcher {
         this.searchString = firstName.isEmpty() ? lastName : String.format("%s, %s", lastName, firstName);
     }
 
-    private Iterator<PlayerEntity> getBaseSearchIterator() throws IOException {
-        Iterator<PlayerEntity> baseIterator = playerBase.iterator();
+    private Stream<PlayerEntity> getBaseStream() {
+        Stream<PlayerEntity> baseStream = playerBase.stream();
         if (this.caseSensitive) {
-            baseIterator = this.playerBase.prefixSearch(this.lastName);
+            baseStream = this.playerBase.prefixSearch(this.lastName);
         }
-        return baseIterator;
+        return baseStream;
     }
 
-    public Iterator<Hit> search() throws IOException {
-        return new HitIterator(getBaseSearchIterator());
+    public Stream<Hit> search() {
+        return getBaseStream().filter(this::matches).map(Hit::new);
     }
 
     /**
@@ -76,14 +76,15 @@ public class PlayerSearcher {
      *
      * @return a list of all matching players, or null if a quick search couldn't provide a complete result quickly enough.
      */
-    public List<PlayerEntity> quickSearch() throws IOException {
-        Iterator<PlayerEntity> playerEntityIterator = getBaseSearchIterator();
+    public List<PlayerEntity> quickSearch() {
+        // The nature of this operation (aborting if taking too long) makes it unsuitable for streaming operations
+        Iterator<PlayerEntity> stream = getBaseStream().iterator();
         // Start the timer after the initial prefix lookup since we might have a random high startup time
         long start = System.currentTimeMillis();
         ArrayList<PlayerEntity> result = new ArrayList<>();
         int steps = 0;
-        while (playerEntityIterator.hasNext()) {
-            PlayerEntity player = playerEntityIterator.next();
+        while (stream.hasNext()) {
+            PlayerEntity player = stream.next();
             steps += 1;
             if (matches(player)) {
                 result.add(player);
@@ -117,47 +118,6 @@ public class PlayerSearcher {
         return caseSensitive ? playerName.startsWith(searchName) : playerName.toLowerCase().startsWith(searchName.toLowerCase());
     }
 
-    private class HitIterator implements Iterator<Hit> {
-
-        private final Iterator<PlayerEntity> iterator;
-        private Hit nextHit;
-
-        public HitIterator(Iterator<PlayerEntity> iterator) {
-            this.iterator = iterator;
-        }
-
-        private void searchNext() {
-            while (this.iterator.hasNext()) {
-                PlayerEntity current = this.iterator.next();
-
-                if (matches(current)) {
-                    this.nextHit = new Hit(current);
-                    break;
-                }
-            }
-        }
-
-        @Override
-        public boolean hasNext() {
-            if (nextHit != null) {
-                return true;
-            }
-            searchNext();
-            return nextHit != null;
-        }
-
-        @Override
-        public Hit next() {
-            if (nextHit == null) {
-                searchNext();
-            }
-
-            Hit hit = nextHit;
-            nextHit = null;
-            return hit;
-        }
-    }
-
     public class Hit {
         @Getter
         private final PlayerEntity player;
@@ -165,6 +125,5 @@ public class PlayerSearcher {
         public Hit(PlayerEntity player) {
             this.player = player;
         }
-
     }
 }

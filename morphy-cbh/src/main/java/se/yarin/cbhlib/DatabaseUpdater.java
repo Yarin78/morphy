@@ -15,6 +15,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.function.BiPredicate;
+import java.util.stream.Stream;
 
 /**
  * Contains the logic that coordinates the updates across the different database files when a game is added/replaced/deleted
@@ -120,11 +121,12 @@ public class DatabaseUpdater {
         if (oldAnnotationOfs == 0) {
             // This game has no annotations. Find first game after this one that does
             // and use that annotation offset.
-            Iterator<GameHeader> iterator = database.getHeaderBase().iterator(gameId + 1);
-            while (iterator.hasNext() && oldAnnotationOfs == 0) {
-                GameHeader header = iterator.next();
-                oldAnnotationOfs = header.getAnnotationOffset();
-            }
+            oldAnnotationOfs = database.getHeaderBase()
+                    .stream(gameId + 1)
+                    .map(GameHeader::getAnnotationOffset)
+                    .filter(ofs -> ofs > 0)
+                    .findFirst()
+                    .orElse(0);
             if (oldAnnotationOfs != 0) {
                 insertedAnnotationBytes = database.getAnnotationBase().preparePutBlob(0, oldAnnotationOfs, moves);
             }
@@ -163,14 +165,13 @@ public class DatabaseUpdater {
 
         // TODO: Replace this with a proper search implementation in the EntityBase
         private int findFirstGame(int entityId) {
-            for (GameHeader gameHeader : database.getHeaderBase()) {
-                // When checking the game we're actually updating, don't pick the one from the db
-                GameHeader actual = gameHeader.getId() == newGame.getId() ? newGame : gameHeader;
-                if (predicate.test(actual, entityId)) {
-                    return gameHeader.getId();
-                }
-            }
-            return 0;
+            return database.getHeaderBase().stream()
+                    .map(gameHeader -> gameHeader.getId() == newGame.getId() ? newGame : gameHeader)
+                    // When checking the game we're actually updating, don't pick the one from the db
+                    .filter(actual -> predicate.test(actual, entityId))
+                    .map(GameHeader::getId)
+                    .findFirst()
+                    .orElse(0);
         }
 
         private void applyChanges() throws EntityStorageException {

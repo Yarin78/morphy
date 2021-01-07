@@ -53,7 +53,7 @@ public class ExtractTopTournamentGames {
     private static void getGames(GameHeaderBase headers, TournamentEntity entity, PlayerBase players, BufferedWriter output) throws IOException {
         output.write("gameId;whiteId;blackId;white;black;whiteElo;blackElo;result;noMoves;tourId;tour;tourTime;tourType;tourCategory;round;date\n");
         int found = 0, first = 0, last = 0;
-        Iterator<GameHeader> iter = headers.iterator(entity.getFirstGameId());
+        Iterator<GameHeader> iter = headers.stream(entity.getFirstGameId()).iterator();
         while (iter.hasNext() && found < entity.getCount()) {
             GameHeader header = iter.next();
             if (header.getTournamentId() == entity.getId()) {
