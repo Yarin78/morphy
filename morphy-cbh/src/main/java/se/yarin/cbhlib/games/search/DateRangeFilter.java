@@ -1,24 +1,29 @@
 package se.yarin.cbhlib.games.search;
 
+import lombok.Getter;
 import lombok.NonNull;
 import se.yarin.cbhlib.Database;
 import se.yarin.cbhlib.games.GameHeader;
+import se.yarin.cbhlib.games.SerializedGameHeaderFilter;
+import se.yarin.cbhlib.util.ByteBufferUtil;
+import se.yarin.cbhlib.util.CBUtil;
 import se.yarin.chess.Date;
 
 import java.io.IOException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class DateRangeFilter implements SearchFilter {
+public class DateRangeFilter extends SearchFilterBase implements SearchFilter, SerializedGameHeaderFilter {
 
     private static final Pattern dateRangePattern = Pattern.compile("^(([0-9]{4})(-([0-9]{2})(-([0-9]{2}))?)?)?-(([0-9]{4})(-([0-9]{2})(-([0-9]{2}))?)?)?$");
 
-    private final Database db;
+    @Getter
     private final @NonNull Date fromDate;
+    @Getter
     private final @NonNull Date toDate;
 
     public DateRangeFilter(Database db, String dateRange) {
-        this.db = db;
+        super(db);
         Matcher matcher = dateRangePattern.matcher(dateRange);
         if (!matcher.matches()) {
             throw new IllegalArgumentException("Invalid date range specified: " + dateRange);
@@ -29,6 +34,9 @@ public class DateRangeFilter implements SearchFilter {
     }
 
     private static Date extractDate(String year, String month, String day) {
+        if (year == null) {
+            return Date.unset();
+        }
         if (month == null) {
             return new Date(Integer.parseInt(year));
         }
@@ -39,38 +47,32 @@ public class DateRangeFilter implements SearchFilter {
     }
 
     public DateRangeFilter(Database db, Date fromDate, Date toDate) {
-        this.db = db;
+        super(db);
         this.fromDate = fromDate == null ? Date.unset() : fromDate;
         this.toDate = toDate == null ? Date.unset() : toDate;
     }
 
     @Override
-    public Database getDatabase() {
-        return this.db;
-    }
-
-    @Override
-    public void initSearch() throws IOException {
-    }
-
-    @Override
-    public int countEstimate() {
-        return SearchFilter.UNKNOWN_COUNT_ESTIMATE;
-    }
-
-    @Override
-    public int firstGameId() {
-        return 1;
-    }
-
-    @Override
     public boolean matches(GameHeader gameHeader) throws IOException {
-        if (!fromDate.isUnset() && fromDate.compareTo(gameHeader.getPlayedDate()) > 0) {
+        return matches(gameHeader.getPlayedDate());
+    }
+
+    public boolean matches(Date playedDate) {
+        if (!fromDate.isUnset() && fromDate.compareTo(playedDate) > 0) {
             return false;
         }
-        if (!toDate.isUnset() && toDate.compareTo(gameHeader.getPlayedDate()) < 0) {
+        if (!toDate.isUnset() && toDate.compareTo(playedDate) < 0) {
             return false;
         }
         return true;
+    }
+
+    @Override
+    public boolean matches(byte[] serializedGameHeader) {
+        if ((serializedGameHeader[0] & 2) > 0) {
+            // Guiding text has no dates
+            return false;
+        }
+        return matches(CBUtil.decodeDate(ByteBufferUtil.getUnsigned24BitB(serializedGameHeader, 24)));
     }
 }

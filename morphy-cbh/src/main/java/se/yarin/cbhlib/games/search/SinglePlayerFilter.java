@@ -4,14 +4,11 @@ import se.yarin.cbhlib.Database;
 import se.yarin.cbhlib.entities.PlayerEntity;
 import se.yarin.cbhlib.games.GameHeader;
 
-import java.io.IOException;
-
 /**
  * A search filter that only returns games played by a specific player.
  */
-public class SinglePlayerFilter implements SearchFilter {
+public class SinglePlayerFilter extends SearchFilterBase implements SearchFilter {
 
-    private final Database database;
     private final PlayerEntity player;
     private final PlayerColor color;
 
@@ -22,17 +19,9 @@ public class SinglePlayerFilter implements SearchFilter {
     }
 
     public SinglePlayerFilter(Database database, PlayerEntity player, PlayerColor color) {
-        this.database = database;
+        super(database);
         this.player = player;
         this.color = color;
-    }
-
-    @Override
-    public Database getDatabase() {
-        return this.database;
-    }
-
-    public void initSearch() {
     }
 
     @Override

@@ -189,6 +189,10 @@ public class PersistentGameHeaderStorage extends GameHeaderStorageBase {
 
     @Override
     List<GameHeader> getRange(int startId, int endId) throws IOException {
+        return getRange(startId, endId, null);
+    }
+
+    List<GameHeader> getRange(int startId, int endId, SerializedGameHeaderFilter filter) throws IOException {
         if (startId < 1) throw new IllegalArgumentException("startId must be 1 or greater");
         int count = endId - startId;
         ArrayList<GameHeader> result = new ArrayList<>(count);
@@ -206,7 +210,9 @@ public class PersistentGameHeaderStorage extends GameHeaderStorageBase {
                 log.warn(String.format("Unexpected end of file reached when reading game headers in range [%d, %d)", startId, endId), e);
                 break;
             }
-            result.add(serializer.deserialize(id, ByteBuffer.wrap(gameHeaderBuf)));
+            if (filter == null || filter.matches(gameHeaderBuf)) {
+                result.add(serializer.deserialize(id, ByteBuffer.wrap(gameHeaderBuf)));
+            }
         }
 
         return result;

@@ -115,7 +115,7 @@ public class GameHeaderBase implements GameHeaderSerializer, Iterable<GameHeader
      * @return an iterator
      */
     public Iterator<GameHeader> iterator() {
-        return new DefaultIterator(1);
+        return iterator(1, null);
     }
 
     /**
@@ -124,7 +124,23 @@ public class GameHeaderBase implements GameHeaderSerializer, Iterable<GameHeader
      * @return an iterator
      */
     public Iterator<GameHeader> iterator(int gameId) {
-        return new DefaultIterator(gameId);
+        return iterator(gameId, null);
+    }
+
+    /**
+     * Gets an iterator over all game headers in the database starting at the specified id
+     * @param gameId the id to start the iteration at (inclusive)
+     * @param filter a optional low level filter that _may_ filter out games at the ByteBuffer level.
+     *               The filter has no effect if the data has already been deserialized, so a proper
+     *               {@link se.yarin.cbhlib.games.search.SearchFilter} should be used as well.
+     *               However, since it's much faster to filter things out at this level, it's a nice performance boost.
+     * @return an iterator
+     */
+    public Iterator<GameHeader> iterator(int gameId, SerializedGameHeaderFilter filter) {
+        if (filter != null && !(storage instanceof PersistentGameHeaderStorage)) {
+            log.warn("A serialized GameHeader filter was specified in iteration but the underlying storage doesn't support it");
+        }
+        return new DefaultIterator(gameId, filter);
     }
 
 
@@ -133,6 +149,7 @@ public class GameHeaderBase implements GameHeaderSerializer, Iterable<GameHeader
         private static final int BATCH_SIZE = 1000;
         private int batchPos, nextBatchStart;
         private final int version;
+        private final SerializedGameHeaderFilter filter;
 
         private void getNextBatch() {
             int endId = Math.min(getNextGameId(), nextBatchStart + BATCH_SIZE);
@@ -140,7 +157,11 @@ public class GameHeaderBase implements GameHeaderSerializer, Iterable<GameHeader
                 batch = null;
             } else {
                 try {
-                    batch = storage.getRange(nextBatchStart, endId);
+                    if (storage instanceof PersistentGameHeaderStorage) {
+                        batch = ((PersistentGameHeaderStorage) storage).getRange(nextBatchStart, endId, filter);
+                    } else {
+                        batch = storage.getRange(nextBatchStart, endId);
+                    }
                 } catch (IOException e) {
                     throw new UncheckedEntityException("An IO error when iterating game headers", e);
                 }
@@ -149,14 +170,15 @@ public class GameHeaderBase implements GameHeaderSerializer, Iterable<GameHeader
             batchPos = 0;
         }
 
-        DefaultIterator(int startId) {
+        DefaultIterator(int startId, SerializedGameHeaderFilter filter) {
             version = storage.getVersion();
+            this.filter = filter;
             nextBatchStart = startId;
             prefetchBatch();
         }
 
         private void prefetchBatch() {
-            if (batch == null || batchPos == batch.size()) {
+            while (batch != null && batchPos == batch.size()) {
                 getNextBatch();
             }
         }

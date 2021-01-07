@@ -20,8 +20,8 @@ public class PlayerSearcher {
     private static final int QUICK_SEARCH_MAX_TIME_IN_MS = 50;
 
     private final PlayerBase playerBase;
-    private final String firstName;
-    private final String lastName;
+    @Getter private final String firstName;
+    @Getter private final String lastName;
     private final boolean caseSensitive;
     private final boolean exactMatch;
     private final String searchString;  // Logging purposes

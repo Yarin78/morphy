@@ -10,6 +10,7 @@ import se.yarin.cbhlib.entities.TournamentEntity;
 import se.yarin.cbhlib.exceptions.ChessBaseException;
 import se.yarin.cbhlib.games.GameHeader;
 import se.yarin.cbhlib.games.GameLoader;
+import se.yarin.cbhlib.games.SerializedGameHeaderFilter;
 import se.yarin.chess.GameModel;
 
 import java.io.IOException;
@@ -47,8 +48,18 @@ public class GameSearcher {
         }
         hasSearched = true;
 
+        ArrayList<SerializedGameHeaderFilter> serializedFilters = new ArrayList<>();
         for (SearchFilter filter : filters) {
             filter.initSearch();
+            if (filter instanceof SerializedGameHeaderFilter) {
+                serializedFilters.add((SerializedGameHeaderFilter) filter);
+            }
+        }
+        SerializedGameHeaderFilter rawFilter = null;
+        if (serializedFilters.size() == 1) {
+            rawFilter = serializedFilters.get(0);
+        } else if (serializedFilters.size() > 1) {
+            rawFilter = SerializedGameHeaderFilter.chain(serializedFilters);
         }
 
         int firstGameId = 1;
@@ -58,7 +69,7 @@ public class GameSearcher {
         }
 
         log.info("Starting game search from game id " + firstGameId);
-        Iterator<GameHeader> iterator = this.database.getHeaderBase().iterator(firstGameId);
+        Iterator<GameHeader> iterator = this.database.getHeaderBase().iterator(firstGameId, rawFilter);
 
         return () -> new HitIterator(iterator);
     }

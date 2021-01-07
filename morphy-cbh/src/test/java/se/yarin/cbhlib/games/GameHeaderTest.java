@@ -4,6 +4,7 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import se.yarin.cbhlib.ResourceLoader;
 import se.yarin.chess.Date;
 import se.yarin.chess.Eco;
 import se.yarin.chess.GameResult;
@@ -29,22 +30,9 @@ public class GameHeaderTest {
 
     @Before
     public void setupEntityTest() throws IOException {
-        gameHeaderFile = materializeStream(this.getClass().getResourceAsStream("cbhlib_test.cbh"));
-    }
-
-    private File materializeStream(InputStream stream) throws IOException {
-        File file = folder.newFile("temp.cbh");
-        FileOutputStream fos = new FileOutputStream(file);
-        byte[] buf = new byte[0x1000];
-        while (true) {
-            int r = stream.read(buf);
-            if (r == -1) {
-                break;
-            }
-            fos.write(buf, 0, r);
-        }
-        fos.close();
-        return file;
+        gameHeaderFile = ResourceLoader.materializeStream(
+                this.getClass().getResourceAsStream("cbhlib_test.cbh"),
+                folder.newFile("temp.cbh"));
     }
 
     @Test

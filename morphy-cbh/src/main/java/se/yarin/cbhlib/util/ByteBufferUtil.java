@@ -106,6 +106,10 @@ public final class ByteBufferUtil {
         return buf.get() & 0xff;
     }
 
+    public static int getUnsignedByte(byte[] buf, int offset) {
+        return buf[offset] & 0xff;
+    }
+
     public static void putByte(ByteBuffer buf, int value) { buf.put((byte) value); }
 
     // Methods for reading and writing Big Endian data from a ByteBuffer
@@ -125,6 +129,11 @@ public final class ByteBufferUtil {
 
     public static int getUnsigned24BitB(ByteBuffer buf) {
         int b1 = getUnsignedByte(buf), b2 = getUnsignedByte(buf), b3 = getUnsignedByte(buf);
+        return (b1 << 16) + (b2 << 8) + b3;
+    }
+
+    public static int getUnsigned24BitB(byte[] buf, int offset) {
+        int b1 = getUnsignedByte(buf, offset), b2 = getUnsignedByte(buf, offset+1), b3 = getUnsignedByte(buf, offset+2);
         return (b1 << 16) + (b2 << 8) + b3;
     }
 
