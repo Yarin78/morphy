@@ -1,7 +1,7 @@
-package se.yarin.cbhlib;
+package se.yarin.morphy.tools;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import se.yarin.cbhlib.annotations.*;
 import se.yarin.cbhlib.exceptions.ChessBaseException;
 import se.yarin.cbhlib.exceptions.ChessBaseUnsupportedException;
@@ -25,7 +25,7 @@ import static se.yarin.cbhlib.games.GameHeaderFlags.*;
  * Iterate through all games in a database and ensure that the correct GameHeader flags are set
  */
 public class VerifyGameFlags {
-    private static final Logger log = LoggerFactory.getLogger(VerifyGameFlags.class);
+    private static final Logger log = LogManager.getLogger();
 
     private static GameMovesModel getMoves(MovesBase movesBase, AnnotationBase annotationBase, GameHeader gameHeader)
             throws IOException, ChessBaseException {

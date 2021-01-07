@@ -1,5 +1,6 @@
-package se.yarin.cbhlib;
+package se.yarin.morphy.tools;
 
+import se.yarin.cbhlib.Database;
 import se.yarin.cbhlib.exceptions.ChessBaseException;
 import se.yarin.cbhlib.exceptions.ChessBaseInvalidDataException;
 import se.yarin.cbhlib.exceptions.ChessBaseUnsupportedException;

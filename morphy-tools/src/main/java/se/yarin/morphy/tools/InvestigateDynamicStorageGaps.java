@@ -1,7 +1,8 @@
-package se.yarin.cbhlib;
+package se.yarin.morphy.tools;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import se.yarin.cbhlib.Database;
 import se.yarin.cbhlib.games.GameHeader;
 import se.yarin.cbhlib.games.GameHeaderBase;
 import se.yarin.cbhlib.storage.FileBlobStorage;
@@ -13,7 +14,7 @@ import java.nio.file.NoSuchFileException;
 import java.nio.file.Paths;
 
 public class InvestigateDynamicStorageGaps {
-    private static final Logger log = LoggerFactory.getLogger(InvestigateDynamicStorageGaps.class);
+    private static final Logger log = LogManager.getLogger();
 
     public static void main(String[] args) throws IOException {
         Files.walk(Paths.get("testbases/tmp/Move data fragmentation/testing.cbh")).forEach(filePath -> {

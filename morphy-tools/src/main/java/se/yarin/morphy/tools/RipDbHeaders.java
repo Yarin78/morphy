@@ -1,4 +1,4 @@
-package se.yarin.cbhlib;
+package se.yarin.morphy.tools;
 
 import java.io.*;
 

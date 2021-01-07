@@ -1,7 +1,7 @@
-package se.yarin.cbhlib;
+package se.yarin.morphy.tools;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import se.yarin.cbhlib.annotations.AnnotationBase;
 import se.yarin.cbhlib.exceptions.ChessBaseInvalidDataException;
 import se.yarin.cbhlib.exceptions.ChessBaseUnsupportedException;
@@ -14,7 +14,7 @@ import java.io.File;
 import java.io.IOException;
 
 public class LoadAllGames {
-    private static final Logger log = LoggerFactory.getLogger(LoadAllGames.class);
+    private static final Logger log = LogManager.getLogger();
 
     public static void main(String[] args) throws IOException, ChessBaseInvalidDataException {
 //        String fileBase = "/Users/yarin/chessbasemedia/mediafiles/cbh/tmp/movedatafragmentation";

@@ -1,7 +1,7 @@
-package se.yarin.cbhlib;
+package se.yarin.morphy.tools;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import se.yarin.cbhlib.games.EndgameType;
 import se.yarin.cbhlib.games.ExtendedGameHeaderBase;
 import se.yarin.cbhlib.games.GameHeaderBase;
@@ -14,7 +14,7 @@ import java.nio.file.Paths;
 import java.util.HashSet;
 
 public class InvestigateSecondaryHeader {
-    private static final Logger log = LoggerFactory.getLogger(InvestigateSecondaryHeader.class);
+    private static final Logger log = LogManager.getLogger();
 
     public static void main(String[] args) throws IOException {
 //        Files.walk(Paths.get("testbases/CHESS LITERATURE 3")).forEach(filePath -> {

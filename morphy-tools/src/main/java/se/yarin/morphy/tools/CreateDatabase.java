@@ -1,5 +1,6 @@
-package se.yarin.cbhlib;
+package se.yarin.morphy.tools;
 
+import se.yarin.cbhlib.Database;
 import se.yarin.cbhlib.annotations.GameQuotationAnnotation;
 import se.yarin.cbhlib.annotations.SymbolAnnotation;
 import se.yarin.cbhlib.util.GameGenerator;

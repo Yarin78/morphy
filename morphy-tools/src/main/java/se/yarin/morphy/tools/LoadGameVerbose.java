@@ -1,7 +1,7 @@
-package se.yarin.cbhlib;
+package se.yarin.morphy.tools;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import se.yarin.cbhlib.annotations.AnnotationBase;
 import se.yarin.cbhlib.annotations.SymbolAnnotation;
 import se.yarin.cbhlib.annotations.TextAfterMoveAnnotation;
@@ -22,7 +22,7 @@ import java.util.List;
  * Loads a single game from a database, prints verbose output
  */
 public class LoadGameVerbose {
-    private static final Logger log = LoggerFactory.getLogger(LoadGameVerbose.class);
+    private static final Logger log = LogManager.getLogger();
 
     public static void main(String[] args) throws IOException, ChessBaseException {
 //        String fileBase = "testbases/Mega Database 2016/Mega Database 2016";

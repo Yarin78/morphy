@@ -1,5 +1,6 @@
-package se.yarin.cbhlib;
+package se.yarin.morphy.tools;
 
+import se.yarin.cbhlib.Database;
 import se.yarin.cbhlib.util.TestGames;
 import se.yarin.chess.GameHeaderModel;
 import se.yarin.chess.GameModel;

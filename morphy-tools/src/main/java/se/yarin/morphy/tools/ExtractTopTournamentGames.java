@@ -1,5 +1,6 @@
-package se.yarin.cbhlib;
+package se.yarin.morphy.tools;
 
+import se.yarin.cbhlib.Database;
 import se.yarin.cbhlib.entities.TournamentBase;
 import se.yarin.cbhlib.entities.TournamentEntity;
 import se.yarin.cbhlib.games.GameHeader;

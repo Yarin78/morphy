@@ -1,7 +1,7 @@
-package se.yarin.cbhlib;
+package se.yarin.morphy.tools;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import se.yarin.cbhlib.exceptions.ChessBaseInvalidDataException;
 import se.yarin.cbhlib.games.GameHeader;
 import se.yarin.cbhlib.games.GameHeaderBase;
@@ -16,7 +16,7 @@ import java.nio.file.Paths;
 import java.util.*;
 
 public class CheckMoveEncodingFlags {
-    private static final Logger log = LoggerFactory.getLogger(CheckMoveEncodingFlags.class);
+    private static final Logger log = LogManager.getLogger();
 
     private static ByteBuffer getMoves(FileChannel movesFiles, int ofs) throws IOException, ChessBaseInvalidDataException {
         movesFiles.position(ofs);
