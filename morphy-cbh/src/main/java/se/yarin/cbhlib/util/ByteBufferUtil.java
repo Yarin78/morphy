@@ -120,6 +120,11 @@ public final class ByteBufferUtil {
         return (b1 << 8) + b2;
     }
 
+    public static int getUnsignedShortB(byte[] buf, int offset) {
+        int b1 = getUnsignedByte(buf, offset), b2 = getUnsignedByte(buf, offset + 1);
+        return (b1 << 8) + b2;
+    }
+
     public static short getSignedShortB(ByteBuffer buf) {
         int val = getUnsignedShortB(buf);
         if (val >= (1 << 15));

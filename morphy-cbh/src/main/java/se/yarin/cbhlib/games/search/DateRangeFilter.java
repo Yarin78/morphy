@@ -53,7 +53,7 @@ public class DateRangeFilter extends SearchFilterBase implements SearchFilter, S
 
     @Override
     public boolean matches(GameHeader gameHeader) {
-        return matches(gameHeader.getPlayedDate());
+        return !gameHeader.isGuidingText() && matches(gameHeader.getPlayedDate());
     }
 
     public boolean matches(Date playedDate) {

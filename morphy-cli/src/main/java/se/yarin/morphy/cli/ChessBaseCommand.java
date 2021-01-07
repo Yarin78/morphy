@@ -13,6 +13,7 @@ import se.yarin.cbhlib.games.GameHeader;
 import se.yarin.cbhlib.games.search.DateRangeFilter;
 import se.yarin.cbhlib.games.search.GameSearcher;
 import se.yarin.cbhlib.games.search.PlayerFilter;
+import se.yarin.cbhlib.games.search.RatingRangeFilter;
 import se.yarin.cbhlib.storage.EntityStorageException;
 import se.yarin.cbhlib.util.CBUtil;
 import se.yarin.cbhlib.validation.Validator;
@@ -62,6 +63,12 @@ class Games implements Callable<Integer> {
     @CommandLine.Option(names = "--date", description = "Date range, e.g. '2015-10-' or '1960-1970'")
     private String dateRange;
 
+    @CommandLine.Option(names = "--rating", description = "Rating range required for both players, e.g. 2700- or 2000-2200")
+    private String ratingRangeBoth;
+
+    @CommandLine.Option(names = "--rating.any", description = "Rating range required for at least one player, e.g. 2700- or 2000-2200")
+    private String ratingRangeAny;
+
     @Override
     public Integer call() throws IOException, ChessBaseException {
         if (verbose != null) {
@@ -85,6 +92,14 @@ class Games implements Callable<Integer> {
 
             if (dateRange != null) {
                 gameSearcher.addFilter(new DateRangeFilter(db, dateRange));
+            }
+
+            if (ratingRangeBoth != null) {
+                gameSearcher.addFilter(new RatingRangeFilter(db, ratingRangeBoth, RatingRangeFilter.RatingColor.BOTH));
+            }
+
+            if (ratingRangeAny != null) {
+                gameSearcher.addFilter(new RatingRangeFilter(db, ratingRangeAny, RatingRangeFilter.RatingColor.ANY));
             }
 
             outputHeader();
