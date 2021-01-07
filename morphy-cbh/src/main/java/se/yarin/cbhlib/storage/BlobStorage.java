@@ -1,6 +1,7 @@
 package se.yarin.cbhlib.storage;
 
 import lombok.NonNull;
+import se.yarin.cbhlib.exceptions.ChessBaseIOException;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -23,14 +24,14 @@ public interface BlobStorage {
      * @param offset to offset to where the blob begins
      * @return a buffer containing the blob
      */
-    ByteBuffer readBlob(int offset) throws IOException;
+    ByteBuffer readBlob(int offset);
 
     /**
      * Writes a new blob to the end of the storage
      * @param blob the blob to append
      * @return the offset in the storage to the blob
      */
-    int writeBlob(@NonNull ByteBuffer blob) throws IOException;
+    int writeBlob(@NonNull ByteBuffer blob);
 
     /**
      * Writes a blob to the storage at the specific offset.
@@ -38,7 +39,7 @@ public interface BlobStorage {
      * @param offset the offset to write the blob
      * @param blob the blob to write
      */
-    void writeBlob(int offset, @NonNull ByteBuffer blob) throws IOException;
+    void writeBlob(int offset, @NonNull ByteBuffer blob);
 
     /**
      * Gets the current size of the storage.
@@ -52,9 +53,9 @@ public interface BlobStorage {
      * that indices to any blob stored after the specified offset is updated.
      * @param offset the offset in the storage at which to insert empty bytes
      * @param noBytes the number of empty bytes to insert
-     * @throws IOException if an IO error occurred during the insert
+     * @throws ChessBaseIOException if an IO error occurred during the insert
      */
-    void insert(int offset, int noBytes) throws IOException;
+    void insert(int offset, int noBytes);
 
     /**
      * Closes the storage. Any further operations on the storage will cause IO errors.

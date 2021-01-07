@@ -3,6 +3,7 @@ package se.yarin.cbhlib.storage;
 import lombok.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import se.yarin.cbhlib.exceptions.ChessBaseIOException;
 import se.yarin.cbhlib.util.ByteBufferUtil;
 
 import java.io.File;
@@ -19,6 +20,7 @@ public class FileBlobStorage implements BlobStorage {
     private static final int DEFAULT_CHUNK_SIZE = 1024*1024;
     private static final int DEFAULT_PREFETCH_SIZE = 4096;
 
+    private final File file;
     private final FileChannel channel;
     private final BlobSizeRetriever blobSizeRetriever;
     public static final int DEFAULT_SERIALIZED_HEADER_SIZE = 26; // Size of header to create for a new storage
@@ -39,6 +41,7 @@ public class FileBlobStorage implements BlobStorage {
             @NonNull File file,
             @NonNull BlobSizeRetriever blobSizeRetriever,
             int chunkSize, int prefetchSize) throws IOException {
+        this.file = file;
         this.channel = FileChannel.open(file.toPath(), READ, WRITE);
         this.blobSizeRetriever = blobSizeRetriever;
         this.chunkSize = chunkSize;
@@ -100,39 +103,51 @@ public class FileBlobStorage implements BlobStorage {
     }
 
     @Override
-    public ByteBuffer readBlob(int offset) throws IOException {
-        channel.position(offset);
-        ByteBuffer buf = ByteBuffer.allocate(prefetchSize);
-        channel.read(buf);
-        buf.position(0);
-        int size = blobSizeRetriever.getBlobSize(buf);
-        if (size > prefetchSize) {
-            ByteBuffer newBuf = ByteBuffer.allocate(size);
-            newBuf.put(buf);
-            channel.read(newBuf);
-            buf = newBuf;
+    public ByteBuffer readBlob(int offset) {
+        try {
+            channel.position(offset);
+            ByteBuffer buf = ByteBuffer.allocate(prefetchSize);
+            channel.read(buf);
+            buf.position(0);
+            int size = blobSizeRetriever.getBlobSize(buf);
+            if (size > prefetchSize) {
+                ByteBuffer newBuf = ByteBuffer.allocate(size);
+                newBuf.put(buf);
+                channel.read(newBuf);
+                buf = newBuf;
+            }
+            buf.position(0);
+            buf.limit(size);
+            return buf;
+        } catch (IOException e) {
+            throw new ChessBaseIOException("Failed to read blob at offset " + offset + " in " + file.getName());
         }
-        buf.position(0);
-        buf.limit(size);
-        return buf;
     }
 
     @Override
-    public int writeBlob(@NonNull ByteBuffer blob) throws IOException {
-        int offset = size;
-        channel.position(size);
-        size += channel.write(blob);
-        saveMetadata();
-        return offset;
+    public int writeBlob(@NonNull ByteBuffer blob) {
+        try {
+            int offset = size;
+            channel.position(size);
+            size += channel.write(blob);
+            saveMetadata();
+            return offset;
+        } catch (IOException e) {
+            throw new ChessBaseIOException("Failed to append blob to " + file.getName(), e);
+        }
     }
 
     @Override
-    public void writeBlob(int offset, @NonNull ByteBuffer blob) throws IOException {
-        channel.position(offset);
-        channel.write(blob);
-        channel.force(false);
-        size = (int) channel.size();
-        saveMetadata();
+    public void writeBlob(int offset, @NonNull ByteBuffer blob) {
+        try {
+            channel.position(offset);
+            channel.write(blob);
+            channel.force(false);
+            size = (int) channel.size();
+            saveMetadata();
+        } catch (IOException e) {
+            throw new ChessBaseIOException("Failed to write blob to " + file.getName() + " at offset " + offset, e);
+        }
     }
 
     @Override
@@ -145,7 +160,7 @@ public class FileBlobStorage implements BlobStorage {
     }
 
     @Override
-    public void insert(int offset, int noBytes) throws IOException {
+    public void insert(int offset, int noBytes) {
         if (noBytes < 0) {
             throw new IllegalArgumentException("Number of bytes to insert must be non-negative");
         }
@@ -153,25 +168,29 @@ public class FileBlobStorage implements BlobStorage {
             return;
         }
         ByteBuffer buf = ByteBuffer.allocateDirect(chunkSize);
-        int pos = size;
-        while (pos > offset) {
-            // Invariant: All bytes at position pos and after have been shifted noBytes bytes
-            pos -= chunkSize;
-            int length = chunkSize;
-            if (pos < offset) {
-                length -= (offset - pos);
-                pos = offset;
+        try {
+            int pos = size;
+            while (pos > offset) {
+                // Invariant: All bytes at position pos and after have been shifted noBytes bytes
+                pos -= chunkSize;
+                int length = chunkSize;
+                if (pos < offset) {
+                    length -= (offset - pos);
+                    pos = offset;
+                }
+                channel.position(pos);
+                buf.limit(length);
+                channel.read(buf);
+                buf.flip();
+                channel.position(pos + noBytes);
+                channel.write(buf);
+                buf.clear();
             }
-            channel.position(pos);
-            buf.limit(length);
-            channel.read(buf);
-            buf.flip();
-            channel.position(pos + noBytes);
-            channel.write(buf);
-            buf.clear();
-        }
 
-        size += noBytes;
+            size += noBytes;
+        } catch (IOException e) {
+            throw new ChessBaseIOException("Failed to insert " + noBytes + " in blob " + file.getName());
+        }
     }
 
     @Override

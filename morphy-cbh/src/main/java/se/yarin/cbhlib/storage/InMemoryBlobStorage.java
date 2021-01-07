@@ -8,7 +8,7 @@ import java.nio.ByteBuffer;
 public class InMemoryBlobStorage implements BlobStorage {
 
     private ByteBuffer data;
-    private BlobSizeRetriever blobSizeRetriever;
+    private final BlobSizeRetriever blobSizeRetriever;
 
     public InMemoryBlobStorage(
             @NonNull BlobSizeRetriever blobSizeRetriever) {

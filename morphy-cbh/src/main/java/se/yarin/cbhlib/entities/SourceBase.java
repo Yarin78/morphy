@@ -11,7 +11,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 
 public class SourceBase extends EntityBase<SourceEntity> {
-    private int SERIALIZED_SOURCE_SIZE = 59;
+    private static final int SERIALIZED_SOURCE_SIZE = 59;
 
     /**
      * Creates a new in-memory source database that is initially empty.

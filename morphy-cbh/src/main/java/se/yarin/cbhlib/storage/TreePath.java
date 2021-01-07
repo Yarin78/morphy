@@ -4,8 +4,6 @@ import lombok.Getter;
 import lombok.NonNull;
 import se.yarin.cbhlib.entities.Entity;
 
-import java.io.IOException;
-
 /**
  * A path in the Entity node tree. This class is immutable.
  * When using TreePath in iteration, it should never be null; use TreePath.end() to mark end of iteration.
@@ -15,7 +13,7 @@ public class TreePath<T extends Entity & Comparable<T>> {
     @Getter private final int entityId;
     @Getter private final TreePath<T> parent;
 
-    public static <U extends Entity & Comparable<U>> TreePath<U> begin(EntityNodeStorageBase<U> storage) throws IOException {
+    public static <U extends Entity & Comparable<U>> TreePath<U> begin(EntityNodeStorageBase<U> storage) {
         if (storage.getRootEntityId() < 0) {
             return end(storage);
         }
@@ -34,7 +32,7 @@ public class TreePath<T extends Entity & Comparable<T>> {
         this.parent = parent;
     }
 
-    public boolean isBegin() throws IOException {
+    public boolean isBegin() {
         if (this.entityId < 0 && this.storage.getRootEntityId() < 0) {
             return true;
         }
@@ -55,7 +53,7 @@ public class TreePath<T extends Entity & Comparable<T>> {
         return this.entityId < 0;
     }
 
-    public EntityNode<T> getNode() throws IOException {
+    public EntityNode<T> getNode() {
         if (isEnd()) {
             throw new IllegalStateException("Tried to getNode at end of TreePath");
         }
@@ -65,14 +63,14 @@ public class TreePath<T extends Entity & Comparable<T>> {
         return storage.getEntityNode(entityId);
     }
 
-    public T getEntity() throws IOException {
+    public T getEntity() {
         if (isEnd()) {
             throw new IllegalStateException("Tried to getEntity at end of TreePath");
         }
         return getNode().getEntity();
     }
 
-    public boolean isLeftChild() throws IOException {
+    public boolean isLeftChild() {
         if (isEnd()) {
             throw new IllegalStateException("Tried to check isLeftChild at end of TreePath");
         }
@@ -83,7 +81,7 @@ public class TreePath<T extends Entity & Comparable<T>> {
         return entityId == parentLeftId;
     }
 
-    public boolean isRightChild() throws IOException {
+    public boolean isRightChild() {
         if (isEnd()) {
             throw new IllegalStateException("Tried to check isRightChild at end of TreePath");
         }
@@ -101,14 +99,14 @@ public class TreePath<T extends Entity & Comparable<T>> {
         return parent == null;
     }
 
-    public static <U extends Entity & Comparable<U>> @NonNull TreePath<U> first(EntityNodeStorageBase<U> nodeStorage) throws IOException {
+    public static <U extends Entity & Comparable<U>> @NonNull TreePath<U> first(EntityNodeStorageBase<U> nodeStorage) {
         if (nodeStorage.getRootEntityId() < 0) {
             throw new IllegalStateException("There are no nodes in the tree");
         }
         return traverseLeftMost(nodeStorage, nodeStorage.getRootEntityId(), null);
     }
 
-    public static <U extends Entity & Comparable<U>> @NonNull TreePath<U> last(EntityNodeStorageBase<U> nodeStorage) throws IOException {
+    public static <U extends Entity & Comparable<U>> @NonNull TreePath<U> last(EntityNodeStorageBase<U> nodeStorage) {
         if (nodeStorage.getRootEntityId() < 0) {
             throw new IllegalStateException("There are no nodes in the tree");
         }
@@ -131,21 +129,21 @@ public class TreePath<T extends Entity & Comparable<T>> {
         }
     }
 
-    public boolean hasLeftChild() throws IOException {
+    public boolean hasLeftChild() {
         if (isEnd()) {
             throw new IllegalStateException("Tried to check left child at end of TreePath");
         }
         return getNode().getLeftEntityId() >= 0;
     }
 
-    public boolean hasRightChild() throws IOException {
+    public boolean hasRightChild() {
         if (isEnd()) {
             throw new IllegalStateException("Tried to check right child at end of TreePath");
         }
         return getNode().getRightEntityId() >= 0;
     }
 
-    public @NonNull TreePath<T> successor() throws IOException {
+    public @NonNull TreePath<T> successor() {
         if (isEnd()) {
             throw new IllegalStateException("Tried to get successor at end of TreePath");
         }
@@ -168,7 +166,7 @@ public class TreePath<T extends Entity & Comparable<T>> {
         return successorPath;
     }
 
-    public @NonNull TreePath<T> predecessor() throws IOException {
+    public @NonNull TreePath<T> predecessor() {
         if (isBegin()) {
             throw new IllegalStateException("Tried to get predecessor at begin of TreePath");
         }
@@ -192,7 +190,7 @@ public class TreePath<T extends Entity & Comparable<T>> {
     }
 
     private static <U extends Entity & Comparable<U>> @NonNull TreePath<U> traverseLeftMost(
-            EntityNodeStorageBase<U> storage, int currentId, TreePath<U> path) throws IOException {
+            EntityNodeStorageBase<U> storage, int currentId, TreePath<U> path) {
         if (currentId < 0) {
             return path;
         }
@@ -201,7 +199,7 @@ public class TreePath<T extends Entity & Comparable<T>> {
     }
 
     private static <U extends Entity & Comparable<U>> @NonNull TreePath<U> traverseRightMost(
-            EntityNodeStorageBase<U> storage, int currentId, TreePath<U> path) throws IOException {
+            EntityNodeStorageBase<U> storage, int currentId, TreePath<U> path) {
         if (currentId < 0) {
             return path;
         }

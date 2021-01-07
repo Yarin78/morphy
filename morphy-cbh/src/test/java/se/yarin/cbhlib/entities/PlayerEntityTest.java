@@ -4,6 +4,7 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import se.yarin.cbhlib.exceptions.ChessBaseIOException;
 import se.yarin.cbhlib.storage.EntityStorageDuplicateKeyException;
 import se.yarin.cbhlib.storage.EntityStorageException;
 import se.yarin.cbhlib.entities.PlayerBase;
@@ -66,7 +67,7 @@ public class PlayerEntityTest {
     }
 
 
-    @Test(expected = IOException.class)
+    @Test(expected = ChessBaseIOException.class)
     public void testGetPlayerAfterClosingDatabase() throws IOException {
         PlayerBase playerBase = PlayerBase.open(playerIndexFile);
 

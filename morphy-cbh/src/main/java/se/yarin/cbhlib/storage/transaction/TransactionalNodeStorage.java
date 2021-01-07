@@ -28,7 +28,7 @@ public class TransactionalNodeStorage<T extends Entity & Comparable<T>> extends 
     }
 
     @Override
-    public EntityNode<T> getEntityNode(int entityId) throws IOException {
+    public EntityNode<T> getEntityNode(int entityId) {
         EntityNode<T> node = changes.get(entityId);
         if (node != null) {
             return node;
@@ -37,13 +37,13 @@ public class TransactionalNodeStorage<T extends Entity & Comparable<T>> extends 
     }
 
     @Override
-    public List<EntityNode<T>> getEntityNodes(int startIdInclusive, int endIdExclusive) throws IOException {
+    public List<EntityNode<T>> getEntityNodes(int startIdInclusive, int endIdExclusive) {
         // Transactional operations don't need this method
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public void putEntityNode(@NonNull EntityNode<T> node) throws IOException {
+    public void putEntityNode(@NonNull EntityNode<T> node) {
         changes.put(node.getEntityId(), node);
     }
 

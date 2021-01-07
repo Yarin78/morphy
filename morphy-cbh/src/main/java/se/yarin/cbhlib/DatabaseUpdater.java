@@ -4,13 +4,13 @@ import lombok.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.cbhlib.entities.*;
+import se.yarin.cbhlib.exceptions.ChessBaseIOException;
 import se.yarin.cbhlib.games.GameHeader;
 import se.yarin.cbhlib.games.GameLoader;
 import se.yarin.cbhlib.storage.EntityStorageException;
 import se.yarin.chess.GameModel;
 import se.yarin.chess.GameMovesModel;
 
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -34,9 +34,9 @@ public class DatabaseUpdater {
      * Adds a new game to the database
      * @param model the model of the game to add
      * @return the game header of the saved game
-     * @throws IOException if the game couldn't be stored due to an IO error
+     * @throws ChessBaseIOException if the game couldn't be stored due to an IO error
      */
-    public GameHeader addGame(@NonNull GameModel model) throws IOException {
+    public GameHeader addGame(@NonNull GameModel model) {
         int gameId = database.getHeaderBase().getNextGameId();
 
         int annotationOfs = database.getAnnotationBase().putAnnotations(gameId, 0, model.moves());
@@ -57,9 +57,9 @@ public class DatabaseUpdater {
      * @param gameId the id of the game to replace
      * @param model the model of the game to replace
      * @return the game header of the saved game
-     * @throws IOException if the game couldn't be stored due to an IO error
+     * @throws ChessBaseIOException if the game couldn't be stored due to an IO error
      */
-    public GameHeader replaceGame(int gameId, @NonNull GameModel model) throws IOException {
+    public GameHeader replaceGame(int gameId, @NonNull GameModel model) {
         GameHeader oldGameHeader = database.getHeaderBase().getGameHeader(gameId);
         if (oldGameHeader == null) {
             throw new IllegalArgumentException("There is no game with game id " + gameId);
@@ -90,10 +90,9 @@ public class DatabaseUpdater {
      * @param gameHeader the header of the game to replace
      * @param moves the model containing the new moves and annotations
      * @return the new offset to store the annotations
-     * @throws IOException if there was an IO error when preparing the replace
+     * @throws ChessBaseIOException if there was an IO error when preparing the replace
      */
-    private int prepareReplace(@NonNull GameHeader gameHeader, @NonNull GameMovesModel moves)
-            throws IOException {
+    private int prepareReplace(@NonNull GameHeader gameHeader, @NonNull GameMovesModel moves) {
         int gameId = gameHeader.getId();
 
         // This code is a bit messy. In the worst case, it does three sweeps over
@@ -174,7 +173,7 @@ public class DatabaseUpdater {
             return 0;
         }
 
-        private void applyChanges() throws IOException, EntityStorageException {
+        private void applyChanges() throws EntityStorageException {
             for (Map.Entry<Integer, Integer> delta : map.entrySet()) {
                 if (delta.getValue() != 0) {
                     T entity = base.get(delta.getKey());
@@ -203,8 +202,7 @@ public class DatabaseUpdater {
         }
     }
 
-    private void updateEntityStats(GameHeader oldGame, @NonNull GameHeader newGame)
-            throws IOException {
+    private void updateEntityStats(GameHeader oldGame, @NonNull GameHeader newGame) {
         assert oldGame == null || oldGame.getId() != 0;
         assert newGame.getId() != 0;
 
@@ -236,7 +234,7 @@ public class DatabaseUpdater {
             annotatorDelta.applyChanges();
             sourceDelta.applyChanges();
         } catch (EntityStorageException e) {
-            throw new IOException("Entity storage is in an inconsistent state. Please run repair.", e);
+            throw new ChessBaseIOException("Entity storage is in an inconsistent state. Please run repair.", e);
         }
     }
 }

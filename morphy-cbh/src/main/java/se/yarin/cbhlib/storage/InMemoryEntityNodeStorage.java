@@ -7,12 +7,11 @@ import se.yarin.cbhlib.entities.Entity;
 
 import java.io.IOException;
 import java.util.*;
-import java.util.stream.Collectors;
 
 public class InMemoryEntityNodeStorage<T extends Entity & Comparable<T>> extends EntityNodeStorageBase<T> {
     private static final Logger log = LoggerFactory.getLogger(InMemoryEntityNodeStorage.class);
 
-    private TreeMap<Integer, EntityNode<T>> nodes = new TreeMap<>();
+    private final TreeMap<Integer, EntityNode<T>> nodes = new TreeMap<>();
 
     public InMemoryEntityNodeStorage() {
         this(new EntityNodeStorageMetadata(0, 0, 0));
@@ -23,7 +22,7 @@ public class InMemoryEntityNodeStorage<T extends Entity & Comparable<T>> extends
     }
 
     @Override
-    public EntityNode<T> getEntityNode(int entityId) throws IOException {
+    public EntityNode<T> getEntityNode(int entityId) {
         EntityNode<T> entityNode = nodes.get(entityId);
         if (log.isTraceEnabled()) {
             log.trace("Read entity node: " + entityNode);
@@ -32,16 +31,13 @@ public class InMemoryEntityNodeStorage<T extends Entity & Comparable<T>> extends
     }
 
     @Override
-    public List<EntityNode<T>> getEntityNodes(int startIdInclusive, int endIdExclusive)
-            throws IOException {
-        return nodes.subMap(startIdInclusive, true, endIdExclusive, false)
-                .values()
-                .stream()
-                .collect(Collectors.toList());
+    public List<EntityNode<T>> getEntityNodes(int startIdInclusive, int endIdExclusive) {
+        return new ArrayList<>(nodes.subMap(startIdInclusive, true, endIdExclusive, false)
+                .values());
     }
 
     @Override
-    public void putEntityNode(@NonNull EntityNode<T> node) throws IOException {
+    public void putEntityNode(@NonNull EntityNode<T> node) {
         nodes.put(node.getEntityId(), node);
         if (log.isDebugEnabled()) {
             log.debug(String.format("Put entity node: %s", node));

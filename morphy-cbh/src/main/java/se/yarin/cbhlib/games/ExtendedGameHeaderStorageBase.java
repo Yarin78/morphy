@@ -1,6 +1,7 @@
 package se.yarin.cbhlib.games;
 
 import lombok.NonNull;
+import se.yarin.cbhlib.exceptions.ChessBaseIOException;
 
 import java.io.IOException;
 import java.util.List;
@@ -16,7 +17,7 @@ abstract class ExtendedGameHeaderStorageBase {
         return this.metadata;
     }
 
-    void setMetadata(ExtendedGameHeaderStorageMetadata metadata) throws IOException {
+    void setMetadata(ExtendedGameHeaderStorageMetadata metadata) {
         this.metadata = metadata;
     }
 
@@ -24,9 +25,9 @@ abstract class ExtendedGameHeaderStorageBase {
      * Gets an extended game header
      * @param id the id of the extended game header to get
      * @return an extended game header, or null if there is no extended game header with that id
-     * @throws IOException if there was some IO error reading the extended game header
+     * @throws ChessBaseIOException if there was some IO error reading the extended game header
      */
-    abstract ExtendedGameHeader get(int id) throws IOException;
+    abstract ExtendedGameHeader get(int id);
 
     /**
      * Gets a range of extended game headers. The resulting list will contain fewer
@@ -34,19 +35,19 @@ abstract class ExtendedGameHeaderStorageBase {
      * @param startId the id of the first extended game header to get
      * @param endId the id of the first extended game header NOT to get
      * @return a list of extended game headers between startId and endId in ascending order
-     * @throws IOException if there was some IO error reading the extended game headers
+     * @throws ChessBaseIOException if there was some IO error reading the extended game headers
      */
-    abstract List<ExtendedGameHeader> getRange(int startId, int endId) throws IOException;
+    abstract List<ExtendedGameHeader> getRange(int startId, int endId);
 
     /**
      * Puts an extended game header in the storage, either overwriting an existing extended game header
      * or adding it to the end. The id must be set and must be between
      * 1 and nextGameId, inclusive.
      * @param extendedGameHeader the extended game header to put
-     * @throws IOException if there was some IO error putting the extended game header
+     * @throws ChessBaseIOException if there was some IO error putting the extended game header
      * @throws IllegalArgumentException is the id in extendedGameHeader is outside the valid range
      */
-    abstract void put(ExtendedGameHeader extendedGameHeader) throws IOException;
+    abstract void put(ExtendedGameHeader extendedGameHeader);
 
     /**
      * The number of modifying operations to the storage since it was opened.

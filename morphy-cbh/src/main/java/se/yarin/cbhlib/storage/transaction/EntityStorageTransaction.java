@@ -10,8 +10,6 @@ import se.yarin.cbhlib.storage.EntityNode;
 import se.yarin.cbhlib.storage.EntityNodeStorageBase;
 import se.yarin.cbhlib.storage.TreePath;
 
-import java.io.IOException;
-
 public class EntityStorageTransaction<T extends Entity & Comparable<T>> {
     private static final Logger log = LoggerFactory.getLogger(EntityStorageTransaction.class);
 
@@ -29,7 +27,7 @@ public class EntityStorageTransaction<T extends Entity & Comparable<T>> {
         this.nodeStorage = new TransactionalNodeStorage<>(nodeStorage);
     }
 
-    public synchronized void commit() throws EntityStorageException, IOException {
+    public synchronized void commit() throws EntityStorageException {
         if (committed) {
             throw new IllegalStateException("The transaction has already been committed");
         }
@@ -51,22 +49,22 @@ public class EntityStorageTransaction<T extends Entity & Comparable<T>> {
         committed = true;
     }
 
-    private @NonNull TreePath<T> lowerBound(@NonNull T entity) throws IOException {
+    private @NonNull TreePath<T> lowerBound(@NonNull T entity) {
         return nodeStorage.lowerBound(entity);
     }
 
-    private @NonNull TreePath<T> upperBound(@NonNull T entity) throws IOException {
+    private @NonNull TreePath<T> upperBound(@NonNull T entity) {
         return nodeStorage.upperBound(entity);
     }
 
-    public T getEntity(int entityId) throws IOException {
+    public T getEntity(int entityId) {
         if (entityId < 0 || entityId >= nodeStorage.getCapacity()) {
             return null;
         }
         return nodeStorage.getEntityNode(entityId).getEntity();
     }
 
-    public T getAnyEntity(@NonNull T entity) throws IOException {
+    public T getAnyEntity(@NonNull T entity) {
         TreePath<T> treePath = lowerBound(entity);
         if (treePath.isEnd()) {
             return null;
@@ -92,7 +90,7 @@ public class EntityStorageTransaction<T extends Entity & Comparable<T>> {
      * @param entity the entity to add
      * @return the id of the new entity
      */
-    public int addEntity(@NonNull T entity) throws IOException {
+    public int addEntity(@NonNull T entity) {
         if (committed) {
             throw new IllegalStateException("The transaction has already been committed");
         }
@@ -188,7 +186,7 @@ public class EntityStorageTransaction<T extends Entity & Comparable<T>> {
      * @param entityId the entity id to update.
      * @param entity the new entity. {@link Entity#getId()} will be ignored.
      */
-    public void putEntityById(int entityId, @NonNull T entity) throws EntityStorageException, IOException {
+    public void putEntityById(int entityId, @NonNull T entity) throws EntityStorageException {
         if (committed) {
             throw new IllegalStateException("The transaction has already been committed");
         }
@@ -220,7 +218,7 @@ public class EntityStorageTransaction<T extends Entity & Comparable<T>> {
      * @throws EntityStorageException if no existing entity with the key exists
      * @throws EntityStorageDuplicateKeyException if more than one existing key exists
      */
-    public void putEntityByKey(@NonNull T entity) throws EntityStorageException, IOException {
+    public void putEntityByKey(@NonNull T entity) throws EntityStorageException {
         if (committed) {
             throw new IllegalStateException("The transaction has already been committed");
         }
@@ -245,7 +243,7 @@ public class EntityStorageTransaction<T extends Entity & Comparable<T>> {
      * @param entityId the id of the entity to delete
      * @return true if an entity was deleted; false if there was no entity with that id
      */
-    public boolean deleteEntity(int entityId) throws IOException, EntityStorageException {
+    public boolean deleteEntity(int entityId) throws EntityStorageException {
         if (committed) {
             throw new IllegalStateException("The transaction has already been committed");
         }
@@ -284,7 +282,7 @@ public class EntityStorageTransaction<T extends Entity & Comparable<T>> {
      * @return true if an entity was deleted; false if there was no entity with that key
      * @throws EntityStorageDuplicateKeyException if there are multiple entities with the given key
      */
-    public boolean deleteEntity(T entity) throws IOException, EntityStorageDuplicateKeyException {
+    public boolean deleteEntity(T entity) throws EntityStorageDuplicateKeyException {
         if (committed) {
             throw new IllegalStateException("The transaction has already been committed");
         }
@@ -304,7 +302,7 @@ public class EntityStorageTransaction<T extends Entity & Comparable<T>> {
     }
 
 
-    private boolean internalDeleteEntity(TreePath<T> deleteEntityPath) throws IOException {
+    private boolean internalDeleteEntity(TreePath<T> deleteEntityPath) {
         assert this.nodeStorage == deleteEntityPath.getStorage();
 
         EntityNode<T> deleteNode = deleteEntityPath.getNode();
@@ -414,7 +412,7 @@ public class EntityStorageTransaction<T extends Entity & Comparable<T>> {
         return true;
     }
 
-    private void replaceChild(TreePath<T> path, boolean replaceLeftChild, int newChildId) throws IOException {
+    private void replaceChild(TreePath<T> path, boolean replaceLeftChild, int newChildId) {
         if (path == null) {
             // The root node has no parent
             nodeStorage.setRootEntityId(newChildId);
@@ -430,21 +428,21 @@ public class EntityStorageTransaction<T extends Entity & Comparable<T>> {
     }
 
     // Rotates the tree rooted at x with right child z to the left and returns the new root
-    private EntityNode<T> rotateLeft(EntityNode<T> x, EntityNode<T> z) throws IOException {
+    private EntityNode<T> rotateLeft(EntityNode<T> x, EntityNode<T> z) {
         nodeStorage.putEntityNode(x.update(x.getLeftEntityId(), z.getLeftEntityId(), z.getHeightDif() == 0 ? 1 : 0));
         nodeStorage.putEntityNode(z.update(x.getEntityId(), z.getRightEntityId(), z.getHeightDif() == 0 ? -1 : 0));
         return z;
     }
 
     // Rotates the tree rooted at x with the left child z to the right and returns the new root
-    private EntityNode<T> rotateRight(EntityNode<T> x, EntityNode<T> z) throws IOException {
+    private EntityNode<T> rotateRight(EntityNode<T> x, EntityNode<T> z) {
         nodeStorage.putEntityNode(x.update(z.getRightEntityId(), x.getRightEntityId(), z.getHeightDif() == 0 ? -1 : 0));
         nodeStorage.putEntityNode(z.update(z.getLeftEntityId(), x.getEntityId(), z.getHeightDif() == 0 ? 1 : 0));
         return z;
     }
 
     // Rotates the tree rooted at x with right child z first to the right then to the left and returns the new root
-    private EntityNode<T> rotateRightLeft(EntityNode<T> x, EntityNode<T> z) throws IOException {
+    private EntityNode<T> rotateRightLeft(EntityNode<T> x, EntityNode<T> z) {
         EntityNode<T> y = nodeStorage.getEntityNode(z.getLeftEntityId());
         nodeStorage.putEntityNode(x.update(x.getLeftEntityId(), y.getLeftEntityId(), y.getHeightDif() > 0 ? -1 : 0));
         nodeStorage.putEntityNode(y.update(x.getEntityId(), z.getEntityId(), 0));
@@ -453,7 +451,7 @@ public class EntityStorageTransaction<T extends Entity & Comparable<T>> {
     }
 
     // Rotates the tree rooted at x with left child z first to the left then to the right and returns the new root
-    private EntityNode<T> rotateLeftRight(EntityNode<T> x, EntityNode<T> z) throws IOException {
+    private EntityNode<T> rotateLeftRight(EntityNode<T> x, EntityNode<T> z) {
         EntityNode<T> y = nodeStorage.getEntityNode(z.getRightEntityId());
         nodeStorage.putEntityNode(x.update(y.getRightEntityId(), x.getRightEntityId(), y.getHeightDif() < 0 ? 1 : 0));
         nodeStorage.putEntityNode(y.update(z.getEntityId(), x.getEntityId(), 0));

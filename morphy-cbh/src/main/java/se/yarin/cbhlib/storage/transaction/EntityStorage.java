@@ -2,6 +2,7 @@ package se.yarin.cbhlib.storage.transaction;
 
 import lombok.NonNull;
 import se.yarin.cbhlib.entities.Entity;
+import se.yarin.cbhlib.exceptions.ChessBaseIOException;
 import se.yarin.cbhlib.storage.EntityStorageDuplicateKeyException;
 import se.yarin.cbhlib.storage.EntityStorageException;
 import se.yarin.cbhlib.storage.TreePath;
@@ -28,14 +29,14 @@ public interface EntityStorage<T extends Entity & Comparable<T>> extends Iterabl
      * @param entityId the id of the entity to get
      * @return the entity, or null if there was no entity with that id
      */
-    T getEntity(int entityId) throws IOException;
+    T getEntity(int entityId);
 
     /**
      * Gets an entity by its key. If there are multiple matching the key, one of them will be returned.
      * @param entity an entity populated with the key fields
      * @return the entity, or null if there was no entity with that key
      */
-    T getAnyEntity(T entity) throws IOException;
+    T getAnyEntity(T entity);
 
     /**
      * Gets an entity by its key.
@@ -43,14 +44,14 @@ public interface EntityStorage<T extends Entity & Comparable<T>> extends Iterabl
      * @return the entity, or null if there was no entity with that key
      * @throws EntityStorageDuplicateKeyException if there are multiple entities in the storage having the same key
      */
-    T getEntity(T entity) throws IOException, EntityStorageDuplicateKeyException;
+    T getEntity(T entity) throws EntityStorageDuplicateKeyException;
 
     /**
      * Gets all entities matching the key.
      * @param entity an entity populated with the key fields
      * @return all entities in the base with the given key
      */
-    List<T> getEntities(T entity) throws IOException;
+    List<T> getEntities(T entity);
 
     /**
      * Begins a new transaction
@@ -63,14 +64,14 @@ public interface EntityStorage<T extends Entity & Comparable<T>> extends Iterabl
      * @param entity the entity to add
      * @return the id of the new entity
      */
-    int addEntity(@NonNull T entity) throws EntityStorageException, IOException;
+    int addEntity(@NonNull T entity) throws EntityStorageException;
 
     /**
      * Updates an entity in the storage.
      * @param id the entity id to update.
      * @param entity the new entity. {@link Entity#getId()} will be ignored.
      */
-    void putEntityById(int id, @NonNull T entity) throws EntityStorageException, IOException;
+    void putEntityById(int id, @NonNull T entity) throws EntityStorageException;
 
     /**
      * Updates an entity in the storage. The key fields of the entity will
@@ -79,14 +80,14 @@ public interface EntityStorage<T extends Entity & Comparable<T>> extends Iterabl
      * @throws EntityStorageException if no existing entity with the key exists
      * @throws EntityStorageDuplicateKeyException if more than one entity with the key exists
      */
-    void putEntityByKey(@NonNull T entity) throws EntityStorageException, IOException;
+    void putEntityByKey(@NonNull T entity) throws EntityStorageException;
 
     /**
      * Deletes an entity from the storage.
      * @param entityId the id of the entity to delete
      * @return true if an entity was deleted; false if there was no entity with that id
      */
-    boolean deleteEntity(int entityId) throws IOException, EntityStorageException;
+    boolean deleteEntity(int entityId) throws EntityStorageException;
 
     /**
      * Deletes an entity from the storage.
@@ -95,7 +96,7 @@ public interface EntityStorage<T extends Entity & Comparable<T>> extends Iterabl
      * @throws EntityStorageDuplicateKeyException if there are multiple entities with the key
      * @throws EntityStorageException if the delete operation failed
      */
-    boolean deleteEntity(@NonNull T entity) throws IOException, EntityStorageException;
+    boolean deleteEntity(@NonNull T entity) throws EntityStorageException;
 
     /**
      * Closes the storage. Any further operations on the storage will cause IO errors.
@@ -109,35 +110,35 @@ public interface EntityStorage<T extends Entity & Comparable<T>> extends Iterabl
      * @param sortByKey if false, sort by id; otherwise sort by default sorting order
      * @return a list of all entities
      */
-    List<T> getAllEntities(boolean sortByKey) throws IOException;
+    List<T> getAllEntities(boolean sortByKey);
 
     /**
      * Gets an iterator over the entities in ascending id order.
      * Entities will be read in batches to improve performance.
      * @param startId the first entity id, inclusive
      * @return an entity iterator
-     * @throws IOException if an IO error occurs
+     * @throws ChessBaseIOException if an IO error occurs
      */
-    Iterator<T> iterator(int startId) throws IOException;
+    Iterator<T> iterator(int startId);
 
-    TreePath<T> lowerBound(@NonNull T entity) throws IOException;
+    TreePath<T> lowerBound(@NonNull T entity);
 
-    TreePath<T> upperBound(@NonNull T entity) throws IOException;
+    TreePath<T> upperBound(@NonNull T entity);
 
     /**
      * Gets an iterator over the entities in ascending primary key sorting order
      * @return an entity iterator
-     * @throws IOException if an IO error occurs
+     * @throws ChessBaseIOException if an IO error occurs
      */
-    Iterator<T> getOrderedAscendingIterator() throws IOException;
+    Iterator<T> getOrderedAscendingIterator();
 
     /**
      * Gets an iterator over the entities in ascending primary key sorting order
      * @param startEntity the first entity (inclusive); null to start at the beginning
      * @return an entity iterator
-     * @throws IOException if an IO error occurs
+     * @throws ChessBaseIOException if an IO error occurs
      */
-    Iterator<T> getOrderedAscendingIterator(T startEntity) throws IOException;
+    Iterator<T> getOrderedAscendingIterator(T startEntity);
 
     /**
      * Gets an iterator over the entities in ascending primary key sorting order
@@ -158,16 +159,16 @@ public interface EntityStorage<T extends Entity & Comparable<T>> extends Iterabl
      * Gets an iterator over the entities in descending primary key sorting order
      * @param startEntity the first entity (inclusive), or null to start from the last entity
      * @return an entity iterator
-     * @throws IOException if an IO error occurs
+     * @throws ChessBaseIOException if an IO error occurs
      */
-    Iterator<T> getOrderedDescendingIterator(T startEntity) throws IOException;
+    Iterator<T> getOrderedDescendingIterator(T startEntity);
 
     /**
      * Validates the integrity of the entity storage.
      * @throws EntityStorageException if the structure of the storage is damaged in some way
-     * @throws IOException if an IO error occurs
+     * @throws ChessBaseIOException if an IO error occurs
      */
-    void validateStructure() throws EntityStorageException, IOException;
+    void validateStructure() throws EntityStorageException;
 
     /**
      * Gets the number of transactions committed to the storage since it was opened

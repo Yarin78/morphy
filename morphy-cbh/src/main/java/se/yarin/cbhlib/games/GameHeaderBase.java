@@ -3,7 +3,7 @@ package se.yarin.cbhlib.games;
 import lombok.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import se.yarin.cbhlib.exceptions.UncheckedEntityException;
+import se.yarin.cbhlib.exceptions.ChessBaseIOException;
 import se.yarin.cbhlib.util.ByteBufferUtil;
 import se.yarin.cbhlib.util.CBUtil;
 import se.yarin.chess.*;
@@ -106,7 +106,7 @@ public class GameHeaderBase implements GameHeaderSerializer, Iterable<GameHeader
      * @param gameHeaderId the id of the game header to get
      * @return a game header id, or null if there was no game header with the specified id
      */
-    public GameHeader getGameHeader(int gameHeaderId) throws IOException {
+    public GameHeader getGameHeader(int gameHeaderId) {
         return storage.get(gameHeaderId);
     }
 
@@ -156,14 +156,10 @@ public class GameHeaderBase implements GameHeaderSerializer, Iterable<GameHeader
             if (nextBatchStart >= endId) {
                 batch = null;
             } else {
-                try {
-                    if (storage instanceof PersistentGameHeaderStorage) {
-                        batch = ((PersistentGameHeaderStorage) storage).getRange(nextBatchStart, endId, filter);
-                    } else {
-                        batch = storage.getRange(nextBatchStart, endId);
-                    }
-                } catch (IOException e) {
-                    throw new UncheckedEntityException("An IO error when iterating game headers", e);
+                if (storage instanceof PersistentGameHeaderStorage) {
+                    batch = ((PersistentGameHeaderStorage) storage).getRange(nextBatchStart, endId, filter);
+                } else {
+                    batch = storage.getRange(nextBatchStart, endId);
                 }
                 nextBatchStart = endId;
             }
@@ -208,7 +204,7 @@ public class GameHeaderBase implements GameHeaderSerializer, Iterable<GameHeader
      * @param gameHeader the new data of the game header
      * @return the saved gameHeader
      */
-    public GameHeader update(int gameHeaderId, @NonNull GameHeader gameHeader) throws IOException {
+    public GameHeader update(int gameHeaderId, @NonNull GameHeader gameHeader) {
         // The id may not be set in gameHeader, in which case we need to do this now
         if (gameHeader.getId() != gameHeaderId) {
             gameHeader = gameHeader.toBuilder().id(gameHeaderId).build();
@@ -222,7 +218,7 @@ public class GameHeaderBase implements GameHeaderSerializer, Iterable<GameHeader
      * @param gameHeader the game header to add
      * @return the id that the game header received
      */
-    public GameHeader add(@NonNull GameHeader gameHeader) throws IOException {
+    public GameHeader add(@NonNull GameHeader gameHeader) {
         int nextGameId = storage.getMetadata().getNextGameId();
         gameHeader = gameHeader.toBuilder().id(nextGameId).build();
         storage.put(gameHeader);
@@ -491,7 +487,7 @@ public class GameHeaderBase implements GameHeaderSerializer, Iterable<GameHeader
      * @param movesOffset a game is only affected if its moves offset is greater than this
      * @param insertedBytes the number of bytes to adjust with
      */
-    public void adjustMovesOffset(int startGameId, int movesOffset, int insertedBytes) throws IOException {
+    public void adjustMovesOffset(int startGameId, int movesOffset, int insertedBytes) {
         storage.adjustMovesOffset(startGameId, movesOffset, insertedBytes);
     }
 
@@ -502,7 +498,7 @@ public class GameHeaderBase implements GameHeaderSerializer, Iterable<GameHeader
      * @param annotationOffset a game is only affected if its annotation offset is greater than this
      * @param insertedBytes the number of bytes to adjust with
      */
-    public void adjustAnnotationOffset(int startGameId, int annotationOffset, int insertedBytes) throws IOException {
+    public void adjustAnnotationOffset(int startGameId, int annotationOffset, int insertedBytes) {
         storage.adjustAnnotationOffset(startGameId, annotationOffset, insertedBytes);
     }
 

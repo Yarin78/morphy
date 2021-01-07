@@ -6,15 +6,11 @@ import se.yarin.cbhlib.entities.Entity;
 
 @AllArgsConstructor
 class EntityNodeImpl<T extends Entity & Comparable<T>> implements EntityNode<T> {
-    @Getter
-    private int entityId;
-    private T entity;
-    @Getter
-    private int leftEntityId;
-    @Getter
-    private int rightEntityId;
-    @Getter
-    private int heightDif;
+    @Getter private final int entityId;
+    private final T entity;
+    @Getter private final int leftEntityId;
+    @Getter private final int rightEntityId;
+    @Getter private final int heightDif;
 
     // This version will only be used by the in-memory node storage
     public T getEntity() {

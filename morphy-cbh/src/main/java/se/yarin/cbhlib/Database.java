@@ -161,7 +161,7 @@ public final class Database implements AutoCloseable {
      * @throws IOException if the game couldn't be fetched due to an IO error
      * @throws ChessBaseException if an internal error occurred when fetching the game
      */
-    public GameModel getGameModel(int gameId) throws IOException, ChessBaseException {
+    public GameModel getGameModel(int gameId) throws ChessBaseException {
         return loader.getGameModel(gameId);
     }
 
@@ -171,7 +171,7 @@ public final class Database implements AutoCloseable {
      * @return the game header of the saved game
      * @throws IOException if the game couldn't be stored due to an IO error
      */
-    public GameHeader addGame(@NonNull GameModel model) throws IOException {
+    public GameHeader addGame(@NonNull GameModel model) {
         return updater.addGame(model);
     }
 
@@ -182,7 +182,7 @@ public final class Database implements AutoCloseable {
      * @return the game header of the saved game
      * @throws IOException if the game couldn't be stored due to an IO error
      */
-    public GameHeader replaceGame(int gameId, @NonNull GameModel model) throws IOException {
+    public GameHeader replaceGame(int gameId, @NonNull GameModel model) {
         return updater.replaceGame(gameId, model);
     }
 

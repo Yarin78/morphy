@@ -11,7 +11,7 @@ import java.nio.ByteBuffer;
 
 public class TeamBase extends EntityBase<TeamEntity> {
 
-    private int SERIALIZED_TEAM_SIZE = 63;
+    private static final int SERIALIZED_TEAM_SIZE = 63;
 
     /**
      * Creates a new in-memory team database that is initially empty.

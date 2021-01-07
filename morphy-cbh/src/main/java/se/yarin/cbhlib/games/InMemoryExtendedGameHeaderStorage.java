@@ -22,12 +22,12 @@ public class InMemoryExtendedGameHeaderStorage extends ExtendedGameHeaderStorage
     }
 
     @Override
-    ExtendedGameHeader get(int id) throws IOException {
+    ExtendedGameHeader get(int id) {
         return gameHeaders.get(id);
     }
 
     @Override
-    List<ExtendedGameHeader> getRange(int startId, int endId) throws IOException {
+    List<ExtendedGameHeader> getRange(int startId, int endId) {
         if (startId < 1) throw new IllegalArgumentException("startId must be 1 or greater");
         ArrayList<ExtendedGameHeader> result = new ArrayList<>(endId - startId);
         for (int i = startId; i < endId; i++) {
@@ -39,7 +39,7 @@ public class InMemoryExtendedGameHeaderStorage extends ExtendedGameHeaderStorage
     }
 
     @Override
-    void put(ExtendedGameHeader gameHeader) throws IOException {
+    void put(ExtendedGameHeader gameHeader) {
         int gameId = gameHeader.getId();
         if (gameId < 1 || gameId > getMetadata().getNumHeaders() + 1) {
             throw new IllegalArgumentException(String.format("gameId outside range (was %d, numHeader is %d)", gameId, getMetadata().getNumHeaders()));

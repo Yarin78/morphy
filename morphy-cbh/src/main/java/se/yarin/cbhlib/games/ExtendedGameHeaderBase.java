@@ -4,7 +4,6 @@ import lombok.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.cbhlib.entities.TournamentTimeControl;
-import se.yarin.cbhlib.exceptions.UncheckedEntityException;
 import se.yarin.cbhlib.util.ByteBufferUtil;
 
 import java.io.File;
@@ -31,7 +30,7 @@ public class ExtendedGameHeaderBase implements ExtendedGameHeaderSerializer, Ite
         this.storage = new InMemoryExtendedGameHeaderStorage();
     }
 
-    private ExtendedGameHeaderBase(@NonNull ExtendedGameHeaderStorageBase storage) throws IOException {
+    private ExtendedGameHeaderBase(@NonNull ExtendedGameHeaderStorageBase storage) {
         this.storage = storage;
     }
 
@@ -102,7 +101,7 @@ public class ExtendedGameHeaderBase implements ExtendedGameHeaderSerializer, Ite
      * @param gameId the id of the game
      * @return an extended game header, or null if there was no extended game header with the specified id
      */
-    public ExtendedGameHeader getExtendedGameHeader(int gameId) throws IOException {
+    public ExtendedGameHeader getExtendedGameHeader(int gameId) {
         return storage.get(gameId);
     }
 
@@ -112,7 +111,7 @@ public class ExtendedGameHeaderBase implements ExtendedGameHeaderSerializer, Ite
      * @param extendedGameHeader the new data of the game header
      * @return the saved gameHeader
      */
-    public ExtendedGameHeader update(int gameId, @NonNull ExtendedGameHeader extendedGameHeader) throws IOException {
+    public ExtendedGameHeader update(int gameId, @NonNull ExtendedGameHeader extendedGameHeader) {
         // The id may not be set in gameHeader, in which case we need to do this now
         if (extendedGameHeader.getId() != gameId) {
             extendedGameHeader = extendedGameHeader.toBuilder().id(gameId).build();
@@ -126,7 +125,7 @@ public class ExtendedGameHeaderBase implements ExtendedGameHeaderSerializer, Ite
      * @param extendedGameHeader the extended game header to add
      * @return the id that the extended game header received
      */
-    public ExtendedGameHeader add(@NonNull ExtendedGameHeader extendedGameHeader) throws IOException {
+    public ExtendedGameHeader add(@NonNull ExtendedGameHeader extendedGameHeader) {
         // TODO: Extended game headers should probably not be added without specifying id
         int nextGameId = storage.getMetadata().getNumHeaders() + 1;
         extendedGameHeader = extendedGameHeader.toBuilder().id(nextGameId).build();
@@ -167,11 +166,7 @@ public class ExtendedGameHeaderBase implements ExtendedGameHeaderSerializer, Ite
             if (nextBatchStart >= endId) {
                 batch = null;
             } else {
-                try {
-                    batch = storage.getRange(nextBatchStart, endId);
-                } catch (IOException e) {
-                    throw new UncheckedEntityException("An IO error when iterating game headers", e);
-                }
+                batch = storage.getRange(nextBatchStart, endId);
                 nextBatchStart = endId;
             }
             batchPos = 0;

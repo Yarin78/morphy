@@ -3,7 +3,7 @@ package se.yarin.cbhlib.games;
 import lombok.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import se.yarin.cbhlib.*;
+import se.yarin.cbhlib.Database;
 import se.yarin.cbhlib.annotations.AnnotationStatistics;
 import se.yarin.cbhlib.annotations.StatisticalAnnotation;
 import se.yarin.cbhlib.entities.*;
@@ -12,7 +12,6 @@ import se.yarin.cbhlib.storage.EntityStorageException;
 import se.yarin.chess.*;
 import se.yarin.chess.annotations.Annotation;
 
-import java.io.IOException;
 import java.util.EnumSet;
 
 /**
@@ -34,7 +33,7 @@ public class GameLoader {
         this.database = database;
     }
 
-    public GameHeaderModel getHeaderModel(GameHeader header) throws IOException {
+    public GameHeaderModel getHeaderModel(GameHeader header) {
         GameHeaderModel model = new GameHeaderModel();
 
         if (header.isGuidingText()) {
@@ -101,7 +100,7 @@ public class GameLoader {
         return model;
     }
 
-    public GameModel getGameModel(int gameId) throws IOException, ChessBaseException {
+    public GameModel getGameModel(int gameId) throws ChessBaseException {
         GameHeader gameHeader = database.getHeaderBase().getGameHeader(gameId);
 
         GameHeaderModel headerModel = getHeaderModel(gameHeader);
@@ -112,8 +111,7 @@ public class GameLoader {
         return new GameModel(headerModel, moves);
     }
 
-    public GameHeader createGameHeader(GameModel model, int movesOfs, int annotationOfs)
-            throws IOException {
+    public GameHeader createGameHeader(GameModel model, int movesOfs, int annotationOfs) {
         GameHeaderModel header = model.header();
 
         PlayerEntity white, black;
@@ -223,8 +221,7 @@ public class GameLoader {
         return name == null ? "" : name;
     }
 
-    <T extends Entity & Comparable<T>> T resolveEntity(Integer id, T key, EntityBase<T> base)
-            throws IOException {
+    <T extends Entity & Comparable<T>> T resolveEntity(Integer id, T key, EntityBase<T> base) {
         T entity;
         if (id != null && id > 0) {
             entity = base.get(id);

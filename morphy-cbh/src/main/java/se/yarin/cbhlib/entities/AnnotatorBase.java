@@ -11,7 +11,7 @@ import java.nio.ByteBuffer;
 
 public class AnnotatorBase extends EntityBase<AnnotatorEntity> {
     
-    private int SERIALIZED_ANNOTATOR_SIZE = 53;
+    private static final int SERIALIZED_ANNOTATOR_SIZE = 53;
 
     /**
      * Creates a new in-memory annotator database that is initially empty.

@@ -3,6 +3,7 @@ package se.yarin.cbhlib.moves;
 import lombok.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import se.yarin.cbhlib.exceptions.ChessBaseIOException;
 import se.yarin.cbhlib.exceptions.ChessBaseInvalidDataException;
 import se.yarin.cbhlib.exceptions.ChessBaseUnsupportedException;
 import se.yarin.cbhlib.storage.BlobSizeRetriever;
@@ -97,10 +98,10 @@ public class MovesBase implements BlobSizeRetriever {
      * @param ofs the offset in the database where the game moves data is stored
      * @param gameId the id of the game to load; only used in logging statements
      * @return a model of the game
-     * @throws IOException if there was some IO errors when reading the moves
+     * @throws ChessBaseIOException if there was some IO errors when reading the moves
      */
     public GameMovesModel getMoves(int ofs, int gameId)
-            throws IOException, ChessBaseInvalidDataException, ChessBaseUnsupportedException {
+            throws ChessBaseInvalidDataException, ChessBaseUnsupportedException {
         ByteBuffer blob = storage.readBlob(ofs);
         return MovesSerializer.deserializeMoves(blob, gameId);
     }
@@ -111,9 +112,9 @@ public class MovesBase implements BlobSizeRetriever {
      *            or 0 if this is a new game in the database
      * @param model the game to store
      * @return The offset where the game moves was stored
-     * @throws IOException if there was some IO errors when storing the moves
+     * @throws ChessBaseIOException if there was some IO errors when storing the moves
      */
-    public int putMoves(int ofs, GameMovesModel model) throws IOException {
+    public int putMoves(int ofs, GameMovesModel model) {
         ByteBuffer buf = MovesSerializer.serializeMoves(model, encodingMode);
         if (ofs > 0) {
             storage.writeBlob(ofs, buf);
@@ -122,7 +123,7 @@ public class MovesBase implements BlobSizeRetriever {
         return storage.writeBlob(buf);
     }
 
-    public int preparePutBlob(int ofs, GameMovesModel model) throws IOException {
+    public int preparePutBlob(int ofs, GameMovesModel model) {
         ByteBuffer buf = MovesSerializer.serializeMoves(model, encodingMode);
         int oldGameSize = getBlobSize(storage.readBlob(ofs));
         int newGameSize = getBlobSize(buf);

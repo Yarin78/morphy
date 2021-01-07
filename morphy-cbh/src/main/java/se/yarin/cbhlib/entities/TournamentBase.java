@@ -16,7 +16,7 @@ public class TournamentBase extends EntityBase<TournamentEntity> {
 
     private static final Logger log = LoggerFactory.getLogger(TournamentBase.class);
 
-    private int SERIALIZED_TOURNAMENT_SIZE = 90;
+    private static final int SERIALIZED_TOURNAMENT_SIZE = 90;
 
     /**
      * Creates a new in-memory tournament database that is initially empty.

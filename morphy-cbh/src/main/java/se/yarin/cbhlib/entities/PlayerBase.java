@@ -13,7 +13,7 @@ import java.util.Iterator;
 
 public class PlayerBase extends EntityBase<PlayerEntity> {
 
-    private int SERIALIZED_PLAYER_SIZE = 58;
+    private static final int SERIALIZED_PLAYER_SIZE = 58;
 
     /**
      * Creates a new in-memory player database that is initially empty.
@@ -61,7 +61,7 @@ public class PlayerBase extends EntityBase<PlayerEntity> {
      * @param name a prefix of the last name of the player; first name can be specified after a comma
      * @return an iterator over matching players
      */
-    public Iterator<PlayerEntity> prefixSearch(@NonNull String name) throws IOException {
+    public Iterator<PlayerEntity> prefixSearch(@NonNull String name) {
         if (name.contains(",")) {
             String[] parts = name.split(",", 2);
             return prefixSearch(parts[0].strip(), parts[1].strip());
@@ -76,7 +76,7 @@ public class PlayerBase extends EntityBase<PlayerEntity> {
      * @param firstName a prefix of the first name of the player (or null/empty).
      * @return an iterator over matching players
      */
-    public Iterator<PlayerEntity> prefixSearch(@NonNull String lastName, String firstName) throws IOException {
+    public Iterator<PlayerEntity> prefixSearch(@NonNull String lastName, String firstName) {
         PlayerEntity startKey = new PlayerEntity(lastName, firstName == null ? "" : firstName);
         PlayerEntity endKey = firstName == null ? new PlayerEntity(lastName + "zzz", "") :
                 new PlayerEntity(lastName, firstName + "zzz");

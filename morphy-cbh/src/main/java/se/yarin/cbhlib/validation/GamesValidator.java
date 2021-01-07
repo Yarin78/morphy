@@ -4,6 +4,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.cbhlib.*;
 import se.yarin.cbhlib.exceptions.ChessBaseException;
+import se.yarin.cbhlib.exceptions.ChessBaseIOException;
 import se.yarin.cbhlib.games.GameHeader;
 import se.yarin.cbhlib.games.GameHeaderBase;
 import se.yarin.cbhlib.games.GameLoader;
@@ -22,7 +23,7 @@ public class GamesValidator {
         this.loader = new GameLoader(db);
     }
 
-    public void readAllGames() throws IOException, ChessBaseException {
+    public void readAllGames() throws ChessBaseException {
         for (GameHeader gameHeader : db.getHeaderBase()) {
             db.getGameModel(gameHeader.getId());
         }
@@ -47,7 +48,7 @@ public class GamesValidator {
         }
     }
 
-    public void processGames(boolean loadMoves, Runnable progressCallback) throws IOException {
+    public void processGames(boolean loadMoves, Runnable progressCallback) {
         GameHeaderBase headerBase = db.getHeaderBase();
 
         // System.out.println("Loading all " + headerBase.size() + " games...");
@@ -109,7 +110,7 @@ public class GamesValidator {
                     }
                     numGames += 1;
                 }
-            } catch (ChessBaseException | IOException e) {
+            } catch (ChessBaseException | ChessBaseIOException e) {
                 numErrors += 1;
             } finally {
                 progressCallback.run();

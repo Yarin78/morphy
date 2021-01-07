@@ -4,6 +4,7 @@ import lombok.Getter;
 import lombok.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import se.yarin.cbhlib.exceptions.ChessBaseIOException;
 import se.yarin.cbhlib.util.ByteBufferUtil;
 
 import java.io.File;
@@ -23,10 +24,10 @@ public class PersistentExtendedGameHeaderStorage extends ExtendedGameHeaderStora
 
     private static final int FILE_HEADER_SIZE = 32;
 
-    private int serializedExtendedGameHeaderSize;
+    private final int serializedExtendedGameHeaderSize;
     private final ExtendedGameHeaderSerializer serializer;
     private final String storageName;
-    private FileChannel channel;
+    private final FileChannel channel;
 
     @Getter
     private int version = 0;
@@ -80,15 +81,19 @@ public class PersistentExtendedGameHeaderStorage extends ExtendedGameHeaderStora
     }
 
     @Override
-    void setMetadata(ExtendedGameHeaderStorageMetadata metadata) throws IOException {
+    void setMetadata(ExtendedGameHeaderStorageMetadata metadata) {
         // Update the in-memory metadata cache as well
         super.setMetadata(metadata);
 
         ByteBuffer buffer = serializeMetadata(metadata);
 
-        channel.position(0);
-        channel.write(buffer);
-        channel.force(false);
+        try {
+            channel.position(0);
+            channel.write(buffer);
+            channel.force(false);
+        } catch (IOException e) {
+            throw new ChessBaseIOException("Failed to write metadata to Extended GameHeader storage", e);
+        }
 
         log.debug(String.format("Updated %s; numHeaders = %d", storageName, metadata.getNumHeaders()));
     }
@@ -116,14 +121,18 @@ public class PersistentExtendedGameHeaderStorage extends ExtendedGameHeaderStora
      * @throws IOException if an IO error occurs
      */
     private void positionChannel(int gameId) throws IOException {
-        channel.position(FILE_HEADER_SIZE + (gameId-1) * serializedExtendedGameHeaderSize);
+        channel.position(FILE_HEADER_SIZE + (long) (gameId - 1) * serializedExtendedGameHeaderSize);
     }
 
     @Override
-    ExtendedGameHeader get(int id) throws IOException {
-        positionChannel(id);
+    ExtendedGameHeader get(int id) {
         ByteBuffer buf = ByteBuffer.allocate(serializedExtendedGameHeaderSize);
-        channel.read(buf);
+        try {
+            positionChannel(id);
+            channel.read(buf);
+        } catch (IOException e) {
+            throw new ChessBaseIOException("Failed to get Extended GameHeader with id " + id, e);
+        }
         buf.flip();
         if (!buf.hasRemaining()) {
             return null;
@@ -144,14 +153,18 @@ public class PersistentExtendedGameHeaderStorage extends ExtendedGameHeaderStora
     }
 
     @Override
-    List<ExtendedGameHeader> getRange(int startId, int endId) throws IOException {
+    List<ExtendedGameHeader> getRange(int startId, int endId) {
         if (startId < 1) throw new IllegalArgumentException("startId must be 1 or greater");
         int count = endId - startId;
         ArrayList<ExtendedGameHeader> result = new ArrayList<>(count);
 
-        positionChannel(startId);
         ByteBuffer buf = ByteBuffer.allocate(serializedExtendedGameHeaderSize * count);
-        channel.read(buf);
+        try {
+            positionChannel(startId);
+            channel.read(buf);
+        } catch (IOException e) {
+            throw new ChessBaseIOException("Failed to get Extended GameHeaders in range [%d, %d)".formatted(startId, endId), e);
+        }
         buf.flip();
 
         for (int id = startId; id < endId && buf.hasRemaining(); id++) {
@@ -168,15 +181,19 @@ public class PersistentExtendedGameHeaderStorage extends ExtendedGameHeaderStora
         return result;
     }
 
-    void put(ExtendedGameHeader extendedGameHeader) throws IOException {
+    void put(ExtendedGameHeader extendedGameHeader) {
         int gameId = extendedGameHeader.getId();
         if (gameId < 1 || gameId > getMetadata().getNumHeaders() + 1) {
             throw new IllegalArgumentException(String.format("gameId outside range (was %d, numHeaders is %d)", gameId, getMetadata().getNumHeaders()));
         }
-        positionChannel(gameId);
         ByteBuffer src = serializer.serialize(extendedGameHeader);
         src.position(0);
-        channel.write(src);
+        try {
+            positionChannel(gameId);
+            channel.write(src);
+        } catch (IOException e) {
+            throw new ChessBaseIOException("Failed to write extended game header with id " + gameId, e);
+        }
 
         version++;
 

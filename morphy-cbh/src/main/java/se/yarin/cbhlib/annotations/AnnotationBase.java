@@ -3,6 +3,7 @@ package se.yarin.cbhlib.annotations;
 import lombok.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import se.yarin.cbhlib.exceptions.ChessBaseIOException;
 import se.yarin.cbhlib.storage.BlobSizeRetriever;
 import se.yarin.cbhlib.storage.BlobStorage;
 import se.yarin.cbhlib.storage.FileBlobStorage;
@@ -91,9 +92,9 @@ public class AnnotationBase implements BlobSizeRetriever {
      * Decorates a game with annotations from the annotation database
      * @param model the game to decorate with annotations
      * @param ofs the offset in the database where the annotation data is stored
-     * @throws IOException if there was some IO errors when reading the annotations
+     * @throws ChessBaseIOException if there was some IO errors when reading the annotations
      */
-    public void getAnnotations(@NonNull GameMovesModel model, int ofs) throws IOException {
+    public void getAnnotations(@NonNull GameMovesModel model, int ofs) {
         if (ofs > 0) {
             ByteBuffer blob = storage.readBlob(ofs);
             AnnotationsSerializer.deserializeAnnotations(blob, model);
@@ -107,9 +108,9 @@ public class AnnotationBase implements BlobSizeRetriever {
      *            or 0 if no annotations were stored for this game before
      * @param model the game with annotations to store
      * @return The offset where the annotation was stored. 0 if the game contained no annotations.
-     * @throws IOException if there was some IO errors when storing the annotations
+     * @throws ChessBaseIOException if there was some IO errors when storing the annotations
      */
-    public int putAnnotations(int gameId, int ofs, GameMovesModel model) throws IOException {
+    public int putAnnotations(int gameId, int ofs, GameMovesModel model) {
         if (model.countAnnotations() == 0) {
             return 0;
         }
@@ -121,8 +122,7 @@ public class AnnotationBase implements BlobSizeRetriever {
         return storage.writeBlob(buf);
     }
 
-    public int preparePutBlob(int currentAnnotationOffset, int targetAnnotationOffset, GameMovesModel model)
-            throws IOException {
+    public int preparePutBlob(int currentAnnotationOffset, int targetAnnotationOffset, GameMovesModel model) {
         if (model.countAnnotations() == 0 || targetAnnotationOffset == 0) {
             return 0;
         }

@@ -6,9 +6,9 @@ import lombok.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.cbhlib.entities.Entity;
+import se.yarin.cbhlib.exceptions.ChessBaseIOException;
 import se.yarin.cbhlib.storage.EntityStorageDuplicateKeyException;
 import se.yarin.cbhlib.storage.EntityStorageException;
-import se.yarin.cbhlib.exceptions.UncheckedEntityException;
 import se.yarin.cbhlib.storage.*;
 
 import java.io.File;
@@ -90,7 +90,7 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
     }
 
     @Override
-    public T getEntity(int entityId) throws IOException {
+    public T getEntity(int entityId) {
         if (entityId < 0 || entityId >= nodeStorage.getCapacity()) {
             return null;
         }
@@ -98,7 +98,7 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
     }
 
     @Override
-    public T getAnyEntity(@NonNull T entity) throws IOException {
+    public T getAnyEntity(@NonNull T entity) {
         TreePath<T> treePath = lowerBound(entity);
         if (treePath.isEnd()) {
             return null;
@@ -111,7 +111,7 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
     }
 
     @Override
-    public T getEntity(@NonNull T entity) throws IOException, EntityStorageDuplicateKeyException {
+    public T getEntity(@NonNull T entity) throws EntityStorageDuplicateKeyException {
         Iterator<T> iterator = getOrderedAscendingIterator(entity);
         ArrayList<T> result = new ArrayList<>();
         while (iterator.hasNext() && result.size() < 2) {
@@ -132,7 +132,7 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
     }
 
     @Override
-    public List<T> getEntities(@NonNull T entity) throws IOException {
+    public List<T> getEntities(@NonNull T entity) {
         Iterator<T> iterator = getOrderedAscendingIterator(entity);
         ArrayList<T> result = new ArrayList<>();
         while (iterator.hasNext()) {
@@ -151,7 +151,7 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
     }
 
     @Override
-    public int addEntity(@NonNull T entity) throws IOException, EntityStorageException {
+    public int addEntity(@NonNull T entity) throws EntityStorageException {
         EntityStorageTransaction<T> txn = beginTransaction();
         int id = txn.addEntity(entity);
         txn.commit();
@@ -160,21 +160,21 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
 
 
     @Override
-    public void putEntityById(int entityId, @NonNull T entity) throws IOException, EntityStorageException {
+    public void putEntityById(int entityId, @NonNull T entity) throws EntityStorageException {
         EntityStorageTransaction<T> txn = beginTransaction();
         txn.putEntityById(entityId, entity);
         txn.commit();
     }
 
     @Override
-    public void putEntityByKey(@NonNull T entity) throws IOException, EntityStorageException {
+    public void putEntityByKey(@NonNull T entity) throws EntityStorageException {
         EntityStorageTransaction<T> txn = beginTransaction();
         txn.putEntityByKey(entity);
         txn.commit();
     }
 
     @Override
-    public boolean deleteEntity(T entity) throws IOException, EntityStorageException {
+    public boolean deleteEntity(T entity) throws EntityStorageException {
         EntityStorageTransaction<T> txn = beginTransaction();
         boolean deleted = txn.deleteEntity(entity);
         txn.commit();
@@ -182,7 +182,7 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
     }
 
     @Override
-    public boolean deleteEntity(int entityId) throws IOException, EntityStorageException {
+    public boolean deleteEntity(int entityId) throws EntityStorageException {
         EntityStorageTransaction<T> txn = beginTransaction();
         boolean deleted = txn.deleteEntity(entityId);
         txn.commit();
@@ -192,7 +192,7 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
     /**
      * Validates that the entity headers correctly reflects the order of the entities
      */
-    public void validateStructure() throws EntityStorageException, IOException {
+    public void validateStructure() throws EntityStorageException {
         if (nodeStorage.getRootEntityId() == -1) {
             if (getNumEntities() == 0) {
                 return;
@@ -210,12 +210,12 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
     }
 
     @AllArgsConstructor
-    private class ValidationResult {
-        @Getter private int count;
-        @Getter private int height;
+    private static class ValidationResult {
+        @Getter private final int count;
+        @Getter private final int height;
     }
 
-    private ValidationResult validate(int entityId, T min, T max, int depth) throws IOException, EntityStorageException {
+    private ValidationResult validate(int entityId, T min, T max, int depth) throws EntityStorageException {
         if (depth > 40) {
             throw new EntityStorageException("Infinite loop when verifying storage structure");
         }
@@ -261,9 +261,9 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
      * Returns all entities. There will be no null entries in the output.
      * If there are a large number of entities, consider using {@link #iterator()} instead.
      * @return a list of all entities
-     * @throws IOException if there was an error getting any entity
+     * @throws ChessBaseIOException if there was an error getting any entity
      */
-    public List<T> getAllEntities(boolean sortByKey) throws IOException {
+    public List<T> getAllEntities(boolean sortByKey) {
         ArrayList<T> result = new ArrayList<>(getNumEntities());
         if (sortByKey) {
             Iterator<T> iterator = getOrderedAscendingIterator();
@@ -278,11 +278,11 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
         return result;
     }
 
-    public TreePath<T> lowerBound(@NonNull T entity) throws IOException {
+    public TreePath<T> lowerBound(@NonNull T entity) {
         return nodeStorage.lowerBound(entity);
     }
 
-    public TreePath<T> upperBound(@NonNull T entity) throws IOException {
+    public TreePath<T> upperBound(@NonNull T entity) {
         return nodeStorage.upperBound(entity);
     }
 
@@ -299,19 +299,16 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
 
     private class DefaultIterator implements Iterator<T> {
         private List<EntityNode<T>> batch = new ArrayList<>();
-        private int batchPos, nextBatchStart = 0, batchSize = 1000;
+        private int batchPos, nextBatchStart;
+        private static final int BATCH_SIZE = 1000;
         private final int version;
 
         private void getNextBatch() {
-            int endId = Math.min(nodeStorage.getCapacity(), nextBatchStart + batchSize);
+            int endId = Math.min(nodeStorage.getCapacity(), nextBatchStart + BATCH_SIZE);
             if (nextBatchStart >= endId) {
                 batch = null;
             } else {
-                try {
-                    batch = nodeStorage.getEntityNodes(nextBatchStart, endId);
-                } catch (IOException e) {
-                    throw new UncheckedEntityException("An IO error when iterating entities", e);
-                }
+                batch = nodeStorage.getEntityNodes(nextBatchStart, endId);
                 nextBatchStart = endId;
             }
             batchPos = 0;
@@ -379,13 +376,9 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
             if (!hasNext()) {
                 throw new NoSuchElementException("End of entity iteration reached");
             }
-            try {
-                T entity = current.getNode().getEntity();
-                this.current = this.current.successor();
-                return entity;
-            } catch (IOException e) {
-                throw new UncheckedEntityException("An IO error when iterating entities", e);
-            }
+            T entity = current.getNode().getEntity();
+            this.current = this.current.successor();
+            return entity;
         }
     }
 
@@ -406,11 +399,7 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
             if (this.version != getVersion()) {
                 throw new IllegalStateException("The storage has changed since the iterator was created");
             }
-            try {
-                return !this.current.isBegin();
-            } catch (IOException e) {
-                throw new UncheckedEntityException("An IO error when iterating entities", e);
-            }
+            return !this.current.isBegin();
         }
 
         @Override
@@ -418,20 +407,16 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
             if (!hasNext()) {
                 throw new NoSuchElementException("End of entity iteration reached");
             }
-            try {
-                this.current = this.current.predecessor();
-                return current.getNode().getEntity();
-            } catch (IOException e) {
-                throw new UncheckedEntityException("An IO error when iterating entities", e);
-            }
+            this.current = this.current.predecessor();
+            return current.getNode().getEntity();
         }
     }
 
-    public Iterator<T> getOrderedAscendingIterator() throws IOException {
+    public Iterator<T> getOrderedAscendingIterator() {
         return getOrderedAscendingIterator(TreePath.begin(nodeStorage), TreePath.end(nodeStorage));
     }
 
-    public Iterator<T> getOrderedAscendingIterator(T startEntity) throws IOException {
+    public Iterator<T> getOrderedAscendingIterator(T startEntity) {
         return getOrderedAscendingIterator(startEntity == null ? TreePath.begin(nodeStorage) : lowerBound(startEntity));
     }
 
@@ -443,7 +428,7 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
         return new OrderedAscendingIterator(start, end.getEntityId());
     }
 
-    public Iterator<T> getOrderedDescendingIterator(T startEntity) throws IOException {
+    public Iterator<T> getOrderedDescendingIterator(T startEntity) {
         return new OrderedDescendingIterator(startEntity == null ? TreePath.end(nodeStorage) : upperBound(startEntity));
     }
 }
