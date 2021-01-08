@@ -90,7 +90,6 @@ public class PersistentExtendedGameHeaderStorage extends ExtendedGameHeaderStora
         try {
             channel.position(0);
             channel.write(buffer);
-            channel.force(false);
         } catch (IOException e) {
             throw new ChessBaseIOException("Failed to write metadata to Extended GameHeader storage", e);
         }

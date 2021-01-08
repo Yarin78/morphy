@@ -99,7 +99,6 @@ public class FileBlobStorage implements BlobStorage {
         ByteBuffer buf = serializeMetadata(size, headerSize, trashBytes);
         channel.position(0);
         channel.write(buf);
-        channel.force(false);
     }
 
     @Override
@@ -142,7 +141,6 @@ public class FileBlobStorage implements BlobStorage {
         try {
             channel.position(offset);
             channel.write(blob);
-            channel.force(false);
             size = (int) channel.size();
             saveMetadata();
         } catch (IOException e) {

@@ -22,9 +22,11 @@ public enum Medal {
 
     public static EnumSet<Medal> decode(int data) {
         EnumSet<Medal> medals = EnumSet.noneOf(Medal.class);
-        for (Medal medal : Medal.values()) {
-            if (((1<<medal.ordinal()) & data) > 0) {
-                medals.add(medal);
+        if (data != 0) {
+            for (Medal medal : Medal.values()) {
+                if (((1 << medal.ordinal()) & data) > 0) {
+                    medals.add(medal);
+                }
             }
         }
         return medals;

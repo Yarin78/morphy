@@ -61,7 +61,7 @@ public final class AnnotationsSerializer {
      */
     public static ByteBuffer serializeAnnotations(int gameId, @NonNull GameMovesModel model) {
         // TODO: Double size on demand
-        ByteBuffer buf = ByteBuffer.allocate(16384);
+        ByteBuffer buf = ByteBuffer.allocate(16384*2);
         ByteBufferUtil.put24BitB(buf, gameId);
         ByteBufferUtil.putIntB(buf, 0x01000E0E);
         ByteBufferUtil.put24BitB(buf, 0); // noAnnotations + 1 (filled in later)

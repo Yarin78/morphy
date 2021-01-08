@@ -23,10 +23,10 @@ public class MovesBase implements BlobSizeRetriever {
     private static final Logger log = LoggerFactory.getLogger(MovesBase.class);
 
     private final BlobStorage storage;
-    private int encodingMode = 0; // The encoding mode to use when writing games
+    private int overrideEncodingMode = -1; // The encoding mode to use when writing games, -1 = default based on type
 
     public void setEncodingMode(int encodingMode) {
-        this.encodingMode = encodingMode;
+        this.overrideEncodingMode = encodingMode;
     }
 
     /**
@@ -115,7 +115,7 @@ public class MovesBase implements BlobSizeRetriever {
      * @throws ChessBaseIOException if there was some IO errors when storing the moves
      */
     public int putMoves(int ofs, GameMovesModel model) {
-        ByteBuffer buf = MovesSerializer.serializeMoves(model, encodingMode);
+        ByteBuffer buf = MovesSerializer.serializeMoves(model, resolveEncodingMode(model));
         if (ofs > 0) {
             storage.writeBlob(ofs, buf);
             return ofs;
@@ -124,7 +124,7 @@ public class MovesBase implements BlobSizeRetriever {
     }
 
     public int preparePutBlob(int ofs, GameMovesModel model) {
-        ByteBuffer buf = MovesSerializer.serializeMoves(model, encodingMode);
+        ByteBuffer buf = MovesSerializer.serializeMoves(model, resolveEncodingMode(model));
         int oldGameSize = getBlobSize(storage.readBlob(ofs));
         int newGameSize = getBlobSize(buf);
         if (newGameSize <= oldGameSize) {
@@ -133,6 +133,16 @@ public class MovesBase implements BlobSizeRetriever {
         int delta = newGameSize - oldGameSize;
         storage.insert(ofs, delta);
         return delta;
+    }
+
+    private int resolveEncodingMode(GameMovesModel model) {
+        if (overrideEncodingMode >= 0) {
+            return overrideEncodingMode;
+        }
+        if (model.root().position().isRegularChess()) {
+            return 0;
+        }
+        return 10;
     }
 
     public void close() throws IOException {

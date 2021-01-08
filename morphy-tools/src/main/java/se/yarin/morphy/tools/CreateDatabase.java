@@ -3,6 +3,7 @@ package se.yarin.morphy.tools;
 import se.yarin.cbhlib.Database;
 import se.yarin.cbhlib.annotations.GameQuotationAnnotation;
 import se.yarin.cbhlib.annotations.SymbolAnnotation;
+import se.yarin.cbhlib.exceptions.ChessBaseInvalidDataException;
 import se.yarin.cbhlib.util.GameGenerator;
 import se.yarin.chess.*;
 
@@ -18,7 +19,7 @@ import static se.yarin.chess.Chess.*;
  */
 public class CreateDatabase {
 
-    public static void main3(String[] args) throws IOException {
+    public static void main3(String[] args) throws IOException, ChessBaseInvalidDataException {
         Database db = Database.create(new File("testbases/tmp/Created/random3.cbh"));
         GameGenerator gameGenerator = new GameGenerator();
 
@@ -39,7 +40,7 @@ public class CreateDatabase {
         db.close();
     }
 
-    public static void main2(String[] args) throws IOException {
+    public static void main2(String[] args) throws IOException, ChessBaseInvalidDataException {
         Database db = Database.create(new File("testbases/tmp/Created/db8.cbh"));
         GameGenerator gameGenerator = new GameGenerator();
 
@@ -56,7 +57,7 @@ public class CreateDatabase {
         db.close();
     }
 
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) throws IOException, ChessBaseInvalidDataException {
         GameModel quoted = new GameModel();
         quoted.moves().root().addMove(E2, E4).addMove(E7, E5).addMove(G1,F3).addMove(B8, C6)
                 .parent().addMove(D7, D6).addMove(D2, D4)

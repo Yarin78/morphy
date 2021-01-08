@@ -7,6 +7,7 @@ import se.yarin.cbhlib.annotations.TextAfterMoveAnnotation;
 import se.yarin.cbhlib.entities.PlayerEntity;
 import se.yarin.cbhlib.entities.TournamentEntity;
 import se.yarin.cbhlib.exceptions.ChessBaseException;
+import se.yarin.cbhlib.exceptions.ChessBaseInvalidDataException;
 import se.yarin.cbhlib.util.GameGenerator;
 import se.yarin.cbhlib.validation.EntityStatsValidator;
 import se.yarin.cbhlib.storage.EntityStorageException;
@@ -44,7 +45,7 @@ public class DatabaseTest {
     }
 
     @Test
-    public void addSingleGameToEmptyDatabase() throws IOException, EntityStorageException {
+    public void addSingleGameToEmptyDatabase() throws IOException, EntityStorageException, ChessBaseInvalidDataException {
         Database db = new Database();
 
         GameModel gameModel = getSimpleGame("Mardell", "Carlsen", "Sample tournament", null, null);
@@ -82,7 +83,7 @@ public class DatabaseTest {
     }
 
     @Test
-    public void addMultipleGames() throws IOException, EntityStorageException {
+    public void addMultipleGames() throws IOException, EntityStorageException, ChessBaseInvalidDataException {
         Database db = new Database();
 
         db.addGame(getSimpleGame("Mardell", "Carlsen", "t1", "my source", "myself"));
@@ -113,7 +114,7 @@ public class DatabaseTest {
     }
 
     @Test
-    public void replaceGameCorrectlyUpdatesFirstGame() throws IOException, EntityStorageException {
+    public void replaceGameCorrectlyUpdatesFirstGame() throws IOException, EntityStorageException, ChessBaseInvalidDataException {
         Database db = new Database();
 
         db.addGame(getSimpleGame("a", "b"));

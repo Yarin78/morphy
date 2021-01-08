@@ -1,5 +1,6 @@
 package se.yarin.morphy.cli;
 
+import me.tongfei.progressbar.ProgressBar;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.config.Configuration;
@@ -8,8 +9,6 @@ import org.apache.logging.log4j.core.config.ConfigurationSource;
 import picocli.CommandLine;
 import se.yarin.cbhlib.Database;
 import se.yarin.cbhlib.entities.*;
-import se.yarin.cbhlib.exceptions.ChessBaseException;
-import se.yarin.cbhlib.games.GameHeader;
 import se.yarin.cbhlib.games.search.DateRangeFilter;
 import se.yarin.cbhlib.games.search.GameSearcher;
 import se.yarin.cbhlib.games.search.PlayerFilter;
@@ -17,10 +16,10 @@ import se.yarin.cbhlib.games.search.RatingRangeFilter;
 import se.yarin.cbhlib.storage.EntityStorageException;
 import se.yarin.cbhlib.util.CBUtil;
 import se.yarin.cbhlib.validation.Validator;
-import se.yarin.chess.GameResult;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.FileAlreadyExistsException;
 import java.util.EnumSet;
 import java.util.Locale;
 import java.util.Map;
@@ -52,10 +51,10 @@ class Games implements Callable<Integer> {
     private boolean[] verbose;
 
     @CommandLine.Option(names = "--limit", description = "Max number of games to output")
-    private int limit = 50;
+    private int limit = 0;
 
-    @CommandLine.Option(names = "--total", description = "Show total number of hits")
-    private boolean showTotal = false;
+    @CommandLine.Option(names = "--count-all", description = "Count all hits, even beyond the limit (if specified)")
+    private boolean countAll = false;
 
     @CommandLine.Option(names = "--player", description = "Show only games with this player (any color)")
     private String[] players;
@@ -69,8 +68,17 @@ class Games implements Callable<Integer> {
     @CommandLine.Option(names = "--rating.any", description = "Rating range required for at least one player, e.g. 2700- or 2000-2200")
     private String ratingRangeAny;
 
+    @CommandLine.Option(names = {"-o", "--output"}, description = "Output database (.cbh or .pgn)")
+    private String output;
+
+    @CommandLine.Option(names = "--stats", description = "Show statistics about all matching games")
+    private boolean stats;
+
+    @CommandLine.Option(names = "--overwrite", description = "If true, overwrite the output database if it already exists.")
+    private boolean overwrite;
+
     @Override
-    public Integer call() throws IOException, ChessBaseException {
+    public Integer call() throws IOException {
         if (verbose != null) {
             String level = verbose.length == 1 ? "info" : "debug";
             org.apache.logging.log4j.core.LoggerContext context = ((org.apache.logging.log4j.core.LoggerContext) LogManager.getContext(false));
@@ -102,97 +110,49 @@ class Games implements Callable<Integer> {
                 gameSearcher.addFilter(new RatingRangeFilter(db, ratingRangeAny, RatingRangeFilter.RatingColor.ANY));
             }
 
-            outputHeader();
-            //try (ProgressBar pb = new ProgressBar("Games", gameSearcher.getTotal())) {
-            GameSearcher.SearchResult result = gameSearcher.search(limit, showTotal, this::outputHit);
-
-            if (showTotal) {
-                if (result.getTotalHits() == 0) {
-                    System.out.printf("No hits (%.2f s)%n", result.getElapsedTime() / 1000.0);
-                } else {
-                    System.out.println();
-                    if (result.getHits().size() < result.getTotalHits()) {
-                        System.out.printf("%d out of %d hits displayed (%.2f s)%n", result.getHits().size(), result.getTotalHits(), result.getElapsedTime() / 1000.0);
-                    } else {
-                        System.out.printf("%d hits  (%.2f ms)%n", result.getTotalHits(), result.getElapsedTime() / 1000.0);
+            boolean showProgressBar = true;
+            GameConsumer gameConsumer;
+            if (output == null) {
+                if (!stats) {
+                    gameConsumer = new StdoutGamesSummary(countAll);
+                    showProgressBar = false;
+                    if (limit == 0) {
+                        limit = 50;
                     }
+                } else {
+                    gameConsumer = new StatsGameConsumer();
                 }
+            } else if (output.endsWith(".cbh")) {
+                File file = new File(output);
+                if (!overwrite && file.exists()) {
+                    throw new FileAlreadyExistsException(output);
+                }
+                if (file.exists()) {
+                    // TODO: Clear up old files, or add support for overwrite in Database
+                }
+                gameConsumer = new DatabaseBuilder(file);
+            } else {
+                throw new IllegalArgumentException("Unknown output format: " + output);
             }
+
+            GameSearcher.SearchResult result;
+
+            gameConsumer.init();
+
+            if (showProgressBar) {
+                try (ProgressBar pb = new ProgressBar("Games", gameSearcher.getTotal())) {
+                    result = gameSearcher.search(limit, countAll, gameConsumer, pb::stepTo);
+                }
+            } else {
+                result = gameSearcher.search(limit, countAll, gameConsumer, null);
+            }
+
+            gameConsumer.done(result);
         }
         return 0;
     }
 
-    private void outputHeader() {
-        output("Game #",
-                "White",
-                "",
-                "Black",
-                "",
-                "Res",
-                "Mov",
-                "ECO",
-                "Tournament",
-                "Date");
-        System.out.println("-".repeat(120));
-    }
 
-    private void output(String... columns) {
-        System.out.printf("%8s  %-20s %4s  %-20s %4s  %3s %3s  %3s  %-30s  %10s%n", (Object[]) columns);
-    }
-
-    private void outputHit(GameSearcher.Hit hit) {
-        GameHeader header = hit.getGameHeader();
-
-        int gameId = header.getId();
-
-        String whitePlayer, blackPlayer, whiteElo, blackElo, result, numMoves, eco, tournament;
-        if (header.isGuidingText()) {
-            whitePlayer = "?"; // TODO: Where is the Text title stored?
-            blackPlayer = "";
-            whiteElo = "";
-            blackElo = "";
-            result = "Txt";
-            numMoves = "";
-            eco = "";
-            tournament = "";
-        } else {
-            PlayerEntity white = hit.getWhite();
-            PlayerEntity black = hit.getBlack();
-            whitePlayer = white.getFullNameShort();
-            blackPlayer = black.getFullNameShort();
-            whiteElo = header.getWhiteElo() == 0 ? "" : Integer.toString(header.getWhiteElo());
-            blackElo = header.getBlackElo() == 0 ? "" : Integer.toString(header.getBlackElo());
-            result = header.getResult().toString();
-            if (header.getResult() == GameResult.DRAW) {
-                result = "½-½";
-            } else if (header.getResult() == GameResult.NOT_FINISHED) {
-                result = header.getLineEvaluation().toASCIIString();
-            }
-            numMoves = header.getNoMoves() > 0 ? Integer.toString(header.getNoMoves()) : "";
-            eco = header.getEco().toString().substring(0, 3);
-            if (eco.equals("???")) {
-                eco = "";
-            }
-            tournament = hit.getTournament().getTitle();
-        }
-
-        String playedDate = header.getPlayedDate().toPrettyString();
-
-        output(Integer.toString(gameId),
-                limit(whitePlayer, 20),
-                limit(whiteElo, 4),
-                limit(blackPlayer, 20),
-                limit(blackElo, 4),
-                limit(result, 3),
-                limit(numMoves, 3),
-                limit(eco, 3),
-                limit(tournament, 30),
-                limit(playedDate, 10));
-    }
-
-    private String limit(String s, int n) {
-        return s.length() > n ? s.substring(0, n) : s;
-    }
 }
 
 

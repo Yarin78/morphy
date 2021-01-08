@@ -111,7 +111,6 @@ public class PersistentEntityNodeStorage<T extends Entity & Comparable<T>> exten
         try {
             channel.position(0);
             channel.write(buffer);
-            channel.force(false);
         } catch (IOException e) {
             throw new ChessBaseIOException("Failed to write metadata to entity storage " + storageName);
         }

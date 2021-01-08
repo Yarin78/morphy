@@ -71,8 +71,7 @@ public class FileBlobStorageTest {
         assertEquals(58, storage.getSize());
     }
 
-    // @Test
-    // TODO: Make this an integration test
+    @Test
     public void addAndReplaceRandomBlobs() throws IOException {
         Random random = new Random(0);
         final int iter = 1000, positions = 20;

@@ -45,6 +45,17 @@ public class GameSearcher {
      * @return an iterable over all hits.
      */
     public Stream<Hit> streamSearch() {
+        return streamSearch(null);
+    }
+
+    /**
+     * Performs the actual search. The search is done lazily.
+     * This function can only be called once per instance.
+     * @param progressUpdater an optional updater that will be called after every processed game with the gameId
+     *                        of the most recent processed game (but not if it's filtered out by a {@link SerializedGameHeaderFilter}).
+     * @return an iterable over all hits.
+     */
+    public Stream<Hit> streamSearch(Consumer<Integer> progressUpdater) {
         if (hasSearched) {
             throw new IllegalStateException("A search has already been executed");
         }
@@ -72,8 +83,12 @@ public class GameSearcher {
 
         log.info("Starting game search from game id " + firstGameId);
 
-        return this.database.getHeaderBase()
-                .stream(firstGameId, rawFilter)
+        Stream<GameHeader> searchStream = this.database.getHeaderBase()
+                .stream(firstGameId, rawFilter);
+        if (progressUpdater != null) {
+            searchStream = searchStream.peek(game -> progressUpdater.accept(game.getId()));
+        }
+        return searchStream
                 .filter(this::matches)
                 .map(Hit::new);
     }
@@ -93,21 +108,21 @@ public class GameSearcher {
      * @return the search result
      */
     public SearchResult search(int limit, boolean countAll) {
-        return search(limit, countAll, null);
+        return search(limit, countAll, null, null);
     }
 
     /**
      * Performs the actual search.
-     * @param limit maximum number of hits to return
+     * @param limit maximum number of hits to consume/return
      * @param countAll if true, also count the total number of hits
      * @param hitConsumer an optional consumer of each hit, called as soon as a hit is found
      * @return the search result
      */
-    public SearchResult search(int limit, boolean countAll, Consumer<Hit> hitConsumer) {
-        AtomicInteger hitsFound = new AtomicInteger(0);
+    public SearchResult search(int limit, boolean countAll, Consumer<Hit> hitConsumer, Consumer<Integer> progressUpdater) {
+        AtomicInteger hitsFound = new AtomicInteger(0), hitsConsumed = new AtomicInteger(0);
         long startTime = System.currentTimeMillis();
 
-        Stream<Hit> searchStream = streamSearch();
+        Stream<Hit> searchStream = streamSearch(progressUpdater);
         if (!countAll && limit > 0) {
             searchStream = searchStream.limit(limit);
         }
@@ -115,18 +130,20 @@ public class GameSearcher {
         ArrayList<Hit> result = new ArrayList<>();
         searchStream.forEachOrdered(hit -> {
             if (hitsFound.incrementAndGet() <= limit || limit == 0) {
-                result.add(hit);
+                hitsConsumed.incrementAndGet();
                 if (hitConsumer != null) {
                     hitConsumer.accept(hit);
+                } else {
+                    result.add(hit);
                 }
             }
         });
 
-        return new SearchResult(hitsFound.get(), result, System.currentTimeMillis() - startTime);
+        return new SearchResult(hitsFound.get(), hitsConsumed.get(), result, System.currentTimeMillis() - startTime);
     }
 
     /**
-     * Adds a new filter to the searcher. This can only be done before {@link #search(int, boolean, Consumer)} ()} has been called.
+     * Adds a new filter to the searcher. This can only be done before {@link #search()} ()} has been called.
      * @param filter the filter to add
      */
     public void addFilter(SearchFilter filter) {
@@ -154,9 +171,11 @@ public class GameSearcher {
     @AllArgsConstructor
     public class SearchResult {
         @Getter
-        private int totalHits;
+        private int totalHits; // If countAll is false and a limit was used, then the counting stopped at limit
         @Getter
-        private List<Hit> hits;
+        private int consumedHits;
+        @Getter
+        private List<Hit> hits; // Only set if no Consumer<Hit> was given
         @Getter
         private long elapsedTime;
     }

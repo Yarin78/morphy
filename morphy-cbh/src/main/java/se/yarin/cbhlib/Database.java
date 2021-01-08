@@ -8,6 +8,7 @@ import se.yarin.cbhlib.annotations.AnnotationBase;
 import se.yarin.cbhlib.entities.AnnotatorBase;
 import se.yarin.cbhlib.entities.TournamentBase;
 import se.yarin.cbhlib.exceptions.ChessBaseException;
+import se.yarin.cbhlib.exceptions.ChessBaseInvalidDataException;
 import se.yarin.cbhlib.games.GameHeader;
 import se.yarin.cbhlib.games.GameHeaderBase;
 import se.yarin.cbhlib.games.GameLoader;
@@ -18,6 +19,7 @@ import se.yarin.chess.GameModel;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.UUID;
 
 /**
  * Represents a ChessBase database.
@@ -38,6 +40,11 @@ public final class Database implements AutoCloseable {
 
     private final DatabaseUpdater updater;
     private final GameLoader loader;
+
+    // The database id is not persisted but unique each time the database is reloaded
+    // It's used to know if an entity id in a GameModel can be used or not in the context of a database,
+    // when games are copied between databases.
+    @Getter @NonNull private final String databaseId;
 
     @Getter @NonNull private final GameHeaderBase headerBase;
     @Getter @NonNull private final MovesBase movesBase;
@@ -75,6 +82,7 @@ public final class Database implements AutoCloseable {
 
         this.loader = new GameLoader(this);
         this.updater = new DatabaseUpdater(this, loader);
+        this.databaseId = UUID.randomUUID().toString();
     }
 
     private static void validateDatabaseName(File file) {
@@ -169,9 +177,10 @@ public final class Database implements AutoCloseable {
      * Adds a new game to the database
      * @param model the model of the game to add
      * @return the game header of the saved game
+     * @throws ChessBaseInvalidDataException if the game model contained invalid data
      * @throws IOException if the game couldn't be stored due to an IO error
      */
-    public GameHeader addGame(@NonNull GameModel model) {
+    public GameHeader addGame(@NonNull GameModel model) throws ChessBaseInvalidDataException {
         return updater.addGame(model);
     }
 
@@ -180,9 +189,10 @@ public final class Database implements AutoCloseable {
      * @param gameId the id of the game to replace
      * @param model the model of the game to replace
      * @return the game header of the saved game
+     * @throws ChessBaseInvalidDataException if the game model contained invalid data
      * @throws IOException if the game couldn't be stored due to an IO error
      */
-    public GameHeader replaceGame(int gameId, @NonNull GameModel model) {
+    public GameHeader replaceGame(int gameId, @NonNull GameModel model) throws ChessBaseInvalidDataException {
         return updater.replaceGame(gameId, model);
     }
 

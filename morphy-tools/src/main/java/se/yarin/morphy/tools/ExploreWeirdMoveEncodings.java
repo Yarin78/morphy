@@ -18,7 +18,7 @@ import static se.yarin.chess.Chess.*;
 
 public class ExploreWeirdMoveEncodings {
 
-    public static void main2(String[] args) throws IOException {
+    public static void main2(String[] args) throws IOException, ChessBaseInvalidDataException {
         Database db = Database.create(new File("testbases/tmp/Weird Move Encodings/multimodes2.cbh"));
 /*
         byte[] moveData = convert("85 E2 56 6B FB B7 1F 35 56 BC 1F DF 49 85 1F 9B FB 9D 1F 43 9F B6 D4 C0 30 38 85 15 30 7F 6C 6D 6C C0 11 98 85 E5 AA ED 30 9E B6 B5 6B BD 78 7F 78 FA 67 3E 78 A4 75 65 78 6C 75 81 75 2A 31 41 26 12 31 C6 C8 B2 92 05 31 B1 C8 54 C8 B9 12 49 60 4C A0 AA A9 FB D1 48 5F 3F 4B E9 60 B8 4E 55 4B 7A 96 13 A0 A2 5F 21 A6 DD EB DC AB B3");
@@ -74,7 +74,7 @@ public class ExploreWeirdMoveEncodings {
 
     }
 
-    public static void mainx(String[] args) throws IOException {
+    public static void mainx(String[] args) throws IOException, ChessBaseInvalidDataException {
         Database db = Database.create(new File("testbases/tmp/Weird Move Encodings/mode11_2.cbh"));
 
 //        for (int mode = 0; mode < 32; mode++) {
@@ -116,7 +116,7 @@ public class ExploreWeirdMoveEncodings {
         db.close();
     }
 
-    public static void main4(String[] args) throws IOException {
+    public static void main4(String[] args) throws IOException, ChessBaseInvalidDataException {
         Database db = Database.create(new File("testbases/tmp/Weird Move Encodings/mode1prom4.cbh"));
         db.getMovesBase().setEncodingMode(1);
 

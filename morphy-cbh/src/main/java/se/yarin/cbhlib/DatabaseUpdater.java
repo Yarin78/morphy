@@ -5,6 +5,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.cbhlib.entities.*;
 import se.yarin.cbhlib.exceptions.ChessBaseIOException;
+import se.yarin.cbhlib.exceptions.ChessBaseInvalidDataException;
 import se.yarin.cbhlib.games.GameHeader;
 import se.yarin.cbhlib.games.GameLoader;
 import se.yarin.cbhlib.storage.EntityStorageException;
@@ -35,9 +36,10 @@ public class DatabaseUpdater {
      * Adds a new game to the database
      * @param model the model of the game to add
      * @return the game header of the saved game
+     * @throws ChessBaseInvalidDataException if the game model contained invalid data
      * @throws ChessBaseIOException if the game couldn't be stored due to an IO error
      */
-    public GameHeader addGame(@NonNull GameModel model) {
+    public GameHeader addGame(@NonNull GameModel model) throws ChessBaseInvalidDataException {
         int gameId = database.getHeaderBase().getNextGameId();
 
         int annotationOfs = database.getAnnotationBase().putAnnotations(gameId, 0, model.moves());
@@ -58,9 +60,10 @@ public class DatabaseUpdater {
      * @param gameId the id of the game to replace
      * @param model the model of the game to replace
      * @return the game header of the saved game
+     * @throws ChessBaseInvalidDataException if the game model contained invalid data
      * @throws ChessBaseIOException if the game couldn't be stored due to an IO error
      */
-    public GameHeader replaceGame(int gameId, @NonNull GameModel model) {
+    public GameHeader replaceGame(int gameId, @NonNull GameModel model) throws ChessBaseInvalidDataException {
         GameHeader oldGameHeader = database.getHeaderBase().getGameHeader(gameId);
         if (oldGameHeader == null) {
             throw new IllegalArgumentException("There is no game with game id " + gameId);

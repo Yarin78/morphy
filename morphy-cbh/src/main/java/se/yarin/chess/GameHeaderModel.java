@@ -104,9 +104,9 @@ public class GameHeaderModel {
     public void setAnnotator(String annotator) { setField(FIELD_ANNOTATOR, annotator); }
 
     // This map contains all the fields, including the standard ones
-    private Map<String, Object> fields = new ConcurrentHashMap<>();
+    private final Map<String, Object> fields = new ConcurrentHashMap<>();
 
-    private static Map<String, Field> predefinedHeaderFields = new HashMap<>();
+    private static final Map<String, Field> predefinedHeaderFields = new HashMap<>();
 
     static {
         for (Field field : GameHeaderModel.class.getDeclaredFields()) {

@@ -326,7 +326,6 @@ public class GameHeaderBase implements GameHeaderSerializer {
             builder.subRound(ByteBufferUtil.getUnsignedByte(buf));
             builder.whiteElo(ByteBufferUtil.getUnsignedShortB(buf));
             builder.blackElo(ByteBufferUtil.getUnsignedShortB(buf));
-
             int ecoValue = ByteBufferUtil.getUnsignedShortB(buf);
             if (ecoValue >= 65536 - 960) {
                 builder.chess960StartPosition(ecoValue - 65536 + 960);
@@ -340,6 +339,7 @@ public class GameHeaderBase implements GameHeaderSerializer {
                 }
                 builder.chess960StartPosition(-1);
             }
+
             builder.medals(Medal.decode(ByteBufferUtil.getUnsignedShortB(buf)));
             int flagInt = ByteBufferUtil.getIntB(buf);
 
@@ -355,6 +355,7 @@ public class GameHeaderBase implements GameHeaderSerializer {
             }
 
             builder.flags(flags);
+
             // These extra annotation bytes provide extra significance to flags already set
             // If the corresponding flag isn't set, the bit may be dirty and should be ignored
             int extraAnnotations2 = ByteBufferUtil.getUnsignedByte(buf);
@@ -366,31 +367,35 @@ public class GameHeaderBase implements GameHeaderSerializer {
                 log.warn("Unknown extraAnnotations2 value " + extraAnnotations2 + " in game " + gameId);
             }
             int extraAnnotations = ByteBufferUtil.getUnsignedByte(buf);
-            // This byte may be contain stray bits set which should probably be ignored
-            if (flags.contains(GameHeaderFlags.VARIATIONS)) {
-                builder.variationsMagnitude(1 + (extraAnnotations & 3));
-                extraAnnotations &= ~3;
+
+            if (!flags.isEmpty()) {  // Usually empty, so this is plainly a performance optimization
+                // This byte may be contain stray bits set which should probably be ignored
+                if (flags.contains(GameHeaderFlags.VARIATIONS)) {
+                    builder.variationsMagnitude(1 + (extraAnnotations & 3));
+                    extraAnnotations &= ~3;
+                }
+                if (flags.contains(GameHeaderFlags.COMMENTARY)) {
+                    builder.commentariesMagnitude(((extraAnnotations & 4) > 0) ? 2 : 1);
+                    extraAnnotations &= ~4;
+                }
+                if (flags.contains(GameHeaderFlags.SYMBOLS)) {
+                    builder.symbolsMagnitude(((extraAnnotations & 8) > 0) ? 2 : 1);
+                    extraAnnotations &= ~8;
+                }
+                if (flags.contains(GameHeaderFlags.GRAPHICAL_SQUARES)) {
+                    builder.graphicalSquaresMagnitude(((extraAnnotations & 16) > 0) ? 2 : 1);
+                    extraAnnotations &= ~16;
+                }
+                if (flags.contains(GameHeaderFlags.GRAPHICAL_ARROWS)) {
+                    builder.graphicalArrowsMagnitude(((extraAnnotations & 32) > 0) ? 2 : 1);
+                    extraAnnotations &= ~32;
+                }
+                if (flags.contains(GameHeaderFlags.TIME_SPENT)) {
+                    builder.timeSpentMagnitude((extraAnnotations & 128) > 0 ? 2 : 1);
+                    extraAnnotations &= ~128;
+                }
             }
-            if (flags.contains(GameHeaderFlags.COMMENTARY)) {
-                builder.commentariesMagnitude(((extraAnnotations & 4) > 0) ? 2 : 1);
-                extraAnnotations &= ~4;
-            }
-            if (flags.contains(GameHeaderFlags.SYMBOLS)) {
-                builder.symbolsMagnitude(((extraAnnotations & 8) > 0) ? 2 : 1);
-                extraAnnotations &= ~8;
-            }
-            if (flags.contains(GameHeaderFlags.GRAPHICAL_SQUARES)) {
-                builder.graphicalSquaresMagnitude(((extraAnnotations & 16) > 0) ? 2 : 1);
-                extraAnnotations &= ~16;
-            }
-            if (flags.contains(GameHeaderFlags.GRAPHICAL_ARROWS)) {
-                builder.graphicalArrowsMagnitude(((extraAnnotations & 32) > 0) ? 2 : 1);
-                extraAnnotations &= ~32;
-            }
-            if (flags.contains(GameHeaderFlags.TIME_SPENT)) {
-                builder.timeSpentMagnitude((extraAnnotations & 128) > 0 ? 2 : 1);
-                extraAnnotations &= ~128;
-            }
+
             extraAnnotations &= 64;
             if (extraAnnotations != 0) {
                 log.warn("Unknown extraAnnotations value " + extraAnnotations + " in game " + gameId);

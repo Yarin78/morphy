@@ -25,7 +25,7 @@ public abstract class EntityBase<T extends Entity & Comparable<T>> implements En
     // Cache entities by id to avoid having to deserialize the same entity again and again.
     // Only used when doing direct lookups, not when iterating over ranges.
     // TODO: Proper LRU cache to save memory
-    private Map<Integer, T> cacheById = new HashMap<>();
+    private final Map<Integer, T> cacheById = new HashMap<>();
 
     /**
      * Gets the underlying storage of the database.

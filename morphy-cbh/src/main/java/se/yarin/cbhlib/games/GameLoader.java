@@ -8,6 +8,7 @@ import se.yarin.cbhlib.annotations.AnnotationStatistics;
 import se.yarin.cbhlib.annotations.StatisticalAnnotation;
 import se.yarin.cbhlib.entities.*;
 import se.yarin.cbhlib.exceptions.ChessBaseException;
+import se.yarin.cbhlib.exceptions.ChessBaseInvalidDataException;
 import se.yarin.cbhlib.storage.EntityStorageException;
 import se.yarin.chess.*;
 import se.yarin.chess.annotations.Annotation;
@@ -21,6 +22,7 @@ import java.util.EnumSet;
 public class GameLoader {
     private static final Logger log = LoggerFactory.getLogger(GameLoader.class);
 
+    public static final String DATABASE_ID = "databaseId";
     public static final String WHITE_ID = "whiteId";
     public static final String BLACK_ID = "blackId";
     public static final String EVENT_ID = "eventId";
@@ -45,6 +47,8 @@ public class GameLoader {
         AnnotatorEntity annotator = database.getAnnotatorBase().get(header.getAnnotatorId());
         SourceEntity source = database.getSourceBase().get(header.getSourceId());
         TournamentEntity tournament = database.getTournamentBase().get(header.getTournamentId());
+
+        model.setField(DATABASE_ID, database);
 
         model.setWhite(whitePlayer.getFullName());
         model.setField(WHITE_ID, whitePlayer.getId());
@@ -111,7 +115,7 @@ public class GameLoader {
         return new GameModel(headerModel, moves);
     }
 
-    public GameHeader createGameHeader(GameModel model, int movesOfs, int annotationOfs) {
+    public GameHeader createGameHeader(GameModel model, int movesOfs, int annotationOfs) throws ChessBaseInvalidDataException {
         GameHeaderModel header = model.header();
 
         PlayerEntity white, black;
@@ -119,22 +123,27 @@ public class GameLoader {
         AnnotatorEntity annotator;
         SourceEntity source;
 
+        // If the GameModel contains ID's from a different database, we can't use them
+        boolean sameDb = database.getDatabaseId().equals(header.getField(DATABASE_ID));
+
         // Lookup or create the entities that are referenced in the game header
         // If the id field is set, use that one. Otherwise use the string field.
         // If no entity exists with the same name, create a new one.
         // TODO: Would be nice to create these entities in a transaction and wait with the commit
         try {
-            white = resolveEntity((Integer) header.getField(WHITE_ID),
+            white = resolveEntity(sameDb ? (Integer) header.getField(WHITE_ID) : 0,
                     PlayerEntity.fromFullName(defaultName(header.getWhite())), database.getPlayerBase());
-            black = resolveEntity((Integer) header.getField(BLACK_ID),
+            black = resolveEntity(sameDb ? (Integer) header.getField(BLACK_ID) : 0,
                     PlayerEntity.fromFullName(defaultName(header.getBlack())), database.getPlayerBase());
-            tournament = resolveEntity((Integer) header.getField(EVENT_ID),
+            tournament = resolveEntity(sameDb ? (Integer) header.getField(EVENT_ID) : 0,
                     new TournamentEntity(defaultName(header.getEvent()), Date.today()), database.getTournamentBase());
-            annotator = resolveEntity((Integer) header.getField(ANNOTATOR_ID),
+            annotator = resolveEntity(sameDb ? (Integer) header.getField(ANNOTATOR_ID) : 0,
                     new AnnotatorEntity(defaultName(header.getAnnotator())), database.getAnnotatorBase());
-            source = resolveEntity((Integer) header.getField(SOURCE_ID),
+            source = resolveEntity(sameDb ? (Integer) header.getField(SOURCE_ID) : 0,
                     new SourceEntity(defaultName(header.getSourceTitle())), database.getSourceBase());
-        } catch (RuntimeException e) {
+        } catch (IllegalArgumentException e) {
+           throw new ChessBaseInvalidDataException("Failed to create GameHeader entry due to invalid entity data reference", e);
+        }  catch (RuntimeException e) {
             throw new IllegalArgumentException("Some argument were not set in the game header model", e);
         }
 
@@ -226,7 +235,7 @@ public class GameLoader {
         if (id != null && id > 0) {
             entity = base.get(id);
             if (entity == null) {
-                throw new IllegalArgumentException("No entity with id " + id);
+                throw new IllegalArgumentException("No entity with id " + id + " in " + base.getClass().getSimpleName());
             }
         } else {
             entity = base.getAny(key);
