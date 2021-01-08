@@ -2,3 +2,4 @@
 target/
 bases/
 mediafiles/
+.DS_Store
