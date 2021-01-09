@@ -7,7 +7,7 @@ import java.nio.ByteBuffer;
 
 public class GameQuotationMoveEncoder implements MoveEncoder {
 
-    private MoveEncoder encoder;
+    private final MoveEncoder encoder;
 
     public GameQuotationMoveEncoder() {
         encoder = new SimpleMoveEncoder(8, true, false);
@@ -30,9 +30,9 @@ public class GameQuotationMoveEncoder implements MoveEncoder {
     }
 
     @Override
-    public void decode(ByteBuffer buf, GameMovesModel movesModel)
+    public void decode(ByteBuffer buf, GameMovesModel movesModel, boolean validateMoves)
             throws ChessBaseMoveDecodingException {
-        encoder.decode(buf, movesModel);
+        encoder.decode(buf, movesModel, validateMoves);
 
         // Get rid of the trailing null move
         GameMovesModel.Node current = movesModel.root();

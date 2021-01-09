@@ -73,8 +73,8 @@ public class CompactMoveEncoder implements MoveEncoder {
     private static final int[] kingDir = new int[] { 1, 9, 8, 7, -1, -9, -8, -7};
     private static final int[] knightDir = new int[] { 17, 10, -6, -15, -17, -10, 6, 15 };
 
-    private static int[] kingDelta;
-    private static int[] knightDelta;
+    private static final int[] kingDelta;
+    private static final int[] knightDelta;
 
     static {
         // Map the opcode ranges into lookup tables for each opcode
@@ -249,18 +249,18 @@ public class CompactMoveEncoder implements MoveEncoder {
             return sqi * 64 + sqi;
         }
 
-        int code = 0;
-        switch (move.promotionStone().toPiece()) {
-            case QUEEN :code = 0; break;
-            case ROOK  :code = 1; break;
-            case BISHOP:code = 2; break;
-            case KNIGHT:code = 3; break;
-        }
+        int code = switch (move.promotionStone().toPiece()) {
+            case QUEEN -> 0;
+            case ROOK -> 1;
+            case BISHOP -> 2;
+            case KNIGHT -> 3;
+            default -> 0;
+        };
         return move.fromSqi() + move.toSqi() * 64 + code * 4096;
     }
 
     @Override
-    public synchronized void decode(ByteBuffer buf, GameMovesModel movesModel)
+    public synchronized void decode(ByteBuffer buf, GameMovesModel movesModel, boolean validateMoves)
             throws ChessBaseMoveDecodingException {
 
         GameMovesModel.Node currentNode = movesModel.root();
@@ -315,7 +315,7 @@ public class CompactMoveEncoder implements MoveEncoder {
 
             // Update position of the moved piece
             piecePosition = piecePosition.doMove(move);
-            currentNode = currentNode.addMove(move);
+            currentNode = validateMoves ? currentNode.addMove(move) : currentNode.addMoveUnsafe(move);
 
             if (INTEGRITY_CHECKS_ENABLED) {
                 piecePosition.validate(currentNode.position());

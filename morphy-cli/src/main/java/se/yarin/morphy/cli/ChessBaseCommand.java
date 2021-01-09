@@ -89,6 +89,9 @@ class Games implements Callable<Integer> {
         Locale.setDefault(Locale.US);
 
         try (Database db = Database.open(cbhFile)) {
+            // Speeds up performance quite a lot, and we should be fairly certain that the moves in the CBH databases are valid
+            db.getMovesBase().setValidateDecodedMoves(false);
+
             GameSearcher gameSearcher = new GameSearcher(db);
 
             if (players != null) {

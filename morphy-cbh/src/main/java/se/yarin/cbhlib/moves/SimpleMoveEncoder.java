@@ -52,18 +52,10 @@ public class SimpleMoveEncoder implements MoveEncoder {
                 value = move.toSqi() + move.fromSqi() * 64;
             }
             switch (move.promotionStone().toPiece()) {
-                case QUEEN:
-                    value += 0;
-                    break;
-                case ROOK:
-                    value += 1 << 12;
-                    break;
-                case BISHOP:
-                    value += 2 << 12;
-                    break;
-                case KNIGHT:
-                    value += 3 << 12;
-                    break;
+                case QUEEN -> value += 0;
+                case ROOK -> value += 1 << 12;
+                case BISHOP -> value += 2 << 12;
+                case KNIGHT -> value += 3 << 12;
             }
             if (i + 1 < children.size()) {
                 value += 1 << 15;
@@ -83,7 +75,7 @@ public class SimpleMoveEncoder implements MoveEncoder {
     }
 
     @Override
-    public synchronized void decode(ByteBuffer buf, GameMovesModel movesModel)
+    public synchronized void decode(ByteBuffer buf, GameMovesModel movesModel, boolean validateMoves)
             throws ChessBaseMoveDecodingException {
         if (!buf.hasRemaining()) {
             // An empty game can't have a proper end marker, so it needs a special check
@@ -120,21 +112,13 @@ public class SimpleMoveEncoder implements MoveEncoder {
 
             int toRow = Chess.sqiToRow(toSqi);
             if ((toRow == 0 || toRow == 7) && current.position().stoneAt(fromSqi).toPiece() == Piece.PAWN) {
-                Piece promotionPiece = Piece.NO_PIECE;
-                switch ((value / 4096) % 4) {
-                    case 0:
-                        promotionPiece = Piece.QUEEN;
-                        break;
-                    case 1:
-                        promotionPiece = Piece.ROOK;
-                        break;
-                    case 2:
-                        promotionPiece = Piece.BISHOP;
-                        break;
-                    case 3:
-                        promotionPiece = Piece.KNIGHT;
-                        break;
-                }
+                Piece promotionPiece = switch ((value / 4096) % 4) {
+                    case 0 -> Piece.QUEEN;
+                    case 1 -> Piece.ROOK;
+                    case 2 -> Piece.BISHOP;
+                    case 3 -> Piece.KNIGHT;
+                    default -> Piece.NO_PIECE;
+                };
                 Stone promotionStone = promotionPiece.toStone(current.position().playerToMove());
                 move = new Move(current.position(), fromSqi, toSqi, promotionStone);
             }
@@ -143,7 +127,7 @@ public class SimpleMoveEncoder implements MoveEncoder {
                 log.debug(String.format("Decoded move %s with flags %d", move, value >> 14));
             }
             try {
-                current = current.addMove(move);
+                current = validateMoves ? current.addMoveUnsafe(move) : current.addMove(move);
             } catch (IllegalMoveException e) {
                 throw new ChessBaseMoveDecodingException("Decoded illegal move: " + move);
             }

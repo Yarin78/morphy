@@ -20,9 +20,10 @@ import static se.yarin.chess.Player.WHITE;
  */
 class StonePositions {
     // For every stone, there's a list of square indexes
-    private int[][] pieceSqi;
+    private final int[] pieceSqi;
+    private static final int[] stoneOffset = {0, 1, 4, 7, 10, 13, 21, 21, 29, 32, 35, 38, 41, 42};
 
-    private StonePositions(int[][] pieceSqi) {
+    private StonePositions(int[] pieceSqi) {
         this.pieceSqi = pieceSqi;
     }
 
@@ -34,28 +35,19 @@ class StonePositions {
      * Initializes a {@link StonePositions} from a board position.
      */
     public static StonePositions fromPosition(Position position, boolean reverse) {
-        int[][] pps = new int[13][];
-        for (Stone stone : Stone.values()) {
-            int cnt;
-            switch (stone.toPiece()) {
-                case PAWN: cnt = 8; break;
-                case KING: cnt = 1; break;
-                default  : cnt = 3; break;
-            }
-            pps[stone.index()] = new int[cnt];
-            for (int i = 0; i < cnt; i++) {
-                pps[stone.index()][i] = -1;
-            }
+        int[] pps = new int[42];
+        for (int i = 0; i < 42; i++) {
+            pps[i] = -1;
         }
 
         for (int ii = 0; ii < 64; ii++) {
             int i = reverse ? 63 - ii : ii;
             Stone stone = position.stoneAt(i);
             if (!stone.isNoStone()) {
-                int[] pp = pps[stone.index()];
-                for (int j = 0; j < pp.length; j++) {
-                    if (pp[j] == -1) {
-                        pp[j] = i;
+                int from = stoneOffset[stone.index()], to = stoneOffset[stone.index() + 1];
+                for (int j = from; j < to; j++) {
+                    if (pps[j] == -1) {
+                        pps[j] = i;
                         break;
                     }
                 }
@@ -64,12 +56,8 @@ class StonePositions {
         return new StonePositions(pps);
     }
 
-    private int[][] cloneData() {
-        int[][] a = new int[pieceSqi.length][];
-        for (int i = 0; i < a.length; i++) {
-            a[i] = pieceSqi[i].clone();
-        }
-        return a;
+    private int[] cloneData() {
+        return pieceSqi.clone();
     }
 
     /**
@@ -79,8 +67,9 @@ class StonePositions {
      * @return the square for this stone, or -1 if no stone with this stoneNo on the board
      */
     public int getSqi(Stone stone, int stoneNo) {
-        if (stoneNo >= 0 && stoneNo < pieceSqi[stone.index()].length) {
-            return pieceSqi[stone.index()][stoneNo];
+        int from = stoneOffset[stone.index()], to = stoneOffset[stone.index() + 1];
+        if (stoneNo >= 0 && stoneNo < to-from) {
+            return pieceSqi[from + stoneNo];
         }
         return -1;
     }
@@ -92,9 +81,9 @@ class StonePositions {
      * @return the stone number, or -1 if the given stone isn't on the given square
      */
     public int getStoneNo(Stone stone, int sqi) {
-        int[] pp = pieceSqi[stone.index()];
-        for (int j = 0; j < pp.length; j++) {
-            if (pp[j] == sqi) return j;
+        int from = stoneOffset[stone.index()], to = stoneOffset[stone.index() + 1];
+        for (int j = from; j < to; j++) {
+            if (pieceSqi[j] == sqi) return j - from;
         }
         return -1;
     }
@@ -110,24 +99,24 @@ class StonePositions {
             return this;
         }
 
-        int[][] pieces = cloneData();
+        int[] pieces = cloneData();
         Stone stone = move.movingStone();
         int stoneNo = getStoneNo(stone, move.fromSqi());
         if (stoneNo >= 0) {
-            pieces[stone.index()][stoneNo] = move.toSqi();
+            pieces[stoneOffset[stone.index()] + stoneNo] = move.toSqi();
         }
 
         // In case of pawn promotion, the pawn must be removed and the promoted piece added
         if (move.promotionStone() != Stone.NO_STONE && stone.toPiece() == Piece.PAWN) {
             // Remove the pawn (pawn positions are not adjusted)
-            pieces[stone.index()][stoneNo] = -1;
+            pieces[stoneOffset[stone.index()] + stoneNo] = -1;
 
             // Add the promotion piece by finding the first available position for that stone
             // If there are no available positions, the new piece will not be added (which is okay)
-            int[] pp = pieces[move.promotionStone().index()];
-            for (int j = 0; j < pp.length; j++) {
-                if (pp[j] == -1) {
-                    pp[j] = move.toSqi();
+            int from = stoneOffset[move.promotionStone().index()], to = stoneOffset[move.promotionStone().index() + 1];
+            for (int j = from; j < to; j++) {
+                if (pieces[j] == -1) {
+                    pieces[j] = move.toSqi();
                     break;
                 }
             }
@@ -149,7 +138,7 @@ class StonePositions {
             int rookNo = getStoneNo(rook, rookFromSqi);
             // This can probably be -1 in case of a setup position with more than 3 rooks and castling still allowed...
             if (rookNo >= 0) {
-                pieces[rook.index()][rookNo] = rookToSqi;
+                pieces[stoneOffset[rook.index()] + rookNo] = rookToSqi;
             }
         }
 
@@ -161,23 +150,23 @@ class StonePositions {
                 captureSqi = Chess.coorToSqi(move.toCol(), move.fromRow());
             }
             int pno = getStoneNo(capturedStone, captureSqi);
-            int[] removeStone = pieces[capturedStone.index()];
+            int removeFrom = stoneOffset[capturedStone.index()], removeTo = stoneOffset[capturedStone.index() + 1];
 
             // If it's a pawn, just remove it
             if (capturedStone.toPiece() == Piece.PAWN) {
-                removeStone[pno] = -1;
+                pieces[removeFrom + pno] = -1;
             } else {
                 // Otherwise we must adjust the pieces (shift left)
-                int i = 0, j = 0;
-                while (i < removeStone.length) {
-                    if (removeStone[i] != captureSqi) {
-                        removeStone[j++] = removeStone[i++];
+                int i = removeFrom, j = removeFrom;
+                while (i < removeTo) {
+                    if (pieces[i] != captureSqi) {
+                        pieces[j++] = pieces[i++];
                     } else {
                         i++;
                     }
                 }
-                while (j < removeStone.length) {
-                    removeStone[j++] = -1;
+                while (j < removeTo) {
+                    pieces[j++] = -1;
                 }
             }
         }
@@ -192,7 +181,9 @@ class StonePositions {
         for (Stone stone : Stone.values()) {
             if (stone.isNoStone()) continue;
             boolean endReached = false;
-            for (int sqi : pieceSqi[stone.index()]) {
+            int from = stoneOffset[stone.index()], to = stoneOffset[stone.index() + 1];
+            for (int i = from; i < to; i++) {
+                int sqi = pieceSqi[i];
                 if (sqi < 0) {
                     endReached = true;
                 } else {

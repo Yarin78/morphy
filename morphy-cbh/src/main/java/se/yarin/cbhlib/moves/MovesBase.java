@@ -25,9 +25,13 @@ public class MovesBase implements BlobSizeRetriever {
     private final BlobStorage storage;
     private int overrideEncodingMode = -1; // The encoding mode to use when writing games, -1 = default based on type
 
+    private boolean validateDecodedMoves = true; // If true, validate all moves when decoding
+
     public void setEncodingMode(int encodingMode) {
         this.overrideEncodingMode = encodingMode;
     }
+
+    public void setValidateDecodedMoves(boolean validateDecodedMoves) { this.validateDecodedMoves = validateDecodedMoves; }
 
     /**
      * Creates a new moves base that is initially empty.
@@ -103,7 +107,7 @@ public class MovesBase implements BlobSizeRetriever {
     public GameMovesModel getMoves(int ofs, int gameId)
             throws ChessBaseInvalidDataException, ChessBaseUnsupportedException {
         ByteBuffer blob = storage.readBlob(ofs);
-        return MovesSerializer.deserializeMoves(blob, gameId);
+        return MovesSerializer.deserializeMoves(blob, validateDecodedMoves, gameId);
     }
 
     /**

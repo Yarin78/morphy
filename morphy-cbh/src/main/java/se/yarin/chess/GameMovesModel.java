@@ -487,6 +487,18 @@ public class GameMovesModel {
         /**
          * Adds a move to this node.
          * If the node already contains moves (possibly the same move), a new variation is created.
+         * Does not check if the move is valid! Should only be used for performance reason when
+         * you know the move is legal when processing a large number of games.
+         * @param move the move to add
+         * @return the node representing the position after the added move has been made
+         */
+        public Node addMoveUnsafe(@NonNull Move move) {
+            return internalAddNode(move, false);
+        }
+
+        /**
+         * Adds a move to this node.
+         * If the node already contains moves (possibly the same move), a new variation is created.
          * @param move the move to add
          * @return the node representing the position after the added move has been made
          * @throws IllegalMoveException if the move is illegal from this position

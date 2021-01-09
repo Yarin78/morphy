@@ -92,18 +92,19 @@ public final class MovesSerializer {
      * @throws ChessBaseMoveDecodingException if there was an error deserializing the moves
      */
     public static GameMovesModel deserializeMoves(ByteBuffer buf) throws ChessBaseMoveDecodingException {
-        return deserializeMoves(buf, 0);
+        return deserializeMoves(buf, true, 0);
     }
 
     /**
      * Deserializes the moves of a ChessBase encoded chess game.
      * If there was some error decoding the game
      * @param buf a buffer containing the serialized game
+     * @param validateMoves if true, all decoded moves will be checked if they are legal or not
      * @param gameId the id of the game to load; only used in logging statements
      * @return a model of the game
      * @throws ChessBaseMoveDecodingException if there was an error deserializing the moves
      */
-    public static GameMovesModel deserializeMoves(ByteBuffer buf, int gameId) throws ChessBaseMoveDecodingException {
+    public static GameMovesModel deserializeMoves(ByteBuffer buf, boolean validateMoves, int gameId) throws ChessBaseMoveDecodingException {
         GameMovesModel model;
         int flags, moveSize;
         try {
@@ -149,7 +150,7 @@ public final class MovesSerializer {
         MoveEncoder moveEncoder = getMoveEncoder(encodingMode);
 
         try {
-            moveEncoder.decode(moveBuf, model);
+            moveEncoder.decode(moveBuf, model, validateMoves);
         } catch (ChessBaseMoveDecodingException e) {
             // TODO: Add tests for this
             e.setModel(model);

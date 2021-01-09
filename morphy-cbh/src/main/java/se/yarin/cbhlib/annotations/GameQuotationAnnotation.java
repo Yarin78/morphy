@@ -109,7 +109,7 @@ public class GameQuotationAnnotation extends Annotation implements StatisticalAn
 
         try {
             MoveEncoder encoder = new GameQuotationMoveEncoder();
-            encoder.decode(ByteBuffer.wrap(gameData), moves);
+            encoder.decode(ByteBuffer.wrap(gameData), moves, true);
         } catch (ChessBaseMoveDecodingException e) {
             log.warn("Error parsing move in game quotation", e);
             moves = e.getModel();

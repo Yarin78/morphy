@@ -31,7 +31,7 @@ public enum Stone {
 
     /**
      * @return an index in the range [0,12] representing this stone
-     * &lt;6 = white stones, 6 = NO_STONE, &gt;6 = black stones
+     * &gt;6 = white stones, 6 = NO_STONE, &lt;6 = black stones
      */
     public int index() { return this.value + 6; }
 
