@@ -4,6 +4,7 @@ import lombok.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.cbhlib.exceptions.ChessBaseIOException;
+import se.yarin.cbhlib.util.BufferedFileChannel;
 import se.yarin.cbhlib.util.ByteBufferUtil;
 
 import java.io.File;
@@ -11,30 +12,28 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 
-import static java.nio.file.StandardOpenOption.CREATE_NEW;
-import static java.nio.file.StandardOpenOption.READ;
-import static java.nio.file.StandardOpenOption.WRITE;
+import static java.nio.file.StandardOpenOption.*;
 
 public class FileBlobStorage implements BlobStorage {
     private static final Logger log = LoggerFactory.getLogger(FileBlobStorage.class);
-    private static final int DEFAULT_CHUNK_SIZE = 1024*1024;
+
     private static final int DEFAULT_PREFETCH_SIZE = 4096;
 
     private final File file;
-    private final FileChannel channel;
+    private final BufferedFileChannel channel;
     private final BlobSizeRetriever blobSizeRetriever;
     public static final int DEFAULT_SERIALIZED_HEADER_SIZE = 26; // Size of header to create for a new storage
-    private int size; // Should match channel.size()
+
     private int headerSize; // The actual header size according to the metadata
     private int trashBytes; // The number of bytes in the storage that's not used for any data
 
-    private final int chunkSize, prefetchSize;
+    private final int prefetchSize;
 
 
     public FileBlobStorage(
             @NonNull File file,
             @NonNull BlobSizeRetriever blobSizeRetriever) throws IOException {
-        this(file, blobSizeRetriever, DEFAULT_CHUNK_SIZE, DEFAULT_PREFETCH_SIZE);
+        this(file, blobSizeRetriever, 0, DEFAULT_PREFETCH_SIZE);
     }
 
     public FileBlobStorage(
@@ -42,10 +41,12 @@ public class FileBlobStorage implements BlobStorage {
             @NonNull BlobSizeRetriever blobSizeRetriever,
             int chunkSize, int prefetchSize) throws IOException {
         this.file = file;
-        this.channel = FileChannel.open(file.toPath(), READ, WRITE);
+        this.channel = BufferedFileChannel.open(file.toPath(), READ, WRITE);
         this.blobSizeRetriever = blobSizeRetriever;
-        this.chunkSize = chunkSize;
         this.prefetchSize = prefetchSize;
+        if (chunkSize > 0) {
+            this.channel.setChunkSize(chunkSize);
+        }
 
         loadMetadata();
     }
@@ -58,14 +59,10 @@ public class FileBlobStorage implements BlobStorage {
     }
 
     private void loadMetadata() throws IOException {
-        channel.position(0);
-
-        ByteBuffer buf = ByteBuffer.allocate(DEFAULT_SERIALIZED_HEADER_SIZE);
-        channel.read(buf);
-        buf.flip();
+        ByteBuffer buf = channel.read(0, DEFAULT_SERIALIZED_HEADER_SIZE);
 
         headerSize = ByteBufferUtil.getUnsignedShortB(buf);
-        size = ByteBufferUtil.getIntB(buf);
+        int size = ByteBufferUtil.getIntB(buf);
         trashBytes = ByteBufferUtil.getIntB(buf);
         int unknown2 = 0, unknown3 = 0, trashBytes2 = trashBytes, size2 = size;
 
@@ -96,28 +93,16 @@ public class FileBlobStorage implements BlobStorage {
     }
 
     private void saveMetadata() throws IOException {
-        ByteBuffer buf = serializeMetadata(size, headerSize, trashBytes);
-        channel.position(0);
-        channel.write(buf);
+        ByteBuffer buf = serializeMetadata((int) channel.size(), headerSize, trashBytes);
+        channel.write(0, buf);
     }
 
     @Override
     public ByteBuffer readBlob(int offset) {
         try {
-            channel.position(offset);
-            ByteBuffer buf = ByteBuffer.allocate(prefetchSize);
-            channel.read(buf);
-            buf.position(0);
+            ByteBuffer buf = channel.read(offset, prefetchSize);
             int size = blobSizeRetriever.getBlobSize(buf);
-            if (size > prefetchSize) {
-                ByteBuffer newBuf = ByteBuffer.allocate(size);
-                newBuf.put(buf);
-                channel.read(newBuf);
-                buf = newBuf;
-            }
-            buf.position(0);
-            buf.limit(size);
-            return buf;
+            return channel.read(offset, size);
         } catch (IOException e) {
             throw new ChessBaseIOException("Failed to read blob at offset " + offset + " in " + file.getName());
         }
@@ -126,9 +111,8 @@ public class FileBlobStorage implements BlobStorage {
     @Override
     public int writeBlob(@NonNull ByteBuffer blob) {
         try {
-            int offset = size;
-            channel.position(size);
-            size += channel.write(blob);
+            int offset = (int) channel.size();
+            channel.append(blob);
             saveMetadata();
             return offset;
         } catch (IOException e) {
@@ -139,9 +123,7 @@ public class FileBlobStorage implements BlobStorage {
     @Override
     public void writeBlob(int offset, @NonNull ByteBuffer blob) {
         try {
-            channel.position(offset);
-            channel.write(blob);
-            size = (int) channel.size();
+            channel.write(offset, blob);
             saveMetadata();
         } catch (IOException e) {
             throw new ChessBaseIOException("Failed to write blob to " + file.getName() + " at offset " + offset, e);
@@ -150,7 +132,7 @@ public class FileBlobStorage implements BlobStorage {
 
     @Override
     public int getSize() {
-        return size;
+        return (int) channel.size();
     }
 
     public int getHeaderSize() {
@@ -159,33 +141,8 @@ public class FileBlobStorage implements BlobStorage {
 
     @Override
     public void insert(int offset, int noBytes) {
-        if (noBytes < 0) {
-            throw new IllegalArgumentException("Number of bytes to insert must be non-negative");
-        }
-        if (noBytes == 0) {
-            return;
-        }
-        ByteBuffer buf = ByteBuffer.allocateDirect(chunkSize);
         try {
-            int pos = size;
-            while (pos > offset) {
-                // Invariant: All bytes at position pos and after have been shifted noBytes bytes
-                pos -= chunkSize;
-                int length = chunkSize;
-                if (pos < offset) {
-                    length -= (offset - pos);
-                    pos = offset;
-                }
-                channel.position(pos);
-                buf.limit(length);
-                channel.read(buf);
-                buf.flip();
-                channel.position(pos + noBytes);
-                channel.write(buf);
-                buf.clear();
-            }
-
-            size += noBytes;
+            channel.insert(offset, noBytes);
         } catch (IOException e) {
             throw new ChessBaseIOException("Failed to insert " + noBytes + " in blob " + file.getName());
         }
