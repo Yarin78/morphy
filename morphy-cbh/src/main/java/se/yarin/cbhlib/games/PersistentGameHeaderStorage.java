@@ -5,7 +5,7 @@ import lombok.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.cbhlib.exceptions.ChessBaseIOException;
-import se.yarin.cbhlib.util.BufferedFileChannel;
+import se.yarin.cbhlib.util.BlobChannel;
 import se.yarin.cbhlib.util.ByteBufferUtil;
 
 import java.io.File;
@@ -26,7 +26,7 @@ public class PersistentGameHeaderStorage extends GameHeaderStorageBase {
     private final int serializedGameHeaderSize;
     private final GameHeaderSerializer serializer;
     private final String storageName;
-    private final BufferedFileChannel channel;
+    private final BlobChannel channel;
 
     @Getter
     private int version = 0;
@@ -38,7 +38,7 @@ public class PersistentGameHeaderStorage extends GameHeaderStorageBase {
         this.serializedGameHeaderSize = getMetadata().getSerializedHeaderSize();
         this.storageName = file.getName();
         this.serializer = serializer;
-        channel = BufferedFileChannel.open(file.toPath(), READ, WRITE);
+        channel = BlobChannel.open(file.toPath(), READ, WRITE);
 
         log.debug(String.format("Opening %s; next game id = %d",
                 storageName, getMetadata().getNextGameId()));

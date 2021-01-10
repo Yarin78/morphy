@@ -8,7 +8,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
-public class BufferedFileChannel {
+public class BufferedBlobChannel implements BlobChannel {
     private static final int PAGE_SIZE = 16384;
     private static final int DEFAULT_INSERT_CHUNK_SIZE = 1024*1024;
     private final FileChannel channel;
@@ -16,15 +16,15 @@ public class BufferedFileChannel {
     private int chunkSize;
     private final SimpleLRUCache<Integer, ByteBuffer> pageCache;
 
-    public BufferedFileChannel(FileChannel channel) throws IOException {
+    public BufferedBlobChannel(FileChannel channel) throws IOException {
         this.channel = channel;
         this.size = this.channel.size();
         this.chunkSize = DEFAULT_INSERT_CHUNK_SIZE;
         this.pageCache = new SimpleLRUCache<>(8);
     }
 
-    public static BufferedFileChannel open(Path path, OpenOption... openOptions) throws IOException {
-        return new BufferedFileChannel(FileChannel.open(path, openOptions));
+    public static BufferedBlobChannel open(Path path, OpenOption... openOptions) throws IOException {
+        return new BufferedBlobChannel(FileChannel.open(path, openOptions));
     }
 
     public void setChunkSize(int chunkSize) {
@@ -138,5 +138,6 @@ public class BufferedFileChannel {
 
     public void close() throws IOException {
         channel.close();
+        pageCache.clear();
     }
 }

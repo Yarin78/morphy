@@ -5,6 +5,7 @@ import lombok.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.cbhlib.exceptions.ChessBaseIOException;
+import se.yarin.cbhlib.util.BlobChannel;
 import se.yarin.cbhlib.util.ByteBufferUtil;
 import se.yarin.cbhlib.entities.Entity;
 
@@ -27,7 +28,7 @@ public class PersistentEntityNodeStorage<T extends Entity & Comparable<T>> exten
     private final int serializedEntitySize;
     private final int headerSize;
 
-    private final FileChannel channel;
+    private final BlobChannel channel;
 
     public PersistentEntityNodeStorage(File file, EntitySerializer<T> serializer)
             throws IOException {
@@ -37,7 +38,7 @@ public class PersistentEntityNodeStorage<T extends Entity & Comparable<T>> exten
         this.headerSize = getMetadata().getHeaderSize();
         this.storageName = file.getName();
         this.serializer = serializer;
-        this.channel = FileChannel.open(file.toPath(), READ, WRITE);
+        this.channel = BlobChannel.open(file.toPath(), READ, WRITE);
 
         log.debug(String.format("Opening %s; capacity = %d, root = %d, numEntities = %d, firstDeletedId = %d",
                 storageName, getCapacity(), getRootEntityId(), getNumEntities(), getFirstDeletedEntityId()));
@@ -109,8 +110,7 @@ public class PersistentEntityNodeStorage<T extends Entity & Comparable<T>> exten
         ByteBuffer buffer = serializeMetadata(metadata);
 
         try {
-            channel.position(0);
-            channel.write(buffer);
+            channel.write(0, buffer);
         } catch (IOException e) {
             throw new ChessBaseIOException("Failed to write metadata to entity storage " + storageName);
         }
@@ -123,26 +123,24 @@ public class PersistentEntityNodeStorage<T extends Entity & Comparable<T>> exten
     }
 
     /**
-     * Positions the channel at the start of the specified entityId.
+     * Gets the offset for a specific entityId.
      * Valid positions are between 0 and capacity (to allow for adding new entities)
-     * @param entityId the entityId to position to channel against
-     * @throws IOException if an IO error occurs
+     * @param entityId the entityId to get the offset for
      */
-    private void positionChannel(int entityId) throws IOException {
-        channel.position(headerSize + (long) entityId * (9 + serializedEntitySize));
+    private long getEntityOffset(int entityId) {
+        return headerSize + (long) entityId * (9 + serializedEntitySize);
     }
-
 
     @Override
     public synchronized EntityNode<T> getEntityNode(int entityId) {
-        ByteBuffer buf = ByteBuffer.allocate(9 + serializedEntitySize);
+        ByteBuffer buf;
         try {
-            positionChannel(entityId);
-            channel.read(buf);
+            buf = channel.read(getEntityOffset(entityId), 9 + serializedEntitySize);
         } catch (IOException e) {
             throw new ChessBaseIOException("Failed to get entity node " + entityId + " in " + storageName);
         }
-        buf.position(0);
+        // The limit might have been decreased if we read past the end of file
+        buf.limit(9 + serializedEntitySize);
 
         EntityNode<T> entityNode = deserializeNode(entityId, buf);
 
@@ -164,10 +162,10 @@ public class PersistentEntityNodeStorage<T extends Entity & Comparable<T>> exten
             log.trace(String.format("getEntitiesBuffered [%d, %d)", startIdInclusive, endIdExclusive));
         }
         ArrayList<EntityNode<T>> result = new ArrayList<>(endIdExclusive - startIdInclusive);
-        ByteBuffer buf = ByteBuffer.allocate((endIdExclusive - startIdInclusive) * (9 + serializedEntitySize));
+        ByteBuffer buf;
+        int length = (endIdExclusive - startIdInclusive) * (9 + serializedEntitySize);
         try {
-            positionChannel(startIdInclusive);
-            channel.read(buf);
+            buf = channel.read(getEntityOffset(startIdInclusive), length);
         } catch (IOException e) {
             throw new ChessBaseIOException("Failed to get entity nodes in range [%d, %d) in %s".formatted(startIdInclusive, endIdExclusive, storageName));
         }
@@ -184,8 +182,7 @@ public class PersistentEntityNodeStorage<T extends Entity & Comparable<T>> exten
         ByteBuffer src = serializeNode(node);
         src.position(0);
         try {
-            positionChannel(node.getEntityId());
-            channel.write(src);
+            channel.write(getEntityOffset(node.getEntityId()), src);
         } catch (IOException e) {
             throw new ChessBaseIOException("Failed to put entity node " + node.getEntityId() + " in " + storageName);
         }

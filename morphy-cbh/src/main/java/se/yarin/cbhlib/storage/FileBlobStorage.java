@@ -4,7 +4,7 @@ import lombok.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.cbhlib.exceptions.ChessBaseIOException;
-import se.yarin.cbhlib.util.BufferedFileChannel;
+import se.yarin.cbhlib.util.BlobChannel;
 import se.yarin.cbhlib.util.ByteBufferUtil;
 
 import java.io.File;
@@ -20,7 +20,7 @@ public class FileBlobStorage implements BlobStorage {
     private static final int DEFAULT_PREFETCH_SIZE = 4096;
 
     private final File file;
-    private final BufferedFileChannel channel;
+    private final BlobChannel channel;
     private final BlobSizeRetriever blobSizeRetriever;
     public static final int DEFAULT_SERIALIZED_HEADER_SIZE = 26; // Size of header to create for a new storage
 
@@ -41,7 +41,7 @@ public class FileBlobStorage implements BlobStorage {
             @NonNull BlobSizeRetriever blobSizeRetriever,
             int chunkSize, int prefetchSize) throws IOException {
         this.file = file;
-        this.channel = BufferedFileChannel.open(file.toPath(), READ, WRITE);
+        this.channel = BlobChannel.open(file.toPath(), READ, WRITE);
         this.blobSizeRetriever = blobSizeRetriever;
         this.prefetchSize = prefetchSize;
         if (chunkSize > 0) {
