@@ -131,7 +131,7 @@ class Games implements Callable<Integer> {
                     throw new FileAlreadyExistsException(output);
                 }
                 if (file.exists()) {
-                    // TODO: Clear up old files, or add support for overwrite in Database
+                    Database.delete(file);
                 }
                 gameConsumer = new DatabaseBuilder(file);
             } else {

@@ -6,6 +6,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.cbhlib.annotations.AnnotationBase;
 import se.yarin.cbhlib.entities.AnnotatorBase;
+import se.yarin.cbhlib.entities.PlayerBase;
+import se.yarin.cbhlib.entities.SourceBase;
 import se.yarin.cbhlib.entities.TournamentBase;
 import se.yarin.cbhlib.exceptions.ChessBaseException;
 import se.yarin.cbhlib.exceptions.ChessBaseInvalidDataException;
@@ -13,12 +15,12 @@ import se.yarin.cbhlib.games.GameHeader;
 import se.yarin.cbhlib.games.GameHeaderBase;
 import se.yarin.cbhlib.games.GameLoader;
 import se.yarin.cbhlib.moves.MovesBase;
-import se.yarin.cbhlib.entities.PlayerBase;
-import se.yarin.cbhlib.entities.SourceBase;
 import se.yarin.chess.GameModel;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -160,6 +162,45 @@ public final class Database implements AutoCloseable {
         SourceBase cbs = SourceBase.create(new File(base + ".cbs"));
 
         return new Database(cbh, cbg, cba, cbp, cbt, cbc, cbs);
+    }
+
+    /**
+     * Deletes a database from disk by deleting all database related files and subdirectories
+     * with the same basename as the given file.
+     * @param file the name of the cbh file
+     */
+    public static void delete(File file) throws IOException {
+        String basename = file.getName().split("\\.")[0];
+        File directory = file.getParentFile();
+        List<File> toBeDeleted = new ArrayList<>();
+
+        // Collect all files that should be deleted and verify that the process has access to delete them all
+        // before carrying out the actual delete
+        File[] files = directory.listFiles((dir, name) -> name.split("\\.")[0].equals(basename));
+        assert files != null;
+        for(File databaseFile : files) {
+            if (databaseFile.isDirectory()) {
+                File[] subFiles = databaseFile.listFiles();
+                assert subFiles != null;
+                for(File subFile : subFiles) {
+                    if (subFile.isDirectory()) {
+                        throw new IOException("Database deletion aborted; unexpected subdirectory: " + subFile);
+                    }
+                    toBeDeleted.add(subFile);
+                }
+            }
+            if (!databaseFile.canWrite()) {
+                throw new IOException("Database deletion aborted; file can't be deleted: " + databaseFile);
+            }
+
+            toBeDeleted.add(databaseFile);
+        }
+
+        for (File databaseFile : toBeDeleted) {
+            if (!databaseFile.delete()) {
+                throw new IOException("Database deletion aborted; Failed to delete " + databaseFile);
+            }
+        }
     }
 
     /**
