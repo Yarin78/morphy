@@ -51,7 +51,38 @@ public class TeamBase extends EntityBase<TeamEntity> {
      * @throws IOException if something went wrong when creating the database
      */
     public static TeamBase create(@NonNull File file) throws IOException {
-        return new TeamBase(EntityStorageImpl.create(file, new TeamBase()));
+        return create(file, false);
+    }
+
+    /**
+     * Creates a new team database on disk, optionally keeping everything in memory until the base is closed.
+     * This is much more performant if adding a lot of entities immediately after creating the database.
+     * If the target file already exists, an {@link IOException} is thrown.
+     * @param file the file to create
+     * @param createOnClose if true, the base is not persisted to disk until it's closed
+     * @return the opened team database
+     * @throws IOException if something went wrong when creating the database
+     */
+    public static TeamBase create(@NonNull File file, boolean createOnClose) throws IOException {
+        if (!createOnClose) {
+            return new TeamBase(EntityStorageImpl.create(file, new TeamBase()));
+        } else {
+            if (file.exists()) throw new IllegalArgumentException("The file " + file + " already exists");
+            TeamBase teamBase = new TeamBase();
+            teamBase.addOnCloseHandler(closingBase -> closingBase.duplicate(file));
+            return teamBase;
+        }
+    }
+
+    /**
+     * Creates a clone of this team database on disk
+     * @param targetFile the file of the new team database to create
+     * @return the opened, cloned, team database
+     * @throws IOException if something went wrong went cloning the database
+     */
+    @Override
+    public TeamBase duplicate(@NonNull File targetFile) throws IOException {
+        return new TeamBase(getStorage().duplicate(targetFile, new TeamBase()));
     }
 
     public ByteBuffer serialize(@NonNull TeamEntity team) {

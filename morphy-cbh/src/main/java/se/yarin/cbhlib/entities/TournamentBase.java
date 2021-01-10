@@ -56,7 +56,38 @@ public class TournamentBase extends EntityBase<TournamentEntity> {
      * @throws IOException if something went wrong when creating the database
      */
     public static TournamentBase create(@NonNull File file) throws IOException {
-        return new TournamentBase(EntityStorageImpl.create(file, new TournamentBase()));
+        return create(file, false);
+    }
+
+    /**
+     * Creates a new tournament database on disk, optionally keeping everything in memory until the base is closed.
+     * This is much more performant if adding a lot of entities immediately after creating the database.
+     * If the target file already exists, an {@link IOException} is thrown.
+     * @param file the file to create
+     * @param createOnClose if true, the base is not persisted to disk until it's closed
+     * @return the opened tournament database
+     * @throws IOException if something went wrong when creating the database
+     */
+    public static TournamentBase create(@NonNull File file, boolean createOnClose) throws IOException {
+        if (!createOnClose) {
+            return new TournamentBase(EntityStorageImpl.create(file, new TournamentBase()));
+        } else {
+            if (file.exists()) throw new IllegalArgumentException("The file " + file + " already exists");
+            TournamentBase tournamentBase = new TournamentBase();
+            tournamentBase.addOnCloseHandler(closingBase -> closingBase.duplicate(file));
+            return tournamentBase;
+        }
+    }
+
+    /**
+     * Creates a clone of this tournament database on disk
+     * @param targetFile the file of the new tournament database to create
+     * @return the opened, cloned, tournament database
+     * @throws IOException if something went wrong went cloning the database
+     */
+    @Override
+    public TournamentBase duplicate(@NonNull File targetFile) throws IOException {
+        return new TournamentBase(getStorage().duplicate(targetFile, new TournamentBase()));
     }
 
     public ByteBuffer serialize(@NonNull TournamentEntity tournament) {

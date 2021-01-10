@@ -150,16 +150,28 @@ public final class Database implements AutoCloseable {
      * @throws IOException if an IO error occurred when trying to create the database
      */
     public static Database create(@NonNull File file) throws IOException {
+        return create(file, false);
+    }
+
+    /**
+     * Creates a new ChessBase database on disk.
+     * @param file the database file object
+     * @param createOnClose if true, some of the bases are in-memory until being flushed when the database closes
+     * @return an instance of this class, representing the created database
+     * @throws IOException if an IO error occurred when trying to create the database
+     */
+    public static Database create(@NonNull File file, boolean createOnClose) throws IOException {
         validateDatabaseName(file);
         String base = file.getPath().substring(0, file.getPath().length() - 4);
 
         GameHeaderBase cbh = GameHeaderBase.create(file);
         MovesBase cbg = MovesBase.create(new File(base + ".cbg"));
         AnnotationBase cba = AnnotationBase.create(new File(base + ".cba"));
-        PlayerBase cbp = PlayerBase.create(new File(base + ".cbp"));
-        TournamentBase cbt = TournamentBase.create(new File(base + ".cbt"));
-        AnnotatorBase cbc = AnnotatorBase.create(new File(base + ".cbc"));
-        SourceBase cbs = SourceBase.create(new File(base + ".cbs"));
+
+        PlayerBase cbp = PlayerBase.create(new File(base + ".cbp"), createOnClose);
+        TournamentBase cbt = TournamentBase.create(new File(base + ".cbt"), createOnClose);
+        AnnotatorBase cbc = AnnotatorBase.create(new File(base + ".cbc"), createOnClose);
+        SourceBase cbs = SourceBase.create(new File(base + ".cbs"), createOnClose);
 
         return new Database(cbh, cbg, cba, cbp, cbt, cbc, cbs);
     }

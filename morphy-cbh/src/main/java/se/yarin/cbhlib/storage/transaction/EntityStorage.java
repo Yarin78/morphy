@@ -3,10 +3,12 @@ package se.yarin.cbhlib.storage.transaction;
 import lombok.NonNull;
 import se.yarin.cbhlib.entities.Entity;
 import se.yarin.cbhlib.exceptions.ChessBaseIOException;
+import se.yarin.cbhlib.storage.EntitySerializer;
 import se.yarin.cbhlib.storage.EntityStorageDuplicateKeyException;
 import se.yarin.cbhlib.storage.EntityStorageException;
 import se.yarin.cbhlib.storage.TreePath;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import java.util.stream.Stream;
@@ -216,4 +218,14 @@ public interface EntityStorage<T extends Entity & Comparable<T>> {
      * @return the version number of the storage
      */
     int getVersion();
+
+
+    /**
+     * Creates a new persistent EntityStorage that contains the same data as this EntityStorage
+     * @param file the target file (must not exist)
+     * @param serializer the entity serializer to use
+     * @return the newly created persistent EntityStorage
+     * @throws IOException if an IO error occurs
+     */
+    EntityStorage<T> duplicate(@NonNull File file, @NonNull EntitySerializer<T> serializer) throws IOException;
 }

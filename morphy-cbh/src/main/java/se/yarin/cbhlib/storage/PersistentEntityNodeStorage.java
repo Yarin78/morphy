@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 import static java.nio.file.StandardOpenOption.*;
@@ -42,6 +43,30 @@ public class PersistentEntityNodeStorage<T extends Entity & Comparable<T>> exten
 
         log.debug(String.format("Opening %s; capacity = %d, root = %d, numEntities = %d, firstDeletedId = %d",
                 storageName, getCapacity(), getRootEntityId(), getNumEntities(), getFirstDeletedEntityId()));
+    }
+
+    public PersistentEntityNodeStorage(File file, EntitySerializer<T> serializer, int headerSize, EntityNodeStorageBase<T> source)
+            throws IOException {
+        super(new EntityNodeStorageMetadata(serializer.getSerializedEntityLength(), headerSize, 0));
+
+        createEmptyStorage(file, serializer, headerSize);
+
+        this.serializedEntitySize = serializer.getSerializedEntityLength();
+        this.headerSize = headerSize;
+        this.storageName = file.getName();
+        this.serializer = serializer;
+        this.channel = BlobChannel.open(file.toPath(), READ, WRITE);
+
+        for (EntityNode<T> node : source.getAllEntityNodes()) {
+            putEntityNode(createNode(node));
+        }
+
+        // TODO: The way metadata is represented in these classes is a bit weird and non-sensical
+        getMetadata().setRootEntityId(source.getRootEntityId());
+        getMetadata().setCapacity(source.getCapacity());
+        getMetadata().setNumEntities(source.getNumEntities());
+        getMetadata().setFirstDeletedEntityId(source.getFirstDeletedEntityId());
+        setMetadata(getMetadata());
     }
 
     public static <T extends Entity> void createEmptyStorage(File file, EntitySerializer<T> serializer, int headerSize)
@@ -151,6 +176,10 @@ public class PersistentEntityNodeStorage<T extends Entity & Comparable<T>> exten
         return entityNode;
     }
 
+    public Collection<EntityNode<T>> getAllEntityNodes() {
+        return getEntityNodes(0, getMetadata().getCapacity());
+    }
+
     /**
      * Gets all entity node in the specified range.
      */
@@ -199,6 +228,14 @@ public class PersistentEntityNodeStorage<T extends Entity & Comparable<T>> exten
             return new SerializedEntityNode(entityId, -1, -1, 0, new byte[serializer.getSerializedEntityLength()], null);
         }
         return new SerializedEntityNode(entityId, -1, -1, 0, entity);
+    }
+
+    public EntityNode<T> createNode(EntityNode<T> source) {
+        // Clones a node
+        return new SerializedEntityNode(
+                source.getEntityId(),
+                source.getLeftEntityId(), source.getRightEntityId(), source.getHeightDif(),
+                source.getEntity());
     }
 
     @Override

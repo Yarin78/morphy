@@ -12,6 +12,7 @@ import se.yarin.cbhlib.storage.transaction.EntityStorageImpl;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -21,6 +22,7 @@ public abstract class EntityBase<T extends Entity & Comparable<T>> implements En
     private static final Logger log = LoggerFactory.getLogger(EntityBase.class);
 
     private final EntityStorage<T> storage;
+    private final List<EntityBaseOnCloseHandler<T>> onCloseHandlers = new ArrayList<>();
 
     // Cache entities by id to avoid having to deserialize the same entity again and again.
     // Only used when doing direct lookups, not when iterating over ranges.
@@ -350,6 +352,15 @@ public abstract class EntityBase<T extends Entity & Comparable<T>> implements En
      * @throws IOException if an IO error occurs
      */
     public void close() throws IOException {
+        for (EntityBaseOnCloseHandler<T> onCloseHandler : onCloseHandlers) {
+            onCloseHandler.closing(this);
+        }
         storage.close();
+    }
+
+    public abstract EntityBase<T> duplicate(@NonNull File targetFile) throws IOException;
+
+    protected void addOnCloseHandler(@NonNull EntityBaseOnCloseHandler<T> handler) {
+        this.onCloseHandlers.add(handler);
     }
 }

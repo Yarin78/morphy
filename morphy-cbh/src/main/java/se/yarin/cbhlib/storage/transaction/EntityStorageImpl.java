@@ -34,6 +34,10 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
         nodeStorage = new InMemoryEntityNodeStorage<>();
     }
 
+    private EntityStorageImpl(EntityNodeStorageBase<T> nodeStorage) {
+        this.nodeStorage = nodeStorage;
+    }
+
     public static <T extends Entity & Comparable<T>> EntityStorage<T> open(
             File file, @NonNull EntitySerializer<T> serializer) throws IOException {
         return new EntityStorageImpl<>(file, serializer);
@@ -67,6 +71,10 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
 
     public static <T extends Entity & Comparable<T>> EntityStorage<T> createInMemory() {
         return new EntityStorageImpl<>();
+    }
+
+    public EntityStorage<T> duplicate(@NonNull File file, @NonNull EntitySerializer<T> serializer) throws IOException {
+        return new EntityStorageImpl<>(new PersistentEntityNodeStorage<>(file, serializer, DEFAULT_HEADER_SIZE, this.nodeStorage));
     }
 
     @Override

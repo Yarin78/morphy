@@ -53,7 +53,39 @@ public class PlayerBase extends EntityBase<PlayerEntity> {
      * @throws IOException if something went wrong when creating the database
      */
     public static PlayerBase create(@NonNull File file) throws IOException {
-        return new PlayerBase(EntityStorageImpl.create(file, new PlayerBase()));
+        return create(file, false);
+    }
+
+    /**
+     * Creates a new player database on disk, optionally keeping everything in memory until the base is closed.
+     * This is much more performant if adding a lot of entities immediately after creating the database.
+     * If the target file already exists, an {@link IOException} is thrown.
+     * @param file the file to create
+     * @param createOnClose if true, the base is not persisted to disk until it's closed
+     * @return the opened player database
+     * @throws IOException if something went wrong when creating the database
+     */
+    public static PlayerBase create(@NonNull File file, boolean createOnClose) throws IOException {
+        if (!createOnClose) {
+            return new PlayerBase(EntityStorageImpl.create(file, new PlayerBase()));
+        } else {
+            if (file.exists()) throw new IllegalArgumentException("The file " + file + " already exists");
+            PlayerBase playerBase = new PlayerBase();
+            playerBase.addOnCloseHandler(closingBase -> closingBase.duplicate(file));
+            return playerBase;
+        }
+    }
+
+    /**
+     * Creates a clone of this player database on disk
+     * @param targetFile the file of the new player database to create
+     * @return the opened, cloned, player database
+     * @throws IOException if something went wrong went cloning the database
+     */
+    @Override
+    public PlayerBase duplicate(@NonNull File targetFile) throws IOException {
+        PlayerBase playerBase = new PlayerBase(getStorage().duplicate(targetFile, new PlayerBase()));
+        return playerBase;
     }
 
     /**

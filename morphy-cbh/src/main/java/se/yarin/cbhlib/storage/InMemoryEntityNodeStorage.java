@@ -30,6 +30,10 @@ public class InMemoryEntityNodeStorage<T extends Entity & Comparable<T>> extends
         return entityNode;
     }
 
+    public Collection<EntityNode<T>> getAllEntityNodes() {
+        return nodes.values();
+    }
+
     @Override
     public List<EntityNode<T>> getEntityNodes(int startIdInclusive, int endIdExclusive) {
         return new ArrayList<>(nodes.subMap(startIdInclusive, true, endIdExclusive, false)

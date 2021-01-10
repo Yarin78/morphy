@@ -5,6 +5,7 @@ import se.yarin.cbhlib.entities.Entity;
 import se.yarin.cbhlib.exceptions.ChessBaseIOException;
 
 import java.io.IOException;
+import java.util.Collection;
 import java.util.List;
 
 public abstract class EntityNodeStorageBase<T extends Entity & Comparable<T>> {
@@ -22,6 +23,13 @@ public abstract class EntityNodeStorageBase<T extends Entity & Comparable<T>> {
      * @throws ChessBaseIOException if some IO error occurred
      */
     public abstract EntityNode<T> getEntityNode(int entityId);
+
+    /**
+     * Gets all entity nodes in the base
+     * @return a collection of all entities
+     * @throws ChessBaseIOException if some IO error occurred
+     */
+    public abstract Collection<EntityNode<T>> getAllEntityNodes();
 
     /**
      * Gets all entity node in the specified range.

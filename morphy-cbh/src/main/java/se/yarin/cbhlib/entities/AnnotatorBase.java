@@ -51,7 +51,38 @@ public class AnnotatorBase extends EntityBase<AnnotatorEntity> {
      * @throws IOException if something went wrong when creating the database
      */
     public static AnnotatorBase create(@NonNull File file) throws IOException {
-        return new AnnotatorBase(EntityStorageImpl.create(file, new AnnotatorBase()));
+        return create(file, false);
+    }
+
+    /**
+     * Creates a new annotator database on disk, optionally keeping everything in memory until the base is closed.
+     * This is much more performant if adding a lot of entities immediately after creating the database.
+     * If the target file already exists, an {@link IOException} is thrown.
+     * @param file the file to create
+     * @param createOnClose if true, the base is not persisted to disk until it's closed
+     * @return the opened annotator database
+     * @throws IOException if something went wrong when creating the database
+     */
+    public static AnnotatorBase create(@NonNull File file, boolean createOnClose) throws IOException {
+        if (!createOnClose) {
+            return new AnnotatorBase(EntityStorageImpl.create(file, new AnnotatorBase()));
+        } else {
+            if (file.exists()) throw new IllegalArgumentException("The file " + file + " already exists");
+            AnnotatorBase annotatorBase = new AnnotatorBase();
+            annotatorBase.addOnCloseHandler(closingBase -> closingBase.duplicate(file));
+            return annotatorBase;
+        }
+    }
+
+    /**
+     * Creates a clone of this annotator database on disk
+     * @param targetFile the file of the new annotator database to create
+     * @return the opened, cloned, annotator database
+     * @throws IOException if something went wrong went cloning the database
+     */
+    @Override
+    public AnnotatorBase duplicate(@NonNull File targetFile) throws IOException {
+        return new AnnotatorBase(getStorage().duplicate(targetFile, new AnnotatorBase()));
     }
 
     public ByteBuffer serialize(@NonNull AnnotatorEntity annotator) {

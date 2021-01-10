@@ -793,4 +793,33 @@ public class EntityStorageTest {
         assertEquals("hello", entity.getKey());
         assertEquals(5, entity.getValue());
     }
+
+    @Test
+    public void testDuplicate() throws IOException, EntityStorageException {
+        EntityStorage<TestEntity> storage = createStorage();
+        storage.addEntity(new TestEntity("foo"));
+        storage.addEntity(new TestEntity("bar"));
+        storage.addEntity(new TestEntity("xyz"));
+        storage.addEntity(new TestEntity("abc"));
+        storage.addEntity(new TestEntity("chess"));
+
+        storage.validateStructure();
+
+        List<String> collect = storage.getAllEntities(true).stream().map(TestEntity::getKey).collect(Collectors.toList());
+        assertEquals(Arrays.asList("abc", "bar", "chess", "foo", "xyz"), collect);
+
+        File file = folder.newFile();
+        file.delete();
+
+        EntityStorage<TestEntity> duplicateStorage = storage.duplicate(file, new TestEntitySerializer());
+        duplicateStorage.validateStructure();
+        List<String> collect2 = duplicateStorage.getAllEntities(true).stream().map(TestEntity::getKey).collect(Collectors.toList());
+        assertEquals(Arrays.asList("abc", "bar", "chess", "foo", "xyz"), collect2);
+
+        // Had a bug that caused the return storage from duplicate be okay but not when loading from file! (metadata not being saved)
+        EntityStorage<TestEntity> clonedStorage = EntityStorageImpl.open(file, new TestEntitySerializer());
+        clonedStorage.validateStructure();
+        List<String> collect3 = clonedStorage.getAllEntities(true).stream().map(TestEntity::getKey).collect(Collectors.toList());
+        assertEquals(Arrays.asList("abc", "bar", "chess", "foo", "xyz"), collect3);
+    }
 }

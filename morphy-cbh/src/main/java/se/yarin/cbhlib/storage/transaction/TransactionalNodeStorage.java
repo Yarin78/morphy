@@ -37,6 +37,12 @@ public class TransactionalNodeStorage<T extends Entity & Comparable<T>> extends 
     }
 
     @Override
+    public Collection<EntityNode<T>> getAllEntityNodes() {
+        // Transactional operations don't need this method
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
     public List<EntityNode<T>> getEntityNodes(int startIdInclusive, int endIdExclusive) {
         // Transactional operations don't need this method
         throw new UnsupportedOperationException();

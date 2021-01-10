@@ -20,7 +20,7 @@ public class DatabaseBuilder implements GameConsumer {
 
     public DatabaseBuilder(File file) throws IOException {
         this.file = file;
-        this.database = Database.create(file);
+        this.database = Database.create(file, true);
         // this.database = new Database();
     }
 
@@ -58,7 +58,7 @@ public class DatabaseBuilder implements GameConsumer {
         gamesAdded++;
         // System.out.printf("Game %d added (%s - %s )%n", hit.getGameHeader().getId(), model.header().getWhite(), model.header().getBlack());
 
-        if (gamesAdded % 100 == 0) {
+        if (gamesAdded % 1000 == 0) {
             System.out.println(gamesAdded + " games added");
         }
     }
