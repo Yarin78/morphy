@@ -1,0 +1,10 @@
+#!/bin/bash
+
+if [ -z "$MORPHY_CLI_PATH" ]
+then
+  TARGET_PATH="target"
+else
+  TARGET_PATH="${MORPHY_CLI_PATH}/target"
+fi
+
+java -jar ${TARGET_PATH}/morphy-cli-0.1-SNAPSHOT-jar-with-dependencies.jar "$@"

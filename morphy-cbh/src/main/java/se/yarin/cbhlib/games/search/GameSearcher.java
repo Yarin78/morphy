@@ -183,6 +183,10 @@ public class GameSearcher {
     public class Hit {
         @Getter private final GameHeader gameHeader;
 
+        public Database getDatabase() {
+            return database;
+        }
+
         public PlayerEntity getWhite() {
             return database.getPlayerBase().get(gameHeader.getWhitePlayerId());
         }

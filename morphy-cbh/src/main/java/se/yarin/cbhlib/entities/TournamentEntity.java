@@ -1,12 +1,16 @@
 package se.yarin.cbhlib.entities;
 
 import lombok.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import se.yarin.cbhlib.util.CBUtil;
 import se.yarin.chess.Date;
 
 @Builder(toBuilder = true)
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class TournamentEntity implements Entity, Comparable<TournamentEntity> {
+    private static final Logger log = LoggerFactory.getLogger(TournamentEntity.class);
+
     @Getter
     private int id;
 
@@ -115,5 +119,18 @@ public class TournamentEntity implements Entity, Comparable<TournamentEntity> {
     @Override
     public int hashCode() {
         return title.hashCode() + this.date.year();
+    }
+
+    public String getCategoryRoman() {
+        String[] roman = { "", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX"};
+        int cat = getCategory();
+        if (cat < 0) {
+            return "";
+        }
+        if (cat > 39) {
+            log.warn("Unexpected tournament category: " + cat);
+            return Integer.toString(cat);
+        }
+        return "X".repeat(cat / 10) + roman[cat % 10];
     }
 }

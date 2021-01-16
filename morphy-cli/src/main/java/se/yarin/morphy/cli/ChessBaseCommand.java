@@ -77,6 +77,9 @@ class Games implements Callable<Integer> {
     @CommandLine.Option(names = "--overwrite", description = "If true, overwrite the output database if it already exists.")
     private boolean overwrite;
 
+    @CommandLine.Option(names = "--columns", description = "A comma separated list on which columns to show. Prefix columns with +/- to only adjust the default columns.")
+    private String columns;
+
     @Override
     public Integer call() throws IOException {
         if (verbose != null) {
@@ -117,7 +120,11 @@ class Games implements Callable<Integer> {
             GameConsumer gameConsumer;
             if (output == null) {
                 if (!stats) {
-                    gameConsumer = new StdoutGamesSummary(countAll);
+                    if (columns != null) {
+                        gameConsumer = new StdoutGamesSummary(countAll, StdoutGamesSummary.parseColumns(this.columns));
+                    } else {
+                        gameConsumer = new StdoutGamesSummary(countAll);
+                    }
                     showProgressBar = false;
                     if (limit == 0) {
                         limit = 50;
@@ -151,6 +158,9 @@ class Games implements Callable<Integer> {
             }
 
             gameConsumer.done(result);
+        } catch (IllegalArgumentException e) {
+            System.err.println(e.getMessage());
+            System.exit(1);
         }
         return 0;
     }
