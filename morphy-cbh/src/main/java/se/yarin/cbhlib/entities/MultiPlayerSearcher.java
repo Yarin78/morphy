@@ -31,6 +31,7 @@ public class MultiPlayerSearcher implements PlayerSearcher {
     @Override
     public List<PlayerEntity> quickSearch() {
         boolean notUnique = false;
+        long start = System.currentTimeMillis();
         ArrayList<PlayerEntity> players = new ArrayList<>();
         for (String name : names) {
             List<PlayerEntity> matches = playerBase.prefixSearch(name).limit(2).collect(Collectors.toList());
@@ -42,6 +43,14 @@ public class MultiPlayerSearcher implements PlayerSearcher {
                 log.warn(String.format("%s matches no player", name));
             }
             players.addAll(matches);
+        }
+        if (log.isInfoEnabled()) {
+            String msg = String.format("Multi-player quick search for %d names finished in %d ms with %d hits",
+                    names.size(), System.currentTimeMillis() - start, players.size());
+            if (notUnique) {
+                msg += " (not unique match)";
+            }
+            log.info(msg);
         }
         return notUnique ? null : players;
     }

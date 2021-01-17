@@ -56,6 +56,9 @@ class Games implements Callable<Integer> {
     @CommandLine.Option(names = "--player", description = "Show only games with this player (any color)")
     private String[] players;
 
+    @CommandLine.Option(names = "--result", description = "Show only games with this result (1-0, 0-1, draw, win, loss etc)")
+    private String result;
+
     @CommandLine.Option(names = "--date", description = "Date range, e.g. '2015-10-' or '1960-1970'")
     private String dateRange;
 
@@ -106,6 +109,7 @@ class Games implements Callable<Integer> {
 
             GameSearcher gameSearcher = new GameSearcher(db);
 
+            PlayerSearcher primaryPlayerSearcher = null;
             if (players != null) {
                 for (String player : players) {
                     PlayerSearcher playerSearcher;
@@ -115,6 +119,20 @@ class Games implements Callable<Integer> {
                         playerSearcher = new MultiPlayerSearcher(db.getPlayerBase(), player);
                     }
                     gameSearcher.addFilter(new PlayerFilter(db, playerSearcher, PlayerFilter.PlayerColor.ANY));
+                    if (primaryPlayerSearcher == null) {
+                        primaryPlayerSearcher = playerSearcher;
+                    }
+                }
+            }
+
+            if (result != null) {
+                if (result.equals("win") || result.equals("loss")) {
+                    if (primaryPlayerSearcher == null) {
+                        throw new IllegalArgumentException("A player search is needed when filtering on 'wins' or 'loss' results");
+                    }
+                    gameSearcher.addFilter(new PlayerResultsFilter(db, result, primaryPlayerSearcher));
+                } else {
+                    gameSearcher.addFilter(new ResultsFilter(db, result));
                 }
             }
 
