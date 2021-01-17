@@ -9,10 +9,7 @@ import org.apache.logging.log4j.core.config.ConfigurationSource;
 import picocli.CommandLine;
 import se.yarin.cbhlib.Database;
 import se.yarin.cbhlib.entities.*;
-import se.yarin.cbhlib.games.search.DateRangeFilter;
-import se.yarin.cbhlib.games.search.GameSearcher;
-import se.yarin.cbhlib.games.search.PlayerFilter;
-import se.yarin.cbhlib.games.search.RatingRangeFilter;
+import se.yarin.cbhlib.games.search.*;
 import se.yarin.cbhlib.storage.EntityStorageException;
 import se.yarin.cbhlib.util.CBUtil;
 import se.yarin.cbhlib.validation.Validator;
@@ -61,6 +58,18 @@ class Games implements Callable<Integer> {
 
     @CommandLine.Option(names = "--date", description = "Date range, e.g. '2015-10-' or '1960-1970'")
     private String dateRange;
+
+    @CommandLine.Option(names = "--tournament", description = "Show only games in this tournament")
+    private String tournament;
+
+    @CommandLine.Option(names = "--tournament-time", description = "Show only games with this type of time control (normal, rapid, blitz, corr)")
+    private String tournamentTimeControl;
+
+    @CommandLine.Option(names = "--tournament-type", description = "Show only games in this type of tournament (tourn, swiss, match etc)")
+    private String tournamentType;
+
+    @CommandLine.Option(names = "--tournament-place", description = "Show only games from this tournament place")
+    private String tournamentPlace;
 
     @CommandLine.Option(names = "--rating", description = "Rating range required for both players, e.g. 2700- or 2000-2200")
     private String ratingRangeBoth;
@@ -114,6 +123,23 @@ class Games implements Callable<Integer> {
 
             if (ratingRangeAny != null) {
                 gameSearcher.addFilter(new RatingRangeFilter(db, ratingRangeAny, RatingRangeFilter.RatingColor.ANY));
+            }
+
+            if (tournament != null) {
+                TournamentSearcher tournamentSearcher = new TournamentSearcher(db.getTournamentBase(), tournament, true, false);
+                gameSearcher.addFilter(new TournamentFilter(db, tournamentSearcher));
+            }
+
+            if (tournamentTimeControl != null) {
+                gameSearcher.addFilter(new TournamentTimeControlFilter(db, tournamentTimeControl));
+            }
+
+            if (tournamentType != null) {
+                gameSearcher.addFilter(new TournamentTypeFilter(db, tournamentType));
+            }
+
+            if (tournamentPlace != null) {
+                gameSearcher.addFilter(new TournamentPlaceFilter(db, tournamentPlace));
             }
 
             boolean showProgressBar = true;
