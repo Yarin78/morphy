@@ -108,7 +108,12 @@ class Games implements Callable<Integer> {
 
             if (players != null) {
                 for (String player : players) {
-                    PlayerSearcher playerSearcher = new PlayerSearcher(db.getPlayerBase(), player, true, false);
+                    PlayerSearcher playerSearcher;
+                    if (!player.contains("|")) {
+                        playerSearcher = new SinglePlayerSearcher(db.getPlayerBase(), player, true, false);
+                    } else {
+                        playerSearcher = new MultiPlayerSearcher(db.getPlayerBase(), player);
+                    }
                     gameSearcher.addFilter(new PlayerFilter(db, playerSearcher, PlayerFilter.PlayerColor.ANY));
                 }
             }

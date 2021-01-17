@@ -101,7 +101,7 @@ public class StdoutGamesSummary implements GameConsumer {
             } else {
                 System.out.println();
                 if (result.getConsumedHits() < result.getTotalHits()) {
-                    System.out.printf("%d out of %d hits displayed (%.2f s)%n", result.getHits().size(), result.getTotalHits(), result.getElapsedTime() / 1000.0);
+                    System.out.printf("%d out of %d hits displayed (%.2f s)%n", result.getConsumedHits(), result.getTotalHits(), result.getElapsedTime() / 1000.0);
                 } else {
                     System.out.printf("%d hits  (%.2f s)%n", result.getTotalHits(), result.getElapsedTime() / 1000.0);
                 }

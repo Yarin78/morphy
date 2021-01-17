@@ -6,7 +6,7 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import se.yarin.cbhlib.Database;
 import se.yarin.cbhlib.ResourceLoader;
-import se.yarin.cbhlib.entities.PlayerSearcher;
+import se.yarin.cbhlib.entities.SinglePlayerSearcher;
 import se.yarin.cbhlib.games.GameHeader;
 
 import java.io.File;
@@ -34,7 +34,7 @@ public class PlayerFilterTest {
 
     @Test
     public void testCaseSensitivePrefixSearch() {
-        PlayerSearcher carlsen = new PlayerSearcher(database.getPlayerBase(), "Carlsen", true, false);
+        SinglePlayerSearcher carlsen = new SinglePlayerSearcher(database.getPlayerBase(), "Carlsen", true, false);
 
         PlayerFilter filter = new PlayerFilter(database, carlsen, PlayerFilter.PlayerColor.WHITE);
         filter.initSearch();
@@ -51,7 +51,7 @@ public class PlayerFilterTest {
 
     @Test
     public void testCaseInsensitiveExactMatch() {
-        PlayerSearcher garry = new PlayerSearcher(database.getPlayerBase(), "kasparov, garry", false, true);
+        SinglePlayerSearcher garry = new SinglePlayerSearcher(database.getPlayerBase(), "kasparov, garry", false, true);
 
         PlayerFilter filter = new PlayerFilter(database, garry, PlayerFilter.PlayerColor.ANY);
         filter.initSearch();
