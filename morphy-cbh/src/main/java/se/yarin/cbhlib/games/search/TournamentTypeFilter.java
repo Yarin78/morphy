@@ -1,5 +1,6 @@
 package se.yarin.cbhlib.games.search;
 
+import lombok.Getter;
 import se.yarin.cbhlib.Database;
 import se.yarin.cbhlib.entities.TournamentEntity;
 import se.yarin.cbhlib.entities.TournamentType;
@@ -12,6 +13,7 @@ import java.util.stream.Collectors;
 
 public class TournamentTypeFilter extends SearchFilterBase {
 
+    @Getter
     private final Set<TournamentType> types;
 
     public TournamentTypeFilter(Database database, String tournamentType) {

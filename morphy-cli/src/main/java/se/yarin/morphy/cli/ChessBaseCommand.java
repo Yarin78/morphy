@@ -130,21 +130,34 @@ class Games implements Callable<Integer> {
                 gameSearcher.addFilter(new RatingRangeFilter(db, ratingRangeAny, RatingRangeFilter.RatingColor.ANY));
             }
 
+            TournamentSearcher tournamentSearcher = null;
             if (tournament != null) {
-                TournamentSearcher tournamentSearcher = new TournamentSearcher(db.getTournamentBase(), tournament, true, false);
+                tournamentSearcher = new TournamentSearcher(db.getTournamentBase(), tournament, true, false);
                 gameSearcher.addFilter(new TournamentFilter(db, tournamentSearcher));
             }
 
             if (tournamentTimeControl != null) {
-                gameSearcher.addFilter(new TournamentTimeControlFilter(db, tournamentTimeControl));
+                TournamentTimeControlFilter ttFilter = new TournamentTimeControlFilter(db, tournamentTimeControl);
+                gameSearcher.addFilter(ttFilter);
+                if (tournamentSearcher != null) {
+                    tournamentSearcher.setTimeControls(ttFilter.getTimeControls());
+                }
             }
 
             if (tournamentType != null) {
-                gameSearcher.addFilter(new TournamentTypeFilter(db, tournamentType));
+                TournamentTypeFilter ttFilter = new TournamentTypeFilter(db, tournamentType);
+                gameSearcher.addFilter(ttFilter);
+                if (tournamentSearcher != null) {
+                    tournamentSearcher.setTypes(ttFilter.getTypes());
+                }
             }
 
             if (tournamentPlace != null) {
-                gameSearcher.addFilter(new TournamentPlaceFilter(db, tournamentPlace));
+                TournamentPlaceFilter tpFilter = new TournamentPlaceFilter(db, tournamentPlace);
+                gameSearcher.addFilter(tpFilter);
+                if (tournamentSearcher != null) {
+                    tournamentSearcher.setPlaces(tpFilter.getPlaces());
+                }
             }
 
             boolean showProgressBar = true;
@@ -195,8 +208,6 @@ class Games implements Callable<Integer> {
         }
         return 0;
     }
-
-
 }
 
 

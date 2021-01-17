@@ -137,7 +137,7 @@ public class StdoutGamesSummary implements GameConsumer {
 
             GameModel model;
             try {
-                model = hit.getModel();
+                model = hit.getGameHeader().isGuidingText() ? null : hit.getModel();
             } catch (ChessBaseException e) {
                 model = null;
             }

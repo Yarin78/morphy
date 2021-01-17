@@ -3,14 +3,17 @@ package se.yarin.cbhlib.entities;
 import lombok.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import se.yarin.cbhlib.storage.TreePath;
 import se.yarin.cbhlib.storage.transaction.EntityStorage;
 import se.yarin.cbhlib.storage.transaction.EntityStorageImpl;
 import se.yarin.cbhlib.util.ByteBufferUtil;
 import se.yarin.cbhlib.util.CBUtil;
+import se.yarin.chess.Date;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.stream.Stream;
 
 public class TournamentBase extends EntityBase<TournamentEntity> {
 
@@ -88,6 +91,22 @@ public class TournamentBase extends EntityBase<TournamentEntity> {
     @Override
     public TournamentBase duplicate(@NonNull File targetFile) throws IOException {
         return new TournamentBase(getStorage().duplicate(targetFile, new TournamentBase()));
+    }
+
+    /**
+     * Searches for tournaments using a case sensitive prefix search.
+     * The exact year must also be specified as the primary key starts with the year.
+     * @param year the exact year of the tournament
+     * @param name a prefix of the title of the tournament
+     * @return a stream over matching tournaments
+     */
+    public Stream<TournamentEntity> prefixSearch(int year, @NonNull String name) {
+        TournamentEntity startKey = new TournamentEntity(name, new Date(year));
+        TournamentEntity endKey = new TournamentEntity(name + "zzz", new Date(year));
+
+        TreePath<TournamentEntity> start = getStorage().lowerBound(startKey);
+        TreePath<TournamentEntity> end = getStorage().upperBound(endKey);
+        return getStorage().streamOrderedAscending(start, end);
     }
 
     public ByteBuffer serialize(@NonNull TournamentEntity tournament) {
