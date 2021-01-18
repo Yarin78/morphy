@@ -5,6 +5,7 @@ import lombok.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.cbhlib.exceptions.ChessBaseIOException;
+import se.yarin.cbhlib.util.BlobChannel;
 import se.yarin.cbhlib.util.ByteBufferUtil;
 
 import java.io.File;
@@ -27,7 +28,7 @@ public class PersistentExtendedGameHeaderStorage extends ExtendedGameHeaderStora
     private final int serializedExtendedGameHeaderSize;
     private final ExtendedGameHeaderSerializer serializer;
     private final String storageName;
-    private final FileChannel channel;
+    private final BlobChannel channel;
 
     @Getter
     private int version = 0;
@@ -39,7 +40,7 @@ public class PersistentExtendedGameHeaderStorage extends ExtendedGameHeaderStora
         this.serializedExtendedGameHeaderSize = getMetadata().getSerializedExtendedGameHeaderSize();
         this.storageName = file.getName();
         this.serializer = serializer;
-        channel = FileChannel.open(file.toPath(), READ, WRITE);
+        channel = BlobChannel.open(file.toPath(), READ, WRITE);
 
         log.debug(String.format("Opening %s; number of extended game headers = %d",
                 storageName, getMetadata().getNumHeaders()));
@@ -88,8 +89,7 @@ public class PersistentExtendedGameHeaderStorage extends ExtendedGameHeaderStora
         ByteBuffer buffer = serializeMetadata(metadata);
 
         try {
-            channel.position(0);
-            channel.write(buffer);
+            channel.write(0, buffer);
         } catch (IOException e) {
             throw new ChessBaseIOException("Failed to write metadata to Extended GameHeader storage", e);
         }
@@ -114,25 +114,23 @@ public class PersistentExtendedGameHeaderStorage extends ExtendedGameHeaderStora
     }
 
     /**
-     * Positions the channel at the start of the specified gameId.
+     * Gets the offset in the channel where a specified gameId starts
      * Valid positions are between 1 and numHeaders+1
      * @param gameId the gameId (1-indexed) to position to channel against
-     * @throws IOException if an IO error occurs
      */
-    private void positionChannel(int gameId) throws IOException {
-        channel.position(FILE_HEADER_SIZE + (long) (gameId - 1) * serializedExtendedGameHeaderSize);
+    private long getGameOffset(int gameId) {
+        return FILE_HEADER_SIZE + (long) (gameId - 1) * serializedExtendedGameHeaderSize;
     }
 
     @Override
     ExtendedGameHeader get(int id) {
-        ByteBuffer buf = ByteBuffer.allocate(serializedExtendedGameHeaderSize);
+        ByteBuffer buf;
         try {
-            positionChannel(id);
-            channel.read(buf);
+            buf = channel.read(getGameOffset(id), serializedExtendedGameHeaderSize);
         } catch (IOException e) {
             throw new ChessBaseIOException("Failed to get Extended GameHeader with id " + id, e);
         }
-        buf.flip();
+
         if (!buf.hasRemaining()) {
             return null;
         }
@@ -153,18 +151,20 @@ public class PersistentExtendedGameHeaderStorage extends ExtendedGameHeaderStora
 
     @Override
     List<ExtendedGameHeader> getRange(int startId, int endId) {
+        return getRange(startId, endId, null);
+    }
+
+    List<ExtendedGameHeader> getRange(int startId, int endId, SerializedExtendedGameHeaderFilter filter) {
         if (startId < 1) throw new IllegalArgumentException("startId must be 1 or greater");
         int count = endId - startId;
         ArrayList<ExtendedGameHeader> result = new ArrayList<>(count);
 
-        ByteBuffer buf = ByteBuffer.allocate(serializedExtendedGameHeaderSize * count);
+        ByteBuffer buf;
         try {
-            positionChannel(startId);
-            channel.read(buf);
+            buf = channel.read(getGameOffset(startId), serializedExtendedGameHeaderSize * count);
         } catch (IOException e) {
             throw new ChessBaseIOException("Failed to get Extended GameHeaders in range [%d, %d)".formatted(startId, endId), e);
         }
-        buf.flip();
 
         for (int id = startId; id < endId && buf.hasRemaining(); id++) {
             byte[] gameHeaderBuf = new byte[serializedExtendedGameHeaderSize];
@@ -174,7 +174,9 @@ public class PersistentExtendedGameHeaderStorage extends ExtendedGameHeaderStora
                 log.warn(String.format("Unexpected end of file reached when reading game headers in range [%d, %d)", startId, endId), e);
                 break;
             }
-            result.add(serializer.deserialize(id, ByteBuffer.wrap(gameHeaderBuf)));
+            if (filter == null || filter.matches(gameHeaderBuf)) {
+                result.add(serializer.deserialize(id, ByteBuffer.wrap(gameHeaderBuf)));
+            }
         }
 
         return result;
@@ -188,8 +190,7 @@ public class PersistentExtendedGameHeaderStorage extends ExtendedGameHeaderStora
         ByteBuffer src = serializer.serialize(extendedGameHeader);
         src.position(0);
         try {
-            positionChannel(gameId);
-            channel.write(src);
+            channel.write(getGameOffset(gameId), src);
         } catch (IOException e) {
             throw new ChessBaseIOException("Failed to write extended game header with id " + gameId, e);
         }
@@ -198,6 +199,66 @@ public class PersistentExtendedGameHeaderStorage extends ExtendedGameHeaderStora
 
         if (log.isDebugEnabled()) {
             log.debug(String.format("Successfully put game header %d to %s", gameId, storageName));
+        }
+    }
+
+    @Override
+    void adjustMovesOffset(int startGameId, long movesOffset, long insertedBytes) {
+        // TODO: This code is almost the same as in PersistentGameHeaderStorage, simplify?
+        final int batchSize = 1000;
+
+        try {
+            while (startGameId < getMetadata().getNumHeaders() + 1) {
+                int noGames = Math.min(batchSize, getMetadata().getNumHeaders() + 1 - startGameId);
+                ByteBuffer buf = channel.read(getGameOffset(startGameId), noGames * serializedExtendedGameHeaderSize);
+
+                for (int i = 0; i < noGames; i++) {
+                    // 30 = offset into extended game header storing moves offset
+                    buf.position(i * serializedExtendedGameHeaderSize + 30);
+                    long oldOfs = ByteBufferUtil.getLongB(buf);
+                    if (oldOfs > movesOffset) {
+                        buf.position(i * serializedExtendedGameHeaderSize + 30);
+                        ByteBufferUtil.putLongB(buf, oldOfs + insertedBytes);
+                    }
+                }
+
+                buf.position(0);
+                channel.write(getGameOffset(startGameId), buf);
+
+                startGameId += noGames;
+            }
+        } catch (IOException e) {
+            throw new ChessBaseIOException("Failed to adjust move offset in GameHeader file due to an IO error", e);
+        }
+    }
+
+    @Override
+    void adjustAnnotationOffset(int startGameId, long annotationOffset, long insertedBytes) {
+        // TODO: This code is almost the same as in PersistentGameHeaderStorage, simplify?
+        final int batchSize = 1000;
+
+        try {
+            while (startGameId < getMetadata().getNumHeaders() + 1) {
+                int noGames = Math.min(batchSize, getMetadata().getNumHeaders() + 1 - startGameId);
+                ByteBuffer buf = channel.read(getGameOffset(startGameId), noGames * serializedExtendedGameHeaderSize);
+                for (int i = 0; i < noGames; i++) {
+                    // 12 = offset into game header storing annotation offset
+                    buf.position(i * serializedExtendedGameHeaderSize + 12);
+                    long oldOfs = ByteBufferUtil.getLongB(buf);
+                    // This check will also work on games that doesn't have annotations (where it's 0)
+                    if (oldOfs > annotationOffset) {
+                        buf.position(i * serializedExtendedGameHeaderSize + 12);
+                        ByteBufferUtil.putLongB(buf, oldOfs + insertedBytes);
+                    }
+                }
+
+                buf.position(0);
+                channel.write(getGameOffset(startGameId), buf);
+
+                startGameId += noGames;
+            }
+        } catch (IOException e) {
+            throw new ChessBaseIOException("Failed to adjust annotation offset in GameHeader file due to an IO error", e);
         }
     }
 

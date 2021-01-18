@@ -5,12 +5,10 @@ import lombok.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.cbhlib.annotations.AnnotationBase;
-import se.yarin.cbhlib.entities.AnnotatorBase;
-import se.yarin.cbhlib.entities.PlayerBase;
-import se.yarin.cbhlib.entities.SourceBase;
-import se.yarin.cbhlib.entities.TournamentBase;
+import se.yarin.cbhlib.entities.*;
 import se.yarin.cbhlib.exceptions.ChessBaseException;
 import se.yarin.cbhlib.exceptions.ChessBaseInvalidDataException;
+import se.yarin.cbhlib.games.ExtendedGameHeaderBase;
 import se.yarin.cbhlib.games.GameHeader;
 import se.yarin.cbhlib.games.GameHeaderBase;
 import se.yarin.cbhlib.games.GameLoader;
@@ -49,12 +47,15 @@ public final class Database implements AutoCloseable {
     @Getter @NonNull private final String databaseId;
 
     @Getter @NonNull private final GameHeaderBase headerBase;
+    @Getter @NonNull private final ExtendedGameHeaderBase extendedHeaderBase;
     @Getter @NonNull private final MovesBase movesBase;
     @Getter @NonNull private final AnnotationBase annotationBase;
     @Getter @NonNull private final PlayerBase playerBase;
     @Getter @NonNull private final TournamentBase tournamentBase;
     @Getter @NonNull private final AnnotatorBase annotatorBase;
     @Getter @NonNull private final SourceBase sourceBase;
+    @Getter @NonNull private final TeamBase teamBase;
+
 
     /**
      * Creates a new in-memory ChessBase database.
@@ -62,25 +63,29 @@ public final class Database implements AutoCloseable {
      * Important: Write operations to the database will not be persisted to disk.
      */
     public Database() {
-        this(new GameHeaderBase(), new MovesBase(), new AnnotationBase(), new PlayerBase(),
-                new TournamentBase(), new AnnotatorBase(), new SourceBase());
+        this(new GameHeaderBase(), new ExtendedGameHeaderBase(), new MovesBase(), new AnnotationBase(), new PlayerBase(),
+                new TournamentBase(), new AnnotatorBase(), new SourceBase(), new TeamBase());
     }
 
     private Database(
             @NonNull GameHeaderBase headerBase,
+            @NonNull ExtendedGameHeaderBase extendedHeaderBase,
             @NonNull MovesBase movesBase,
             @NonNull AnnotationBase annotationBase,
             @NonNull PlayerBase playerBase,
             @NonNull TournamentBase tournamentBase,
             @NonNull AnnotatorBase annotatorBase,
-            @NonNull SourceBase sourceBase) {
+            @NonNull SourceBase sourceBase,
+            @NonNull TeamBase teamBase) {
         this.headerBase = headerBase;
+        this.extendedHeaderBase = extendedHeaderBase;
         this.movesBase = movesBase;
         this.annotationBase = annotationBase;
         this.playerBase = playerBase;
         this.tournamentBase = tournamentBase;
         this.annotatorBase = annotatorBase;
         this.sourceBase = sourceBase;
+        this.teamBase = teamBase;
 
         this.loader = new GameLoader(this);
         this.updater = new DatabaseUpdater(this, loader);
@@ -109,14 +114,16 @@ public final class Database implements AutoCloseable {
         String base = file.getPath().substring(0, file.getPath().length() - 4);
 
         GameHeaderBase cbh = GameHeaderBase.open(file);
+        ExtendedGameHeaderBase cbj = ExtendedGameHeaderBase.open(new File(base + ".cbj"));
         MovesBase cbg = MovesBase.open(new File(base + ".cbg"));
         AnnotationBase cba = AnnotationBase.open(new File(base + ".cba"));
         PlayerBase cbp = PlayerBase.open(new File(base + ".cbp"));
         TournamentBase cbt = TournamentBase.open(new File(base + ".cbt"));
         AnnotatorBase cbc = AnnotatorBase.open(new File(base + ".cbc"));
         SourceBase cbs = SourceBase.open(new File(base + ".cbs"));
+        TeamBase cbe = TeamBase.open(new File(base + ".cbe"));
 
-        return new Database(cbh, cbg, cba, cbp, cbt, cbc, cbs);
+        return new Database(cbh, cbj, cbg, cba, cbp, cbt, cbc, cbs, cbe);
     }
 
     /**
@@ -133,14 +140,16 @@ public final class Database implements AutoCloseable {
         String base = file.getPath().substring(0, file.getPath().length() - 4);
 
         GameHeaderBase cbh = GameHeaderBase.openInMemory(file);
+        ExtendedGameHeaderBase cbj = ExtendedGameHeaderBase.openInMemory(new File(base + ".cbj"));
         MovesBase cbg = MovesBase.openInMemory(new File(base + ".cbg"));
         AnnotationBase cba = AnnotationBase.openInMemory(new File(base + ".cba"));
         PlayerBase cbp = PlayerBase.openInMemory(new File(base + ".cbp"));
         TournamentBase cbt = TournamentBase.openInMemory(new File(base + ".cbt"));
         AnnotatorBase cbc = AnnotatorBase.openInMemory(new File(base + ".cbc"));
         SourceBase cbs = SourceBase.openInMemory(new File(base + ".cbs"));
+        TeamBase cbe = TeamBase.openInMemory(new File(base + ".cbe"));
 
-        return new Database(cbh, cbg, cba, cbp, cbt, cbc, cbs);
+        return new Database(cbh, cbj, cbg, cba, cbp, cbt, cbc, cbs, cbe);
     }
 
     /**
@@ -165,6 +174,7 @@ public final class Database implements AutoCloseable {
         String base = file.getPath().substring(0, file.getPath().length() - 4);
 
         GameHeaderBase cbh = GameHeaderBase.create(file);
+        ExtendedGameHeaderBase cbj = ExtendedGameHeaderBase.create(new File(base + ".cbj"));
         MovesBase cbg = MovesBase.create(new File(base + ".cbg"));
         AnnotationBase cba = AnnotationBase.create(new File(base + ".cba"));
 
@@ -172,8 +182,9 @@ public final class Database implements AutoCloseable {
         TournamentBase cbt = TournamentBase.create(new File(base + ".cbt"), createOnClose);
         AnnotatorBase cbc = AnnotatorBase.create(new File(base + ".cbc"), createOnClose);
         SourceBase cbs = SourceBase.create(new File(base + ".cbs"), createOnClose);
+        TeamBase cbe = TeamBase.create(new File(base + ".cbe"), createOnClose);
 
-        return new Database(cbh, cbg, cba, cbp, cbt, cbc, cbs);
+        return new Database(cbh, cbj, cbg, cba, cbp, cbt, cbc, cbs, cbe);
     }
 
     /**
@@ -256,12 +267,14 @@ public final class Database implements AutoCloseable {
      */
     public void close() throws IOException {
         headerBase.close();
+        extendedHeaderBase.close();
         movesBase.close();
         annotationBase.close();
         playerBase.close();
         tournamentBase.close();
         annotatorBase.close();
         sourceBase.close();
+        teamBase.close();
     }
 
 }

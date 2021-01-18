@@ -28,6 +28,8 @@ public class GameLoader {
     public static final String EVENT_ID = "eventId";
     public static final String ANNOTATOR_ID = "annotatorId";
     public static final String SOURCE_ID = "sourceId";
+    public static final String WHITE_TEAM_ID = "whiteTeamId";
+    public static final String BLACK_TEAM_ID = "blackTeamId";
 
     private final Database database;
 
@@ -35,7 +37,7 @@ public class GameLoader {
         this.database = database;
     }
 
-    public GameHeaderModel getHeaderModel(GameHeader header) {
+    public GameHeaderModel getHeaderModel(GameHeader header, ExtendedGameHeader extendedHeader) {
         GameHeaderModel model = new GameHeaderModel();
 
         if (header.isGuidingText()) {
@@ -47,6 +49,15 @@ public class GameLoader {
         AnnotatorEntity annotator = database.getAnnotatorBase().get(header.getAnnotatorId());
         SourceEntity source = database.getSourceBase().get(header.getSourceId());
         TournamentEntity tournament = database.getTournamentBase().get(header.getTournamentId());
+        TeamEntity whiteTeam = database.getTeamBase().get(extendedHeader.getWhiteTeamId());
+        TeamEntity blackTeam = database.getTeamBase().get(extendedHeader.getBlackTeamId());
+
+        // TODO: Instead of duplicating each CBH specific field, it's probably better to keep a reference
+        // to the raw header data. The GameHeaderModel should probably just contain the most generic fields,
+        // while ID's and internal CBH stuff like "last updated", "version" etc should not be there,
+        // but an opaque blob/reference to the CBH/CBJ data should be kept instead.
+        // For data that can be deduced from the game moves (like eco, final material, endgame etc), perhaps
+        // the version of the game can be used to deduce if it needs to be recalculated?
 
         model.setField(DATABASE_ID, database);
 
@@ -55,13 +66,15 @@ public class GameLoader {
         if (header.getWhiteElo() > 0) {
             model.setWhiteElo(header.getWhiteElo());
         }
-        // TODO: whiteTeam
+        model.setField(WHITE_TEAM_ID, whiteTeam.getId());
+        model.setWhiteTeam(whiteTeam.getTitle());
         model.setBlack(blackPlayer.getFullName());
         model.setField(BLACK_ID, blackPlayer.getId());
         if (header.getBlackElo() > 0) {
             model.setBlackElo(header.getBlackElo());
         }
-        // TODO: blackTeam
+        model.setField(BLACK_TEAM_ID, blackTeam.getId());
+        model.setBlackTeam(blackTeam.getTitle());
         model.setResult(header.getResult());
         model.setDate(header.getPlayedDate());
         model.setEco(header.getEco());
@@ -106,13 +119,46 @@ public class GameLoader {
 
     public GameModel getGameModel(int gameId) throws ChessBaseException {
         GameHeader gameHeader = database.getHeaderBase().getGameHeader(gameId);
+        ExtendedGameHeader extendedGameHeader = database.getExtendedHeaderBase().getExtendedGameHeader(gameId);
 
-        GameHeaderModel headerModel = getHeaderModel(gameHeader);
+        GameHeaderModel headerModel = getHeaderModel(gameHeader, extendedGameHeader);
 
         GameMovesModel moves = database.getMovesBase().getMoves(gameHeader.getMovesOffset(), gameId);
         database.getAnnotationBase().getAnnotations(moves, gameHeader.getAnnotationOffset());
 
         return new GameModel(headerModel, moves);
+    }
+
+    public ExtendedGameHeader createExtendedGameHeader(GameModel model, int gameId, long movesOfs, long annotationOfs)
+            throws ChessBaseInvalidDataException {
+        GameHeaderModel header = model.header();
+
+        TeamEntity whiteTeam, blackTeam;
+
+        // If the GameModel contains ID's from a different database, we can't use them
+        boolean sameDb = database.getDatabaseId().equals(header.getField(DATABASE_ID));
+
+        // Lookup or create the entities that are referenced in the game header
+        // If the id field is set, use that one. Otherwise use the string field.
+        // If no entity exists with the same name, create a new one.
+        try {
+            whiteTeam = resolveEntity(sameDb ? (Integer) header.getField(WHITE_TEAM_ID) : 0,
+                    new TeamEntity(defaultName(header.getWhiteTeam())), database.getTeamBase());
+            blackTeam = resolveEntity(sameDb ? (Integer) header.getField(BLACK_TEAM_ID) : 0,
+                    new TeamEntity(defaultName(header.getBlackTeam())), database.getTeamBase());
+        } catch (IllegalArgumentException e) {
+            throw new ChessBaseInvalidDataException("Failed to create ExtendedGameHeader entry due to invalid entity data reference", e);
+        }  catch (RuntimeException e) {
+            throw new IllegalArgumentException("Some argument were not set in the game header model", e);
+        }
+
+        ExtendedGameHeader.ExtendedGameHeaderBuilder builder = ExtendedGameHeader.builder();
+
+        builder.id(gameId); // TODO: Is this the actual game id?
+        builder.movesOffset(movesOfs);
+        builder.annotationOffset(annotationOfs);
+
+        return builder.build();
     }
 
     public GameHeader createGameHeader(GameModel model, int movesOfs, int annotationOfs) throws ChessBaseInvalidDataException {

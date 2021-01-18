@@ -6,14 +6,15 @@ import org.slf4j.LoggerFactory;
 import se.yarin.cbhlib.entities.*;
 import se.yarin.cbhlib.exceptions.ChessBaseIOException;
 import se.yarin.cbhlib.exceptions.ChessBaseInvalidDataException;
+import se.yarin.cbhlib.games.ExtendedGameHeader;
 import se.yarin.cbhlib.games.GameHeader;
 import se.yarin.cbhlib.games.GameLoader;
+import se.yarin.cbhlib.games.IGameHeader;
 import se.yarin.cbhlib.storage.EntityStorageException;
 import se.yarin.chess.GameModel;
 import se.yarin.chess.GameMovesModel;
 
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.function.BiPredicate;
 import java.util.stream.Stream;
@@ -46,11 +47,14 @@ public class DatabaseUpdater {
         int movesOfs = database.getMovesBase().putMoves(0, model.moves());
 
         GameHeader gameHeader = loader.createGameHeader(model, movesOfs, annotationOfs);
+        ExtendedGameHeader extendedGameHeader = loader.createExtendedGameHeader(model, gameId, movesOfs, annotationOfs);
 
         gameHeader = database.getHeaderBase().add(gameHeader);
         assert gameHeader.getId() == gameId;
 
-        updateEntityStats(null, gameHeader);
+        extendedGameHeader = database.getExtendedHeaderBase().add(extendedGameHeader);
+
+        updateEntityStats(null, null, gameHeader, extendedGameHeader);
 
         return gameHeader;
     }
@@ -65,15 +69,21 @@ public class DatabaseUpdater {
      */
     public GameHeader replaceGame(int gameId, @NonNull GameModel model) throws ChessBaseInvalidDataException {
         GameHeader oldGameHeader = database.getHeaderBase().getGameHeader(gameId);
+        ExtendedGameHeader oldExtendedGameHeader = database.getExtendedHeaderBase().getExtendedGameHeader(gameId);
         if (oldGameHeader == null) {
             throw new IllegalArgumentException("There is no game with game id " + gameId);
+        }
+        if (oldExtendedGameHeader == null) {
+            // TODO: This shouldn't fail
+            throw new IllegalArgumentException("Extended game header missing for game id " + gameId);
         }
 
         // If necessary, first insert space in the moves and annotation base
         // In case the previous game didn't have annotations, we will know where to store them
-        int oldAnnotationOfs = prepareReplace(oldGameHeader, model.moves());
+        int oldAnnotationOfs = prepareReplace(oldGameHeader, oldExtendedGameHeader, model.moves());
 
         int oldMovesOffset = oldGameHeader.getMovesOffset();
+        // TODO: Resolve cases when oldGameHeader and oldExtendedGameHeader differ due to 32 bit limits
 
         int movesOfs = database.getMovesBase().putMoves(oldMovesOffset, model.moves());
         int annotationOfs = database.getAnnotationBase().putAnnotations(gameId, oldAnnotationOfs, model.moves());
@@ -82,9 +92,12 @@ public class DatabaseUpdater {
         assert oldAnnotationOfs == 0 || annotationOfs == 0 || annotationOfs == oldAnnotationOfs;
 
         GameHeader gameHeader = loader.createGameHeader(model, oldGameHeader.getMovesOffset(), annotationOfs);
+        ExtendedGameHeader extendedGameHeader = loader.createExtendedGameHeader(model, gameId,
+                oldExtendedGameHeader.getMovesOffset(), annotationOfs);
 
         gameHeader = database.getHeaderBase().update(gameId, gameHeader);
-        updateEntityStats(oldGameHeader, gameHeader);
+        extendedGameHeader = database.getExtendedHeaderBase().update(gameId, extendedGameHeader);
+        updateEntityStats(oldGameHeader, oldExtendedGameHeader, gameHeader, extendedGameHeader);
 
         return gameHeader;
     }
@@ -92,11 +105,12 @@ public class DatabaseUpdater {
     /**
      * Allocates enough space in the moves and annotation database to fit the new game
      * @param gameHeader the header of the game to replace
+     * @param extendedGameHeader the extended header of the game to replace
      * @param moves the model containing the new moves and annotations
      * @return the new offset to store the annotations
      * @throws ChessBaseIOException if there was an IO error when preparing the replace
      */
-    private int prepareReplace(@NonNull GameHeader gameHeader, @NonNull GameMovesModel moves) {
+    private int prepareReplace(@NonNull GameHeader gameHeader, @NonNull ExtendedGameHeader extendedGameHeader, @NonNull GameMovesModel moves) {
         int gameId = gameHeader.getId();
 
         // This code is a bit messy. In the worst case, it does three sweeps over
@@ -112,8 +126,8 @@ public class DatabaseUpdater {
         // If not, insert bytes and update all game headers.
         int insertedGameBytes = database.getMovesBase().preparePutBlob(gameHeader.getMovesOffset(), moves);
         if (insertedGameBytes > 0) {
-            // TODO: This must be done in the extended header base as well
             database.getHeaderBase().adjustMovesOffset(gameId + 1, gameHeader.getMovesOffset(), insertedGameBytes);
+            database.getExtendedHeaderBase().adjustMovesOffset(gameId + 1, extendedGameHeader.getMovesOffset(), insertedGameBytes);
         }
 
         // Ensure there is enough room to fit the annotation data.
@@ -139,22 +153,46 @@ public class DatabaseUpdater {
                     gameHeader.getAnnotationOffset(), moves);
         }
         if (insertedAnnotationBytes > 0) {
-            // TODO: This must be done in the extended header base as well
             database.getHeaderBase().adjustAnnotationOffset(gameId + 1, gameHeader.getAnnotationOffset(), insertedAnnotationBytes);
+            database.getExtendedHeaderBase().adjustAnnotationOffset(gameId + 1, extendedGameHeader.getAnnotationOffset(), insertedAnnotationBytes);
         }
 
         return oldAnnotationOfs;
     }
 
-    private class DeltaMap<T extends Entity & Comparable<T>> {
+    private class GameHeaderDeltaMap<T extends Entity & Comparable<T>> extends DeltaMap<T, GameHeader> {
+
+        public GameHeaderDeltaMap(EntityBase<T> base, GameHeader newGameHeader, BiPredicate<GameHeader, Integer> predicate) {
+            super(base, newGameHeader, predicate);
+        }
+
+        @Override
+        protected Stream<GameHeader> headerStream() {
+            return database.getHeaderBase().stream();
+        }
+    }
+
+    private class ExtendedGameHeaderDeltaMap<T extends Entity & Comparable<T>> extends DeltaMap<T, ExtendedGameHeader> {
+
+        public ExtendedGameHeaderDeltaMap(EntityBase<T> base, ExtendedGameHeader newGameHeader, BiPredicate<ExtendedGameHeader, Integer> predicate) {
+            super(base, newGameHeader, predicate);
+        }
+
+        @Override
+        protected Stream<ExtendedGameHeader> headerStream() {
+            return database.getExtendedHeaderBase().stream();
+        }
+    }
+
+    private abstract class DeltaMap<T extends Entity & Comparable<T>, U extends IGameHeader> {
         private final Map<Integer, Integer> map = new HashMap<>();
         private final EntityBase<T> base;
-        private final BiPredicate<GameHeader, Integer> predicate;
-        private final GameHeader newGame;
+        private final BiPredicate<U, Integer> predicate;
+        private final U newGameHeader;
 
-        public DeltaMap(EntityBase<T> base, GameHeader newGame, BiPredicate<GameHeader, Integer> predicate) {
+        public DeltaMap(EntityBase<T> base, U newGameHeader, BiPredicate<U, Integer> predicate) {
             this.base = base;
-            this.newGame = newGame;
+            this.newGameHeader = newGameHeader;
             this.predicate = predicate;
         }
 
@@ -166,13 +204,15 @@ public class DatabaseUpdater {
             }
         }
 
+        protected abstract Stream<U> headerStream();
+
         // TODO: Replace this with a proper search implementation in the EntityBase
         private int findFirstGame(int entityId) {
-            return database.getHeaderBase().stream()
-                    .map(gameHeader -> gameHeader.getId() == newGame.getId() ? newGame : gameHeader)
+            return headerStream()
+                    .map(gameHeader -> gameHeader.getId() == newGameHeader.getId() ? newGameHeader : gameHeader)
                     // When checking the game we're actually updating, don't pick the one from the db
                     .filter(actual -> predicate.test(actual, entityId))
-                    .map(GameHeader::getId)
+                    .map(IGameHeader::getId)
                     .findFirst()
                     .orElse(0);
         }
@@ -188,8 +228,8 @@ public class DatabaseUpdater {
                         int newFirstGameId = entity.getFirstGameId();
                         if (delta.getValue() > 0) {
                             newFirstGameId = entity.getFirstGameId() == 0 ?
-                                    newGame.getId() : Math.min(newFirstGameId, newGame.getId());
-                        } else if (newGame.getId() == entity.getFirstGameId()) {
+                                    newGameHeader.getId() : Math.min(newFirstGameId, newGameHeader.getId());
+                        } else if (newGameHeader.getId() == entity.getFirstGameId()) {
                             newFirstGameId = findFirstGame(entity.getId());
                         }
 
@@ -206,37 +246,50 @@ public class DatabaseUpdater {
         }
     }
 
-    private void updateEntityStats(GameHeader oldGame, @NonNull GameHeader newGame) {
-        assert oldGame == null || oldGame.getId() != 0;
-        assert newGame.getId() != 0;
+    private void updateEntityStats(
+            GameHeader oldHeader,
+            ExtendedGameHeader oldExtendedHeader,
+            @NonNull GameHeader newHeader,
+            @NonNull ExtendedGameHeader newExtendedHeader) {
+        assert oldHeader == null || oldHeader.getId() != 0;
+        assert newHeader.getId() != 0;
 
-        DeltaMap<PlayerEntity> playerDelta = new DeltaMap<>(database.getPlayerBase(), newGame,
+        DeltaMap<PlayerEntity, GameHeader> playerDelta = new GameHeaderDeltaMap<>(database.getPlayerBase(), newHeader,
                 (header, entityId) -> header.getWhitePlayerId() == entityId || header.getBlackPlayerId() == entityId);
-        DeltaMap<TournamentEntity> tournamentDelta = new DeltaMap<>(database.getTournamentBase(), newGame,
+        DeltaMap<TournamentEntity, GameHeader> tournamentDelta = new GameHeaderDeltaMap<>(database.getTournamentBase(), newHeader,
                 (header, entityId) -> header.getTournamentId() == entityId);
-        DeltaMap<AnnotatorEntity> annotatorDelta = new DeltaMap<>(database.getAnnotatorBase(), newGame,
+        DeltaMap<AnnotatorEntity, GameHeader> annotatorDelta = new GameHeaderDeltaMap<>(database.getAnnotatorBase(), newHeader,
                 (header, entityId) -> header.getAnnotatorId() == entityId);
-        DeltaMap<SourceEntity> sourceDelta = new DeltaMap<>(database.getSourceBase(), newGame,
+        DeltaMap<SourceEntity, GameHeader> sourceDelta = new GameHeaderDeltaMap<>(database.getSourceBase(), newHeader,
                 (header, entityId) -> header.getSourceId() == entityId);
+        DeltaMap<TeamEntity, ExtendedGameHeader> teamDelta = new ExtendedGameHeaderDeltaMap<>(database.getTeamBase(), newExtendedHeader,
+                (extendedHeader, entityId) -> extendedHeader.getWhiteTeamId() == entityId || extendedHeader.getBlackTeamId() == entityId);
 
-        if (oldGame != null) {
-            playerDelta.update(oldGame.getWhitePlayerId(), -1);
-            playerDelta.update(oldGame.getBlackPlayerId(), -1);
-            tournamentDelta.update(oldGame.getTournamentId(), -1);
-            annotatorDelta.update(oldGame.getAnnotatorId(), -1);
-            sourceDelta.update(oldGame.getSourceId(), -1);
+        if (oldHeader != null) {
+            playerDelta.update(oldHeader.getWhitePlayerId(), -1);
+            playerDelta.update(oldHeader.getBlackPlayerId(), -1);
+            tournamentDelta.update(oldHeader.getTournamentId(), -1);
+            annotatorDelta.update(oldHeader.getAnnotatorId(), -1);
+            sourceDelta.update(oldHeader.getSourceId(), -1);
         }
-        playerDelta.update(newGame.getWhitePlayerId(), 1);
-        playerDelta.update(newGame.getBlackPlayerId(), 1);
-        tournamentDelta.update(newGame.getTournamentId(), 1);
-        annotatorDelta.update(newGame.getAnnotatorId(), 1);
-        sourceDelta.update(newGame.getSourceId(), 1);
+        if (oldExtendedHeader != null) {
+            teamDelta.update(oldExtendedHeader.getWhiteTeamId(), -1);
+            teamDelta.update(oldExtendedHeader.getBlackTeamId(), -1);
+        }
+        playerDelta.update(newHeader.getWhitePlayerId(), 1);
+        playerDelta.update(newHeader.getBlackPlayerId(), 1);
+        tournamentDelta.update(newHeader.getTournamentId(), 1);
+        annotatorDelta.update(newHeader.getAnnotatorId(), 1);
+        sourceDelta.update(newHeader.getSourceId(), 1);
+        teamDelta.update(newExtendedHeader.getWhiteTeamId(), 1);
+        teamDelta.update(newExtendedHeader.getBlackTeamId(), 1);
 
         try {
             playerDelta.applyChanges();
             tournamentDelta.applyChanges();
             annotatorDelta.applyChanges();
             sourceDelta.applyChanges();
+            teamDelta.applyChanges();
         } catch (EntityStorageException e) {
             throw new ChessBaseIOException("Entity storage is in an inconsistent state. Please run repair.", e);
         }

@@ -5,9 +5,7 @@ import org.slf4j.LoggerFactory;
 import se.yarin.cbhlib.*;
 import se.yarin.cbhlib.exceptions.ChessBaseException;
 import se.yarin.cbhlib.exceptions.ChessBaseIOException;
-import se.yarin.cbhlib.games.GameHeader;
-import se.yarin.cbhlib.games.GameHeaderBase;
-import se.yarin.cbhlib.games.GameLoader;
+import se.yarin.cbhlib.games.*;
 import se.yarin.cbhlib.storage.FileBlobStorage;
 
 public class GamesValidator {
@@ -48,6 +46,7 @@ public class GamesValidator {
 
     public void processGames(boolean loadMoves, Runnable progressCallback) {
         GameHeaderBase headerBase = db.getHeaderBase();
+        ExtendedGameHeaderBase extendedGameHeaderBase = db.getExtendedHeaderBase();
 
         // System.out.println("Loading all " + headerBase.size() + " games...");
         int numGames = 0, numDeleted = 0, numAnnotated = 0, numText = 0, numErrors = 0, numChess960 = 0;
@@ -57,6 +56,7 @@ public class GamesValidator {
         int annotationFreeSpace = 0, moveFreeSpace = 0;
 
         for (GameHeader header : headerBase.iterable()) {
+            ExtendedGameHeader extendedHeader = extendedGameHeaderBase.getExtendedGameHeader(header.getId());
             if (header.getAnnotationOffset() > 0) {
                 int annotationSize = db.getAnnotationBase().getStorage().readBlob(header.getAnnotationOffset()).limit();
                 int annotationEnd = header.getAnnotationOffset() + annotationSize;
@@ -104,7 +104,7 @@ public class GamesValidator {
                         loader.getGameModel(header.getId());
                     } else {
                         // Only deserialize the game header (and lookup player, team, source, commentator)
-                        loader.getHeaderModel(header);
+                        loader.getHeaderModel(header, extendedHeader);
                     }
                     numGames += 1;
                 }

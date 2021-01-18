@@ -14,7 +14,7 @@ import java.util.EnumSet;
 @Builder(toBuilder = true)
 @Data
 @EqualsAndHashCode
-public class GameHeader {
+public class GameHeader implements IGameHeader {
     private final int id;
     private final boolean game; // This one is always true
     private final boolean deleted; // If true, game has been marked as deleted but no physical deletion has been done yet

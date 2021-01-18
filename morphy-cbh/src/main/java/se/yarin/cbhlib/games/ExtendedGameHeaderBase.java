@@ -14,14 +14,16 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
-public class ExtendedGameHeaderBase implements ExtendedGameHeaderSerializer, Iterable<ExtendedGameHeader> {
+public class ExtendedGameHeaderBase implements ExtendedGameHeaderSerializer {
     private static final Logger log = LoggerFactory.getLogger(ExtendedGameHeaderBase.class);
 
     private static final int DEFAULT_SERIALIZED_EXTENDED_GAME_HEADER_SIZE = 120;
     private static final int DEFAULT_VERSION = 11;
 
-    private ExtendedGameHeaderStorageBase storage;
+    private final ExtendedGameHeaderStorageBase storage;
 
     /**
      * Creates a new game header base that is initially empty.
@@ -137,49 +139,90 @@ public class ExtendedGameHeaderBase implements ExtendedGameHeaderSerializer, Ite
         return extendedGameHeader;
     }
 
-
     /**
-     * Gets an iterator over all game headers in the database
-     * @return an iterator
+     * Returns an Iterable over all game headers in the database
+     * @return an iterable
      */
-    public Iterator<ExtendedGameHeader> iterator() {
-        return new DefaultIterator(1);
+    public Iterable<ExtendedGameHeader> iterable() {
+        return iterable(1);
     }
 
     /**
-     * Gets an iterator over all game headers in the database starting at the specified id
-     * @param gameId the id to start the iteration at (inclusive)
-     * @return an iterator
+     * Returns an Iterable over all game headers in the database
+     * @param gameId the id to start the iterable at (inclusive)
+     * @return an iterable
      */
-    public Iterator<ExtendedGameHeader> iterator(int gameId) {
-        return new DefaultIterator(gameId);
+    public Iterable<ExtendedGameHeader> iterable(int gameId) {
+        return () -> new ExtendedGameHeaderBase.DefaultIterator(gameId, null);
+    }
+
+    /**
+     * Returns a stream over all game headers in the database
+     * @return a stream
+     */
+    public Stream<ExtendedGameHeader> stream() {
+        return stream(1, null);
+    }
+
+    /**
+     * Returns a stream over all game headers in the database starting at the specified id
+     * @param gameId the id to start the stream at (inclusive)
+     * @return a stream
+     */
+    public Stream<ExtendedGameHeader> stream(int gameId) {
+        return stream(gameId, null);
+    }
+
+    /**
+     * Returns a stream over all extended game headers in the database starting at the specified id
+     * @param gameId the id to start the stream at (inclusive)
+     * @param filter a optional low level filter that _may_ filter out games at the ByteBuffer level.
+     *               The filter has no effect if the data has already been deserialized, so a proper
+     *               {@link se.yarin.cbhlib.games.search.SearchFilter} should be used as well.
+     *               However, since it's much faster to filter things out at this level, it's a nice performance boost.
+     * @return a stream
+     */
+    public Stream<ExtendedGameHeader> stream(int gameId, SerializedExtendedGameHeaderFilter filter) {
+        if (filter != null && !(storage instanceof PersistentExtendedGameHeaderStorage)) {
+            log.warn("A serialized ExtendedGameHeader filter was specified in iteration but the underlying storage doesn't support it");
+        }
+        Iterable<ExtendedGameHeader> iterable = () -> new ExtendedGameHeaderBase.DefaultIterator(gameId, filter);
+        return StreamSupport.stream(iterable.spliterator(), false);
     }
 
 
     private class DefaultIterator implements Iterator<ExtendedGameHeader> {
+        // TODO: This is almost duplicated with GameHeaderBase.DefaultIterator - simplify?
         private List<ExtendedGameHeader> batch = new ArrayList<>();
-        private int batchPos, nextBatchStart = 0, batchSize = 1000;
+        private static final int BATCH_SIZE = 1000;
+        private int batchPos, nextBatchStart;
         private final int version;
+        private final SerializedExtendedGameHeaderFilter filter;
 
         private void getNextBatch() {
-            int endId = Math.min(size() + 1, nextBatchStart + batchSize);
+            int endId = Math.min(size() + 1, nextBatchStart + BATCH_SIZE);
             if (nextBatchStart >= endId) {
                 batch = null;
             } else {
-                batch = storage.getRange(nextBatchStart, endId);
+                if (storage instanceof PersistentExtendedGameHeaderStorage) {
+                    batch = ((PersistentExtendedGameHeaderStorage) storage).getRange(nextBatchStart, endId, filter);
+                } else {
+                    batch = storage.getRange(nextBatchStart, endId);
+                }
                 nextBatchStart = endId;
             }
             batchPos = 0;
         }
 
-        DefaultIterator(int startId) {
+        DefaultIterator(int startId, SerializedExtendedGameHeaderFilter filter) {
             version = storage.getVersion();
+            this.filter = filter;
             nextBatchStart = startId;
             prefetchBatch();
         }
 
         private void prefetchBatch() {
-            if (batch == null || batchPos == batch.size()) {
+            while (batch != null && batchPos == batch.size()) {
                 getNextBatch();
             }
         }
@@ -326,6 +369,28 @@ public class ExtendedGameHeaderBase implements ExtendedGameHeaderSerializer, Ite
         }
 
         return builder.build();
+    }
+
+    /**
+     * Adjusts the moves offset of all extended game headers that have their move offsets
+     * greater than the specified value.
+     * @param startGameId the first gameId to consider
+     * @param movesOffset a game is only affected if its moves offset is greater than this
+     * @param insertedBytes the number of bytes to adjust with
+     */
+    public void adjustMovesOffset(int startGameId, long movesOffset, long insertedBytes) {
+        storage.adjustMovesOffset(startGameId, movesOffset, insertedBytes);
+    }
+
+    /**
+     * Adjusts the annotation offset of all extended game headers that have their annotation offsets
+     * greater than the specified value.
+     * @param startGameId the first gameId to consider
+     * @param annotationOffset a game is only affected if its annotation offset is greater than this
+     * @param insertedBytes the number of bytes to adjust with
+     */
+    public void adjustAnnotationOffset(int startGameId, long annotationOffset, long insertedBytes) {
+        storage.adjustAnnotationOffset(startGameId, annotationOffset, insertedBytes);
     }
 
     @Override

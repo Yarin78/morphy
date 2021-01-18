@@ -47,4 +47,28 @@ public class InMemoryExtendedGameHeaderStorage extends ExtendedGameHeaderStorage
         gameHeaders.put(gameId, gameHeader);
         version++;
     }
+
+    @Override
+    void adjustMovesOffset(int startGameId, long movesOffset, long insertedBytes) {
+        List<Integer> gameIds = new ArrayList<>(gameHeaders.tailMap(startGameId).keySet());
+        for (int gameId : gameIds) {
+            ExtendedGameHeader header = gameHeaders.get(gameId);
+            if (header.getMovesOffset() > movesOffset) {
+                ExtendedGameHeader newHeader = header.toBuilder().movesOffset(header.getMovesOffset() + insertedBytes).build();
+                gameHeaders.put(gameId, newHeader);
+            }
+        }
+    }
+
+    @Override
+    void adjustAnnotationOffset(int startGameId, long annotationOffset, long insertedBytes) {
+        List<Integer> gameIds = new ArrayList<>(gameHeaders.tailMap(startGameId).keySet());
+        for (int gameId : gameIds) {
+            ExtendedGameHeader header = gameHeaders.get(gameId);
+            if (header.getAnnotationOffset() > annotationOffset) {
+                ExtendedGameHeader newHeader = header.toBuilder().annotationOffset(header.getAnnotationOffset() + insertedBytes).build();
+                gameHeaders.put(gameId, newHeader);
+            }
+        }
+    }
 }

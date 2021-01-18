@@ -50,6 +50,24 @@ abstract class ExtendedGameHeaderStorageBase {
     abstract void put(ExtendedGameHeader extendedGameHeader);
 
     /**
+     * Adjusts the moves offset of all extended game headers that have their move offsets
+     * greater than the specified value.
+     * @param startGameId the first gameId to consider
+     * @param movesOffset a game is only affected if its moves offset is greater than this
+     * @param insertedBytes the number of bytes to adjust with
+     */
+    abstract void adjustMovesOffset(int startGameId, long movesOffset, long insertedBytes);
+
+    /**
+     * Adjusts the annotation offset of all extended game headers that have their annotation offsets
+     * greater than the specified value.
+     * @param startGameId the first gameId to consider
+     * @param annotationOffset a game is only affected if its annotation offset is greater than this
+     * @param insertedBytes the number of bytes to adjust with
+     */
+    abstract void adjustAnnotationOffset(int startGameId, long annotationOffset, long insertedBytes);
+
+    /**
      * The number of modifying operations to the storage since it was opened.
      * This field is not persisted.
      * @return the version

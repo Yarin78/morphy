@@ -14,7 +14,7 @@ import java.util.TimeZone;
 @Builder(toBuilder = true)
 @Data
 @EqualsAndHashCode
-public class ExtendedGameHeader {
+public class ExtendedGameHeader implements IGameHeader {
     private final int id;
     private final int whiteTeamId;
     private final int blackTeamId;
