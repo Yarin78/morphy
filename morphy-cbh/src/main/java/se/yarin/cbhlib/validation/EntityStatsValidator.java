@@ -7,6 +7,7 @@ import org.slf4j.LoggerFactory;
 import se.yarin.cbhlib.Database;
 import se.yarin.cbhlib.entities.Entity;
 import se.yarin.cbhlib.entities.EntityBase;
+import se.yarin.cbhlib.games.ExtendedGameHeader;
 import se.yarin.cbhlib.games.GameHeader;
 import se.yarin.cbhlib.storage.EntityStorageException;
 
@@ -29,18 +30,29 @@ public class EntityStatsValidator {
     public void calculateEntityStats(Runnable progressCallback) {
         for (GameHeader gameHeader : db.getHeaderBase().iterable()) {
             int gameId = gameHeader.getId();
+
+            ExtendedGameHeader extendedGameHeader = db.getExtendedHeaderBase().getExtendedGameHeader(gameId);
+
             if (!gameHeader.isGuidingText()) {
                 updateEntityStats(stats.players, gameHeader.getWhitePlayerId(), gameId);
                 updateEntityStats(stats.players, gameHeader.getBlackPlayerId(), gameId);
+                updateEntityStats(stats.teams, extendedGameHeader.getWhiteTeamId(), gameId);
+                updateEntityStats(stats.teams, extendedGameHeader.getBlackTeamId(), gameId);
             }
             updateEntityStats(stats.tournaments, gameHeader.getTournamentId(), gameId);
             updateEntityStats(stats.annotators, gameHeader.getAnnotatorId(), gameId);
             updateEntityStats(stats.sources, gameHeader.getSourceId(), gameId);
+
             progressCallback.run();
         }
     }
 
     private void updateEntityStats(Map<Integer, EntityStats.Stats> map, int entityId, int gameId) {
+        if (entityId == -1) {
+            // For Teams, -1 is a valid reference meaning "no team"
+            return;
+        }
+
         EntityStats.Stats stats = map.get(entityId);
         if (stats == null) {
             map.put(entityId, new EntityStats.Stats(1, gameId));
@@ -191,6 +203,7 @@ public class EntityStatsValidator {
         processEntities("tournaments", db.getTournamentBase(), stats.tournaments, throwOnError);
         processEntities("annotators", db.getAnnotatorBase(), stats.annotators, throwOnError);
         processEntities("sources", db.getSourceBase(), stats.sources, throwOnError);
+        processEntities("teams", db.getTeamBase(), stats.teams, throwOnError);
     }
 
 }

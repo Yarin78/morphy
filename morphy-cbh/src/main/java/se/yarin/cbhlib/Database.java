@@ -114,14 +114,19 @@ public final class Database implements AutoCloseable {
         String base = file.getPath().substring(0, file.getPath().length() - 4);
 
         GameHeaderBase cbh = GameHeaderBase.open(file);
-        ExtendedGameHeaderBase cbj = ExtendedGameHeaderBase.open(new File(base + ".cbj"));
+        File cbjFile = new File(base + ".cbj");
+        ExtendedGameHeaderBase cbj = cbjFile.exists()
+                ? ExtendedGameHeaderBase.open(cbjFile)
+                : ExtendedGameHeaderBase.create(cbjFile);
+
         MovesBase cbg = MovesBase.open(new File(base + ".cbg"));
         AnnotationBase cba = AnnotationBase.open(new File(base + ".cba"));
         PlayerBase cbp = PlayerBase.open(new File(base + ".cbp"));
         TournamentBase cbt = TournamentBase.open(new File(base + ".cbt"));
         AnnotatorBase cbc = AnnotatorBase.open(new File(base + ".cbc"));
         SourceBase cbs = SourceBase.open(new File(base + ".cbs"));
-        TeamBase cbe = TeamBase.open(new File(base + ".cbe"));
+        File cbeFile = new File(base + ".cbe");
+        TeamBase cbe = cbeFile.exists() ? TeamBase.open(cbeFile) : TeamBase.create(cbeFile);
 
         return new Database(cbh, cbj, cbg, cba, cbp, cbt, cbc, cbs, cbe);
     }

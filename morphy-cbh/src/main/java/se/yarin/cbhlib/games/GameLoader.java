@@ -66,15 +66,19 @@ public class GameLoader {
         if (header.getWhiteElo() > 0) {
             model.setWhiteElo(header.getWhiteElo());
         }
-        model.setField(WHITE_TEAM_ID, whiteTeam.getId());
-        model.setWhiteTeam(whiteTeam.getTitle());
+        if (whiteTeam != null) {
+            model.setField(WHITE_TEAM_ID, whiteTeam.getId());
+            model.setWhiteTeam(whiteTeam.getTitle());
+        }
         model.setBlack(blackPlayer.getFullName());
         model.setField(BLACK_ID, blackPlayer.getId());
         if (header.getBlackElo() > 0) {
             model.setBlackElo(header.getBlackElo());
         }
-        model.setField(BLACK_TEAM_ID, blackTeam.getId());
-        model.setBlackTeam(blackTeam.getTitle());
+        if (blackTeam != null) {
+            model.setField(BLACK_TEAM_ID, blackTeam.getId());
+            model.setBlackTeam(blackTeam.getTitle());
+        }
         model.setResult(header.getResult());
         model.setDate(header.getPlayedDate());
         model.setEco(header.getEco());
@@ -157,6 +161,15 @@ public class GameLoader {
         builder.id(gameId); // TODO: Is this the actual game id?
         builder.movesOffset(movesOfs);
         builder.annotationOffset(annotationOfs);
+        builder.finalMaterial(false);
+        builder.whiteTeamId(whiteTeam.getId());
+        builder.blackTeamId(blackTeam.getId());
+        builder.whiteRatingType(RatingType.international(TournamentTimeControl.NORMAL));
+        builder.blackRatingType(RatingType.international(TournamentTimeControl.NORMAL));
+
+        builder.creationTimestamp(0); // TODO
+        builder.endgameInfo(null);
+        builder.lastChangedTimestamp(0); // TODO
 
         return builder.build();
     }

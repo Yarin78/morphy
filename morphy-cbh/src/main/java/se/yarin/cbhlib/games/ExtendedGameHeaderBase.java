@@ -46,10 +46,14 @@ public class ExtendedGameHeaderBase implements ExtendedGameHeaderSerializer {
 
     /**
      * Creates an in-memory extended game header base initially populated with the data from the file
+     * If the file doesn't exist, an empty extended header base is created.
      * @param file the initial data of the database
      * @return an in-memory extended game header base
      */
     public static ExtendedGameHeaderBase openInMemory(@NonNull File file) throws IOException {
+        if (!file.exists()) {
+            return new ExtendedGameHeaderBase();
+        }
         ExtendedGameHeaderBase source = open(file);
         ExtendedGameHeaderBase target = new ExtendedGameHeaderBase();
         for (int i = 0; i < source.size(); i++) {

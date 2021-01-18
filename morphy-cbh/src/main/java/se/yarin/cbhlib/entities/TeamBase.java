@@ -30,6 +30,9 @@ public class TeamBase extends EntityBase<TeamEntity> {
      * @return an in-memory team base
      */
     public static TeamBase openInMemory(@NonNull File file) throws IOException {
+        if (!file.exists()) {
+            return new TeamBase();
+        }
         return new TeamBase(loadInMemoryStorage(file, new TeamBase()));
     }
 

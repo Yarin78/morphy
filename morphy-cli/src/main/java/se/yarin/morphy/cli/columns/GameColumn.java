@@ -31,9 +31,13 @@ public interface GameColumn {
     GameColumn[] ALL = {
             new GameIdColumn(),
             new NameColumn(true),
+            new TeamColumn(true),
             new RatingColumn(true),
+            new RatingTypeColumn(true),
             new NameColumn(false),
+            new TeamColumn(false),
             new RatingColumn(false),
+            new RatingTypeColumn(true),
             new ResultsColumn(),
             new NumMovesColumn(),
             new VCSColumn(),
@@ -50,6 +54,9 @@ public interface GameColumn {
             new DateColumn(),
             new AnnotatorColumn(),
             new SourceColumn(),
+            new GameVersionColumn(),
+            new CreationTimestampColumn(),
+            new LastChangedTimestampColumn(),
     };
 
     static String allColumnsString() {

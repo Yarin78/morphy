@@ -319,6 +319,9 @@ class Check implements Callable<Integer> {
     @CommandLine.Option(names = "--no-sources", negatable = true, description = "Check Source entities (true by default)")
     boolean checkSources = true;
 
+    @CommandLine.Option(names = "--no-teams", negatable = true, description = "Check Team entities (true by default)")
+    boolean checkTeams = true;
+
     @CommandLine.Option(names = "--no-entity-stats", negatable = true, description = "Check entity statistics (true by default)")
     boolean checkEntityStats = true;
 
@@ -341,6 +344,7 @@ class Check implements Callable<Integer> {
             Validator.Checks.ENTITY_TOURNAMENTS, checkTournaments,
             Validator.Checks.ENTITY_ANNOTATORS, checkAnnotators,
             Validator.Checks.ENTITY_SOURCES, checkSources,
+            Validator.Checks.ENTITY_TEAMS, checkTeams,
             Validator.Checks.ENTITY_STATISTICS, checkEntityStats,
             Validator.Checks.ENTITY_SORT_ORDER, checkEntitySortOrder,
             Validator.Checks.ENTITY_DB_INTEGRITY, checkEntityFileIntegrity,

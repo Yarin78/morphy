@@ -139,7 +139,7 @@ public class DatabaseTest {
     }
 
     @Test
-    public void randomlyAddAndReplaceGames() throws IOException, EntityStorageException, ChessBaseException {
+    public void randomlyAddAndReplaceGames() throws EntityStorageException, ChessBaseException {
         Random random = new Random(0);
         GameGenerator gameGenerator = new GameGenerator();
 
@@ -151,7 +151,6 @@ public class DatabaseTest {
             for (int i = 0; i < noOps; i++) {
                 int gameId = random.nextInt(maxGames) + 1;
                 GameModel game = gameGenerator.getRandomGame();
-
 
                 if (gameId <= db.getHeaderBase().size()) {
                     db.replaceGame(gameId, game);

@@ -26,7 +26,7 @@ public class GamesValidator {
     }
 
     public void validateMovesAndAnnotationOffsets() throws ChessBaseException {
-        int lastMovesOfs = 0, lastAnnotationOfs = 0;
+        long lastMovesOfs = 0, lastAnnotationOfs = 0;
         for (GameHeader gameHeader : db.getHeaderBase().iterable()) {
             if (gameHeader.getMovesOffset() <= lastMovesOfs) {
                 throw new ChessBaseException(String.format("Game %d has moves at offset %d while the previous game had moves at offset %d",
@@ -40,6 +40,24 @@ public class GamesValidator {
                             gameHeader.getId(), gameHeader.getAnnotationOffset(), lastAnnotationOfs));
                 }
                 lastAnnotationOfs = gameHeader.getAnnotationOffset();
+            }
+        }
+
+        lastMovesOfs = 0;
+        lastAnnotationOfs = 0;
+        for (ExtendedGameHeader extendedGameHeader : db.getExtendedHeaderBase().iterable()) {
+            if (extendedGameHeader.getMovesOffset() <= lastMovesOfs) {
+                throw new ChessBaseException(String.format("Game %d has moves at offset %d while the previous game had moves at offset %d",
+                        extendedGameHeader.getId(), extendedGameHeader.getMovesOffset(), lastMovesOfs));
+            }
+            lastMovesOfs = extendedGameHeader.getMovesOffset();
+
+            if (extendedGameHeader.getAnnotationOffset() > 0) {
+                if (extendedGameHeader.getAnnotationOffset() <= lastAnnotationOfs) {
+                    throw new ChessBaseException(String.format("Game %d has annotations at offset %d while the last annotated game had annotations at offset %d",
+                            extendedGameHeader.getId(), extendedGameHeader.getAnnotationOffset(), lastAnnotationOfs));
+                }
+                lastAnnotationOfs = extendedGameHeader.getAnnotationOffset();
             }
         }
     }
@@ -57,6 +75,22 @@ public class GamesValidator {
 
         for (GameHeader header : headerBase.iterable()) {
             ExtendedGameHeader extendedHeader = extendedGameHeaderBase.getExtendedGameHeader(header.getId());
+
+            if (extendedHeader.getId() != header.getId()) {
+                log.warn(String.format("Game %5d: Extended game header has wrong id %d",
+                        header.getId(), extendedHeader.getId()));
+            }
+
+            if (extendedHeader.getMovesOffset() != header.getMovesOffset()) {
+                log.warn(String.format("Game %5d: Move offset differs between header files (%d != %d)",
+                        header.getId(), header.getMovesOffset(), extendedHeader.getMovesOffset()));
+            }
+
+            if (extendedHeader.getAnnotationOffset() != header.getAnnotationOffset()) {
+                log.warn(String.format("Game %5d: Annotation offset differs between header files (%d != %d)",
+                        header.getId(), header.getAnnotationOffset(), extendedHeader.getAnnotationOffset()));
+            }
+
             if (header.getAnnotationOffset() > 0) {
                 int annotationSize = db.getAnnotationBase().getStorage().readBlob(header.getAnnotationOffset()).limit();
                 int annotationEnd = header.getAnnotationOffset() + annotationSize;
