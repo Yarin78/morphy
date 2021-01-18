@@ -122,6 +122,14 @@ public class PersistentExtendedGameHeaderStorage extends ExtendedGameHeaderStora
         return FILE_HEADER_SIZE + (long) (gameId - 1) * serializedExtendedGameHeaderSize;
     }
 
+    byte[] getRaw(int id) {
+        try {
+            return channel.read(getGameOffset(id), serializedExtendedGameHeaderSize).array();
+        } catch (IOException e) {
+            throw new ChessBaseIOException("Failed to read extended game header %d".formatted(id), e);
+        }
+    }
+
     @Override
     ExtendedGameHeader get(int id) {
         ByteBuffer buf;

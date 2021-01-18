@@ -13,11 +13,15 @@ import se.yarin.cbhlib.games.search.*;
 import se.yarin.cbhlib.storage.EntityStorageException;
 import se.yarin.cbhlib.util.CBUtil;
 import se.yarin.cbhlib.validation.Validator;
+import se.yarin.morphy.cli.columns.GameColumn;
+import se.yarin.morphy.cli.columns.RawExtendedHeaderColumn;
+import se.yarin.morphy.cli.columns.RawHeaderColumn;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.FileAlreadyExistsException;
 import java.util.EnumSet;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.Callable;
@@ -91,6 +95,12 @@ class Games implements Callable<Integer> {
 
     @CommandLine.Option(names = "--columns", description = "A comma separated list on which columns to show. Prefix columns with +/- to only adjust the default columns.")
     private String columns;
+
+    @CommandLine.Option(names = "--raw-col-cbh", description = "Show binary CBH data (debug)")
+    private String[] rawCbhColumns;
+
+    @CommandLine.Option(names = "--raw-col-cbj", description = "Show binary CBJ data (debug)")
+    private String[] rawCbjColumns;
 
     @Override
     public Integer call() throws IOException {
@@ -182,11 +192,30 @@ class Games implements Callable<Integer> {
             GameConsumer gameConsumer;
             if (output == null) {
                 if (!stats) {
-                    if (columns != null) {
-                        gameConsumer = new StdoutGamesSummary(countAll, StdoutGamesSummary.parseColumns(this.columns));
-                    } else {
-                        gameConsumer = new StdoutGamesSummary(countAll);
+                    if (columns == null) {
+                        columns = StdoutGamesSummary.DEFAULT_COLUMNS;
                     }
+                    List<GameColumn> parsedColumns = StdoutGamesSummary.parseColumns(this.columns);
+                    if (rawCbhColumns != null) {
+                        for (String rawCbhColumn : rawCbhColumns) {
+                            String[] parts = rawCbhColumn.split(",");
+                            if (parts.length != 2) {
+                                throw new IllegalArgumentException("Invalid format of raw CBH column");
+                            }
+                            parsedColumns.add(new RawHeaderColumn(Integer.parseInt(parts[0]), Integer.parseInt(parts[1])));
+                        }
+                    }
+                    if (rawCbjColumns != null) {
+                        for (String rawCbjColumn : rawCbjColumns) {
+                            String[] parts = rawCbjColumn.split(",");
+                            if (parts.length != 2) {
+                                throw new IllegalArgumentException("Invalid format of raw CBJ column");
+                            }
+                            parsedColumns.add(new RawExtendedHeaderColumn(Integer.parseInt(parts[0]), Integer.parseInt(parts[1])));
+                        }
+                    }
+
+                    gameConsumer = new StdoutGamesSummary(countAll, parsedColumns);
                     showProgressBar = false;
                     if (limit == 0) {
                         limit = 50;

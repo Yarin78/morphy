@@ -163,6 +163,19 @@ public class GameHeaderBase implements GameHeaderSerializer {
         return StreamSupport.stream(iterable.spliterator(), false);
     }
 
+    /**
+     * Gets the underlying raw data for a game header.
+     * For debugging purposes only.
+     * @param gameId the id of the game to get
+     * @return a byte array containing the underlying data
+     */
+    public byte[] getRaw(int gameId) {
+        if (!(storage instanceof PersistentGameHeaderStorage)) {
+            throw new IllegalStateException("The underlying storage is not a persistent storage");
+        }
+        return ((PersistentGameHeaderStorage) storage).getRaw(gameId);
+    }
+
 
     private class DefaultIterator implements Iterator<GameHeader> {
         private List<GameHeader> batch = new ArrayList<>();
