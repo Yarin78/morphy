@@ -243,13 +243,24 @@ public final class Database implements AutoCloseable {
     }
 
     /**
+     * Gets a game from the database
+     * @param gameId the id of the game to get
+     * @return a model of the game
+     * @throws IOException if the game couldn't be fetched due to an IO error
+     * @throws ChessBaseException if an internal error occurred when fetching the game
+     */
+    public Game getGame(int gameId) throws ChessBaseException {
+        return new Game(this, gameId);
+    }
+
+    /**
      * Adds a new game to the database
      * @param model the model of the game to add
      * @return the game header of the saved game
      * @throws ChessBaseInvalidDataException if the game model contained invalid data
      * @throws IOException if the game couldn't be stored due to an IO error
      */
-    public GameHeader addGame(@NonNull GameModel model) throws ChessBaseInvalidDataException {
+    public Game addGame(@NonNull GameModel model) throws ChessBaseInvalidDataException {
         return updater.addGame(model);
     }
 
@@ -261,7 +272,7 @@ public final class Database implements AutoCloseable {
      * @throws ChessBaseInvalidDataException if the game model contained invalid data
      * @throws IOException if the game couldn't be stored due to an IO error
      */
-    public GameHeader replaceGame(int gameId, @NonNull GameModel model) throws ChessBaseInvalidDataException {
+    public Game replaceGame(int gameId, @NonNull GameModel model) throws ChessBaseInvalidDataException {
         return updater.replaceGame(gameId, model);
     }
 

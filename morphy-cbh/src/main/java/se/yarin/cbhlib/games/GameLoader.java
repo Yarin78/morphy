@@ -4,6 +4,7 @@ import lombok.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.cbhlib.Database;
+import se.yarin.cbhlib.Game;
 import se.yarin.cbhlib.annotations.AnnotationStatistics;
 import se.yarin.cbhlib.annotations.StatisticalAnnotation;
 import se.yarin.cbhlib.entities.*;

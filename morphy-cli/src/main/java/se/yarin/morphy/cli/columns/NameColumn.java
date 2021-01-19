@@ -1,9 +1,7 @@
 package se.yarin.morphy.cli.columns;
 
-import se.yarin.cbhlib.Database;
+import se.yarin.cbhlib.Game;
 import se.yarin.cbhlib.entities.PlayerEntity;
-import se.yarin.cbhlib.games.GameHeader;
-import se.yarin.chess.GameModel;
 
 public class NameColumn implements GameColumn {
 
@@ -24,12 +22,11 @@ public class NameColumn implements GameColumn {
     }
 
     @Override
-    public String getValue(Database database, GameHeader header, GameModel game) {
-        if (header.isGuidingText()) {
+    public String getValue(Game game) {
+        if (game.isGuidingText()) {
             return isWhite ? "?" : "";
         }
-        int playerId = isWhite ? header.getWhitePlayerId() : header.getBlackPlayerId();
-        PlayerEntity player = database.getPlayerBase().get(playerId);
+        PlayerEntity player = isWhite ? game.getWhite() : game.getBlack();
         String name = player.getFullNameShort();
         return isWhite ? name : ("- " + name);
     }

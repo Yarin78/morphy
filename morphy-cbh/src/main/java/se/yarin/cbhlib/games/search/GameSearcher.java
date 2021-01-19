@@ -6,6 +6,7 @@ import lombok.Getter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.cbhlib.Database;
+import se.yarin.cbhlib.Game;
 import se.yarin.cbhlib.entities.PlayerEntity;
 import se.yarin.cbhlib.entities.TournamentEntity;
 import se.yarin.cbhlib.exceptions.ChessBaseException;
@@ -48,6 +49,10 @@ public class GameSearcher {
         return streamSearch(null);
     }
 
+    public Iterable<Hit> iterableSearch() {
+        return () -> streamSearch().iterator();
+    }
+
     /**
      * Performs the actual search. The search is done lazily.
      * This function can only be called once per instance.
@@ -60,6 +65,9 @@ public class GameSearcher {
             throw new IllegalStateException("A search has already been executed");
         }
         hasSearched = true;
+
+        // TODO: This should batch read HeaderBase and ExtendedHeaderBase in parallel and merge join
+        // (using serialized filters for both)
 
         ArrayList<SerializedGameHeaderFilter> serializedFilters = new ArrayList<>();
         for (SearchFilter filter : filters) {
@@ -90,7 +98,7 @@ public class GameSearcher {
         }
         return searchStream
                 .filter(this::matches)
-                .map(Hit::new);
+                .map(gameHeader -> new Hit(new Game(database, gameHeader)));
     }
 
     /**
@@ -181,30 +189,28 @@ public class GameSearcher {
     }
 
     public class Hit {
-        @Getter private final GameHeader gameHeader;
+        @Getter private final Game game;
 
         public Database getDatabase() {
             return database;
         }
 
         public PlayerEntity getWhite() {
-            return database.getPlayerBase().get(gameHeader.getWhitePlayerId());
+            return game.getWhite();
         }
 
         public PlayerEntity getBlack() {
-            return database.getPlayerBase().get(gameHeader.getBlackPlayerId());
+            return game.getBlack();
         }
 
-        public TournamentEntity getTournament() {
-            return database.getTournamentBase().get(gameHeader.getTournamentId());
-        }
+        public TournamentEntity getTournament() { return game.getTournament(); }
 
         public GameModel getModel() throws ChessBaseException {
-            return gameLoader.getGameModel(gameHeader.getId());
+            return gameLoader.getGameModel(game.getId());
         }
 
-        public Hit(GameHeader gameHeader) {
-            this.gameHeader = gameHeader;
+        public Hit(Game game) {
+            this.game = game;
         }
 
     }

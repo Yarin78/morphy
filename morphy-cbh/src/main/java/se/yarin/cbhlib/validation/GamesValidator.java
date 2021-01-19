@@ -6,6 +6,7 @@ import se.yarin.cbhlib.*;
 import se.yarin.cbhlib.exceptions.ChessBaseException;
 import se.yarin.cbhlib.exceptions.ChessBaseIOException;
 import se.yarin.cbhlib.games.*;
+import se.yarin.cbhlib.games.search.GameSearcher;
 import se.yarin.cbhlib.storage.FileBlobStorage;
 
 public class GamesValidator {
@@ -20,8 +21,10 @@ public class GamesValidator {
     }
 
     public void readAllGames() throws ChessBaseException {
-        for (GameHeader gameHeader : db.getHeaderBase().iterable()) {
-            db.getGameModel(gameHeader.getId());
+        GameSearcher gameSearcher = new GameSearcher(db);
+
+        for (GameSearcher.Hit hit : gameSearcher.iterableSearch()) {
+            db.getGameModel(hit.getGame().getId());
         }
     }
 
@@ -63,18 +66,17 @@ public class GamesValidator {
     }
 
     public void processGames(boolean loadMoves, Runnable progressCallback) {
-        GameHeaderBase headerBase = db.getHeaderBase();
-        ExtendedGameHeaderBase extendedGameHeaderBase = db.getExtendedHeaderBase();
-
-        // System.out.println("Loading all " + headerBase.size() + " games...");
         int numGames = 0, numDeleted = 0, numAnnotated = 0, numText = 0, numErrors = 0, numChess960 = 0;
         int lastAnnotationOfs = FileBlobStorage.DEFAULT_SERIALIZED_HEADER_SIZE, lastMovesOfs = FileBlobStorage.DEFAULT_SERIALIZED_HEADER_SIZE;
         int numOverlappingAnnotations = 0, numOverlappingMoves = 0;
         int numAnnotationGaps = 0, numMoveGaps = 0;
         int annotationFreeSpace = 0, moveFreeSpace = 0;
 
-        for (GameHeader header : headerBase.iterable()) {
-            ExtendedGameHeader extendedHeader = extendedGameHeaderBase.getExtendedGameHeader(header.getId());
+        GameSearcher gameSearcher = new GameSearcher(db);
+        for (GameSearcher.Hit hit : gameSearcher.iterableSearch()) {
+            Game game = hit.getGame();
+            GameHeader header = game.getHeader();
+            ExtendedGameHeader extendedHeader = game.getExtendedHeader();
 
             if (extendedHeader.getId() != header.getId()) {
                 log.warn(String.format("Game %5d: Extended game header has wrong id %d",

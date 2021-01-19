@@ -1,8 +1,6 @@
 package se.yarin.morphy.cli.columns;
 
-import se.yarin.cbhlib.Database;
-import se.yarin.cbhlib.games.GameHeader;
-import se.yarin.chess.GameModel;
+import se.yarin.cbhlib.Game;
 
 public class RatingColumn implements GameColumn {
 
@@ -23,11 +21,11 @@ public class RatingColumn implements GameColumn {
     }
 
     @Override
-    public String getValue(Database database, GameHeader header, GameModel game) {
-        if (header.isGuidingText()) {
+    public String getValue(Game game) {
+        if (game.isGuidingText()) {
             return "";
         }
-        int rating = isWhite ? header.getWhiteElo() : header.getBlackElo();
+        int rating = isWhite ? game.getWhiteElo() : game.getBlackElo();
         String elo = rating == 0 ? "" : Integer.toString(rating);
         return String.format("%4s", elo);
     }

@@ -1,8 +1,6 @@
 package se.yarin.morphy.cli.columns;
 
-import se.yarin.cbhlib.Database;
-import se.yarin.cbhlib.games.GameHeader;
-import se.yarin.chess.GameModel;
+import se.yarin.cbhlib.Game;
 
 public class NumMovesColumn implements GameColumn {
     @Override
@@ -11,10 +9,10 @@ public class NumMovesColumn implements GameColumn {
     }
 
     @Override
-    public String getValue(Database database, GameHeader header, GameModel game) {
+    public String getValue(Game game) {
         String numMoves = "";
-        if (!header.isGuidingText()) {
-            numMoves = header.getNoMoves() > 0 ? Integer.toString(header.getNoMoves()) : "";
+        if (!game.isGuidingText()) {
+            numMoves = game.getNoMoves() > 0 ? Integer.toString(game.getNoMoves()) : "";
         }
         return String.format("%3s", numMoves);
     }

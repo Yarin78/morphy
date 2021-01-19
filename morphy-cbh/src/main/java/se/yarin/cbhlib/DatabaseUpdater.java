@@ -36,11 +36,11 @@ public class DatabaseUpdater {
     /**
      * Adds a new game to the database
      * @param model the model of the game to add
-     * @return the game header of the saved game
+     * @return the added game
      * @throws ChessBaseInvalidDataException if the game model contained invalid data
      * @throws ChessBaseIOException if the game couldn't be stored due to an IO error
      */
-    public GameHeader addGame(@NonNull GameModel model) throws ChessBaseInvalidDataException {
+    public Game addGame(@NonNull GameModel model) throws ChessBaseInvalidDataException {
         int gameId = database.getHeaderBase().getNextGameId();
 
         int annotationOfs = database.getAnnotationBase().putAnnotations(gameId, 0, model.moves());
@@ -56,18 +56,18 @@ public class DatabaseUpdater {
 
         updateEntityStats(null, null, gameHeader, extendedGameHeader);
 
-        return gameHeader;
+        return new Game(database, gameHeader, extendedGameHeader);
     }
 
     /**
      * Replaces a game in the database
      * @param gameId the id of the game to replace
      * @param model the model of the game to replace
-     * @return the game header of the saved game
+     * @return the saved game
      * @throws ChessBaseInvalidDataException if the game model contained invalid data
      * @throws ChessBaseIOException if the game couldn't be stored due to an IO error
      */
-    public GameHeader replaceGame(int gameId, @NonNull GameModel model) throws ChessBaseInvalidDataException {
+    public Game replaceGame(int gameId, @NonNull GameModel model) throws ChessBaseInvalidDataException {
         GameHeader oldGameHeader = database.getHeaderBase().getGameHeader(gameId);
         ExtendedGameHeader oldExtendedGameHeader = database.getExtendedHeaderBase().getExtendedGameHeader(gameId);
         if (oldGameHeader == null) {
@@ -99,7 +99,7 @@ public class DatabaseUpdater {
         extendedGameHeader = database.getExtendedHeaderBase().update(gameId, extendedGameHeader);
         updateEntityStats(oldGameHeader, oldExtendedGameHeader, gameHeader, extendedGameHeader);
 
-        return gameHeader;
+        return new Game(database, gameHeader, extendedGameHeader);
     }
 
     /**

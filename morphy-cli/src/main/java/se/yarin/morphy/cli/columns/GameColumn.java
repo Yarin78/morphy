@@ -1,6 +1,7 @@
 package se.yarin.morphy.cli.columns;
 
 import se.yarin.cbhlib.Database;
+import se.yarin.cbhlib.Game;
 import se.yarin.cbhlib.games.GameHeader;
 import se.yarin.chess.GameModel;
 
@@ -23,7 +24,7 @@ public interface GameColumn {
         return 1;
     }
 
-    String getValue(Database database, GameHeader header, GameModel game);
+    String getValue(Game game);
 
     String getId();
 

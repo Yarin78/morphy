@@ -2,15 +2,9 @@ package se.yarin.morphy.cli;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import se.yarin.cbhlib.entities.PlayerEntity;
-import se.yarin.cbhlib.exceptions.ChessBaseException;
-import se.yarin.cbhlib.games.GameHeader;
 import se.yarin.cbhlib.games.search.GameSearcher;
-import se.yarin.chess.GameModel;
-import se.yarin.chess.GameResult;
 import se.yarin.morphy.cli.columns.GameColumn;
 
-import java.net.CookieHandler;
 import java.util.*;
 
 public class StdoutGamesSummary implements GameConsumer {
@@ -135,13 +129,7 @@ public class StdoutGamesSummary implements GameConsumer {
             sb.append(" ".repeat(marginBefore));
             lastColumn = column;
 
-            GameModel model;
-            try {
-                model = hit.getGameHeader().isGuidingText() ? null : hit.getModel();
-            } catch (ChessBaseException e) {
-                model = null;
-            }
-            String value = column.getValue(hit.getDatabase(), hit.getGameHeader(), model);
+            String value = column.getValue(hit.getGame());
             if (value.length() > column.width()) {
                 value = value.substring(0, column.width());
             }

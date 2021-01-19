@@ -1,9 +1,6 @@
 package se.yarin.morphy.cli.columns;
 
-import se.yarin.cbhlib.Database;
-import se.yarin.cbhlib.games.ExtendedGameHeader;
-import se.yarin.cbhlib.games.GameHeader;
-import se.yarin.chess.GameModel;
+import se.yarin.cbhlib.Game;
 
 public class GameVersionColumn implements GameColumn {
 
@@ -13,9 +10,8 @@ public class GameVersionColumn implements GameColumn {
     }
 
     @Override
-    public String getValue(Database database, GameHeader header, GameModel game) {
-        ExtendedGameHeader extendedGameHeader = database.getExtendedHeaderBase().getExtendedGameHeader(header.getId());
-        return String.format("%3d", extendedGameHeader.getGameVersion());
+    public String getValue(Game game) {
+        return String.format("%3d", game.getGameVersion());
     }
 
     @Override

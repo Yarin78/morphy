@@ -1,9 +1,7 @@
 package se.yarin.morphy.cli.columns;
 
-import se.yarin.cbhlib.Database;
-import se.yarin.cbhlib.games.GameHeader;
+import se.yarin.cbhlib.Game;
 import se.yarin.cbhlib.util.CBUtil;
-import se.yarin.chess.GameModel;
 
 import java.util.Arrays;
 
@@ -28,8 +26,8 @@ public class RawExtendedHeaderColumn implements GameColumn {
     }
 
     @Override
-    public String getValue(Database database, GameHeader header, GameModel game) {
-        byte[] raw = database.getExtendedHeaderBase().getRaw(header.getId());
+    public String getValue(Game game) {
+        byte[] raw = game.getDatabase().getExtendedHeaderBase().getRaw(game.getId());
         byte[] dest = Arrays.copyOfRange(raw, start, start+length);
         return CBUtil.toHexString(dest);
     }

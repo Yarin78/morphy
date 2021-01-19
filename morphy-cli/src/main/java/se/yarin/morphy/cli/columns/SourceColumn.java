@@ -1,8 +1,6 @@
 package se.yarin.morphy.cli.columns;
 
-import se.yarin.cbhlib.Database;
-import se.yarin.cbhlib.games.GameHeader;
-import se.yarin.chess.GameModel;
+import se.yarin.cbhlib.Game;
 
 public class SourceColumn implements GameColumn {
     @Override
@@ -16,12 +14,8 @@ public class SourceColumn implements GameColumn {
     }
 
     @Override
-    public String getValue(Database database, GameHeader header, GameModel game) {
-        int sourceId = header.getSourceId();
-        if (sourceId <= 0) {
-            return "";
-        }
-        return database.getSourceBase().get(sourceId).getTitle();
+    public String getValue(Game game) {
+        return game.getSource().getTitle();
     }
 
     @Override

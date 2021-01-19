@@ -1,10 +1,7 @@
 package se.yarin.morphy.cli.columns;
 
-import se.yarin.cbhlib.Database;
-import se.yarin.cbhlib.games.ExtendedGameHeader;
-import se.yarin.cbhlib.games.GameHeader;
+import se.yarin.cbhlib.Game;
 import se.yarin.cbhlib.games.RatingType;
-import se.yarin.chess.GameModel;
 
 public class RatingTypeColumn implements GameColumn {
 
@@ -20,9 +17,8 @@ public class RatingTypeColumn implements GameColumn {
     }
 
     @Override
-    public String getValue(Database database, GameHeader header, GameModel game) {
-        ExtendedGameHeader extendedGameHeader = database.getExtendedHeaderBase().getExtendedGameHeader(header.getId());
-        RatingType ratingType = isWhite ? extendedGameHeader.getWhiteRatingType() : extendedGameHeader.getBlackRatingType();
+    public String getValue(Game game) {
+        RatingType ratingType = isWhite ? game.getWhiteRatingType() : game.getBlackRatingType();
         return ratingType.toString();
     }
 

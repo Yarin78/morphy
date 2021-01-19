@@ -43,7 +43,7 @@ public class GameSearcherTest {
         });
 
         GameSearcher.SearchResult result = searcher.search(0, true);
-        assertTrue(result.getHits().stream().allMatch(hit -> hit.getGameHeader().getPlayedDate().year() == 2018));
+        assertTrue(result.getHits().stream().allMatch(hit -> hit.getGame().getPlayedDate().year() == 2018));
         assertEquals(15, result.getHits().size());
         assertEquals(15, result.getTotalHits());
     }
@@ -68,7 +68,7 @@ public class GameSearcherTest {
 
         GameSearcher.SearchResult result = searcher.search(30, true);
         assertTrue(result.getHits().stream()
-                .map(GameSearcher.Hit::getGameHeader)
+                .map(GameSearcher.Hit::getGame)
                 .allMatch(game -> game.getResult() != GameResult.DRAW && game.getPlayedDate().year() >= 2000));
 
         assertEquals(30, result.getHits().size());

@@ -46,14 +46,14 @@ public class DatabaseBuilder implements GameConsumer {
         try {
             model = hit.getModel();
         } catch (ChessBaseException e) {
-            log.warn("Failed to get game " + hit.getGameHeader().getId() + " in the searched database");
+            log.warn("Failed to get game " + hit.getGame().getId() + " in the searched database");
             return;
         }
 
         try {
             this.database.addGame(model);
         } catch (ChessBaseInvalidDataException e) {
-            log.warn("Failed to add game " + hit.getGameHeader().getId() + " in the searched database in the output database", e);
+            log.warn("Failed to add game " + hit.getGame().getId() + " in the searched database in the output database", e);
         }
         gamesAdded++;
         // System.out.printf("Game %d added (%s - %s )%n", hit.getGameHeader().getId(), model.header().getWhite(), model.header().getBlack());

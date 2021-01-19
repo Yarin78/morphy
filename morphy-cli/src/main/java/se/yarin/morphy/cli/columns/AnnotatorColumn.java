@@ -1,8 +1,6 @@
 package se.yarin.morphy.cli.columns;
 
-import se.yarin.cbhlib.Database;
-import se.yarin.cbhlib.games.GameHeader;
-import se.yarin.chess.GameModel;
+import se.yarin.cbhlib.Game;
 
 public class AnnotatorColumn implements GameColumn {
     @Override
@@ -16,12 +14,8 @@ public class AnnotatorColumn implements GameColumn {
     }
 
     @Override
-    public String getValue(Database database, GameHeader header, GameModel game) {
-        int annotatorId = header.getAnnotatorId();
-        if (annotatorId <= 0) {
-            return "";
-        }
-        return database.getAnnotatorBase().get(annotatorId).getName();
+    public String getValue(Game game) {
+        return game.getAnnotator().getName();
     }
 
     @Override

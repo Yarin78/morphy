@@ -1,7 +1,7 @@
 package se.yarin.morphy.cli;
 
+import se.yarin.cbhlib.Game;
 import se.yarin.cbhlib.exceptions.ChessBaseException;
-import se.yarin.cbhlib.games.GameHeader;
 import se.yarin.cbhlib.games.search.GameSearcher;
 
 public class StatsGameConsumer implements GameConsumer {
@@ -21,8 +21,8 @@ public class StatsGameConsumer implements GameConsumer {
 
     @Override
     public void accept(GameSearcher.Hit hit) {
-        GameHeader header = hit.getGameHeader();
-        if (!header.isGuidingText()) {
+        Game game = hit.getGame();
+        if (!game.isGuidingText()) {
             try {
                 hit.getModel();
             } catch (ChessBaseException e) {
