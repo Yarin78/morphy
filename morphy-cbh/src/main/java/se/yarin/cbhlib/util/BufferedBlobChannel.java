@@ -63,7 +63,7 @@ public class BufferedBlobChannel implements BlobChannel {
             return ByteBuffer.allocate(0);
         }
 
-        int startPage = (int) (offset / PAGE_SIZE), lastPage = (int) ((offset + length - 1) / PAGE_SIZE);
+        int startPage = (int) (offset / PAGE_SIZE), lastPage = (int) ((offset + length) / PAGE_SIZE);
 
         ByteBuffer buf = ByteBuffer.allocate(length);
 
@@ -81,7 +81,7 @@ public class BufferedBlobChannel implements BlobChannel {
             for (int page = 1; page < pages.size() - 1; page++) {
                 buf.put(pages.get(page).array(), 0, PAGE_SIZE);
             }
-            // Last page
+            // Last page (might be 0 bytes)
             ByteBuffer page = pages.get(pages.size() - 1);
             buf.put(page.array(), 0, (int) (offset + length) % PAGE_SIZE);
         }
