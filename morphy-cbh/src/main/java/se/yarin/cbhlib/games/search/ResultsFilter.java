@@ -2,7 +2,7 @@ package se.yarin.cbhlib.games.search;
 
 import lombok.Getter;
 import se.yarin.cbhlib.Database;
-import se.yarin.cbhlib.games.GameHeader;
+import se.yarin.cbhlib.Game;
 import se.yarin.chess.GameResult;
 
 public class ResultsFilter extends SearchFilterBase implements SearchFilter {
@@ -38,10 +38,10 @@ public class ResultsFilter extends SearchFilterBase implements SearchFilter {
     }
 
     @Override
-    public boolean matches(GameHeader gameHeader) {
-        if (gameHeader.isGuidingText()) {
+    public boolean matches(Game game) {
+        if (game.isGuidingText()) {
             return false;
         }
-        return result.equals(gameHeader.getResult());
+        return result.equals(game.getResult());
     }
 }

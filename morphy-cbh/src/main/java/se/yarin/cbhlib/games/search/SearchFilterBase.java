@@ -1,9 +1,7 @@
 package se.yarin.cbhlib.games.search;
 
 import se.yarin.cbhlib.Database;
-import se.yarin.cbhlib.games.GameHeader;
-
-import java.io.IOException;
+import se.yarin.cbhlib.Game;
 
 public abstract class SearchFilterBase implements SearchFilter {
 
@@ -33,5 +31,5 @@ public abstract class SearchFilterBase implements SearchFilter {
     }
 
     @Override
-    public abstract boolean matches(GameHeader gameHeader);
+    public abstract boolean matches(Game game);
 }

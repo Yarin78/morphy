@@ -12,14 +12,20 @@ import se.yarin.cbhlib.games.ExtendedGameHeaderBase;
 import se.yarin.cbhlib.games.GameHeader;
 import se.yarin.cbhlib.games.GameHeaderBase;
 import se.yarin.cbhlib.games.GameLoader;
+import se.yarin.cbhlib.games.search.GameSearcher;
+import se.yarin.cbhlib.games.search.SearchFilter;
 import se.yarin.cbhlib.moves.MovesBase;
 import se.yarin.chess.GameModel;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 /**
  * Represents a ChessBase database.
@@ -232,14 +238,14 @@ public final class Database implements AutoCloseable {
     }
 
     /**
-     * Gets a game from the database
-     * @param gameId the id of the game to get
+     * Gets a game model
+     * @param game the game
      * @return a model of the game
      * @throws IOException if the game couldn't be fetched due to an IO error
      * @throws ChessBaseException if an internal error occurred when fetching the game
      */
-    public GameModel getGameModel(int gameId) throws ChessBaseException {
-        return loader.getGameModel(gameId);
+    public GameModel getGameModel(Game game) throws ChessBaseException {
+        return loader.getGameModel(game);
     }
 
     /**
@@ -251,6 +257,25 @@ public final class Database implements AutoCloseable {
      */
     public Game getGame(int gameId) throws ChessBaseException {
         return new Game(this, gameId);
+    }
+
+    /**
+     * Gets a list over all games that matches the given search filter.
+     * Use the {@link se.yarin.cbhlib.games.search.GameSearcher} directly for more options.
+     * @param filter a search filter, or null to return all games
+     * @param limit maximum number of games to return; 0 for no limit
+     * @return all matching game, ordered by id
+     */
+    public List<Game> getGames(SearchFilter filter, int limit) {
+        GameSearcher gameSearcher = new GameSearcher(this);
+        if (filter != null) {
+            gameSearcher.addFilter(filter);
+        }
+        Stream<Game> stream = gameSearcher.streamSearch();
+        if (limit > 0) {
+            stream = stream.limit(limit);
+        }
+        return stream.collect(Collectors.toList());
     }
 
     /**

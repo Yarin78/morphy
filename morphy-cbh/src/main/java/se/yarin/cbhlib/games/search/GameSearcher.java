@@ -7,19 +7,16 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.cbhlib.Database;
 import se.yarin.cbhlib.Game;
-import se.yarin.cbhlib.entities.PlayerEntity;
-import se.yarin.cbhlib.entities.TournamentEntity;
-import se.yarin.cbhlib.exceptions.ChessBaseException;
-import se.yarin.cbhlib.games.GameHeader;
-import se.yarin.cbhlib.games.GameLoader;
-import se.yarin.cbhlib.games.SerializedGameHeaderFilter;
-import se.yarin.chess.GameModel;
+import se.yarin.cbhlib.games.*;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 /**
  * Class responsible for searching for games in a database that matches one or more search filters.
@@ -30,13 +27,11 @@ public class GameSearcher {
     private static final Logger log = LoggerFactory.getLogger(GameSearcher.class);
 
     private final Database database;
-    private final GameLoader gameLoader;
     private final ArrayList<SearchFilter> filters;
     private boolean hasSearched = false;
 
     public GameSearcher(Database database) {
         this.database = database;
-        this.gameLoader = new GameLoader(database);
         this.filters = new ArrayList<>();
     }
 
@@ -45,12 +40,21 @@ public class GameSearcher {
      * This function can only be called once per instance.
      * @return an iterable over all hits.
      */
-    public Stream<Hit> streamSearch() {
+    public Stream<Game> streamSearch() {
         return streamSearch(null);
     }
 
-    public Iterable<Hit> iterableSearch() {
-        return () -> streamSearch().iterator();
+    public Iterable<Game> iterableSearch() {
+        return iterableSearch(null);
+    }
+
+    public Stream<Game> streamSearch(Consumer<Integer> progressUpdater) {
+        Iterable<Game> games = iterableSearch(progressUpdater);
+        Stream<Game> stream = StreamSupport.stream(games.spliterator(), false);
+        if (progressUpdater != null) {
+            stream = stream.peek(game -> progressUpdater.accept(game.getId()));
+        }
+        return stream;
     }
 
     /**
@@ -60,27 +64,35 @@ public class GameSearcher {
      *                        of the most recent processed game (but not if it's filtered out by a {@link SerializedGameHeaderFilter}).
      * @return an iterable over all hits.
      */
-    public Stream<Hit> streamSearch(Consumer<Integer> progressUpdater) {
+    public Iterable<Game> iterableSearch(Consumer<Integer> progressUpdater) {
         if (hasSearched) {
             throw new IllegalStateException("A search has already been executed");
         }
         hasSearched = true;
 
-        // TODO: This should batch read HeaderBase and ExtendedHeaderBase in parallel and merge join
-        // (using serialized filters for both)
-
+        // Combine the filters and extract the raw filters that are used in the iterators
         ArrayList<SerializedGameHeaderFilter> serializedFilters = new ArrayList<>();
+        ArrayList<SerializedExtendedGameHeaderFilter> serializedExtendedFilters = new ArrayList<>();
         for (SearchFilter filter : filters) {
             filter.initSearch();
             if (filter instanceof SerializedGameHeaderFilter) {
                 serializedFilters.add((SerializedGameHeaderFilter) filter);
             }
+            if (filter instanceof SerializedExtendedGameHeaderFilter) {
+                serializedExtendedFilters.add((SerializedExtendedGameHeaderFilter) filter);
+            }
         }
         SerializedGameHeaderFilter rawFilter = null;
+        SerializedExtendedGameHeaderFilter rawExtendedFilter = null;
         if (serializedFilters.size() == 1) {
             rawFilter = serializedFilters.get(0);
         } else if (serializedFilters.size() > 1) {
             rawFilter = SerializedGameHeaderFilter.chain(serializedFilters);
+        }
+        if (serializedExtendedFilters.size() == 1) {
+            rawExtendedFilter = serializedExtendedFilters.get(0);
+        } else if (serializedExtendedFilters.size() > 1) {
+            rawExtendedFilter = SerializedExtendedGameHeaderFilter.chain(serializedExtendedFilters);
         }
 
         int firstGameId = 1;
@@ -91,14 +103,99 @@ public class GameSearcher {
 
         log.info("Starting game search from game id " + firstGameId);
 
-        Stream<GameHeader> searchStream = this.database.getHeaderBase()
-                .stream(firstGameId, rawFilter);
-        if (progressUpdater != null) {
-            searchStream = searchStream.peek(game -> progressUpdater.accept(game.getId()));
+        Iterator<GameHeader> headerIterator = this.database.getHeaderBase()
+                .stream(firstGameId, rawFilter)
+                .iterator();
+
+        Iterator<ExtendedGameHeader> extendedHeaderIterator = this.database.getExtendedHeaderBase()
+                .stream(firstGameId, rawExtendedFilter)
+                .iterator();
+
+        return () -> new SearchIterator(headerIterator, extendedHeaderIterator, progressUpdater);
+    }
+
+    public class SearchIterator implements Iterator<Game> {
+        private final Iterator<GameHeader> leftIterator;
+        private final Iterator<ExtendedGameHeader> rightIterator;
+        private final Consumer<Integer> progressUpdater;
+        private Game cache;
+        private boolean iteratorDone;
+        private GameHeader currentLeft;
+        private ExtendedGameHeader currentRight;
+
+        public SearchIterator(Iterator<GameHeader> leftIterator,
+                              Iterator<ExtendedGameHeader> rightIterator,
+                              Consumer<Integer> progressUpdater) {
+            this.leftIterator = leftIterator;
+            this.rightIterator = rightIterator;
+            this.progressUpdater = progressUpdater;
+            stepLeft();
+            stepRight();
+
+            this.cache = null;
         }
-        return searchStream
-                .filter(this::matches)
-                .map(gameHeader -> new Hit(new Game(database, gameHeader)));
+
+        private void stepLeft() {
+            if (leftIterator.hasNext()) {
+                currentLeft = leftIterator.next();
+                if (progressUpdater != null) {
+                    progressUpdater.accept(currentLeft.getId());
+                }
+            } else {
+                iteratorDone = true;
+            }
+        }
+
+        private void stepRight() {
+            if (rightIterator.hasNext()) {
+                currentRight = rightIterator.next();
+                if (progressUpdater != null) {
+                    progressUpdater.accept(currentRight.getId());
+                }
+            } else {
+                iteratorDone = true;
+            }
+        }
+
+        public void ensureCache() {
+            if (cache != null) {
+                return;
+            }
+            while (!iteratorDone) {
+                int diff = currentLeft.getId() - currentRight.getId();
+                if (diff < 0) {
+                    stepLeft();
+                } else if (diff > 0) {
+                    stepRight();
+                } else {
+                    Game game = new Game(database, currentLeft, currentRight);
+                    stepLeft();
+                    stepRight();
+                    if (matches(game)) {
+                        cache = game;
+                        return;
+                    }
+                }
+            }
+        }
+
+
+        @Override
+        public boolean hasNext() {
+            ensureCache();
+            return cache != null;
+        }
+
+        @Override
+        public Game next() {
+            ensureCache();
+            if (cache == null) {
+                throw new NoSuchElementException();
+            }
+            Game game = cache;
+            cache = null;
+            return game;
+        }
     }
 
     /**
@@ -123,26 +220,26 @@ public class GameSearcher {
      * Performs the actual search.
      * @param limit maximum number of hits to consume/return
      * @param countAll if true, also count the total number of hits
-     * @param hitConsumer an optional consumer of each hit, called as soon as a hit is found
+     * @param gameConsumer an optional consumer of each hit, called as soon as a hit is found
      * @return the search result
      */
-    public SearchResult search(int limit, boolean countAll, Consumer<Hit> hitConsumer, Consumer<Integer> progressUpdater) {
+    public SearchResult search(int limit, boolean countAll, Consumer<Game> gameConsumer, Consumer<Integer> progressUpdater) {
         AtomicInteger hitsFound = new AtomicInteger(0), hitsConsumed = new AtomicInteger(0);
         long startTime = System.currentTimeMillis();
 
-        Stream<Hit> searchStream = streamSearch(progressUpdater);
+        Stream<Game> searchStream = streamSearch(progressUpdater);
         if (!countAll && limit > 0) {
             searchStream = searchStream.limit(limit);
         }
 
-        ArrayList<Hit> result = new ArrayList<>();
-        searchStream.forEachOrdered(hit -> {
+        ArrayList<Game> result = new ArrayList<>();
+        searchStream.forEachOrdered(game -> {
             if (hitsFound.incrementAndGet() <= limit || limit == 0) {
                 hitsConsumed.incrementAndGet();
-                if (hitConsumer != null) {
-                    hitConsumer.accept(hit);
+                if (gameConsumer != null) {
+                    gameConsumer.accept(game);
                 } else {
-                    result.add(hit);
+                    result.add(game);
                 }
             }
         });
@@ -171,47 +268,20 @@ public class GameSearcher {
         return database.getHeaderBase().size();
     }
 
-    private boolean matches(GameHeader current) {
+    private boolean matches(Game current) {
         return !current.isDeleted() && filters.stream().allMatch(filter -> filter.matches(current));
     }
 
     @Data
     @AllArgsConstructor
-    public class SearchResult {
+    public static class SearchResult {
         @Getter
-        private int totalHits; // If countAll is false and a limit was used, then the counting stopped at limit
+        private int totalGames; // If countAll is false and a limit was used, then the counting stopped at limit
         @Getter
-        private int consumedHits;
+        private int consumedGames;
         @Getter
-        private List<Hit> hits; // Only set if no Consumer<Hit> was given
+        private List<Game> games; // Only set if no Consumer<Game> was given
         @Getter
         private long elapsedTime;
-    }
-
-    public class Hit {
-        @Getter private final Game game;
-
-        public Database getDatabase() {
-            return database;
-        }
-
-        public PlayerEntity getWhite() {
-            return game.getWhite();
-        }
-
-        public PlayerEntity getBlack() {
-            return game.getBlack();
-        }
-
-        public TournamentEntity getTournament() { return game.getTournament(); }
-
-        public GameModel getModel() throws ChessBaseException {
-            return gameLoader.getGameModel(game.getId());
-        }
-
-        public Hit(Game game) {
-            this.game = game;
-        }
-
     }
 }

@@ -3,13 +3,11 @@ package se.yarin.cbhlib;
 import lombok.Getter;
 import lombok.NonNull;
 import se.yarin.cbhlib.entities.*;
+import se.yarin.cbhlib.exceptions.ChessBaseException;
 import se.yarin.cbhlib.games.ExtendedGameHeader;
 import se.yarin.cbhlib.games.GameHeader;
 import se.yarin.cbhlib.games.RatingType;
-import se.yarin.chess.Date;
-import se.yarin.chess.Eco;
-import se.yarin.chess.GameResult;
-import se.yarin.chess.NAG;
+import se.yarin.chess.*;
 
 import java.util.Calendar;
 
@@ -152,5 +150,31 @@ public class Game {
 
     public int getSymbolsMagnitude() {
         return header.getSymbolsMagnitude();
+    }
+
+    public int getWhitePlayerId() {
+        return header.getWhitePlayerId();
+    }
+
+    public int getBlackPlayerId() {
+        return header.getBlackPlayerId();
+    }
+
+    public boolean isDeleted() {
+        return header.isDeleted();
+    }
+
+    public int getMovesOffset() {
+        // TODO: Resolve if different; should be long
+        return header.getMovesOffset();
+    }
+
+    public int getAnnotationOffset() {
+        // TODO: Resolve if different; should be long
+        return header.getAnnotationOffset();
+    }
+
+    public GameModel getModel() throws ChessBaseException {
+        return database.getGameModel(this);
     }
 }

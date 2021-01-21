@@ -1,9 +1,9 @@
 package se.yarin.cbhlib.games.search;
 
 import se.yarin.cbhlib.Database;
+import se.yarin.cbhlib.Game;
 import se.yarin.cbhlib.entities.PlayerEntity;
 import se.yarin.cbhlib.entities.PlayerSearcher;
-import se.yarin.cbhlib.games.GameHeader;
 import se.yarin.cbhlib.games.SerializedGameHeaderFilter;
 import se.yarin.cbhlib.util.ByteBufferUtil;
 
@@ -75,21 +75,15 @@ public class PlayerFilter extends SearchFilterBase implements SearchFilter, Seri
     }
 
     @Override
-    public boolean matches(GameHeader gameHeader) {
-        if (gameHeader.isGuidingText()) {
+    public boolean matches(Game game) {
+        if (game.isGuidingText()) {
             return false;
         }
-        if (color != PlayerColor.BLACK) {
-            PlayerEntity whitePlayer = getDatabase().getPlayerBase().get(gameHeader.getWhitePlayerId());
-            if (playerSearcher.matches(whitePlayer)) {
-                return true;
-            }
+        if (color != PlayerColor.BLACK && playerSearcher.matches(game.getWhite())) {
+            return true;
         }
-        if (color != PlayerColor.WHITE) {
-            PlayerEntity blackPlayer = getDatabase().getPlayerBase().get(gameHeader.getBlackPlayerId());
-            if (playerSearcher.matches(blackPlayer)) {
-                return true;
-            }
+        if (color != PlayerColor.WHITE && playerSearcher.matches(game.getBlack())) {
+            return true;
         }
         return false;
     }

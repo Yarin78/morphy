@@ -66,6 +66,9 @@ class Games implements Callable<Integer> {
     @CommandLine.Option(names = "--date", description = "Date range, e.g. '2015-10-' or '1960-1970'")
     private String dateRange;
 
+    @CommandLine.Option(names = "--team", description = "Show only games where one of the players played for this team")
+    private String team;
+
     @CommandLine.Option(names = "--tournament", description = "Show only games in this tournament")
     private String tournament;
 
@@ -156,6 +159,10 @@ class Games implements Callable<Integer> {
 
             if (ratingRangeAny != null) {
                 gameSearcher.addFilter(new RatingRangeFilter(db, ratingRangeAny, RatingRangeFilter.RatingColor.ANY));
+            }
+
+            if (team != null) {
+                gameSearcher.addFilter(new TeamFilter(db, team));
             }
 
             TournamentSearcher tournamentSearcher = null;

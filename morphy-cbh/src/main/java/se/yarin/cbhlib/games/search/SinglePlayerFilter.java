@@ -1,8 +1,8 @@
 package se.yarin.cbhlib.games.search;
 
 import se.yarin.cbhlib.Database;
+import se.yarin.cbhlib.Game;
 import se.yarin.cbhlib.entities.PlayerEntity;
-import se.yarin.cbhlib.games.GameHeader;
 
 /**
  * A search filter that only returns games played by a specific player.
@@ -39,9 +39,9 @@ public class SinglePlayerFilter extends SearchFilterBase implements SearchFilter
     }
 
     @Override
-    public boolean matches(GameHeader gameHeader) {
-        boolean isWhite = gameHeader.getWhitePlayerId() == this.player.getId();
-        boolean isBlack = gameHeader.getBlackPlayerId() == this.player.getId();
+    public boolean matches(Game game) {
+        boolean isWhite = game.getWhitePlayerId() == this.player.getId();
+        boolean isBlack = game.getBlackPlayerId() == this.player.getId();
         return (isWhite && this.color != PlayerColor.BLACK) || (isBlack && this.color != PlayerColor.WHITE);
     }
 }

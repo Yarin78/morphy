@@ -2,7 +2,7 @@ package se.yarin.cbhlib.games.search;
 
 import lombok.Getter;
 import se.yarin.cbhlib.Database;
-import se.yarin.cbhlib.games.GameHeader;
+import se.yarin.cbhlib.Game;
 import se.yarin.cbhlib.games.SerializedGameHeaderFilter;
 import se.yarin.cbhlib.util.ByteBufferUtil;
 
@@ -49,11 +49,11 @@ public class RatingRangeFilter extends SearchFilterBase implements SearchFilter,
     }
 
     @Override
-    public boolean matches(GameHeader gameHeader) {
-        if (gameHeader.isGuidingText()) {
+    public boolean matches(Game game) {
+        if (game.isGuidingText()) {
             return false;
         }
-        int whiteRating = gameHeader.getWhiteElo(), blackRating = gameHeader.getBlackElo();
+        int whiteRating = game.getWhiteElo(), blackRating = game.getBlackElo();
         return matches(whiteRating, blackRating);
     }
 

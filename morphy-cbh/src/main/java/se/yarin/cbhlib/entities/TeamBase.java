@@ -1,6 +1,7 @@
 package se.yarin.cbhlib.entities;
 
 import lombok.NonNull;
+import se.yarin.cbhlib.storage.TreePath;
 import se.yarin.cbhlib.storage.transaction.EntityStorage;
 import se.yarin.cbhlib.storage.transaction.EntityStorageImpl;
 import se.yarin.cbhlib.util.ByteBufferUtil;
@@ -8,6 +9,7 @@ import se.yarin.cbhlib.util.ByteBufferUtil;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.stream.Stream;
 
 public class TeamBase extends EntityBase<TeamEntity> {
 
@@ -86,6 +88,20 @@ public class TeamBase extends EntityBase<TeamEntity> {
     @Override
     public TeamBase duplicate(@NonNull File targetFile) throws IOException {
         return new TeamBase(getStorage().duplicate(targetFile, new TeamBase()));
+    }
+
+    /**
+     * Searches for teams using a case sensitive prefix search.
+     * @param title a prefix of the team name
+     * @return a stream of matching teams
+     */
+    public Stream<TeamEntity> prefixSearch(@NonNull String title) {
+        TeamEntity startKey = new TeamEntity(title);
+        TeamEntity endKey = new TeamEntity(title + "zzz");
+
+        TreePath<TeamEntity> start = getStorage().lowerBound(startKey);
+        TreePath<TeamEntity> end = getStorage().upperBound(endKey);
+        return getStorage().streamOrderedAscending(start, end);
     }
 
     public ByteBuffer serialize(@NonNull TeamEntity team) {

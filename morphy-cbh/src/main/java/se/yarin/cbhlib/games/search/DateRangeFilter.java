@@ -3,7 +3,7 @@ package se.yarin.cbhlib.games.search;
 import lombok.Getter;
 import lombok.NonNull;
 import se.yarin.cbhlib.Database;
-import se.yarin.cbhlib.games.GameHeader;
+import se.yarin.cbhlib.Game;
 import se.yarin.cbhlib.games.SerializedGameHeaderFilter;
 import se.yarin.cbhlib.util.ByteBufferUtil;
 import se.yarin.cbhlib.util.CBUtil;
@@ -52,8 +52,8 @@ public class DateRangeFilter extends SearchFilterBase implements SearchFilter, S
     }
 
     @Override
-    public boolean matches(GameHeader gameHeader) {
-        return !gameHeader.isGuidingText() && matches(gameHeader.getPlayedDate());
+    public boolean matches(Game game) {
+        return !game.isGuidingText() && matches(game.getPlayedDate());
     }
 
     public boolean matches(Date playedDate) {

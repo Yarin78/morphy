@@ -1,9 +1,9 @@
 package se.yarin.cbhlib.games.search;
 
 import se.yarin.cbhlib.Database;
+import se.yarin.cbhlib.Game;
 import se.yarin.cbhlib.entities.TournamentEntity;
 import se.yarin.cbhlib.entities.TournamentSearcher;
-import se.yarin.cbhlib.games.GameHeader;
 import se.yarin.cbhlib.games.SerializedGameHeaderFilter;
 import se.yarin.cbhlib.util.ByteBufferUtil;
 
@@ -64,9 +64,8 @@ public class TournamentFilter extends SearchFilterBase implements SerializedGame
     }
 
     @Override
-    public boolean matches(GameHeader gameHeader) {
-        TournamentEntity tournament = getDatabase().getTournamentBase().get(gameHeader.getTournamentId());
-        return tournamentSearcher.matches(tournament);
+    public boolean matches(Game game) {
+        return tournamentSearcher.matches(game.getTournament());
     }
 
     @Override

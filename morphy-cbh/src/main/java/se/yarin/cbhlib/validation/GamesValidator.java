@@ -23,8 +23,8 @@ public class GamesValidator {
     public void readAllGames() throws ChessBaseException {
         GameSearcher gameSearcher = new GameSearcher(db);
 
-        for (GameSearcher.Hit hit : gameSearcher.iterableSearch()) {
-            db.getGameModel(hit.getGame().getId());
+        for (Game game : gameSearcher.iterableSearch()) {
+            game.getModel();
         }
     }
 
@@ -73,8 +73,7 @@ public class GamesValidator {
         int annotationFreeSpace = 0, moveFreeSpace = 0;
 
         GameSearcher gameSearcher = new GameSearcher(db);
-        for (GameSearcher.Hit hit : gameSearcher.iterableSearch()) {
-            Game game = hit.getGame();
+        for (Game game : gameSearcher.iterableSearch()) {
             GameHeader header = game.getHeader();
             ExtendedGameHeader extendedHeader = game.getExtendedHeader();
 

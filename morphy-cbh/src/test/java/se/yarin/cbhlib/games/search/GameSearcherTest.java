@@ -5,6 +5,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import se.yarin.cbhlib.Database;
+import se.yarin.cbhlib.Game;
 import se.yarin.cbhlib.ResourceLoader;
 import se.yarin.cbhlib.games.GameHeader;
 import se.yarin.chess.GameResult;
@@ -32,20 +33,39 @@ public class GameSearcherTest {
     }
 
     @Test
-    public void testSingleFilter() {
+    public void testSingleHeaderFilter() {
         GameSearcher searcher = new GameSearcher(database);
 
         searcher.addFilter(new SearchFilterBase(database) {
             @Override
-            public boolean matches(GameHeader gameHeader) {
-                return gameHeader.getPlayedDate().year() == 2018;
+            public boolean matches(Game game) {
+                return game.getPlayedDate().year() == 2018;
             }
         });
 
         GameSearcher.SearchResult result = searcher.search(0, true);
-        assertTrue(result.getHits().stream().allMatch(hit -> hit.getGame().getPlayedDate().year() == 2018));
-        assertEquals(15, result.getHits().size());
-        assertEquals(15, result.getTotalHits());
+        assertTrue(result.getGames().stream().allMatch(game -> game.getPlayedDate().year() == 2018));
+        assertEquals(15, result.getGames().size());
+        assertEquals(15, result.getTotalGames());
+    }
+
+    @Test
+    public void testSingleExtendedHeaderFilter() {
+        GameSearcher searcher = new GameSearcher(database);
+
+        searcher.addFilter(new SearchFilterBase(database) {
+            @Override
+            public boolean matches(Game game) {
+                return game.getGameVersion() >= 1000;
+            }
+        });
+
+        GameSearcher.SearchResult result = searcher.search(30, true);
+        assertTrue(result.getGames().stream()
+                .allMatch(game -> game.getGameVersion() >= 1000));
+
+        assertEquals(13, result.getGames().size());
+        assertEquals(13, result.getTotalGames());
     }
 
     @Test
@@ -54,24 +74,24 @@ public class GameSearcherTest {
 
         searcher.addFilter(new SearchFilterBase(database) {
             @Override
-            public boolean matches(GameHeader gameHeader) {
-                return gameHeader.getPlayedDate().year() >= 2000;
+            public boolean matches(Game game) {
+                return game.getPlayedDate().year() >= 2000;
             }
         });
 
         searcher.addFilter(new SearchFilterBase(database) {
             @Override
-            public boolean matches(GameHeader gameHeader) {
-                return gameHeader.getResult() != GameResult.DRAW;
+            public boolean matches(Game game) {
+                return game.getResult() != GameResult.DRAW;
             }
         });
 
         GameSearcher.SearchResult result = searcher.search(30, true);
-        assertTrue(result.getHits().stream()
-                .map(GameSearcher.Hit::getGame)
+        assertTrue(result.getGames().stream()
                 .allMatch(game -> game.getResult() != GameResult.DRAW && game.getPlayedDate().year() >= 2000));
 
-        assertEquals(30, result.getHits().size());
-        assertEquals(61, result.getTotalHits());
+        assertEquals(30, result.getGames().size());
+        assertEquals(61, result.getTotalGames());
     }
+
 }

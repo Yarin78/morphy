@@ -1,6 +1,7 @@
 package se.yarin.cbhlib.games.search;
 
 import se.yarin.cbhlib.Database;
+import se.yarin.cbhlib.Game;
 import se.yarin.cbhlib.games.GameHeader;
 import se.yarin.cbhlib.games.GameLoader;
 
@@ -40,5 +41,5 @@ public interface SearchFilter {
     /**
      * Determines if a specific game in the database matches this filter.
      */
-    boolean matches(GameHeader gameHeader);
+    boolean matches(Game game);
 }

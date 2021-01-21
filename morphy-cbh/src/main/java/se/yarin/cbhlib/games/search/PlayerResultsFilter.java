@@ -2,6 +2,8 @@ package se.yarin.cbhlib.games.search;
 
 import lombok.NonNull;
 import se.yarin.cbhlib.Database;
+import se.yarin.cbhlib.Game;
+import se.yarin.cbhlib.entities.PlayerEntity;
 import se.yarin.cbhlib.entities.PlayerSearcher;
 import se.yarin.cbhlib.games.GameHeader;
 import se.yarin.chess.GameResult;
@@ -21,19 +23,16 @@ public class PlayerResultsFilter extends SearchFilterBase implements SearchFilte
     }
 
     @Override
-    public boolean matches(GameHeader gameHeader) {
-        if (gameHeader.isGuidingText()) {
+    public boolean matches(Game game) {
+        if (game.isGuidingText()) {
             return false;
         }
-        int playerId = -1;
-        if (gameHeader.getResult().equals(GameResult.WHITE_WINS) || gameHeader.getResult().equals(GameResult.WHITE_WINS_ON_FORFEIT)) {
-            playerId = wins ? gameHeader.getWhitePlayerId() : gameHeader.getBlackPlayerId();
-        } else if (gameHeader.getResult().equals(GameResult.BLACK_WINS) || gameHeader.getResult().equals(GameResult.BLACK_WINS_ON_FORFEIT)) {
-            playerId = !wins ? gameHeader.getWhitePlayerId() : gameHeader.getBlackPlayerId();
+        PlayerEntity player = null;
+        if (game.getResult().equals(GameResult.WHITE_WINS) || game.getResult().equals(GameResult.WHITE_WINS_ON_FORFEIT)) {
+            player = wins ? game.getWhite() : game.getBlack();
+        } else if (game.getResult().equals(GameResult.BLACK_WINS) || game.getResult().equals(GameResult.BLACK_WINS_ON_FORFEIT)) {
+            player = !wins ? game.getWhite() : game.getBlack();
         }
-        if (playerId < 0) {
-            return false;
-        }
-        return playerSearcher.matches(getDatabase().getPlayerBase().get(playerId));
+        return player != null && playerSearcher.matches(player);
     }
 }

@@ -122,16 +122,17 @@ public class GameLoader {
         return model;
     }
 
-    public GameModel getGameModel(int gameId) throws ChessBaseException {
-        GameHeader gameHeader = database.getHeaderBase().getGameHeader(gameId);
-        ExtendedGameHeader extendedGameHeader = database.getExtendedHeaderBase().getExtendedGameHeader(gameId);
+    public GameModel getGameModel(Game game) throws ChessBaseException {
+        GameHeaderModel headerModel = getHeaderModel(game.getHeader(), game.getExtendedHeader());
 
-        GameHeaderModel headerModel = getHeaderModel(gameHeader, extendedGameHeader);
-
-        GameMovesModel moves = database.getMovesBase().getMoves(gameHeader.getMovesOffset(), gameId);
-        database.getAnnotationBase().getAnnotations(moves, gameHeader.getAnnotationOffset());
+        GameMovesModel moves = database.getMovesBase().getMoves(game.getMovesOffset(), game.getId());
+        database.getAnnotationBase().getAnnotations(moves, game.getAnnotationOffset());
 
         return new GameModel(headerModel, moves);
+    }
+
+    public GameModel getGameModel(int gameId) throws ChessBaseException {
+        return getGameModel(database.getGame(gameId));
     }
 
     public ExtendedGameHeader createExtendedGameHeader(GameModel model, int gameId, long movesOfs, long annotationOfs)

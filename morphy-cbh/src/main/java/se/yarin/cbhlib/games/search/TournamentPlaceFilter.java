@@ -2,8 +2,8 @@ package se.yarin.cbhlib.games.search;
 
 import lombok.Getter;
 import se.yarin.cbhlib.Database;
+import se.yarin.cbhlib.Game;
 import se.yarin.cbhlib.entities.TournamentEntity;
-import se.yarin.cbhlib.games.GameHeader;
 
 import java.util.Set;
 
@@ -18,8 +18,8 @@ public class TournamentPlaceFilter extends SearchFilterBase {
     }
 
     @Override
-    public boolean matches(GameHeader gameHeader) {
-        TournamentEntity tournament = getDatabase().getTournamentBase().get(gameHeader.getTournamentId());
+    public boolean matches(Game game) {
+        TournamentEntity tournament = game.getTournament();
         return places.stream().anyMatch(tournament.getPlace()::startsWith);
     }
 }

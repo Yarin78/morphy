@@ -2,6 +2,7 @@ package se.yarin.morphy.cli;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import se.yarin.cbhlib.Game;
 import se.yarin.cbhlib.games.search.GameSearcher;
 import se.yarin.morphy.cli.columns.GameColumn;
 
@@ -90,14 +91,14 @@ public class StdoutGamesSummary implements GameConsumer {
     @Override
     public void done(GameSearcher.SearchResult result) {
         if (showTotal) {
-            if (result.getTotalHits() == 0) {
+            if (result.getTotalGames() == 0) {
                 System.out.printf("No hits (%.2f s)%n", result.getElapsedTime() / 1000.0);
             } else {
                 System.out.println();
-                if (result.getConsumedHits() < result.getTotalHits()) {
-                    System.out.printf("%d out of %d hits displayed (%.2f s)%n", result.getConsumedHits(), result.getTotalHits(), result.getElapsedTime() / 1000.0);
+                if (result.getConsumedGames() < result.getTotalGames()) {
+                    System.out.printf("%d out of %d hits displayed (%.2f s)%n", result.getConsumedGames(), result.getTotalGames(), result.getElapsedTime() / 1000.0);
                 } else {
-                    System.out.printf("%d hits  (%.2f s)%n", result.getTotalHits(), result.getElapsedTime() / 1000.0);
+                    System.out.printf("%d hits  (%.2f s)%n", result.getTotalGames(), result.getElapsedTime() / 1000.0);
                 }
             }
         }
@@ -121,7 +122,7 @@ public class StdoutGamesSummary implements GameConsumer {
     }
 
     @Override
-    public void accept(GameSearcher.Hit hit) {
+    public void accept(Game game) {
         StringBuilder sb = new StringBuilder();
         GameColumn lastColumn = null;
         for (GameColumn column : columns) {
@@ -129,7 +130,7 @@ public class StdoutGamesSummary implements GameConsumer {
             sb.append(" ".repeat(marginBefore));
             lastColumn = column;
 
-            String value = column.getValue(hit.getGame());
+            String value = column.getValue(game);
             if (value.length() > column.width()) {
                 value = value.substring(0, column.width());
             }

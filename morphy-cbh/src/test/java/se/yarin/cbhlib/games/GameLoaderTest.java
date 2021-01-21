@@ -6,7 +6,6 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import se.yarin.cbhlib.Database;
 import se.yarin.cbhlib.ResourceLoader;
-import se.yarin.cbhlib.entities.PlayerBase;
 import se.yarin.cbhlib.exceptions.ChessBaseException;
 import se.yarin.chess.Date;
 import se.yarin.chess.GameModel;
@@ -34,7 +33,7 @@ public class GameLoaderTest {
 
     @Test
     public void getGameTest() throws ChessBaseException {
-        GameModel gameModel = database.getGameModel(1);
+        GameModel gameModel = database.getGame(1).getModel();
 
         assertEquals("Zukertort, Johannes Hermann", gameModel.header().getWhite());
         assertEquals("Steinitz, William", gameModel.header().getBlack());

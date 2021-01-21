@@ -105,7 +105,7 @@ public class ExploreWeirdMoveEncodings {
         CompactMoveEncoder.INTEGRITY_CHECKS_ENABLED = true;
         Database db = Database.open(new File("testbases/tmp/Weird Move Encodings/mode11.cbh"));
         try {
-            GameModel gameModel = db.getGameModel(1);
+            GameModel gameModel = db.getGame(1).getModel();
             System.out.println(gameModel.moves());
         } catch (ChessBaseMoveDecodingException e) {
             System.err.println("Error parsing game: " + e);

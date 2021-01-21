@@ -11,6 +11,7 @@ import se.yarin.cbhlib.games.GameHeader;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.stream.StreamSupport;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -42,7 +43,7 @@ public class PlayerFilterTest {
         assertEquals(52, filter.countEstimate());  // All Carlsen games are used as the estimate
         assertTrue(filter.firstGameId() > 100);
 
-        long count = database.getHeaderBase().stream().filter(filter::matches).count();
+        long count = database.getGames(filter, 0).size();
         assertEquals(27, count);  // There are 27 White Magnus Carlsen games in the World-ch database
 
         count = database.getHeaderBase().stream(1, filter).count();
@@ -56,7 +57,7 @@ public class PlayerFilterTest {
         PlayerFilter filter = new PlayerFilter(database, garry, PlayerFilter.PlayerColor.ANY);
         filter.initSearch();
 
-        long count = database.getHeaderBase().stream().filter(filter::matches).count();
+        long count = database.getGames(filter, 0).size();
         assertEquals(197, count);
     }
 

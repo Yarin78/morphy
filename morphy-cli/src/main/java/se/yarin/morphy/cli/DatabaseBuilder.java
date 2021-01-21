@@ -3,6 +3,7 @@ package se.yarin.morphy.cli;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import se.yarin.cbhlib.Database;
+import se.yarin.cbhlib.Game;
 import se.yarin.cbhlib.exceptions.ChessBaseException;
 import se.yarin.cbhlib.exceptions.ChessBaseInvalidDataException;
 import se.yarin.cbhlib.games.search.GameSearcher;
@@ -37,23 +38,23 @@ public class DatabaseBuilder implements GameConsumer {
             log.warn("Failed to close output database");
         }
 
-        System.out.printf("%d games added to %s in %.2f s%n", searchResult.getTotalHits(), file, searchResult.getElapsedTime() / 1000.0);
+        System.out.printf("%d games added to %s in %.2f s%n", searchResult.getTotalGames(), file, searchResult.getElapsedTime() / 1000.0);
     }
 
     @Override
-    public void accept(GameSearcher.Hit hit) {
+    public void accept(Game game) {
         GameModel model;
         try {
-            model = hit.getModel();
+            model = database.getGameModel(game);
         } catch (ChessBaseException e) {
-            log.warn("Failed to get game " + hit.getGame().getId() + " in the searched database");
+            log.warn("Failed to get game " + game.getId() + " in the searched database");
             return;
         }
 
         try {
             this.database.addGame(model);
         } catch (ChessBaseInvalidDataException e) {
-            log.warn("Failed to add game " + hit.getGame().getId() + " in the searched database in the output database", e);
+            log.warn("Failed to add game " + game.getId() + " in the searched database in the output database", e);
         }
         gamesAdded++;
         // System.out.printf("Game %d added (%s - %s )%n", hit.getGameHeader().getId(), model.header().getWhite(), model.header().getBlack());

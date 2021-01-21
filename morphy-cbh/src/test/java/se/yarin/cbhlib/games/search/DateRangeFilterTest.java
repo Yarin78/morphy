@@ -53,7 +53,7 @@ public class DateRangeFilterTest {
     public void testFromRange() {
         DateRangeFilter filter = new DateRangeFilter(database, "1950-");
 
-        long count = database.getHeaderBase().stream().filter(filter::matches).count();
+        long count = database.getGames(filter, 0).size();
         assertEquals(649, count);
 
         count = database.getHeaderBase().stream(1, filter).count();
@@ -64,7 +64,7 @@ public class DateRangeFilterTest {
     public void testRange() {
         DateRangeFilter filter = new DateRangeFilter(database, "1921-04-1927-10-13");
 
-        long count = database.getHeaderBase().stream().filter(filter::matches).count();
+        long count = database.getGames(filter, 0).size();
         // Some games from the 1921 WCh match, some games from the 1927 WCh match
         assertEquals(21, count);
 

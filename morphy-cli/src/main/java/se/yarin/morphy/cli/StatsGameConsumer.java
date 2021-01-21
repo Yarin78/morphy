@@ -16,15 +16,14 @@ public class StatsGameConsumer implements GameConsumer {
     public void done(GameSearcher.SearchResult result) {
         System.out.println("# games where a GameModel couldn't be created: " + numFailedModels);
 
-        System.out.printf("%d hits  (%.2f s)%n", result.getTotalHits(), result.getElapsedTime() / 1000.0);
+        System.out.printf("%d hits  (%.2f s)%n", result.getTotalGames(), result.getElapsedTime() / 1000.0);
     }
 
     @Override
-    public void accept(GameSearcher.Hit hit) {
-        Game game = hit.getGame();
+    public void accept(Game game) {
         if (!game.isGuidingText()) {
             try {
-                hit.getModel();
+                game.getModel();
             } catch (ChessBaseException e) {
                 numFailedModels += 1;
             }

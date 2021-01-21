@@ -48,7 +48,7 @@ public class RatingRangeFilterTest {
     public void testFilterRangeAverage() {
         RatingRangeFilter filter = new RatingRangeFilter(database, 2750, 9999, RatingRangeFilter.RatingColor.AVERAGE);
 
-        long count = database.getHeaderBase().stream().filter(filter::matches).count();
+        long count = database.getGames(filter, 0).size();
         assertEquals(208, count);
 
         count = database.getHeaderBase().stream(1, filter).count();
@@ -59,7 +59,7 @@ public class RatingRangeFilterTest {
     public void testFilterRangeAny() {
         RatingRangeFilter filter = new RatingRangeFilter(database, 0, 2600, RatingRangeFilter.RatingColor.ANY);
 
-        long count = database.getHeaderBase().stream().filter(filter::matches).count();
+        long count = database.getGames(filter, 0).size();
         assertEquals(600, count);
 
         count = database.getHeaderBase().stream(1, filter).count();
@@ -70,7 +70,7 @@ public class RatingRangeFilterTest {
     public void testFilterRangeBoth() {
         RatingRangeFilter filter = new RatingRangeFilter(database, 2600, 2700, RatingRangeFilter.RatingColor.BOTH);
 
-        long count = database.getHeaderBase().stream().filter(filter::matches).count();
+        long count = database.getGames(filter, 0).size();
         assertEquals(18, count);
 
         count = database.getHeaderBase().stream(1, filter).count();
@@ -81,7 +81,7 @@ public class RatingRangeFilterTest {
     public void testFilterRangeDifference() {
         RatingRangeFilter filter = new RatingRangeFilter(database, 150, 9999, RatingRangeFilter.RatingColor.DIFFERENCE);
 
-        long count = database.getHeaderBase().stream().filter(filter::matches).count();
+        long count = database.getGames(filter, 0).size();
         assertEquals(20, count);
 
         count = database.getHeaderBase().stream(1, filter).count();

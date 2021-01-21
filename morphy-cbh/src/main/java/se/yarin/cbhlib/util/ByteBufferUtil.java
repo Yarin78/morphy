@@ -155,6 +155,12 @@ public final class ByteBufferUtil {
         return (b1 << 24) + (b2 << 16) + (b3 << 8) + b4;
     }
 
+    public static int getIntB(byte[] buf, int offset) {
+        int b1 = getUnsignedByte(buf, offset), b2 = getUnsignedByte(buf, offset + 1);
+        int b3 = getUnsignedByte(buf, offset + 2), b4 = getUnsignedByte(buf, offset + 3);
+        return (b1 << 24) + (b2 << 16) + (b3 << 8) + b4;
+    }
+
     public static long getLongB(ByteBuffer buf) {
         long b1 = getUnsignedByte(buf), b2 = getUnsignedByte(buf);
         long b3 = getUnsignedByte(buf), b4 = getUnsignedByte(buf);
