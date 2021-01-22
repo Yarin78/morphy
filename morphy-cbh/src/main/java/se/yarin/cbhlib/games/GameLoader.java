@@ -176,7 +176,7 @@ public class GameLoader {
         return builder.build();
     }
 
-    public GameHeader createGameHeader(GameModel model, int movesOfs, int annotationOfs) throws ChessBaseInvalidDataException {
+    public GameHeader createGameHeader(GameModel model, long movesOfs, long annotationOfs) throws ChessBaseInvalidDataException {
         GameHeaderModel header = model.header();
 
         PlayerEntity white, black;
@@ -240,8 +240,10 @@ public class GameLoader {
 
         setInferredData(builder, model.moves());
 
-        builder.annotationOffset(annotationOfs);
-        builder.movesOffset(movesOfs);
+        // The moves and annotation offset may be truncated if they are > 32 bits
+        // This is fine as the full value is stored in the ExtendedGameHeader
+        builder.annotationOffset((int) annotationOfs);
+        builder.movesOffset((int) movesOfs);
         return builder.build();
     }
 

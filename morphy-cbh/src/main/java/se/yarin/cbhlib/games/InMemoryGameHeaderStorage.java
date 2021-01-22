@@ -9,7 +9,7 @@ import java.util.*;
 public class InMemoryGameHeaderStorage extends GameHeaderStorageBase {
     private static final Logger log = LoggerFactory.getLogger(InMemoryGameHeaderStorage.class);
 
-    private TreeMap<Integer, GameHeader> gameHeaders = new TreeMap<>();
+    private final TreeMap<Integer, GameHeader> gameHeaders = new TreeMap<>();
 
     @Getter
     private int version = 0;
@@ -46,24 +46,24 @@ public class InMemoryGameHeaderStorage extends GameHeaderStorageBase {
     }
 
     @Override
-    void adjustMovesOffset(int startGameId, int movesOffset, int insertedBytes) {
+    void adjustMovesOffset(int startGameId, long movesOffset, long insertedBytes) {
         List<Integer> gameIds = new ArrayList<>(gameHeaders.tailMap(startGameId).keySet());
         for (int gameId : gameIds) {
             GameHeader header = gameHeaders.get(gameId);
             if (header.getMovesOffset() > movesOffset) {
-                GameHeader newHeader = header.toBuilder().movesOffset(header.getMovesOffset() + insertedBytes).build();
+                GameHeader newHeader = header.toBuilder().movesOffset((int) (header.getMovesOffset() + insertedBytes)).build();
                 gameHeaders.put(gameId, newHeader);
             }
         }
     }
 
     @Override
-    void adjustAnnotationOffset(int startGameId, int annotationOffset, int insertedBytes) {
+    void adjustAnnotationOffset(int startGameId, long annotationOffset, long insertedBytes) {
         List<Integer> gameIds = new ArrayList<>(gameHeaders.tailMap(startGameId).keySet());
         for (int gameId : gameIds) {
             GameHeader header = gameHeaders.get(gameId);
             if (header.getAnnotationOffset() > annotationOffset) {
-                GameHeader newHeader = header.toBuilder().annotationOffset(header.getAnnotationOffset() + insertedBytes).build();
+                GameHeader newHeader = header.toBuilder().annotationOffset((int) (header.getAnnotationOffset() + insertedBytes)).build();
                 gameHeaders.put(gameId, newHeader);
             }
         }

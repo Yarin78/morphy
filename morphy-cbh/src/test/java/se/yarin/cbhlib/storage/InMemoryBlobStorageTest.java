@@ -2,8 +2,6 @@ package se.yarin.cbhlib.storage;
 
 import org.junit.Assert;
 import org.junit.Test;
-import se.yarin.cbhlib.storage.BlobSizeRetriever;
-import se.yarin.cbhlib.storage.InMemoryBlobStorage;
 import se.yarin.cbhlib.util.CBUtil;
 
 import java.nio.ByteBuffer;
@@ -36,7 +34,7 @@ public class InMemoryBlobStorageTest {
     @Test
     public void addAndRetrieveBlobToStorage() {
         InMemoryBlobStorage storage = new InMemoryBlobStorage(new StringBlobSizeRetriever());
-        int ofs = storage.writeBlob(createBlob("hello world"));
+        long ofs = storage.writeBlob(createBlob("hello world"));
         Assert.assertEquals("hello world", parseBlob(storage.readBlob(ofs)));
     }
 
@@ -68,7 +66,8 @@ public class InMemoryBlobStorageTest {
 
         StringBlobSizeRetriever sizeRetriever = new StringBlobSizeRetriever();
         InMemoryBlobStorage storage = new InMemoryBlobStorage(sizeRetriever);
-        int[] ofs = new int[positions], expected = new int[positions];
+        long[] ofs = new long[positions];
+        int[] expected = new int[positions];
         for (int i = 0; i < positions; i++) {
             ofs[i] = -1;
         }
@@ -102,9 +101,9 @@ public class InMemoryBlobStorageTest {
     @Test
     public void testInsert() {
         InMemoryBlobStorage storage = new InMemoryBlobStorage(new StringBlobSizeRetriever());
-        int ofs1 = storage.writeBlob(createBlob("foo"));
-        int ofs2 = storage.writeBlob(createBlob("bar"));
-        int ofs3 = storage.writeBlob(createBlob("yo"));
+        long ofs1 = storage.writeBlob(createBlob("foo"));
+        long ofs2 = storage.writeBlob(createBlob("bar"));
+        long ofs3 = storage.writeBlob(createBlob("yo"));
 
         storage.insert(ofs2, 8);
 

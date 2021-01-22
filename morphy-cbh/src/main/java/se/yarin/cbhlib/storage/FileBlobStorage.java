@@ -98,7 +98,7 @@ public class FileBlobStorage implements BlobStorage {
     }
 
     @Override
-    public ByteBuffer readBlob(int offset) {
+    public ByteBuffer readBlob(long offset) {
         try {
             ByteBuffer buf = channel.read(offset, prefetchSize);
             int size = blobSizeRetriever.getBlobSize(buf);
@@ -109,9 +109,9 @@ public class FileBlobStorage implements BlobStorage {
     }
 
     @Override
-    public int writeBlob(@NonNull ByteBuffer blob) {
+    public long writeBlob(@NonNull ByteBuffer blob) {
         try {
-            int offset = (int) channel.size();
+            long offset = channel.size();
             channel.append(blob);
             saveMetadata();
             return offset;
@@ -121,7 +121,7 @@ public class FileBlobStorage implements BlobStorage {
     }
 
     @Override
-    public void writeBlob(int offset, @NonNull ByteBuffer blob) {
+    public void writeBlob(long offset, @NonNull ByteBuffer blob) {
         try {
             channel.write(offset, blob);
             saveMetadata();
@@ -131,8 +131,8 @@ public class FileBlobStorage implements BlobStorage {
     }
 
     @Override
-    public int getSize() {
-        return (int) channel.size();
+    public long getSize() {
+        return channel.size();
     }
 
     public int getHeaderSize() {
@@ -140,7 +140,7 @@ public class FileBlobStorage implements BlobStorage {
     }
 
     @Override
-    public void insert(int offset, int noBytes) {
+    public void insert(long offset, long noBytes) {
         try {
             channel.insert(offset, noBytes);
         } catch (IOException e) {

@@ -525,7 +525,7 @@ public class GameHeaderBase implements GameHeaderSerializer {
      * @param movesOffset a game is only affected if its moves offset is greater than this
      * @param insertedBytes the number of bytes to adjust with
      */
-    public void adjustMovesOffset(int startGameId, int movesOffset, int insertedBytes) {
+    public void adjustMovesOffset(int startGameId, long movesOffset, long insertedBytes) {
         storage.adjustMovesOffset(startGameId, movesOffset, insertedBytes);
     }
 
@@ -536,7 +536,7 @@ public class GameHeaderBase implements GameHeaderSerializer {
      * @param annotationOffset a game is only affected if its annotation offset is greater than this
      * @param insertedBytes the number of bytes to adjust with
      */
-    public void adjustAnnotationOffset(int startGameId, int annotationOffset, int insertedBytes) {
+    public void adjustAnnotationOffset(int startGameId, long annotationOffset, long insertedBytes) {
         storage.adjustAnnotationOffset(startGameId, annotationOffset, insertedBytes);
     }
 

@@ -255,7 +255,7 @@ public class PersistentGameHeaderStorage extends GameHeaderStorageBase {
     }
 
     @Override
-    void adjustMovesOffset(int startGameId, int movesOffset, int insertedBytes) {
+    void adjustMovesOffset(int startGameId, long movesOffset, long insertedBytes) {
         final int batchSize = 1000;
 
         try {
@@ -269,7 +269,7 @@ public class PersistentGameHeaderStorage extends GameHeaderStorageBase {
                     int oldOfs = ByteBufferUtil.getIntB(buf);
                     if (oldOfs > movesOffset) {
                         buf.position(i * serializedGameHeaderSize + 1);
-                        ByteBufferUtil.putIntB(buf, oldOfs + insertedBytes);
+                        ByteBufferUtil.putIntB(buf, (int) (oldOfs + insertedBytes));
                     }
                 }
 
@@ -284,7 +284,7 @@ public class PersistentGameHeaderStorage extends GameHeaderStorageBase {
     }
 
     @Override
-    void adjustAnnotationOffset(int startGameId, int annotationOffset, int insertedBytes) {
+    void adjustAnnotationOffset(int startGameId, long annotationOffset, long insertedBytes) {
         final int batchSize = 1000;
 
         try {
@@ -298,7 +298,7 @@ public class PersistentGameHeaderStorage extends GameHeaderStorageBase {
                     // This check will also work on games that doesn't have annotations (where it's 0)
                     if (oldOfs > annotationOffset) {
                         buf.position(i * serializedGameHeaderSize + 5);
-                        ByteBufferUtil.putIntB(buf, oldOfs + insertedBytes);
+                        ByteBufferUtil.putIntB(buf, (int) (oldOfs + insertedBytes));
                     }
                 }
 

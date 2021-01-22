@@ -12,7 +12,7 @@ public class InMemoryBlobStorage implements BlobStorage {
 
     public InMemoryBlobStorage(
             @NonNull BlobSizeRetriever blobSizeRetriever) {
-        this((ByteBuffer) ByteBuffer.allocate(32).limit(1), blobSizeRetriever);
+        this(ByteBuffer.allocate(32).limit(1), blobSizeRetriever);
     }
 
     public InMemoryBlobStorage(
@@ -34,15 +34,15 @@ public class InMemoryBlobStorage implements BlobStorage {
     }
 
     @Override
-    public ByteBuffer readBlob(int offset) {
-        data.position(offset);
+    public ByteBuffer readBlob(long offset) {
+        data.position((int) offset);
         byte[] result = new byte[blobSizeRetriever.getBlobSize(data)];
         data.get(result);
         return ByteBuffer.wrap(result);
     }
 
     @Override
-    public int writeBlob(@NonNull ByteBuffer blob) {
+    public long writeBlob(@NonNull ByteBuffer blob) {
         while (data.limit() + blob.limit() > data.capacity()) {
             grow();
         }
@@ -54,27 +54,27 @@ public class InMemoryBlobStorage implements BlobStorage {
     }
 
     @Override
-    public void writeBlob(int offset, @NonNull ByteBuffer blob) {
+    public void writeBlob(long offset, @NonNull ByteBuffer blob) {
         while (offset + blob.limit() > data.capacity()) {
             grow();
         }
-        data.position(offset);
+        data.position((int) offset);
         data.put(blob);
     }
 
     @Override
-    public int getSize() {
+    public long getSize() {
         return data.limit();
     }
 
     @Override
-    public void insert(int offset, int noBytes) {
+    public void insert(long offset, long noBytes) {
         while (data.limit() + noBytes > data.capacity()) {
             grow();
         }
-        data.limit(data.limit() + noBytes);
+        data.limit((int) (data.limit() + noBytes));
         for (int i = data.limit() - 1; i >= offset+noBytes; i--) {
-            byte b = data.get(i - noBytes);
+            byte b = data.get((int) (i - noBytes));
             data.put(i, b);
         }
     }

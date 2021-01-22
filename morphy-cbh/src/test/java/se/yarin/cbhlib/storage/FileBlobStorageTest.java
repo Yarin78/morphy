@@ -57,7 +57,7 @@ public class FileBlobStorageTest {
     @Test
     public void addAndRetrieveBlobToStorage() throws IOException {
         BlobStorage storage = createStorage();
-        int ofs = storage.writeBlob(createBlob("hello world"));
+        long ofs = storage.writeBlob(createBlob("hello world"));
         assertEquals("hello world", parseBlob(storage.readBlob(ofs)));
     }
 
@@ -89,7 +89,8 @@ public class FileBlobStorageTest {
 
         BlobStorage storage = createStorage();
         StringBlobSizeRetriever sizeRetriever = new StringBlobSizeRetriever();
-        int[] ofs = new int[positions], expected = new int[positions];
+        long[] ofs = new long[positions];
+        int[] expected = new int[positions];
         for (int i = 0; i < positions; i++) {
             ofs[i] = -1;
         }
@@ -123,9 +124,9 @@ public class FileBlobStorageTest {
     @Test
     public void testInsert() throws IOException {
         BlobStorage storage = createStorage();
-        int ofs1 = storage.writeBlob(createBlob("foo"));
-        int ofs2 = storage.writeBlob(createBlob("bar"));
-        int ofs3 = storage.writeBlob(createBlob("yo"));
+        long ofs1 = storage.writeBlob(createBlob("foo"));
+        long ofs2 = storage.writeBlob(createBlob("bar"));
+        long ofs3 = storage.writeBlob(createBlob("yo"));
 
         storage.insert(ofs2, 8);
 
@@ -152,7 +153,7 @@ public class FileBlobStorageTest {
         assertTrue(largeStrings[0].length() > CHUNK_SIZE);
 
         BlobStorage storage = createStorage();
-        int[] ofs = new int[n];
+        long[] ofs = new long[n];
         for (int i = 0; i < n; i++) {
             ofs[i] = storage.writeBlob(createBlob(largeStrings[i]));
         }

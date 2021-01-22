@@ -42,8 +42,8 @@ public class DatabaseUpdater {
     public Game addGame(@NonNull GameModel model) throws ChessBaseInvalidDataException {
         int gameId = database.getHeaderBase().getNextGameId();
 
-        int annotationOfs = database.getAnnotationBase().putAnnotations(gameId, 0, model.moves());
-        int movesOfs = database.getMovesBase().putMoves(0, model.moves());
+        long annotationOfs = database.getAnnotationBase().putAnnotations(gameId, 0, model.moves());
+        long movesOfs = database.getMovesBase().putMoves(0, model.moves());
 
         GameHeader gameHeader = loader.createGameHeader(model, movesOfs, annotationOfs);
         ExtendedGameHeader extendedGameHeader = loader.createExtendedGameHeader(model, gameId, movesOfs, annotationOfs);
@@ -72,12 +72,12 @@ public class DatabaseUpdater {
 
         // If necessary, first insert space in the moves and annotation base
         // In case the previous game didn't have annotations, we will know where to store them
-        int oldAnnotationOfs = prepareReplace(oldGame, model.moves());
+        long oldAnnotationOfs = prepareReplace(oldGame, model.moves());
 
-        int oldMovesOffset = oldGame.getMovesOffset();
+        long oldMovesOffset = oldGame.getMovesOffset();
 
-        int movesOfs = database.getMovesBase().putMoves(oldMovesOffset, model.moves());
-        int annotationOfs = database.getAnnotationBase().putAnnotations(gameId, oldAnnotationOfs, model.moves());
+        long movesOfs = database.getMovesBase().putMoves(oldMovesOffset, model.moves());
+        long annotationOfs = database.getAnnotationBase().putAnnotations(gameId, oldAnnotationOfs, model.moves());
 
         assert movesOfs == oldMovesOffset; // Since we inserted space above, we should get the same offset
         assert oldAnnotationOfs == 0 || annotationOfs == 0 || annotationOfs == oldAnnotationOfs;
@@ -103,7 +103,7 @@ public class DatabaseUpdater {
      * @return the new offset to store the annotations
      * @throws ChessBaseIOException if there was an IO error when preparing the replace
      */
-    private int prepareReplace(@NonNull Game game, @NonNull GameMovesModel moves) {
+    private long prepareReplace(@NonNull Game game, @NonNull GameMovesModel moves) {
         int gameId = game.getId();
 
         // This code is a bit messy. In the worst case, it does three sweeps over
@@ -127,7 +127,7 @@ public class DatabaseUpdater {
         // If not, insert bytes and update all game headers.
         // This is a bit trickier since the game might not have had annotations before,
         // in which case we must find the next game that did have annotations and use that offset.
-        int insertedAnnotationBytes = 0, oldAnnotationOfs = game.getAnnotationOffset();
+        long insertedAnnotationBytes = 0, oldAnnotationOfs = game.getAnnotationOffset();
         if (oldAnnotationOfs == 0) {
             // This game has no annotations. Find first game after this one that does
             // and use that annotation offset.

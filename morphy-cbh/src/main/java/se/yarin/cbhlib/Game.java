@@ -2,6 +2,8 @@ package se.yarin.cbhlib;
 
 import lombok.Getter;
 import lombok.NonNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import se.yarin.cbhlib.entities.*;
 import se.yarin.cbhlib.exceptions.ChessBaseException;
 import se.yarin.cbhlib.games.ExtendedGameHeader;
@@ -16,6 +18,8 @@ import java.util.Calendar;
  * Immutable.
  */
 public class Game {
+    private static final Logger log = LoggerFactory.getLogger(Game.class);
+
     @Getter
     private final Database database;
 
@@ -25,8 +29,27 @@ public class Game {
     @Getter
     private final ExtendedGameHeader extendedHeader;
 
+    public Game(@NonNull Database database, @NonNull GameHeader header, @NonNull ExtendedGameHeader extendedHeader) {
+        this.database = database;
+        this.header = header;
+        this.extendedHeader = extendedHeader;
+
+        assert header.getId() == extendedHeader.getId();
+    }
+
+    // All getters below are just convenience getters that fetch
+    // the data either from the header entity or the extended header entity (or both!)
+
     public int getId() {
         return header.getId();
+    }
+
+    public int getWhitePlayerId() {
+        return header.getWhitePlayerId();
+    }
+
+    public int getBlackPlayerId() {
+        return header.getBlackPlayerId();
     }
 
     public @NonNull PlayerEntity getWhite() {
@@ -37,16 +60,44 @@ public class Game {
         return database.getPlayerBase().get(header.getBlackPlayerId());
     }
 
+    public int getWhiteElo() {
+        return header.getWhiteElo();
+    }
+
+    public int getBlackElo() {
+        return header.getBlackElo();
+    }
+
+    public int getTournamentId() {
+        return header.getTournamentId();
+    }
+
     public @NonNull TournamentEntity getTournament() {
         return database.getTournamentBase().get(header.getTournamentId());
+    }
+
+    public int getAnnotatorId() {
+        return header.getAnnotatorId();
     }
 
     public @NonNull AnnotatorEntity getAnnotator() {
         return database.getAnnotatorBase().get(header.getAnnotatorId());
     }
 
+    public int getSourceId() {
+        return header.getSourceId();
+    }
+
     public @NonNull SourceEntity getSource() {
         return database.getSourceBase().get(header.getSourceId());
+    }
+
+    public int getWhiteTeamId() {
+        return extendedHeader.getWhiteTeamId();
+    }
+
+    public int getBlackTeamId() {
+        return extendedHeader.getBlackTeamId();
     }
 
     public TeamEntity getWhiteTeam() {
@@ -59,24 +110,28 @@ public class Game {
         return teamId == -1 ? null : database.getTeamBase().get(teamId);
     }
 
-    public Game(@NonNull Database database, @NonNull GameHeader header, @NonNull ExtendedGameHeader extendedHeader) {
-        this.database = database;
-        this.header = header;
-        this.extendedHeader = extendedHeader;
-
-        assert header.getId() == extendedHeader.getId();
+    public boolean isGuidingText() {
+        return header.isGuidingText();
     }
 
-    public Date getPlayedDate() {
-        return header.getPlayedDate();
+    public boolean isDeleted() {
+        return header.isDeleted();
     }
 
     public GameResult getResult() {
         return header.getResult();
     }
 
-    public boolean isGuidingText() {
-        return header.isGuidingText();
+    public int getRound() {
+        return header.getRound();
+    }
+
+    public int getSubRound() {
+        return header.getSubRound();
+    }
+
+    public Date getPlayedDate() {
+        return header.getPlayedDate();
     }
 
     public Calendar getCreationTime() {
@@ -85,14 +140,6 @@ public class Game {
 
     public long getCreationTimestamp() {
         return extendedHeader.getCreationTimestamp();
-    }
-
-    public Eco getEco() {
-        return header.getEco();
-    }
-
-    public int getGameVersion() {
-        return extendedHeader.getGameVersion();
     }
 
     public long getLastChangedTimestamp() {
@@ -107,12 +154,12 @@ public class Game {
         return header.getNoMoves();
     }
 
-    public int getWhiteElo() {
-        return header.getWhiteElo();
+    public Eco getEco() {
+        return header.getEco();
     }
 
-    public int getBlackElo() {
-        return header.getBlackElo();
+    public int getGameVersion() {
+        return extendedHeader.getGameVersion();
     }
 
     public RatingType getWhiteRatingType() {
@@ -127,14 +174,6 @@ public class Game {
         return header.getLineEvaluation();
     }
 
-    public int getRound() {
-        return header.getRound();
-    }
-
-    public int getSubRound() {
-        return header.getSubRound();
-    }
-
     public int getVariationsMagnitude() {
         return header.getVariationsMagnitude();
     }
@@ -147,49 +186,32 @@ public class Game {
         return header.getSymbolsMagnitude();
     }
 
-    public int getWhitePlayerId() {
-        return header.getWhitePlayerId();
+    public long getMovesOffset() {
+        return resolveOffset(header.getMovesOffset(), extendedHeader.getMovesOffset(), "move");
     }
 
-    public int getBlackPlayerId() {
-        return header.getBlackPlayerId();
+    public long getAnnotationOffset() {
+        return resolveOffset(header.getAnnotationOffset(), extendedHeader.getAnnotationOffset(), "annotation");
     }
 
-    public boolean isDeleted() {
-        return header.isDeleted();
-    }
+    private long resolveOffset(int shortOffset, long longOffset, String type) {
+        if (shortOffset == longOffset) {
+            return longOffset;
+        }
 
-    public int getMovesOffset() {
-        // TODO: Resolve if different; should be long
-        return header.getMovesOffset();
-    }
+        if ((int) longOffset == shortOffset) {
+            // This indicates that the offset requires more than 32 bits; use the extended version
+            return longOffset;
+        }
 
-    public int getAnnotationOffset() {
-        // TODO: Resolve if different; should be long
-        return header.getAnnotationOffset();
+        // The difference is not due to the 32 bit limitation in the game header
+        log.warn(String.format("The %s offset differs between the two header databases (%d != %d)", type, shortOffset, longOffset));
+        // Use the default header offset, this is what ChessBase does
+        return shortOffset;
     }
 
     public GameModel getModel() throws ChessBaseException {
         return database.getGameModel(this);
     }
 
-    public int getTournamentId() {
-        return header.getTournamentId();
-    }
-
-    public int getAnnotatorId() {
-        return header.getAnnotatorId();
-    }
-
-    public int getSourceId() {
-        return header.getSourceId();
-    }
-
-    public int getWhiteTeamId() {
-        return extendedHeader.getWhiteTeamId();
-    }
-
-    public int getBlackTeamId() {
-        return extendedHeader.getBlackTeamId();
-    }
 }

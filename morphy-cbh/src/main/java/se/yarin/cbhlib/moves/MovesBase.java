@@ -104,7 +104,7 @@ public class MovesBase implements BlobSizeRetriever {
      * @return a model of the game
      * @throws ChessBaseIOException if there was some IO errors when reading the moves
      */
-    public GameMovesModel getMoves(int ofs, int gameId)
+    public GameMovesModel getMoves(long ofs, int gameId)
             throws ChessBaseInvalidDataException, ChessBaseUnsupportedException {
         ByteBuffer blob = storage.readBlob(ofs);
         return MovesSerializer.deserializeMoves(blob, validateDecodedMoves, gameId);
@@ -118,7 +118,7 @@ public class MovesBase implements BlobSizeRetriever {
      * @return The offset where the game moves was stored
      * @throws ChessBaseIOException if there was some IO errors when storing the moves
      */
-    public int putMoves(int ofs, GameMovesModel model) {
+    public long putMoves(long ofs, GameMovesModel model) {
         ByteBuffer buf = MovesSerializer.serializeMoves(model, resolveEncodingMode(model));
         if (ofs > 0) {
             storage.writeBlob(ofs, buf);
@@ -127,7 +127,7 @@ public class MovesBase implements BlobSizeRetriever {
         return storage.writeBlob(buf);
     }
 
-    public int preparePutBlob(int ofs, GameMovesModel model) {
+    public int preparePutBlob(long ofs, GameMovesModel model) {
         ByteBuffer buf = MovesSerializer.serializeMoves(model, resolveEncodingMode(model));
         int oldGameSize = getBlobSize(storage.readBlob(ofs));
         int newGameSize = getBlobSize(buf);

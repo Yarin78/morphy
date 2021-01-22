@@ -24,14 +24,14 @@ public interface BlobStorage {
      * @param offset to offset to where the blob begins
      * @return a buffer containing the blob
      */
-    ByteBuffer readBlob(int offset);
+    ByteBuffer readBlob(long offset);
 
     /**
      * Writes a new blob to the end of the storage
      * @param blob the blob to append
      * @return the offset in the storage to the blob
      */
-    int writeBlob(@NonNull ByteBuffer blob);
+    long writeBlob(@NonNull ByteBuffer blob);
 
     /**
      * Writes a blob to the storage at the specific offset.
@@ -39,13 +39,13 @@ public interface BlobStorage {
      * @param offset the offset to write the blob
      * @param blob the blob to write
      */
-    void writeBlob(int offset, @NonNull ByteBuffer blob);
+    void writeBlob(long offset, @NonNull ByteBuffer blob);
 
     /**
      * Gets the current size of the storage.
      * @return the size
      */
-    int getSize();
+    long getSize();
 
     /**
      * Inserts the specified number of bytes at the given start position.
@@ -55,7 +55,7 @@ public interface BlobStorage {
      * @param noBytes the number of empty bytes to insert
      * @throws ChessBaseIOException if an IO error occurred during the insert
      */
-    void insert(int offset, int noBytes);
+    void insert(long offset, long noBytes);
 
     /**
      * Closes the storage. Any further operations on the storage will cause IO errors.

@@ -94,7 +94,7 @@ public class AnnotationBase implements BlobSizeRetriever {
      * @param ofs the offset in the database where the annotation data is stored
      * @throws ChessBaseIOException if there was some IO errors when reading the annotations
      */
-    public void getAnnotations(@NonNull GameMovesModel model, int ofs) {
+    public void getAnnotations(@NonNull GameMovesModel model, long ofs) {
         if (ofs > 0) {
             ByteBuffer blob = storage.readBlob(ofs);
             AnnotationsSerializer.deserializeAnnotations(blob, model);
@@ -110,7 +110,7 @@ public class AnnotationBase implements BlobSizeRetriever {
      * @return The offset where the annotation was stored. 0 if the game contained no annotations.
      * @throws ChessBaseIOException if there was some IO errors when storing the annotations
      */
-    public int putAnnotations(int gameId, int ofs, GameMovesModel model) {
+    public long putAnnotations(int gameId, long ofs, GameMovesModel model) {
         if (model.countAnnotations() == 0) {
             return 0;
         }
@@ -122,7 +122,7 @@ public class AnnotationBase implements BlobSizeRetriever {
         return storage.writeBlob(buf);
     }
 
-    public int preparePutBlob(int currentAnnotationOffset, int targetAnnotationOffset, GameMovesModel model) {
+    public int preparePutBlob(long currentAnnotationOffset, long targetAnnotationOffset, GameMovesModel model) {
         if (model.countAnnotations() == 0 || targetAnnotationOffset == 0) {
             return 0;
         }
