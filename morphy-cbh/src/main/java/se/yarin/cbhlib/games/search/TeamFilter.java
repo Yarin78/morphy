@@ -6,6 +6,7 @@ import se.yarin.cbhlib.entities.TeamEntity;
 import se.yarin.cbhlib.games.SerializedExtendedGameHeaderFilter;
 import se.yarin.cbhlib.util.ByteBufferUtil;
 
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -18,6 +19,13 @@ public class TeamFilter extends SearchFilterBase implements SerializedExtendedGa
     private List<TeamEntity> teams;
     private HashSet<Integer> teamIds;
 
+    public TeamFilter(Database database, TeamEntity team) {
+        super(database);
+
+        this.searchString = "";
+        this.teams = Arrays.asList(team);
+    }
+
     public TeamFilter(Database database, String searchString) {
         super(database);
 
@@ -25,13 +33,18 @@ public class TeamFilter extends SearchFilterBase implements SerializedExtendedGa
     }
 
     public void initSearch() {
-        // If we can quickly determine if there are few enough tournaments in the database that matches the search string,
-        // we can get an improved searched
-        Stream<TeamEntity> stream = getDatabase().getTeamBase().prefixSearch(searchString);
-        List<TeamEntity> matchingTeams = stream.limit(MAX_TEAMS + 1).collect(Collectors.toList());
-        if (matchingTeams.size() <= MAX_TEAMS) {
-            teams = matchingTeams;
-            teamIds = matchingTeams.stream().map(TeamEntity::getId).collect(Collectors.toCollection(HashSet::new));
+        if (this.teams == null) {
+            // If we can quickly determine if there are few enough tournaments in the database that matches the search string,
+            // we can get an improved searched
+            Stream<TeamEntity> stream = getDatabase().getTeamBase().prefixSearch(searchString);
+            List<TeamEntity> matchingTeams = stream.limit(MAX_TEAMS + 1).collect(Collectors.toList());
+            if (matchingTeams.size() <= MAX_TEAMS) {
+                this.teams = matchingTeams;
+            }
+        }
+
+        if (this.teams != null) {
+            this.teamIds = this.teams.stream().map(TeamEntity::getId).collect(Collectors.toCollection(HashSet::new));
         }
     }
 
@@ -65,11 +78,15 @@ public class TeamFilter extends SearchFilterBase implements SerializedExtendedGa
     public boolean matches(Game game) {
         TeamEntity whiteTeam = game.getWhiteTeam();
         TeamEntity blackTeam = game.getBlackTeam();
-        if (whiteTeam != null && whiteTeam.getTitle().startsWith(this.searchString)) {
-            return true;
-        }
-        if (blackTeam != null && blackTeam.getTitle().startsWith(this.searchString)) {
-            return true;
+        if (this.teams != null) {
+            return this.teams.contains(whiteTeam) || this.teams.contains(blackTeam);
+        } else {
+            if (whiteTeam != null && whiteTeam.getTitle().startsWith(this.searchString)) {
+                return true;
+            }
+            if (blackTeam != null && blackTeam.getTitle().startsWith(this.searchString)) {
+                return true;
+            }
         }
         return false;
     }

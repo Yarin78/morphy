@@ -165,9 +165,9 @@ class Games implements Callable<Integer> {
                 gameSearcher.addFilter(new TeamFilter(db, team));
             }
 
-            TournamentSearcher tournamentSearcher = null;
+            SingleTournamentSearcher tournamentSearcher = null;
             if (tournament != null) {
-                tournamentSearcher = new TournamentSearcher(db.getTournamentBase(), tournament, true, false);
+                tournamentSearcher = new SingleTournamentSearcher(db.getTournamentBase(), tournament, true, false);
                 gameSearcher.addFilter(new TournamentFilter(db, tournamentSearcher));
             }
 

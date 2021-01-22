@@ -7,11 +7,10 @@ import org.slf4j.LoggerFactory;
 import se.yarin.cbhlib.annotations.AnnotationBase;
 import se.yarin.cbhlib.entities.*;
 import se.yarin.cbhlib.exceptions.ChessBaseException;
+import se.yarin.cbhlib.exceptions.ChessBaseIOException;
 import se.yarin.cbhlib.exceptions.ChessBaseInvalidDataException;
-import se.yarin.cbhlib.games.ExtendedGameHeaderBase;
-import se.yarin.cbhlib.games.GameHeader;
-import se.yarin.cbhlib.games.GameHeaderBase;
-import se.yarin.cbhlib.games.GameLoader;
+import se.yarin.cbhlib.exceptions.ChessBaseMissingGameException;
+import se.yarin.cbhlib.games.*;
 import se.yarin.cbhlib.games.search.GameSearcher;
 import se.yarin.cbhlib.games.search.SearchFilter;
 import se.yarin.cbhlib.moves.MovesBase;
@@ -252,11 +251,21 @@ public final class Database implements AutoCloseable {
      * Gets a game from the database
      * @param gameId the id of the game to get
      * @return a model of the game
-     * @throws IOException if the game couldn't be fetched due to an IO error
-     * @throws ChessBaseException if an internal error occurred when fetching the game
+     * @throws ChessBaseIOException if the game couldn't be fetched due to an IO error
+     * @throws ChessBaseMissingGameException if no game with the specified ID exists
      */
-    public Game getGame(int gameId) throws ChessBaseException {
-        return new Game(this, gameId);
+    public Game getGame(int gameId) {
+        GameHeader header = getHeaderBase().getGameHeader(gameId);
+        if (header == null) {
+            throw new ChessBaseMissingGameException("There is no game in the database with ID " + gameId);
+        }
+        ExtendedGameHeader extendedGameHeader = getExtendedHeaderBase().getExtendedGameHeader(gameId);
+        if (extendedGameHeader == null) {
+            // This should only occur if the CBJ file is shorter than expected,
+            // not if it's missing entirely
+            throw new ChessBaseIOException("No extended game header for game " + gameId + " could be found even though an ordinary header existed");
+        }
+        return new Game(this, header, extendedGameHeader);
     }
 
     /**

@@ -174,6 +174,10 @@ public class PersistentGameHeaderStorage extends GameHeaderStorageBase {
 
     @Override
     GameHeader get(int id) {
+        if (id < 1 || id >= getMetadata().getNextGameId()) {
+            return null;
+        }
+
         ByteBuffer buf;
         try {
             buf = channel.read(getGameOffset(id), serializedGameHeaderSize);

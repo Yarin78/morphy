@@ -1,7 +1,9 @@
 package se.yarin.cbhlib.games.search;
 
+import lombok.NonNull;
 import se.yarin.cbhlib.Database;
 import se.yarin.cbhlib.Game;
+import se.yarin.cbhlib.entities.ManualPlayerSearcher;
 import se.yarin.cbhlib.entities.PlayerEntity;
 import se.yarin.cbhlib.entities.PlayerSearcher;
 import se.yarin.cbhlib.games.SerializedGameHeaderFilter;
@@ -28,21 +30,34 @@ public class PlayerFilter extends SearchFilterBase implements SearchFilter, Seri
         BLACK
     }
 
-    public PlayerFilter(Database database, PlayerSearcher playerSearcher, PlayerColor color) {
+    public PlayerFilter(@NonNull Database database, @NonNull PlayerEntity player, @NonNull PlayerColor color) {
+        this(database, new ManualPlayerSearcher(player), color);
+    }
+
+    public PlayerFilter(@NonNull Database database, @NonNull List<PlayerEntity> players, @NonNull PlayerColor color) {
+        this(database, new ManualPlayerSearcher(players), color);
+    }
+
+    public PlayerFilter(@NonNull Database database, @NonNull PlayerSearcher playerSearcher, @NonNull PlayerColor color) {
         super(database);
         this.playerSearcher = playerSearcher;
         this.color = color;
     }
 
     public void initSearch() {
-        // If we can quickly determine if there are few enough players in the database that matches the search string,
-        // we can get an improved searched
-        List<PlayerEntity> players = playerSearcher.quickSearch();
-        if (players != null) {
-            if (players.size() < MAX_PLAYERS) {
-                // Used by the regular filter
-                this.players = players;
+        if (playerSearcher != null) {
+            // If we can quickly determine if there are few enough players in the database that matches the search string,
+            // we can get an improved searched
+            List<PlayerEntity> foundPlayers = playerSearcher.quickSearch();
+            if (foundPlayers != null) {
+                if (foundPlayers.size() < MAX_PLAYERS) {
+                    // Used by the regular filter
+                    this.players = foundPlayers;
+                }
             }
+        }
+
+        if (this.players != null) {
             // Used by the serialized filter
             this.playerIds = players.stream().map(PlayerEntity::getId).collect(Collectors.toCollection(HashSet::new));
         }

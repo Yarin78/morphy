@@ -132,6 +132,10 @@ public class PersistentExtendedGameHeaderStorage extends ExtendedGameHeaderStora
 
     @Override
     ExtendedGameHeader get(int id) {
+        if (id < 1) {
+            return null;
+        }
+
         ByteBuffer buf;
         try {
             buf = channel.read(getGameOffset(id), serializedExtendedGameHeaderSize);
