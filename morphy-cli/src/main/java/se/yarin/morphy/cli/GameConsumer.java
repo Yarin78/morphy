@@ -8,5 +8,7 @@ import java.util.function.Consumer;
 public interface GameConsumer extends Consumer<Game> {
     void init();
 
-    void done(GameSearcher.SearchResult searchResult);
+    void searchDone(GameSearcher.SearchResult searchResult);
+
+    void finish();
 }

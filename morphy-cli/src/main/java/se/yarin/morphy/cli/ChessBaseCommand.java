@@ -19,12 +19,13 @@ import se.yarin.morphy.cli.columns.RawHeaderColumn;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.FileAlreadyExistsException;
+import java.nio.file.*;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.Callable;
+import java.util.stream.Stream;
 
 @CommandLine.Command(name = "cb", description = "Performs an operation on a ChessBase file",
         mixinStandardHelpOptions = true,
@@ -44,9 +45,13 @@ class ChessBaseCommand implements Runnable {
 
 @CommandLine.Command(name = "games", mixinStandardHelpOptions = true)
 class Games implements Callable<Integer> {
+    private static final Logger log = LogManager.getLogger();
 
-    @CommandLine.Parameters(index = "0", description = "The ChessBase file to load")
-    private File cbhFile;
+    @CommandLine.Parameters(index = "0", description = "The ChessBase file to load, or a folder to search in multiple databases")
+    private File file;
+
+    @CommandLine.Option(names = {"-R", "--recursive"}, description = "Scan the folder recursively for databases")
+    private boolean recursive = false;
 
     @CommandLine.Option(names = "-v", description = "Output info logging; use twice for debug logging")
     private boolean[] verbose;
@@ -105,6 +110,12 @@ class Games implements Callable<Integer> {
     @CommandLine.Option(names = "--raw-col-cbj", description = "Show binary CBJ data (debug)")
     private String[] rawCbjColumns;
 
+    @CommandLine.Option(names = "--raw-cbh", description = "Raw filter expression in CBH data (debug)")
+    private String[] rawCbhFilter;
+
+    @CommandLine.Option(names = "--raw-cbj", description = "Raw filter expression in CBJ data (debug)")
+    private String[] rawCbjFilter;
+
     @Override
     public Integer call() throws IOException {
         if (verbose != null) {
@@ -116,151 +127,195 @@ class Games implements Callable<Integer> {
         }
         Locale.setDefault(Locale.US);
 
-        try (Database db = Database.open(cbhFile)) {
-            // Speeds up performance quite a lot, and we should be fairly certain that the moves in the CBH databases are valid
-            db.getMovesBase().setValidateDecodedMoves(false);
-
-            GameSearcher gameSearcher = new GameSearcher(db);
-
-            PlayerSearcher primaryPlayerSearcher = null;
-            if (players != null) {
-                for (String player : players) {
-                    PlayerSearcher playerSearcher;
-                    if (!player.contains("|")) {
-                        playerSearcher = new SinglePlayerSearcher(db.getPlayerBase(), player, true, false);
-                    } else {
-                        playerSearcher = new MultiPlayerSearcher(db.getPlayerBase(), player);
-                    }
-                    gameSearcher.addFilter(new PlayerFilter(db, playerSearcher, PlayerFilter.PlayerColor.ANY));
-                    if (primaryPlayerSearcher == null) {
-                        primaryPlayerSearcher = playerSearcher;
-                    }
-                }
-            }
-
-            if (result != null) {
-                if (result.equals("win") || result.equals("loss")) {
-                    if (primaryPlayerSearcher == null) {
-                        throw new IllegalArgumentException("A player search is needed when filtering on 'wins' or 'loss' results");
-                    }
-                    gameSearcher.addFilter(new PlayerResultsFilter(db, result, primaryPlayerSearcher));
-                } else {
-                    gameSearcher.addFilter(new ResultsFilter(db, result));
-                }
-            }
-
-            if (dateRange != null) {
-                gameSearcher.addFilter(new DateRangeFilter(db, dateRange));
-            }
-
-            if (ratingRangeBoth != null) {
-                gameSearcher.addFilter(new RatingRangeFilter(db, ratingRangeBoth, RatingRangeFilter.RatingColor.BOTH));
-            }
-
-            if (ratingRangeAny != null) {
-                gameSearcher.addFilter(new RatingRangeFilter(db, ratingRangeAny, RatingRangeFilter.RatingColor.ANY));
-            }
-
-            if (team != null) {
-                gameSearcher.addFilter(new TeamFilter(db, team));
-            }
-
-            SingleTournamentSearcher tournamentSearcher = null;
-            if (tournament != null) {
-                tournamentSearcher = new SingleTournamentSearcher(db.getTournamentBase(), tournament, true, false);
-                gameSearcher.addFilter(new TournamentFilter(db, tournamentSearcher));
-            }
-
-            if (tournamentTimeControl != null) {
-                TournamentTimeControlFilter ttFilter = new TournamentTimeControlFilter(db, tournamentTimeControl);
-                gameSearcher.addFilter(ttFilter);
-                if (tournamentSearcher != null) {
-                    tournamentSearcher.setTimeControls(ttFilter.getTimeControls());
-                }
-            }
-
-            if (tournamentType != null) {
-                TournamentTypeFilter ttFilter = new TournamentTypeFilter(db, tournamentType);
-                gameSearcher.addFilter(ttFilter);
-                if (tournamentSearcher != null) {
-                    tournamentSearcher.setTypes(ttFilter.getTypes());
-                }
-            }
-
-            if (tournamentPlace != null) {
-                TournamentPlaceFilter tpFilter = new TournamentPlaceFilter(db, tournamentPlace);
-                gameSearcher.addFilter(tpFilter);
-                if (tournamentSearcher != null) {
-                    tournamentSearcher.setPlaces(tpFilter.getPlaces());
-                }
-            }
-
-            boolean showProgressBar = true;
-            GameConsumer gameConsumer;
-            if (output == null) {
-                if (!stats) {
-                    if (columns == null) {
-                        columns = StdoutGamesSummary.DEFAULT_COLUMNS;
-                    }
-                    List<GameColumn> parsedColumns = StdoutGamesSummary.parseColumns(this.columns);
-                    if (rawCbhColumns != null) {
-                        for (String rawCbhColumn : rawCbhColumns) {
-                            String[] parts = rawCbhColumn.split(",");
-                            if (parts.length != 2) {
-                                throw new IllegalArgumentException("Invalid format of raw CBH column");
-                            }
-                            parsedColumns.add(new RawHeaderColumn(Integer.parseInt(parts[0]), Integer.parseInt(parts[1])));
-                        }
-                    }
-                    if (rawCbjColumns != null) {
-                        for (String rawCbjColumn : rawCbjColumns) {
-                            String[] parts = rawCbjColumn.split(",");
-                            if (parts.length != 2) {
-                                throw new IllegalArgumentException("Invalid format of raw CBJ column");
-                            }
-                            parsedColumns.add(new RawExtendedHeaderColumn(Integer.parseInt(parts[0]), Integer.parseInt(parts[1])));
-                        }
-                    }
-
-                    gameConsumer = new StdoutGamesSummary(countAll, parsedColumns);
-                    showProgressBar = false;
-                    if (limit == 0) {
-                        limit = 50;
-                    }
-                } else {
-                    gameConsumer = new StatsGameConsumer();
-                }
-            } else if (output.endsWith(".cbh")) {
-                File file = new File(output);
-                if (!overwrite && file.exists()) {
-                    throw new FileAlreadyExistsException(output);
-                }
-                if (file.exists()) {
-                    Database.delete(file);
-                }
-                gameConsumer = new DatabaseBuilder(file);
-            } else {
-                throw new IllegalArgumentException("Unknown output format: " + output);
-            }
-
-            GameSearcher.SearchResult result;
-
-            gameConsumer.init();
-
-            if (showProgressBar) {
-                try (ProgressBar pb = new ProgressBar("Games", gameSearcher.getTotal())) {
-                    result = gameSearcher.search(limit, countAll, gameConsumer, pb::stepTo);
-                }
-            } else {
-                result = gameSearcher.search(limit, countAll, gameConsumer, null);
-            }
-
-            gameConsumer.done(result);
-        } catch (IllegalArgumentException e) {
-            System.err.println(e.getMessage());
-            System.exit(1);
+        Stream<File> cbhStream;
+        if (file.isDirectory()) {
+            cbhStream = Files.walk(file.toPath(), recursive ? 30 : 1)
+                    .filter(path -> path.toString().toLowerCase().endsWith(".cbh"))
+                    .map(Path::toFile);
+        } else if (file.isFile()) {
+            cbhStream = Stream.of(file);
+        } else {
+            System.err.println("Database does not exist: " + file);
+            return 1;
         }
+
+        GameConsumer gameConsumer = createGameConsumer();
+        gameConsumer.init();
+
+        cbhStream.forEach(file -> {
+            log.info("Opening " + file);
+            try (Database db = Database.open(file)) {
+                // Speeds up performance quite a lot, and we should be fairly certain that the moves in the CBH databases are valid
+                db.getMovesBase().setValidateDecodedMoves(false);
+
+                GameSearcher gameSearcher = null;
+                try {
+                    gameSearcher = createGameSearcher(db);
+                } catch (IllegalArgumentException e) {
+                    System.err.println(e.getMessage());
+                    System.exit(1);
+                }
+                assert gameSearcher != null;
+
+                GameSearcher.SearchResult result;
+
+                if (!(gameConsumer instanceof StdoutGamesSummary)) {
+                    try (ProgressBar pb = new ProgressBar("Games", gameSearcher.getTotal())) {
+                        result = gameSearcher.search(limit, countAll, gameConsumer, pb::stepTo);
+                    }
+                } else {
+                    result = gameSearcher.search(limit, countAll, gameConsumer, null);
+                }
+
+                gameConsumer.searchDone(result);
+            } catch (IOException e) {
+                System.err.println("IO error when processing " + file);
+            }
+        });
+
+        gameConsumer.finish();
         return 0;
+    }
+
+    public GameConsumer createGameConsumer() throws IOException {
+        GameConsumer gameConsumer;
+        if (output == null) {
+            if (!stats) {
+                if (columns == null) {
+                    columns = StdoutGamesSummary.DEFAULT_COLUMNS;
+                }
+                List<GameColumn> parsedColumns = StdoutGamesSummary.parseColumns(this.columns);
+                if (rawCbhColumns != null) {
+                    for (String rawCbhColumn : rawCbhColumns) {
+                        String[] parts = rawCbhColumn.split(",");
+                        if (parts.length != 2) {
+                            throw new IllegalArgumentException("Invalid format of raw CBH column");
+                        }
+                        parsedColumns.add(new RawHeaderColumn(Integer.parseInt(parts[0]), Integer.parseInt(parts[1])));
+                    }
+                }
+                if (rawCbjColumns != null) {
+                    for (String rawCbjColumn : rawCbjColumns) {
+                        String[] parts = rawCbjColumn.split(",");
+                        if (parts.length != 2) {
+                            throw new IllegalArgumentException("Invalid format of raw CBJ column");
+                        }
+                        parsedColumns.add(new RawExtendedHeaderColumn(Integer.parseInt(parts[0]), Integer.parseInt(parts[1])));
+                    }
+                }
+
+                gameConsumer = new StdoutGamesSummary(countAll, parsedColumns);
+                if (limit == 0) {
+                    limit = 50;
+                }
+            } else {
+                gameConsumer = new StatsGameConsumer();
+            }
+        } else if (output.endsWith(".cbh")) {
+            File file = new File(output);
+            if (!overwrite && file.exists()) {
+                throw new FileAlreadyExistsException(output);
+            }
+            if (file.exists()) {
+                Database.delete(file);
+            }
+            gameConsumer = new DatabaseBuilder(file);
+        } else {
+            throw new IllegalArgumentException("Unknown output format: " + output);
+        }
+        return gameConsumer;
+    }
+
+    public GameSearcher createGameSearcher(Database db) {
+        GameSearcher gameSearcher = new GameSearcher(db);
+
+        PlayerSearcher primaryPlayerSearcher = null;
+        if (players != null) {
+            for (String player : players) {
+                PlayerSearcher playerSearcher;
+                if (!player.contains("|")) {
+                    playerSearcher = new SinglePlayerSearcher(db.getPlayerBase(), player, true, false);
+                } else {
+                    playerSearcher = new MultiPlayerSearcher(db.getPlayerBase(), player);
+                }
+                gameSearcher.addFilter(new PlayerFilter(db, playerSearcher, PlayerFilter.PlayerColor.ANY));
+                if (primaryPlayerSearcher == null) {
+                    primaryPlayerSearcher = playerSearcher;
+                }
+            }
+        }
+
+        if (result != null) {
+            if (result.equals("win") || result.equals("loss")) {
+                if (primaryPlayerSearcher == null) {
+                    throw new IllegalArgumentException("A player search is needed when filtering on 'wins' or 'loss' results");
+                }
+                gameSearcher.addFilter(new PlayerResultsFilter(db, result, primaryPlayerSearcher));
+            } else {
+                gameSearcher.addFilter(new ResultsFilter(db, result));
+            }
+        }
+
+        if (dateRange != null) {
+            gameSearcher.addFilter(new DateRangeFilter(db, dateRange));
+        }
+
+        if (ratingRangeBoth != null) {
+            gameSearcher.addFilter(new RatingRangeFilter(db, ratingRangeBoth, RatingRangeFilter.RatingColor.BOTH));
+        }
+
+        if (ratingRangeAny != null) {
+            gameSearcher.addFilter(new RatingRangeFilter(db, ratingRangeAny, RatingRangeFilter.RatingColor.ANY));
+        }
+
+        if (team != null) {
+            gameSearcher.addFilter(new TeamFilter(db, team));
+        }
+
+        SingleTournamentSearcher tournamentSearcher = null;
+        if (tournament != null) {
+            tournamentSearcher = new SingleTournamentSearcher(db.getTournamentBase(), tournament, true, false);
+            gameSearcher.addFilter(new TournamentFilter(db, tournamentSearcher));
+        }
+
+        if (tournamentTimeControl != null) {
+            TournamentTimeControlFilter ttFilter = new TournamentTimeControlFilter(db, tournamentTimeControl);
+            gameSearcher.addFilter(ttFilter);
+            if (tournamentSearcher != null) {
+                tournamentSearcher.setTimeControls(ttFilter.getTimeControls());
+            }
+        }
+
+        if (tournamentType != null) {
+            TournamentTypeFilter ttFilter = new TournamentTypeFilter(db, tournamentType);
+            gameSearcher.addFilter(ttFilter);
+            if (tournamentSearcher != null) {
+                tournamentSearcher.setTypes(ttFilter.getTypes());
+            }
+        }
+
+        if (tournamentPlace != null) {
+            TournamentPlaceFilter tpFilter = new TournamentPlaceFilter(db, tournamentPlace);
+            gameSearcher.addFilter(tpFilter);
+            if (tournamentSearcher != null) {
+                tournamentSearcher.setPlaces(tpFilter.getPlaces());
+            }
+        }
+
+        if (rawCbhFilter != null) {
+            for (String filter : rawCbhFilter) {
+                // TODO: parse
+                gameSearcher.addFilter(new RawHeaderFilter(db));
+            }
+        }
+
+        if (rawCbjFilter != null) {
+            for (String filter : rawCbjFilter) {
+                // TODO: parse
+                gameSearcher.addFilter(new RawExtendedHeaderFilter(db));
+            }
+        }
+        return gameSearcher;
     }
 }
 

@@ -3,12 +3,11 @@ package se.yarin.morphy.cli;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import se.yarin.cbhlib.Game;
-import se.yarin.cbhlib.games.search.GameSearcher;
 import se.yarin.morphy.cli.columns.GameColumn;
 
 import java.util.*;
 
-public class StdoutGamesSummary implements GameConsumer {
+public class StdoutGamesSummary extends GameConsumerBase {
     private static final Logger log = LogManager.getLogger();
 
     private final boolean showTotal;
@@ -89,16 +88,18 @@ public class StdoutGamesSummary implements GameConsumer {
     }
 
     @Override
-    public void done(GameSearcher.SearchResult result) {
+    public void finish() {
         if (showTotal) {
-            if (result.getTotalGames() == 0) {
-                System.out.printf("No hits (%.2f s)%n", result.getElapsedTime() / 1000.0);
+            if (totalFoundGames == 0) {
+                System.out.printf("No hits (%.2f s)%n", totalSearchTime / 1000.0);
             } else {
                 System.out.println();
-                if (result.getConsumedGames() < result.getTotalGames()) {
-                    System.out.printf("%d out of %d hits displayed (%.2f s)%n", result.getConsumedGames(), result.getTotalGames(), result.getElapsedTime() / 1000.0);
+                if (totalConsumedGames < totalFoundGames) {
+                    System.out.printf("%d out of %d hits displayed (%.2f s)%n",
+                            totalConsumedGames, totalFoundGames, totalSearchTime / 1000.0);
                 } else {
-                    System.out.printf("%d hits  (%.2f s)%n", result.getTotalGames(), result.getElapsedTime() / 1000.0);
+                    System.out.printf("%d hits  (%.2f s)%n",
+                            totalFoundGames, totalSearchTime / 1000.0);
                 }
             }
         }

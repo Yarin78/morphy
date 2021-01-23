@@ -21,6 +21,8 @@ abstract class GameHeaderStorageBase {
         this.metadata = metadata;
     }
 
+    abstract String getStorageName();
+
     /**
      * Gets a game header
      * @param id the id of the game header to get

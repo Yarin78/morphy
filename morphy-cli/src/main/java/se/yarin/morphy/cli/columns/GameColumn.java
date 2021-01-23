@@ -58,6 +58,7 @@ public interface GameColumn {
             new GameVersionColumn(),
             new CreationTimestampColumn(),
             new LastChangedTimestampColumn(),
+            new DatabaseColumn(),
     };
 
     static String allColumnsString() {

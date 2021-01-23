@@ -19,13 +19,16 @@ public class GameHeaderBase implements GameHeaderSerializer {
 
     // TODO: GameHeaderBase and GameHeaderStorageBase + implementations needs refactoring
     // It's quite messy right now, could be made cleaner
-    // TODO: Add search
     private static final Logger log = LoggerFactory.getLogger(GameHeaderBase.class);
 
     private static final int DEFAULT_UNKNOWN_FLAGS = 0x2C;
     private static final int DEFAULT_SERIALIZED_GAME_HEADER_SIZE = 46;
 
     private final GameHeaderStorageBase storage;
+
+    public String getStorageName() {
+        return storage.getStorageName();
+    }
 
     /**
      * Creates a new game header base that is initially empty.

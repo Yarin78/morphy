@@ -25,6 +25,7 @@ public class PersistentGameHeaderStorage extends GameHeaderStorageBase {
 
     private final int serializedGameHeaderSize;
     private final GameHeaderSerializer serializer;
+    @Getter
     private final String storageName;
     private final BlobChannel channel;
 

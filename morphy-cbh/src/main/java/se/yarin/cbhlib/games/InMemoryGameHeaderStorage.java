@@ -14,6 +14,11 @@ public class InMemoryGameHeaderStorage extends GameHeaderStorageBase {
     @Getter
     private int version = 0;
 
+    @Override
+    String getStorageName() {
+        return "<temp>";
+    }
+
     InMemoryGameHeaderStorage() {
         super(GameHeaderBase.emptyMetadata());
     }

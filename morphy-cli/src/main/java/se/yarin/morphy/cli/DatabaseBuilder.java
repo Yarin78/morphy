@@ -6,13 +6,12 @@ import se.yarin.cbhlib.Database;
 import se.yarin.cbhlib.Game;
 import se.yarin.cbhlib.exceptions.ChessBaseException;
 import se.yarin.cbhlib.exceptions.ChessBaseInvalidDataException;
-import se.yarin.cbhlib.games.search.GameSearcher;
 import se.yarin.chess.GameModel;
 
 import java.io.File;
 import java.io.IOException;
 
-public class DatabaseBuilder implements GameConsumer {
+public class DatabaseBuilder extends GameConsumerBase {
     private static final Logger log = LogManager.getLogger();
 
     private final Database database;
@@ -25,20 +24,16 @@ public class DatabaseBuilder implements GameConsumer {
         // this.database = new Database();
     }
 
-    @Override
-    public void init() {
-
-    }
 
     @Override
-    public void done(GameSearcher.SearchResult searchResult) {
+    public void finish() {
         try {
             this.database.close();
         } catch (IOException e) {
             log.warn("Failed to close output database");
         }
 
-        System.out.printf("%d games added to %s in %.2f s%n", searchResult.getTotalGames(), file, searchResult.getElapsedTime() / 1000.0);
+        System.out.printf("%d games added to %s in %.2f s%n", totalFoundGames, file, totalSearchTime / 1000.0);
     }
 
     @Override
