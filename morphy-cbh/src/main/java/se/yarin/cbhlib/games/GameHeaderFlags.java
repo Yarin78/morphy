@@ -2,6 +2,8 @@ package se.yarin.cbhlib.games;
 
 import lombok.Getter;
 
+import java.util.EnumSet;
+
 public enum GameHeaderFlags {
     SETUP_POSITION(0x00000001), // doesn't start from the initial position
     VARIATIONS(0x00000002), // has variations
@@ -24,9 +26,7 @@ public enum GameHeaderFlags {
     CORRESPONDENCE_HEADER(0x02000000), // has annotation 0x61 (?)
     ANNO_TYPE_1A(0x04000000), // has annotation 0x1a (media? denoted with M in the AIT column)
     UNORTHODOX(0x08000000), // if the game is an unorthodox chess game (e.g. Chess 960)
-    WEB_LINK(0x10000000), // has annotation 0x1C
-
-    STREAM(0x80000000); // Only in guiding text (TODO: Move to separate flags enum?)
+    WEB_LINK(0x10000000); // has annotation 0x1C
 
     @Getter
     private final int value;
@@ -34,4 +34,32 @@ public enum GameHeaderFlags {
     GameHeaderFlags(int value) {
         this.value = value;
     }
+
+    public static EnumSet<GameHeaderFlags> decodeFlags(int flagInt) {
+        EnumSet<GameHeaderFlags> flags = EnumSet.noneOf(GameHeaderFlags.class);
+        for (GameHeaderFlags flag : GameHeaderFlags.values()) {
+            if ((flagInt & flag.getValue()) > 0) {
+                flags.add(flag);
+            }
+        }
+        return flags;
+    }
+
+    public static int encodeFlags(EnumSet<GameHeaderFlags> flags) {
+        int flagInt = 0;
+        for (GameHeaderFlags flag : flags) {
+            flagInt += flag.getValue();
+        }
+        return flagInt;
+    }
+
+    public static int allFlagsMask() {
+        int value = 0;
+        for (GameHeaderFlags flag : GameHeaderFlags.values()) {
+            value |= flag.value;
+        }
+        return value;
+    }
+
+
 }

@@ -58,7 +58,8 @@ public class Validator {
      * @param checks The types of checks to perform
      * @param throwOnError If true, throws an exception if a critical error is found
      */
-    public void validate(Database db, EnumSet<Checks> checks, boolean throwOnError) throws IOException, EntityStorageException {
+    public void validate(Database db, EnumSet<Checks> checks, boolean throwOnError)
+            throws IOException, EntityStorageException {
         // Validates the integrity of the binary search tree (proper binary tree)
         List<EntityTypeCheck> entityTypeCheck = new ArrayList<>();
 

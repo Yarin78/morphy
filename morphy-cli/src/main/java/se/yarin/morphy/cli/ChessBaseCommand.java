@@ -393,8 +393,14 @@ class Check implements Callable<Integer> {
 
     private static final Logger log = LogManager.getLogger();
 
-    @CommandLine.Parameters(index = "0", description = "The ChessBase file to load")
-    File cbhFile;
+    @CommandLine.Parameters(index = "0", description = "The ChessBase file to load, or a folder to search in multiple databases")
+    private File file;
+
+    @CommandLine.Option(names = {"-R", "--recursive"}, description = "Scan the folder recursively for databases")
+    private boolean recursive = false;
+
+    @CommandLine.Option(names = "-v", description = "Output info logging; use twice for debug logging")
+    private boolean[] verbose;
 
     @CommandLine.Option(names = "--no-players", negatable = true, description = "Check Player entities (true by default)")
     boolean checkPlayers = true;
@@ -410,6 +416,9 @@ class Check implements Callable<Integer> {
 
     @CommandLine.Option(names = "--no-teams", negatable = true, description = "Check Team entities (true by default)")
     boolean checkTeams = true;
+
+    @CommandLine.Option(names = "--no-entities", negatable = true, description = "Check entities (true by default)")
+    boolean checkEntities = true;
 
     @CommandLine.Option(names = "--no-entity-stats", negatable = true, description = "Check entity statistics (true by default)")
     boolean checkEntityStats = true;
@@ -427,27 +436,56 @@ class Check implements Callable<Integer> {
     boolean loadGames = true;
 
     @Override
-    public Integer call() throws IOException, EntityStorageException {
+    public Integer call() throws IOException {
+        if (verbose != null) {
+            String level = verbose.length == 1 ? "info" : "debug";
+            org.apache.logging.log4j.core.LoggerContext context = ((org.apache.logging.log4j.core.LoggerContext) LogManager.getContext(false));
+            ConfigurationSource configurationSource = ConfigurationSource.fromResource("log4j2-" + level + ".xml", null);
+            Configuration configuration = ConfigurationFactory.getInstance().getConfiguration(context, configurationSource);
+            context.reconfigure(configuration);
+        }
+        Locale.setDefault(Locale.US);
+
         Map<Validator.Checks, Boolean> checkFlags = Map.of(
-            Validator.Checks.ENTITY_PLAYERS, checkPlayers,
-            Validator.Checks.ENTITY_TOURNAMENTS, checkTournaments,
-            Validator.Checks.ENTITY_ANNOTATORS, checkAnnotators,
-            Validator.Checks.ENTITY_SOURCES, checkSources,
-            Validator.Checks.ENTITY_TEAMS, checkTeams,
-            Validator.Checks.ENTITY_STATISTICS, checkEntityStats,
-            Validator.Checks.ENTITY_SORT_ORDER, checkEntitySortOrder,
-            Validator.Checks.ENTITY_DB_INTEGRITY, checkEntityFileIntegrity,
+            Validator.Checks.ENTITY_PLAYERS, checkPlayers && checkEntities,
+            Validator.Checks.ENTITY_TOURNAMENTS, checkTournaments && checkEntities,
+            Validator.Checks.ENTITY_ANNOTATORS, checkAnnotators && checkEntities,
+            Validator.Checks.ENTITY_SOURCES, checkSources && checkEntities,
+            Validator.Checks.ENTITY_TEAMS, checkTeams && checkEntities,
+            Validator.Checks.ENTITY_STATISTICS, checkEntityStats && checkEntities,
+            Validator.Checks.ENTITY_SORT_ORDER, checkEntitySortOrder && checkEntities,
+            Validator.Checks.ENTITY_DB_INTEGRITY, checkEntityFileIntegrity && checkEntities,
             Validator.Checks.GAMES, checkGameHeaders,
             Validator.Checks.GAMES_LOAD, loadGames
         );
 
+        Stream<File> cbhStream;
+        if (file.isDirectory()) {
+            cbhStream = Files.walk(file.toPath(), recursive ? 30 : 1)
+                    .filter(path -> path.toString().toLowerCase().endsWith(".cbh"))
+                    .map(Path::toFile);
+        } else if (file.isFile()) {
+            cbhStream = Stream.of(file);
+        } else {
+            System.err.println("Database does not exist: " + file);
+            return 1;
+        }
+
         EnumSet<Validator.Checks> checks = EnumSet.allOf(Validator.Checks.class);
         checks.removeIf(flag -> !checkFlags.get(flag));
 
-        try (Database db = Database.open(cbhFile)) {
-            Validator validator = new Validator();
-            validator.validate(db, checks, false);
-        }
+        cbhStream.forEach(file -> {
+            log.info("Opening " + file);
+
+            try (Database db = Database.open(file)) {
+                Validator validator = new Validator();
+                validator.validate(db, checks, false);
+            } catch (IOException e) {
+                log.error("IO error when processing " + file);
+            } catch (EntityStorageException e) {
+                log.error("Entity storage error: " + e);
+            }
+        });
 
         return 0;
     }

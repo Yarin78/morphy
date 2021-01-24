@@ -83,33 +83,33 @@ public class PersistentGameHeaderStorage extends GameHeaderStorageBase {
             }
 
             metadata.setNextGameId(ByteBufferUtil.getIntB(header));
+
+            int value = ByteBufferUtil.getUnsignedShortB(header);
+            metadata.getUnknownShort()[0] = value;
+            if (value != 0) {
+                log.warn("Unknown header short " + 0 + " = " + value + " in " + storageName);
+            }
+
             metadata.setNextEmbeddedSoundId(ByteBufferUtil.getIntB(header));
             metadata.setNextEmbeddedPictureId(ByteBufferUtil.getIntB(header));
             metadata.setNextEmbeddedVideoId(ByteBufferUtil.getIntB(header));
-            for (int i = 0; i < 9; i++) {
-                int value = ByteBufferUtil.getUnsignedShortB(header);
+
+            for (int i = 1; i < 9; i++) {
+                value = ByteBufferUtil.getUnsignedShortB(header);
                 metadata.getUnknownShort()[i] = value;
                 if (value != 0) {
-//                    INFO  ScanAllGameHeaders - Reading testbases/CHESS LITERATURE 3/TECHNICAL PLAY AND ENDGAME/Endgame Databases - Karsten Mueller/113Endgame.cbh
-//                    WARN  PersistentGameHeaderStorage - Unknown header short 0 = 9 in 113Endgame.cbh
-//                    INFO  ScanAllGameHeaders - Reading testbases/CHESS LITERATURE 3/TECHNICAL PLAY AND ENDGAME/Endgame Databases - Karsten Mueller/114Endgame.cbh
-//                    WARN  PersistentGameHeaderStorage - Unknown header short 0 = 30 in 114Endgame.cbh
-//                    INFO  ScanAllGameHeaders - Reading testbases/CHESS LITERATURE 3/TECHNICAL PLAY AND ENDGAME/Endgame Databases - Karsten Mueller/115Endgame.cbh
-//                    INFO  ScanAllGameHeaders - Reading testbases/CHESS LITERATURE 3/TECHNICAL PLAY AND ENDGAME/Endgame Databases - Karsten Mueller/116Endgame.cbh
-//                    WARN  PersistentGameHeaderStorage - Unknown header short 0 = 13 in 116Endgame.cbh
-
                     log.warn("Unknown header short " + i + " = " + value + " in " + storageName);
                 }
             }
 
             metadata.setNextGameId2(ByteBufferUtil.getIntB(header));
-            if (metadata.getNextGameId() != metadata.getNextGameId2() && metadata.getNextGameId2() != 0) {
-                // This value can be 0 sometimes on old databases
+            // This value can be 0 sometimes on old databases
+            if (metadata.getNextGameId2() != metadata.getNextGameId() && metadata.getNextGameId2() != 0) {
                 log.warn(String.format("Second nextGameId didn't match the first one in %s (%d != %d)",
                         storageName, metadata.getNextGameId(), metadata.getNextGameId2()));
             }
 
-            int value = ByteBufferUtil.getUnsignedShortB(header);
+            value = ByteBufferUtil.getUnsignedShortB(header);
             metadata.getUnknownShort()[9] = value;
             if (value != 0) {
                 log.warn("Unknown header short " + 9 + " = " + value + " in " + storageName);
@@ -143,10 +143,11 @@ public class PersistentGameHeaderStorage extends GameHeaderStorageBase {
         ByteBufferUtil.putShortB(buffer, metadata.getSerializedHeaderSize());
         ByteBufferUtil.putByte(buffer, metadata.getUnknownByte2());
         ByteBufferUtil.putIntB(buffer, metadata.getNextGameId());
+        ByteBufferUtil.putShortB(buffer, metadata.getUnknownShort()[0]);
         ByteBufferUtil.putIntB(buffer, metadata.getNextEmbeddedSoundId());
         ByteBufferUtil.putIntB(buffer, metadata.getNextEmbeddedPictureId());
         ByteBufferUtil.putIntB(buffer, metadata.getNextEmbeddedVideoId());
-        for (int i = 0; i < 9; i++) {
+        for (int i = 1; i < 9; i++) {
             ByteBufferUtil.putShortB(buffer, metadata.getUnknownShort()[i]);
         }
         ByteBufferUtil.putIntB(buffer, metadata.getNextGameId2());

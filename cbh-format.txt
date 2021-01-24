@@ -33,7 +33,7 @@ All strings are ISO-8859-1 encoded. Characters that doesn't exist in that encodi
 
 CBH file
 ========
-44 byte header, 46 byte records
+46 byte header, 46 byte records
 
 Header
 ------
@@ -53,7 +53,7 @@ Ofs 0, Len 1 - bit 0: 1 = game (can sometimes be 0 if guiding text is 1?)
                bit 7: 1 = marked as deleted
 Ofs 1, Len 4 - Position in .cbg file where the game data starts (or guiding text)
 Ofs 5, Len 4 - Position in .cba file where annotations start (0 = no annotations)
-Ofs 9, Len 3 - White player number (0 = first player in .cbp file)
+Ofs 9, Len 3 -  White player number (0 = first player in .cbp file)
 Ofs 12, Len 3 - Black player number (0 = first player in .cbp file)
 Ofs 15, Len 3 - Tournament number (0 = first tournament in .cbt file)
 Ofs 18, Len 3 - Annotator number (0 = first annotator in .cbc file)
