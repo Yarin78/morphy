@@ -208,6 +208,11 @@ public final class ByteBufferUtil {
         return (b2 << 8) + b1;
     }
 
+    public static int getUnsignedShortL(byte[] buf, int offset) {
+        int b1 = getUnsignedByte(buf, offset), b2 = getUnsignedByte(buf, offset + 1);
+        return (b2 << 8) + b1;
+    }
+
     public static short getSignedShortL(ByteBuffer buf) {
         int val = getUnsignedShortL(buf);
         if (val >= (1 << 15));
@@ -230,6 +235,12 @@ public final class ByteBufferUtil {
     public static int getIntL(ByteBuffer buf) {
         int b1 = getUnsignedByte(buf), b2 = getUnsignedByte(buf);
         int b3 = getUnsignedByte(buf), b4 = getUnsignedByte(buf);
+        return (b4 << 24) + (b3 << 16) + (b2 << 8) + b1;
+    }
+
+    public static int getIntL(byte[] buf, int offset) {
+        int b1 = getUnsignedByte(buf, offset), b2 = getUnsignedByte(buf, offset + 1);
+        int b3 = getUnsignedByte(buf, offset + 2), b4 = getUnsignedByte(buf, offset + 3);
         return (b4 << 24) + (b3 << 16) + (b2 << 8) + b1;
     }
 

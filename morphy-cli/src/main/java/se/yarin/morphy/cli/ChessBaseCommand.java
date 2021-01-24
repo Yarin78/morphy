@@ -304,15 +304,13 @@ class Games implements Callable<Integer> {
 
         if (rawCbhFilter != null) {
             for (String filter : rawCbhFilter) {
-                // TODO: parse
-                gameSearcher.addFilter(new RawHeaderFilter(db));
+                gameSearcher.addFilter(new RawHeaderFilter(db, filter));
             }
         }
 
         if (rawCbjFilter != null) {
             for (String filter : rawCbjFilter) {
-                // TODO: parse
-                gameSearcher.addFilter(new RawExtendedHeaderFilter(db));
+                gameSearcher.addFilter(new RawExtendedHeaderFilter(db, filter));
             }
         }
         return gameSearcher;

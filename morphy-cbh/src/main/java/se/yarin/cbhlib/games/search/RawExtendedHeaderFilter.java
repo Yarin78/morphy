@@ -3,15 +3,25 @@ package se.yarin.cbhlib.games.search;
 import se.yarin.cbhlib.Database;
 import se.yarin.cbhlib.Game;
 import se.yarin.cbhlib.games.SerializedExtendedGameHeaderFilter;
+import se.yarin.cbhlib.util.parser.Expr;
+import se.yarin.cbhlib.util.parser.Interpreter;
+import se.yarin.cbhlib.util.parser.Parser;
+import se.yarin.cbhlib.util.parser.Scanner;
 
 public class RawExtendedHeaderFilter extends SearchFilterBase implements SerializedExtendedGameHeaderFilter {
-    public RawExtendedHeaderFilter(Database database) {
+    private final Expr expr;
+
+    public RawExtendedHeaderFilter(Database database, String filterExpression) {
         super(database);
+
+        Scanner scanner = new Scanner(filterExpression);
+        this.expr = new Parser(scanner.scanTokens()).parse();
     }
 
     @Override
     public boolean matches(byte[] serializedGameHeader) {
-        return false;
+        Interpreter interpreter = new Interpreter(serializedGameHeader);
+        return (boolean) interpreter.evaluate(expr);
     }
 
     @Override
