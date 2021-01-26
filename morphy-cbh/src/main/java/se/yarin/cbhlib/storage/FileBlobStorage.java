@@ -25,7 +25,7 @@ public class FileBlobStorage implements BlobStorage {
     public static final int DEFAULT_SERIALIZED_HEADER_SIZE = 26; // Size of header to create for a new storage
 
     private int headerSize; // The actual header size according to the metadata
-    private int trashBytes; // The number of bytes in the storage that's not used for any data
+    private long unused; // The number of bytes in the storage that's not used for any data TODO: Needs to be updated
 
     private final int prefetchSize;
 
@@ -62,38 +62,59 @@ public class FileBlobStorage implements BlobStorage {
         ByteBuffer buf = channel.read(0, DEFAULT_SERIALIZED_HEADER_SIZE);
 
         headerSize = ByteBufferUtil.getUnsignedShortB(buf);
-        int size = ByteBufferUtil.getIntB(buf);
-        trashBytes = ByteBufferUtil.getIntB(buf);
-        int unknown2 = 0, unknown3 = 0, trashBytes2 = trashBytes, size2 = size;
+        if (headerSize >= 256) {
+            // Happens in ussr.cba; TODO: how does CB handle this?
+            throw new IOException("Invalid header size in " + file.getName() + ": " + headerSize);
+        }
+        if (headerSize != 10 && headerSize != 26) {
+            log.warn("Unknown header size in " + file.getName() + ": " + headerSize);
+        }
 
-        if (headerSize >= 14) unknown2 = ByteBufferUtil.getIntB(buf);
-        if (headerSize >= 18) size2 = ByteBufferUtil.getIntB(buf);
-        if (headerSize >= 22) unknown3 = ByteBufferUtil.getIntB(buf);
-        if (headerSize >= 26) trashBytes2 = ByteBufferUtil.getIntB(buf);
+        int shortSize = ByteBufferUtil.getIntB(buf);
+        int shortUnused = ByteBufferUtil.getIntB(buf);
+        long size = shortSize;
+        unused = shortUnused;
 
-        if (unknown2 != 0) log.warn(String.format("Unknown int2 is %08X", unknown2));
-        if (unknown3 != 0) log.warn(String.format("Unknown int3 is %08X", unknown3));
+        if (headerSize >= 26) {
+            // In later versions of the header a long version of the same value was included
+            // This value should be prioritized, except if they differ in the lower 32 bits;
+            // then the 32-bit value should be used.
+            // The values might differ if the database was created in a modern version of CB
+            // and then later modified in an earlier version (TODO: confirm this)
+            size = ByteBufferUtil.getLongB(buf);
+            unused = ByteBufferUtil.getLongB(buf);
 
-        if (trashBytes != trashBytes2) log.warn(String.format("Second trash bytes int is not same as the first (%d != %d)", trashBytes, trashBytes2));
-        if (size != size2) log.warn(String.format("Second size int is not the same as first (%d != %d)", size, size2));
-        if (channel.size() != size) log.warn(String.format("File size doesn't match size in header (%d != %d)", channel.size(), size));
+            if ((int) size != shortSize) {
+                log.warn(String.format("%s: File size values don't match (%d != %d)", file.getName(), shortSize, size));
+                size = shortSize;
+            }
+
+            if ((int) unused != shortUnused) {
+                log.warn(String.format("%s: Unused bytes values don't match (%d != %d)", file.getName(), shortUnused, unused));
+                unused = shortUnused;
+            }
+        }
+
+        if (channel.size() != size) {
+            log.warn(String.format("%s: File size doesn't match size in header (%d != %d)", file.getName(), channel.size(), size));
+        }
     }
 
-    private static ByteBuffer serializeMetadata(int size, int headerSize, int trashBytes) {
-        ByteBuffer buf = ByteBuffer.allocate(DEFAULT_SERIALIZED_HEADER_SIZE);
+    private static ByteBuffer serializeMetadata(long size, int headerSize, long unused) {
+        ByteBuffer buf = ByteBuffer.allocate(headerSize);
         ByteBufferUtil.putShortB(buf, headerSize);
-        ByteBufferUtil.putIntB(buf, size);
-        ByteBufferUtil.putIntB(buf, trashBytes);
-        ByteBufferUtil.putIntB(buf, 0);
-        ByteBufferUtil.putIntB(buf, size);
-        ByteBufferUtil.putIntB(buf, 0);
-        ByteBufferUtil.putIntB(buf, trashBytes);
+        ByteBufferUtil.putIntB(buf, (int) size);
+        ByteBufferUtil.putIntB(buf, (int) unused);
+        if (headerSize >= 26) {
+            ByteBufferUtil.putLongB(buf, size);
+            ByteBufferUtil.putLongB(buf, unused);
+        }
         buf.flip();
         return buf;
     }
 
     private void saveMetadata() throws IOException {
-        ByteBuffer buf = serializeMetadata((int) channel.size(), headerSize, trashBytes);
+        ByteBuffer buf = serializeMetadata(channel.size(), headerSize, unused);
         channel.write(0, buf);
     }
 
