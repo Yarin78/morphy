@@ -39,7 +39,7 @@ public class RatingType {
         buf.put((byte) (isInternational() ? 1 : 2));
         buf.put((byte) (national == null ? 0 : national.ordinal()));
         buf.put((byte) (international == null ? 0 : (international.ordinal() + 1)));
-        buf.put((byte) CBUtil.encodeNation(nation));
+        buf.put((byte) (nation == null ? 0 : CBUtil.encodeNation(nation)));
         ByteBufferUtil.putFixedSizeByteString(buf, name == null ? "" : name, 11);
     }
 

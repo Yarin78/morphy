@@ -123,6 +123,7 @@ public class GameLoader {
     }
 
     public GameModel getGameModel(Game game) throws ChessBaseException {
+        assert game.getDatabase() == this.database;
         GameHeaderModel headerModel = getHeaderModel(game.getHeader(), game.getExtendedHeader());
 
         GameMovesModel moves = database.getMovesBase().getMoves(game.getMovesOffset(), game.getId());

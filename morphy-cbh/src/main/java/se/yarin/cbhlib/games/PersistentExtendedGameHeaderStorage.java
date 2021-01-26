@@ -38,6 +38,7 @@ public class PersistentExtendedGameHeaderStorage extends ExtendedGameHeaderStora
         super(loadMetadata(file));
 
         this.serializedExtendedGameHeaderSize = getMetadata().getSerializedExtendedGameHeaderSize();
+        assert this.serializedExtendedGameHeaderSize < 256;
         this.storageName = file.getName();
         this.serializer = serializer;
         channel = BlobChannel.open(file.toPath(), READ, WRITE);
@@ -100,9 +101,9 @@ public class PersistentExtendedGameHeaderStorage extends ExtendedGameHeaderStora
     private static ByteBuffer serializeMetadata(ExtendedGameHeaderStorageMetadata metadata) {
         ByteBuffer buffer = ByteBuffer.allocate(FILE_HEADER_SIZE);
 
-        ByteBufferUtil.putIntB(buffer, metadata.getVersion());
-        ByteBufferUtil.putIntB(buffer, metadata.getSerializedExtendedGameHeaderSize());
-        ByteBufferUtil.putIntB(buffer, metadata.getNumHeaders());
+        ByteBufferUtil.putIntL(buffer, metadata.getVersion());
+        ByteBufferUtil.putIntL(buffer, metadata.getSerializedExtendedGameHeaderSize());
+        ByteBufferUtil.putIntL(buffer, metadata.getNumHeaders());
 
         if (metadata.getFillers() != null) {
             buffer.put(metadata.getFillers());

@@ -38,9 +38,14 @@ public class DatabaseBuilder extends GameConsumerBase {
 
     @Override
     public void accept(Game game) {
+        if (game.isGuidingText()) {
+            // TODO: Support adding guiding texts
+            log.warn("DatabaseBuilder does not support guiding texts yet; ignoring");
+            return;
+        }
         GameModel model;
         try {
-            model = database.getGameModel(game);
+            model = game.getModel();
         } catch (ChessBaseException e) {
             log.warn("Failed to get game " + game.getId() + " in the searched database");
             return;

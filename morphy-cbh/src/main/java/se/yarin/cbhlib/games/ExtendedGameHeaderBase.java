@@ -295,7 +295,7 @@ public class ExtendedGameHeaderBase implements ExtendedGameHeaderSerializer {
         // End of version 7 (74 bytes)
         ByteBufferUtil.putIntB(buf, header.getUnknown2());
         // End of version 8 (78 bytes)
-        ByteBufferUtil.putIntB(buf, header.getGameVersion());
+        ByteBufferUtil.putShortB(buf, header.getGameVersion());
         ByteBufferUtil.putLongB(buf, header.getCreationTimestamp());
         if (header.getEndgameInfo() != null) {
             header.getEndgameInfo().serialize(buf);

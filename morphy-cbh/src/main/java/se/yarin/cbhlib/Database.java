@@ -201,6 +201,7 @@ public final class Database implements AutoCloseable {
      * @param file the name of the cbh file
      */
     public static void delete(File file) throws IOException {
+        file = file.getAbsoluteFile();
         String basename = file.getName().split("\\.")[0];
         File directory = file.getParentFile();
         List<File> toBeDeleted = new ArrayList<>();
