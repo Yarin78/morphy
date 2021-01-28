@@ -136,6 +136,42 @@ public class GameLoader {
         return getGameModel(database.getGame(gameId));
     }
 
+    public ExtendedGameHeader createExtendedGameHeader(Game game, int gameId, long movesOfs, long annotationOfs) throws ChessBaseInvalidDataException {
+        boolean sameDb = database.getDatabaseId().equals(game.getDatabase().getDatabaseId());
+
+        ExtendedGameHeader.ExtendedGameHeaderBuilder builder = game.getExtendedHeader().toBuilder();
+
+        builder.id(gameId); // TODO: Is this the actual game id?
+        builder.movesOffset(movesOfs);
+        builder.annotationOffset(annotationOfs);
+
+        if (!sameDb) {
+            // If we're adding the game to a different database (usually the case),
+            // the ids of all entities may be different so we can't just copy them
+            // If no entity exists with the same name, create a new one.
+            try {
+                TeamEntity oldWhiteTeam = game.getWhiteTeam();
+                TeamEntity oldBlackTeam = game.getBlackTeam();
+
+                TeamEntity whiteTeam = oldWhiteTeam != null ? resolveEntity(0,
+                        oldWhiteTeam.withNewId(0), database.getTeamBase()) : null;
+                TeamEntity blackTeam = oldBlackTeam != null ? resolveEntity(0,
+                        oldBlackTeam.withNewId(0), database.getTeamBase()) : null;
+
+                builder.whiteTeamId(whiteTeam == null ? -1 : whiteTeam.getId());
+                builder.blackTeamId(blackTeam == null ? -1 : blackTeam.getId());
+            } catch (IllegalArgumentException e) {
+                throw new ChessBaseInvalidDataException("Failed to create ExtendedGameHeader entry due to invalid entity data reference", e);
+            } catch (RuntimeException e) {
+                throw new IllegalArgumentException("Some argument were not set in the extended game header model", e);
+            }
+        }
+
+        builder.lastChangedTimestamp(0); // TODO
+
+        return builder.build();
+    }
+
     public ExtendedGameHeader createExtendedGameHeader(GameModel model, int gameId, long movesOfs, long annotationOfs)
             throws ChessBaseInvalidDataException {
         GameHeaderModel header = model.header();
@@ -156,7 +192,7 @@ public class GameLoader {
         } catch (IllegalArgumentException e) {
             throw new ChessBaseInvalidDataException("Failed to create ExtendedGameHeader entry due to invalid entity data reference", e);
         }  catch (RuntimeException e) {
-            throw new IllegalArgumentException("Some argument were not set in the game header model", e);
+            throw new IllegalArgumentException("Some argument were not set in the extended game header model", e);
         }
 
         ExtendedGameHeader.ExtendedGameHeaderBuilder builder = ExtendedGameHeader.builder();
@@ -174,6 +210,50 @@ public class GameLoader {
         builder.endgameInfo(null);
         builder.lastChangedTimestamp(0); // TODO
 
+        return builder.build();
+    }
+
+    public GameHeader createGameHeader(Game game, long movesOfs, long annotationOfs) throws ChessBaseInvalidDataException {
+        boolean sameDb = database.getDatabaseId().equals(game.getDatabase().getDatabaseId());
+
+        GameHeader.GameHeaderBuilder builder = game.getHeader().toBuilder();
+
+        if (!sameDb) {
+            // If we're adding the game to a different database (usually the case),
+            // the ids of all entities may be different so we can't just copy them
+            // If no entity exists with the same name, create a new one.
+            try {
+                if (!game.isGuidingText()) {
+                    PlayerEntity white = resolveEntity(0,
+                            PlayerEntity.fromFullName(game.getWhite().getFullName()), database.getPlayerBase());
+                    PlayerEntity black = resolveEntity(0,
+                            PlayerEntity.fromFullName(game.getBlack().getFullName()), database.getPlayerBase());
+
+                    builder.whitePlayerId(white.getId());
+                    builder.blackPlayerId(black.getId());
+                }
+
+                TournamentEntity tournament = resolveEntity(0,
+                        new TournamentEntity(game.getTournament().getTitle(), game.getTournament().getDate()), database.getTournamentBase());
+                AnnotatorEntity annotator = resolveEntity(0,
+                        new AnnotatorEntity(game.getAnnotator().getName()), database.getAnnotatorBase());
+                SourceEntity source = resolveEntity(0,
+                        new SourceEntity(game.getSource().getTitle()), database.getSourceBase());
+
+                builder.tournamentId(tournament.getId());
+                builder.annotatorId(annotator.getId());
+                builder.sourceId(source.getId());
+            } catch (IllegalArgumentException e) {
+                throw new ChessBaseInvalidDataException("Failed to create GameHeader entry due to invalid entity data reference", e);
+            } catch (RuntimeException e) {
+                throw new IllegalArgumentException("Some argument were not set in the game header model", e);
+            }
+        }
+
+        // The moves and annotation offset may be truncated if they are > 32 bits
+        // This is fine as the full value is stored in the ExtendedGameHeader
+        builder.annotationOffset((int) annotationOfs);
+        builder.movesOffset((int) movesOfs);
         return builder.build();
     }
 

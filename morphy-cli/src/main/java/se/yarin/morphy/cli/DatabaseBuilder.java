@@ -38,27 +38,41 @@ public class DatabaseBuilder extends GameConsumerBase {
 
     @Override
     public void accept(Game game) {
+        Game addedGame;
+
         if (game.isGuidingText()) {
-            // TODO: Support adding guiding texts
-            log.warn("DatabaseBuilder does not support guiding texts yet; ignoring");
-            return;
-        }
-        GameModel model;
-        try {
-            model = game.getModel();
-        } catch (ChessBaseException e) {
-            log.warn("Failed to get game " + game.getId() + " in the searched database");
-            return;
+            // TODO: This should be done always, not only for guiding texts
+            try {
+                addedGame = this.database.addGame(game);
+            } catch (ChessBaseException e) {
+                log.warn("Failed to add game " + game.getId() + " in the searched database");
+                return;
+            }
+        } else {
+            GameModel model;
+            try {
+                model = game.getModel();
+            } catch (ChessBaseException e) {
+                log.warn("Failed to get game " + game.getId() + " in the searched database");
+                return;
+            }
+
+            try {
+                addedGame = this.database.addGame(model);
+            } catch (ChessBaseInvalidDataException e) {
+                log.warn("Failed to add game " + game.getId() + " in the searched database in the output database", e);
+                return;
+            }
         }
 
-        try {
-            Game addedGame = this.database.addGame(model);
-            if (log.isDebugEnabled()) {
+        if (log.isDebugEnabled()) {
+            if (game.isGuidingText()) {
+                log.debug(String.format("%d: Text added to new database with id %d",
+                        game.getId(), addedGame.getId()));
+            } else {
                 log.debug(String.format("%d: %s-%s added to new database with id %d",
                         game.getId(), game.getWhite().getFullNameShort(), game.getBlack().getFullNameShort(), addedGame.getId()));
             }
-        } catch (ChessBaseInvalidDataException e) {
-            log.warn("Failed to add game " + game.getId() + " in the searched database in the output database", e);
         }
         gamesAdded++;
 

@@ -98,6 +98,18 @@ public class MovesBase implements BlobSizeRetriever {
     }
 
     /**
+     * Gets the serialized bytes that make up the moves of the game
+     * or the text for guiding texts.
+     * @param ofs the offset in the database where the game moves (or text) data is stored
+     * @return a read only byte buffer containing the game moves
+     * @throws ChessBaseIOException if there was some IO errors when reading the moves
+     */
+    public ByteBuffer getMovesBlob(long ofs) {
+        ByteBuffer blob = storage.readBlob(ofs);
+        return blob.asReadOnlyBuffer();
+    }
+
+    /**
      * Gets the moves of a game from the moves database
      * @param ofs the offset in the database where the game moves data is stored
      * @param gameId the id of the game to load; only used in logging statements
@@ -120,11 +132,22 @@ public class MovesBase implements BlobSizeRetriever {
      */
     public long putMoves(long ofs, GameMovesModel model) {
         ByteBuffer buf = MovesSerializer.serializeMoves(model, resolveEncodingMode(model));
+        return putMovesBlob(ofs, buf);
+    }
+
+    /**
+     * Puts the moves of a game into the moves database
+     * @param ofs the old offset where moves of this game was stored,
+     *            or 0 if this is a new game in the database
+     * @param blob the serialized moves to store
+     * @return The offset where the game moves was stored
+     */
+    public long putMovesBlob(long ofs, ByteBuffer blob) {
         if (ofs > 0) {
-            storage.writeBlob(ofs, buf);
+            storage.writeBlob(ofs, blob);
             return ofs;
         }
-        return storage.writeBlob(buf);
+        return storage.writeBlob(blob);
     }
 
     public int preparePutBlob(long ofs, GameMovesModel model) {

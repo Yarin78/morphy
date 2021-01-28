@@ -11,6 +11,7 @@ import se.yarin.cbhlib.games.GameHeader;
 import se.yarin.cbhlib.games.RatingType;
 import se.yarin.chess.*;
 
+import java.nio.ByteBuffer;
 import java.util.Calendar;
 
 /**
@@ -212,6 +213,14 @@ public class Game {
 
     public GameModel getModel() throws ChessBaseException {
         return database.getGameModel(this);
+    }
+
+    public ByteBuffer getMovesBlob() {
+        return database.getMovesBase().getMovesBlob(getMovesOffset());
+    }
+
+    public ByteBuffer getAnnotationsBlob() {
+        return database.getAnnotationBase().getAnnotationsBlob(getAnnotationOffset());
     }
 
 }

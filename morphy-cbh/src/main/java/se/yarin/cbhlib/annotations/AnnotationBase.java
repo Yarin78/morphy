@@ -102,6 +102,19 @@ public class AnnotationBase implements BlobSizeRetriever {
     }
 
     /**
+     * Gets the serialized bytes that make up the annotations of the game.
+     * @param ofs the offset in the database where the annotations data are stored
+     * @return a read only byte buffer containing the annotations
+     * @throws IllegalArgumentException if ofs is not set
+     */
+    public ByteBuffer getAnnotationsBlob(long ofs) {
+        if (ofs <= 0) {
+            throw new IllegalArgumentException("There are no annotations in this game");
+        }
+        return storage.readBlob(ofs).asReadOnlyBuffer();
+    }
+
+    /**
      * Stores annotations for a game in the annotation database.
      * @param gameId the id of the game to store annotations for
      * @param ofs the old offset where annotations of this game was stored,
@@ -115,11 +128,23 @@ public class AnnotationBase implements BlobSizeRetriever {
             return 0;
         }
         ByteBuffer buf = AnnotationsSerializer.serializeAnnotations(gameId, model);
+        return putAnnotationsBlob(ofs, buf);
+    }
+
+    /**
+     * Stores annotations for a game in the annotation database.
+     * @param ofs the old offset where annotations of this game was stored,
+     *            or 0 if no annotations were stored for this game before
+     * @param blob the serialized annotations to store
+     * @return The offset where the annotation was stored. 0 if the game contained no annotations.
+     * @throws ChessBaseIOException if there was some IO errors when storing the annotations
+     */
+    public long putAnnotationsBlob(long ofs, ByteBuffer blob) {
         if (ofs > 0) {
-            storage.writeBlob(ofs, buf);
+            storage.writeBlob(ofs, blob);
             return ofs;
         }
-        return storage.writeBlob(buf);
+        return storage.writeBlob(blob);
     }
 
     public int preparePutBlob(long currentAnnotationOffset, long targetAnnotationOffset, GameMovesModel model) {

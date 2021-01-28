@@ -83,7 +83,7 @@ public class BufferedBlobChannel implements BlobChannel {
             }
             // Last page (might be 0 bytes)
             ByteBuffer page = pages.get(pages.size() - 1);
-            buf.put(page.array(), 0, (int) (offset + length) % PAGE_SIZE);
+            buf.put(page.array(), 0, (int) ((offset + length) % PAGE_SIZE));
         }
 
         buf.flip();

@@ -4,6 +4,7 @@ import lombok.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.cbhlib.entities.*;
+import se.yarin.cbhlib.exceptions.ChessBaseException;
 import se.yarin.cbhlib.exceptions.ChessBaseIOException;
 import se.yarin.cbhlib.exceptions.ChessBaseInvalidDataException;
 import se.yarin.cbhlib.games.ExtendedGameHeader;
@@ -14,6 +15,7 @@ import se.yarin.cbhlib.storage.EntityStorageException;
 import se.yarin.chess.GameModel;
 import se.yarin.chess.GameMovesModel;
 
+import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
@@ -47,6 +49,37 @@ public class DatabaseUpdater {
 
         GameHeader gameHeader = loader.createGameHeader(model, movesOfs, annotationOfs);
         ExtendedGameHeader extendedGameHeader = loader.createExtendedGameHeader(model, gameId, movesOfs, annotationOfs);
+
+        gameHeader = database.getHeaderBase().add(gameHeader);
+        assert gameHeader.getId() == gameId;
+
+        extendedGameHeader = database.getExtendedHeaderBase().add(extendedGameHeader);
+
+        Game addedGame = new Game(database, gameHeader, extendedGameHeader);
+        updateEntityStats(null, addedGame);
+
+        return addedGame;
+    }
+
+    /**
+     * Adds a new game to the database
+     * @param game the game to add (can be from the same or another database)
+     * @return the added game
+     * @throws ChessBaseIOException if the game couldn't be stored due to an IO error
+     */
+    public Game addGame(@NonNull Game game) throws ChessBaseInvalidDataException {
+        int gameId = database.getHeaderBase().getNextGameId();
+
+        long annotationOfs = 0;
+
+        if (game.getAnnotationOffset() > 0) {
+            annotationOfs = database.getAnnotationBase().putAnnotationsBlob(0, game.getAnnotationsBlob());
+        }
+
+        long movesOfs = database.getMovesBase().putMovesBlob(0, game.getMovesBlob());
+
+        GameHeader gameHeader = loader.createGameHeader(game, movesOfs, annotationOfs);
+        ExtendedGameHeader extendedGameHeader = loader.createExtendedGameHeader(game, gameId, movesOfs, annotationOfs);
 
         gameHeader = database.getHeaderBase().add(gameHeader);
         assert gameHeader.getId() == gameId;
@@ -166,6 +199,10 @@ public class DatabaseUpdater {
         }
 
         private void update(int id, int diff) {
+            if (id < 0) {
+                return;
+            }
+
             if (map.containsKey(id)) {
                 map.put(id, map.get(id) + diff);
             } else {

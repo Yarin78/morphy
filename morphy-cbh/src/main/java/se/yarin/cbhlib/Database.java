@@ -296,6 +296,16 @@ public final class Database implements AutoCloseable {
     }
 
     /**
+     * Adds a new game to the database
+     * @param game a game already stored in some database
+     * @return the game header of the saved game
+     * @throws ChessBaseInvalidDataException if the game model contained invalid data
+     */
+    public Game addGame(@NonNull Game game) throws ChessBaseInvalidDataException {
+        return updater.addGame(game);
+    }
+
+    /**
      * Replaces a game in the database
      * @param gameId the id of the game to replace
      * @param model the model of the game to replace

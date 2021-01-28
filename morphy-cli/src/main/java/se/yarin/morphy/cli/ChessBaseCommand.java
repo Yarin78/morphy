@@ -97,6 +97,12 @@ class Games implements Callable<Integer> {
     @CommandLine.Option(names = "--start-position", description = "Show only games that starts at the start position (move 1)")
     private boolean startPosition;
 
+    @CommandLine.Option(names = "--game", description = "Show only chess games (no guiding texts)")
+    private boolean game;
+
+    @CommandLine.Option(names = "--text", description = "Show only guiding texts")
+    private boolean guidingText;
+
     @CommandLine.Option(names = {"-o", "--output"}, description = "Output database (.cbh or .pgn)")
     private String output;
 
@@ -181,9 +187,9 @@ class Games implements Callable<Integer> {
                 gameConsumer.searchDone(result);
             } catch (IOException e) {
                 System.err.println("IO error when processing " + file);
-            }/* catch (RuntimeException e) {
+            } catch (RuntimeException e) {
                 System.err.println("Unexpected error when processing " + file + ": " + e.getMessage());
-            }*/
+            }
         });
 
         gameConsumer.finish();
@@ -258,6 +264,14 @@ class Games implements Callable<Integer> {
 
         if (startPosition) {
             gameSearcher.addFilter(new SetupPositionFilter(db, false));
+        }
+
+        if (game) {
+            gameSearcher.addFilter(new GameTypeFilter(db, false));
+        }
+
+        if (guidingText) {
+            gameSearcher.addFilter(new GameTypeFilter(db, true));
         }
 
         PlayerSearcher primaryPlayerSearcher = null;
