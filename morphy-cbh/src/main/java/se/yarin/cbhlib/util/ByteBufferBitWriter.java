@@ -2,7 +2,7 @@ package se.yarin.cbhlib.util;
 
 import java.nio.ByteBuffer;
 
-public class ByteBufferBitWriter {
+public class ByteBufferBitWriter implements AutoCloseable {
     private int curBit = 7;
     private int curByte = 0;
     private final ByteBuffer buffer;
@@ -29,5 +29,12 @@ public class ByteBufferBitWriter {
         buffer.put((byte) curByte);
         curByte = 0;
         curBit = 7;
+    }
+
+    @Override
+    public void close() {
+        if (curBit != 7) {
+            flushCurrent();
+        }
     }
 }

@@ -6,6 +6,8 @@ import se.yarin.cbhlib.*;
 import se.yarin.cbhlib.exceptions.ChessBaseException;
 import se.yarin.cbhlib.exceptions.ChessBaseInvalidDataException;
 import se.yarin.cbhlib.exceptions.ChessBaseUnsupportedException;
+import se.yarin.cbhlib.games.GameHeader;
+import se.yarin.cbhlib.util.CBUtil;
 import se.yarin.cbhlib.util.GameGenerator;
 import se.yarin.cbhlib.util.TestGames;
 import se.yarin.chess.*;
@@ -14,8 +16,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import static junit.framework.TestCase.assertFalse;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 import static se.yarin.chess.Chess.*;
 
 public class MovesSerializerTest {
@@ -238,6 +239,53 @@ public class MovesSerializerTest {
             ByteBuffer buf = MovesSerializer.serializeMoves(moves, encodingMode);
             GameMovesModel outputMoves = MovesSerializer.deserializeMoves(buf);
             assertEquals(moves.toString(), outputMoves.toString());
+        }
+    }
+
+    @Test
+    public void serializeSetupPosition() {
+        Position position = Position.fromString(".Q......\n" +
+                "........\n" +
+                "....p..p\n" +
+                "...pPqp.\n" +
+                ".......k\n" +
+                ".....P..\n" +
+                ".....P..\n" +
+                "......K.\n", Player.WHITE);
+
+        GameMovesModel model = new GameMovesModel(position, 60);
+        ByteBuffer buf = ByteBuffer.allocate(28);
+
+        MovesSerializer.serializeInitialPosition(model, buf, false);
+
+        String expected = "01 00 00 3C 00 01 20 00 F0 0B 78 5A CD 08 8F 01 97 80 00 00 00 00 00 00 00 00 00 00 ";
+
+        assertEquals(expected, CBUtil.toHexString(buf.array()));
+    }
+
+
+    @Test
+    public void reserializeManyGames() throws ChessBaseException {
+        Database db = ResourceLoader.openWorldChDatabase();
+        for (int gameId = 1; gameId <= db.getHeaderBase().size(); gameId++) {
+            GameHeader header = db.getHeaderBase().getGameHeader(gameId);
+            if (header.isGuidingText()) {
+                continue;
+            }
+
+            int ofs = header.getMovesOffset();
+
+            // Deserialize the moves and then serialize them again
+            // Compare the textual notation since it's actually valid
+            // that the re-serialized version differs (but the actual moves should not)
+
+            GameMovesModel model = db.getMovesBase().getMoves(ofs, gameId);
+            String moves = model.toString();
+
+            ByteBuffer byteBuffer = MovesSerializer.serializeMoves(model, 0);
+            GameMovesModel reserializedModel = MovesSerializer.deserializeMoves(byteBuffer);
+            String reserializedMoves = reserializedModel.toString();
+            assertEquals("Game " + gameId, moves, reserializedMoves);
         }
     }
 }

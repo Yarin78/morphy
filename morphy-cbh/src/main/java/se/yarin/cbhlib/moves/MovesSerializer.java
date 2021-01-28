@@ -362,25 +362,25 @@ public final class MovesSerializer {
         if (b > 255) b = 255;
         buf.put((byte) b);
 
-        ByteBufferBitWriter byteBufferBitWriter = new ByteBufferBitWriter(buf);
-
-        for (int i = 0; i < 64; i++) {
-            Stone stone = position.stoneAt(i);
-            if (stone.isNoStone()) {
-                byteBufferBitWriter.putBit(0);
-            } else {
-                byteBufferBitWriter.putBit(1);
-                byteBufferBitWriter.putBit(stone.isWhite() ? 0 : 1);
-                int p = switch (stone.toPiece()) {
-                    case KING -> 1;
-                    case QUEEN -> 2;
-                    case KNIGHT -> 3;
-                    case BISHOP -> 4;
-                    case ROOK -> 5;
-                    case PAWN -> 6;
-                    default -> 0;
-                };
-                byteBufferBitWriter.putBits(p, 3);
+        try (ByteBufferBitWriter byteBufferBitWriter = new ByteBufferBitWriter(buf)) {
+            for (int i = 0; i < 64; i++) {
+                Stone stone = position.stoneAt(i);
+                if (stone.isNoStone()) {
+                    byteBufferBitWriter.putBit(0);
+                } else {
+                    byteBufferBitWriter.putBit(1);
+                    byteBufferBitWriter.putBit(stone.isWhite() ? 0 : 1);
+                    int p = switch (stone.toPiece()) {
+                        case KING -> 1;
+                        case QUEEN -> 2;
+                        case KNIGHT -> 3;
+                        case BISHOP -> 4;
+                        case ROOK -> 5;
+                        case PAWN -> 6;
+                        default -> 0;
+                    };
+                    byteBufferBitWriter.putBits(p, 3);
+                }
             }
         }
         if (buf.position() > mark) {

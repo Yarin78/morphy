@@ -52,12 +52,15 @@ public class DatabaseBuilder extends GameConsumerBase {
         }
 
         try {
-            this.database.addGame(model);
+            Game addedGame = this.database.addGame(model);
+            if (log.isDebugEnabled()) {
+                log.debug(String.format("%d: %s-%s added to new database with id %d",
+                        game.getId(), game.getWhite().getFullNameShort(), game.getBlack().getFullNameShort(), addedGame.getId()));
+            }
         } catch (ChessBaseInvalidDataException e) {
             log.warn("Failed to add game " + game.getId() + " in the searched database in the output database", e);
         }
         gamesAdded++;
-        // System.out.printf("Game %d added (%s - %s )%n", hit.getGameHeader().getId(), model.header().getWhite(), model.header().getBlack());
 
         if (gamesAdded % 1000 == 0) {
             System.out.println(gamesAdded + " games added");

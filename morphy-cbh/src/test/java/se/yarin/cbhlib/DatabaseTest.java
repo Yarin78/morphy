@@ -1,9 +1,6 @@
 package se.yarin.cbhlib;
 
-import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.cbhlib.annotations.TextAfterMoveAnnotation;
@@ -12,14 +9,12 @@ import se.yarin.cbhlib.entities.TournamentEntity;
 import se.yarin.cbhlib.exceptions.ChessBaseException;
 import se.yarin.cbhlib.exceptions.ChessBaseInvalidDataException;
 import se.yarin.cbhlib.exceptions.ChessBaseMissingGameException;
-import se.yarin.cbhlib.games.GameHeader;
+import se.yarin.cbhlib.storage.EntityStorageException;
 import se.yarin.cbhlib.util.GameGenerator;
 import se.yarin.cbhlib.validation.EntityStatsValidator;
-import se.yarin.cbhlib.storage.EntityStorageException;
 import se.yarin.cbhlib.validation.GamesValidator;
 import se.yarin.chess.*;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.Random;
 
@@ -28,21 +23,6 @@ import static se.yarin.chess.Chess.*;
 
 public class DatabaseTest {
     private static final Logger log = LoggerFactory.getLogger(DatabaseTest.class);
-
-    @Rule
-    public TemporaryFolder folder = new TemporaryFolder();
-    private Database worldChDatabase;
-
-    @Before
-    public void setupEntityTest() throws IOException {
-        File file = ResourceLoader.materializeDatabaseStream(
-                GameHeader.class,
-                "World-ch/World-ch",
-                folder.newFolder("World-ch"),
-                "World-ch");
-        // Can't openInMemory because the serializedFilter tests only works on persistent storage
-        worldChDatabase = Database.open(file);
-    }
 
     private GameModel getSimpleGame(String white, String black) {
         return getSimpleGame(white, black, "", "", "");
@@ -67,7 +47,7 @@ public class DatabaseTest {
 
     @Test
     public void getSingleGame() {
-        Game game = worldChDatabase.getGame(73);
+        Game game = ResourceLoader.openWorldChDatabase().getGame(73);
         assertEquals("Chigorin, Mikhail Ivanovich", game.getWhite().getFullName());
         assertEquals("Steinitz, William", game.getBlack().getFullName());
         assertEquals("World-ch04 Steinitz-Chigorin +10-8=5", game.getTournament().getTitle());
@@ -75,12 +55,12 @@ public class DatabaseTest {
 
     @Test(expected = ChessBaseMissingGameException.class)
     public void getGame0() {
-        worldChDatabase.getGame(0);
+        ResourceLoader.openWorldChDatabase().getGame(0);
     }
 
     @Test(expected = ChessBaseMissingGameException.class)
     public void getSingleMissingGame() {
-        worldChDatabase.getGame(100000);
+        ResourceLoader.openWorldChDatabase().getGame(100000);
     }
 
     @Test

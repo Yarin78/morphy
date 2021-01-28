@@ -1,10 +1,14 @@
 package se.yarin.cbhlib;
 
+import se.yarin.cbhlib.games.GameHeader;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.HashMap;
 
 public class ResourceLoader {
@@ -41,5 +45,20 @@ public class ResourceLoader {
                         new File(targetDirectory, targetNameBase + extension)));
         }
         return extensionFiles.get(".cbh");
+    }
+
+    public static Database openWorldChDatabase() {
+        try {
+            Path worldChPath = Files.createTempDirectory("worldch");
+            File file = ResourceLoader.materializeDatabaseStream(
+                    GameHeader.class,
+                    "World-ch/World-ch",
+                    worldChPath.toFile(),
+                    "World-ch");
+            // Can't openInMemory because the serializedFilter tests only works on persistent storage
+            return Database.open(file);
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to open World-ch test database");
+        }
     }
 }
