@@ -132,11 +132,11 @@ public class StdoutGamesSummary extends GameConsumerBase {
             lastColumn = column;
 
             String value = column.getValue(game);
-            if (value.length() > column.width()) {
+            if (column.trimValueToWidth() && value.length() > column.width()) {
                 value = value.substring(0, column.width());
             }
             sb.append(value);
-            sb.append(" ".repeat(column.width() - value.length()));
+            sb.append(" ".repeat(Math.max(0, column.width() - value.length())));
         }
         if (lastColumn != null) {
             sb.append(" ".repeat(lastColumn.marginRight()));

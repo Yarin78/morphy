@@ -170,6 +170,17 @@ public final class CBUtil {
             sb.append(String.format("%02X ", v));
         }
         return sb.toString();
+    }
 
+    public static byte[] fromHexString(String s) {
+        s = s.replace(" ", "");
+        if (s.length() % 2 != 0) {
+            throw new IllegalArgumentException("Invalid length of hex string");
+        }
+        byte[] bytes = new byte[s.length() / 2];
+        for (int i = 0; i < bytes.length; i++) {
+            bytes[i] = (byte) Integer.parseInt(s.substring(i*2, i*2+2), 16);
+        }
+        return bytes;
     }
 }

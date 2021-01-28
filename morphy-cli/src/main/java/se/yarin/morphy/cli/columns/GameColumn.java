@@ -24,6 +24,8 @@ public interface GameColumn {
         return 1;
     }
 
+    default boolean trimValueToWidth() { return true; }
+
     String getValue(Game game);
 
     String getId();

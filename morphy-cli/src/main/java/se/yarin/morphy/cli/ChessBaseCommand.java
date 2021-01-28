@@ -13,18 +13,14 @@ import se.yarin.cbhlib.games.search.*;
 import se.yarin.cbhlib.storage.EntityStorageException;
 import se.yarin.cbhlib.util.CBUtil;
 import se.yarin.cbhlib.validation.Validator;
-import se.yarin.morphy.cli.columns.GameColumn;
-import se.yarin.morphy.cli.columns.RawExtendedHeaderColumn;
-import se.yarin.morphy.cli.columns.RawHeaderColumn;
+import se.yarin.morphy.cli.columns.*;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.*;
-import java.util.EnumSet;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.Callable;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @CommandLine.Command(name = "cb", description = "Performs an operation on a ChessBase file",
@@ -59,6 +55,9 @@ class Games implements Callable<Integer> {
     @CommandLine.Option(names = "--limit", description = "Max number of games to output")
     private int limit = 0;
 
+    @CommandLine.Option(names = "--id", description = "The id of a game to get")
+    private int[] ids;
+
     @CommandLine.Option(names = "--count-all", description = "Count all hits, even beyond the limit (if specified)")
     private boolean countAll = false;
 
@@ -92,6 +91,12 @@ class Games implements Callable<Integer> {
     @CommandLine.Option(names = "--rating.any", description = "Rating range required for at least one player, e.g. 2700- or 2000-2200")
     private String ratingRangeAny;
 
+    @CommandLine.Option(names = "--setup-position", description = "Show only games that has a setup position (does not start at move 1)")
+    private boolean setupPosition;
+
+    @CommandLine.Option(names = "--start-position", description = "Show only games that starts at the start position (move 1)")
+    private boolean startPosition;
+
     @CommandLine.Option(names = {"-o", "--output"}, description = "Output database (.cbh or .pgn)")
     private String output;
 
@@ -109,6 +114,12 @@ class Games implements Callable<Integer> {
 
     @CommandLine.Option(names = "--raw-col-cbj", description = "Show binary CBJ data (debug)")
     private String[] rawCbjColumns;
+
+    @CommandLine.Option(names = "--raw-col-cbg", description = "Show binary CBG data (debug)")
+    private boolean rawCbgColumns;
+
+    @CommandLine.Option(names = "--raw-col-cba", description = "Show binary CBA data (debug)")
+    private boolean rawCbaColumns;
 
     @CommandLine.Option(names = "--raw-cbh", description = "Raw filter expression in CBH data (debug)")
     private String[] rawCbhFilter;
@@ -170,7 +181,9 @@ class Games implements Callable<Integer> {
                 gameConsumer.searchDone(result);
             } catch (IOException e) {
                 System.err.println("IO error when processing " + file);
-            }
+            }/* catch (RuntimeException e) {
+                System.err.println("Unexpected error when processing " + file + ": " + e.getMessage());
+            }*/
         });
 
         gameConsumer.finish();
@@ -203,6 +216,12 @@ class Games implements Callable<Integer> {
                         parsedColumns.add(new RawExtendedHeaderColumn(Integer.parseInt(parts[0]), Integer.parseInt(parts[1])));
                     }
                 }
+                if (rawCbgColumns) {
+                    parsedColumns.add(new RawMovesColumn());
+                }
+                if (rawCbaColumns) {
+                    parsedColumns.add(new RawAnnotationsColumn());
+                }
 
                 gameConsumer = new StdoutGamesSummary(countAll, parsedColumns);
                 if (limit == 0) {
@@ -228,6 +247,18 @@ class Games implements Callable<Integer> {
 
     public GameSearcher createGameSearcher(Database db) {
         GameSearcher gameSearcher = new GameSearcher(db);
+
+        if (ids != null) {
+            gameSearcher.addFilter(new GameIdFilter(db, Arrays.stream(ids).boxed().collect(Collectors.toList())));
+        }
+
+        if (setupPosition) {
+            gameSearcher.addFilter(new SetupPositionFilter(db, true));
+        }
+
+        if (startPosition) {
+            gameSearcher.addFilter(new SetupPositionFilter(db, false));
+        }
 
         PlayerSearcher primaryPlayerSearcher = null;
         if (players != null) {
