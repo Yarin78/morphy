@@ -195,7 +195,7 @@ Ofs  Type  Len   Description
  +0  int     4   bit 0-29: Game size, in number of bytes (including this, excluding trash bytes)
                  bit 30: If set, the game doesn't start with the initial position.
                  bit 31: If set, the data is not encoded (iff guiding text?)
- +4  word    2   ? (1?) (little-endian)
+ +4  word    2   Main text format, known values 1 (old), 2 (rare), 3 (new)
  +6  word    2   Number of titles (can be 0) (little endian)
 
 For each title
@@ -203,6 +203,78 @@ For each title
  +0  word    2   Language (0=english, 1=german, 2=france, 3=spain, 4=italian, 5=dutch) (little endian)
  +2  word    2   Length of title (little endian)
  +4  string  ?   Title
+
+
+Guiding text format (old - 1)
+-------------------
+After the titles:
+01  <-- !? subformat? can also be 0
+01 00   <-- 1 text things to follow!?
+
+00 00  <-- language
+a0 02 <-- size of first text blob
+<raw text>
+38 03  (number of bytes to follow)
+<styling and metadata information, unknown format>
+
+Guiding text format (rare - 2)
+-------------------
+01  <-- !? subformat?
+01 00 <-- 1 text thing to follow
+
+00 00 <-- language
+46 0f 01 00  <-- size of first text blob
+<raw text>
+da 29  00 00 <-- size of formatting
+<formatting>
+
+Guiding text format (new - 3)
+-------------------
+After the titles:
+
+01  <-- !? subformat?
+08 00   <-- 8 text things to follow!?
+
+00 00
+c1 00 00 00  <-- size of first text blob
+<html text blog matching size above>
+00 00 00 00  (these presumably belong to the blob above)
+
+01 00
+eb 00 00 00 <-- size of second text blob
+<text blob>
+00 00 00 00
+
+02 00
+eb 00 00 00
+<text blob>
+00 00 00 00
+
+03 00
+eb 00 00 00
+<text blob>
+00 00 00 00
+
+04 00
+eb 00 00 00
+<text blob>
+00 00 00 00
+
+05 00
+eb 00 00 00
+<text blob>
+00 00 00 00
+
+06 00
+eb 00 00 00
+<text blob>
+00 00 00 00
+
+07 00
+eb 00 00 00
+<text blob>
+00 00 00 00
+
 
 Game setup format
 -----------------

@@ -185,6 +185,74 @@ Specifies the magnitude for some of the annotation flags above. The correspondin
 
 ## CBJ file format
 
+The CBJ file was added to store additional metadata about games, such as team information, endgame information, timestamps etc. 
+In databases created in CB6 the file doesn't exist, but it was added shortly after. The size of each game record has changed multiple
+times, indicating that this is a dynamic file format that may continue to change. An important aspect of the format is that
+databases create in later version of ChessBase can still be opened in earlier version; unrecognized fields are simple ignored.
+
+As with the CBH file, the file starts with a <a href="#cbj_header">header</a> containing metadata about the file itself.
+Then follows one record per <a href="#cbj_game">game</a>/<a href="#cbh_text">text</a>. The header is 32 bytes,
+while the size of the record varies depending on CBJ version. 
+
+All integers are stored in Big Endian (most significant byte first) unless otherwise specified.
+
+### <a name="cbj_header">CBJ file header</a>
+
+| Offset | Bytes | Description
+| --- | --- | ---
+| 0   | 4   | .cbj file version (CB? = `1`, CB? = `7`, CB12 = `8`, CB13-CB16 = `11`)
+| 4   | 4   | Size of the game records (`120` in the more recent versions of CB)
+| 8   | 4   | Number of game records
+| 12  | 20  | Presumably random dirty bytes, perhaps reserved for future use (may contain parts of random strings etc)
+
+### <a name="cbj_game">CBJ game record</a>
+
+The id-references to teams are 0-based; see [Entities](entities.md).
+For games with no teams, `-1` is specified instead (note that this differs compared to how entities are referenced in the .cbh file).
+
+| Offset | Bytes | Description
+| --- | --- | ---
+| 0   | 4   | The id of the White team (-1 if no team)
+| 4   | 4   | The id of the Black team (-1 if no team)
+| 8   | 4   | Offset into the .cbm file where media data is stored. Only used by guiding texts; -1 if not used.
+| 12  | 8   | Offset into the .cba file where annotations data start. Same as in the .cbh file, but 64 bit version. 
+| 20  | 10  | <a href="#final_material">Final material</a> 
+| 30  | 8   | Offset into the .cbg file where moves data start. Same as in the .cbh file, but 64 bit version. 
+| 38  | 16  | <a href="#rating_type">Rating type for White player</a>
+| 54  | 16  | <a href="#rating_type">Rating type for Black player</a>
+| 70  | 4   | Unknown
+| 74  | 4   | Unknown
+| 78  | 2   | Game version (? increased every time game is saved ?)
+| 80  | 8   | Timestamp when the game was originally created
+| 88  | 20  | <a href="#endgame_info">Endgame information</a>
+| 108 | 4   | Timestamp when the game was last updated
+| 116 | 4   | Unknown. Seems to be `0` when creation time stamp exist and `-1` otherwise.
+
+### <a name="rating_type">Rating type</a>
+
+A 16 byte record used to specify what type of rating was given in the .cbh file for the corresponding player.
+Only certain combinations seems possible in practice.
+
+| Offset | Bytes | Description
+| --- | --- | ---
+| 0   | 2   | Bit 0-2 (`1` = Internal rating, `2` = National rating); other bits may be set as well
+| 2   | 1   | National time control (`0` = normal, `1` = blitz, `2` = rapid, `3` = corr.); ignore if not a national rating
+| 3   | 1   | International time control (`1` = normal, `2` = blitz, `3` = rapid, `4` = corr.); ignore if not an international rating
+| 4   | 1   | `0` if international rating, otherwise the <a href="#nation">Nation code</a> (TODO)
+| 5   | 11  | The name of the rating system as a zero-terminated string, e.g. "FIDE", "ICCF" etc
+
+### <a name="final_material">Final material</a>
+
+A summary of the material at the final position of the game (number of pawns, knights etc)
+
+For details, see code.
+
+### <a name="endgame_info">Endgame info</a>
+
+Represents different types of Endgames that a game contained at various stages.
+
+For details, see code.
+
 ## flags file format
 
 N/A
