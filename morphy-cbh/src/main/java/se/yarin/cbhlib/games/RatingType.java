@@ -15,6 +15,10 @@ public class RatingType {
     private final Nation nation;
     private final String name;
 
+    public static RatingType unspecified() {
+        return RatingType.international(TournamentTimeControl.NORMAL);
+    }
+
     public boolean isInternational() {
         return international != null;
     }

@@ -354,8 +354,8 @@ public class ExtendedGameHeaderBase implements ExtendedGameHeaderSerializer {
                 builder.blackRatingType(RatingType.deserialize(buf));
                 builder.unknown1(ByteBufferUtil.getIntB(buf)); // No idea what this is for
             } else {
-                builder.whiteRatingType(RatingType.international(TournamentTimeControl.NORMAL));
-                builder.blackRatingType(RatingType.international(TournamentTimeControl.NORMAL));
+                builder.whiteRatingType(RatingType.unspecified());
+                builder.blackRatingType(RatingType.unspecified());
             }
             if (bufSize >= 78) {
                 builder.unknown2(ByteBufferUtil.getIntB(buf)); // No idea what this is for

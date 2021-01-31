@@ -16,7 +16,7 @@ import java.util.EnumSet;
 @EqualsAndHashCode
 public class GameHeader {
     private final int id;
-    private final boolean game; // This one is always true
+    private final boolean game; // This one is always true (TODO: delete this)
     private final boolean deleted; // If true, game has been marked as deleted but no physical deletion has been done yet
     private final boolean guidingText; // If true, this is a text document and not a chess game
     private final int movesOffset; // Position in the .cbg file where the actual moves are stored

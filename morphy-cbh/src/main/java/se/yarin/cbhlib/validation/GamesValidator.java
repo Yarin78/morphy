@@ -139,7 +139,7 @@ public class GamesValidator {
                         loader.getGameModel(header.getId());
                     } else {
                         // Only deserialize the game header (and lookup player, team, source, commentator)
-                        loader.getHeaderModel(header, extendedHeader);
+                        loader.getGameHeaderModel(game);
                     }
                     numGames += 1;
                 }

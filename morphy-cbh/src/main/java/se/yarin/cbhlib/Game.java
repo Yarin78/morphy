@@ -6,9 +6,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.cbhlib.entities.*;
 import se.yarin.cbhlib.exceptions.ChessBaseException;
-import se.yarin.cbhlib.games.ExtendedGameHeader;
-import se.yarin.cbhlib.games.GameHeader;
-import se.yarin.cbhlib.games.RatingType;
+import se.yarin.cbhlib.games.*;
 import se.yarin.chess.*;
 
 import java.nio.ByteBuffer;
@@ -213,6 +211,14 @@ public class Game {
 
     public GameModel getModel() throws ChessBaseException {
         return database.getGameModel(this);
+    }
+
+    public TextModel getTextModel() throws ChessBaseException {
+        return database.getTextModel(this);
+    }
+
+    public String getTextTitle() {
+        return TextContentsModel.deserializeTitle(getId(), getMovesBlob());
     }
 
     public ByteBuffer getMovesBlob() {

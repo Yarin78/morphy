@@ -10,6 +10,7 @@ import se.yarin.cbhlib.annotations.StatisticalAnnotation;
 import se.yarin.cbhlib.entities.*;
 import se.yarin.cbhlib.exceptions.ChessBaseException;
 import se.yarin.cbhlib.exceptions.ChessBaseInvalidDataException;
+import se.yarin.cbhlib.moves.ChessBaseMoveDecodingException;
 import se.yarin.cbhlib.storage.EntityStorageException;
 import se.yarin.chess.*;
 import se.yarin.chess.annotations.Annotation;
@@ -17,8 +18,8 @@ import se.yarin.chess.annotations.Annotation;
 import java.util.EnumSet;
 
 /**
- * Contains methods for converting game data from the format as store din {@link se.yarin.cbhlib.Database}
- * and the generic {@link se.yarin.chess.GameModel}
+ * Contains methods for converting game data from the format as stored in {@link se.yarin.cbhlib.Database}
+ * to the generic {@link se.yarin.chess.GameModel} and {@link TextModel}.
  */
 public class GameLoader {
     private static final Logger log = LoggerFactory.getLogger(GameLoader.class);
@@ -38,7 +39,10 @@ public class GameLoader {
         this.database = database;
     }
 
-    public GameHeaderModel getHeaderModel(GameHeader header, ExtendedGameHeader extendedHeader) {
+    public GameHeaderModel getGameHeaderModel(Game game) {
+        GameHeader header = game.getHeader();
+        ExtendedGameHeader extendedHeader = game.getExtendedHeader();
+
         GameHeaderModel model = new GameHeaderModel();
 
         if (header.isGuidingText()) {
@@ -124,7 +128,7 @@ public class GameLoader {
 
     public GameModel getGameModel(Game game) throws ChessBaseException {
         assert game.getDatabase() == this.database;
-        GameHeaderModel headerModel = getHeaderModel(game.getHeader(), game.getExtendedHeader());
+        GameHeaderModel headerModel = getGameHeaderModel(game);
 
         GameMovesModel moves = database.getMovesBase().getMoves(game.getMovesOffset(), game.getId());
         database.getAnnotationBase().getAnnotations(moves, game.getAnnotationOffset());
@@ -134,6 +138,40 @@ public class GameLoader {
 
     public GameModel getGameModel(int gameId) throws ChessBaseException {
         return getGameModel(database.getGame(gameId));
+    }
+
+    public TextHeaderModel getTextHeaderModel(Game game) {
+        GameHeader header = game.getHeader();
+        if (!header.isGuidingText()) {
+            throw new IllegalArgumentException("Can't get text header model for a game (id " + header.getId() + ")");
+        }
+
+        AnnotatorEntity annotator = database.getAnnotatorBase().get(header.getAnnotatorId());
+        SourceEntity source = database.getSourceBase().get(header.getSourceId());
+        TournamentEntity tournament = database.getTournamentBase().get(header.getTournamentId());
+
+        TextHeaderModel model = new TextHeaderModel();
+
+        model.setRound(header.getRound());
+        model.setSubRound(header.getRound());
+        model.setTournament(tournament == null ? "" : tournament.getTitle());
+        model.setTournamentYear(tournament == null ? 0 : tournament.getDate().year());
+        model.setSource(source == null ? "" : source.getPublisher());
+        model.setAnnotator(annotator == null ? "" : annotator.getName());
+
+        return model;
+    }
+
+    public TextModel getTextModel(Game game) throws ChessBaseException {
+        assert game.getDatabase() == this.database;
+
+        TextHeaderModel header = getTextHeaderModel(game);
+        TextContentsModel contents = database.getMovesBase().getText(game.getMovesOffset(), game.getId());
+        return new TextModel(header, contents);
+    }
+
+    public TextModel getTextModel(int gameId) throws ChessBaseException {
+        return getTextModel(database.getGame(gameId));
     }
 
     public ExtendedGameHeader createExtendedGameHeader(Game game, int gameId, long movesOfs, long annotationOfs) throws ChessBaseInvalidDataException {
@@ -172,6 +210,20 @@ public class GameLoader {
         return builder.build();
     }
 
+    public ExtendedGameHeader createExtendedGameHeader(TextModel model, int gameId, long movesOfs) {
+        return ExtendedGameHeader.builder()
+                .id(gameId)
+                .whiteTeamId(-1)
+                .blackTeamId(-1)
+                .whiteRatingType(RatingType.unspecified())
+                .blackRatingType(RatingType.unspecified())
+                .movesOffset(movesOfs)
+                .annotationOffset(0)
+                .creationTimestamp(0) // TODO
+                .lastChangedTimestamp(0) // TODO
+                .build();
+    }
+
     public ExtendedGameHeader createExtendedGameHeader(GameModel model, int gameId, long movesOfs, long annotationOfs)
             throws ChessBaseInvalidDataException {
         GameHeaderModel header = model.header();
@@ -191,26 +243,23 @@ public class GameLoader {
                     new TeamEntity(defaultName(header.getBlackTeam())), database.getTeamBase());
         } catch (IllegalArgumentException e) {
             throw new ChessBaseInvalidDataException("Failed to create ExtendedGameHeader entry due to invalid entity data reference", e);
-        }  catch (RuntimeException e) {
+        } catch (RuntimeException e) {
             throw new IllegalArgumentException("Some argument were not set in the extended game header model", e);
         }
 
-        ExtendedGameHeader.ExtendedGameHeaderBuilder builder = ExtendedGameHeader.builder();
-
-        builder.id(gameId); // TODO: Is this the actual game id?
-        builder.movesOffset(movesOfs);
-        builder.annotationOffset(annotationOfs);
-        builder.finalMaterial(false);
-        builder.whiteTeamId(whiteTeam.getId());
-        builder.blackTeamId(blackTeam.getId());
-        builder.whiteRatingType(RatingType.international(TournamentTimeControl.NORMAL));
-        builder.blackRatingType(RatingType.international(TournamentTimeControl.NORMAL));
-
-        builder.creationTimestamp(0); // TODO
-        builder.endgameInfo(null);
-        builder.lastChangedTimestamp(0); // TODO
-
-        return builder.build();
+        return ExtendedGameHeader.builder()
+                .id(gameId) // TODO: Is this the actual game id?
+                .movesOffset(movesOfs)
+                .annotationOffset(annotationOfs)
+                .finalMaterial(false)
+                .whiteTeamId(whiteTeam.getId())
+                .blackTeamId(blackTeam.getId())
+                .whiteRatingType(RatingType.international(TournamentTimeControl.NORMAL))
+                .blackRatingType(RatingType.international(TournamentTimeControl.NORMAL))
+                .creationTimestamp(0) // TODO
+                .endgameInfo(null)
+                .lastChangedTimestamp(0) // TODO
+                .build();
     }
 
     public GameHeader createGameHeader(Game game, long movesOfs, long annotationOfs) throws ChessBaseInvalidDataException {
@@ -257,6 +306,47 @@ public class GameLoader {
         return builder.build();
     }
 
+    public GameHeader createGameHeader(TextModel model, long movesOfs) throws ChessBaseInvalidDataException {
+        TextHeaderModel header = model.getHeader();
+
+        TournamentEntity tournament;
+        AnnotatorEntity annotator;
+        SourceEntity source;
+
+        try {
+            tournament = resolveEntity(0,
+                    new TournamentEntity(defaultName(header.getTournament()), new Date(header.getTournamentYear())), database.getTournamentBase());
+            annotator = resolveEntity(0,
+                    new AnnotatorEntity(defaultName(header.getAnnotator())), database.getAnnotatorBase());
+            source = resolveEntity(0,
+                    new SourceEntity(defaultName(header.getSource())), database.getSourceBase());
+        } catch (IllegalArgumentException e) {
+            throw new ChessBaseInvalidDataException("Failed to create GameHeader entry due to invalid entity data reference", e);
+        } catch (RuntimeException e) {
+            throw new IllegalArgumentException("Some argument were not set in the text header model", e);
+        }
+
+        return GameHeader.builder()
+                .game(true)
+                .guidingText(true)
+                .whitePlayerId(-1)
+                .blackPlayerId(-1)
+                .tournamentId(tournament.getId())
+                .annotatorId(annotator.getId())
+                .sourceId(source.getId())
+                .playedDate(new Date(0))
+                .result(GameResult.NOT_FINISHED)
+                .round(header.getRound())
+                .subRound(header.getSubRound())
+                .eco(Eco.unset())
+                .lineEvaluation(NAG.NONE)
+                .medals(EnumSet.noneOf(Medal.class))
+                .flags(EnumSet.noneOf(GameHeaderFlags.class)) // TODO: Maybe some flags can be set?
+                .annotationOffset(0)
+                .movesOffset((int) movesOfs)
+                .build();
+    }
+
     public GameHeader createGameHeader(GameModel model, long movesOfs, long annotationOfs) throws ChessBaseInvalidDataException {
         GameHeaderModel header = model.header();
 
@@ -271,7 +361,6 @@ public class GameLoader {
         // Lookup or create the entities that are referenced in the game header
         // If the id field is set, use that one. Otherwise use the string field.
         // If no entity exists with the same name, create a new one.
-        // TODO: Would be nice to create these entities in a transaction and wait with the commit
         try {
             white = resolveEntity(sameDb ? (Integer) header.getField(WHITE_ID) : 0,
                     PlayerEntity.fromFullName(defaultName(header.getWhite())), database.getPlayerBase());

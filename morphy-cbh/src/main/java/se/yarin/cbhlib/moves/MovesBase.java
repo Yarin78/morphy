@@ -6,6 +6,7 @@ import org.slf4j.LoggerFactory;
 import se.yarin.cbhlib.exceptions.ChessBaseIOException;
 import se.yarin.cbhlib.exceptions.ChessBaseInvalidDataException;
 import se.yarin.cbhlib.exceptions.ChessBaseUnsupportedException;
+import se.yarin.cbhlib.games.TextContentsModel;
 import se.yarin.cbhlib.storage.BlobSizeRetriever;
 import se.yarin.cbhlib.storage.BlobStorage;
 import se.yarin.cbhlib.storage.FileBlobStorage;
@@ -123,6 +124,17 @@ public class MovesBase implements BlobSizeRetriever {
     }
 
     /**
+     * Gets the contents of a text entry from the moves database
+     * @param ofs the offset in the database where the text contents are stored
+     * @param gameId the id of the text to load; only used in logging statements
+     * @return a model of the text entry
+     */
+    public TextContentsModel getText(long ofs, int gameId) throws ChessBaseMoveDecodingException {
+        ByteBuffer blob = storage.readBlob(ofs);
+        return TextContentsModel.deserialize(gameId, blob);
+    }
+
+    /**
      * Puts the moves of a game into the moves database
      * @param ofs the old offset where moves of this game was stored,
      *            or 0 if this is a new game in the database
@@ -132,6 +144,19 @@ public class MovesBase implements BlobSizeRetriever {
      */
     public long putMoves(long ofs, GameMovesModel model) {
         ByteBuffer buf = MovesSerializer.serializeMoves(model, resolveEncodingMode(model));
+        return putMovesBlob(ofs, buf);
+    }
+
+    /**
+     * Puts the contents of a text entry into the moves database
+     * @param ofs the old offset where moves of this game was stored,
+     *            or 0 if this is a new game in the database
+     * @param model the text to store
+     * @return The offset where the game moves was stored
+     * @throws ChessBaseIOException if there was some IO errors when storing the moves
+     */
+    public long putText(long ofs, TextContentsModel model) {
+        ByteBuffer buf = model.serialize();
         return putMovesBlob(ofs, buf);
     }
 

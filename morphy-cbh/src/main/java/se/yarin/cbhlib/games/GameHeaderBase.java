@@ -270,7 +270,10 @@ public class GameHeaderBase implements GameHeaderSerializer {
         GameHeader.GameHeaderBuilder builder = GameHeader.builder();
         builder.id(gameId);
         int type = ByteBufferUtil.getUnsignedByte(buf);
-        builder.game((type & 1) > 0); // Is this one always set?
+        if ((type & 1) == 0) {
+            log.warn("Game Header type bit 0 was not set in game " + gameId);
+        }
+        builder.game((type & 1) > 0);
         builder.deleted((type & 128) > 0);
         boolean guidingText = (type & 2) > 0;
         builder.guidingText(guidingText);
@@ -283,7 +286,6 @@ public class GameHeaderBase implements GameHeaderSerializer {
         }
         builder.movesOffset(ByteBufferUtil.getIntB(buf));
         if (guidingText) {
-            // TODO: Test this
             int unknownShort = ByteBufferUtil.getUnsignedShortB(buf);
             if (unknownShort != 0) {
                 log.warn("Unknown short in guiding text: " + unknownShort);
@@ -308,6 +310,7 @@ public class GameHeaderBase implements GameHeaderSerializer {
             if ((flagInt & ~GameHeaderFlags.allFlagsMask()) > 0) {
                 log.warn(String.format("Unknown game header flags in game %d: %08X", gameId, flagInt));
             }
+            // TODO: Check what flags can actually be set in texts, update in GameLoader accordingly
             builder.flags(GameHeaderFlags.decodeFlags(flagInt));
 
             int i = 0;

@@ -240,9 +240,21 @@ public final class Database implements AutoCloseable {
      * @param game the game
      * @return a model of the game
      * @throws ChessBaseException if an internal error occurred when fetching the game
+     * @throws IllegalArgumentException if the game is actually a text
      */
     public GameModel getGameModel(Game game) throws ChessBaseException {
         return loader.getGameModel(game);
+    }
+
+    /**
+     * Gets a text model
+     * @param game the game
+     * @return a model of the text
+     * @throws ChessBaseException if an internal error occurred when fetching the game
+     * @throws IllegalArgumentException if the text is actually a game
+     */
+    public TextModel getTextModel(Game game) throws ChessBaseException {
+        return loader.getTextModel(game);
     }
 
     /**
@@ -296,6 +308,16 @@ public final class Database implements AutoCloseable {
     }
 
     /**
+     * Adds a new text to the database
+     * @param model the model of the text to add
+     * @return the game header of the saved text
+     * @throws ChessBaseInvalidDataException if the text model contained invalid data
+     */
+    public Game addText(@NonNull TextModel model) throws ChessBaseInvalidDataException {
+        return updater.addText(model);
+    }
+
+    /**
      * Adds a new game to the database
      * @param game a game already stored in some database
      * @return the game header of the saved game
@@ -314,6 +336,17 @@ public final class Database implements AutoCloseable {
      */
     public Game replaceGame(int gameId, @NonNull GameModel model) throws ChessBaseInvalidDataException {
         return updater.replaceGame(gameId, model);
+    }
+
+    /**
+     * Replaces a text in the database
+     * @param gameId the id of the text to replace
+     * @param model the model of the text to replace
+     * @return the game header of the saved text
+     * @throws ChessBaseInvalidDataException if the text model contained invalid data
+     */
+    public Game replaceText(int gameId, @NonNull TextModel model) throws ChessBaseInvalidDataException {
+        return updater.replaceText(gameId, model);
     }
 
     /**

@@ -217,6 +217,7 @@ public final class MovesSerializer {
         int endPosition = buf.position() + 28;
         int b = ByteBufferUtil.getUnsignedByte(buf);
         if (b != 1) {
+            // Version?
             log.warn(String.format("Unexpected first byte in setup position in game " + gameId + ": %02X", b));
         }
         b = ByteBufferUtil.getUnsignedByte(buf);
@@ -290,6 +291,7 @@ public final class MovesSerializer {
         int spNo = ByteBufferUtil.getUnsignedShortB(buf);
 
         if (spNo < 0 || spNo >= 960) {
+            // TODO: Is this still wrong if only the lower 10 bits are considered?
             log.warn("Invalid Chess960 start position in game " + gameId + ": " + spNo);
         } else {
             Position sp = Chess960.getStartPosition(spNo);

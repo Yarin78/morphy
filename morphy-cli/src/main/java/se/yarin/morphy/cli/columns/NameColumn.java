@@ -24,7 +24,7 @@ public class NameColumn implements GameColumn {
     @Override
     public String getValue(Game game) {
         if (game.isGuidingText()) {
-            return isWhite ? "?" : "";
+            return isWhite ? game.getTextTitle() : "";
         }
         PlayerEntity player = isWhite ? game.getWhite() : game.getBlack();
         String name = player.getFullNameShort();

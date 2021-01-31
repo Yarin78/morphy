@@ -4,24 +4,21 @@ import lombok.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.cbhlib.entities.*;
-import se.yarin.cbhlib.exceptions.ChessBaseException;
 import se.yarin.cbhlib.exceptions.ChessBaseIOException;
 import se.yarin.cbhlib.exceptions.ChessBaseInvalidDataException;
-import se.yarin.cbhlib.games.ExtendedGameHeader;
-import se.yarin.cbhlib.games.GameHeader;
-import se.yarin.cbhlib.games.GameLoader;
+import se.yarin.cbhlib.games.*;
 import se.yarin.cbhlib.games.search.*;
 import se.yarin.cbhlib.storage.EntityStorageException;
 import se.yarin.chess.GameModel;
 import se.yarin.chess.GameMovesModel;
 
-import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
 
 /**
- * Contains the logic that coordinates the updates across the different database files when a game is added/replaced/deleted
+ * Contains the logic that coordinates the updates across the different database files
+ * when a game is added/replaced/deleted
  */
 public class DatabaseUpdater {
     private static final Logger log = LoggerFactory.getLogger(DatabaseUpdater.class);
@@ -49,6 +46,31 @@ public class DatabaseUpdater {
 
         GameHeader gameHeader = loader.createGameHeader(model, movesOfs, annotationOfs);
         ExtendedGameHeader extendedGameHeader = loader.createExtendedGameHeader(model, gameId, movesOfs, annotationOfs);
+
+        gameHeader = database.getHeaderBase().add(gameHeader);
+        assert gameHeader.getId() == gameId;
+
+        extendedGameHeader = database.getExtendedHeaderBase().add(extendedGameHeader);
+
+        Game addedGame = new Game(database, gameHeader, extendedGameHeader);
+        updateEntityStats(null, addedGame);
+
+        return addedGame;
+    }
+
+    /**
+     * Adds a new text to the database
+     * @param model the model of the text to add
+     * @return the game header of the saved text
+     * @throws ChessBaseInvalidDataException if the text model contained invalid data
+     */
+    public Game addText(@NonNull TextModel model) throws ChessBaseInvalidDataException {
+        int gameId = database.getHeaderBase().getNextGameId();
+
+        long movesOfs = database.getMovesBase().putText(0, model.getContents());
+
+        GameHeader gameHeader = loader.createGameHeader(model, movesOfs);
+        ExtendedGameHeader extendedGameHeader = loader.createExtendedGameHeader(model, gameId, movesOfs);
 
         gameHeader = database.getHeaderBase().add(gameHeader);
         assert gameHeader.getId() == gameId;
@@ -103,6 +125,11 @@ public class DatabaseUpdater {
     public Game replaceGame(int gameId, @NonNull GameModel model) throws ChessBaseInvalidDataException {
         Game oldGame = database.getGame(gameId);
 
+        if (oldGame.isGuidingText()) {
+            // Probably trivial to support this, but unlikely to be a need for it
+            throw new IllegalArgumentException("Can't replace a text with a game");
+        }
+
         // If necessary, first insert space in the moves and annotation base
         // In case the previous game didn't have annotations, we will know where to store them
         long oldAnnotationOfs = prepareReplace(oldGame, model.moves());
@@ -118,6 +145,40 @@ public class DatabaseUpdater {
         GameHeader gameHeader = loader.createGameHeader(model, oldGame.getMovesOffset(), annotationOfs);
         ExtendedGameHeader extendedGameHeader = loader.createExtendedGameHeader(model, gameId,
                 oldGame.getMovesOffset(), annotationOfs);
+
+        gameHeader = database.getHeaderBase().update(gameId, gameHeader);
+        extendedGameHeader = database.getExtendedHeaderBase().update(gameId, extendedGameHeader);
+
+        Game updatedGame = new Game(database, gameHeader, extendedGameHeader);
+
+        updateEntityStats(oldGame, updatedGame);
+
+        return updatedGame;
+    }
+
+    /**
+     * Replaces a text in the database
+     * @param gameId the id of the text to replace
+     * @param model the model of the text to replace
+     * @return the game header of the saved text
+     * @throws ChessBaseInvalidDataException if the text model contained invalid data
+     */
+    public Game replaceText(int gameId, @NonNull TextModel model) throws ChessBaseInvalidDataException {
+        Game oldGame = database.getGame(gameId);
+
+        if (!oldGame.isGuidingText()) {
+            // Probably trivial to support this, but unlikely to be a need for it
+            throw new IllegalArgumentException("Can't replace a game with a text");
+        }
+
+        long oldMovesOffset = oldGame.getMovesOffset();
+
+        long movesOfs = database.getMovesBase().putText(oldMovesOffset, model.getContents());
+
+        assert movesOfs == oldMovesOffset; // Since we inserted space above, we should get the same offset
+
+        GameHeader gameHeader = loader.createGameHeader(model, movesOfs);
+        ExtendedGameHeader extendedGameHeader = loader.createExtendedGameHeader(model, gameId, movesOfs);
 
         gameHeader = database.getHeaderBase().update(gameId, gameHeader);
         extendedGameHeader = database.getExtendedHeaderBase().update(gameId, extendedGameHeader);

@@ -6,6 +6,7 @@ import se.yarin.cbhlib.Database;
 import se.yarin.cbhlib.Game;
 import se.yarin.cbhlib.exceptions.ChessBaseException;
 import se.yarin.cbhlib.exceptions.ChessBaseInvalidDataException;
+import se.yarin.cbhlib.games.TextModel;
 import se.yarin.chess.GameModel;
 
 import java.io.File;
@@ -13,6 +14,9 @@ import java.io.IOException;
 
 public class DatabaseBuilder extends GameConsumerBase {
     private static final Logger log = LogManager.getLogger();
+
+    // If true, moves and annotations are added without parsing
+    private static final boolean QUICK_ADD = false;
 
     private final Database database;
     private final File file;
@@ -40,8 +44,10 @@ public class DatabaseBuilder extends GameConsumerBase {
     public void accept(Game game) {
         Game addedGame;
 
-        if (game.isGuidingText()) {
-            // TODO: This should be done always, not only for guiding texts
+        if (QUICK_ADD) {
+            // Direct copy of game between databases
+            // Header metadata is refreshed (entities needs to receive new ID's etc)
+            // but moves and annotations are copied as opaque blobs
             try {
                 addedGame = this.database.addGame(game);
             } catch (ChessBaseException e) {
@@ -49,19 +55,37 @@ public class DatabaseBuilder extends GameConsumerBase {
                 return;
             }
         } else {
-            GameModel model;
-            try {
-                model = game.getModel();
-            } catch (ChessBaseException e) {
-                log.warn("Failed to get game " + game.getId() + " in the searched database");
-                return;
-            }
+            // Moves and annotations are deserialized into models and then
+            // serialized back again. This is slower, but will detect errors in the games.
+            if (game.isGuidingText()) {
+                TextModel model;
+                try {
+                     model = game.getTextModel();
+                } catch (ChessBaseException e) {
+                    log.warn("Failed to get text " + game.getId() + " in the searched database");
+                    return;
+                }
+                try {
+                    addedGame = this.database.addText(model);
+                } catch (ChessBaseException e) {
+                    log.warn("Failed to add text " + game.getId() + " in the searched database");
+                    return;
+                }
+            } else {
+                GameModel model;
+                try {
+                    model = game.getModel();
+                } catch (ChessBaseException e) {
+                    log.warn("Failed to get game " + game.getId() + " in the searched database");
+                    return;
+                }
 
-            try {
-                addedGame = this.database.addGame(model);
-            } catch (ChessBaseInvalidDataException e) {
-                log.warn("Failed to add game " + game.getId() + " in the searched database in the output database", e);
-                return;
+                try {
+                    addedGame = this.database.addGame(model);
+                } catch (ChessBaseInvalidDataException e) {
+                    log.warn("Failed to add game " + game.getId() + " in the searched database in the output database", e);
+                    return;
+                }
             }
         }
 
