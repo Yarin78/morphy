@@ -3,6 +3,7 @@ package se.yarin.cbhlib.games.search;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.Getter;
+import lombok.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.cbhlib.Database;
@@ -101,15 +102,18 @@ public class GameSearcher {
             firstGameId = Math.max(firstGameId, filter.firstGameId());
         }
 
-        log.info("Starting game search from game id " + firstGameId);
+        log.debug("Starting game search from game id " + firstGameId);
 
         Iterator<GameHeader> headerIterator = this.database.getHeaderBase()
                 .stream(firstGameId, rawFilter)
                 .iterator();
 
-        Iterator<ExtendedGameHeader> extendedHeaderIterator = this.database.getExtendedHeaderBase()
-                .stream(firstGameId, rawExtendedFilter)
-                .iterator();
+        // If there are no headers in the extended base (old database), the search should work anyway
+        final Iterator<ExtendedGameHeader> extendedHeaderIterator =
+            this.database.getExtendedHeaderBase().size() > 0 ?
+                this.database.getExtendedHeaderBase()
+                        .stream(firstGameId, rawExtendedFilter)
+                        .iterator() : null;
 
         return () -> new SearchIterator(headerIterator, extendedHeaderIterator, progressUpdater);
     }
@@ -123,7 +127,7 @@ public class GameSearcher {
         private GameHeader currentLeft;
         private ExtendedGameHeader currentRight;
 
-        public SearchIterator(Iterator<GameHeader> leftIterator,
+        public SearchIterator(@NonNull Iterator<GameHeader> leftIterator,
                               Iterator<ExtendedGameHeader> rightIterator,
                               Consumer<Integer> progressUpdater) {
             this.leftIterator = leftIterator;
@@ -147,6 +151,9 @@ public class GameSearcher {
         }
 
         private void stepRight() {
+            if (rightIterator == null) {
+                return;
+            }
             if (rightIterator.hasNext()) {
                 currentRight = rightIterator.next();
                 if (progressUpdater != null) {
@@ -162,13 +169,13 @@ public class GameSearcher {
                 return;
             }
             while (!iteratorDone) {
-                int diff = currentLeft.getId() - currentRight.getId();
+                int diff = currentRight == null ? 0 : currentLeft.getId() - currentRight.getId();
                 if (diff < 0) {
                     stepLeft();
                 } else if (diff > 0) {
                     stepRight();
                 } else {
-                    Game game = new Game(database, currentLeft, currentRight);
+                    Game game = new Game(database, currentLeft, currentRight == null ? ExtendedGameHeader.empty(currentLeft) : currentRight);
                     stepLeft();
                     stepRight();
                     if (matches(game)) {

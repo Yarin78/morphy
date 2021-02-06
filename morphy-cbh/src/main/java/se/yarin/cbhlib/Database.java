@@ -116,11 +116,15 @@ public final class Database implements AutoCloseable {
         validateDatabaseName(file);
         String base = file.getPath().substring(0, file.getPath().length() - 4);
 
+        // If some database file doesn't exist, don't create it automatically since
+        // we might just be open the db for reading.
+        // TODO: Open in read-only mode? If opening for write, make sure cbj file has one entry per game.
+
         GameHeaderBase cbh = GameHeaderBase.open(file);
         File cbjFile = new File(base + ".cbj");
         ExtendedGameHeaderBase cbj = cbjFile.exists()
                 ? ExtendedGameHeaderBase.open(cbjFile)
-                : ExtendedGameHeaderBase.create(cbjFile);
+                : new ExtendedGameHeaderBase();
 
         MovesBase cbg = MovesBase.open(new File(base + ".cbg"));
         AnnotationBase cba = AnnotationBase.open(new File(base + ".cba"));
@@ -129,7 +133,7 @@ public final class Database implements AutoCloseable {
         AnnotatorBase cbc = AnnotatorBase.open(new File(base + ".cbc"));
         SourceBase cbs = SourceBase.open(new File(base + ".cbs"));
         File cbeFile = new File(base + ".cbe");
-        TeamBase cbe = cbeFile.exists() ? TeamBase.open(cbeFile) : TeamBase.create(cbeFile);
+        TeamBase cbe = cbeFile.exists() ? TeamBase.open(cbeFile) : new TeamBase();
 
         return new Database(cbh, cbj, cbg, cba, cbp, cbt, cbc, cbs, cbe);
     }
@@ -271,11 +275,25 @@ public final class Database implements AutoCloseable {
         }
         ExtendedGameHeader extendedGameHeader = getExtendedHeaderBase().getExtendedGameHeader(gameId);
         if (extendedGameHeader == null) {
-            // This should only occur if the CBJ file is shorter than expected,
-            // not if it's missing entirely
-            throw new ChessBaseIOException("No extended game header for game " + gameId + " could be found even though an ordinary header existed");
+            if (getExtendedHeaderBase().size() > 0 && gameId > getExtendedHeaderBase().size()) {
+                // This should only occur if the CBJ file is shorter than expected,
+                // not if it's missing entirely
+                log.warn("No extended game header for game " + gameId + " could be found even though an ordinary header existed");
+            }
+            extendedGameHeader = ExtendedGameHeader.empty(header);
         }
         return new Game(this, header, extendedGameHeader);
+    }
+
+
+    /**
+     * Gets a list over all games in the database.
+     * Please note that if the database is large, this might be slow and consume a lot of memory.
+     * Use the {@link se.yarin.cbhlib.games.search.GameSearcher} for more efficient processing of games.
+     * @return all games in the database, ordered by id
+     */
+    public List<Game> getGames() {
+        return getGames(null, 0);
     }
 
     /**

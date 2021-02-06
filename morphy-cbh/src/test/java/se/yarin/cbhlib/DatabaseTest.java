@@ -9,16 +9,21 @@ import se.yarin.cbhlib.entities.TournamentEntity;
 import se.yarin.cbhlib.exceptions.ChessBaseException;
 import se.yarin.cbhlib.exceptions.ChessBaseInvalidDataException;
 import se.yarin.cbhlib.exceptions.ChessBaseMissingGameException;
+import se.yarin.cbhlib.games.ExtendedGameHeaderBase;
+import se.yarin.cbhlib.games.GameHeader;
 import se.yarin.cbhlib.storage.EntityStorageException;
 import se.yarin.cbhlib.util.GameGenerator;
 import se.yarin.cbhlib.validation.EntityStatsValidator;
 import se.yarin.cbhlib.validation.GamesValidator;
 import se.yarin.chess.*;
 
+import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Random;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.*;
 import static se.yarin.chess.Chess.*;
 
 public class DatabaseTest {
@@ -185,5 +190,64 @@ public class DatabaseTest {
                 gamesValidator.readAllGames();
             }
         }
+    }
+
+    @Test
+    public void noExtendedHeaderBaseCreatedIfMissing() throws IOException {
+        // If we open a database that has no .cbj file, don't create one either
+        Path worldChPath = Files.createTempDirectory("worldch-nocbj");
+
+        File file = ResourceLoader.materializeDatabaseStream(
+                GameHeader.class,
+                "World-ch/World-ch",
+                worldChPath.toFile(),
+                "World-ch",
+                new String[] {".cbh", ".cbg", ".cba", ".cbp", ".cbt", ".cbc", ".cbs"});
+
+        String cbjPath = file.getPath().replace(".cbh", ".cbj");
+        String cbePath = file.getPath().replace(".cbh", ".cbe");
+
+        assertFalse(new File(cbjPath).exists());
+        assertFalse(new File(cbePath).exists());
+
+        Database db = Database.open(file);
+        db.close();
+
+        assertFalse(new File(cbjPath).exists());
+        assertFalse(new File(cbePath).exists());
+    }
+
+    @Test
+    public void getGameWithEmptyExtendedHeaderBase() throws IOException {
+        // Ensure we can get a game even if cbj file is missing
+        Path worldChPath = Files.createTempDirectory("worldch-nocbj");
+
+        File file = ResourceLoader.materializeDatabaseStream(
+                GameHeader.class,
+                "World-ch/World-ch",
+                worldChPath.toFile(),
+                "World-ch",
+                new String[] {".cbh", ".cbg", ".cba", ".cbp", ".cbt", ".cbc", ".cbs"});
+
+        Database db = Database.open(file);
+        Game game = db.getGame(830);
+        assertEquals("Anand, V", game.getWhite().getFullNameShort());
+        assertEquals("Kasparov, G", game.getBlack().getFullNameShort());
+    }
+
+    @Test
+    public void getGameWithShorterExtendedHeaderBase() throws IOException {
+        Path worldChPath = Files.createTempDirectory("worldch-emptycbj");
+        File file = ResourceLoader.materializeDatabaseStream(
+                GameHeader.class,
+                "World-ch/World-ch",
+                worldChPath.toFile(),
+                "World-ch",
+                new String[] {".cbh", ".cbg", ".cba", ".cbp", ".cbt", ".cbc", ".cbs"});
+        ExtendedGameHeaderBase.create(new File(file.getPath().replace(".cbh", ".cbj")));
+        Database db = Database.open(file);
+        Game game = db.getGame(830);
+        assertEquals("Anand, V", game.getWhite().getFullNameShort());
+        assertEquals("Kasparov, G", game.getBlack().getFullNameShort());
     }
 }

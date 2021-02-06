@@ -203,8 +203,12 @@ public class Game {
             return longOffset;
         }
 
-        // The difference is not due to the 32 bit limitation in the game header
-        log.warn(String.format("The %s offset differs between the two header databases (%d != %d)", type, shortOffset, longOffset));
+        if (longOffset != 0 && log.isDebugEnabled()) {
+            // The difference is not due to the 32 bit limitation in the game header
+            // or because the extended game header didn't contain an offset
+            // Only log as debug as this is a non-critical error
+            log.debug(String.format("The %s offset differs between the two header databases (%d != %d)", type, shortOffset, longOffset));
+        }
         // Use the default header offset, this is what ChessBase does
         return shortOffset;
     }

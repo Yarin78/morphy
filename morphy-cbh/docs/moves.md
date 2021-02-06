@@ -1,7 +1,7 @@
 # Moves
 
-The game moves (including variations) are stored in the .cbg file encoded in a storage-efficient way.
-Most moves are encoded into 1 byte. For obfuscation purposes, the move data is "encrypted" using
+The game moves (including variations) are stored in the .cbg file in a storage-efficient way.
+Most moves are encoded into 1 byte. For obfuscation purposes, the move data is also "encrypted" using
 a [translation table](#translation_table) with a moving index.
 
 For text entry games, the actual textual content (including the title) is also stored in the .cbg files.
@@ -20,7 +20,7 @@ in the beginning of the database, the entire file needs to be shifted the corres
 all offsets in the .cbh file (and .cbj file) needs to be updated.
 
 If a game is shortened (for instance, when purging all variations), no corresponding shift will be done,
-but instead there will be "holes" of unused bytes in the file. The size of this fragmentation is stored in the header.
+but instead there will be "holes" of unused bytes in the file. The size of this unused fragmented space is stored in the header.
 
 ## <a name="cbg_header">CBG file header</a>
 
@@ -43,14 +43,14 @@ If the game is a text entry (determined by the CBH file), see [CBG text data](#c
 | Offset | Bytes | Bits | Description
 | --- | --- | --- | ---
 | 0 | 1 | 7   | Always set if text entry, but can also be set for games (very rarely, unknown effect).
-|   |   | 6   | If set, the move data doesn't start from the ordinary initial position. Instead, the start position is explicitly given, see below.
-|   |   | 0-5 | Encoding mode and chess variant. Determines how to parse the moves, see [encoding modes](#encoding_modes)
-| 1 | 3 |     | Number of bytes this game occupies in the CBG file (including this header)
+|   |   | 6   | If set, the move data doesn't start from the ordinary initial position. Instead, the start position is explicitly given, see <a href="#setup_position">Setup position</a> below.
+|   |   | 0-5 | Encoding mode and chess variant. Determines how to parse the moves, see [encoding modes](#encoding_modes).
+| 1 | 3 |     | Number of bytes this game occupies in the CBG file (including this header).
 
 ### <a name="setup_position">Setup position</a>
 
 If the moves doesn't start from the initial chess position, it's specified here. 
-Otherwise the [moves data](#moves_data) follows instead.
+Otherwise this section is skipped and the [moves data](#moves_data) follows directly.
 
 | Offset | Bytes | Bit | Description
 | --- | --- | --- | ---
@@ -65,7 +65,7 @@ Otherwise the [moves data](#moves_data) follows instead.
 | 4 | 24 | | A 192 bit long bit stream representing the contents of the 64 squares. Starts with the most significant bit in the first byte.
 | 28 | (8) | | Additional information for Chess960 games (see below)  
 
-The squares are represented in column major order: a1, a2, a3, .. a8, b1, b2, ... h8.
+The squares are represented in column major order: a1, a2, a3, ..., a8, b1, b2, ..., h8.
 The contents of the square is encoded according to the table below. There can be at most 32 pieces
 on the board, so the total number of bits required is 32 * 5 + 32 * 1 bits = 192 bits = 24 bytes.
 If there are fewer pieces, the bit stream is padded with zeros.
@@ -88,12 +88,13 @@ If there are fewer pieces, the bit stream is padded with zeros.
 
 Example: If the first couple of bytes in the bit stream are `88, 14, 147`, this corresponds to the bit stream 
 `010110000000111010010011...`. Going from left to right, and matching according to the table above,
-we get empty, white pawn, empty * 6, black rook, empty * 2, white knight. This corresponds to a white pawn on a2, black rook on b1 and a white knight on b4.
+we get `empty`, `white pawn`, `empty` * 6, `black rook`, `empty` * 2, `white knight`. 
+This corresponds to a `white pawn` on `a2`, `black rook` on `b1` and a `white knight` on `b4`.
 
-If this is a Chess960 game, there are 8 additional bytes describing the game start position.
+The order of the pieces in the setup position are listed determines which piece is the "first piece", and so on - see [moves data](#moves_data).
+
+If this is a Chess960 game (determined by the encoding mode), there are 8 additional bytes describing the game start position.
 This is required to be able to decode some moves in the move data.
-
-The order the pieces are listed determines which piece is the "first piece", and so on - see [moves data](#moves_data).  
 
 | Ofs | Byte | Description
 | --- | --- | --- 
@@ -107,7 +108,7 @@ The order the pieces are listed determines which piece is the "first piece", and
 
 The last value is wrong in many games in some official ChessBase databases, probably due to a software bug.
 
-### <a name="moves_data">Moves data</a>
+### <a name="moves_data">Decoding the moves</a>
 
 There are several ways the game moves can be encoded.
 This is determined by the _encoding mode_ mentioned earlier. Virtually all games in known ChessBase databases
@@ -115,25 +116,26 @@ use encoding mode 0, which is the default for normal chess games. This is the mo
 are documented in [encoding modes](#encoding_modes).
 
 The moves in a game are represented as a stream of bytes. Most moves are represented as a single byte, describing the
-_relative movement_ of a piece. A special byte is used to encode moves that require multiple bytes. Special
-bytes are also used to indicate the start or the end of a variation.
+_relative movement_ of a piece. Moves that can't be represented in a single byte, typically promotions,
+take three bytes: first a special byte signaling that this is a multi-byte move, then two additional bytes describing the move.
+Special bytes are also used to indicate the start or the end of a variation.
 
-When decoding the byte stream, first decrease the byte value with the number of moves processed so far in the game
+When decoding the byte stream, first decrease the byte value with the _number of moves processed so far_ in the game
 data (0 for the first move). The special codes for "multiple byte moves" and start/end of variations don't count.
 The move count should not be restarted when a variation ends. Then translate the byte according to a
-256 byte [translation table](#translation_tables).
+256 byte [translation table](#translation_tables). All operations are done modulo 256.
 
 The following table is then used to determine the move. Pieces are referred to in relative terms. The "first rook"
-refers to the white rook starting at a1 (black at a8) and this remains the "first rook" through the game until it gets captured.
-When a piece (not pawns) get captured, the pieces shift one step. If the "first bishop" gets captured, the second becomes the first
-and the third (if it exists) becomes the second. If the "second bishop" is captured, the third bishop
+refers to the white rook starting at a1 (black at a8) and this remains the "first rook" throughout the game until it gets captured.
+When a piece (not pawns) get captured, the pieces shift one step. If the "first bishop" gets captured, the second bishop becomes the first
+and the third (if it exists) becomes the second. If the "second bishop" gets captured, the third bishop
 become the second, and so on. Up to 3 pieces of each type and color are referred to this way. If a player gets
 a fourth queen, the moves of that queen is always done using double byte moves (and the forth queen can't "promote" to become
 third queen if some other queen is captured). References to pawns never change; the "d-pawn" always refers to the
-pawn that started on d2/d7, regardless of where on the board it now is. En-passant captures are stored as ordinary captures.
+pawn that started on d2/d7, regardless of where on the board it now is or which other pawns are left. _En passant_ captures are stored as ordinary captures.
 
-The relative movements in the table is given as x,y coordinate; x being the file and y the rank. (0,0) corresponds to a1 and (7,7) h8.
-All movements are module 8. So a queen at c2, (2,1), moving "x+7, y" actually moves one step "left" and reaches (1,1) or b2.
+The relative movements in the table is given as delta x,y coordinate; x being the file and y the rank. (0,0) corresponds to a1 and (7,7) h8.
+All movements are module 8. So a queen at c2 (2,1), moving "x+7, y" actually moves one step "left" and reaches (1,1) or b2.
 Where there are ... in table, it means it follows the same pattern as the previous movements of that piece, or
 the same pattern as the previous piece of that type.
 
@@ -248,7 +250,7 @@ would semantically be stored as
 
 The previous section described encoding mode 0. There are many more encoding modes as seen in this table.
 
-| Mode | Encoder | modifier | scan order| Chess variant
+| Mode | Encoder | modifier | order| Chess variant
 | --- | --- | --- | --- | ---
 | 0 | Compact | pre | default | Regular chess
 | 1 | Simple | pre | default | Regular chess
@@ -269,15 +271,16 @@ The previous section described encoding mode 0. There are many more encoding mod
 | 63   | ? | ? | ? | Illegal positions allowed
 
 The _Compact_ move encoder was the single-byte move encoder described in the previous section.
-The _Simple_ move encoder is a two-byte move encoder described in [here](#simple_move_encoder). 
+The _Simple_ move encoder is a two-byte move encoder described [here](#simple_move_encoder). 
 
 The _modifier_ determines the order of events in the byte reading sequence:
 
 * pre: read byte from stream, decrease with number of moves seen, translate in translation table 
 * post: read byte from stream, translate in translation table, decrease with number of moves seen
 
-The _scan order_ determines which pieces are to be considered "1st rook" and so on. If reverse,
-the 1st rook is the one on h1/h8, "a-pawn" is the one on h2/h7, and so on - effectively a horizontal mirror of the board.
+The _order_ determines which pieces are to be considered "1st rook" and so on. If reverse,
+the 1st rook is the one on h1/h8, "a-pawn" is the one on h2/h7, and so on - effectively a horizontal mirror of the chess board.
+For the Simple move encoder this has a slightly different meaning, see below.
 
 #### <a name="translation_tables">Translation tables</a>
 
@@ -286,15 +289,24 @@ of a byte to another byte. The decoding step "decrease the byte with number of m
 the format as the same move gets encoded differently depending on the move number.
 
 Further, each encoding mode above uses a different translation table. There are hundreds of these translation tables
-in the ChessBase executable files.
+in the ChessBase executable files. See the source code of Morphy for the contents of these translation tables.
 
 #### <a name="simple_move_encoder">Simple move encoder</a>
 
+Every move is stored as a 16-bit word (Big Endian).
 
+If the `reverse` flag above is _not_ set, bit 0-5 is the index of the source square, and bit 6-11 the index of the destination square (0=a1, 1=a2, etc).
+If the `reverse` flag is set, the source and destination squares are swapped. If both squares are 0, the move is a null move.
+If the move is a pawn promotion, bit 12-13 represents the new piece (0=queen, 1=rook, 2=bishop, 3=knight).
+
+Variations are built up similarly as the compact (default) move encoder above, with the difference
+that start- and end markers are stored in the same byte as the move.
+If bit 15 is set, a new variation starts before the move has been decoded.
+If bit 14 is set, a variation ends _after_ the move has been decoded.
 
 ## <a name="cbg_text">CBG text data</a>
 
-All integers describing the text data are in Little Endian, unless otherwise specified.
+This section describes "games" that contains textual content instead of a chess game. All integers describing the text data are in Little Endian, unless otherwise specified.
 
 | Ofs | Bytes | Description
 | --- | --- | ---

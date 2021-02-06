@@ -34,6 +34,20 @@ public class ExtendedGameHeader {
     private final EndgameInfo endgameInfo;
     private final long lastChangedTimestamp; // 1/10,000,000th seconds since October 15th 1582
 
+    public static ExtendedGameHeader empty(GameHeader header) {
+        return ExtendedGameHeader.builder()
+                .id(header.getId())
+                .whiteTeamId(-1)
+                .blackTeamId(-1)
+                .whiteRatingType(RatingType.unspecified())
+                .blackRatingType(RatingType.unspecified())
+                .movesOffset(header.getMovesOffset())
+                .annotationOffset(header.getAnnotationOffset())
+                .creationTimestamp(0) // TODO
+                .lastChangedTimestamp(0) // TODO
+                .build();
+    }
+
     /**
      * Gets the date and time when this game was first created.
      * @return a date and time in the default TimeZone

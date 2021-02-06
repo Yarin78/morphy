@@ -10,10 +10,7 @@ import se.yarin.cbhlib.storage.*;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.NoSuchElementException;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
@@ -23,19 +20,36 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
 
     private static final int DEFAULT_HEADER_SIZE = 32;
 
+    @Getter
     private final EntityNodeStorageBase<T> nodeStorage;
+    private final String entityType; // For debugging purposes, since we can't resolve <T> at runtime
+
+    private static Map<String, String> extensionTypeMap = Map.of(
+            ".cbp", "Player",
+            ".cbt", "Tournament",
+            ".cbc", "Annotator",
+            ".cbs", "Source",
+            ".cbe", "Team");
+
+    private static String resolveEntityType(@NonNull File file) {
+        String path = file.getPath().toLowerCase();
+        return extensionTypeMap.getOrDefault(path.substring(path.length() - 4), "?");
+    }
 
     private EntityStorageImpl(@NonNull File file, @NonNull EntitySerializer<T> serializer)
             throws IOException {
         nodeStorage = new PersistentEntityNodeStorage<>(file, serializer);
+        entityType = resolveEntityType(file);
     }
 
     private EntityStorageImpl() {
         nodeStorage = new InMemoryEntityNodeStorage<>();
+        entityType = "?";
     }
 
-    private EntityStorageImpl(EntityNodeStorageBase<T> nodeStorage) {
+    private EntityStorageImpl(EntityNodeStorageBase<T> nodeStorage, String entityType) {
         this.nodeStorage = nodeStorage;
+        this.entityType = entityType;
     }
 
     public static <T extends Entity & Comparable<T>> EntityStorage<T> open(
@@ -74,7 +88,7 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
     }
 
     public EntityStorage<T> duplicate(@NonNull File file, @NonNull EntitySerializer<T> serializer) throws IOException {
-        return new EntityStorageImpl<>(new PersistentEntityNodeStorage<>(file, serializer, DEFAULT_HEADER_SIZE, this.nodeStorage));
+        return new EntityStorageImpl<>(new PersistentEntityNodeStorage<>(file, serializer, DEFAULT_HEADER_SIZE, this.nodeStorage), resolveEntityType(file));
     }
 
     @Override
@@ -95,6 +109,20 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
     @Override
     public void close() throws IOException {
         nodeStorage.close();
+    }
+
+    @Override
+    public List<Integer> getDeletedEntityIds() {
+        ArrayList<Integer> ids = new ArrayList<>();
+        int id = nodeStorage.getFirstDeletedEntityId();
+        while (id >= 0 && !ids.contains(id)) {
+            ids.add(id);
+            id = nodeStorage.getEntityNode(id).getRightEntityId();
+        }
+        if (id >= 0) {
+            log.warn(String.format("Loop in deleted id chain in entity %s", entityType.toLowerCase()));
+        }
+        return ids;
     }
 
     @Override
@@ -186,6 +214,7 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
 
     /**
      * Validates that the entity headers correctly reflects the order of the entities
+     * @throws EntityStorageException if the structure of the storage is damaged in some way
      */
     public void validateStructure() throws EntityStorageException {
         if (nodeStorage.getRootEntityId() == -1) {
@@ -198,9 +227,10 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
 
         ValidationResult result = validate(nodeStorage.getRootEntityId(), null, null, 0);
         if (result.getCount() != getNumEntities()) {
-            throw new EntityStorageException(String.format(
-                    "Found %d entities when traversing the base but the header says there should be %d entities.",
-                    result.getCount(), getNumEntities()));
+            // This is not a critical error; ChessBase integrity checker doesn't even notice it
+            log.warn(String.format(
+                    "Found %d entities when traversing the %s base but the header says there should be %d entities.",
+                    result.getCount(), entityType.toLowerCase(), getNumEntities()));
         }
     }
 
@@ -212,17 +242,17 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
 
     private ValidationResult validate(int entityId, T min, T max, int depth) throws EntityStorageException {
         if (depth > 40) {
-            throw new EntityStorageException("Infinite loop when verifying storage structure");
+            throw new EntityStorageException("Infinite loop when verifying storage structure for entity " + entityType.toLowerCase());
         }
         EntityNode<T> node = nodeStorage.getEntityNode(entityId);
         T entity = node.getEntity();
         if (node.isDeleted() || entity == null) {
             throw new EntityStorageException(String.format(
-                    "Reached deleted element %d when validating the storage structure.", entityId));
+                    "Reached deleted %s entity %d when validating the storage structure.", entityType.toLowerCase(), entityId));
         }
         if ((min != null && min.compareTo(entity) > 0) || (max != null && max.compareTo(entity) < 0)) {
             throw new EntityStorageException(String.format(
-                    "Entity %d out of order when validating the storage structure", entityId));
+                    "%s entity %d out of order when validating the storage structure", entityType, entityId));
         }
 
         // Since the range is strictly decreasing every time, we should not have to worry
@@ -240,13 +270,13 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
         }
 
         if (rightHeight - leftHeight != node.getHeightDif()) {
-            throw new EntityStorageException(String.format("Height difference at node %d was %d but node data says it should be %d",
-                    node.getEntityId(), rightHeight - leftHeight, node.getHeightDif()));
+            throw new EntityStorageException(String.format("Height difference at node %d was %d but node data says it should be %d (entity type %s)",
+                    node.getEntityId(), rightHeight - leftHeight, node.getHeightDif(), entityType.toLowerCase()));
         }
 
         if (Math.abs(leftHeight - rightHeight) > 1) {
-            throw new EntityStorageException(String.format("Height difference at node %d was %d",
-                    node.getEntityId(), leftHeight - rightHeight));
+            throw new EntityStorageException(String.format("Height difference at node %d was %d (entity type %s)",
+                    node.getEntityId(), leftHeight - rightHeight, entityType.toLowerCase()));
         }
 
         return new ValidationResult(cnt, 1 + Math.max(leftHeight, rightHeight));

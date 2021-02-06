@@ -37,12 +37,16 @@ public class ResourceLoader {
 
     public static File materializeDatabaseStream(Class resourceRoot, String resourceNameRoot, File targetDirectory, String targetNameBase) throws IOException {
         // TODO: Make Database.openInMemory work directly with streams (BaseLocator/BaseLoader pattern?)
-        String[] extensions = {".cbh", ".cbg", ".cba", ".cbp", ".cbt", ".cbc", ".cbs", ".cbj"};
+        return materializeDatabaseStream(resourceRoot, resourceNameRoot, targetDirectory, targetNameBase,
+                new String[] {".cbh", ".cbg", ".cba", ".cbp", ".cbt", ".cbc", ".cbs", ".cbj", ".cbe"});
+    }
+
+    public static File materializeDatabaseStream(Class resourceRoot, String resourceNameRoot, File targetDirectory, String targetNameBase, String[] extensions) throws IOException {
         HashMap<String, File> extensionFiles = new HashMap<>();
         for (String extension : extensions) {
             extensionFiles.put(extension,
                     materializeStream(resourceRoot.getResourceAsStream(resourceNameRoot + extension),
-                        new File(targetDirectory, targetNameBase + extension)));
+                            new File(targetDirectory, targetNameBase + extension)));
         }
         return extensionFiles.get(".cbh");
     }

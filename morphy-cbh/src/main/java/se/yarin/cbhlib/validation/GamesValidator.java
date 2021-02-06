@@ -67,10 +67,12 @@ public class GamesValidator {
 
     public void processGames(boolean loadMoves, Runnable progressCallback) {
         int numGames = 0, numDeleted = 0, numAnnotated = 0, numText = 0, numErrors = 0, numChess960 = 0;
-        int lastAnnotationOfs = FileBlobStorage.DEFAULT_SERIALIZED_HEADER_SIZE, lastMovesOfs = FileBlobStorage.DEFAULT_SERIALIZED_HEADER_SIZE;
+        long lastMovesOfs = this.db.getMovesBase().getStorage().getHeaderSize();
+        long lastAnnotationOfs = this.db.getAnnotationBase().getStorage().getHeaderSize();
         int numOverlappingAnnotations = 0, numOverlappingMoves = 0;
         int numAnnotationGaps = 0, numMoveGaps = 0;
         int annotationFreeSpace = 0, moveFreeSpace = 0;
+        boolean moveOffsetDiffers = false, annotationOffsetDiffers = false;
 
         GameSearcher gameSearcher = new GameSearcher(db);
         for (Game game : gameSearcher.iterableSearch()) {
@@ -78,27 +80,33 @@ public class GamesValidator {
             ExtendedGameHeader extendedHeader = game.getExtendedHeader();
 
             if (extendedHeader.getId() != header.getId()) {
-                log.warn(String.format("Game %5d: Extended game header has wrong id %d",
+                log.warn(String.format("Game %d: Extended game header has wrong id %d",
                         header.getId(), extendedHeader.getId()));
             }
 
-            if (extendedHeader.getMovesOffset() != header.getMovesOffset()) {
-                log.warn(String.format("Game %5d: Move offset differs between header files (%d != %d)",
+            if (extendedHeader.getMovesOffset() != 0 && extendedHeader.getMovesOffset() != header.getMovesOffset() && !moveOffsetDiffers) {
+                log.warn(String.format("Game %d: Move offset differs between header files (%d != %d) [ignoring similar errors]",
                         header.getId(), header.getMovesOffset(), extendedHeader.getMovesOffset()));
+                moveOffsetDiffers = true; // If this happens in one game, it usually happens in many games
             }
 
-            if (extendedHeader.getAnnotationOffset() != header.getAnnotationOffset()) {
-                log.warn(String.format("Game %5d: Annotation offset differs between header files (%d != %d)",
+            if (extendedHeader.getAnnotationOffset() != 0 && extendedHeader.getAnnotationOffset() != header.getAnnotationOffset() && !annotationOffsetDiffers) {
+                log.warn(String.format("Game %d: Annotation offset differs between header files (%d != %d) [ignoring similar errors]",
                         header.getId(), header.getAnnotationOffset(), extendedHeader.getAnnotationOffset()));
+                annotationOffsetDiffers = true; // If this happens in one game, it usually happens in many games
             }
 
             if (header.getAnnotationOffset() > 0) {
                 int annotationSize = db.getAnnotationBase().getStorage().readBlob(header.getAnnotationOffset()).limit();
                 int annotationEnd = header.getAnnotationOffset() + annotationSize;
                 if (log.isDebugEnabled()) {
-                    log.debug(String.format("Game %5d: Annotation [%d, %d)", header.getId(), header.getAnnotationOffset(), annotationEnd));
+                    log.debug(String.format("Game %d: Annotation [%d, %d)", header.getId(), header.getAnnotationOffset(), annotationEnd));
                 }
                 if (header.getAnnotationOffset() < lastAnnotationOfs) {
+                    if (numOverlappingAnnotations == 0) {
+                        log.warn(String.format("Game %d has annotation data at offset %d but previous game annotation data ended at %d",
+                                game.getId(), header.getAnnotationOffset(), lastAnnotationOfs));
+                    }
                     numOverlappingAnnotations += 1;
                 } else if (header.getAnnotationOffset() > lastAnnotationOfs) {
                     numAnnotationGaps += 1;
@@ -110,9 +118,13 @@ public class GamesValidator {
             int movesSize = db.getMovesBase().getStorage().readBlob(header.getMovesOffset()).limit();
             int movesEnd = header.getMovesOffset() + movesSize;
             if (log.isDebugEnabled()) {
-                log.debug(String.format("Game %5d: Moves [%d, %d)", header.getId(), header.getMovesOffset(), movesEnd));
+                log.debug(String.format("Game %d: Moves [%d, %d)", header.getId(), header.getMovesOffset(), movesEnd));
             }
             if (header.getMovesOffset() < lastMovesOfs) {
+                if (numOverlappingMoves == 0) {
+                    log.warn(String.format("Game %d has move data at offset %d but previous game move data ended at %d",
+                            game.getId(), header.getMovesOffset(), lastMovesOfs));
+                }
                 numOverlappingMoves += 1;
             } else if (header.getMovesOffset() > lastMovesOfs) {
                 numMoveGaps += 1;
@@ -143,7 +155,7 @@ public class GamesValidator {
                     }
                     numGames += 1;
                 }
-            } catch (ChessBaseException | ChessBaseIOException e) {
+            } catch (ChessBaseException | ChessBaseIOException | AssertionError e) {
                 numErrors += 1;
             } finally {
                 progressCallback.run();

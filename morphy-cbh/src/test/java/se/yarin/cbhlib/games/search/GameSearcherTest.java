@@ -94,4 +94,13 @@ public class GameSearcherTest {
         assertEquals(61, result.getTotalGames());
     }
 
+    @Test
+    public void testIterateWithNoExtendedHeaders() {
+        Database database = new Database();
+        GameHeader header = GameHeader.defaultBuilder().id(1).build();
+        database.getHeaderBase().add(header);
+        assertEquals(1, database.getGames().size());
+    }
+
+    // TODO: testIterate when there are 0 < cbj headers < cbh headers
 }

@@ -221,6 +221,12 @@ public interface EntityStorage<T extends Entity & Comparable<T>> {
 
 
     /**
+     * Gets the ids of all deleted entities in this storage
+     * @return a list of deleted ids
+     */
+    List<Integer> getDeletedEntityIds();
+
+    /**
      * Creates a new persistent EntityStorage that contains the same data as this EntityStorage
      * @param file the target file (must not exist)
      * @param serializer the entity serializer to use

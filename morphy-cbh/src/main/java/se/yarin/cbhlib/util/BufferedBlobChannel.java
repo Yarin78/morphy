@@ -72,11 +72,11 @@ public class BufferedBlobChannel implements BlobChannel {
         if (pages.size() == 1) {
             ByteBuffer pageBuf = pages.get(0);
             int start = (int) (offset % PAGE_SIZE);
-            buf.put(pageBuf.array(), start, Math.min(pageBuf.limit() - start, length));
+            buf.put(pageBuf.array(), start, Math.max(0, Math.min(pageBuf.limit() - start, length)));
         } else {
             // First page
             ByteBuffer pageBuf = pages.get(0);
-            buf.put(pageBuf.array(), (int) (offset % PAGE_SIZE), (int) (PAGE_SIZE - (offset % PAGE_SIZE)));
+            buf.put(pageBuf.array(), (int) (offset % PAGE_SIZE), Math.max(0, (int) (PAGE_SIZE - (offset % PAGE_SIZE))));
             // Intermediate pages, if any
             for (int page = 1; page < pages.size() - 1; page++) {
                 buf.put(pages.get(page).array(), 0, PAGE_SIZE);

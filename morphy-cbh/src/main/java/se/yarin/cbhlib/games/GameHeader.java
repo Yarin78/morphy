@@ -53,7 +53,7 @@ public class GameHeader {
 
     private final int noMoves; // -1 = More than 255 moves. Count the exact number upon demand.
 
-    static GameHeader.GameHeaderBuilder defaultBuilder() {
+    public static GameHeader.GameHeaderBuilder defaultBuilder() {
         return builder()
                 .playedDate(new Date(0))
                 .result(GameResult.NOT_FINISHED)

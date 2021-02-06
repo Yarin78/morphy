@@ -119,7 +119,7 @@ public class TextContentsModelTest {
 
     @Test
     public void testReserialize() throws ChessBaseException {
-        for (Game game : textDatabase.getGames(null, 100)) {
+        for (Game game : textDatabase.getGames()) {
             if (!game.isGuidingText()) {
                 continue;
             }

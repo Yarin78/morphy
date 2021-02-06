@@ -8,6 +8,7 @@ import se.yarin.cbhlib.exceptions.ChessBaseIOException;
 import se.yarin.cbhlib.util.BlobChannel;
 import se.yarin.cbhlib.util.ByteBufferUtil;
 import se.yarin.cbhlib.entities.Entity;
+import se.yarin.cbhlib.util.CBUtil;
 
 import java.io.File;
 import java.io.IOException;
@@ -94,6 +95,13 @@ public class PersistentEntityNodeStorage<T extends Entity & Comparable<T>> exten
 
             int capacity = ByteBufferUtil.getIntL(header);
             int rootEntityId = ByteBufferUtil.getIntL(header);
+            if (capacity == 0 && rootEntityId == 0) {
+                // In many team databases both of these are 0, even though root ought to be -1
+                rootEntityId = -1;
+            }
+            if (rootEntityId >= capacity) {
+                log.warn(String.format("Root entity is %d but capacity %d in %s", rootEntityId, capacity, file));
+            }
             int headerInt = ByteBufferUtil.getIntL(header);
             if (headerInt != MAGIC_CONSTANT) {
                 // Not sure what this is!?
@@ -103,6 +111,17 @@ public class PersistentEntityNodeStorage<T extends Entity & Comparable<T>> exten
             int firstDeletedId = ByteBufferUtil.getIntL(header);
             int numEntities = ByteBufferUtil.getIntL(header);
             int headerSize = 28 + ByteBufferUtil.getIntL(header);
+            if (headerSize > 28) {
+                ByteBuffer extraHeaderBuf = ByteBuffer.allocate(headerSize - 28);
+                channel.read(extraHeaderBuf);
+                for (int i = 0; i < headerSize - 28; i++) {
+                    if (extraHeaderBuf.get(i) != 0) {
+                        log.warn(String.format("Unknown extra header bytes in %s: %s",
+                                file, CBUtil.toHexString(extraHeaderBuf.array())));
+                        break;
+                    }
+                }
+            }
 
             EntityNodeStorageMetadata metadata = new EntityNodeStorageMetadata(serializedEntitySize, headerSize, 0);
             metadata.setCapacity(capacity);

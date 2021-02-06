@@ -5,10 +5,10 @@ import lombok.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.cbhlib.Database;
+import se.yarin.cbhlib.Game;
 import se.yarin.cbhlib.entities.Entity;
 import se.yarin.cbhlib.entities.EntityBase;
-import se.yarin.cbhlib.games.ExtendedGameHeader;
-import se.yarin.cbhlib.games.GameHeader;
+import se.yarin.cbhlib.games.search.GameSearcher;
 import se.yarin.cbhlib.storage.EntityStorageException;
 
 import java.util.EnumSet;
@@ -28,20 +28,19 @@ public class EntityStatsValidator {
     }
 
     public void calculateEntityStats(Runnable progressCallback) {
-        for (GameHeader gameHeader : db.getHeaderBase().iterable()) {
-            int gameId = gameHeader.getId();
+        GameSearcher searcher = new GameSearcher(db);
+        for (Game game : searcher.iterableSearch()) {
+            int gameId = game.getId();
 
-            ExtendedGameHeader extendedGameHeader = db.getExtendedHeaderBase().getExtendedGameHeader(gameId);
-
-            if (!gameHeader.isGuidingText()) {
-                updateEntityStats(stats.players, gameHeader.getWhitePlayerId(), gameId);
-                updateEntityStats(stats.players, gameHeader.getBlackPlayerId(), gameId);
-                updateEntityStats(stats.teams, extendedGameHeader.getWhiteTeamId(), gameId);
-                updateEntityStats(stats.teams, extendedGameHeader.getBlackTeamId(), gameId);
+            if (!game.isGuidingText()) {
+                updateEntityStats(stats.players, game.getWhitePlayerId(), gameId);
+                updateEntityStats(stats.players, game.getBlackPlayerId(), gameId);
+                updateEntityStats(stats.teams, game.getWhiteTeamId(), gameId);
+                updateEntityStats(stats.teams, game.getBlackTeamId(), gameId);
             }
-            updateEntityStats(stats.tournaments, gameHeader.getTournamentId(), gameId);
-            updateEntityStats(stats.annotators, gameHeader.getAnnotatorId(), gameId);
-            updateEntityStats(stats.sources, gameHeader.getSourceId(), gameId);
+            updateEntityStats(stats.tournaments, game.getTournamentId(), gameId);
+            updateEntityStats(stats.annotators, game.getAnnotatorId(), gameId);
+            updateEntityStats(stats.sources, game.getSourceId(), gameId);
 
             progressCallback.run();
         }
@@ -94,8 +93,8 @@ public class EntityStatsValidator {
             if (checks.contains(Validator.Checks.ENTITY_STATISTICS)) {
                 EntityStats.Stats stats = expectedStats.get(current.getId());
                 if (stats == null) {
-                    String msg = String.format("Entity %d (%s) occurs in 0 games but stats says %d games and first game %d",
-                            current.getId(), current.toString(), current.getCount(), current.getFirstGameId());
+                    String msg = String.format("Entity in %s base with id %d (%s) occurs in 0 games but stats says %d games and first game %d",
+                            entityType, current.getId(), current.toString(), current.getCount(), current.getFirstGameId());
                     if (throwOnError) {
                         throw new EntityStorageException(msg);
                     }
@@ -103,8 +102,8 @@ public class EntityStatsValidator {
                     isValidEntity = false;
                 } else {
                     if (stats.getCount() != current.getCount()) {
-                        String msg = String.format("Entity %d (%s) has %d games but stats says %d",
-                                current.getId(), current.toString(), stats.getCount(), current.getCount());
+                        String msg = String.format("Entity in %s base with id %d (%s) has %d games but stats says %d",
+                                entityType, current.getId(), current.toString(), stats.getCount(), current.getCount());
                         if (throwOnError) {
                             throw new EntityStorageException(msg);
                         }
@@ -113,8 +112,8 @@ public class EntityStatsValidator {
                     }
 
                     if (stats.getFirstGameId() != current.getFirstGameId()) {
-                        String msg = String.format("Entity %d (%s) first game is %d but stats says %d",
-                                current.getId(), current.toString(), stats.getFirstGameId(), current.getFirstGameId());
+                        String msg = String.format("Entity in %s base with id %d (%s) first game is %d but stats says %d",
+                                entityType, current.getId(), current.toString(), stats.getFirstGameId(), current.getFirstGameId());
                         if (throwOnError) {
                             throw new EntityStorageException(msg);
                         }
@@ -125,7 +124,7 @@ public class EntityStatsValidator {
             }
 
             if (current.getCount() == 0) {
-                String msg = "Entity %d (%s) has 0 count";
+                String msg = String.format("Entity in %s base with %d (%s) has 0 count", entityType, current.getId(), current.toString());
                 if (throwOnError) {
                     throw new EntityStorageException(msg);
                 }
@@ -158,7 +157,6 @@ public class EntityStatsValidator {
             progressCallback.run();
         }
 
-
         if (existingIds.size() != numEntities) {
             log.warn(String.format("Found %d unique %s during sorted iteration, expected to find %d %s",
                     existingIds.size(), entityType, numEntities, entityType));
@@ -173,7 +171,7 @@ public class EntityStatsValidator {
             }
         }
         if (numEntities != entities.getCount()) {
-            log.warn(String.format("Iterated over %d %s in ascending order, expected to find %d %s",
+            log.warn(String.format("Iterated over %d %s in ascending order, but header said there were %d %s",
                     numEntities, entityType, entities.getCount(), entityType));
         }
         if (checks.contains(Validator.Checks.ENTITY_SORT_ORDER)) {
@@ -182,16 +180,28 @@ public class EntityStatsValidator {
             }
         }
         if (entities.getCapacity() > numEntities) {
-            log.info(String.format("Database has additional capacity for %d %s",
+            log.debug(String.format("Database has additional capacity for %d %s",
                     entities.getCapacity() - numEntities, entityType));
         }
+
+        for (Integer id : entities.getStorage().getDeletedEntityIds()) {
+            if (existingIds.contains(id)) {
+                log.warn(String.format("Entity id %d was found both when iterating and among deleted nodes", id));
+            }
+            existingIds.add(id);
+        }
+
         if (existingIds.size() > 0) {
             if (existingIds.first() != 0) {
                 log.warn(String.format("First id in %s was %d, expected 0", entityType, existingIds.first()));
             }
-            if (existingIds.last() != entities.getCount() - 1) {
+            if (existingIds.last() != entities.getCapacity() - 1) {
                 log.warn(String.format("Last id in %s was %d, expected %d",
                         entityType, existingIds.last(), entities.getCount() - 1));
+            }
+            if (existingIds.size() != entities.getCapacity()) {
+                log.warn(String.format("Discovered %d entities in %s, but capacity is %d",
+                        existingIds.size(), entityType, entities.getCapacity()));
             }
         }
     }

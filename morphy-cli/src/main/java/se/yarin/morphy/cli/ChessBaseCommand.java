@@ -10,7 +10,6 @@ import picocli.CommandLine;
 import se.yarin.cbhlib.Database;
 import se.yarin.cbhlib.entities.*;
 import se.yarin.cbhlib.games.search.*;
-import se.yarin.cbhlib.storage.EntityStorageException;
 import se.yarin.cbhlib.util.CBUtil;
 import se.yarin.cbhlib.validation.Validator;
 import se.yarin.morphy.cli.columns.*;
@@ -408,21 +407,38 @@ class Tournaments implements Callable<Integer> {
     @CommandLine.Option(names = "--count", description = "Max number of tournaments to list")
     int maxTournaments = 20;
 
+    @CommandLine.Option(names = "--sorted", description = "Sort by default sorting order (instead of id)")
+    boolean sorted = false;
+
     @CommandLine.Option(names = "--hex", description = "Show tournament key in hexadecimal")
     boolean hex = false;
 
+    @CommandLine.Option(names = "-v", description = "Output info logging; use twice for debug logging")
+    private boolean[] verbose;
+
     @Override
     public Integer call() throws IOException {
+        if (verbose != null) {
+            String level = verbose.length == 1 ? "info" : "debug";
+            org.apache.logging.log4j.core.LoggerContext context = ((org.apache.logging.log4j.core.LoggerContext) LogManager.getContext(false));
+            ConfigurationSource configurationSource = ConfigurationSource.fromResource("log4j2-" + level + ".xml", null);
+            Configuration configuration = ConfigurationFactory.getInstance().getConfiguration(context, configurationSource);
+            context.reconfigure(configuration);
+        }
+        Locale.setDefault(Locale.US);
+
         try (Database db = Database.open(cbhFile)) {
             TournamentBase tournaments = db.getTournamentBase();
             int count = 0;
-            for (TournamentEntity tournament : tournaments.iterable()) {
+            Iterable<TournamentEntity> iterable = sorted ? tournaments.iterableOrderedAscending() : tournaments.iterable();
+            for (TournamentEntity tournament : iterable) {
                 if (count >= maxTournaments) break;
                 String line;
+                String year = tournament.getDate().year() == 0 ? "????" : tournament.getDate().toPrettyString().substring(0, 4);
                 if (hex) {
-                    line = String.format("%7d:  %-30s %-30s %6d", tournament.getId(), CBUtil.toHexString(tournament.getRaw()).substring(0, 30), tournament.getTitle(), tournament.getCount());
+                    line = String.format("%7d:  %4s %-30s %-30s %6d", tournament.getId(), year, CBUtil.toHexString(tournament.getRaw()).substring(0, 30), tournament.getTitle(), tournament.getCount());
                 } else {
-                    line = String.format("%7d:  %-30s %6d", tournament.getId(), tournament.getTitle(), tournament.getCount());
+                    line = String.format("%7d:  %4s %-30s %6d", tournament.getId(), year, tournament.getTitle(), tournament.getCount());
                 }
                 System.out.println(line);
             }
@@ -446,6 +462,9 @@ class Check implements Callable<Integer> {
 
     @CommandLine.Option(names = "-v", description = "Output info logging; use twice for debug logging")
     private boolean[] verbose;
+
+    @CommandLine.Option(names = "--no-progress-bar", negatable = true, description = "Show progress bar")
+    private boolean showProgressBar = true;
 
     @CommandLine.Option(names = "--no-players", negatable = true, description = "Check Player entities (true by default)")
     boolean checkPlayers = true;
@@ -524,11 +543,10 @@ class Check implements Callable<Integer> {
 
             try (Database db = Database.open(file)) {
                 Validator validator = new Validator();
-                validator.validate(db, checks, false);
-            } catch (IOException e) {
-                log.error("IO error when processing " + file);
-            } catch (EntityStorageException e) {
-                log.error("Entity storage error: " + e);
+                validator.validate(db, checks, true, showProgressBar);
+                log.info("OK! " + file);
+            } catch (Exception e) {
+                log.error("ERROR! " + e.getMessage());
             }
         });
 
