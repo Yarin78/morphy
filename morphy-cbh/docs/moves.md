@@ -1,10 +1,10 @@
 # Moves
 
 The game moves (including variations) are stored in the .cbg file encoded in a storage-efficient way.
-Most moves are encoded into 1 byte, including markers for start and end of variations.
-The move data is also "encrypted" using a substitution scheme.
+Most moves are encoded into 1 byte. For obfuscation purposes, the move data is "encrypted" using
+a [translation table](#translation_table) with a moving index.
 
-For guiding texts, the actual textual content (including the title) is also stored in the .cbg files.
+For text entry games, the actual textual content (including the title) is also stored in the .cbg files.
 
 ## CBG file format
 
@@ -22,7 +22,7 @@ all offsets in the .cbh file (and .cbj file) needs to be updated.
 If a game is shortened (for instance, when purging all variations), no corresponding shift will be done,
 but instead there will be "holes" of unused bytes in the file. The size of this fragmentation is stored in the header.
 
-### <a name="cbg_header">CBG file header</a>
+## <a name="cbg_header">CBG file header</a>
 
 The file size is stored twice, both as a 32-bit integer and a 64-bit integer.
 The 64-bit versions were a later addition, presumably to support .cbg-files larger than 2 GB.
@@ -36,7 +36,7 @@ However, as of CB16 this still doesn't work; both integers overflow and you'll e
 | 10  | 8   | Total file size (64-bit version)
 | 18  | 8   | Number of unused bytes due to "holes" between games (64-bit version)
 
-### <a name="cbg_game">CBG game data</a>
+## <a name="cbg_game">CBG game data</a>
 
 If the game is a text entry (determined by the CBH file), see [CBG text data](#cbg_text).
 
@@ -44,10 +44,10 @@ If the game is a text entry (determined by the CBH file), see [CBG text data](#c
 | --- | --- | --- | ---
 | 0 | 1 | 7   | Always set if text entry, but can also be set for games (very rarely, unknown effect).
 |   |   | 6   | If set, the move data doesn't start from the ordinary initial position. Instead, the start position is explicitly given, see below.
-|   |   | 0-5 | Encoding mode and chess variant. Determines how to parse the moves, see [moves data](#moves_data)
+|   |   | 0-5 | Encoding mode and chess variant. Determines how to parse the moves, see [encoding modes](#encoding_modes)
 | 1 | 3 |     | Number of bytes this game occupies in the CBG file (including this header)
 
-#### <a name="setup_position">Setup position</a>
+### <a name="setup_position">Setup position</a>
 
 If the moves doesn't start from the initial chess position, it's specified here. 
 Otherwise the [moves data](#moves_data) follows instead.
@@ -107,20 +107,192 @@ The order the pieces are listed determines which piece is the "first piece", and
 
 The last value is wrong in many games in some official ChessBase databases, probably due to a software bug.
 
-#### <a name="moves_data">Moves data</a>
+### <a name="moves_data">Moves data</a>
 
-| Encoding mode | Description
+There are several ways the game moves can be encoded.
+This is determined by the _encoding mode_ mentioned earlier. Virtually all games in known ChessBase databases
+use encoding mode 0, which is the default for normal chess games. This is the mode describe here. Other modes
+are documented in [encoding modes](#encoding_modes).
+
+The moves in a game are represented as a stream of bytes. Most moves are represented as a single byte, describing the
+_relative movement_ of a piece. A special byte is used to encode moves that require multiple bytes. Special
+bytes are also used to indicate the start or the end of a variation.
+
+When decoding the byte stream, first decrease the byte value with the number of moves processed so far in the game
+data (0 for the first move). The special codes for "multiple byte moves" and start/end of variations don't count.
+The move count should not be restarted when a variation ends. Then translate the byte according to a
+256 byte [translation table](#translation_tables).
+
+The following table is then used to determine the move. Pieces are referred to in relative terms. The "first rook"
+refers to the white rook starting at a1 (black at a8) and this remains the "first rook" through the game until it gets captured.
+When a piece (not pawns) get captured, the pieces shift one step. If the "first bishop" gets captured, the second becomes the first
+and the third (if it exists) becomes the second. If the "second bishop" is captured, the third bishop
+become the second, and so on. Up to 3 pieces of each type and color are referred to this way. If a player gets
+a fourth queen, the moves of that queen is always done using double byte moves (and the forth queen can't "promote" to become
+third queen if some other queen is captured). References to pawns never change; the "d-pawn" always refers to the
+pawn that started on d2/d7, regardless of where on the board it now is. En-passant captures are stored as ordinary captures.
+
+The relative movements in the table is given as x,y coordinate; x being the file and y the rank. (0,0) corresponds to a1 and (7,7) h8.
+All movements are module 8. So a queen at c2, (2,1), moving "x+7, y" actually moves one step "left" and reaches (1,1) or b2.
+Where there are ... in table, it means it follows the same pattern as the previous movements of that piece, or
+the same pattern as the previous piece of that type.
+
+| Byte | Piece | Relative movement
+| --- | --- | ---
+| 0 | - | Null move
+| 1 | King | x, y+1
+| 2 | King | x+1, y+1
+| 3 | King | x+1, y
+| 4 | King | x+1, y-1
+| 5 | King | x, y-1
+| 6 | King | x-1, y-1
+| 7 | King | x-1, y
+| 8 | King | x-1, y+1
+| 9 | King | O-O
+| 10 | King | O-O-O
+| 11 | 1st Queen | x, y+1
+| 12 | 1st Queen | x, y+2
+| ... | |
+| 17 | 1st Queen | x, y+7
+| 18 | 1st Queen | x+1, y
+| ... | |
+| 24 | 1st Queen | x+7, y
+| 25 | 1st Queen | x+1, y+1
+| ... | |
+| 31 | 1st Queen | x+7, y+7
+| 32 | 1st Queen | x+1, y-1
+| ... | |
+| 38 | 1st Queen | x+7, y-7
+| 39 | 1st Rook | x, y+1
+| ... | |
+| 45 | 1st Rook | x, y+7
+| 46 | 1st Rook | x+1, y
+| ... | |
+| 52 | 1st Rook | x+7, y
+| 53 | 2nd Rook | x, y+1
+| ... | |
+| 66 | 2nd Rook | x+7, y
+| 67 | 1st Bishop | x+1, y+1
+| ... | |
+| 73 | 1st Bishop | x+7, y+7
+| 74 | 1st Bishop | x+1, y-1
+| ... | |
+| 80 | 1st Bishop | x+7, y-7
+| 81 | 2nd Bishop | x+1, y+1
+| ... | |
+| 94 | 2nd Bishop | x+7, y-7
+| 95 | 1st Knight | x+2, y+1
+| 96 | 1st Knight | x+1, y+2
+| 97 | 1st Knight | x-1, y+2
+| 98 | 1st Knight | x-2, y+1
+| 99 | 1st Knight | x-2, y-1
+| 100 | 1st Knight | x-1, y-2
+| 101 | 1st Knight | x+1, y-2
+| 102 | 1st Knight | x+2, y-1
+| 103 | 2nd Knight | x+2, y+1
+| ... |
+| 110 | 2nd Knight | x+2, y-1
+| 111 | a-pawn | One step forward (x,y+1 if white, x,y-1 if black)
+| 112 | a-pawn | Two steps forward
+| 113 | a-pawn | Capture to the right (x+1,y+1 if white, x-1,y-1 if black)
+| 114 | a-pawn | Capture to the left
+| 115 | b-pawn | ...
+| 119 | c-pawn | ...
+| 123 | d-pawn | ...
+| 127 | e-pawn | ...
+| 131 | f-pawn | ...
+| 135 | g-pawn | ...
+| 139 | h-pawn | ...
+| 143 | 2nd Queen | ...
+| 171 | 3rd Queen | ...
+| 199 | 3rd Rook | ...
+| 213 | 3rd Bishop | ...
+| 227 | 3rd Knight | ...
+| 235 | - | The next two bytes will describe a multi byte move
+| 236 | - | Ignore (no move in the move list)
+| 237-253 | - | Unknown/unused
+| 254 | - | Start of variation
+| 255 | - | End of variation
+
+#### Multiple byte moves
+
+Any type of move can be described as a multiple bytes move, but it's typically only done when moving a fourth piece
+or for pawn promotions. The two bytes are to be read as a 16-bit word with the most significant byte first.
+
+| Bit | Description
 | --- | ---
-| 0-7 | Regular chess
-| 8-9 | Chess variant [Losing Chess](https://en.wikipedia.org/wiki/Losing_chess)
-| 10-11 | Chess variant [Chess960](https://en.wikipedia.org/wiki/Fischer_random_chess) (Fischer Random)
-| 12-13 | Chess variant [Out Chatrang](https://en.wikipedia.org/wiki/Shatranj)
-| 14-15 | Chess variant [Twins](https://www.chessvariants.com/diffmove.dir/twin.html)
-| 16-17 | Chess variant [Makruk](https://en.wikipedia.org/wiki/Makruk) (Thai chess)
-| 18-19 | Chess variant Pawns
-| 63   | Illegal positions allowed
+| 0-5 | Source square (0=a1, 1=a2, ...)
+| 6-11 | Destination square
+| 12-13 | Promotion piece (0=queen, 1=rook, 2=bishop, 3=knight)
 
-### <a name="cbg_text">CBG text data</a>
+A special case of a double byte move is castles in a Chess 960 game. Short castles are described as g1-g1 or g8-g8,
+while long castle are described as c1-c1 or c8-c8 (source and destination square are the same).
+
+#### Variations
+
+The node tree is visited in depth first order, starting with the primary variation in all lines.
+If there are more moves to come from the same position, before going into the next variation, a "start of variation"
+byte is stored. When there are no more moves in the variation, and "end of variation" byte is stored.
+This is also the case at the very end of the game, so there will always be one more "end of variation" byte than
+"start of variation".
+
+For instance, the following line with variations
+
+    1. e4 c5 (1. - c6 2. d4; 1. - Nf6 2. e5) 2. Nf3 d6 (2. - Nc6 3. Bb5) 3. d4
+
+would semantically be stored as
+
+    e4 <start> c5 Sf3 <start> d6 d4 <end> Sc6 Lb5 <end> <start> c6 d4 <end> Sf6 e5 <end>
+
+#### <a name="encoding_modes">Encoding modes</a>
+
+The previous section described encoding mode 0. There are many more encoding modes as seen in this table.
+
+| Mode | Encoder | modifier | scan order| Chess variant
+| --- | --- | --- | --- | ---
+| 0 | Compact | pre | default | Regular chess
+| 1 | Simple | pre | default | Regular chess
+| 2 | Compact | pre | reverse | Regular chess
+| 3 | Simple | pre | reverse | Regular chess
+| 4 | Compact | post | default | Regular chess
+| 5 | Simple | post | default | Regular chess
+| 6 | Compact | post | reverse | Regular chess
+| 7 | Simple | post | reverse | Regular chess
+| 8 | Compact | post | default | Chess variant [Losing Chess](https://en.wikipedia.org/wiki/Losing_chess)
+| 9 | Compact | post | reverse | Chess variant [Losing Chess](https://en.wikipedia.org/wiki/Losing_chess)
+| 10 | Compact | post | default | Chess variant [Chess960](https://en.wikipedia.org/wiki/Fischer_random_chess) (Fischer Random)
+| 11 | Compact | post | reverse | Chess variant [Chess960](https://en.wikipedia.org/wiki/Fischer_random_chess) (Fischer Random)
+| 12-13 | ? | ? | ? | Chess variant [Out Chatrang](https://en.wikipedia.org/wiki/Shatranj)
+| 14-15 | ? | ? | ? | Chess variant [Twins](https://www.chessvariants.com/diffmove.dir/twin.html)
+| 16-17 | ? | ? | ? | Chess variant [Makruk](https://en.wikipedia.org/wiki/Makruk) (Thai chess)
+| 18-19 | ? | ? | ? | Chess variant Pawns
+| 63   | ? | ? | ? | Illegal positions allowed
+
+The _Compact_ move encoder was the single-byte move encoder described in the previous section.
+The _Simple_ move encoder is a two-byte move encoder described in [here](#simple_move_encoder). 
+
+The _modifier_ determines the order of events in the byte reading sequence:
+
+* pre: read byte from stream, decrease with number of moves seen, translate in translation table 
+* post: read byte from stream, translate in translation table, decrease with number of moves seen
+
+The _scan order_ determines which pieces are to be considered "1st rook" and so on. If reverse,
+the 1st rook is the one on h1/h8, "a-pawn" is the one on h2/h7, and so on - effectively a horizontal mirror of the board.
+
+#### <a name="translation_tables">Translation tables</a>
+
+As a way of obfuscating the file format, all bytes passes through a _translation table_, a 256 byte 1-1 mapping
+of a byte to another byte. The decoding step "decrease the byte with number of moves seen so far" also contributes in obfuscating
+the format as the same move gets encoded differently depending on the move number.
+
+Further, each encoding mode above uses a different translation table. There are hundreds of these translation tables
+in the ChessBase executable files.
+
+#### <a name="simple_move_encoder">Simple move encoder</a>
+
+
+
+## <a name="cbg_text">CBG text data</a>
 
 All integers describing the text data are in Little Endian, unless otherwise specified.
 
@@ -173,368 +345,3 @@ The current format. The contents are in HTML.
 | 2   | 4   | Length of HTML contents
 | 4   | ?   | HTML contents
 | ?   | 4   | Unknown value. Always 0?
-
-
-[At game start]
-
-+0  byte    1   bit 7: If set, the data is not encoded (iff guiding text?)
-bit 6: If set, the game doesn't start with the initial position.
-bit 0-3: 0xA = chess960?? can also be 0x4 and 0x5
-This whole byte is set to 0x7F if the position is an illegal position!?
-+0  int     3   Game size, in number of bytes (including this, excluding trash bytes)
-+4  byte   (28) If game does not start with initial position, here that position follows.
-?  byte   ?    Game data (see below), ends with 0C (=pop position)
-
-
-Game data
-=========
-The moves in a game are represented as a stream of bytes. Most moves are represented as a single byte, describing the
-relative movement of a piece. Pieces are described in terms such as "first rook" (meaning the rook that for white
-starts on a1 and for black on a8), "second rook" etc.
-
-When decoding the byte stream, first decrease the byte value with the number of moves so far processed in the game
-data (minus 0 for the first move). The special codes for "multiple byte moves" and begin/end of variations don't count.
-The move count should not be restarted when a variation end. Then translate the byte according to the
-translation table below.
-
-All pawn moments are seen from the point of view of the player to move. Pawn captures include en passant.
-
-When a "first piece" is captured, the "second piece" becomes the new "first piece" for that player, and the
-"third piece" becomes the "second piece". When a "second piece" is cpatured, the old "third piece" becomes the
-"second piece". A "fourth piece" (or higher) never "promotes" and its movements are always represented with
-multiple bytes. Pawns are never adjusted in this way, so the e-pawn remains as the "fifth pawn" throughout the game.
-
-Multiple byte moves describes a move by denoting the start square and the destination square. This is done
-with 6 bits each. Bit 0-5 in the second byte is the start square (a1=0, a2=1, h8=63), bit 6-7 in the second
-byte and 0-3 in the first is the destination square. For pawn promotions, bit 4-5 is also used
-(0=queen, 1=rook, 2=bishop, 3=knight). Any type of move can be described as a multipe byte move, but it's
-typically only done when moving a fourth piece or doing a pawn promotion.
-
-Single byte move translation table
-----------------------------------
-Note: These bytes look random, but they have actually been "encrypted" using a static array of 256 bytes that can be found at position 0x7AE4A8 in CBase9.exe and position 0x9D6530 in CBase10.exe (it starts with 0xAA, 0x49, 0x39, 0xD8, 0x5D, 0xC2, 0xB1, 0xB2). By reverse looking up these values, the new value will correspond to the order the are listed here.
-
-Special
--------
-AA = null move
-
-King
-----
-49 = y+1
-39 = x+1, y+1
-D8 = x+1
-5D = x+1, y+7
-C2 = y+7
-B1 = x+7, y+7
-B2 = x+7
-47 = x+7, y+1
-76 = 0-0
-B5 = 0-0-0
-
-First queen
------------
-A5 = y+1
-B8 = y+2
-CB = y+3
-53 = y+4
-7F = y+5
-6B = y+6
-8D = y+7
-79 = x+1
-BE = x+2
-EB = x+3
-21 = x+4
-99 = x+5
-D2 = x+6
-57 = x+7
-4D = x+1, y+1
-B4 = x+2, y+2
-BF = x+3, y+3
-62 = x+4, y+4
-BD = x+5, y+5
-24 = x+6, y+6
-96 = x+7, y+7
-A7 = x+1, y+7
-48 = x+2, y+6
-28 = x+3, y+5
-6E = x+4, y+4 (not primarly used)
-2F = x+5, y+3
-5A = x+6, y+2
-18 = x+7, y+1
-
-First rook (a1/a8 at start)
-----------
-4E = y+1
-F8 = y+2
-43 = y+3
-D7 = y+4
-63 = y+5
-9C = y+6
-E6 = y+7
-2E = x+1
-C6 = x+2
-26 = x+3
-88 = x+4
-30 = x+5
-61 = x+6
-6F = x+7
-
-Second rook (h1/h8 at start)
------------
-14 = y+1
-A9 = y+2
-68 = y+3
-EE = y+4
-FB = y+5
-77 = y+6
-E2 = y+7
-A6 = x+1
-05 = x+2
-8B = x+3
-A1 = x+4
-98 = x+5
-32 = x+6
-52 = x+7
-
-First bishop (c1/c8 at start)
-------------
-02 = x+1, y+1
-97 = x+2, y+2
-E1 = x+3, y+3
-41 = x+4, y+4
-C3 = x+5, y+5
-7C = x+6, y+6
-E4 = x+7, y+7
-06 = x+1, y+7
-B7 = x+2, y+6
-55 = x+3, y+5
-D9 = x+4, y+4 (not primarily used)
-2C = x+5, y+3
-AE = x+6, y+2
-37 = x+7, y+1
-
-Second bishop (f1/f8 at start)
--------------
-F6 = x+1, y+1
-3F = x+2, y+2
-08 = x+3, y+3
-93 = x+4, y+4
-73 = x+5, y+5
-5E = x+6, y+6
-78 = x+7, y+7
-35 = x+1, y+7
-F2 = x+2, y+6
-6D = x+3, y+5
-71 = x+4, y+4 (not primarly used)
-A2 = x+5, y+3
-F3 = x+6, y+2
-16 = x+7, y+1
-
-First knight (b1/b8 at start)
-------------
-58 = x+2, y+1
-3D = x+1, y+2
-FA = x-1, y+2
-E9 = x-2, y+1
-BA = x-2, y-1
-D4 = x-1, y-2
-DD = x+1, y-2
-4A = x+2, y-1
-
-Second knight (g1/g8 at start)
--------------
-C4 = x+2, y+1
-0E = x+1, y+2
-FE = x-1, y+2
-5F = x-2, y+1
-75 = x-2, y-1
-07 = x-1, y-2
-89 = x+1, y-2
-34 = x+2, y-1
-
-a2/a7-pawn
-------------
-2D = one step forward
-C1 = two steps forward
-8E = capture right
-F5 = capture left
-
-b2/b7-pawn
-------------
-64 = one step forward
-17 = two steps forward
-70 = capture right
-A4 = capture left
-
-c2/c7-pawn
-------------
-7B = one step forward
-DA = two steps forward
-E0 = capture right
-85 = capture left
-
-d2/d7-pawn
-------------
-C5 = one step forward
-0B = two steps forward
-90 = capture right
-F9 = capture left
-
-e2/e7-pawn
-------------
-84 = one step forward
-FF = two steps forward
-15 = capture right
-36 = capture left
-
-f2/f7-pawn
-------------
-09 = one step forward
-9E = two steps forward
-7D = capture right
-DE = capture left
-
-g2/g7-pawn
-------------
-BB = one step forward
-DF = two steps forward
-BC = capture right
-3A = capture left
-
-h2/h7-pawn
-------------
-12 = one step forward
-33 = two steps forward
-13 = capture right
-19 = capture left
-
-Second queen
-------------
-E5 = y+1
-94 = y+2
-50 = y+3
-11 = y+4
-EA = y+5
-31 = y+6
-01 = y+7
-5C = x+1
-95 = x+2
-CA = x+3
-D3 = x+4
-1D = x+5
-7E = x+6
-EF = x+7
-44 = x+1, y+1
-80 = x+2, y+2
-A0 = x+3, y+3
-1F = x+4, y+4
-83 = x+5, y+5
-00 = x+6, y+6
-4B = x+7, y+7
-67 = x+1, y+7
-20 = x+2, y+6
-5B = x+3, y+5
-2A = x+4, y+4 (not primarly used)
-92 = x+5, y+3
-B6 = x+6, y+2
-60 = x+7, y+1
-
-Third queen
------------
-1A = y+1
-42 = y+2
-0F = y+3
-0D = y+4
-B0 = y+5
-D1 = y+6
-23 = y+7
-F0 = x+1
-7A = x+2
-54 = x+3
-4F = x+4
-F4 = x+5
-A8 = x+6
-72 = x+7
-E7 = x+1, y+1
-40 = x+2, y+2
-38 = x+3, y+3
-59 = x+4, y+4
-87 = x+5, y+5
-E8 = x+6, y+6
-6C = x+7, y+7
-86 = x+1, y+7
-04 = x+2, y+6
-F1 = x+3, y+5
-8C = x+4, y+4 (not primarly used)
-CE = x+5, y+3
-6A = x+6, y+2
-DB = x+7, y+1
-
-Third rook
-----------
-81 = y+1
-82 = y+2
-9A = y+3
-1B = y+4
-9D = y+5
-0A = y+6
-2B = y+7
-8F = x+1
-CD = x+2
-ED = x+3
-10 = x+4
-74 = x+5
-69 = x+6
-D6 = x+7
-
-Third bishop
-------------
-51 = x+1, y+1
-B9 = x+2, y+2
-45 = x+3, y+3
-3B = x+4, y+4
-56 = x+5, y+5
-91 = x+6, y+6
-FD = x+7, y+7
-AB = x+1, y+7
-66 = x+2, y+6
-3E = x+3, y+5
-46 = x+4, y+4 (not primarily used)
-B3 = x+5, y+3
-FC = x+6, y+2
-C8 = x+7, y+1
-
-Third knight
-------------
-9B = x+2, y+1
-C0 = x+1, y+2
-E3 = x-1, y+2
-A3 = x-2, y+1
-AC = x-2, y-1
-C9 = x-1, y-2
-EC = x+1, y-2
-27 = x+2, y-1
-
-Special
--------
-29 = multiple byte move to follow
-9F = dummy - skip and don't count thi move. Used by earlier CB verions as padding!?
-25 = unused
-C7 = unused
-CC = unused
-65 = unused
-4C = unused
-D5 = unused
-1E = unused
-CF = unused
-03 = unused
-8A = unused
-AF = unused
-F7 = unused
-AD = unused
-3C = unused
-D0 = unused
-22 = unused
-1C = unused
-DC = push position (start of variant)
-0C = pop position (end of variant)
