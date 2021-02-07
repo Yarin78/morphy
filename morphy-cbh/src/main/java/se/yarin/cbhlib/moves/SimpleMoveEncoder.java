@@ -75,7 +75,7 @@ public class SimpleMoveEncoder implements MoveEncoder {
     }
 
     @Override
-    public synchronized void decode(ByteBuffer buf, GameMovesModel movesModel, boolean validateMoves)
+    public synchronized void decode(ByteBuffer buf, GameMovesModel movesModel, boolean checkLegalMoves)
             throws ChessBaseMoveDecodingException {
         if (!buf.hasRemaining()) {
             // An empty game can't have a proper end marker, so it needs a special check
@@ -127,7 +127,7 @@ public class SimpleMoveEncoder implements MoveEncoder {
                 log.debug(String.format("Decoded move %s with flags %d", move, value >> 14));
             }
             try {
-                current = validateMoves ? current.addMoveUnsafe(move) : current.addMove(move);
+                current = checkLegalMoves ? current.addMoveUnsafe(move) : current.addMove(move);
             } catch (IllegalMoveException e) {
                 throw new ChessBaseMoveDecodingException("Decoded illegal move: " + move);
             }

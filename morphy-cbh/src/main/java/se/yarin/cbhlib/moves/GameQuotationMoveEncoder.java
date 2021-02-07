@@ -30,9 +30,9 @@ public class GameQuotationMoveEncoder implements MoveEncoder {
     }
 
     @Override
-    public void decode(ByteBuffer buf, GameMovesModel movesModel, boolean validateMoves)
+    public void decode(ByteBuffer buf, GameMovesModel movesModel, boolean checkLegalMoves)
             throws ChessBaseMoveDecodingException {
-        encoder.decode(buf, movesModel, validateMoves);
+        encoder.decode(buf, movesModel, checkLegalMoves);
 
         // Get rid of the trailing null move
         GameMovesModel.Node current = movesModel.root();

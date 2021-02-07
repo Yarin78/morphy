@@ -60,6 +60,7 @@ public interface GameColumn {
             new GameVersionColumn(),
             new CreationTimestampColumn(),
             new LastChangedTimestampColumn(),
+            new MovesColumn(),
             new DatabaseColumn(),
     };
 

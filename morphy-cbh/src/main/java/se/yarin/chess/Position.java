@@ -153,8 +153,8 @@ public class Position {
         if (chess960sp < 0 || chess960sp >= 960) {
             throw new IllegalArgumentException("Illegal Chess960 start position: " + chess960sp);
         }
-        assert board[whiteKingSqi] == WHITE_KING;
-        assert board[blackKingSqi] == BLACK_KING;
+        assert board[whiteKingSqi] == WHITE_KING : "White king was not at the expected square " + Chess.sqiToStr(whiteKingSqi);
+        assert board[blackKingSqi] == BLACK_KING : "Black king was not at the expected square " + Chess.sqiToStr(blackKingSqi);
         this.board = board; // No cloning for performance reasons; see comment above
         // locateKings(); // TODO: Add constructor option to pass this in
         this.whiteKingSqi = whiteKingSqi;

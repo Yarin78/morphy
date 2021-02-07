@@ -59,7 +59,7 @@ public class GameQuotationAnnotation extends Annotation implements StatisticalAn
         if (game.moves().root().position().isRegularChess()) {
             if (game.moves().isSetupPosition()) {
                 this.setupPositionData = new byte[28];
-                MovesSerializer.serializeInitialPosition(game.moves(),
+                new MovesSerializer().serializeInitialPosition(game.moves(),
                         ByteBuffer.wrap(this.setupPositionData), false);
             }
 
@@ -97,7 +97,7 @@ public class GameQuotationAnnotation extends Annotation implements StatisticalAn
         GameMovesModel moves;
         try {
             if (setupPositionData != null) {
-                moves = MovesSerializer.parseInitialPosition(ByteBuffer.wrap(setupPositionData), false, 0);
+                moves = new MovesSerializer().parseInitialPosition(ByteBuffer.wrap(setupPositionData), false, 0);
             } else {
                 moves = new GameMovesModel();
             }

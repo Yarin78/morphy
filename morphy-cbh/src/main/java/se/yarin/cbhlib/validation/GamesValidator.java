@@ -5,9 +5,14 @@ import org.slf4j.LoggerFactory;
 import se.yarin.cbhlib.*;
 import se.yarin.cbhlib.exceptions.ChessBaseException;
 import se.yarin.cbhlib.exceptions.ChessBaseIOException;
+import se.yarin.cbhlib.exceptions.ChessBaseInvalidDataException;
 import se.yarin.cbhlib.games.*;
 import se.yarin.cbhlib.games.search.GameSearcher;
-import se.yarin.cbhlib.storage.FileBlobStorage;
+import se.yarin.cbhlib.moves.ChessBaseMoveDecodingException;
+import se.yarin.cbhlib.moves.MovesSerializer;
+import se.yarin.chess.GameMovesModel;
+
+import java.nio.ByteBuffer;
 
 public class GamesValidator {
     private static final Logger log = LoggerFactory.getLogger(GamesValidator.class);
@@ -65,14 +70,17 @@ public class GamesValidator {
         }
     }
 
-    public void processGames(boolean loadMoves, Runnable progressCallback) {
+    public int processGames(boolean loadMoves, Runnable progressCallback) {
         int numGames = 0, numDeleted = 0, numAnnotated = 0, numText = 0, numErrors = 0, numChess960 = 0;
         long lastMovesOfs = this.db.getMovesBase().getStorage().getHeaderSize();
         long lastAnnotationOfs = this.db.getAnnotationBase().getStorage().getHeaderSize();
         int numOverlappingAnnotations = 0, numOverlappingMoves = 0;
         int numAnnotationGaps = 0, numMoveGaps = 0;
         int annotationFreeSpace = 0, moveFreeSpace = 0;
+        int numMoveDecodingErrors = 0, numInvalidEntityReferences = 0;
         boolean moveOffsetDiffers = false, annotationOffsetDiffers = false;
+
+        MovesSerializer movesSerializer = new MovesSerializer(true);
 
         GameSearcher gameSearcher = new GameSearcher(db);
         for (Game game : gameSearcher.iterableSearch()) {
@@ -146,16 +154,31 @@ public class GamesValidator {
                     numText += 1;
                 }
                 if (!header.isGuidingText()) {
+                    // Deserialize the game header (and lookup player, team, source, commentator)
+                    loader.getGameHeaderModel(game);
+
                     if (loadMoves) {
-                        // Deserialize all the moves and annotations
-                        loader.getGameModel(header.getId());
-                    } else {
-                        // Only deserialize the game header (and lookup player, team, source, commentator)
-                        loader.getGameHeaderModel(game);
+                        // Deserialize explicitly to be able to catch the exceptions
+                        ByteBuffer movesBlob = this.db.getMovesBase().getMovesBlob(game.getMovesOffset());
+                        GameMovesModel moves = movesSerializer.deserializeMoves(movesBlob, true, game.getId());
+                        this.db.getAnnotationBase().getAnnotations(moves, game.getAnnotationOffset());
                     }
                     numGames += 1;
                 }
-            } catch (ChessBaseException | ChessBaseIOException | AssertionError e) {
+            } catch (ChessBaseMoveDecodingException e) {
+                if (numMoveDecodingErrors < 5) {
+                    log.error("Move decoding error in game " + game.getId() + ": " + e.getMessage());
+                }
+                numMoveDecodingErrors += 1;
+                numErrors += 1;
+            } catch (ChessBaseInvalidDataException e) {
+                if (numInvalidEntityReferences < 5) {
+                    log.error("Invalid data in game " + game.getId() + ": " + e.getMessage());
+                }
+                numInvalidEntityReferences += 1;
+                numErrors += 1;
+            } catch (ChessBaseIOException | AssertionError e) {
+                log.error("Critical error in game " + game.getId() + ": " + e.getMessage());
                 numErrors += 1;
             } finally {
                 progressCallback.run();
@@ -164,7 +187,7 @@ public class GamesValidator {
 
         log.info(String.format("%d games loaded (%d deleted, %d annotated, %d guiding texts, %d Chess960)", numGames, numDeleted, numAnnotated, numText, numChess960));
         if (numErrors > 0) {
-            log.warn(String.format("%d errors encountered", numErrors));
+            log.warn(String.format("%d errors in the game data encountered (%d move decoding errors, %d entity references errors)", numErrors, numMoveDecodingErrors, numInvalidEntityReferences));
         }
         if (numOverlappingMoves > 0) {
             log.warn(String.format("%d games had overlapping move data", numOverlappingMoves));
@@ -178,5 +201,7 @@ public class GamesValidator {
         if (numMoveGaps > 0) {
             log.info(String.format("There were %d gaps in the moves data (total %d bytes)", numMoveGaps, moveFreeSpace));
         }
+
+        return numErrors;
     }
 }

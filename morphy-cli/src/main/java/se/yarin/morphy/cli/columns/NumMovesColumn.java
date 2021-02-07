@@ -19,6 +19,6 @@ public class NumMovesColumn implements GameColumn {
 
     @Override
     public String getId() {
-        return "moves";
+        return "num-moves";
     }
 }

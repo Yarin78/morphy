@@ -260,7 +260,7 @@ public class CompactMoveEncoder implements MoveEncoder {
     }
 
     @Override
-    public synchronized void decode(ByteBuffer buf, GameMovesModel movesModel, boolean validateMoves)
+    public synchronized void decode(ByteBuffer buf, GameMovesModel movesModel, boolean checkLegalMoves)
             throws ChessBaseMoveDecodingException {
 
         GameMovesModel.Node currentNode = movesModel.root();
@@ -315,7 +315,7 @@ public class CompactMoveEncoder implements MoveEncoder {
 
             // Update position of the moved piece
             piecePosition = piecePosition.doMove(move);
-            currentNode = validateMoves ? currentNode.addMove(move) : currentNode.addMoveUnsafe(move);
+            currentNode = checkLegalMoves ? currentNode.addMove(move) : currentNode.addMoveUnsafe(move);
 
             if (INTEGRITY_CHECKS_ENABLED) {
                 piecePosition.validate(currentNode.position());

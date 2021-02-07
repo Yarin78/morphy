@@ -6,5 +6,5 @@ import java.nio.ByteBuffer;
 
 public interface MoveEncoder {
     void encode(ByteBuffer buf, GameMovesModel movesModel);
-    void decode(ByteBuffer buf, GameMovesModel movesModel, boolean validateMoves) throws ChessBaseMoveDecodingException;
+    void decode(ByteBuffer buf, GameMovesModel movesModel, boolean checkLegalMoves) throws ChessBaseMoveDecodingException;
 }

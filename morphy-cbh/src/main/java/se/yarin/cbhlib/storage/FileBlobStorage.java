@@ -85,7 +85,7 @@ public class FileBlobStorage implements BlobStorage {
             unused = ByteBufferUtil.getLongB(buf);
 
             if ((int) size != shortSize) {
-                // This seems to be a critical error in the ChessBase integrity checker
+                // This seems to be a critical error in the ChessBase integrity checker ("CBG Prolog damaged")
                 log.warn(String.format("%s: File size values don't match (%d != %d)", file.getName(), shortSize, size));
                 size = shortSize;
             }

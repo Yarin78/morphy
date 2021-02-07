@@ -1,6 +1,8 @@
 package se.yarin.cbhlib.moves;
 
+import lombok.Getter;
 import lombok.NonNull;
+import lombok.Setter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.cbhlib.util.ByteBufferBitReader;
@@ -14,6 +16,10 @@ import java.util.EnumSet;
 
 public final class MovesSerializer {
     private static final Logger log = LoggerFactory.getLogger(MovesSerializer.class);
+
+    @Getter
+    @Setter
+    private boolean logDetailedErrors;
 
     // The CBG format supports many different chess variants, which are encoded differently.
     // This library only supports regular chess and Chess 960 at the moment.
@@ -31,9 +37,15 @@ public final class MovesSerializer {
     private static final int FLAG10_ENCRYPTION_KEY = 22;
     private static final int FLAG11_ENCRYPTION_KEY = 24;
 
-    private MovesSerializer() {}
+    public MovesSerializer() {
+        this(false);
+    }
 
-    public static ByteBuffer serializeMoves(@NonNull GameMovesModel model) {
+    public MovesSerializer(boolean logDetailedErrors) {
+        this.logDetailedErrors = logDetailedErrors;
+    }
+
+    public ByteBuffer serializeMoves(@NonNull GameMovesModel model) {
         // TODO: All serialize method should probably not return a ByteBuffer but write to an existing one
         if (model.root().position().isRegularChess()) {
             return serializeMoves(model, 0);
@@ -43,7 +55,7 @@ public final class MovesSerializer {
         }
     }
 
-    static ByteBuffer serializeMoves(@NonNull GameMovesModel model, int encodingMode) {
+    ByteBuffer serializeMoves(@NonNull GameMovesModel model, int encodingMode) {
         validateEncodingMode(encodingMode);
 
         ByteBuffer buf = ByteBuffer.allocate(16384);
@@ -91,7 +103,7 @@ public final class MovesSerializer {
      * @return a model of the game
      * @throws ChessBaseMoveDecodingException if there was an error deserializing the moves
      */
-    public static GameMovesModel deserializeMoves(ByteBuffer buf) throws ChessBaseMoveDecodingException {
+    public GameMovesModel deserializeMoves(ByteBuffer buf) throws ChessBaseMoveDecodingException {
         return deserializeMoves(buf, true, 0);
     }
 
@@ -99,19 +111,20 @@ public final class MovesSerializer {
      * Deserializes the moves of a ChessBase encoded chess game.
      * If there was some error decoding the game
      * @param buf a buffer containing the serialized game
-     * @param validateMoves if true, all decoded moves will be checked if they are legal or not
+     * @param checkLegalMoves if true, all decoded moves will be checked if they are legal or not
      * @param gameId the id of the game to load; only used in logging statements
      * @return a model of the game
-     * @throws ChessBaseMoveDecodingException if there was an error deserializing the moves
+     * @throws ChessBaseMoveDecodingException if there was an error deserializing the moves,
+     * with the {@link ChessBaseMoveDecodingException#getModel()} containing the moves parsed so far.
      */
-    public static GameMovesModel deserializeMoves(ByteBuffer buf, boolean validateMoves, int gameId) throws ChessBaseMoveDecodingException {
+    public GameMovesModel deserializeMoves(ByteBuffer buf, boolean checkLegalMoves, int gameId) throws ChessBaseMoveDecodingException {
         GameMovesModel model;
         int flags, moveSize;
         try {
             flags = ByteBufferUtil.getUnsignedByte(buf);
             moveSize = ByteBufferUtil.getUnsigned24BitB(buf);
         } catch (BufferUnderflowException e) {
-            throw new ChessBaseMoveDecodingException("Moves data header ended abruptly in game " + gameId, e);
+            throw new ChessBaseMoveDecodingException("Moves data header ended abruptly", e);
         }
         // Ensure we don't read too many bytes if the data would be broken
         ByteBuffer moveBuf = buf.slice();
@@ -146,26 +159,32 @@ public final class MovesSerializer {
                     model.root().position().toString("|"), moveBuf.limit() - moveBuf.position()));
         }
 
-
         MoveEncoder moveEncoder = getMoveEncoder(encodingMode);
 
         try {
-            moveEncoder.decode(moveBuf, model, validateMoves);
+            moveEncoder.decode(moveBuf, model, checkLegalMoves);
         } catch (ChessBaseMoveDecodingException e) {
             // TODO: Add tests for this
             e.setModel(model);
-            log.warn("Parsed illegal move in game " + gameId + "; aborting. Moves parsed so far: " + model.toString(), e);
+            throw e;
         } catch (IllegalMoveException e) {
-            throw new ChessBaseMoveDecodingException("Parsed illegal move in game " + gameId + ": " + e.toString(), e, model);
+            String message = "Illegal move";
+            if (logDetailedErrors) {
+                message += ": " + e.toString().replace("\n", "\\");
+            }
+            throw new ChessBaseMoveDecodingException(message, e, model);
         } catch (BufferUnderflowException e) {
-            log.warn("Move data ended abruptly in game " + gameId + ". Moves parsed so far: " + model.toString());
-            throw new ChessBaseMoveDecodingException("Move data ended abruptly in game " + gameId, e, model);
+            String message = "Move data ended abruptly";
+            if (logDetailedErrors) {
+                message += ". Moves parsed so far: " + model.toString();
+            }
+            throw new ChessBaseMoveDecodingException(message, e, model);
         }
 
         return model;
     }
 
-    private static MoveEncoder getMoveEncoder(int encodingMode) {
+    private MoveEncoder getMoveEncoder(int encodingMode) {
         return switch (encodingMode) {
             case 0x00 -> new CompactMoveEncoder(FLAG0_ENCRYPTION_KEY, true, false);
             case 0x01 -> new SimpleMoveEncoder(FLAG1_ENCRYPTION_KEY, true, false);
@@ -183,7 +202,7 @@ public final class MovesSerializer {
         };
     }
 
-    private static void validateEncodingMode(int mode) {
+    private void validateEncodingMode(int mode) {
         if (mode >= 0 && mode < 8) {
             return; // Regular chess
         }
@@ -212,7 +231,7 @@ public final class MovesSerializer {
         throw new UnsupportedOperationException("Unknown encoding mode " + mode + " not supported");
     }
 
-    public static GameMovesModel parseInitialPosition(ByteBuffer buf, boolean hasExtraInfo, int gameId)
+    public GameMovesModel parseInitialPosition(ByteBuffer buf, boolean hasExtraInfo, int gameId)
             throws ChessBaseMoveDecodingException {
         int endPosition = buf.position() + 28;
         int b = ByteBufferUtil.getUnsignedByte(buf);
@@ -275,7 +294,7 @@ public final class MovesSerializer {
         return new GameMovesModel(startPosition, moveNumber);
     }
 
-    private static int deserializeChess960StartingPosition(ByteBuffer buf, Stone[] stones, int gameId) {
+    private int deserializeChess960StartingPosition(ByteBuffer buf, Stone[] stones, int gameId) {
         // The following 6 bytes contains the start square indices for
         // the white king, black king, white h-rook, white a-rook, black h-rook and black a-rook
         // They determine how the castles move is encoded
@@ -337,13 +356,13 @@ public final class MovesSerializer {
         return originalSpNo;
     }
 
-    private static boolean chess960Matches(Position sp, int wkSqi, int bkSqi, int wkrSqi, int wqrSqi, int bkrSqi, int bqrSqi) {
+    private boolean chess960Matches(Position sp, int wkSqi, int bkSqi, int wkrSqi, int wqrSqi, int bkrSqi, int bqrSqi) {
         return sp.stoneAt(wkSqi) == Stone.WHITE_KING && sp.stoneAt(bkSqi) == Stone.BLACK_KING
                 && sp.stoneAt(wkrSqi) == Stone.WHITE_ROOK && sp.stoneAt(wqrSqi) == Stone.WHITE_ROOK
                 && sp.stoneAt(bkrSqi) == Stone.BLACK_ROOK && sp.stoneAt(bqrSqi) == Stone.BLACK_ROOK;
     }
 
-    public static ByteBuffer serializeInitialPosition(GameMovesModel moves, ByteBuffer buf, boolean addExtraInfo) {
+    public ByteBuffer serializeInitialPosition(GameMovesModel moves, ByteBuffer buf, boolean addExtraInfo) {
         Position position = moves.root().position();
         int mark = buf.position() + 28;
 
@@ -396,7 +415,7 @@ public final class MovesSerializer {
         return buf;
     }
 
-    private static void serializeChess960StartingPosition(ByteBuffer buf, int sp) {
+    private void serializeChess960StartingPosition(ByteBuffer buf, int sp) {
         ByteBufferUtil.putByte(buf, Chess960.getKingSqi(sp, Player.WHITE));
         ByteBufferUtil.putByte(buf, Chess960.getKingSqi(sp, Player.BLACK));
         ByteBufferUtil.putByte(buf, Chess960.getHRookSqi(sp, Player.WHITE));

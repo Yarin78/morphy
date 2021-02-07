@@ -137,16 +137,20 @@ public class Validator {
             GamesValidator gamesValidator = new GamesValidator(db);
             try (ProgressTracker progressTracker = trackerFactory.create("Games", db.getHeaderBase().size())) {
                 try {
-                    gamesValidator.processGames(checks.contains(Checks.GAMES_LOAD), progressTracker::step);
+                    int numErrors = gamesValidator.processGames(checks.contains(Checks.GAMES_LOAD), progressTracker::step);
+                    if (numErrors > 0) {
+                        hasCritialErrors = true;
+                    }
                 } catch (Exception e) {
-                    log.error("Error processing games: " + e.getMessage());
+                    // This shouldn't really happen
+                    log.error("Critical error processing games: " + e.getMessage());
                     hasCritialErrors = true;
                 }
             }
         }
 
         if (hasCritialErrors && throwOnError) {
-            throw new ChessBaseException("There were critical errors in " + db.getHeaderBase().getStorageName());
+            throw new ChessBaseException("There were critical errors");
         }
     }
 }

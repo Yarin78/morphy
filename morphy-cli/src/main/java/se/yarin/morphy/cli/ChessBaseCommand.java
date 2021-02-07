@@ -9,6 +9,7 @@ import org.apache.logging.log4j.core.config.ConfigurationSource;
 import picocli.CommandLine;
 import se.yarin.cbhlib.Database;
 import se.yarin.cbhlib.entities.*;
+import se.yarin.cbhlib.exceptions.ChessBaseException;
 import se.yarin.cbhlib.games.search.*;
 import se.yarin.cbhlib.util.CBUtil;
 import se.yarin.cbhlib.validation.Validator;
@@ -543,10 +544,16 @@ class Check implements Callable<Integer> {
 
             try (Database db = Database.open(file)) {
                 Validator validator = new Validator();
+                db.getMovesBase().getMovesSerializer().setLogDetailedErrors(true);
                 validator.validate(db, checks, true, showProgressBar);
-                log.info("OK! " + file);
+                log.info("Database OK: " + file);
+            } catch (ChessBaseException e) {
+                // At least one error that the ChessBase integrity checker would consider an error found
+                // It could be just a single game that has some bad moves though
+                log.error("Database ERROR: " + file);
             } catch (Exception e) {
-                log.error("ERROR! " + e.getMessage());
+                // Something was not caught properly
+                log.error("Database CRITICAL ERROR: " + file, e);
             }
         });
 

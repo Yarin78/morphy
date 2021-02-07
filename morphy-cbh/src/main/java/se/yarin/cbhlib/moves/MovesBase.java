@@ -1,11 +1,11 @@
 package se.yarin.cbhlib.moves;
 
+import lombok.Getter;
 import lombok.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.cbhlib.exceptions.ChessBaseIOException;
 import se.yarin.cbhlib.exceptions.ChessBaseInvalidDataException;
-import se.yarin.cbhlib.exceptions.ChessBaseUnsupportedException;
 import se.yarin.cbhlib.games.TextContentsModel;
 import se.yarin.cbhlib.storage.BlobSizeRetriever;
 import se.yarin.cbhlib.storage.BlobStorage;
@@ -24,6 +24,8 @@ public class MovesBase implements BlobSizeRetriever {
     private static final Logger log = LoggerFactory.getLogger(MovesBase.class);
 
     private final BlobStorage storage;
+    @Getter
+    private final MovesSerializer movesSerializer;
     private int overrideEncodingMode = -1; // The encoding mode to use when writing games, -1 = default based on type
 
     private boolean validateDecodedMoves = true; // If true, validate all moves when decoding
@@ -39,10 +41,12 @@ public class MovesBase implements BlobSizeRetriever {
      */
     public MovesBase() {
         this.storage = new InMemoryBlobStorage(this);
+        this.movesSerializer = new MovesSerializer();
     }
 
     private MovesBase(@NonNull BlobStorage storage) {
         this.storage = storage;
+        this.movesSerializer = new MovesSerializer();
     }
 
     /**
@@ -117,10 +121,15 @@ public class MovesBase implements BlobSizeRetriever {
      * @return a model of the game
      * @throws ChessBaseIOException if there was some IO errors when reading the moves
      */
-    public GameMovesModel getMoves(long ofs, int gameId)
-            throws ChessBaseInvalidDataException, ChessBaseUnsupportedException {
+    public GameMovesModel getMoves(long ofs, int gameId) throws ChessBaseInvalidDataException {
         ByteBuffer blob = storage.readBlob(ofs);
-        return MovesSerializer.deserializeMoves(blob, validateDecodedMoves, gameId);
+        try {
+            return movesSerializer.deserializeMoves(blob, validateDecodedMoves, gameId);
+        } catch (ChessBaseMoveDecodingException e) {
+            // If there was an error parsing the moves, returned what we got so far
+            log.warn("Error decoding moves in game " + gameId + ": " + e.getMessage());
+            return e.getModel();
+        }
     }
 
     /**
@@ -143,7 +152,7 @@ public class MovesBase implements BlobSizeRetriever {
      * @throws ChessBaseIOException if there was some IO errors when storing the moves
      */
     public long putMoves(long ofs, GameMovesModel model) {
-        ByteBuffer buf = MovesSerializer.serializeMoves(model, resolveEncodingMode(model));
+        ByteBuffer buf = movesSerializer.serializeMoves(model, resolveEncodingMode(model));
         return putMovesBlob(ofs, buf);
     }
 
@@ -176,7 +185,7 @@ public class MovesBase implements BlobSizeRetriever {
     }
 
     public int preparePutBlob(long ofs, GameMovesModel model) {
-        ByteBuffer buf = MovesSerializer.serializeMoves(model, resolveEncodingMode(model));
+        ByteBuffer buf = movesSerializer.serializeMoves(model, resolveEncodingMode(model));
         int oldGameSize = getBlobSize(storage.readBlob(ofs));
         int newGameSize = getBlobSize(buf);
         if (newGameSize <= oldGameSize) {

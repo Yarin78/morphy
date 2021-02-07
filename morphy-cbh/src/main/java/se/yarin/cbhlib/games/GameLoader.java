@@ -10,7 +10,6 @@ import se.yarin.cbhlib.annotations.StatisticalAnnotation;
 import se.yarin.cbhlib.entities.*;
 import se.yarin.cbhlib.exceptions.ChessBaseException;
 import se.yarin.cbhlib.exceptions.ChessBaseInvalidDataException;
-import se.yarin.cbhlib.moves.ChessBaseMoveDecodingException;
 import se.yarin.cbhlib.storage.EntityStorageException;
 import se.yarin.chess.*;
 import se.yarin.chess.annotations.Annotation;
@@ -39,7 +38,13 @@ public class GameLoader {
         this.database = database;
     }
 
-    public GameHeaderModel getGameHeaderModel(Game game) {
+    /**
+     * Creates a mutable model of the game header
+     * @param game the game to get the header model for
+     * @return a mutable game header model
+     * @throws ChessBaseInvalidDataException if an entity couldn't be resolved
+     */
+    public GameHeaderModel getGameHeaderModel(@NonNull Game game) throws ChessBaseInvalidDataException {
         GameHeader header = game.getHeader();
         ExtendedGameHeader extendedHeader = game.getExtendedHeader();
 
@@ -49,13 +54,19 @@ public class GameLoader {
             throw new IllegalArgumentException("Can't get game header model for a guiding text (id " + header.getId() + ")");
         }
 
-        PlayerEntity whitePlayer = database.getPlayerBase().get(header.getWhitePlayerId());
-        PlayerEntity blackPlayer = database.getPlayerBase().get(header.getBlackPlayerId());
-        AnnotatorEntity annotator = database.getAnnotatorBase().get(header.getAnnotatorId());
-        SourceEntity source = database.getSourceBase().get(header.getSourceId());
-        TournamentEntity tournament = database.getTournamentBase().get(header.getTournamentId());
-        TeamEntity whiteTeam = database.getTeamBase().get(extendedHeader.getWhiteTeamId());
-        TeamEntity blackTeam = database.getTeamBase().get(extendedHeader.getBlackTeamId());
+        PlayerEntity whitePlayer = resolveEntity(database.getPlayerBase(), "white player", header.getWhitePlayerId(), game, false);
+        PlayerEntity blackPlayer = resolveEntity(database.getPlayerBase(), "black player", header.getBlackPlayerId(), game, false);
+        AnnotatorEntity annotator = resolveEntity(database.getAnnotatorBase(), "annotator", header.getAnnotatorId(), game, false);
+        SourceEntity source = resolveEntity(database.getSourceBase(), "source", header.getSourceId(), game, false);
+        TournamentEntity tournament = resolveEntity(database.getTournamentBase(), "tournament", header.getTournamentId(), game, false);
+        TeamEntity whiteTeam = resolveEntity(database.getTeamBase(), "white team", extendedHeader.getWhiteTeamId(), game, true);
+        TeamEntity blackTeam = resolveEntity(database.getTeamBase(), "black team", extendedHeader.getBlackTeamId(), game, true);
+
+        assert whitePlayer != null;
+        assert blackPlayer != null;
+        assert annotator != null;
+        assert source != null;
+        assert tournament != null;
 
         // TODO: Instead of duplicating each CBH specific field, it's probably better to keep a reference
         // to the raw header data. The GameHeaderModel should probably just contain the most generic fields,
@@ -126,7 +137,14 @@ public class GameLoader {
         return model;
     }
 
-    public GameModel getGameModel(Game game) throws ChessBaseException {
+    /**
+     * Creates a mutable model of the game, header and moves
+     * @param game the game to get the model for
+     * @return a mutable game model
+     * @throws ChessBaseInvalidDataException if the model couldn't be created due to broken references
+     * If the move data is broken, a model is still returned with as many moves as could be decoded
+     */
+    public GameModel getGameModel(Game game) throws ChessBaseInvalidDataException {
         assert game.getDatabase() == this.database;
         GameHeaderModel headerModel = getGameHeaderModel(game);
 
@@ -136,7 +154,14 @@ public class GameLoader {
         return new GameModel(headerModel, moves);
     }
 
-    public GameModel getGameModel(int gameId) throws ChessBaseException {
+    /**
+     * Creates a mutable model of the game, header and moves
+     * @param gameId the id of the game to get the model for
+     * @return a mutable game model
+     * @throws ChessBaseInvalidDataException if the model couldn't be created due to broken references
+     * If the move data is broken, a model is still returned with as many moves as could be decoded
+     */
+    public GameModel getGameModel(int gameId) throws ChessBaseInvalidDataException {
         return getGameModel(database.getGame(gameId));
     }
 
@@ -191,9 +216,9 @@ public class GameLoader {
                 TeamEntity oldWhiteTeam = game.getWhiteTeam();
                 TeamEntity oldBlackTeam = game.getBlackTeam();
 
-                TeamEntity whiteTeam = oldWhiteTeam != null ? resolveEntity(0,
+                TeamEntity whiteTeam = oldWhiteTeam != null ? resolveOrCreateEntity(0,
                         oldWhiteTeam.withNewId(0), database.getTeamBase()) : null;
-                TeamEntity blackTeam = oldBlackTeam != null ? resolveEntity(0,
+                TeamEntity blackTeam = oldBlackTeam != null ? resolveOrCreateEntity(0,
                         oldBlackTeam.withNewId(0), database.getTeamBase()) : null;
 
                 builder.whiteTeamId(whiteTeam == null ? -1 : whiteTeam.getId());
@@ -237,9 +262,9 @@ public class GameLoader {
         // If the id field is set, use that one. Otherwise use the string field.
         // If no entity exists with the same name, create a new one.
         try {
-            whiteTeam = resolveEntity(sameDb ? (Integer) header.getField(WHITE_TEAM_ID) : 0,
+            whiteTeam = resolveOrCreateEntity(sameDb ? (Integer) header.getField(WHITE_TEAM_ID) : 0,
                     new TeamEntity(defaultName(header.getWhiteTeam())), database.getTeamBase());
-            blackTeam = resolveEntity(sameDb ? (Integer) header.getField(BLACK_TEAM_ID) : 0,
+            blackTeam = resolveOrCreateEntity(sameDb ? (Integer) header.getField(BLACK_TEAM_ID) : 0,
                     new TeamEntity(defaultName(header.getBlackTeam())), database.getTeamBase());
         } catch (IllegalArgumentException e) {
             throw new ChessBaseInvalidDataException("Failed to create ExtendedGameHeader entry due to invalid entity data reference", e);
@@ -273,20 +298,20 @@ public class GameLoader {
             // If no entity exists with the same name, create a new one.
             try {
                 if (!game.isGuidingText()) {
-                    PlayerEntity white = resolveEntity(0,
+                    PlayerEntity white = resolveOrCreateEntity(0,
                             PlayerEntity.fromFullName(game.getWhite().getFullName()), database.getPlayerBase());
-                    PlayerEntity black = resolveEntity(0,
+                    PlayerEntity black = resolveOrCreateEntity(0,
                             PlayerEntity.fromFullName(game.getBlack().getFullName()), database.getPlayerBase());
 
                     builder.whitePlayerId(white.getId());
                     builder.blackPlayerId(black.getId());
                 }
 
-                TournamentEntity tournament = resolveEntity(0,
+                TournamentEntity tournament = resolveOrCreateEntity(0,
                         new TournamentEntity(game.getTournament().getTitle(), game.getTournament().getDate()), database.getTournamentBase());
-                AnnotatorEntity annotator = resolveEntity(0,
+                AnnotatorEntity annotator = resolveOrCreateEntity(0,
                         new AnnotatorEntity(game.getAnnotator().getName()), database.getAnnotatorBase());
-                SourceEntity source = resolveEntity(0,
+                SourceEntity source = resolveOrCreateEntity(0,
                         new SourceEntity(game.getSource().getTitle()), database.getSourceBase());
 
                 builder.tournamentId(tournament.getId());
@@ -314,11 +339,11 @@ public class GameLoader {
         SourceEntity source;
 
         try {
-            tournament = resolveEntity(0,
+            tournament = resolveOrCreateEntity(0,
                     new TournamentEntity(defaultName(header.getTournament()), new Date(header.getTournamentYear())), database.getTournamentBase());
-            annotator = resolveEntity(0,
+            annotator = resolveOrCreateEntity(0,
                     new AnnotatorEntity(defaultName(header.getAnnotator())), database.getAnnotatorBase());
-            source = resolveEntity(0,
+            source = resolveOrCreateEntity(0,
                     new SourceEntity(defaultName(header.getSource())), database.getSourceBase());
         } catch (IllegalArgumentException e) {
             throw new ChessBaseInvalidDataException("Failed to create GameHeader entry due to invalid entity data reference", e);
@@ -362,15 +387,15 @@ public class GameLoader {
         // If the id field is set, use that one. Otherwise use the string field.
         // If no entity exists with the same name, create a new one.
         try {
-            white = resolveEntity(sameDb ? (Integer) header.getField(WHITE_ID) : 0,
+            white = resolveOrCreateEntity(sameDb ? (Integer) header.getField(WHITE_ID) : 0,
                     PlayerEntity.fromFullName(defaultName(header.getWhite())), database.getPlayerBase());
-            black = resolveEntity(sameDb ? (Integer) header.getField(BLACK_ID) : 0,
+            black = resolveOrCreateEntity(sameDb ? (Integer) header.getField(BLACK_ID) : 0,
                     PlayerEntity.fromFullName(defaultName(header.getBlack())), database.getPlayerBase());
-            tournament = resolveEntity(sameDb ? (Integer) header.getField(EVENT_ID) : 0,
+            tournament = resolveOrCreateEntity(sameDb ? (Integer) header.getField(EVENT_ID) : 0,
                     new TournamentEntity(defaultName(header.getEvent()), Date.today()), database.getTournamentBase());
-            annotator = resolveEntity(sameDb ? (Integer) header.getField(ANNOTATOR_ID) : 0,
+            annotator = resolveOrCreateEntity(sameDb ? (Integer) header.getField(ANNOTATOR_ID) : 0,
                     new AnnotatorEntity(defaultName(header.getAnnotator())), database.getAnnotatorBase());
-            source = resolveEntity(sameDb ? (Integer) header.getField(SOURCE_ID) : 0,
+            source = resolveOrCreateEntity(sameDb ? (Integer) header.getField(SOURCE_ID) : 0,
                     new SourceEntity(defaultName(header.getSourceTitle())), database.getSourceBase());
         } catch (IllegalArgumentException e) {
            throw new ChessBaseInvalidDataException("Failed to create GameHeader entry due to invalid entity data reference", e);
@@ -463,7 +488,18 @@ public class GameLoader {
         return name == null ? "" : name;
     }
 
-    <T extends Entity & Comparable<T>> T resolveEntity(Integer id, T key, EntityBase<T> base) {
+    private <T extends Entity & Comparable<T>> T resolveEntity(EntityBase<T> base, String entityType, int id, Game game, boolean allowNone) throws ChessBaseInvalidDataException {
+        if (id == -1 && allowNone) {
+            return null;
+        }
+        T entity = base.get(id);
+        if (entity == null) {
+            throw new ChessBaseInvalidDataException(String.format("Invalid %s in game %d (id %d does not exist)", entityType, game.getId(), id));
+        }
+        return entity;
+    }
+
+    <T extends Entity & Comparable<T>> T resolveOrCreateEntity(Integer id, T key, EntityBase<T> base) {
         T entity;
         if (id != null && id > 0) {
             entity = base.get(id);
