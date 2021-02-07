@@ -15,8 +15,7 @@ import se.yarin.cbhlib.util.CBUtil;
 import se.yarin.cbhlib.validation.Validator;
 import se.yarin.morphy.cli.columns.*;
 
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
 import java.nio.file.*;
 import java.util.*;
 import java.util.concurrent.Callable;
@@ -39,11 +38,8 @@ class ChessBaseCommand implements Runnable {
     }
 }
 
-@CommandLine.Command(name = "games", mixinStandardHelpOptions = true)
-class Games implements Callable<Integer> {
-    private static final Logger log = LogManager.getLogger();
-
-    @CommandLine.Parameters(index = "0", description = "The ChessBase file to load, or a folder to search in multiple databases")
+abstract class BaseCommand {
+    @CommandLine.Parameters(index = "0", description = "The ChessBase file to load, or a folder to search in multiple databases, or a txt file containing a list of database to load")
     private File file;
 
     @CommandLine.Option(names = {"-R", "--recursive"}, description = "Scan the folder recursively for databases")
@@ -51,6 +47,46 @@ class Games implements Callable<Integer> {
 
     @CommandLine.Option(names = "-v", description = "Output info logging; use twice for debug logging")
     private boolean[] verbose;
+
+    protected void setupGlobalOptions() {
+        if (verbose != null) {
+            String level = verbose.length == 1 ? "info" : "debug";
+            org.apache.logging.log4j.core.LoggerContext context = ((org.apache.logging.log4j.core.LoggerContext) LogManager.getContext(false));
+            ConfigurationSource configurationSource = ConfigurationSource.fromResource("log4j2-" + level + ".xml", null);
+            Configuration configuration = ConfigurationFactory.getInstance().getConfiguration(context, configurationSource);
+            context.reconfigure(configuration);
+        }
+        Locale.setDefault(Locale.US);
+    }
+
+    protected Stream<File> getDatabaseStream() throws IOException {
+        if (file.isDirectory()) {
+            return Files.walk(file.toPath(), recursive ? 30 : 1)
+                    .filter(path -> path.toString().toLowerCase().endsWith(".cbh"))
+                    .map(Path::toFile);
+        }
+
+        if (!file.isFile()) {
+            throw new IllegalArgumentException("Database does not exist: " + file);
+        }
+
+        if (file.getPath().toLowerCase().endsWith(".txt")) {
+            BufferedReader reader = new BufferedReader(new FileReader(file));
+            ArrayList<File> files = new ArrayList<>();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                files.add(new File(line));
+            }
+            return files.stream();
+        }
+
+        return Stream.of(file);
+    }
+}
+
+@CommandLine.Command(name = "games", mixinStandardHelpOptions = true)
+class Games extends BaseCommand implements Callable<Integer> {
+    private static final Logger log = LogManager.getLogger();
 
     @CommandLine.Option(names = "--limit", description = "Max number of games to output")
     private int limit = 0;
@@ -135,31 +171,12 @@ class Games implements Callable<Integer> {
 
     @Override
     public Integer call() throws IOException {
-        if (verbose != null) {
-            String level = verbose.length == 1 ? "info" : "debug";
-            org.apache.logging.log4j.core.LoggerContext context = ((org.apache.logging.log4j.core.LoggerContext) LogManager.getContext(false));
-            ConfigurationSource configurationSource = ConfigurationSource.fromResource("log4j2-" + level + ".xml", null);
-            Configuration configuration = ConfigurationFactory.getInstance().getConfiguration(context, configurationSource);
-            context.reconfigure(configuration);
-        }
-        Locale.setDefault(Locale.US);
-
-        Stream<File> cbhStream;
-        if (file.isDirectory()) {
-            cbhStream = Files.walk(file.toPath(), recursive ? 30 : 1)
-                    .filter(path -> path.toString().toLowerCase().endsWith(".cbh"))
-                    .map(Path::toFile);
-        } else if (file.isFile()) {
-            cbhStream = Stream.of(file);
-        } else {
-            System.err.println("Database does not exist: " + file);
-            return 1;
-        }
+        setupGlobalOptions();
 
         GameConsumer gameConsumer = createGameConsumer();
         gameConsumer.init();
 
-        cbhStream.forEach(file -> {
+        getDatabaseStream().forEach(file -> {
             log.info("Opening " + file);
             try (Database db = Database.open(file)) {
                 // Speeds up performance quite a lot, and we should be fairly certain that the moves in the CBH databases are valid
@@ -364,10 +381,9 @@ class Games implements Callable<Integer> {
 
 
 @CommandLine.Command(name = "players", mixinStandardHelpOptions = true)
-class Players implements Callable<Integer> {
+class Players extends BaseCommand implements Callable<Integer> {
 
-    @CommandLine.Parameters(index = "0", description = "The ChessBase file to load")
-    private File cbhFile;
+    private static final Logger log = LogManager.getLogger();
 
     @CommandLine.Option(names = "--count", description = "Max number of players to list")
     int maxPlayers = 20;
@@ -377,33 +393,39 @@ class Players implements Callable<Integer> {
 
     @Override
     public Integer call() throws IOException {
-        try (Database db = Database.open(cbhFile)) {
+        setupGlobalOptions();
 
-            PlayerBase players = db.getPlayerBase();
-            int count = 0;
-            for (PlayerEntity player : players.iterable()) {
-                if (count >= maxPlayers) break;
-                String line;
-                if (hex) {
-                    line = String.format("%7d:  %-30s %-30s %6d", player.getId(), CBUtil.toHexString(player.getRaw()).substring(0, 30), player.getFullName(), player.getCount());
-                } else {
-                    line = String.format("%7d:  %-30s %6d", player.getId(), player.getFullName(), player.getCount());
+        getDatabaseStream().forEach(file -> {
+            log.info("Opening " + file);
+            try (Database db = Database.open(file)) {
+
+                PlayerBase players = db.getPlayerBase();
+                int count = 0;
+                for (PlayerEntity player : players.iterable()) {
+                    if (count >= maxPlayers) break;
+                    String line;
+                    if (hex) {
+                        line = String.format("%7d:  %-30s %-30s %6d", player.getId(), CBUtil.toHexString(player.getRaw()).substring(0, 30), player.getFullName(), player.getCount());
+                    } else {
+                        line = String.format("%7d:  %-30s %6d", player.getId(), player.getFullName(), player.getCount());
+                    }
+                    System.out.println(line);
                 }
-                System.out.println(line);
+                System.out.println();
+                System.out.println("Total: " + players.getCount());
+            } catch (IOException e) {
+                System.err.println("IO error when processing " + file);
             }
-            System.out.println();
-            System.out.println("Total: " + players.getCount());
-        }
+        });
 
         return 0;
     }
 }
 
 @CommandLine.Command(name = "tournaments", mixinStandardHelpOptions = true)
-class Tournaments implements Callable<Integer> {
+class Tournaments extends BaseCommand implements Callable<Integer> {
 
-    @CommandLine.Parameters(index = "0", description = "The ChessBase file to load")
-    private File cbhFile;
+    private static final Logger log = LogManager.getLogger();
 
     @CommandLine.Option(names = "--count", description = "Max number of tournaments to list")
     int maxTournaments = 20;
@@ -414,55 +436,41 @@ class Tournaments implements Callable<Integer> {
     @CommandLine.Option(names = "--hex", description = "Show tournament key in hexadecimal")
     boolean hex = false;
 
-    @CommandLine.Option(names = "-v", description = "Output info logging; use twice for debug logging")
-    private boolean[] verbose;
-
     @Override
     public Integer call() throws IOException {
-        if (verbose != null) {
-            String level = verbose.length == 1 ? "info" : "debug";
-            org.apache.logging.log4j.core.LoggerContext context = ((org.apache.logging.log4j.core.LoggerContext) LogManager.getContext(false));
-            ConfigurationSource configurationSource = ConfigurationSource.fromResource("log4j2-" + level + ".xml", null);
-            Configuration configuration = ConfigurationFactory.getInstance().getConfiguration(context, configurationSource);
-            context.reconfigure(configuration);
-        }
-        Locale.setDefault(Locale.US);
+        setupGlobalOptions();
 
-        try (Database db = Database.open(cbhFile)) {
-            TournamentBase tournaments = db.getTournamentBase();
-            int count = 0;
-            Iterable<TournamentEntity> iterable = sorted ? tournaments.iterableOrderedAscending() : tournaments.iterable();
-            for (TournamentEntity tournament : iterable) {
-                if (count >= maxTournaments) break;
-                String line;
-                String year = tournament.getDate().year() == 0 ? "????" : tournament.getDate().toPrettyString().substring(0, 4);
-                if (hex) {
-                    line = String.format("%7d:  %4s %-30s %-30s %6d", tournament.getId(), year, CBUtil.toHexString(tournament.getRaw()).substring(0, 30), tournament.getTitle(), tournament.getCount());
-                } else {
-                    line = String.format("%7d:  %4s %-30s %6d", tournament.getId(), year, tournament.getTitle(), tournament.getCount());
+        getDatabaseStream().forEach(file -> {
+            log.info("Opening " + file);
+            try (Database db = Database.open(file)) {
+                TournamentBase tournaments = db.getTournamentBase();
+                int count = 0;
+                Iterable<TournamentEntity> iterable = sorted ? tournaments.iterableOrderedAscending() : tournaments.iterable();
+                for (TournamentEntity tournament : iterable) {
+                    if (count >= maxTournaments) break;
+                    String line;
+                    String year = tournament.getDate().year() == 0 ? "????" : tournament.getDate().toPrettyString().substring(0, 4);
+                    if (hex) {
+                        line = String.format("%7d:  %4s %-30s %-30s %6d", tournament.getId(), year, CBUtil.toHexString(tournament.getRaw()).substring(0, 30), tournament.getTitle(), tournament.getCount());
+                    } else {
+                        line = String.format("%7d:  %4s %-30s %6d", tournament.getId(), year, tournament.getTitle(), tournament.getCount());
+                    }
+                    System.out.println(line);
                 }
-                System.out.println(line);
+                System.out.println();
+                System.out.println("Total: " + tournaments.getCount());
+            }  catch (IOException e) {
+                System.err.println("IO error when processing " + file);
             }
-            System.out.println();
-            System.out.println("Total: " + tournaments.getCount());
-        }
+        });
         return 0;
     }
 }
 
 @CommandLine.Command(name = "check", mixinStandardHelpOptions = true)
-class Check implements Callable<Integer> {
+class Check extends BaseCommand implements Callable<Integer> {
 
     private static final Logger log = LogManager.getLogger();
-
-    @CommandLine.Parameters(index = "0", description = "The ChessBase file to load, or a folder to search in multiple databases")
-    private File file;
-
-    @CommandLine.Option(names = {"-R", "--recursive"}, description = "Scan the folder recursively for databases")
-    private boolean recursive = false;
-
-    @CommandLine.Option(names = "-v", description = "Output info logging; use twice for debug logging")
-    private boolean[] verbose;
 
     @CommandLine.Option(names = "--no-progress-bar", negatable = true, description = "Show progress bar")
     private boolean showProgressBar = true;
@@ -502,14 +510,7 @@ class Check implements Callable<Integer> {
 
     @Override
     public Integer call() throws IOException {
-        if (verbose != null) {
-            String level = verbose.length == 1 ? "info" : "debug";
-            org.apache.logging.log4j.core.LoggerContext context = ((org.apache.logging.log4j.core.LoggerContext) LogManager.getContext(false));
-            ConfigurationSource configurationSource = ConfigurationSource.fromResource("log4j2-" + level + ".xml", null);
-            Configuration configuration = ConfigurationFactory.getInstance().getConfiguration(context, configurationSource);
-            context.reconfigure(configuration);
-        }
-        Locale.setDefault(Locale.US);
+        setupGlobalOptions();
 
         Map<Validator.Checks, Boolean> checkFlags = Map.of(
             Validator.Checks.ENTITY_PLAYERS, checkPlayers && checkEntities,
@@ -524,22 +525,10 @@ class Check implements Callable<Integer> {
             Validator.Checks.GAMES_LOAD, loadGames
         );
 
-        Stream<File> cbhStream;
-        if (file.isDirectory()) {
-            cbhStream = Files.walk(file.toPath(), recursive ? 30 : 1)
-                    .filter(path -> path.toString().toLowerCase().endsWith(".cbh"))
-                    .map(Path::toFile);
-        } else if (file.isFile()) {
-            cbhStream = Stream.of(file);
-        } else {
-            System.err.println("Database does not exist: " + file);
-            return 1;
-        }
-
         EnumSet<Validator.Checks> checks = EnumSet.allOf(Validator.Checks.class);
         checks.removeIf(flag -> !checkFlags.get(flag));
 
-        cbhStream.forEach(file -> {
+        getDatabaseStream().forEach(file -> {
             log.info("Opening " + file);
 
             try (Database db = Database.open(file)) {
