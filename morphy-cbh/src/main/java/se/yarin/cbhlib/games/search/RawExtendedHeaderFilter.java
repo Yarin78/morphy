@@ -28,6 +28,7 @@ public class RawExtendedHeaderFilter extends SearchFilterBase implements Seriali
     public boolean matches(Game game) {
         // The raw filter is a bit special as the filter can only happen when scanning a range of games
         // It means that it will not work when looking at individual games
-        return true;
+        // Make sure to not match also in case the cbj file doesn't even exist (will cause weird errors)
+        return game.getDatabase().getExtendedHeaderBase().canGetRaw();
     }
 }

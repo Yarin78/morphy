@@ -25,7 +25,7 @@ import static se.yarin.cbhlib.util.parser.TokenType.*;
  * factor      -> unary ( ( "/" | "*" ) unary )*
  * unary       -> ( "!" | "-" | "~" ) unary | primary
  * function    -> identifier "(" expression ")"
- * primary     -> INTEGER | true | false | functino | "(" expression ")"
+ * primary     -> INTEGER | true | false | function | "(" expression ")"
  */
 public class Parser {
     private static final Logger log = LoggerFactory.getLogger(Parser.class);

@@ -200,15 +200,29 @@ All integers are stored in Big Endian (most significant byte first) unless other
 
 | Offset | Bytes | Description
 | --- | --- | ---
-| 0   | 4   | .cbj file version (CB? = `1`, CB? = `7`, CB12 = `8`, CB13-CB16 = `11`)
-| 4   | 4   | Size of the game records (`120` in the more recent versions of CB)
-| 8   | 4   | Number of game records
-| 12  | 20  | Presumably random dirty bytes, perhaps reserved for future use (may contain parts of random strings etc)
+| 0   | 4   | .cbj file version, see table below.
+| 4   | 4   | Size of the game records. `120` in newer database, but earlier versions have shorter headers; see table below.
+| 8   | 4   | Number of game records.
+| 12  | 20  | Presumably random dirty bytes, perhaps reserved for future use (may contain parts of random strings etc).
+
+The version of the .cbj file loosely correspond to the ChessBase version. The .cbj file itself did not exist in the earliest versions
+(the .cbh file format was introduced in ChessBase 6.0).
+
+| ChessBase version | .cbj file version | Game record size
+| --- | --- | ---
+| 8? | 1 | 8
+| 9? | 5 | 30
+| 10? | 6 | 38
+| 11? | 7 | 74
+| 12 | 8 | 78
+| 13-16 | 11 | 120
+
+If a database has an old version of the extended header and a game is saved to the database, the entire .cbj file is upgraded to the latest version and the additional fields are assigned default values.
 
 ### <a name="cbj_game">CBJ game record</a>
 
-The id-references to teams are 0-based; see [Entities](entities.md).
-For games with no teams, `-1` is specified instead (note that this differs compared to how entities are referenced in the .cbh file).
+The id-references to teams and tags are 0-based; see [Entities](entities.md).
+For games with no teams or tag, `-1` is specified instead (note that this differs compared to how entities are referenced in the .cbh file).
 
 | Offset | Bytes | Description
 | --- | --- | ---
@@ -220,13 +234,13 @@ For games with no teams, `-1` is specified instead (note that this differs compa
 | 30  | 8   | Offset into the .cbg file where moves data start. Same as in the .cbh file, but 64 bit version. 
 | 38  | 16  | <a href="#rating_type">Rating type for White player</a>
 | 54  | 16  | <a href="#rating_type">Rating type for Black player</a>
-| 70  | 4   | Unknown
-| 74  | 4   | Unknown
-| 78  | 2   | Game version (? increased every time game is saved ?)
-| 80  | 8   | Timestamp when the game was originally created
+| 70  | 4   | Unknown. Fairly often set, but data seems very random, unsure if it's actually used. Stays unchanged when game is changed or copied.
+| 74  | 4   | Unknown. Fairly often set, but data seems very random, unsure if it's actually used. Stays unchanged when game is changed or copied.
+| 78  | 2   | Version. Starts at 1, increases every time the game is saved. Also bumped when copied to a new database.
+| 80  | 8   | The timestamp when the game was originally created (also a globally unique ID of the game). Remains unchanged when game is copied to a new database. If multiple games are created at the same time, they get sequentially increasing numbers.
 | 88  | 20  | <a href="#endgame_info">Endgame information</a>
-| 108 | 4   | Timestamp when the game was last updated
-| 116 | 4   | Unknown. Seems to be `0` when creation time stamp exist and `-1` otherwise.
+| 108 | 4   | Timestamp when the game was last save. When a game is copied between databases, it's not updated though. 
+| 116 | 4   | The id of the game tag (-1 if no game tag)
 
 ### <a name="rating_type">Rating type</a>
 

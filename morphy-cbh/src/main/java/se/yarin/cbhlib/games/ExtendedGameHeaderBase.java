@@ -194,6 +194,10 @@ public class ExtendedGameHeaderBase implements ExtendedGameHeaderSerializer {
         return StreamSupport.stream(iterable.spliterator(), false);
     }
 
+    public boolean canGetRaw() {
+        return storage instanceof PersistentExtendedGameHeaderStorage;
+    }
+
     /**
      * Gets the underlying raw data for an extended game header.
      * For debugging purposes only.
@@ -367,19 +371,14 @@ public class ExtendedGameHeaderBase implements ExtendedGameHeaderSerializer {
                     // Invalid value - must be within 21st century!
                     creationTimestamp = 0;
                 }
+                builder.creationTimestamp(creationTimestamp);
+
                 int position = buf.position();
                 builder.endgameInfo(EndgameInfo.deserialize(buf));
                 buf.position(position + 20);
 
                 builder.lastChangedTimestamp(ByteBufferUtil.getLongB(buf));
-
-                // Not sure about this; it's always 0 when creationTimestamp exists
-                // and none zero (usually -1) otherwise. Probably some check against dirty data.
-                int valid = ByteBufferUtil.getIntB(buf);
-                if (valid != 0) {
-                    creationTimestamp = 0;
-                }
-                builder.creationTimestamp(creationTimestamp);
+                int gameTagId = ByteBufferUtil.getIntB(buf); // TODO
             }
         } catch (BufferUnderflowException e) {
             log.warn("Unexpected end of extended game header buffer", e);

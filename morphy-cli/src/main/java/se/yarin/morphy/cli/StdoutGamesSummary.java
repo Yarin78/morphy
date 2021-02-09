@@ -13,7 +13,7 @@ public class StdoutGamesSummary extends GameConsumerBase {
     private final boolean showTotal;
     private final Collection<GameColumn> columns;
 
-    public static final String DEFAULT_COLUMNS = "id,name,rating,result,moves,eco,tournament,date";
+    public static final String DEFAULT_COLUMNS = "id,name,rating,result,num-moves,eco,tournament,date";
 
     public StdoutGamesSummary(boolean showTotal) {
         this(showTotal, parseColumns(DEFAULT_COLUMNS));

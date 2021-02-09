@@ -63,6 +63,7 @@ abstract class BaseCommand {
         if (file.isDirectory()) {
             return Files.walk(file.toPath(), recursive ? 30 : 1)
                     .filter(path -> path.toString().toLowerCase().endsWith(".cbh"))
+                    .filter(path -> !path.getFileName().toString().startsWith("._"))
                     .map(Path::toFile);
         }
 
@@ -540,7 +541,7 @@ class Check extends BaseCommand implements Callable<Integer> {
                 // At least one error that the ChessBase integrity checker would consider an error found
                 // It could be just a single game that has some bad moves though
                 log.error("Database ERROR: " + file);
-            } catch (Exception e) {
+            } catch (Exception | AssertionError e) {
                 // Something was not caught properly
                 log.error("Database CRITICAL ERROR: " + file, e);
             }

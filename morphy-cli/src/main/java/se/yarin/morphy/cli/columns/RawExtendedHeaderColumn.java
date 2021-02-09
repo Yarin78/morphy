@@ -28,6 +28,10 @@ public class RawExtendedHeaderColumn implements GameColumn {
     @Override
     public String getValue(Game game) {
         byte[] raw = game.getDatabase().getExtendedHeaderBase().getRaw(game.getId());
+        if (raw.length < start+length) {
+            // In case the length of the cbj record is shorter than expected
+            raw = Arrays.copyOf(raw, start+length);
+        }
         byte[] dest = Arrays.copyOfRange(raw, start, start+length);
         return CBUtil.toHexString(dest);
     }

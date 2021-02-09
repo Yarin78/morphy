@@ -1,9 +1,6 @@
 package se.yarin.morphy.cli.columns;
 
-import se.yarin.cbhlib.Database;
 import se.yarin.cbhlib.Game;
-import se.yarin.cbhlib.games.GameHeader;
-import se.yarin.chess.GameModel;
 
 import java.util.Arrays;
 import java.util.stream.Collectors;

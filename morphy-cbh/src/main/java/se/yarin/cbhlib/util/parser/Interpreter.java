@@ -62,6 +62,10 @@ public class Interpreter implements Expr.Visitor<Object> {
     @Override
     public Object visitFunctionExpr(Expr.Function expr) {
         int index = (int) evaluate(expr.parameter);
-        return expr.function.apply(data, index);
+        try {
+            return expr.function.apply(data, index);
+        } catch (ArrayIndexOutOfBoundsException e) {
+            return 0;
+        }
     }
 }
