@@ -1,4 +1,4 @@
-package se.yarin.morphy.cli;
+package se.yarin.morphy.cli.games;
 
 import se.yarin.cbhlib.games.search.GameSearcher;
 

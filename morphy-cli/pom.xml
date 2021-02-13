@@ -47,7 +47,7 @@
                         <configuration>
                             <archive>
                                 <manifest>
-                                    <mainClass>se.yarin.morphy.cli.ChessBaseCommand</mainClass>
+                                    <mainClass>se.yarin.morphy.cli.commands.ChessBaseCommand</mainClass>
                                 </manifest>
                                 <manifestEntries>
                                     <Multi-Release>true</Multi-Release>

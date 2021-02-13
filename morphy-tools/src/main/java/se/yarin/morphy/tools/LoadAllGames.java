@@ -4,7 +4,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import se.yarin.cbhlib.annotations.AnnotationBase;
 import se.yarin.cbhlib.exceptions.ChessBaseInvalidDataException;
-import se.yarin.cbhlib.exceptions.ChessBaseUnsupportedException;
 import se.yarin.cbhlib.games.GameHeader;
 import se.yarin.cbhlib.games.GameHeaderBase;
 import se.yarin.cbhlib.moves.MovesBase;
@@ -130,8 +129,6 @@ public class LoadAllGames {
 //            }
         } catch (IOException e) {
             log.error("IO error reading " + headerFile, e);
-        } catch (ChessBaseUnsupportedException e) {
-            log.error("Error parsing data", e);
         } finally {
             if (base != null) {
                 try {

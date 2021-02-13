@@ -1,92 +1,31 @@
-package se.yarin.morphy.cli;
+package se.yarin.morphy.cli.commands;
 
 import me.tongfei.progressbar.ProgressBar;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.core.config.Configuration;
-import org.apache.logging.log4j.core.config.ConfigurationFactory;
-import org.apache.logging.log4j.core.config.ConfigurationSource;
 import picocli.CommandLine;
 import se.yarin.cbhlib.Database;
-import se.yarin.cbhlib.entities.*;
-import se.yarin.cbhlib.exceptions.ChessBaseException;
+import se.yarin.cbhlib.entities.MultiPlayerSearcher;
+import se.yarin.cbhlib.entities.PlayerSearcher;
+import se.yarin.cbhlib.entities.SinglePlayerSearcher;
+import se.yarin.cbhlib.entities.SingleTournamentSearcher;
 import se.yarin.cbhlib.games.search.*;
-import se.yarin.cbhlib.util.CBUtil;
-import se.yarin.cbhlib.validation.Validator;
+import se.yarin.morphy.cli.games.DatabaseBuilder;
+import se.yarin.morphy.cli.games.GameConsumer;
+import se.yarin.morphy.cli.games.StatsGameConsumer;
+import se.yarin.morphy.cli.games.StdoutGamesSummary;
 import se.yarin.morphy.cli.columns.*;
 
-import java.io.*;
-import java.nio.file.*;
-import java.util.*;
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.FileAlreadyExistsException;
+import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
-@CommandLine.Command(name = "cb", description = "Performs an operation on a ChessBase file",
-        mixinStandardHelpOptions = true,
-        subcommands = { Games.class, Players.class, Tournaments.class, Check.class})
-class ChessBaseCommand implements Runnable {
-
-    @Override
-    public void run() {
-        System.out.println("A subcommand must be specified; use --help");
-    }
-
-    public static void main(String[] args) {
-        int exitCode = new CommandLine(new ChessBaseCommand()).execute(args);
-        System.exit(exitCode);
-    }
-}
-
-abstract class BaseCommand {
-    @CommandLine.Parameters(index = "0", description = "The ChessBase file to load, or a folder to search in multiple databases, or a txt file containing a list of database to load")
-    private File file;
-
-    @CommandLine.Option(names = {"-R", "--recursive"}, description = "Scan the folder recursively for databases")
-    private boolean recursive = false;
-
-    @CommandLine.Option(names = "-v", description = "Output info logging; use twice for debug logging")
-    private boolean[] verbose;
-
-    protected void setupGlobalOptions() {
-        if (verbose != null) {
-            String level = verbose.length == 1 ? "info" : "debug";
-            org.apache.logging.log4j.core.LoggerContext context = ((org.apache.logging.log4j.core.LoggerContext) LogManager.getContext(false));
-            ConfigurationSource configurationSource = ConfigurationSource.fromResource("log4j2-" + level + ".xml", null);
-            Configuration configuration = ConfigurationFactory.getInstance().getConfiguration(context, configurationSource);
-            context.reconfigure(configuration);
-        }
-        Locale.setDefault(Locale.US);
-    }
-
-    protected Stream<File> getDatabaseStream() throws IOException {
-        if (file.isDirectory()) {
-            return Files.walk(file.toPath(), recursive ? 30 : 1)
-                    .filter(path -> path.toString().toLowerCase().endsWith(".cbh"))
-                    .filter(path -> !path.getFileName().toString().startsWith("._"))
-                    .map(Path::toFile);
-        }
-
-        if (!file.isFile()) {
-            throw new IllegalArgumentException("Database does not exist: " + file);
-        }
-
-        if (file.getPath().toLowerCase().endsWith(".txt")) {
-            BufferedReader reader = new BufferedReader(new FileReader(file));
-            ArrayList<File> files = new ArrayList<>();
-            String line;
-            while ((line = reader.readLine()) != null) {
-                files.add(new File(line));
-            }
-            return files.stream();
-        }
-
-        return Stream.of(file);
-    }
-}
 
 @CommandLine.Command(name = "games", mixinStandardHelpOptions = true)
-class Games extends BaseCommand implements Callable<Integer> {
+public class Games extends BaseCommand implements Callable<Integer> {
     private static final Logger log = LogManager.getLogger();
 
     @CommandLine.Option(names = "--limit", description = "Max number of games to output")
@@ -377,176 +316,5 @@ class Games extends BaseCommand implements Callable<Integer> {
             }
         }
         return gameSearcher;
-    }
-}
-
-
-@CommandLine.Command(name = "players", mixinStandardHelpOptions = true)
-class Players extends BaseCommand implements Callable<Integer> {
-
-    private static final Logger log = LogManager.getLogger();
-
-    @CommandLine.Option(names = "--count", description = "Max number of players to list")
-    int maxPlayers = 20;
-
-    @CommandLine.Option(names = "--hex", description = "Show player key in hexadecimal")
-    boolean hex = false;
-
-    @Override
-    public Integer call() throws IOException {
-        setupGlobalOptions();
-
-        getDatabaseStream().forEach(file -> {
-            log.info("Opening " + file);
-            try (Database db = Database.open(file)) {
-
-                PlayerBase players = db.getPlayerBase();
-                int count = 0;
-                for (PlayerEntity player : players.iterable()) {
-                    if (count >= maxPlayers) break;
-                    String line;
-                    if (hex) {
-                        line = String.format("%7d:  %-30s %-30s %6d", player.getId(), CBUtil.toHexString(player.getRaw()).substring(0, 30), player.getFullName(), player.getCount());
-                    } else {
-                        line = String.format("%7d:  %-30s %6d", player.getId(), player.getFullName(), player.getCount());
-                    }
-                    System.out.println(line);
-                }
-                System.out.println();
-                System.out.println("Total: " + players.getCount());
-            } catch (IOException e) {
-                System.err.println("IO error when processing " + file);
-            }
-        });
-
-        return 0;
-    }
-}
-
-@CommandLine.Command(name = "tournaments", mixinStandardHelpOptions = true)
-class Tournaments extends BaseCommand implements Callable<Integer> {
-
-    private static final Logger log = LogManager.getLogger();
-
-    @CommandLine.Option(names = "--count", description = "Max number of tournaments to list")
-    int maxTournaments = 20;
-
-    @CommandLine.Option(names = "--sorted", description = "Sort by default sorting order (instead of id)")
-    boolean sorted = false;
-
-    @CommandLine.Option(names = "--hex", description = "Show tournament key in hexadecimal")
-    boolean hex = false;
-
-    @Override
-    public Integer call() throws IOException {
-        setupGlobalOptions();
-
-        getDatabaseStream().forEach(file -> {
-            log.info("Opening " + file);
-            try (Database db = Database.open(file)) {
-                TournamentBase tournaments = db.getTournamentBase();
-                int count = 0;
-                Iterable<TournamentEntity> iterable = sorted ? tournaments.iterableOrderedAscending() : tournaments.iterable();
-                for (TournamentEntity tournament : iterable) {
-                    if (count >= maxTournaments) break;
-                    String line;
-                    String year = tournament.getDate().year() == 0 ? "????" : tournament.getDate().toPrettyString().substring(0, 4);
-                    if (hex) {
-                        line = String.format("%7d:  %4s %-30s %-30s %6d", tournament.getId(), year, CBUtil.toHexString(tournament.getRaw()).substring(0, 30), tournament.getTitle(), tournament.getCount());
-                    } else {
-                        line = String.format("%7d:  %4s %-30s %6d", tournament.getId(), year, tournament.getTitle(), tournament.getCount());
-                    }
-                    System.out.println(line);
-                }
-                System.out.println();
-                System.out.println("Total: " + tournaments.getCount());
-            }  catch (IOException e) {
-                System.err.println("IO error when processing " + file);
-            }
-        });
-        return 0;
-    }
-}
-
-@CommandLine.Command(name = "check", mixinStandardHelpOptions = true)
-class Check extends BaseCommand implements Callable<Integer> {
-
-    private static final Logger log = LogManager.getLogger();
-
-    @CommandLine.Option(names = "--no-progress-bar", negatable = true, description = "Show progress bar")
-    private boolean showProgressBar = true;
-
-    @CommandLine.Option(names = "--no-players", negatable = true, description = "Check Player entities (true by default)")
-    boolean checkPlayers = true;
-
-    @CommandLine.Option(names = "--no-tournaments", negatable = true, description = "Check Tournament entities (true by default)")
-    boolean checkTournaments = true;
-
-    @CommandLine.Option(names = "--no-annotators", negatable = true, description = "Check Annotator entities (true by default)")
-    boolean checkAnnotators = true;
-
-    @CommandLine.Option(names = "--no-sources", negatable = true, description = "Check Source entities (true by default)")
-    boolean checkSources = true;
-
-    @CommandLine.Option(names = "--no-teams", negatable = true, description = "Check Team entities (true by default)")
-    boolean checkTeams = true;
-
-    @CommandLine.Option(names = "--no-entities", negatable = true, description = "Check entities (true by default)")
-    boolean checkEntities = true;
-
-    @CommandLine.Option(names = "--no-entity-stats", negatable = true, description = "Check entity statistics (true by default)")
-    boolean checkEntityStats = true;
-
-    @CommandLine.Option(names = "--no-entity-sort-order", negatable = true, description = "Check entity sort order (true by default)")
-    boolean checkEntitySortOrder = true;
-
-    @CommandLine.Option(names = "--no-entity-integrity", negatable = true, description = "Check entity file integrity (true by default)")
-    boolean checkEntityFileIntegrity = true;
-
-    @CommandLine.Option(names = "--no-games", negatable = true, description = "Check game headers (true by default)")
-    boolean checkGameHeaders = true;
-
-    @CommandLine.Option(names = "--no-load-games", negatable = true, description = "Check all moves, annotations etc in game data (true by default)")
-    boolean loadGames = true;
-
-    @Override
-    public Integer call() throws IOException {
-        setupGlobalOptions();
-
-        Map<Validator.Checks, Boolean> checkFlags = Map.of(
-            Validator.Checks.ENTITY_PLAYERS, checkPlayers && checkEntities,
-            Validator.Checks.ENTITY_TOURNAMENTS, checkTournaments && checkEntities,
-            Validator.Checks.ENTITY_ANNOTATORS, checkAnnotators && checkEntities,
-            Validator.Checks.ENTITY_SOURCES, checkSources && checkEntities,
-            Validator.Checks.ENTITY_TEAMS, checkTeams && checkEntities,
-            Validator.Checks.ENTITY_STATISTICS, checkEntityStats && checkEntities,
-            Validator.Checks.ENTITY_SORT_ORDER, checkEntitySortOrder && checkEntities,
-            Validator.Checks.ENTITY_DB_INTEGRITY, checkEntityFileIntegrity && checkEntities,
-            Validator.Checks.GAMES, checkGameHeaders,
-            Validator.Checks.GAMES_LOAD, loadGames
-        );
-
-        EnumSet<Validator.Checks> checks = EnumSet.allOf(Validator.Checks.class);
-        checks.removeIf(flag -> !checkFlags.get(flag));
-
-        getDatabaseStream().forEach(file -> {
-            log.info("Opening " + file);
-
-            try (Database db = Database.open(file)) {
-                Validator validator = new Validator();
-                db.getMovesBase().getMovesSerializer().setLogDetailedErrors(true);
-                validator.validate(db, checks, true, showProgressBar);
-                log.info("Database OK: " + file);
-            } catch (ChessBaseException e) {
-                // At least one error that the ChessBase integrity checker would consider an error found
-                // It could be just a single game that has some bad moves though
-                log.error("Database ERROR: " + file);
-            } catch (Exception | AssertionError e) {
-                // Something was not caught properly
-                log.error("Database CRITICAL ERROR: " + file, e);
-            }
-        });
-
-        return 0;
     }
 }

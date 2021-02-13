@@ -1,8 +1,7 @@
-package se.yarin.morphy.cli;
+package se.yarin.morphy.cli.games;
 
 import se.yarin.cbhlib.Game;
 import se.yarin.cbhlib.exceptions.ChessBaseException;
-import se.yarin.cbhlib.games.search.GameSearcher;
 
 public class StatsGameConsumer extends GameConsumerBase {
     private int numFailedModels = 0;
