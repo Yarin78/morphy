@@ -149,7 +149,7 @@ public class TournamentBase extends EntityBase<TournamentEntity> {
             .place(place)
             .date(CBUtil.decodeDate(ByteBufferUtil.getIntL(buf)));
         int typeByte = ByteBufferUtil.getUnsignedByte(buf);
-        builder.teamTournament((ByteBufferUtil.getUnsignedByte(buf) & 1) == 1);
+        builder.teamTournament((ByteBufferUtil.getUnsignedByte(buf) & 1) == 1); // TODO: Ensure other bits are zero
         builder.nation(CBUtil.decodeNation(ByteBufferUtil.getUnsignedByte(buf)));
         int unknownByte1 = ByteBufferUtil.getUnsignedByte(buf);
         builder.category(ByteBufferUtil.getUnsignedByte(buf));

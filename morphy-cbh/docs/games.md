@@ -9,7 +9,7 @@ if the record is a game or a text.
 
 Games are referenced by their id; the first game/text has id 1.
 
-## CBH file format
+## <a name="cbh_file">CBH file format</a>
 
 The file starts with a <a href="#cbh_header">header</a> containing metadata about the file itself. Then follows one record per <a href="#cbh_game">game</a>/<a href="#cbh_text">text</a>. Both header and records are 46 bytes each.
 
@@ -39,7 +39,7 @@ All integers are stored in Big Endian (most significant byte first) unless other
 
 ### <a name="cbh_game">CBH game record</a>
 
-The id-references to player, tournament, annotator and source are all 0-based; see [Entities](entities.md).
+The id references to players, tournament, annotator and source are all 0-based; see [Entities](entities.md).
 For games with no annotator, the game will refer to an annotator with an empty name.
 
 | Offset | Bytes | Description
@@ -52,17 +52,17 @@ For games with no annotator, the game will refer to an annotator with an empty n
 | 15  | 3    | The id of the tournament
 | 18  | 3    | The id of the annotator
 | 21  | 3    | The id of the source
-| 24  | 3    | <a href="#date">Game date</a>
-| 27  | 1    | <a href="#game_result">Game result</a>
-| 28  | 1    | <a href="https://en.wikipedia.org/wiki/Numeric_Annotation_Glyphs">Line evaluation NAG</a> (only set if Game result was set to `Line`)
-| 29  | 1    | Round (`0` = unset)
-| 30  | 1    | Subround (`0` = unset)
-| 31  | 2    | White rating (`0` = unset)
-| 33  | 2    | Black rating (`0` = unset)
-| 35  | 2    | <a href="#eco">ECO code</a> _or_ Chess960 starting position (65536 - 960 + <a href="https://en.wikipedia.org/wiki/Chess960_numbering_scheme">&lt;position id&gt;</a>)
-| 37  | 2    | <a href="#medals">Medals</a>
-| 39  | 4    | <a href="#annotation_flags">Annotation flags</a>
-| 43  | 2    | <a href="#annotation_magnitude">Annotation magnitude</a>
+| 24  | 3    | <a href="types.md#date">Game date</a>
+| 27  | 1    | <a href="types.md#game_result">Game result</a>
+| 28  | 1    | <a href="types.md#nag">Line evaluation NAG</a> (only set if Game result was set to `Line`)
+| 29  | 1    | Round (`0` if not specified)
+| 30  | 1    | Subround (`0` if not specified)
+| 31  | 2    | White rating (`0` if not specified)
+| 33  | 2    | Black rating (`0` if not specified)
+| 35  | 2    | <a href="types.md#eco">ECO code</a> _or_ Chess960 starting position (65536 - 960 + <a href="https://en.wikipedia.org/wiki/Chess960_numbering_scheme">&lt;position id&gt;</a>)
+| 37  | 2    | <a href="types.md#medals">Medals</a>
+| 39  | 4    | <a href="types.md#annotation_flags">Annotation flags</a>
+| 43  | 2    | <a href="types.md#annotation_magnitude">Annotation magnitude</a>
 | 45  | 1    | Number of moves in the main variation of the game (`255` if 255 or more moves were made)
 
 ### <a name="cbh_text">CBH guiding text record</a>
@@ -80,112 +80,10 @@ For games with no annotator, the game will refer to an annotator with an empty n
 | 18  | 4    | <a href="#annotation_flags">Annotation flags</a> (only Media and Embedded audio, picture and video seems to be possible)
 | 22  | 24   | Always `0` ? 
 
-### <a name="game_result">Game Result</a>
 
-| Value | Desccription
-| ----  | ----
-| 0     | 0-1
-| 1     | draw
-| 2     | 1-0
-| 3     | Line
-| 4     | -:+
-| 5     | =:=
-| 6     | +:-
-| 7     | 0-0
+## <a name="cbj_file">CBJ file format</a>
 
-### <a name="date">Date</a>
-
-A date is represented as a 24 bit word. A date might be incomplete; for instance only the year might be specified, or only the year and month.
-
-| Bits | Description
-| ---- | ----
-| 0-4  | The day of the month (0 = unspecified)
-| 5-8  | The month (0 = unspecified)
-| 9-20 | The year (0 = unspecified)
-
-### <a name="eco">ECO</a>
-
-ECO refers to the opening classification system used by the <a href="https://en.wikipedia.org/wiki/Encyclopaedia_of_Chess_Openings">Encyclopaedia of Chess Openings (ECO)</a>.
-A game is typically classified into one of the 500 codes A00-E99. Each code can further be classified into 100 subcodes, e.g. `B97/08` (the use of subcodes is very rare; no standard classification of these exists).
-It's encoded as a 16 bit word.
-
-| Bits | Description
-| ---- | ----
-| 0-6  | Sub ECO (00-99)
-| 7-15 | ECO (0 = unset, 1 = A00, 500 = E99)
-
-### <a name="medals">Medals</a>
-
-A 16 bit word, one bit per "medal".
-
-| Bit | Medal
-| --- | ----
-| 0   | Best game
-| 1   | Decided tournament
-| 2   | Model game (opening plan)
-| 3   | Novelty
-| 4   | Pawn structure
-| 5   | Strategy
-| 6   | Tactics
-| 7   | With attack
-| 8   | Sacrifice
-| 9   | Defense
-| 10  | Material
-| 11  | Piece play
-| 12  | Endgame
-| 13  | Tactical blunder
-| 14  | Strategical blunder
-| 15  | User
-
-### <a name="annotation_flags">Annotation flags</a>
-
-Flags indicating if different types of annotations are used in the game, or if some other specific game properties exist.
-The flags are set automatically when a game is saved, based on the game data.
-
-The bits that are left out are unknown and are expected not to be set.
-
-| Bit | Annotation
-| --- | ----
-| 0   | Starting position (`P`) - game does not start from the initial position 
-| 1   | Variations (`v`)
-| 2   | Commentary (`c`)
-| 3   | Symbols (`s`)
-| 4   | Graphical squares
-| 5   | Graphical arrows
-| 7   | Time spent
-| 8   | ? Unknown annotation
-| 9   | Training annotation
-| 16  | Embedded audio
-| 17  | Embedded picture
-| 18  | Embedded video
-| 19  | Game quotation
-| 20  | Path structure
-| 21  | Piece path
-| 22  | White clock
-| 23  | Black clock
-| 24  | Critical position
-| 25  | Correspondence header
-| 26  | ? Media annotation (denoted with M in the AIT column)
-| 27  | Unorthodox (not a regular chess game, e.g. Chess960)
-| 28  | Web link
-
-#### <a name="annotation_magnitude">Annotation magnitude</a>
-
-Specifies the magnitude for some of the annotation flags above. The corresponding annotation flag must be set for its magnitude value to matter (there may be dirty data). 
-
-| Bit | Size | Annotation
-| --- | ---- | ----
-| 0   | 2    | Many variations: 1 = [51,300] moves (`V`), 2 = [301,1000] moves (`r`), 3 = [1001,] moves (`R`)
-| 2   | 1    | Many commentaries (`C`) (at least 10)
-| 3   | 1    | Many symbols (`S`) (at least 10)
-| 4   | 1    | Many colored squares (in at least 10 positions)
-| 5   | 1    | Many arrows (in at least 6 positions)
-| 7   | 1    | Many time spent (at least 11)
-| 9   | 1    | Many training annotations (at least 11)
-
-## CBJ file format
-
-The CBJ file was added to store additional metadata about games, such as team information, endgame information, timestamps etc. 
+The CBJ file stores additional metadata about games, such as team information, endgame information, timestamps etc. 
 In databases created in CB6 the file doesn't exist, but it was added shortly after. The size of each game record has changed multiple
 times, indicating that this is a dynamic file format that may continue to change. An important aspect of the format is that
 databases create in later version of ChessBase can still be opened in earlier version; unrecognized fields are simple ignored.
@@ -221,8 +119,8 @@ If a database has an old version of the extended header and a game is saved to t
 
 ### <a name="cbj_game">CBJ game record</a>
 
-The id-references to teams and tags are 0-based; see [Entities](entities.md).
-For games with no teams or tag, `-1` is specified instead (note that this differs compared to how entities are referenced in the .cbh file).
+The id references to teams and tags are 0-based; see [Entities](entities.md).
+For games with no teams or tag, `-1` is used. Note that this differs compared to how entities are referenced in the .cbh file.
 
 | Offset | Bytes | Description
 | --- | --- | ---
@@ -230,10 +128,10 @@ For games with no teams or tag, `-1` is specified instead (note that this differ
 | 4   | 4   | The id of the Black team (-1 if no team)
 | 8   | 4   | Offset into the .cbm file where media data is stored. Only used by guiding texts; -1 if not used.
 | 12  | 8   | Offset into the .cba file where annotations data start. Same as in the .cbh file, but 64 bit version. 
-| 20  | 10  | <a href="#final_material">Final material</a> 
+| 20  | 10  | <a href="types.md#final_material">Final material</a> 
 | 30  | 8   | Offset into the .cbg file where moves data start. Same as in the .cbh file, but 64 bit version. 
-| 38  | 16  | <a href="#rating_type">Rating type for White player</a>
-| 54  | 16  | <a href="#rating_type">Rating type for Black player</a>
+| 38  | 16  | <a href="types.md#rating_type">Rating type for White player</a>
+| 54  | 16  | <a href="types.md#rating_type">Rating type for Black player</a>
 | 70  | 4   | Unknown. Fairly often set, but data seems very random, unsure if it's actually used. Stays unchanged when game is changed or copied.
 | 74  | 4   | Unknown. Fairly often set, but data seems very random, unsure if it's actually used. Stays unchanged when game is changed or copied.
 | 78  | 2   | Version. Starts at 1, increases every time the game is saved. Also bumped when copied to a new database.
@@ -242,30 +140,7 @@ For games with no teams or tag, `-1` is specified instead (note that this differ
 | 108 | 4   | Timestamp when the game was last save. When a game is copied between databases, it's not updated though. 
 | 116 | 4   | The id of the game tag (-1 if no game tag)
 
-### <a name="rating_type">Rating type</a>
 
-A 16 byte record used to specify what type of rating was given in the .cbh file for the corresponding player.
-Only certain combinations seems possible in practice.
-
-| Offset | Bytes | Description
-| --- | --- | ---
-| 0   | 2   | Bit 0-2 (`1` = Internal rating, `2` = National rating); other bits may be set as well
-| 2   | 1   | National time control (`0` = normal, `1` = blitz, `2` = rapid, `3` = corr.); ignore if not a national rating
-| 3   | 1   | International time control (`1` = normal, `2` = blitz, `3` = rapid, `4` = corr.); ignore if not an international rating
-| 4   | 1   | `0` if international rating, otherwise the <a href="#nation">Nation code</a> (TODO)
-| 5   | 11  | The name of the rating system as a zero-terminated string, e.g. "FIDE", "ICCF" etc
-
-### <a name="final_material">Final material</a>
-
-A summary of the material at the final position of the game (number of pawns, knights etc)
-
-For details, see code.
-
-### <a name="endgame_info">Endgame info</a>
-
-Represents different types of Endgames that a game contained at various stages.
-
-For details, see code.
 
 ## flags file format
 
