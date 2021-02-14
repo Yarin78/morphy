@@ -38,6 +38,7 @@ public interface TournamentColumn {
             new TournamentCategoryColumn(),
             new TournamentRoundsColumn(),
             new TournamentNumGamesColumn(),
+            new TournamentFirstGameColumn(),
             new TournamentCompleteColumn(),
             new TournamentTimeControlColumn(),
             new DatabaseColumn()

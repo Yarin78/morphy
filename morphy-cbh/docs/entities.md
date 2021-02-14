@@ -18,10 +18,10 @@ These are the different entity types in ChessBase:
 | Type | File | Default sorting order | Signed/unsigned
 | --- | --- | --- | ---
 | <a href="players.md">Players</a>     | .cbp | Last name, first name | unsigned 
-| <a href="tournaments.md">Tournaments</a> | .cbt | Year (desc), Title | signed
+| <a href="tournaments.md">Tournaments</a> | .cbt | Year (desc), Title, Place, Month (desc), Day (desc) | signed
 | <a href="annotators.md">Annotators</a>  | .cbc | Name | signed
 | <a href="sources.md">Sources</a>     | .cbs | Title | signed
-| <a href="teams.md">Teams</a>       | .cbe | ? | unsigned
+| <a href="teams.md">Teams</a>       | .cbe | Name, rank, season, year, nation | unsigned
 | <a href="game_tags.md">Game Tags</a>   | .cbl | ? |
 
 Each entity has a "default sorting order" (see [Entity index](#entity_index) below).

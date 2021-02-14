@@ -66,7 +66,7 @@ public class TournamentEntity implements Entity, Comparable<TournamentEntity> {
     @Builder.Default
     private Nation nation = Nation.NONE;
 
-    // Missing here is City, latitude, longitude
+    // Missing here is latitude, longitude, end date
     // Missing is also tiebreak rules
     // Maybe stored in another database?
 
@@ -78,11 +78,16 @@ public class TournamentEntity implements Entity, Comparable<TournamentEntity> {
 
     public TournamentEntity(@NonNull String title, @NonNull Date date) {
         // Tournaments are keyed (and sorted) by year + title
+        this(title, "", date);
+    }
+
+    public TournamentEntity(@NonNull String title, @NonNull String place, @NonNull Date date) {
+        // Tournaments are keyed (and sorted) by year + title + place + month + day
         this.title = title;
         this.date = date;
         this.type = TournamentType.NONE;
         this.timeControl = TournamentTimeControl.NORMAL;
-        this.place = "";
+        this.place = place;
         this.nation = Nation.NONE;
     }
 
@@ -116,7 +121,16 @@ public class TournamentEntity implements Entity, Comparable<TournamentEntity> {
         if (this.date.year() != o.date.year()) {
             return o.date.year() - this.date.year();
         }
-        return CBUtil.compareString(title, o.title);
+        int dif = CBUtil.compareString(title, o.title);
+
+        if (dif != 0) return dif;
+        dif = CBUtil.compareString(place, o.place);
+        if (dif != 0) return dif;
+
+        if (this.date.month() != o.date.month()) {
+            return o.date.month() - this.date.month();
+        }
+        return o.date.day() - this.date.day();
     }
 
     @Override

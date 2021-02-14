@@ -34,8 +34,15 @@ public class TeamEntity implements Entity, Comparable<TeamEntity> {
     private int firstGameId;
 
     public TeamEntity(@NonNull String title) {
+        this(title, 0, false, 0, Nation.NONE);
+    }
+
+    public TeamEntity(@NonNull String title, int teamNumber, boolean season, int year, @NonNull Nation nation) {
         this.title = title;
-        this.nation = Nation.NONE;
+        this.teamNumber = teamNumber;
+        this.season = season;
+        this.year = year;
+        this.nation = nation;
     }
 
     @Override
@@ -45,7 +52,20 @@ public class TeamEntity implements Entity, Comparable<TeamEntity> {
 
     @Override
     public int compareTo(TeamEntity o) {
-        return CBUtil.compareStringUnsigned(title, o.title);
+        int dif = CBUtil.compareStringUnsigned(title, o.title);
+        if (dif != 0) {
+            return dif;
+        }
+        if (teamNumber != o.teamNumber) {
+            return teamNumber - o.teamNumber;
+        }
+        if (season != o.season) {
+            return season ? -1 : 1;
+        }
+        if (year != o.year) {
+            return year - o.year;
+        }
+        return nation.ordinal() - o.nation.ordinal();
     }
 
     @Override

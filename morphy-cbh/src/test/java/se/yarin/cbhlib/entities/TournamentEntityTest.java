@@ -86,8 +86,9 @@ public class TournamentEntityTest {
     @Test
     public void testGetTournamentByKey() throws IOException, EntityStorageDuplicateKeyException {
         TournamentBase tournamentBase = TournamentBase.open(tournamentIndexFile);
-        TournamentEntity tournament = tournamentBase.get(new TournamentEntity("London Classic 7th", new Date(2015)));
-        assertEquals("London", tournament.getPlace());
+        TournamentEntity key = new TournamentEntity("London Classic 7th", "London", new Date(2015, 12, 4));
+        TournamentEntity tournament = tournamentBase.get(key);
+        assertEquals(93, tournament.getFirstGameId());
     }
 
     @Test

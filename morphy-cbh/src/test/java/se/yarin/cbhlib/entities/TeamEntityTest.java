@@ -64,9 +64,9 @@ public class TeamEntityTest {
     @Test
     public void testGetTeamByKey() throws IOException, EntityStorageDuplicateKeyException {
         TeamBase teamBase = TeamBase.open(teamIndexFile);
-        TeamEntity team = teamBase.get(new TeamEntity("Hamburger SK"));
-        assertEquals(2015, team.getYear());
-        assertEquals(Nation.GERMANY, team.getNation());
+        TeamEntity key = new TeamEntity("Hamburger SK", 0, true, 2015, Nation.GERMANY);
+        TeamEntity team = teamBase.get(key);
+        assertEquals(4, team.getId());
     }
 
     @Test
