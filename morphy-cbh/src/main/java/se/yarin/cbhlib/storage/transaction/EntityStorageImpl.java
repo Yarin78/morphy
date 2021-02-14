@@ -228,7 +228,9 @@ public class EntityStorageImpl<T extends Entity & Comparable<T>> implements Enti
         ValidationResult result = validate(nodeStorage.getRootEntityId(), null, null, 0);
         if (result.getCount() != getNumEntities()) {
             // This is not a critical error; ChessBase integrity checker doesn't even notice it
-            log.warn(String.format(
+            // It's quite often, at least in older databases, off by one; in particular
+            // when there are just a few entities in the db
+            log.debug(String.format(
                     "Found %d entities when traversing the %s base but the header says there should be %d entities.",
                     result.getCount(), entityType.toLowerCase(), getNumEntities()));
         }

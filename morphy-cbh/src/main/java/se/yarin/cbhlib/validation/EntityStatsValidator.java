@@ -124,6 +124,7 @@ public class EntityStatsValidator {
             }
 
             if (current.getCount() == 0) {
+                // This is a critical error in the ChessBase integrity checker
                 String msg = String.format("Entity in %s base with %d (%s) has 0 count", entityType, current.getId(), current.toString());
                 if (throwOnError) {
                     throw new EntityStorageException(msg);
@@ -171,7 +172,9 @@ public class EntityStatsValidator {
             }
         }
         if (numEntities != entities.getCount()) {
-            log.warn(String.format("Iterated over %d %s in ascending order, but header said there were %d %s",
+            // It's quite often, at least in older databases, off by one; in particular
+            // when there are just a few entities in the db
+            log.debug(String.format("Iterated over %d %s in ascending order, but header said there were %d %s",
                     numEntities, entityType, entities.getCount(), entityType));
         }
         if (checks.contains(Validator.Checks.ENTITY_SORT_ORDER)) {

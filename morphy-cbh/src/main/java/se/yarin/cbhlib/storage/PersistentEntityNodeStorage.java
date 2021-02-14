@@ -116,7 +116,8 @@ public class PersistentEntityNodeStorage<T extends Entity & Comparable<T>> exten
                 channel.read(extraHeaderBuf);
                 for (int i = 0; i < headerSize - 28; i++) {
                     if (extraHeaderBuf.get(i) != 0) {
-                        log.warn(String.format("Unknown extra header bytes in %s: %s",
+                        // In some databases these are set, but most likely trash bytes
+                        log.debug(String.format("Unknown extra header bytes in %s: %s",
                                 file, CBUtil.toHexString(extraHeaderBuf.array())));
                         break;
                     }
