@@ -11,7 +11,7 @@ public class TournamentTypeColumn extends TournamentBaseColumn {
 
     @Override
     public int width() {
-        return 5;
+        return 25;
     }
 
     @Override
@@ -21,6 +21,6 @@ public class TournamentTypeColumn extends TournamentBaseColumn {
 
     @Override
     public String getTournamentValue(Database database, TournamentEntity tournament) {
-        return tournament.getType().getName();
+        return tournament.getPrettyTypeName();
     }
 }

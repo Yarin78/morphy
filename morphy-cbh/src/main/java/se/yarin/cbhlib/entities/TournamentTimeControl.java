@@ -4,13 +4,16 @@ import lombok.Getter;
 import lombok.NonNull;
 
 public enum TournamentTimeControl {
-    NORMAL("normal"),
-    BLITZ("blitz"),
-    RAPID("rapid"),
-    CORRESPONDENCE("corr");
+    NORMAL("normal", "Normal"),
+    BLITZ("blitz", "Blitz"),
+    RAPID("rapid", "Rapid"),
+    CORRESPONDENCE("corr", "Correspondence");
 
     @Getter
-    private String name;
+    private final String name;
+
+    @Getter
+    private final String longName;
 
     @NonNull
     public static TournamentTimeControl fromName(String name) {
@@ -22,7 +25,8 @@ public enum TournamentTimeControl {
         return TournamentTimeControl.NORMAL;
     }
 
-    TournamentTimeControl(String name) {
+    TournamentTimeControl(String name, String longName) {
         this.name = name;
+        this.longName = longName;
     }
 }

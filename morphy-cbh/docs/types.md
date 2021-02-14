@@ -32,6 +32,7 @@ The result of a chess game.
 ### <a name="date">Date</a>
 
 A date is represented as a 24 bit word. A date might be incomplete; for instance only the year might be specified, or only the year and month.
+May also be stored as a 32 bit word, in which case the 8 upper bits are unused.
 
 | Bits | Description
 | ---- | ----

@@ -37,6 +37,9 @@ public class TournamentEntity implements Entity, Comparable<TournamentEntity> {
     private TournamentType type = TournamentType.NONE;
 
     @Getter
+    private boolean legacyComplete;
+
+    @Getter
     private boolean complete;
 
     @Getter
@@ -86,6 +89,26 @@ public class TournamentEntity implements Entity, Comparable<TournamentEntity> {
     @Override
     public String toString() {
         return this.date.year() + ": " + this.title;
+    }
+
+    /**
+     * Gets a string describing the type of the tournament,
+     * combining the type, time control and team status
+     * @return
+     */
+    public String getPrettyTypeName() {
+        String typeName = type.getLongName();
+        if (timeControl != TournamentTimeControl.NORMAL) {
+            typeName += String.format(" (%s)", timeControl.getLongName());
+        }
+        if (teamTournament) {
+            if (typeName.length() == 0) {
+                typeName = "Team";
+            } else {
+                typeName = "Team-" + typeName;
+            }
+        }
+        return typeName;
     }
 
     @Override

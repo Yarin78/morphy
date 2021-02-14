@@ -182,30 +182,39 @@ public class TournamentBase extends EntityBase<TournamentEntity> {
             .place(place)
             .date(CBUtil.decodeDate(ByteBufferUtil.getIntL(buf)));
         int typeByte = ByteBufferUtil.getUnsignedByte(buf);
-        builder.teamTournament((ByteBufferUtil.getUnsignedByte(buf) & 1) == 1); // TODO: Ensure other bits are zero
+        int teamByte = ByteBufferUtil.getUnsignedByte(buf);
+        builder.teamTournament((teamByte & 1) == 1);
+        if ((teamByte & ~1) > 0) {
+            // Never seen in the wild
+            log.debug("Unused bits set in team byte when deserializing tournament with id " + entityId);
+        }
         builder.nation(CBUtil.decodeNation(ByteBufferUtil.getUnsignedByte(buf)));
-        int unknownByte1 = ByteBufferUtil.getUnsignedByte(buf);
+        int unusedByte1 = ByteBufferUtil.getUnsignedByte(buf);
         builder.category(ByteBufferUtil.getUnsignedByte(buf));
-        int optionByte = ByteBufferUtil.getUnsignedByte(buf);
+        int tournamentFlags = ByteBufferUtil.getUnsignedByte(buf);
         builder.rounds(ByteBufferUtil.getUnsignedByte(buf));
-        int unknownByte2 = ByteBufferUtil.getUnsignedByte(buf);
+        int unusedByte2 = ByteBufferUtil.getUnsignedByte(buf);
         builder.count(ByteBufferUtil.getIntL(buf));
         builder.firstGameId(ByteBufferUtil.getIntL(buf));
 
         builder.type(CBUtil.decodeTournamentType(typeByte));
         builder.timeControl(CBUtil.decodeTournamentTimeControl(typeByte));
-        builder.complete((optionByte & 2) > 0);
-        builder.boardPoints((optionByte & 4) > 0);
-        builder.threePointsWin((optionByte & 8) > 0);
+        // bit 0 and 1 both refers to the complete flag, and from tournaments 2005 and onwards it's always the same value
+        builder.legacyComplete((tournamentFlags & 1) > 0);
+        builder.complete((tournamentFlags & 2) > 0);
+        builder.boardPoints((tournamentFlags & 4) > 0);
+        builder.threePointsWin((tournamentFlags & 8) > 0);
 
-        if (unknownByte1 != 0) {
-            log.debug("unknownByte1 = " + unknownByte1 + " when deserializing tournament with id " + entityId);
+        if (unusedByte1 != 0) {
+            // Never seen in the wild
+            log.debug("unknownByte1 = " + unusedByte1 + " when deserializing tournament with id " + entityId);
         }
-        if (unknownByte2 != 0) {
-            log.debug("unknownByte2 = " + unknownByte2 + " when deserializing tournament with id " + entityId);
+        if (unusedByte2 != 0) {
+            // Never seen in the wild
+            log.debug("unknownByte2 = " + unusedByte2 + " when deserializing tournament with id " + entityId);
         }
-        if ((optionByte & ~14) != 0) {
-            log.debug("optionByte = " + optionByte + " when deserializing tournament with id " + entityId);
+        if ((tournamentFlags & ~15) != 0) {
+            log.debug("optionByte = " + tournamentFlags + " when deserializing tournament with id " + entityId);
         }
 
         return builder.build();

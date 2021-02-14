@@ -29,7 +29,7 @@ public class RawTournamentColumn implements TournamentColumn {
     @Override
     public String getTournamentValue(Database db, TournamentEntity tournament) {
         byte[] raw = db.getTournamentBase().getRaw(tournament.getId());
-        byte[] dest = Arrays.copyOfRange(raw, start, Math.max(raw.length, start+length));
+        byte[] dest = Arrays.copyOfRange(raw, start, Math.min(raw.length, start+length));
         return CBUtil.toHexString(dest);
     }
 

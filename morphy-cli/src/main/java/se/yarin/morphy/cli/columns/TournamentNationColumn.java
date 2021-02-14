@@ -11,7 +11,7 @@ public class TournamentNationColumn extends TournamentBaseColumn {
 
     @Override
     public int width() {
-        return 20;
+        return 10;
     }
 
     @Override

@@ -126,7 +126,10 @@ public final class CBUtil {
     }
 
     public static TournamentType decodeTournamentType(int data) {
-        // TODO: Out of range
+        if ((data & 31) >= TournamentType.values().length) {
+            log.warn("Unknown tournament type: " + (data & 31));
+            return TournamentType.NONE;
+        }
         return TournamentType.values()[data & 31];
     }
 

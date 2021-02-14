@@ -23,21 +23,24 @@ public interface TournamentColumn {
 
     default boolean trimValueToWidth() { return true; }
 
-    String getTournamentValue(Database db, TournamentEntity game);
+    String getTournamentValue(Database db, TournamentEntity tournament);
 
     String getTournamentId();
 
     TournamentColumn[] ALL = {
             new TournamentIdColumn(),
-            new TournamentYearColumn(),
-            new TournamentDateColumn(),
             new TournamentTitleColumn(),
             new TournamentPlaceColumn(),
-            new TournamentNationColumn(),
+            new TournamentYearColumn(),
+            new TournamentDateColumn(),
             new TournamentTypeColumn(),
-            new TournamentTimeControlColumn(),
+            new TournamentNationColumn(),
             new TournamentCategoryColumn(),
-            new TournamentRoundsColumn()
+            new TournamentRoundsColumn(),
+            new TournamentNumGamesColumn(),
+            new TournamentCompleteColumn(),
+            new TournamentTimeControlColumn(),
+            new DatabaseColumn()
     };
 
     static String allColumnsString() {

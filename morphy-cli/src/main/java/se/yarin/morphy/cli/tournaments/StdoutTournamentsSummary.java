@@ -22,7 +22,7 @@ public class StdoutTournamentsSummary implements TournamentConsumer {
     protected int totalConsumedTournaments = 0;
     protected long totalSearchTime = 0;
 
-    public static final String DEFAULT_COLUMNS = "id,title,year";
+    public static final String DEFAULT_COLUMNS = "title,place,date,type,nation,category,rounds,count,complete";
 
     public StdoutTournamentsSummary(boolean showTotal, Collection<TournamentColumn> columns) {
         this.showTotal = showTotal;

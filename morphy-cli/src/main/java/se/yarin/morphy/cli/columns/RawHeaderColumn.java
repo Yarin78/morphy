@@ -30,7 +30,7 @@ public class RawHeaderColumn implements GameColumn {
     @Override
     public String getValue(Game game) {
         byte[] raw = game.getDatabase().getHeaderBase().getRaw(game.getId());
-        byte[] dest = Arrays.copyOfRange(raw, start, Math.max(raw.length, start+length));
+        byte[] dest = Arrays.copyOfRange(raw, start, Math.min(raw.length, start+length));
         return CBUtil.toHexString(dest);
     }
 

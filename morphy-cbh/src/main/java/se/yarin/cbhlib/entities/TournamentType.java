@@ -4,18 +4,21 @@ import lombok.Getter;
 import lombok.NonNull;
 
 public enum TournamentType {
-    NONE("none"),
-    SINGLE_GAME("game"),
-    MATCH("match"),
-    ROUND_ROBIN("tourn"),
-    SWISS_SYSTEM("swiss"),
-    TEAM("team"),
-    KNOCK_OUT("k.o."),
-    SIMUL("simul"),
-    SCHEVENINGEN_SYSTEM("schev");
+    NONE("none", ""),
+    SINGLE_GAME("game", "Game"),
+    MATCH("match", "Match"),
+    ROUND_ROBIN("tourn", "Tournament"),
+    SWISS_SYSTEM("swiss", "Open"),
+    TEAM("team", "Team"),
+    KNOCK_OUT("k.o.", "Knockout"),
+    SIMUL("simul", "Simul"),
+    SCHEVENINGEN_SYSTEM("schev", "Schevening");
 
     @Getter
-    private String name;
+    private final String name;
+
+    @Getter
+    private final String longName;
 
     @NonNull
     public static TournamentType fromName(String name) {
@@ -27,7 +30,8 @@ public enum TournamentType {
         return TournamentType.NONE;
     }
 
-    TournamentType(String name) {
+    TournamentType(String name, String longName) {
         this.name = name;
+        this.longName = longName;
     }
 }
