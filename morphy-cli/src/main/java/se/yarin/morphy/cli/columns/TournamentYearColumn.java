@@ -3,24 +3,20 @@ package se.yarin.morphy.cli.columns;
 import se.yarin.cbhlib.Database;
 import se.yarin.cbhlib.entities.TournamentEntity;
 
-public class TournamentDateColumn extends TournamentBaseColumn {
+public class TournamentYearColumn extends TournamentBaseColumn {
     @Override
     public String getHeader() {
-        return "Start date";
-    }
-
-    @Override
-    public int width() {
-        return 10;
+        return "Year";
     }
 
     @Override
     public String getTournamentValue(Database database, TournamentEntity tournament) {
-        return tournament.getDate().toPrettyString();
+        int year = tournament.getDate().year();
+        return year == 0 ? "????" : String.format("%4d", year);
     }
 
     @Override
     public String getId() {
-        return "tournament-date";
+        return "tournament-year";
     }
 }

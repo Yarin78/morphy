@@ -23,13 +23,27 @@ public class DateRangeFilter extends SearchFilterBase implements SearchFilter, S
 
     public DateRangeFilter(Database db, String dateRange) {
         super(db);
+
+        this.fromDate = parseFromDate(dateRange);
+        this.toDate = parseToDate(dateRange);
+    }
+
+    public static Date parseFromDate(String dateRange) {
         Matcher matcher = dateRangePattern.matcher(dateRange);
         if (!matcher.matches()) {
             throw new IllegalArgumentException("Invalid date range specified: " + dateRange);
         }
 
-        this.fromDate = extractDate(matcher.group(2), matcher.group(4), matcher.group(6));
-        this.toDate = extractDate(matcher.group(8), matcher.group(10), matcher.group(12));
+        return extractDate(matcher.group(2), matcher.group(4), matcher.group(6));
+    }
+
+    public static Date parseToDate(String dateRange) {
+        Matcher matcher = dateRangePattern.matcher(dateRange);
+        if (!matcher.matches()) {
+            throw new IllegalArgumentException("Invalid date range specified: " + dateRange);
+        }
+
+        return extractDate(matcher.group(8), matcher.group(10), matcher.group(12));
     }
 
     private static Date extractDate(String year, String month, String day) {

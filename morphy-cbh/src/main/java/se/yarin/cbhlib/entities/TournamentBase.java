@@ -3,6 +3,8 @@ package se.yarin.cbhlib.entities;
 import lombok.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import se.yarin.cbhlib.storage.EntityNodeStorageBase;
+import se.yarin.cbhlib.storage.PersistentEntityNodeStorage;
 import se.yarin.cbhlib.storage.TreePath;
 import se.yarin.cbhlib.storage.transaction.EntityStorage;
 import se.yarin.cbhlib.storage.transaction.EntityStorageImpl;
@@ -107,6 +109,37 @@ public class TournamentBase extends EntityBase<TournamentEntity> {
         TreePath<TournamentEntity> start = getStorage().lowerBound(startKey);
         TreePath<TournamentEntity> end = getStorage().upperBound(endKey);
         return getStorage().streamOrderedAscending(start, end);
+    }
+
+    /**
+     * Searches for tournaments in the specified year range
+     * @param fromYear the start year, inclusive
+     * @param toYear the end year, inclusive
+     * @return a stream over matching tournaments
+     */
+    public Stream<TournamentEntity> rangeSearch(int fromYear, int toYear) {
+        // Tournaments are sorted by year in reverse
+        TournamentEntity startKey = new TournamentEntity("", new Date(toYear));
+        TournamentEntity endKey = new TournamentEntity("", new Date(fromYear-1));
+
+        TreePath<TournamentEntity> start = getStorage().lowerBound(startKey);
+        TreePath<TournamentEntity> end = getStorage().upperBound(endKey);
+        return getStorage().streamOrderedAscending(start, end);
+    }
+
+    /**
+     * Gets the underlying raw data for a game header.
+     * For debugging purposes only.
+     * @param tournamentId the id of the game to get
+     * @return a byte array containing the underlying data
+     */
+    public byte[] getRaw(int tournamentId) {
+        EntityNodeStorageBase<TournamentEntity> nodeStorage = getStorage().getNodeStorage();
+        if (!(nodeStorage instanceof PersistentEntityNodeStorage)) {
+            throw new IllegalStateException("The underlying storage is not a persistent storage");
+        }
+
+        return ((PersistentEntityNodeStorage<TournamentEntity>) nodeStorage).getRaw(tournamentId);
     }
 
     public ByteBuffer serialize(@NonNull TournamentEntity tournament) {

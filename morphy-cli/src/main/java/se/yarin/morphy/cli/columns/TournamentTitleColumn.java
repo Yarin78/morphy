@@ -1,5 +1,6 @@
 package se.yarin.morphy.cli.columns;
 
+import se.yarin.cbhlib.Database;
 import se.yarin.cbhlib.entities.TournamentEntity;
 
 public class TournamentTitleColumn extends TournamentBaseColumn {
@@ -24,12 +25,17 @@ public class TournamentTitleColumn extends TournamentBaseColumn {
     }
 
     @Override
-    public String getTournamentValue(TournamentEntity tournament) {
+    public String getTournamentValue(Database database, TournamentEntity tournament) {
         return tournament.getTitle();
     }
 
     @Override
     public String getId() {
         return "tournament";
+    }
+
+    @Override
+    public String getTournamentId() {
+        return "title";
     }
 }

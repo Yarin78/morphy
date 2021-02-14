@@ -8,7 +8,7 @@ import se.yarin.cbhlib.Database;
 import se.yarin.cbhlib.entities.MultiPlayerSearcher;
 import se.yarin.cbhlib.entities.PlayerSearcher;
 import se.yarin.cbhlib.entities.SinglePlayerSearcher;
-import se.yarin.cbhlib.entities.SingleTournamentSearcher;
+import se.yarin.cbhlib.entities.TournamentSearcher;
 import se.yarin.cbhlib.games.search.*;
 import se.yarin.morphy.cli.games.DatabaseBuilder;
 import se.yarin.morphy.cli.games.GameConsumer;
@@ -153,61 +153,6 @@ public class Games extends BaseCommand implements Callable<Integer> {
         return 0;
     }
 
-    public GameConsumer createGameConsumer() throws IOException {
-        GameConsumer gameConsumer;
-        if (output == null) {
-            if (!stats) {
-                if (columns == null) {
-                    columns = StdoutGamesSummary.DEFAULT_COLUMNS;
-                }
-                List<GameColumn> parsedColumns = StdoutGamesSummary.parseColumns(this.columns);
-                if (rawCbhColumns != null) {
-                    for (String rawCbhColumn : rawCbhColumns) {
-                        String[] parts = rawCbhColumn.split(",");
-                        if (parts.length != 2) {
-                            throw new IllegalArgumentException("Invalid format of raw CBH column");
-                        }
-                        parsedColumns.add(new RawHeaderColumn(Integer.parseInt(parts[0]), Integer.parseInt(parts[1])));
-                    }
-                }
-                if (rawCbjColumns != null) {
-                    for (String rawCbjColumn : rawCbjColumns) {
-                        String[] parts = rawCbjColumn.split(",");
-                        if (parts.length != 2) {
-                            throw new IllegalArgumentException("Invalid format of raw CBJ column");
-                        }
-                        parsedColumns.add(new RawExtendedHeaderColumn(Integer.parseInt(parts[0]), Integer.parseInt(parts[1])));
-                    }
-                }
-                if (rawCbgColumns) {
-                    parsedColumns.add(new RawMovesColumn());
-                }
-                if (rawCbaColumns) {
-                    parsedColumns.add(new RawAnnotationsColumn());
-                }
-
-                gameConsumer = new StdoutGamesSummary(countAll, parsedColumns);
-                if (limit == 0) {
-                    limit = 50;
-                }
-            } else {
-                gameConsumer = new StatsGameConsumer();
-            }
-        } else if (output.endsWith(".cbh")) {
-            File file = new File(output);
-            if (!overwrite && file.exists()) {
-                throw new FileAlreadyExistsException(output);
-            }
-            if (file.exists()) {
-                Database.delete(file);
-            }
-            gameConsumer = new DatabaseBuilder(file);
-        } else {
-            throw new IllegalArgumentException("Unknown output format: " + output);
-        }
-        return gameConsumer;
-    }
-
     public GameSearcher createGameSearcher(Database db) {
         GameSearcher gameSearcher = new GameSearcher(db);
 
@@ -274,9 +219,9 @@ public class Games extends BaseCommand implements Callable<Integer> {
             gameSearcher.addFilter(new TeamFilter(db, team));
         }
 
-        SingleTournamentSearcher tournamentSearcher = null;
+        TournamentSearcher tournamentSearcher = null;
         if (tournament != null) {
-            tournamentSearcher = new SingleTournamentSearcher(db.getTournamentBase(), tournament, true, false);
+            tournamentSearcher = new TournamentSearcher(db.getTournamentBase(), tournament, true, false);
             gameSearcher.addFilter(new TournamentFilter(db, tournamentSearcher));
         }
 
@@ -316,5 +261,60 @@ public class Games extends BaseCommand implements Callable<Integer> {
             }
         }
         return gameSearcher;
+    }
+
+    public GameConsumer createGameConsumer() throws IOException {
+        GameConsumer gameConsumer;
+        if (output == null) {
+            if (!stats) {
+                if (columns == null) {
+                    columns = StdoutGamesSummary.DEFAULT_COLUMNS;
+                }
+                List<GameColumn> parsedColumns = StdoutGamesSummary.parseColumns(this.columns);
+                if (rawCbhColumns != null) {
+                    for (String rawCbhColumn : rawCbhColumns) {
+                        String[] parts = rawCbhColumn.split(",");
+                        if (parts.length != 2) {
+                            throw new IllegalArgumentException("Invalid format of raw CBH column");
+                        }
+                        parsedColumns.add(new RawHeaderColumn(Integer.parseInt(parts[0]), Integer.parseInt(parts[1])));
+                    }
+                }
+                if (rawCbjColumns != null) {
+                    for (String rawCbjColumn : rawCbjColumns) {
+                        String[] parts = rawCbjColumn.split(",");
+                        if (parts.length != 2) {
+                            throw new IllegalArgumentException("Invalid format of raw CBJ column");
+                        }
+                        parsedColumns.add(new RawExtendedHeaderColumn(Integer.parseInt(parts[0]), Integer.parseInt(parts[1])));
+                    }
+                }
+                if (rawCbgColumns) {
+                    parsedColumns.add(new RawMovesColumn());
+                }
+                if (rawCbaColumns) {
+                    parsedColumns.add(new RawAnnotationsColumn());
+                }
+
+                gameConsumer = new StdoutGamesSummary(countAll, parsedColumns);
+                if (limit == 0) {
+                    limit = 50;
+                }
+            } else {
+                gameConsumer = new StatsGameConsumer();
+            }
+        } else if (output.endsWith(".cbh")) {
+            File file = new File(output);
+            if (!overwrite && file.exists()) {
+                throw new FileAlreadyExistsException(output);
+            }
+            if (file.exists()) {
+                Database.delete(file);
+            }
+            gameConsumer = new DatabaseBuilder(file);
+        } else {
+            throw new IllegalArgumentException("Unknown output format: " + output);
+        }
+        return gameConsumer;
     }
 }

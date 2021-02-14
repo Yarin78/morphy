@@ -3,10 +3,7 @@ package se.yarin.cbhlib.storage.transaction;
 import lombok.NonNull;
 import se.yarin.cbhlib.entities.Entity;
 import se.yarin.cbhlib.exceptions.ChessBaseIOException;
-import se.yarin.cbhlib.storage.EntitySerializer;
-import se.yarin.cbhlib.storage.EntityStorageDuplicateKeyException;
-import se.yarin.cbhlib.storage.EntityStorageException;
-import se.yarin.cbhlib.storage.TreePath;
+import se.yarin.cbhlib.storage.*;
 
 import java.io.File;
 import java.io.IOException;
@@ -14,6 +11,9 @@ import java.util.List;
 import java.util.stream.Stream;
 
 public interface EntityStorage<T extends Entity & Comparable<T>> {
+
+    EntityNodeStorageBase<T> getNodeStorage();
+
     /**
      * Gets the number of entities in the storage.
      * @return the number of entities

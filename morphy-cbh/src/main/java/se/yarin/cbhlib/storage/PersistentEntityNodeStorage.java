@@ -195,6 +195,14 @@ public class PersistentEntityNodeStorage<T extends Entity & Comparable<T>> exten
         return entityNode;
     }
 
+    public byte[] getRaw(int entityId) {
+        try {
+            return channel.read(getEntityOffset(entityId) + 9, serializedEntitySize).array();
+        } catch (IOException e) {
+            throw new ChessBaseIOException("Failed to get entity node " + entityId + " in " + storageName);
+        }
+    }
+
     public Collection<EntityNode<T>> getAllEntityNodes() {
         return getEntityNodes(0, getMetadata().getCapacity());
     }

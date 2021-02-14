@@ -1,37 +1,41 @@
 package se.yarin.morphy.cli.columns;
 
 import se.yarin.cbhlib.Database;
-import se.yarin.cbhlib.Game;
 import se.yarin.cbhlib.entities.TournamentEntity;
 import se.yarin.cbhlib.util.CBUtil;
 
 import java.util.Arrays;
 
-public class RawHeaderColumn implements GameColumn {
+public class RawTournamentColumn implements TournamentColumn {
     private final int start;
     private final int length;
 
     @Override
     public String getHeader() {
         if (length == 1) {
-            return String.format("CBH %d", start);
+            return String.format("CBT %d", start);
         }
-        return String.format("CBH %d,%d", start, length);
+        return String.format("CBT %d,%d", start, length);
     }
 
-    public RawHeaderColumn(int start, int length) {
-        if (start < 0 || start+length > 46) {
-            throw new IllegalArgumentException("Header length is 46 bytes");
+    public RawTournamentColumn(int start, int length) {
+        if (start < 0 || start+length > 90) {
+            throw new IllegalArgumentException("Tournament entity length is 90 bytes");
         }
         this.start = start;
         this.length = length;
     }
 
     @Override
-    public String getValue(Game game) {
-        byte[] raw = game.getDatabase().getHeaderBase().getRaw(game.getId());
+    public String getTournamentValue(Database db, TournamentEntity tournament) {
+        byte[] raw = db.getTournamentBase().getRaw(tournament.getId());
         byte[] dest = Arrays.copyOfRange(raw, start, Math.max(raw.length, start+length));
         return CBUtil.toHexString(dest);
+    }
+
+    @Override
+    public String getTournamentId() {
+        return "raw";
     }
 
     @Override
@@ -51,10 +55,4 @@ public class RawHeaderColumn implements GameColumn {
 
     @Override
     public boolean trimValueToWidth() { return true; }
-
-    @Override
-    public String getId() {
-        return "raw";
-    }
-
 }

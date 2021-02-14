@@ -2,7 +2,6 @@ package se.yarin.cbhlib.games.search;
 
 import se.yarin.cbhlib.Database;
 import se.yarin.cbhlib.Game;
-import se.yarin.cbhlib.entities.ManualTournamentSearcher;
 import se.yarin.cbhlib.entities.TournamentEntity;
 import se.yarin.cbhlib.entities.TournamentSearcher;
 import se.yarin.cbhlib.games.SerializedGameHeaderFilter;
@@ -20,7 +19,7 @@ public class TournamentFilter extends SearchFilterBase implements SerializedGame
     private HashSet<Integer> tournamentIds;
 
     public TournamentFilter(Database database, TournamentEntity tournament) {
-        this(database, new ManualTournamentSearcher(tournament));
+        this(database, new TournamentSearcher(database.getTournamentBase(), tournament));
     }
 
     public TournamentFilter(Database database, TournamentSearcher tournamentSearcher) {
