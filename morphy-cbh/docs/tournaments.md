@@ -3,6 +3,8 @@
 Tournament entities are stored in the .cbt file; see [Entities](entities.md) for the initial structure of this file.
 The size of a tournament entity record is always `90`.
 
+Additional tournament information is stored in the [.cbtt file](#cbtt.md).
+
 All integers are stored in Little Endian unless otherwise specified.
 
 | Offset | Bytes | Description
@@ -61,3 +63,56 @@ A single byte describing some additional information about the tournament.
 | 1 | Complete (all games from the tournament are expected to be in the database)
 | 2 | Board points
 | 3 | Three points for a win
+
+# <a name="cbtt_file">CBTT file format</a>
+
+The original .cbt file doesn't allow records to be extended, so additional information
+is stored in the .cbtt file. The size of each record in this file is dynamic, and
+can differ between versions. As usual, the file starts with a header. 
+
+All integers are in Little Endian.
+
+| Offset | Bytes | Description
+| --- | --- | ---
+| 0 | 4 | Version number of this file.
+| 4 | 4 | Size of each record. 65 if version 3, 61 if version 2.
+| 8 | 4 | Numbers of tournaments?
+| 12 | 20 | Unused, usually trash bytes.
+
+Then follows each record. The first record corresponds to the tournament with index 0, and so on.
+
+| Offset | Bytes | Description
+| --- | --- | ---
+| 0 | 8 | Latitude ([double point precision](https://en.wikipedia.org/wiki/Double-precision_floating-point_format))
+| 8 | 8 | Longitude ([double point precision](https://en.wikipedia.org/wiki/Double-precision_floating-point_format))
+| 16 | 10 | Unknown
+| 26 | 1 | The value `7`
+| 27 | 10 | Unknown
+| 37 | 1 | The value `7`
+| 38 | 10 | Unknown
+| 48 | 1 | The value `7`
+| 49 | 1 | Unknown
+| 50 | 10 | [Tie break rules](#tiebreaks)
+| 60 | 1 | Number of tiebreak rules specified (at most 4 possible in ChessBase)
+| 61 | 4 | [Tournament end date](types.md#date)
+
+## <a name="tiebreaks">Tie breaks</a>
+
+| Value | Description
+| --- | ---
+| 1 | Unspecified
+| 2 | Not set
+| 10 | Swiss System - Rating of Buchholz
+| 11 | Swiss System - Feine Buchholz
+| 12 | Swiss System - Median Buchholz
+| 13 | Swiss System - Fortshritt
+| 14 | Swiss System - Sonnenbornberger
+| 21 | Swiss System - Median2 Buchholz
+| 22 | Swiss System - Cut 1 Buchholz
+| 23 | Swiss System - Cut 2 Buchholz
+| 200 | Round Robin - Sonnebornberger
+| 201 | Round Robin - # wins
+| 202 | Round Robin - # black wins
+| 203 | Round Robin - # black games
+| 204 | Round Robin - Point group
+| 206 | Round Robin - Koya

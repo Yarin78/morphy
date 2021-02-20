@@ -233,7 +233,7 @@ public class GameMovesModel {
         }
 
         private void validateMove(Move move) {
-            if (move.position() != position() || !position.isMoveLegal(move)) {
+            if (!move.position().equals(position()) || !position.isMoveLegal(move)) {
                 throw new IllegalMoveException(position, move);
             }
         }

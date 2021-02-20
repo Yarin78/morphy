@@ -96,3 +96,5 @@ The header is immediately follow by the entity records. Each entity record has t
 | 4 | 4 | The id of the entity that is the right subtree of this node, or -1 if there is none.
 | 8 | 1 | The height difference between the left and the right subtree. Should be either 1 (left subtree is 1 level higher), 0 or 1 in a well balanced tree.
 | 9 | ? | The remaining data for that specific entity type, see below.
+
+All entities optionally have [Search Boosters](search_boosters.md).

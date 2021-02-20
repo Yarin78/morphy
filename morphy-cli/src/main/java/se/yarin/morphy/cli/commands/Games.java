@@ -18,6 +18,7 @@ import se.yarin.morphy.cli.columns.*;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.channels.FileChannel;
 import java.nio.file.FileAlreadyExistsException;
 import java.util.Arrays;
 import java.util.List;
@@ -102,6 +103,9 @@ public class Games extends BaseCommand implements Callable<Integer> {
 
     @CommandLine.Option(names = "--raw-col-cba", description = "Show binary CBA data (debug)")
     private boolean rawCbaColumns;
+
+    @CommandLine.Option(names = "--raw-col-cbb", description = "Show binary CBB data (debug)")
+    private String[] rawCbbColumns;
 
     @CommandLine.Option(names = "--raw-cbh", description = "Raw filter expression in CBH data (debug)")
     private String[] rawCbhFilter;
@@ -294,6 +298,15 @@ public class Games extends BaseCommand implements Callable<Integer> {
                 }
                 if (rawCbaColumns) {
                     parsedColumns.add(new RawAnnotationsColumn());
+                }
+                if (rawCbbColumns != null) {
+                    for (String rawCbjColumn : rawCbbColumns) {
+                        String[] parts = rawCbjColumn.split(",");
+                        if (parts.length != 2) {
+                            throw new IllegalArgumentException("Invalid format of raw CBB column");
+                        }
+                        parsedColumns.add(new RawCBBColumn(Integer.parseInt(parts[0]), Integer.parseInt(parts[1])));
+                    }
                 }
 
                 gameConsumer = new StdoutGamesSummary(countAll, parsedColumns);
