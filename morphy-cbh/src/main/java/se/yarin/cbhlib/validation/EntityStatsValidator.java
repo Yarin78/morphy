@@ -41,6 +41,7 @@ public class EntityStatsValidator {
             updateEntityStats(stats.tournaments, game.getTournamentId(), gameId);
             updateEntityStats(stats.annotators, game.getAnnotatorId(), gameId);
             updateEntityStats(stats.sources, game.getSourceId(), gameId);
+            updateEntityStats(stats.gameTags, game.getGameTagId(), gameId);
 
             progressCallback.run();
         }
@@ -214,6 +215,7 @@ public class EntityStatsValidator {
         processEntities("annotators", db.getAnnotatorBase(), stats.annotators, throwOnError);
         processEntities("sources", db.getSourceBase(), stats.sources, throwOnError);
         processEntities("teams", db.getTeamBase(), stats.teams, throwOnError);
+        processEntities("game tags", db.getGameTagBase(), stats.gameTags, throwOnError);
     }
 
 }

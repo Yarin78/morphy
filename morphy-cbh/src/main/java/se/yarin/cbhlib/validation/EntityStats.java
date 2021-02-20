@@ -18,5 +18,6 @@ public class EntityStats {
     public Map<Integer, Stats> annotators = new HashMap<>();
     public Map<Integer, Stats> sources = new HashMap<>();
     public Map<Integer, Stats> teams = new HashMap<>();
+    public Map<Integer, Stats> gameTags = new HashMap<>();
 
 }

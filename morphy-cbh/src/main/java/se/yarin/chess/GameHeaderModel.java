@@ -77,6 +77,7 @@ public class GameHeaderModel {
     @HeaderData @Getter private String source;
     @HeaderData @Getter private Date sourceDate;
     @HeaderData @Getter private String annotator;
+    @HeaderData @Getter private String gameTag;
 
     public void setWhite(String name) { setField(FIELD_WHITE, name); }
     public void setBlack(String name) { setField(FIELD_BLACK, name); }

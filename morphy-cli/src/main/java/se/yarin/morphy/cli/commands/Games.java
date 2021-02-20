@@ -50,6 +50,9 @@ public class Games extends BaseCommand implements Callable<Integer> {
     @CommandLine.Option(names = "--team", description = "Show only games where one of the players played for this team")
     private String team;
 
+    @CommandLine.Option(names = "--game-tag", description = "Show only games with a game tag matching this prefix")
+    private String gameTag;
+
     @CommandLine.Option(names = "--tournament", description = "Show only games in this tournament")
     private String tournament;
 
@@ -221,6 +224,10 @@ public class Games extends BaseCommand implements Callable<Integer> {
 
         if (team != null) {
             gameSearcher.addFilter(new TeamFilter(db, team));
+        }
+
+        if (gameTag != null) {
+            gameSearcher.addFilter(new GameTagFilter(db, gameTag));
         }
 
         TournamentSearcher tournamentSearcher = null;
