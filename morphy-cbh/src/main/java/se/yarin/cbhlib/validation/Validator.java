@@ -32,12 +32,13 @@ public class Validator {
         // Checks that statistics (first game and count) for each entity is correct
         ENTITY_STATISTICS,
 
-        // Check Player, Tournament, Annotator, Source and Team entity types (statistics, sorting)
+        // Check Player, Tournament, Annotator, Source, Team and Game Tag entity types (statistics, sorting)
         ENTITY_PLAYERS,
         ENTITY_TOURNAMENTS,
         ENTITY_ANNOTATORS,
         ENTITY_SOURCES,
         ENTITY_TEAMS,
+        ENTITY_GAME_TAGS,
 
         // Check Game Headers
         GAMES,
@@ -89,6 +90,9 @@ public class Validator {
         }
         if (checks.contains(Checks.ENTITY_TEAMS)) {
             entityTypeCheck.add(new EntityTypeCheck("teams", db.getTeamBase(), entityStats.teams));
+        }
+        if (checks.contains(Checks.ENTITY_GAME_TAGS)) {
+            entityTypeCheck.add(new EntityTypeCheck("game tags", db.getGameTagBase(), entityStats.gameTags));
         }
 
         TrackerFactory trackerFactory = showProgressBar

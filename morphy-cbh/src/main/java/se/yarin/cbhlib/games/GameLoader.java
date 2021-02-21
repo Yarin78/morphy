@@ -31,6 +31,7 @@ public class GameLoader {
     public static final String SOURCE_ID = "sourceId";
     public static final String WHITE_TEAM_ID = "whiteTeamId";
     public static final String BLACK_TEAM_ID = "blackTeamId";
+    public static final String GAME_TAG_ID = "gameTagId";
 
     private final Database database;
 
@@ -61,6 +62,7 @@ public class GameLoader {
         TournamentEntity tournament = resolveEntity(database.getTournamentBase(), "tournament", header.getTournamentId(), game, false);
         TeamEntity whiteTeam = resolveEntity(database.getTeamBase(), "white team", extendedHeader.getWhiteTeamId(), game, true);
         TeamEntity blackTeam = resolveEntity(database.getTeamBase(), "black team", extendedHeader.getBlackTeamId(), game, true);
+        GameTagEntity gameTag = resolveEntity(database.getGameTagBase(), "game tag", extendedHeader.getGameTagId(), game, true);
 
         assert whitePlayer != null;
         assert blackPlayer != null;
@@ -131,6 +133,7 @@ public class GameLoader {
         model.setField(SOURCE_ID, source.getId());
         model.setAnnotator(annotator.getName());
         model.setField(ANNOTATOR_ID, annotator.getId());
+        model.setField(GAME_TAG_ID, gameTag.getId());
 
         model.setLineEvaluation(header.getLineEvaluation());
 
@@ -215,14 +218,18 @@ public class GameLoader {
             try {
                 TeamEntity oldWhiteTeam = game.getWhiteTeam();
                 TeamEntity oldBlackTeam = game.getBlackTeam();
+                GameTagEntity oldGameTag = game.getGameTag();
 
                 TeamEntity whiteTeam = oldWhiteTeam != null ? resolveOrCreateEntity(0,
                         oldWhiteTeam.withNewId(0), database.getTeamBase()) : null;
                 TeamEntity blackTeam = oldBlackTeam != null ? resolveOrCreateEntity(0,
                         oldBlackTeam.withNewId(0), database.getTeamBase()) : null;
+                GameTagEntity gameTag = oldGameTag != null ? resolveOrCreateEntity(0,
+                        oldGameTag.withNewId(0), database.getGameTagBase()) : null;
 
                 builder.whiteTeamId(whiteTeam == null ? -1 : whiteTeam.getId());
                 builder.blackTeamId(blackTeam == null ? -1 : blackTeam.getId());
+                builder.gameTagId(gameTag == null ? -1 : gameTag.getId());
             } catch (IllegalArgumentException e) {
                 throw new ChessBaseInvalidDataException("Failed to create ExtendedGameHeader entry due to invalid entity data reference", e);
             } catch (RuntimeException e) {
@@ -246,6 +253,7 @@ public class GameLoader {
                 .annotationOffset(0)
                 .creationTimestamp(0) // TODO
                 .lastChangedTimestamp(0) // TODO
+                .gameTagId(-1) // TODO
                 .build();
     }
 
@@ -254,6 +262,7 @@ public class GameLoader {
         GameHeaderModel header = model.header();
 
         TeamEntity whiteTeam, blackTeam;
+        GameTagEntity gameTag;
 
         // If the GameModel contains ID's from a different database, we can't use them
         boolean sameDb = database.getDatabaseId().equals(header.getField(DATABASE_ID));
@@ -266,6 +275,8 @@ public class GameLoader {
                     new TeamEntity(defaultName(header.getWhiteTeam())), database.getTeamBase());
             blackTeam = resolveOrCreateEntity(sameDb ? (Integer) header.getField(BLACK_TEAM_ID) : 0,
                     new TeamEntity(defaultName(header.getBlackTeam())), database.getTeamBase());
+            gameTag = resolveOrCreateEntity(sameDb ? (Integer) header.getField(GAME_TAG_ID) : 0,
+                    new GameTagEntity(defaultName(header.getGameTag())), database.getGameTagBase());
         } catch (IllegalArgumentException e) {
             throw new ChessBaseInvalidDataException("Failed to create ExtendedGameHeader entry due to invalid entity data reference", e);
         } catch (RuntimeException e) {
@@ -284,6 +295,7 @@ public class GameLoader {
                 .creationTimestamp(0) // TODO
                 .endgameInfo(null)
                 .lastChangedTimestamp(0) // TODO
+                .gameTagId(gameTag.getId())
                 .build();
     }
 

@@ -9,6 +9,7 @@ import se.yarin.cbhlib.validation.Validator;
 
 import java.io.IOException;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.Callable;
 
@@ -35,6 +36,9 @@ public class Check extends BaseCommand implements Callable<Integer> {
     @CommandLine.Option(names = "--no-teams", negatable = true, description = "Check Team entities (true by default)")
     boolean checkTeams = true;
 
+    @CommandLine.Option(names = "--no-game-tags", negatable = true, description = "Check Game Tag entities (true by default)")
+    boolean checkGameTags = true;
+
     @CommandLine.Option(names = "--no-entities", negatable = true, description = "Check entities (true by default)")
     boolean checkEntities = true;
 
@@ -57,18 +61,18 @@ public class Check extends BaseCommand implements Callable<Integer> {
     public Integer call() throws IOException {
         setupGlobalOptions();
 
-        Map<Validator.Checks, Boolean> checkFlags = Map.of(
-                Validator.Checks.ENTITY_PLAYERS, checkPlayers && checkEntities,
-                Validator.Checks.ENTITY_TOURNAMENTS, checkTournaments && checkEntities,
-                Validator.Checks.ENTITY_ANNOTATORS, checkAnnotators && checkEntities,
-                Validator.Checks.ENTITY_SOURCES, checkSources && checkEntities,
-                Validator.Checks.ENTITY_TEAMS, checkTeams && checkEntities,
-                Validator.Checks.ENTITY_STATISTICS, checkEntityStats && checkEntities,
-                Validator.Checks.ENTITY_SORT_ORDER, checkEntitySortOrder && checkEntities,
-                Validator.Checks.ENTITY_DB_INTEGRITY, checkEntityFileIntegrity && checkEntities,
-                Validator.Checks.GAMES, checkGameHeaders,
-                Validator.Checks.GAMES_LOAD, loadGames
-        );
+        HashMap<Validator.Checks, Boolean> checkFlags = new HashMap<>();
+        checkFlags.put(Validator.Checks.ENTITY_PLAYERS, checkPlayers && checkEntities);
+        checkFlags.put(Validator.Checks.ENTITY_TOURNAMENTS, checkTournaments && checkEntities);
+        checkFlags.put(Validator.Checks.ENTITY_ANNOTATORS, checkAnnotators && checkEntities);
+        checkFlags.put(Validator.Checks.ENTITY_SOURCES, checkSources && checkEntities);
+        checkFlags.put(Validator.Checks.ENTITY_TEAMS, checkTeams && checkEntities);
+        checkFlags.put(Validator.Checks.ENTITY_GAME_TAGS, checkGameTags && checkEntities);
+        checkFlags.put(Validator.Checks.ENTITY_STATISTICS, checkEntityStats && checkEntities);
+        checkFlags.put(Validator.Checks.ENTITY_SORT_ORDER, checkEntitySortOrder && checkEntities);
+        checkFlags.put(Validator.Checks.ENTITY_DB_INTEGRITY, checkEntityFileIntegrity && checkEntities);
+        checkFlags.put(Validator.Checks.GAMES, checkGameHeaders);
+        checkFlags.put(Validator.Checks.GAMES_LOAD, loadGames);
 
         EnumSet<Validator.Checks> checks = EnumSet.allOf(Validator.Checks.class);
         checks.removeIf(flag -> !checkFlags.get(flag));

@@ -109,6 +109,12 @@ public class Game {
         return teamId == -1 ? null : database.getTeamBase().get(teamId);
     }
 
+    public int getGameTagId() { return extendedHeader.getGameTagId(); }
+
+    public GameTagEntity getGameTag() {
+        return getGameTagId() == -1 ? null : database.getGameTagBase().get(getGameTagId());
+    }
+
     public boolean isGuidingText() {
         return header.isGuidingText();
     }

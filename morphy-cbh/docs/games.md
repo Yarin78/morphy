@@ -1,7 +1,7 @@
 # Game Headers
 
-**Game Headers**, metadata about a game, are stored across multiple database files. The main game header is stored in the .cbh file, 
-and the extended header in the .cbj file. Additional game information is stored in the .flags file.
+**Game Headers**, metadata about a game, are stored across multiple database files. The main game header is stored in the [.cbh file](#cbh_file), 
+and the extended header in the [.cbj file](#cbj_file). Additional game information (Top Games) is stored in the [flags file](#flags).
 
 Besides games, metadata about *guiding texts* are also stored in the same files. As the attentive user of ChessBase may have noticed,
 these guiding texts are mixed with the games, sharing the same id-space. The first byte of each record contains information
@@ -142,6 +142,29 @@ For games with no teams or tag, `-1` is used. Note that this differs compared to
 
 
 
-## flags file format
+## <a name="flags_file">flags file format</a>
 
-N/A
+The .flags file stores additional flags for games in the database.
+Currently this only seems to refer to which games are marked as "Top Games".
+
+### <a name="flags_header">flags header</a>
+
+The first 12 bytes of the file is a header. The integers are stored in Big Endian.
+
+| Offset | Bytes | Description
+| --- | --- | ---
+| 0 | 4 | The integer 0x0F010B09. Unknown purpose.
+| 4 | 4 | Game capacity in this file; the number of 16-game "chunks" currently reserved. Is increased 16 at a time.
+| 8 | 4 | The integer 2. Unknown purpose. Number of bits per game!? (gets reset to 2 when saving if changed)
+
+### flags bits
+
+There are 2 bits per game, starting at offset 12 and the least significant bits. The first two bits refers to game 0 which doesn't exist so they are not used.
+
+| Bit | Description
+| --- | ---
+| 0 | Set if the game has been evaluate as a Top Game or not
+| 1 | Set if the game is a Top Game
+
+It's unclear what causes a game to be evaluated to a Top Game. In Mega Database, all games are evaluated and bit 0 is always set.
+When adding new games to a database, bit 0 typically is not set right away.

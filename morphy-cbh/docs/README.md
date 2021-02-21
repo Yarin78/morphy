@@ -37,10 +37,12 @@ The specific entities are: [Players](players.md) in the .cbp file, [Tournaments]
 
 ## Multimedia
 
-Multimedia can either be stored as separate files on disks in subdirectories, or in the .cbm file.
+Multimedia files (images, video) are stored in a subfolder with the same name as the database
+with the extension .bmp or .html.
+A manifest of what media files are use in a game is stored in the .cbm file.
 
 ## Search boosters and additional indexes
 
-Most other files, .cbb, .cbd, .cbgi, .cit, .cip etc, contains additional indexes to speed up the 
-search of games and entities. They are not crucial and can be rebuilt from the other files.
-In general, they are not documented here.
+There are a number of additional files that are used to speed up the search.
+They can be recreated from the other files if they go missing and are therefore less essential.
+These are generally called [Search Boosters](search_boosters.md).

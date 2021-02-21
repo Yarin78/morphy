@@ -285,6 +285,9 @@ public class DatabaseUpdater {
             for (Map.Entry<Integer, Integer> delta : map.entrySet()) {
                 if (delta.getValue() != 0) {
                     T entity = base.get(delta.getKey());
+                    if (entity == null) {
+                        log.error("Failed to get entity with id " + delta.getKey());
+                    }
                     int newCount = entity.getCount() + delta.getValue();
                     if (newCount == 0) {
                         base.delete(entity);
@@ -341,6 +344,10 @@ public class DatabaseUpdater {
                 database.getTeamBase(),
                 newGame,
                 entity -> new TeamFilter(database, entity));
+        DeltaMap<GameTagEntity> gameTagDelta = new DeltaMap<>(
+                database.getGameTagBase(),
+                newGame,
+                entity -> new GameTagFilter(database, entity));
 
         if (oldGame != null) {
             playerDelta.update(oldGame.getWhitePlayerId(), -1);
@@ -350,6 +357,7 @@ public class DatabaseUpdater {
             sourceDelta.update(oldGame.getSourceId(), -1);
             teamDelta.update(oldGame.getWhiteTeamId(), -1);
             teamDelta.update(oldGame.getBlackTeamId(), -1);
+            gameTagDelta.update(oldGame.getGameTagId(), -1);
         }
         playerDelta.update(newGame.getWhitePlayerId(), 1);
         playerDelta.update(newGame.getBlackPlayerId(), 1);
@@ -358,6 +366,7 @@ public class DatabaseUpdater {
         sourceDelta.update(newGame.getSourceId(), 1);
         teamDelta.update(newGame.getWhiteTeamId(), 1);
         teamDelta.update(newGame.getBlackTeamId(), 1);
+        gameTagDelta.update(newGame.getGameTagId(), 1);
 
         try {
             playerDelta.applyChanges();
@@ -365,6 +374,7 @@ public class DatabaseUpdater {
             annotatorDelta.applyChanges();
             sourceDelta.applyChanges();
             teamDelta.applyChanges();
+            gameTagDelta.applyChanges();
         } catch (EntityStorageException e) {
             throw new ChessBaseIOException("Entity storage is in an inconsistent state. Please run repair.", e);
         }

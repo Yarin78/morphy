@@ -54,6 +54,7 @@ public interface GameColumn {
             new DateColumn(),
             new AnnotatorColumn(),
             new SourceColumn(),
+            new GameTagColumn(),
             new GameVersionColumn(),
             new CreationTimestampColumn(),
             new LastChangedTimestampColumn(),

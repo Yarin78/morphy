@@ -33,6 +33,7 @@ public class ExtendedGameHeader {
     private final long creationTimestamp; // 1/1024th seconds since December 1st 2008
     private final EndgameInfo endgameInfo;
     private final long lastChangedTimestamp; // 1/10,000,000th seconds since October 15th 1582
+    private final int gameTagId;
 
     public static ExtendedGameHeader empty(GameHeader header) {
         return ExtendedGameHeader.builder()
@@ -45,6 +46,7 @@ public class ExtendedGameHeader {
                 .annotationOffset(header.getAnnotationOffset())
                 .creationTimestamp(0) // TODO
                 .lastChangedTimestamp(0) // TODO
+                .gameTagId(-1)
                 .build();
     }
 

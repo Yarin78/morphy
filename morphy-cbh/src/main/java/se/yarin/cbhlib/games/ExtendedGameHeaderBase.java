@@ -308,7 +308,7 @@ public class ExtendedGameHeaderBase implements ExtendedGameHeaderSerializer {
         }
         ByteBufferUtil.putLongB(buf, header.getLastChangedTimestamp());
 
-        ByteBufferUtil.putIntB(buf, 0);
+        ByteBufferUtil.putIntB(buf, header.getGameTagId());
         // End of version 11 (120 bytes)
 
         assert buf.position() == buf.limit();
@@ -378,7 +378,11 @@ public class ExtendedGameHeaderBase implements ExtendedGameHeaderSerializer {
                 buf.position(position + 20);
 
                 builder.lastChangedTimestamp(ByteBufferUtil.getLongB(buf));
-                int gameTagId = ByteBufferUtil.getIntB(buf); // TODO
+                int gameTagId = ByteBufferUtil.getIntB(buf);
+                builder.gameTagId(gameTagId);
+            } else {
+                // TODO: Set reasonable defaults to timestamps
+                builder.gameTagId(-1);
             }
         } catch (BufferUnderflowException e) {
             log.warn("Unexpected end of extended game header buffer", e);

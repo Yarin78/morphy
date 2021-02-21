@@ -58,6 +58,7 @@ public final class Database implements AutoCloseable {
     @Getter @NonNull private final AnnotatorBase annotatorBase;
     @Getter @NonNull private final SourceBase sourceBase;
     @Getter @NonNull private final TeamBase teamBase;
+    @Getter @NonNull private final GameTagBase gameTagBase;
 
 
     /**
@@ -67,7 +68,7 @@ public final class Database implements AutoCloseable {
      */
     public Database() {
         this(new GameHeaderBase(), new ExtendedGameHeaderBase(), new MovesBase(), new AnnotationBase(), new PlayerBase(),
-                new TournamentBase(), new AnnotatorBase(), new SourceBase(), new TeamBase());
+                new TournamentBase(), new AnnotatorBase(), new SourceBase(), new TeamBase(), new GameTagBase());
     }
 
     private Database(
@@ -79,7 +80,8 @@ public final class Database implements AutoCloseable {
             @NonNull TournamentBase tournamentBase,
             @NonNull AnnotatorBase annotatorBase,
             @NonNull SourceBase sourceBase,
-            @NonNull TeamBase teamBase) {
+            @NonNull TeamBase teamBase,
+            @NonNull GameTagBase gameTagBase) {
         this.headerBase = headerBase;
         this.extendedHeaderBase = extendedHeaderBase;
         this.movesBase = movesBase;
@@ -89,6 +91,7 @@ public final class Database implements AutoCloseable {
         this.annotatorBase = annotatorBase;
         this.sourceBase = sourceBase;
         this.teamBase = teamBase;
+        this.gameTagBase = gameTagBase;
 
         this.loader = new GameLoader(this);
         this.updater = new DatabaseUpdater(this, loader);
@@ -134,8 +137,10 @@ public final class Database implements AutoCloseable {
         SourceBase cbs = SourceBase.open(new File(base + ".cbs"));
         File cbeFile = new File(base + ".cbe");
         TeamBase cbe = cbeFile.exists() ? TeamBase.open(cbeFile) : new TeamBase();
+        File cblFile = new File(base + ".cbl");
+        GameTagBase cbl = cblFile.exists() ? GameTagBase.open(cblFile) : new GameTagBase();
 
-        return new Database(cbh, cbj, cbg, cba, cbp, cbt, cbc, cbs, cbe);
+        return new Database(cbh, cbj, cbg, cba, cbp, cbt, cbc, cbs, cbe, cbl);
     }
 
     /**
@@ -160,8 +165,9 @@ public final class Database implements AutoCloseable {
         AnnotatorBase cbc = AnnotatorBase.openInMemory(new File(base + ".cbc"));
         SourceBase cbs = SourceBase.openInMemory(new File(base + ".cbs"));
         TeamBase cbe = TeamBase.openInMemory(new File(base + ".cbe"));
+        GameTagBase cbl = GameTagBase.openInMemory(new File(base + ".cbl"));
 
-        return new Database(cbh, cbj, cbg, cba, cbp, cbt, cbc, cbs, cbe);
+        return new Database(cbh, cbj, cbg, cba, cbp, cbt, cbc, cbs, cbe, cbl);
     }
 
     /**
@@ -195,8 +201,9 @@ public final class Database implements AutoCloseable {
         AnnotatorBase cbc = AnnotatorBase.create(new File(base + ".cbc"), createOnClose);
         SourceBase cbs = SourceBase.create(new File(base + ".cbs"), createOnClose);
         TeamBase cbe = TeamBase.create(new File(base + ".cbe"), createOnClose);
+        GameTagBase cbl = GameTagBase.create(new File(base + ".cbl"), createOnClose);
 
-        return new Database(cbh, cbj, cbg, cba, cbp, cbt, cbc, cbs, cbe);
+        return new Database(cbh, cbj, cbg, cba, cbp, cbt, cbc, cbs, cbe, cbl);
     }
 
     /**
@@ -382,6 +389,7 @@ public final class Database implements AutoCloseable {
         annotatorBase.close();
         sourceBase.close();
         teamBase.close();
+        gameTagBase.close();
     }
 
 }

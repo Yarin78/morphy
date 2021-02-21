@@ -9,7 +9,7 @@ public class TeamEntity implements Entity, Comparable<TeamEntity> {
     @Getter
     private int id;
 
-    @Getter @Setter
+    @Getter
     @NonNull
     private String title;
 
