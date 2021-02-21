@@ -40,6 +40,7 @@ The specific entities are: [Players](players.md) in the .cbp file, [Tournaments]
 Multimedia files (images, video) are stored in a subfolder with the same name as the database
 with the extension .bmp or .html.
 A manifest of what media files are use in a game is stored in the .cbm file.
+See [Text](text.md) for more info.
 
 ## Search boosters and additional indexes
 

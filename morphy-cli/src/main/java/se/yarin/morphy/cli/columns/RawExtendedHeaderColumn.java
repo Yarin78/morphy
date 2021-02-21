@@ -12,9 +12,9 @@ public class RawExtendedHeaderColumn implements GameColumn {
     @Override
     public String getHeader() {
         if (length == 1) {
-            return String.format("CBH %d", start);
+            return String.format("CBJ %d", start);
         }
-        return String.format("CBH %d,%d", start, length);
+        return String.format("CBJ %d,%d", start, length);
     }
 
     public RawExtendedHeaderColumn(int start, int length) {

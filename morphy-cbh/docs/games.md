@@ -5,7 +5,7 @@ and the extended header in the [.cbj file](#cbj_file). Additional game informati
 
 Besides games, metadata about *guiding texts* are also stored in the same files. As the attentive user of ChessBase may have noticed,
 these guiding texts are mixed with the games, sharing the same id-space. The first byte of each record contains information
-if the record is a game or a text.
+if the record is a game or a text. For more information about textual content, see [Text](text.md).
 
 Games are referenced by their id; the first game/text has id 1.
 

@@ -68,6 +68,22 @@ public final class ByteBufferUtil {
     }
 
     /**
+     * Gets a byte encoded string from a {@link ByteBuffer}.
+     * The string is terminated by a new line character, 0x0a
+     * @param buf the buffer to read from
+     * @return the read string
+     */
+    public static String getByteStringLine(ByteBuffer buf) {
+        StringBuilder sb = new StringBuilder();
+        int start = buf.position();
+        while (buf.hasRemaining() && buf.get() != 10);
+        byte[] bytes = new byte[buf.position() - start];
+        buf.position(start);
+        buf.get(bytes);
+        return new String(bytes, 0, bytes.length, CBUtil.cbCharSet);
+    }
+
+    /**
      * Puts a length encoded string to a {@link ByteBuffer}.
      * @param buf the buffer to write to
      * @param s the string to put
