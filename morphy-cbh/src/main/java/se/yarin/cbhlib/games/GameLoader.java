@@ -133,7 +133,9 @@ public class GameLoader {
         model.setField(SOURCE_ID, source.getId());
         model.setAnnotator(annotator.getName());
         model.setField(ANNOTATOR_ID, annotator.getId());
-        model.setField(GAME_TAG_ID, gameTag.getId());
+        if (gameTag != null) {
+            model.setField(GAME_TAG_ID, gameTag.getId());
+        }
 
         model.setLineEvaluation(header.getLineEvaluation());
 
