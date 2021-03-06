@@ -22,5 +22,6 @@
     <orderEntry type="library" name="Maven: me.tongfei:progressbar:0.9.0" level="project" />
     <orderEntry type="library" name="Maven: org.jline:jline:3.16.0" level="project" />
     <orderEntry type="library" scope="PROVIDED" name="Maven: org.projectlombok:lombok:1.18.16" level="project" />
+    <orderEntry type="library" scope="PROVIDED" name="Maven: org.immutables:value:2.8.2" level="project" />
   </component>
 </module>

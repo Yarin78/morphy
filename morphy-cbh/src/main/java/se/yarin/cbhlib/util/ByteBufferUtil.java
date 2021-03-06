@@ -307,4 +307,12 @@ public final class ByteBufferUtil {
         buf.put((byte) (value >> 48));
         buf.put((byte) (value >> 56));
     }
+
+    public static double getDoubleL(ByteBuffer buf) {
+        return buf.getDouble();
+    }
+
+    public static void putDoubleL(ByteBuffer buf, double value) {
+        buf.putDouble(value);
+    }
 }

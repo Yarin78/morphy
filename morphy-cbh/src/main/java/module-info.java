@@ -1,7 +1,9 @@
 module se.yarin.morphy.cbh {
     requires slf4j.api;
     requires static lombok;
+    requires static org.immutables.value;
     requires progressbar;
+    requires java.compiler;
 
     exports se.yarin.chess;
     exports se.yarin.chess.annotations;

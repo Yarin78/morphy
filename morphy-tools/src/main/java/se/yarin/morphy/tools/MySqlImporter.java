@@ -18,20 +18,21 @@ import java.sql.*;
 public class MySqlImporter {
 
     private Connection getConnection() throws SQLException {
-        return DriverManager.getConnection("jdbc:mysql://localhost/chess?user=root");
+        return DriverManager.getConnection("jdbc:mysql://localhost/chess?user=root&password=root&rewriteBatchedStatements=true");
     }
 
     public static void main(String[] args) throws SQLException, IOException {
         MySqlImporter importer = new MySqlImporter();
 
-        File megadb = new File("/Users/yarin/chess/Mega2021/Mega Database 2021.cbh");
+        File megadb = new File("/Users/yarin/chess/bases/Mega2021/Mega Database 2021.cbh");
         Database db = Database.open(megadb);
 
-        // importer.importPlayers(db.getPlayerBase());
+        //importer.importPlayers(db.getPlayerBase());
         importer.importGames(db);
     }
 
     private void importGames(Database db) throws SQLException {
+        long start = System.currentTimeMillis();
         try (Connection conn = getConnection()) {
             Statement stmt = conn.createStatement();
             stmt.execute("DROP TABLE IF EXISTS games;");
@@ -67,21 +68,36 @@ public class MySqlImporter {
             stmt.execute("CREATE TABLE moves (\n" +
                     "    game_id int not null,\n" +
                     "    ply int not null,\n" +
-                    "    zobrist_hash bigint not null,\n" +
+                    "    hash_lo bigint not null,\n" +
+                    "    hash_hi bigint not null,\n" +
                     "    move varchar(10),\n" +
+                    "    position text,\n" +
                     "    primary key (game_id, ply)\n" +
                     ");\n");
             stmt.close();
-            int cnt = 0;
+            int gameCnt = 0, moveCnt = 0;
             PreparedStatement pstmt = conn.prepareStatement("INSERT INTO games(" +
                     "id, deleted, guiding_text, white_id, black_id, tournament_id, annotator_id, source_id," +
                     "white_team_id, black_team_id, played_date, result, `round`, sub_round, " +
                     "white_elo, black_elo, chess960, eco, line_evaluation, medal_mask, flags, " +
                     "num_moves, game_version, creation_timestamp, last_changed_timestamp, game_tag_id) " +
-                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);");
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
 
-            PreparedStatement mstmt = conn.prepareStatement("INSERT INTO moves(game_id, ply, zobrist_hash, move) VALUES (?, ?, ?, ?);");
+            PreparedStatement mstmt = conn.prepareStatement("INSERT INTO moves(game_id, ply, hash_lo, hash_hi, position, move) VALUES (?, ?, ?, ?, ?, ?)");
             GameSearcher searcher = new GameSearcher(db);
+            /*
+            searcher.addFilter(new SearchFilterBase(db) {
+                @Override
+                public int firstGameId() {
+                    return 1;
+                }
+
+                @Override
+                public boolean matches(Game game) {
+                    return true;
+                }
+            });
+             */
             Iterable<Game> games = searcher.iterableSearch();
             for (Game game : games) {
                 pstmt.setInt(1, game.getId());
@@ -152,22 +168,25 @@ public class MySqlImporter {
                     pstmt.setNull(26, Types.INTEGER);
                 }
 
-                pstmt.execute();
+                pstmt.addBatch();
 
                 if (!game.isGuidingText()) {
                     try {
                         GameModel model = game.getModel();
                         GameMovesModel.Node current = model.moves().root();
-                        while (current != null) {
+                        while (current != null && current.ply() <= 35) {
                             mstmt.setInt(1, game.getId());
                             mstmt.setInt(2, current.ply());
-                            mstmt.setLong(3, current.position().getZobristHash());
+                            mstmt.setLong(3, current.position().getZobristHashLo());
+                            mstmt.setLong(4, current.position().getZobristHashHi());
+                            mstmt.setString(5, current.position().toString());
                             if (current.hasMoves()) {
-                                mstmt.setString(4, current.mainMove().toSAN());
+                                mstmt.setString(6, current.mainMove().toSAN());
                             } else {
-                                mstmt.setNull(4, Types.VARCHAR);
+                                mstmt.setNull(6, Types.VARCHAR);
                             }
-                            mstmt.execute();
+                            moveCnt += 1;
+                            mstmt.addBatch();
 
                             current = current.mainNode();
                         }
@@ -176,12 +195,20 @@ public class MySqlImporter {
                     }
                 }
 
-                cnt += 1;
-                if (cnt % 100 == 0) {
-                    System.out.println(cnt + " games inserted");
+                gameCnt += 1;
+                if (gameCnt % 1000 == 0) {
+                    pstmt.executeBatch();
+                    mstmt.executeBatch();
+                    long tm = System.currentTimeMillis();
+                    long elapsed = tm - start;
+                    System.out.println(String.format("%d games and %d moves inserted (%d ms last batch)", gameCnt, moveCnt, elapsed));
+                    start = tm;
                 }
-                if (cnt == 1000) break;
             }
+            pstmt.executeBatch();
+            mstmt.executeBatch();
+            System.out.println("Last batch inserted");
+
             pstmt.close();
             mstmt.close();
         }
@@ -198,18 +225,20 @@ public class MySqlImporter {
                     ");");
             stmt.close();
 
-            PreparedStatement pstmt = conn.prepareStatement("INSERT INTO players(id, last_name, first_name) VALUES (?, ?, ?);");
+            PreparedStatement pstmt = conn.prepareStatement("INSERT INTO players(id, last_name, first_name) VALUES (?, ?, ?)");
             int cnt = 0;
             for (PlayerEntity p : playerBase.iterable()) {
                 pstmt.setInt(1, p.getId());
                 pstmt.setString(2, p.getLastName());
                 pstmt.setString(3, p.getFirstName());
-                pstmt.execute();
+                pstmt.addBatch();
                 cnt += 1;
                 if (cnt % 1000 == 0) {
+                    pstmt.executeBatch();
                     System.out.println(cnt + " players inserted");
                 }
             }
+            pstmt.executeBatch();
             pstmt.close();
         }
     }
