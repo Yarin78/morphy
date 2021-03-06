@@ -21,10 +21,10 @@ import static se.yarin.chess.Castles.*;
 public class Position {
 
     // Zobrist Hashing is used to calculate the hash code for a position
-    private static final long[][] zobristKey = new long[13][64];
-    private static final long[] zobristKeyCastle = new long[16];
-    private static final long[] zobristKeyToMove = new long[2];
-    private static final long[] zobristKeyEnPassant = new long[9];
+    private static final long[][] zobristKeyLo = new long[13][64], zobristKeyHi = new long[13][64];
+    private static final long[] zobristKeyCastleLo = new long[16], zobristKeyCastleHi = new long[16];
+    private static final long[] zobristKeyToMoveLo = new long[2], zobristKeyToMoveHi = new long[2];
+    private static final long[] zobristKeyEnPassantLo = new long[9], zobristKeyEnPassantHi = new long[9];
 
     private static final Position startPosition;
 
@@ -51,13 +51,26 @@ public class Position {
     }
 
     static {
-        Random r = new Random(0);
-        for (int i = 0; i < 64; i++)
-            for (int c = 0; c < 13; c++)
-                zobristKey[c][i] = getNonzeroLong(r);
-        for (int i = 0; i < 16; i++) zobristKeyCastle[i] = getNonzeroLong(r);
-        for (int i = 0; i < 9; i++) zobristKeyEnPassant[i] = getNonzeroLong(r);
-        for (int i = 0; i < 2; i++) zobristKeyToMove[i] = getNonzeroLong(r);
+        Random rlo = new Random(0);
+        Random rhi = new Random(1);
+        for (int i = 0; i < 64; i++) {
+            for (int c = 0; c < 13; c++) {
+                zobristKeyLo[c][i] = getNonzeroLong(rlo);
+                zobristKeyHi[c][i] = getNonzeroLong(rhi);
+            }
+        }
+        for (int i = 0; i < 16; i++) {
+            zobristKeyCastleLo[i] = getNonzeroLong(rlo);
+            zobristKeyCastleHi[i] = getNonzeroLong(rhi);
+        }
+        for (int i = 0; i < 9; i++) {
+            zobristKeyEnPassantLo[i] = getNonzeroLong(rlo);
+            zobristKeyEnPassantHi[i] = getNonzeroLong(rhi);
+        }
+        for (int i = 0; i < 2; i++) {
+            zobristKeyToMoveLo[i] = getNonzeroLong(rlo);
+            zobristKeyToMoveHi[i] = getNonzeroLong(rhi);
+        }
 
         startPosition = new Position(startBoard, E1, E8, WHITE, 15,
                 Chess.NO_COL, Chess960.REGULAR_CHESS_SP);
@@ -74,7 +87,8 @@ public class Position {
     private final int chess960sp; // Start position id (518 = ordinary chess)
 
     private final int whiteKingSqi, blackKingSqi;
-    private long hash; // Cached hash value of the position
+    private long hashLo; // Cached hash value of the position (lower 64 bits)
+    private long hashHi; // Cached hash value of the position (upper 64 bits)
     private Boolean isCheck, canCaptureKing; // cached values
     private List<Move> allLegalMoves; // cached values
 
@@ -606,24 +620,12 @@ public class Position {
             if (board[i].hasPlayer(toMove)) {
                 if (pieces.contains(board[i].toPiece())) {
                     switch (board[i].toPiece()) {
-                        case PAWN:
-                            moves.addAll(generatePawnMoves(i));
-                            break;
-                        case KNIGHT:
-                            moves.addAll(generateKnightMoves(i));
-                            break;
-                        case BISHOP:
-                            moves.addAll(generateBishopMoves(i));
-                            break;
-                        case ROOK:
-                            moves.addAll(generateRookMoves(i));
-                            break;
-                        case QUEEN:
-                            moves.addAll(generateQueenMoves(i));
-                            break;
-                        case KING:
-                            moves.addAll(generateKingMoves(i));
-                            break;
+                        case PAWN -> moves.addAll(generatePawnMoves(i));
+                        case KNIGHT -> moves.addAll(generateKnightMoves(i));
+                        case BISHOP -> moves.addAll(generateBishopMoves(i));
+                        case ROOK -> moves.addAll(generateRookMoves(i));
+                        case QUEEN -> moves.addAll(generateQueenMoves(i));
+                        case KING -> moves.addAll(generateKingMoves(i));
                     }
                 }
             }
@@ -657,27 +659,15 @@ public class Position {
             return false;
         }
         // This could be made more efficient
-        boolean pseudoLegal = false;
-        switch (board[move.fromSqi()].toPiece()) {
-            case PAWN:
-                pseudoLegal = generatePawnMoves(move.fromSqi()).contains(move);
-                break;
-            case KNIGHT:
-                pseudoLegal = generateKnightMoves(move.fromSqi()).contains(move);
-                break;
-            case BISHOP:
-                pseudoLegal = generateBishopMoves(move.fromSqi()).contains(move);
-                break;
-            case ROOK:
-                pseudoLegal = generateRookMoves(move.fromSqi()).contains(move);
-                break;
-            case QUEEN:
-                pseudoLegal = generateQueenMoves(move.fromSqi()).contains(move);
-                break;
-            case KING:
-                pseudoLegal = generateKingMoves(move.fromSqi()).contains(move);
-                break;
-        }
+        boolean pseudoLegal = switch (board[move.fromSqi()].toPiece()) {
+            case PAWN -> generatePawnMoves(move.fromSqi()).contains(move);
+            case KNIGHT -> generateKnightMoves(move.fromSqi()).contains(move);
+            case BISHOP -> generateBishopMoves(move.fromSqi()).contains(move);
+            case ROOK -> generateRookMoves(move.fromSqi()).contains(move);
+            case QUEEN -> generateQueenMoves(move.fromSqi()).contains(move);
+            case KING -> generateKingMoves(move.fromSqi()).contains(move);
+            default -> false;
+        };
         if (!pseudoLegal) {
             return false;
         }
@@ -685,26 +675,41 @@ public class Position {
     }
 
     public boolean equals(Object obj) {
-        // Assume that two boards with the same zobrist key (64 bit) are identical
-        if (obj instanceof Position)
-            return this.getZobristHash() == ((Position) obj).getZobristHash();
+        // Assume that two boards with the same zobrist key (128 bit) are identical
+        if (obj instanceof Position) {
+            return this.getZobristHashLo() == ((Position) obj).getZobristHashLo()
+                && this.getZobristHashHi() == ((Position) obj).getZobristHashHi();
+        }
         return super.equals(obj);
     }
 
-    public long getZobristHash() {
-        if (hash == 0) {
+    public long getZobristHashLo() {
+        if (hashLo == 0) {
             for (int i = 0; i < 64; i++) {
-                hash ^= zobristKey[board[i].ordinal()][i];
+                hashLo ^= zobristKeyLo[board[i].ordinal()][i];
             }
-            hash ^= zobristKeyCastle[castlesMask];
-            hash ^= zobristKeyEnPassant[enPassantCol + 1];
-            hash ^= zobristKeyToMove[toMove == WHITE ? 1 : 0];
-            hash ^= chess960sp;
+            hashLo ^= zobristKeyCastleLo[castlesMask];
+            hashLo ^= zobristKeyEnPassantLo[enPassantCol + 1];
+            hashLo ^= zobristKeyToMoveLo[toMove == WHITE ? 1 : 0];
+            hashLo ^= chess960sp;
         }
-        return hash;
+        return hashLo;
+    }
+
+    public long getZobristHashHi() {
+        if (hashHi == 0) {
+            for (int i = 0; i < 64; i++) {
+                hashHi ^= zobristKeyHi[board[i].ordinal()][i];
+            }
+            hashHi ^= zobristKeyCastleHi[castlesMask];
+            hashHi ^= zobristKeyEnPassantHi[enPassantCol + 1];
+            hashHi ^= zobristKeyToMoveHi[toMove == WHITE ? 1 : 0];
+            hashHi ^= chess960sp;
+        }
+        return hashHi;
     }
 
     public int hashCode() {
-        return (int) getZobristHash();
+        return (int) getZobristHashLo();
     }
 }

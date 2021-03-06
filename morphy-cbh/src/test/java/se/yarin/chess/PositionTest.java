@@ -443,8 +443,8 @@ public class PositionTest {
         Position p3 = Position.start().doMove(G1, H3).doMove(G8, H6).doMove(H1, G1).doMove(H6, G8)
             .doMove(G1, H1).doMove(G8, F6).doMove(H3, G1).doMove(F6, G8);
 
-        assertEquals(p1.getZobristHash(), p2.getZobristHash());
-        assertNotEquals(p1.getZobristHash(), p3.getZobristHash());
+        assertEquals(p1.getZobristHashLo(), p2.getZobristHashLo());
+        assertNotEquals(p1.getZobristHashLo(), p3.getZobristHashLo());
 
         assertEquals(p1.hashCode(), p2.hashCode());
         assertNotEquals(p1.hashCode(), p3.hashCode());
