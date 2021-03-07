@@ -20,7 +20,7 @@ public class GameTagIndex extends EntityIndex<GameTag> {
     }
 
     protected GameTagIndex(ItemStorage<EntityIndexHeader, EntityNode> storage) {
-        super(storage);
+        super(storage, "GameTag");
     }
 
     public static GameTagIndex open(File file, OpenOption... options)

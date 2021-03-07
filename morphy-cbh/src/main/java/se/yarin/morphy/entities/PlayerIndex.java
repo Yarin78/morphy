@@ -20,7 +20,7 @@ public class PlayerIndex extends EntityIndex<Player> {
     private static final int SERIALIZED_PLAYER_SIZE = 58;
 
     protected PlayerIndex(ItemStorage<EntityIndexHeader, EntityNode> storage) {
-        super(storage);
+        super(storage, "Player");
     }
 
     public static PlayerIndex open(File file, OpenOption... options)

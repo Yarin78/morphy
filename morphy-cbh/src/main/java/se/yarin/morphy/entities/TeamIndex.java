@@ -22,7 +22,7 @@ public class TeamIndex extends EntityIndex<Team> {
     }
 
     protected TeamIndex(ItemStorage<EntityIndexHeader, EntityNode> storage) {
-        super(storage);
+        super(storage, "Team");
     }
 
     public static TeamIndex open(File file, OpenOption... options)

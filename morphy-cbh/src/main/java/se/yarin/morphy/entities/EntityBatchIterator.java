@@ -19,7 +19,7 @@ public class EntityBatchIterator<T extends Entity & Comparable<T>> implements It
     }
 
     private void getNextBatch() {
-        int endId = Math.min(index.storageHeader().capacity(), nextBatchStart + BATCH_SIZE);
+        int endId = Math.min(index.capacity(), nextBatchStart + BATCH_SIZE);
         if (nextBatchStart >= endId) {
             batch = null;
         } else {

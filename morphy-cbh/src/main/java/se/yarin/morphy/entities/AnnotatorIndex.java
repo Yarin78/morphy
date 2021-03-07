@@ -21,7 +21,7 @@ public class AnnotatorIndex extends EntityIndex<Annotator> {
     }
 
     protected AnnotatorIndex(ItemStorage<EntityIndexHeader, EntityNode> storage) {
-        super(storage);
+        super(storage, "Annotator");
     }
 
     public static AnnotatorIndex open(File file, OpenOption... options)

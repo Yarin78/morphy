@@ -22,7 +22,7 @@ public class SourceIndex extends EntityIndex<Source> {
     }
 
     protected SourceIndex(ItemStorage<EntityIndexHeader, EntityNode> storage) {
-        super(storage);
+        super(storage, "Source");
     }
 
     public static SourceIndex open(File file, OpenOption... options)

@@ -40,7 +40,7 @@ public class InMemoryItemStorage<THeader, TItem> implements ItemStorage<THeader,
             throw new IllegalArgumentException(String.format("Tried to get item with id %d but InMemoryStorage only has %d items",
                     index + count - 1, this.items.size()));
         }
-        return items.subList(index, index + count);
+        return new ArrayList<>(items.subList(index, index + count));
     }
 
     @Override
@@ -49,7 +49,11 @@ public class InMemoryItemStorage<THeader, TItem> implements ItemStorage<THeader,
             throw new IllegalArgumentException(String.format("Tried to put item with id %d but InMemoryStorage only has %d items",
                     index, this.items.size()));
         }
-        items.set(index, item);
+        if (index == items.size()) {
+            items.add(item);
+        } else {
+            items.set(index, item);
+        }
     }
 
     @Override

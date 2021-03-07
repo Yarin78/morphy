@@ -42,6 +42,10 @@ public class EntityNode {
         return this.leftChildId == -999;
     }
 
+    public EntityNode(int id, int gameCount, int firstGameId, byte[] serializedEntity) {
+        this(id, -1, -1, 0, gameCount, firstGameId, serializedEntity);
+    }
+
     public EntityNode(int id, int leftChildId, int rightChildId, int balance, int gameCount, int firstGameId, byte[] serializedEntity) {
         this.id = id;
         this.leftChildId = leftChildId;
@@ -52,8 +56,11 @@ public class EntityNode {
         this.serializedEntity = serializedEntity;
     }
 
-    private byte[] serializedEntity;
-    private Entity entity;
+    public EntityNode update(int newLeftChildId, int newRightChildId, int newBalance) {
+        return new EntityNode(getId(), newLeftChildId, newRightChildId, newBalance, getGameCount(), getFirstGameId(), serializedEntity);
+    }
+
+    private final byte[] serializedEntity;
 
     public byte[] getSerializedEntity() {
         return serializedEntity;

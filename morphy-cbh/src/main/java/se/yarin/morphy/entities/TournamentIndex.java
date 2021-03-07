@@ -31,7 +31,7 @@ public class TournamentIndex extends EntityIndex<Tournament> {
     protected TournamentIndex(
             ItemStorage<EntityIndexHeader, EntityNode> storage,
             ItemStorage<TournamentExtraHeader, TournamentExtra> extraStorage) {
-        super(storage);
+        super(storage, "Tournament");
         this.extraStorage = extraStorage;
     }
 

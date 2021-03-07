@@ -1,7 +1,9 @@
 package se.yarin.morphy.entities;
 
+import org.immutables.value.Value;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import se.yarin.morphy.exceptions.MorphyEntityIndexException;
 import se.yarin.morphy.exceptions.MorphyIOException;
 import se.yarin.morphy.storage.ItemStorage;
 
@@ -9,6 +11,7 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
@@ -16,13 +19,20 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
     private static final Logger log = LoggerFactory.getLogger(EntityIndex.class);
 
     protected final ItemStorage<EntityIndexHeader, EntityNode> storage;
+    private final String entityType;
+    private int numCommittedTxn;
 
     EntityIndexHeader storageHeader() {
         return storage.getHeader();
     }
 
-    protected EntityIndex(ItemStorage<EntityIndexHeader, EntityNode> storage) {
+    protected EntityIndex(ItemStorage<EntityIndexHeader, EntityNode> storage, String entityType) {
         this.storage = storage;
+        this.entityType = entityType;
+    }
+
+    public int getNumCommittedTxn() {
+        return numCommittedTxn;
     }
 
     /**
@@ -33,23 +43,51 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
         return storage.getHeader().numEntities();
     }
 
+    /**
+     * Returns the capacity of the index
+     * @return number of entity slots in the index
+     */
+    public int capacity() {
+        return storage.getHeader().capacity();
+    }
+
     EntityNode getNode(int id) {
         return storage.getItem(id);
     }
 
     protected T resolveEntity(EntityNode node) {
+        if (node.isDeleted()) {
+            return null;
+        }
         return deserialize(node.getId(), node.getGameCount(), node.getFirstGameId(), node.getSerializedEntity());
+    }
+
+    public EntityIndexTransaction<T> beginTransaction() {
+        // TODO: Acquire read lock
+        return new EntityIndexTransaction<>(this);
+    }
+
+    void transactionCommitted(EntityIndexTransaction<T> txn) {
+        if (!txn.isCommitted()) {
+            throw new IllegalStateException("Transaction hasn't been committed!");
+        }
+        numCommittedTxn += 1;
     }
 
     /**
      * Gets an entity by id.
-     * If the id is invalid, either an empty (non-null) item is returned or
-     * {@link MorphyIOException} is thrown, depending on the OpenOption of the index.
+     * If the id refers to an entity that has been logically deleted, null is returned.
+     * If the id is invalid (larger than the capacity of the index), either an
+     * empty (non-null) item is returned or {@link MorphyIOException} is thrown, depending on the OpenOption of the index.
      * @param id the id of the entity
      * @return the entity
      */
     public T get(int id) {
-        return resolveEntity(getNode(id));
+        EntityNode node = getNode(id);
+        if (node == null) {
+            return null;
+        }
+        return resolveEntity(node);
     }
 
     /**
@@ -58,7 +96,8 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
      * @return the entity, or null if there was no entity with that key
      */
     public T get(T entityKey) {
-        NodePath<T> treePath = lowerBound(entityKey);
+        EntityIndexTransaction<T> txn = beginTransaction();
+        EntityIndexTransaction<T>.NodePath treePath = txn.lowerBound(entityKey);
         if (treePath.isEnd()) {
             return null;
         }
@@ -70,12 +109,33 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
     }
 
     /**
-     * Gets a list of all entities in the database
+     * Gets all entities with a given key.
+     * @param entityKey the key of the entity
+     * @return a list of all matching entities.
+     */
+    public List<T> getAll(T entityKey) {
+        return streamOrderedAscending(entityKey)
+                .takeWhile(e -> e.compareTo(entityKey) == 0)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Gets a list of all entities in the database, ordered by id
      * @return a list of all entities
      */
     public List<T> getAll() {
         ArrayList<T> result = new ArrayList<>();
         iterable().forEach(result::add);
+        return result;
+    }
+
+    /**
+     * Gets a list of all entities in the database, ordered by key
+     * @return a list of all entities
+     */
+    public List<T> getAllOrdered() {
+        ArrayList<T> result = new ArrayList<>();
+        iterableAscending().forEach(result::add);
         return result;
     }
 
@@ -149,7 +209,8 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
      * @return an iterable of entities
      */
     public Iterable<T> iterableAscending() {
-        return () -> new OrderedEntityAscendingIterator<>(NodePath.begin(this), -1);
+        EntityIndexTransaction<T> txn = beginTransaction();
+        return () -> new OrderedEntityAscendingIterator<>(txn.begin(), -1);
     }
 
     /**
@@ -159,7 +220,8 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
      * @return an iterable of entities
      */
     public Iterable<T> iterableAscending(T start) {
-        return () -> new OrderedEntityAscendingIterator<>(lowerBound(start), -1);
+        EntityIndexTransaction<T> txn = beginTransaction();
+        return () -> new OrderedEntityAscendingIterator<>(txn.lowerBound(start), -1);
     }
 
     /**
@@ -167,7 +229,8 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
      * @return an iterable of entities
      */
     public Iterable<T> iterableDescending() {
-        return () -> new OrderedEntityDescendingIterator<>(NodePath.end(this));
+        EntityIndexTransaction<T> txn = beginTransaction();
+        return () -> new OrderedEntityDescendingIterator<>(txn.end());
     }
 
     /**
@@ -177,7 +240,8 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
      * @return an iterable of entities
      */
     public Iterable<T> iterableDescending(T start) {
-        return () -> new OrderedEntityDescendingIterator<>(lowerBound(start));
+        EntityIndexTransaction<T> txn = beginTransaction();
+        return () -> new OrderedEntityDescendingIterator<>(txn.upperBound(start));
     }
 
     /**
@@ -233,79 +297,149 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
         return StreamSupport.stream(iterableDescending(start).spliterator(), false);
     }
 
-    /**
-     * Returns a NodePath to the first node which does not compare less than entity, or NodePath.end if no such node exists.
-     * If nodes exists with that compares equally to entity, the first of those nodes will be returned.
-     */
-    public NodePath<T> lowerBound(T entity) {
-        return lowerBound(entity, storageHeader().rootNodeId(), null);
-    }
-
-    private NodePath<T> lowerBound(T entity, int currentId, NodePath<T> path) {
-        if (currentId < 0) {
-            return NodePath.end(this);
-        }
-
-        EntityNode node = getNode(currentId);
-        T current = resolveEntity(node);
-        // IMPROVEMENT: Would be nice to be able to compare entities without having to deserialize them
-        int comp = entity.compareTo(current);
-
-        path = new NodePath<>(this, currentId, path);
-        if (comp <= 0) {
-            NodePath<T> left = lowerBound(entity, node.getLeftChildId(), path);
-            return left.isEnd() ? path : left;
-        } else {
-            return lowerBound(entity, node.getRightChildId(), path);
-        }
-    }
-
-    /**
-     * Returns a NodePath to the first node which compares greater than entity, or NodePath.end if no such node exists.
-     */
-    public NodePath<T> upperBound(T entity) {
-        return upperBound(entity, storageHeader().rootNodeId(), null);
-    }
-
-    private NodePath<T> upperBound(T entity, int currentId, NodePath<T> path) {
-        if (currentId < 0) {
-            return NodePath.end(this);
-        }
-
-        EntityNode node = getNode(currentId);
-        T current = resolveEntity(node);
-        int comp = entity.compareTo(current);
-
-        path = new NodePath<>(this, currentId, path);
-        if (comp < 0) {
-            NodePath<T> left = upperBound(entity, node.getLeftChildId(), path);
-            return left.isEnd() ? path : left;
-        } else {
-            return upperBound(entity, node.getRightChildId(), path);
-        }
-    }
-
     protected abstract T deserialize(int entityId, int count, int firstGameId, byte[] serializedData);
 
     protected abstract void serialize(T entity, ByteBuffer buf);
 
-
-    public int addEntity(T entity) {
-        /*
-        EntityIndexTransaction txn = new EntityIndexTransaction(this);
-        txn.addEntity(entity);
+    /**
+     * Adds a new entity to the index
+     * @param entity the entity to add
+     * @return the added entity with the id set
+     */
+    public T add(T entity) {
+        EntityIndexTransaction<T> txn = beginTransaction();
+        T addedEntity = txn.get(txn.addEntity(entity));
         txn.commit();
-        EntityNode node = new EntityNode(0, 0, 0, 0, 0, serialize(entity));
-        int newId = 0;
-        entityStorage.putItem(newId, node);
-        return newId;
+        return addedEntity;
+    }
 
-         */
-        return 0;
+    /**
+     * Updates an existing entity in the index
+     * @param id the id of the entity to update
+     * @param entity the new entity (the id field will be ignored)
+     */
+    public void put(int id, T entity) {
+        EntityIndexTransaction<T> txn = beginTransaction();
+        txn.putEntityById(id, entity);
+        txn.commit();
+    }
+
+    /**
+     * Updates an existing entity in the index
+     * The entity to update is determined by the key; use {@link #put(int, T)} to update the key fields of an entity
+     * @param entity the new entity
+     * @throws IllegalArgumentException if there is no matching entity, or if there are
+     */
+    public void put(T entity) {
+        EntityIndexTransaction<T> txn = beginTransaction();
+        txn.putEntityByKey(entity);
+        txn.commit();
+    }
+
+    /**
+     * Deletes an entity from the index
+     * @param entityId the id of the entity to delete
+     * @return true if the entity was deleted; false if there was no entity with that id in the index
+     */
+    public boolean delete(int entityId) {
+        EntityIndexTransaction<T> txn = beginTransaction();
+        boolean deleted = txn.deleteEntity(entityId);
+        txn.commit();
+        return deleted;
+    }
+
+    /**
+     * Deletes an entity from the index
+     * @param entity the key of the entity to delete
+     * @return true if the entity was deleted; false if there was no entity with that key in the index
+     * @throws IllegalArgumentException if there are multiple entities with the given key
+     */
+    public boolean delete(T entity) {
+        EntityIndexTransaction<T> txn = beginTransaction();
+        boolean deleted = txn.deleteEntity(entity);
+        txn.commit();
+        return deleted;
     }
 
     public void close() throws MorphyIOException {
         storage.close();
+    }
+
+
+    /**
+     * Validates that the entity headers correctly reflects the order of the entities
+     * @throws MorphyEntityIndexException if the structure of the storage is damaged in some way
+     */
+    public void validateStructure() throws MorphyEntityIndexException {
+        if (storageHeader().rootNodeId() == -1) {
+            if (storageHeader().numEntities() == 0) {
+                return;
+            }
+            throw new MorphyEntityIndexException(String.format(
+                    "Header says there are %d entities in the storage but the root points to no entity.", storageHeader().numEntities()));
+        }
+
+        ValidationResult result = validate(storageHeader().rootNodeId(), null, null, 0);
+        if (result.count() != storageHeader().numEntities()) {
+            // This is not a critical error; ChessBase integrity checker doesn't even notice it
+            // It's quite often, at least in older databases, off by one; in particular
+            // when there are just a few entities in the db
+            log.debug(String.format(
+                    "Found %d entities when traversing the %s base but the header says there should be %d entities.",
+                    result.count(), entityType.toLowerCase(), storageHeader().numEntities()));
+        }
+    }
+
+    @Value.Immutable
+    public static abstract class ValidationResult {
+        public abstract int count();
+        public abstract int height();
+
+        public static ValidationResult of(int count, int height) {
+            return ImmutableValidationResult.builder().count(count).height(height).build();
+        }
+    }
+
+    private ValidationResult validate(int entityId, T min, T max, int depth) throws MorphyEntityIndexException {
+        if (depth > 40) {
+            throw new MorphyEntityIndexException("Infinite loop when verifying storage structure for entity " + entityType.toLowerCase());
+        }
+        EntityNode node = getNode(entityId);
+        T entity = resolveEntity(node);
+        if (node.isDeleted() || entity == null) {
+            throw new MorphyEntityIndexException(String.format(
+                    "Reached deleted %s entity %d when validating the storage structure.", entityType.toLowerCase(), entityId));
+        }
+        if ((min != null && min.compareTo(entity) > 0) || (max != null && max.compareTo(entity) < 0)) {
+            throw new MorphyEntityIndexException(String.format(
+                    "%s entity %d out of order when validating the storage structure", entityType, entityId));
+        }
+
+        // Since the range is strictly decreasing every time, we should not have to worry
+        // about ending up in an infinite recursion.
+        int cnt = 1, leftHeight = 0, rightHeight = 0;
+        if (node.getLeftChildId() != -1) {
+            ValidationResult result = validate(node.getLeftChildId(), min, entity, depth+1);
+            cnt += result.count();
+            leftHeight = result.height();
+        }
+        if (node.getRightChildId() != -1) {
+            ValidationResult result = validate(node.getRightChildId(), entity, max, depth+1);
+            cnt += result.count();
+            rightHeight = result.height();
+        }
+
+        if (rightHeight - leftHeight != node.getBalance()) {
+            throw new MorphyEntityIndexException(String.format("Height difference at node %d was %d but node data says it should be %d (entity type %s)",
+                    node.getId(), rightHeight - leftHeight, node.getBalance(), entityType.toLowerCase()));
+        }
+
+        if (Math.abs(leftHeight - rightHeight) > 1) {
+            throw new MorphyEntityIndexException(String.format("Height difference at node %d was %d (entity type %s)",
+                    node.getId(), leftHeight - rightHeight, entityType.toLowerCase()));
+        }
+
+        return ValidationResult.of(cnt, 1 + Math.max(leftHeight, rightHeight));
     }
 
 }

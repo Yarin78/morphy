@@ -1,7 +1,5 @@
 package se.yarin.morphy.entities;
 
-import lombok.NonNull;
-
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
@@ -9,10 +7,10 @@ public class OrderedEntityAscendingIterator<T extends Entity & Comparable<T>> im
 
     // Invariant: current.node is the next entity to be returned
     // If current.isEnd(), there are no more entities to be returned
-    private NodePath<T> current;
+    private EntityIndexTransaction<T>.NodePath current;
     private final int stopId;
 
-    OrderedEntityAscendingIterator(@NonNull NodePath<T> start, int stopId) {
+    OrderedEntityAscendingIterator(EntityIndexTransaction<T>.NodePath start, int stopId) {
         this.current = start;
         this.stopId = stopId;
     }

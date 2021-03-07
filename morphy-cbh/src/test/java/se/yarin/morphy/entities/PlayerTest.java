@@ -157,146 +157,147 @@ public class PlayerTest {
         assertEquals(playerIndex.count(), playerIndex.streamOrderedAscending().count());
         assertEquals(playerIndex.count(), playerIndex.streamOrderedDescending().count());
     }
-    /*
-    @Test
-    public void testAddPlayer() throws IOException, EntityStorageException {
-        PlayerBase playerBase = PlayerBase.open(playerIndexFile);
-        int oldCount = playerBase.getCount();
 
-        PlayerEntity newPlayer = PlayerEntity.builder()
+    @Test
+    public void testAddPlayer() throws IOException {
+        PlayerIndex playerIndex = PlayerIndex.open(playerIndexFile, OpenOption.STRICT, OpenOption.WRITE);
+        int oldCount = playerIndex.count();
+
+        Player newPlayer = ImmutablePlayer.builder()
                 .lastName("Mardell")
                 .firstName("Jimmy")
                 .count(10)
                 .firstGameId(7)
                 .build();
-        assertTrue(playerBase.stream().noneMatch(e -> e.equals(newPlayer)));
+        assertTrue(playerIndex.stream().noneMatch(e -> e.equals(newPlayer)));
 
-        PlayerEntity entity = playerBase.add(newPlayer);
+        Player entity = playerIndex.add(newPlayer);
 
-        assertEquals(oldCount + 1, playerBase.getCount());
-        assertTrue(entity.getId() >= 0);
+        assertEquals(oldCount + 1, playerIndex.count());
+        assertTrue(entity.id() >= 0);
 
-        assertTrue(playerBase.stream().anyMatch(e -> e.equals(newPlayer)));
+        assertTrue(playerIndex.stream().anyMatch(e -> e.equals(newPlayer)));
     }
 
     @Test
-    public void testAddPlayerWithTooLongName() throws IOException, EntityStorageException {
-        PlayerBase playerBase = PlayerBase.open(playerIndexFile);
-        PlayerEntity newPlayer = new PlayerEntity("Thisisaverylongnamethatwillgettruncated", "");
-        PlayerEntity entity = playerBase.add(newPlayer);
-        assertEquals("Thisisaverylongnamethatwillget", entity.getLastName());
+    public void testAddPlayerWithTooLongName() throws IOException {
+        PlayerIndex playerIndex = PlayerIndex.open(playerIndexFile, OpenOption.STRICT, OpenOption.WRITE);
+        Player newPlayer = Player.of("Thisisaverylongnamethatwillgettruncated", "");
+        Player entity = playerIndex.add(newPlayer);
+        assertEquals("Thisisaverylongnamethatwillget", entity.lastName());
     }
 
     @Test
-    public void testRenamePlayer() throws IOException, EntityStorageException {
-        PlayerBase playerBase = PlayerBase.open(playerIndexFile);
-        PlayerEntity player = playerBase.get(new PlayerEntity("Carlsen", "Magnus"));
+    public void testRenamePlayer() throws IOException {
+        PlayerIndex playerIndex = PlayerIndex.open(playerIndexFile, OpenOption.STRICT, OpenOption.WRITE);
+        Player player = playerIndex.get(Player.of("Carlsen", "Magnus"));
 
-        assertNotEquals(player.getId(), playerBase.getLast().getId());
+        assertNotEquals(player.id(), playerIndex.getLast().id());
 
-        player = player.toBuilder().lastName("Zzz").build();
-        playerBase.put(player.getId(), player);
+        player = ImmutablePlayer.copyOf(player).withLastName("Zzz");
+        playerIndex.put(player.id(), player);
 
-        assertNull(playerBase.get(new PlayerEntity("Carlsen", "Magnus")));
-        assertEquals(new PlayerEntity("Zzz", "Magnus"), playerBase.get(player.getId()));
-        assertEquals(player.getId(), playerBase.getLast().getId());
+        assertNull(playerIndex.get(Player.of("Carlsen", "Magnus")));
+        assertEquals(Player.of("Zzz", "Magnus"), playerIndex.get(player.id()));
+        assertEquals(player.id(), playerIndex.getLast().id());
     }
 
     @Test
-    public void testChangePlayerStats() throws IOException, EntityStorageException {
-        PlayerBase playerBase = PlayerBase.open(playerIndexFile);
+    public void testChangePlayerStats() throws IOException {
+        PlayerIndex playerIndex = PlayerIndex.open(playerIndexFile, OpenOption.STRICT, OpenOption.WRITE);
 
-        PlayerEntity player = playerBase.get(new PlayerEntity("Carlsen", "Magnus"));
-        int id = player.getId();
-        assertNotEquals(1, player.getCount());
+        Player player = playerIndex.get(Player.of("Carlsen", "Magnus"));
+        int id = player.id();
+        assertNotEquals(1, player.count());
 
-        player = player.toBuilder().count(1).build();
-        playerBase.put(player.getId(), player);
+        player = ImmutablePlayer.copyOf(player).withCount(1);
+        playerIndex.put(player.id(), player);
 
-        player = playerBase.get(new PlayerEntity("Carlsen", "Magnus"));
-        assertEquals(1, player.getCount());
+        player = playerIndex.get(Player.of("Carlsen", "Magnus"));
+        assertEquals(1, player.count());
 
-        player = playerBase.get(id);
-        assertEquals(1, player.getCount());
+        player = playerIndex.get(id);
+        assertEquals(1, player.count());
     }
 
     @Test
-    public void testDeletePlayer() throws IOException, EntityStorageException {
-        PlayerBase playerBase = PlayerBase.open(playerIndexFile);
-        int oldCount = playerBase.getCount();
+    public void testDeletePlayer() throws IOException {
+        PlayerIndex playerIndex = PlayerIndex.open(playerIndexFile, OpenOption.STRICT, OpenOption.WRITE);
+        int oldCount = playerIndex.count();
 
-        PlayerEntity player = playerBase.get(new PlayerEntity("Carlsen", "Magnus"));
-        assertTrue(playerBase.stream().anyMatch(e -> e.equals(player)));
+        Player player = playerIndex.get(Player.of("Carlsen", "Magnus"));
+        assertTrue(playerIndex.stream().anyMatch(e -> e.equals(player)));
 
-        assertTrue(playerBase.delete(player.getId()));
+        assertTrue(playerIndex.delete(player.id()));
 
-        assertEquals(oldCount - 1, playerBase.getCount());
-        assertTrue(playerBase.stream().noneMatch(e -> e.equals(player)));
+        assertEquals(oldCount - 1, playerIndex.count());
+        assertTrue(playerIndex.stream().noneMatch(e -> e.equals(player)));
     }
 
     @Test
-    public void testDeleteMissingPlayer() throws IOException, EntityStorageException {
-        PlayerBase playerBase = PlayerBase.open(playerIndexFile);
-        int oldCount = playerBase.getCount();
+    public void testDeleteMissingPlayer() throws IOException {
+        PlayerIndex playerIndex = PlayerIndex.open(playerIndexFile, OpenOption.STRICT, OpenOption.WRITE);
+        int oldCount = playerIndex.count();
 
-        assertTrue(playerBase.delete(100));
-        assertEquals(oldCount - 1, playerBase.getCount());
+        assertTrue(playerIndex.delete(100));
+        assertEquals(oldCount - 1, playerIndex.count());
 
         // Delete same player again
-        assertFalse(playerBase.delete(100));
-        assertEquals(oldCount - 1, playerBase.getCount());
+        assertFalse(playerIndex.delete(100));
+        assertEquals(oldCount - 1, playerIndex.count());
     }
 
     @Test
-    public void testDeleteMultiplePlayersAndThenAddNewPlayer() throws IOException, EntityStorageException {
+    public void testDeleteMultiplePlayersAndThenAddNewPlayer() throws IOException {
         // This should reuse player ids
         // Not sure that's the correct thing to test here though since it's an implementation detail?
 
-        PlayerBase playerBase = PlayerBase.open(playerIndexFile);
-        playerBase.delete(10);
-        playerBase.delete(30);
-        playerBase.delete(57);
+        PlayerIndex playerIndex = PlayerIndex.open(playerIndexFile, OpenOption.STRICT, OpenOption.WRITE);
+        playerIndex.delete(10);
+        playerIndex.delete(30);
+        playerIndex.delete(57);
 
-        PlayerEntity first = playerBase.add(new PlayerEntity("First", ""));
-        assertEquals(57, first.getId());
-        PlayerEntity second = playerBase.add(new PlayerEntity("Second", ""));
-        assertEquals(30, second.getId());
-        PlayerEntity third = playerBase.add(new PlayerEntity("Third", ""));
-        assertEquals(10, third.getId());
-        PlayerEntity fourth = playerBase.add(new PlayerEntity("Fourth", ""));
-        assertEquals(playerBase.getCount() - 1, fourth.getId());
+        Player first = playerIndex.add(Player.of("First", ""));
+        assertEquals(57, first.id());
+        Player second = playerIndex.add(Player.of("Second", ""));
+        assertEquals(30, second.id());
+        Player third = playerIndex.add(Player.of("Third", ""));
+        assertEquals(10, third.id());
+        Player fourth = playerIndex.add(Player.of("Fourth", ""));
+        assertEquals(playerIndex.count() - 1, fourth.id());
     }
 
+    /*
     @Test
     public void testInMemoryStorage() throws IOException {
-        PlayerBase playerBase = PlayerBase.openInMemory(playerIndexFile);
-        assertEquals(playerBase.getCount(), playerBase.getAll().size());
+        PlayerIndex playerIndex = PlayerIndex.openInMemory(playerIndexFile);
+        assertEquals(playerIndex.count(), playerIndex.getAll().size());
     }
 
     @Test
-    public void testCreatePlayerBase() throws IOException {
+    public void testCreatePlayerIndex() throws IOException {
         File file = folder.newFile("newbase.cbp");
         file.delete(); // Need to delete it first so we can create it in PlayerBase
-        PlayerBase playerBase = PlayerBase.create(file);
-        assertEquals(0, playerBase.getCount());
+        PlayerIndex playerIndex = PlayerIndex.create(file);
+        assertEquals(0, playerIndex.count());
     }
 
     @Test
-    public void testOpenCreatedPlayerBase() throws IOException, EntityStorageException {
+    public void testOpenCreatedPlayerIndex() throws IOException {
         File file = folder.newFile("newbase.cbp");
         file.delete(); // Need to delete it first so we can create it in PlayerBase
 
-        PlayerBase playerBase = PlayerBase.create(file);
-        playerBase.add(new PlayerEntity("Carlsen", "Magnus"));
-        playerBase.add(new PlayerEntity("Karjakin", "Sergey"));
-        playerBase.add(new PlayerEntity("Svidler", "Peter"));
-        playerBase.close();
+        PlayerIndex playerIndex = PlayerIndex.create(file);
+        playerIndex.add(Player.of("Carlsen", "Magnus"));
+        playerIndex.add(Player.of("Karjakin", "Sergey"));
+        playerIndex.add(Player.of("Svidler", "Peter"));
+        playerIndex.close();
 
-        playerBase = PlayerBase.open(file);
-        PlayerEntity player = playerBase.get(1);
-        assertEquals(new PlayerEntity("Karjakin", "Sergey"), player);
+        playerIndex = PlayerIndex.open(file);
+        Player player = playerIndex.get(1);
+        assertEquals(Player.of("Karjakin", "Sergey"), player);
     }
-
+    */
     @Test
     public void testPlayerSortingOrder() {
         // Tested in ChessBase 16
@@ -319,11 +320,10 @@ public class PlayerTest {
         };
 
         for (int i = 0; i < playerNames.length - 1; i++) {
-            PlayerEntity p1 = new PlayerEntity(playerNames[i], "");
-            PlayerEntity p2 = new PlayerEntity(playerNames[i+1], "");
+            Player p1 = Player.of(playerNames[i], "");
+            Player p2 = Player.of(playerNames[i+1], "");
             assertTrue(String.format("Expected '%s' < '%s'", playerNames[i], playerNames[i+1]), p1.compareTo(p2) < 0);
         }
     }
 
-     */
 }
