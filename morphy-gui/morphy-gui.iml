@@ -26,6 +26,7 @@
     <orderEntry type="module" module-name="morphy-cbh" />
     <orderEntry type="library" name="Maven: me.tongfei:progressbar:0.9.0" level="project" />
     <orderEntry type="library" name="Maven: org.jline:jline:3.16.0" level="project" />
+    <orderEntry type="library" name="Maven: org.jetbrains:annotations:20.1.0" level="project" />
     <orderEntry type="library" name="Maven: de.codecentric.centerdevice:javafxsvg:1.1.0" level="project" />
     <orderEntry type="library" name="Maven: org.apache.xmlgraphics:batik-transcoder:1.7" level="project" />
     <orderEntry type="library" name="Maven: org.apache.xmlgraphics:fop:0.94" level="project" />

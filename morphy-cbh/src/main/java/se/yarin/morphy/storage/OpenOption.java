@@ -27,4 +27,8 @@ public enum OpenOption {
             throw new IllegalArgumentException("A database open in WRITE mode must also be in STRICT mode");
         }
     }
+
+    public static Set<OpenOption> RW() {
+        return Set.of(OpenOption.READ, OpenOption.WRITE, OpenOption.STRICT);
+    }
 }

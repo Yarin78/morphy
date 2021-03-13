@@ -1,12 +1,13 @@
 package se.yarin.morphy.storage;
 
+import org.jetbrains.annotations.NotNull;
 import se.yarin.morphy.exceptions.MorphyIOException;
 
 import java.util.List;
 
 public interface ItemStorage<THeader, TItem> {
-    THeader getHeader();
-    void putHeader(THeader header);
+    @NotNull THeader getHeader();
+    void putHeader(@NotNull THeader header);
 
     /**
      * Gets an item from the storage
@@ -15,8 +16,8 @@ public interface ItemStorage<THeader, TItem> {
      * @param index the id of the item
      * @return an item
      */
-    TItem getItem(int index);
-    void putItem(int index, TItem item);
+    @NotNull TItem getItem(int index);
+    void putItem(int index, @NotNull TItem item);
 
     /**
      * Gets a range of items from the storage
@@ -26,7 +27,7 @@ public interface ItemStorage<THeader, TItem> {
      * @param count the number of items to return
      * @return a list of items
      */
-    List<TItem> getItems(int index, int count);
+    @NotNull List<TItem> getItems(int index, int count);
 
     void close() throws MorphyIOException;
 }

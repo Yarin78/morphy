@@ -1,5 +1,7 @@
 package se.yarin.morphy.entities;
 
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.cbhlib.util.ByteBufferUtil;
@@ -21,21 +23,21 @@ public class TournamentIndex extends EntityIndex<Tournament> {
 
     private static final int SERIALIZED_TOURNAMENT_SIZE = 90;
 
-    private final ItemStorage<TournamentExtraHeader, TournamentExtra> extraStorage;
+    private final @NotNull ItemStorage<TournamentExtraHeader, TournamentExtra> extraStorage;
 
     public TournamentIndex() {
-        this(new InMemoryItemStorage<>(EntityIndexHeader.empty(SERIALIZED_TOURNAMENT_SIZE)),
-                new InMemoryItemStorage<>(TournamentExtraHeader.empty()));
+        this(new InMemoryItemStorage<>(EntityIndexHeader.empty(SERIALIZED_TOURNAMENT_SIZE), OpenOption.RW()),
+                new InMemoryItemStorage<>(TournamentExtraHeader.empty(), OpenOption.RW()));
     }
 
     protected TournamentIndex(
-            ItemStorage<EntityIndexHeader, EntityNode> storage,
-            ItemStorage<TournamentExtraHeader, TournamentExtra> extraStorage) {
+            @NotNull ItemStorage<EntityIndexHeader, EntityNode> storage,
+            @NotNull ItemStorage<TournamentExtraHeader, TournamentExtra> extraStorage) {
         super(storage, "Tournament");
         this.extraStorage = extraStorage;
     }
 
-    public static TournamentIndex open(File file, File extraFile, OpenOption... options)
+    public static TournamentIndex open(@NotNull File file, @Nullable File extraFile, @NotNull OpenOption... options)
             throws IOException, MorphyInvalidDataException {
         OpenOption.validate(options);
         Set<OpenOption> optionSet = Set.of(options);
@@ -49,17 +51,18 @@ public class TournamentIndex extends EntityIndex<Tournament> {
             if (storage.getHeader().entitySize() > SERIALIZED_TOURNAMENT_SIZE) {
                 throw new MorphyNotSupportedException("Newer unsupported tournament index format; writing not possible.");
             }
-            if (!extraFile.exists()) {
+            if (extraFile == null || !extraFile.exists()) {
                throw new MorphyNotSupportedException("The extra tournament index file is missing and creating it is not yet supported.");
             }
         }
 
         ItemStorage<TournamentExtraHeader, TournamentExtra> extraStorage;
-        if (extraFile.exists()) {
+        if (extraFile != null && extraFile.exists()) {
             extraStorage = new FileItemStorage<>(extraFile, new TournamentExtraSerializer(), optionSet);
         } else {
             assert !optionSet.contains(OpenOption.WRITE);
-            extraStorage = new InMemoryItemStorage<>(TournamentExtraHeader.empty(storage.getHeader().capacity()));
+            extraStorage = new InMemoryItemStorage<>(TournamentExtraHeader.empty(storage.getHeader().capacity()),
+                    Set.of(OpenOption.READ, OpenOption.WRITE), TournamentExtra.empty());
         }
 
         return new TournamentIndex(storage, extraStorage);

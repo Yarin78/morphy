@@ -6,6 +6,7 @@ import se.yarin.cbhlib.entities.PlayerEntity;
 import se.yarin.cbhlib.util.ByteBufferUtil;
 import se.yarin.morphy.exceptions.MorphyInvalidDataException;
 import se.yarin.morphy.storage.FileItemStorage;
+import se.yarin.morphy.storage.InMemoryItemStorage;
 import se.yarin.morphy.storage.ItemStorage;
 import se.yarin.morphy.storage.OpenOption;
 
@@ -18,6 +19,10 @@ public class PlayerIndex extends EntityIndex<Player> {
     private static final Logger log = LoggerFactory.getLogger(PlayerIndex.class);
 
     private static final int SERIALIZED_PLAYER_SIZE = 58;
+
+    public PlayerIndex() {
+        this(new InMemoryItemStorage<>(EntityIndexHeader.empty(SERIALIZED_PLAYER_SIZE), OpenOption.RW()));
+    }
 
     protected PlayerIndex(ItemStorage<EntityIndexHeader, EntityNode> storage) {
         super(storage, "Player");

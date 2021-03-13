@@ -16,7 +16,7 @@ public class GameTagIndex extends EntityIndex<GameTag> {
     private static final int SERIALIZED_GAME_TAG_SIZE = 1608;
 
     public GameTagIndex() {
-        this(new InMemoryItemStorage<>(EntityIndexHeader.empty(SERIALIZED_GAME_TAG_SIZE)));
+        this(new InMemoryItemStorage<>(EntityIndexHeader.empty(SERIALIZED_GAME_TAG_SIZE), OpenOption.RW()));
     }
 
     protected GameTagIndex(ItemStorage<EntityIndexHeader, EntityNode> storage) {

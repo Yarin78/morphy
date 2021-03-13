@@ -18,7 +18,7 @@ public class SourceIndex extends EntityIndex<Source> {
     private static final int SERIALIZED_SOURCE_SIZE = 59;
 
     public SourceIndex() {
-        this(new InMemoryItemStorage<>(EntityIndexHeader.empty(SERIALIZED_SOURCE_SIZE)));
+        this(new InMemoryItemStorage<>(EntityIndexHeader.empty(SERIALIZED_SOURCE_SIZE), OpenOption.RW()));
     }
 
     protected SourceIndex(ItemStorage<EntityIndexHeader, EntityNode> storage) {

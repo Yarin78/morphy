@@ -18,7 +18,7 @@ public class TeamIndex extends EntityIndex<Team> {
     private static final int SERIALIZED_TEAM_SIZE = 63;
 
     public TeamIndex() {
-        this(new InMemoryItemStorage<>(EntityIndexHeader.empty(SERIALIZED_TEAM_SIZE)));
+        this(new InMemoryItemStorage<>(EntityIndexHeader.empty(SERIALIZED_TEAM_SIZE), OpenOption.RW()));
     }
 
     protected TeamIndex(ItemStorage<EntityIndexHeader, EntityNode> storage) {

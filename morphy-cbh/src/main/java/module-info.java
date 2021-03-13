@@ -4,6 +4,7 @@ module se.yarin.morphy.cbh {
     requires static org.immutables.value;
     requires progressbar;
     requires java.compiler;
+    requires org.jetbrains.annotations;
 
     exports se.yarin.chess;
     exports se.yarin.chess.annotations;

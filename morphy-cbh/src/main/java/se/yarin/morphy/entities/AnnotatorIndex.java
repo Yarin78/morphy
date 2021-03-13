@@ -17,7 +17,7 @@ public class AnnotatorIndex extends EntityIndex<Annotator> {
     private static final int SERIALIZED_ANNOTATOR_SIZE = 53;
 
     public AnnotatorIndex() {
-        this(new InMemoryItemStorage<>(EntityIndexHeader.empty(SERIALIZED_ANNOTATOR_SIZE)));
+        this(new InMemoryItemStorage<>(EntityIndexHeader.empty(SERIALIZED_ANNOTATOR_SIZE), OpenOption.RW()));
     }
 
     protected AnnotatorIndex(ItemStorage<EntityIndexHeader, EntityNode> storage) {
