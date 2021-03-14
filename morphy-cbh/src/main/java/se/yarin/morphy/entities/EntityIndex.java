@@ -304,13 +304,13 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
     /**
      * Adds a new entity to the index
      * @param entity the entity to add
-     * @return the added entity with the id set
+     * @return the id of the added entity
      */
-    public T add(T entity) {
+    public int add(T entity) {
         EntityIndexTransaction<T> txn = beginTransaction();
-        T addedEntity = txn.get(txn.addEntity(entity));
+        int id = txn.addEntity(entity);
         txn.commit();
-        return addedEntity;
+        return id;
     }
 
     /**
@@ -329,11 +329,13 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
      * The entity to update is determined by the key; use {@link #put(int, T)} to update the key fields of an entity
      * @param entity the new entity
      * @throws IllegalArgumentException if there is no matching entity, or if there are
+     * @return the id of the entity that was updated
      */
-    public void put(T entity) {
+    public int put(T entity) {
         EntityIndexTransaction<T> txn = beginTransaction();
-        txn.putEntityByKey(entity);
+        int id = txn.putEntityByKey(entity);
         txn.commit();
+        return id;
     }
 
     /**

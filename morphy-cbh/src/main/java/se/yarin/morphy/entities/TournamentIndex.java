@@ -23,16 +23,20 @@ public class TournamentIndex extends EntityIndex<Tournament> {
 
     private static final int SERIALIZED_TOURNAMENT_SIZE = 90;
 
-    private final @NotNull ItemStorage<TournamentExtraHeader, TournamentExtra> extraStorage;
+    private final TournamentExtraStorage extraStorage;
+
+    TournamentExtraStorage extraStorage() {
+        return this.extraStorage;
+    }
 
     public TournamentIndex() {
         this(new InMemoryItemStorage<>(EntityIndexHeader.empty(SERIALIZED_TOURNAMENT_SIZE), OpenOption.RW()),
-                new InMemoryItemStorage<>(TournamentExtraHeader.empty(), OpenOption.RW()));
+                new TournamentExtraStorage());
     }
 
     protected TournamentIndex(
             @NotNull ItemStorage<EntityIndexHeader, EntityNode> storage,
-            @NotNull ItemStorage<TournamentExtraHeader, TournamentExtra> extraStorage) {
+            @NotNull TournamentExtraStorage extraStorage) {
         super(storage, "Tournament");
         this.extraStorage = extraStorage;
     }
@@ -45,46 +49,42 @@ public class TournamentIndex extends EntityIndex<Tournament> {
         FileItemStorage<EntityIndexHeader, EntityNode> storage = new FileItemStorage<>(file, new EntityIndexSerializer(SERIALIZED_TOURNAMENT_SIZE), optionSet);
 
         if (optionSet.contains(OpenOption.WRITE)) {
-            if (storage.getHeader().entitySize() < SERIALIZED_TOURNAMENT_SIZE) {
-                throw new MorphyNotSupportedException("Old tournament index format; upgrade needed but not yet supported.");
+            if (extraFile == null) {
+                extraFile = CBUtil.fileWithExtension(file, ".cbtt");
+                if (extraFile.exists()) {
+                    // We don't allow this to avoid accidental overwrite of a .cbtt file if it for some
+                    // reason was explicitly not wanted to read from.
+                    throw new IllegalArgumentException(String.format("No extra tournament file specified but can't create it because %s exists!", extraFile.getPath()));
+                }
             }
-            if (storage.getHeader().entitySize() > SERIALIZED_TOURNAMENT_SIZE) {
-                throw new MorphyNotSupportedException("Newer unsupported tournament index format; writing not possible.");
-            }
-            if (extraFile == null || !extraFile.exists()) {
-               throw new MorphyNotSupportedException("The extra tournament index file is missing and creating it is not yet supported.");
+            if (!extraFile.exists()) {
+               throw new MorphyNotSupportedException("The extra tournament storage file is missing and creating it is not yet supported.");
             }
         }
 
-        ItemStorage<TournamentExtraHeader, TournamentExtra> extraStorage;
+        TournamentExtraStorage extraStorage;
         if (extraFile != null && extraFile.exists()) {
-            extraStorage = new FileItemStorage<>(extraFile, new TournamentExtraSerializer(), optionSet);
+            extraStorage = TournamentExtraStorage.open(extraFile, optionSet);
         } else {
             assert !optionSet.contains(OpenOption.WRITE);
-            extraStorage = new InMemoryItemStorage<>(TournamentExtraHeader.empty(storage.getHeader().capacity()),
-                    Set.of(OpenOption.READ, OpenOption.WRITE), TournamentExtra.empty());
+            extraStorage = new TournamentExtraStorage();
         }
 
         return new TournamentIndex(storage, extraStorage);
     }
 
-    public Tournament get(int id) {
-        TournamentExtra extra = this.extraStorage.getItem(id);
-        if (extra == null) {
-            // Happens when opening the database in read mode and the extra tournament index file is missing
-            extra = TournamentExtra.empty();
-        }
-
-        EntityNode node = storage.getItem(id);
-        return deserialize(id, node.getGameCount(), node.getFirstGameId(), node.getSerializedEntity(), extra);
+    @Override
+    public EntityIndexTransaction<Tournament> beginTransaction() {
+        // TODO: Acquire read lock
+        return new TournamentIndexTransaction(this);
     }
 
     @Override
     protected Tournament deserialize(int entityId, int count, int firstGameId, byte[] serializedData) {
-        return deserialize(entityId, count, firstGameId, serializedData, TournamentExtra.empty());
+        return deserialize(entityId, count, firstGameId, serializedData, extraStorage.get(entityId));
     }
 
-    protected Tournament deserialize(int entityId, int count, int firstGameId, byte[] serializedData, TournamentExtra extra) {
+    protected Tournament deserialize(int entityId, int count, int firstGameId, byte[] serializedData, @NotNull TournamentExtra extra) {
         ByteBuffer buf = ByteBuffer.wrap(serializedData);
 
         ImmutableTournament.Builder builder = ImmutableTournament.builder()

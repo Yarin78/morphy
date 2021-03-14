@@ -55,6 +55,11 @@ public class InMemoryItemStorage<THeader, TItem> implements ItemStorage<THeader,
     }
 
     @Override
+    public boolean isEmpty() {
+        return this.items.size() == 0;
+    }
+
+    @Override
     public @NotNull TItem getItem(int index) {
         if (index < 0) {
             throw new IllegalArgumentException("index must be non-negative");
@@ -97,13 +102,8 @@ public class InMemoryItemStorage<THeader, TItem> implements ItemStorage<THeader,
             throw new IllegalArgumentException("index must be non-negative");
         }
         if (index > items.size()) {
-            if (strict) {
-                throw new IllegalArgumentException(String.format("Tried to put item with id %d but InMemoryStorage only has %d items",
-                        index, this.items.size()));
-            }
-            while (index > items.size()) {
-                items.add(emptyItem);
-            }
+            throw new IllegalArgumentException(String.format("Tried to put item with id %d but InMemoryStorage only has %d items",
+                    index, this.items.size()));
         }
         if (index == items.size()) {
             items.add(item);

@@ -46,8 +46,8 @@ public class EntityIndexTest {
         FooEntityIndex index = createIndex();
 
         FooEntity hello = FooEntity.of("hello", 7);
-        FooEntity added = index.add(hello);
-        assertEquals(0, added.id());
+        int addedId = index.add(hello);
+        assertEquals(0, addedId);
         assertEquals(1, index.count());
 
         FooEntity entity = index.get(0);
@@ -189,7 +189,7 @@ public class EntityIndexTest {
         for (int iter = 0; iter < 100; iter++) {
             FooEntityIndex index = createIndex();
             for (int i = 0; i < 100; i++) {
-                int id = index.add(FooEntity.of(nextRandomString())).id();
+                int id = index.add(FooEntity.of(nextRandomString()));
                 assertEquals(i, id);
                 assertEquals(i + 1, index.count());
                 index.validateStructure();
@@ -198,10 +198,42 @@ public class EntityIndexTest {
     }
 
     @Test
+    public void testUpdateEntityById() {
+        FooEntityIndex index = createIndex();
+        int id1 = index.add(FooEntity.of("foo", 7));
+        int id2 = index.add(FooEntity.of("bar", 8));
+        index.put(id1, FooEntity.of("FOO", 3));
+
+        FooEntity x = index.get(id1);
+        assertEquals("FOO", x.key());
+        assertEquals(3, x.value());
+
+        FooEntity y = index.get(id2);
+        assertEquals("bar", y.key());
+        assertEquals(8, y.value());
+    }
+
+    @Test
+    public void testUpdateEntityByKey() {
+        FooEntityIndex index = createIndex();
+        int id1 = index.add(FooEntity.of("foo", 7));
+        int id2 = index.add(FooEntity.of("bar", 8));
+        index.put(FooEntity.of("foo", 3));
+
+        FooEntity x = index.get(id1);
+        assertEquals("foo", x.key());
+        assertEquals(3, x.value());
+
+        FooEntity y = index.get(id2);
+        assertEquals("bar", y.key());
+        assertEquals(8, y.value());
+    }
+
+    @Test
     public void testDeleteEntity() {
         FooEntityIndex index = createIndex();
-        int id1 = index.add(FooEntity.of("hello")).id();
-        int id2 = index.add(FooEntity.of("world")).id();
+        int id1 = index.add(FooEntity.of("hello"));
+        int id2 = index.add(FooEntity.of("world"));
 
         assertTrue(index.delete(id1));
 
@@ -246,8 +278,8 @@ public class EntityIndexTest {
     @Test
     public void testDeleteEntityByKey() {
         FooEntityIndex index = createIndex();
-        int id1 = index.add(FooEntity.of("hello")).id();
-        int id2 = index.add(FooEntity.of("world")).id();
+        int id1 = index.add(FooEntity.of("hello"));
+        int id2 = index.add(FooEntity.of("world"));
 
         assertTrue(index.delete(FooEntity.of("world")));
 
@@ -271,7 +303,7 @@ public class EntityIndexTest {
     @Test
     public void testDeleteDeletedEntity() {
         FooEntityIndex index = createIndex();
-        int id1 = index.add(FooEntity.of("hello")).id();
+        int id1 = index.add(FooEntity.of("hello"));
         assertTrue(index.delete(id1));
         assertEquals(0, index.count());
         assertFalse(index.delete(id1));
@@ -380,7 +412,7 @@ public class EntityIndexTest {
         HashMap<Integer, String> idEntityMap = new HashMap<>();
         for (int ops = 0; ops < noOps; ops++) {
             String key = candidates[random.nextInt(candidates.length)];
-            int id = index.add(FooEntity.of(key)).id();
+            int id = index.add(FooEntity.of(key));
             idEntityMap.put(id, key);
             expected.add(key);
             expectedIds.add(id);
@@ -437,7 +469,7 @@ public class EntityIndexTest {
         FooEntityIndex index = createIndex();
         index.add(FooEntity.of("b"));
         index.add(FooEntity.of("a"));
-        int id = index.add(FooEntity.of("b")).id();
+        int id = index.add(FooEntity.of("b"));
         index.add(FooEntity.of("c"));
 
         assertEquals(4, index.count());
@@ -470,7 +502,7 @@ public class EntityIndexTest {
     @Test
     public void testReplaceNodeWithNewKeyThatAlreadyExists() {
         FooEntityIndex index = createIndex();
-        int id = index.add(FooEntity.of("b")).id();
+        int id = index.add(FooEntity.of("b"));
         index.add(FooEntity.of("a"));
 
         FooEntity replaceEntity = FooEntity.of("a");

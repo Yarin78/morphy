@@ -1,6 +1,7 @@
 package se.yarin.cbhlib.util;
 
 import lombok.NonNull;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.cbhlib.entities.Nation;
@@ -10,6 +11,7 @@ import se.yarin.chess.Date;
 import se.yarin.chess.Eco;
 import se.yarin.chess.GameResult;
 
+import java.io.File;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 
@@ -185,5 +187,13 @@ public final class CBUtil {
             bytes[i] = (byte) Integer.parseInt(s.substring(i*2, i*2+2), 16);
         }
         return bytes;
+    }
+
+    public static File fileWithExtension(@NotNull File file, @NotNull String extension) {
+        if (!extension.startsWith(".")) {
+            throw new IllegalArgumentException("Extension should start with a .");
+        }
+        String base = file.getPath().substring(0, file.getPath().length() - 4);
+        return new File(base + extension);
     }
 }

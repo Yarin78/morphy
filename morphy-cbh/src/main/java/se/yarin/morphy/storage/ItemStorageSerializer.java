@@ -7,6 +7,10 @@ import java.nio.ByteBuffer;
 public interface ItemStorageSerializer<THeader, TItem> {
     int expectedHeaderSize();
     long itemOffset(THeader header, int index);
+
+    /**
+     * The size of an item record when reading from the storage, according to the file metadata.
+     */
     int itemSize(THeader header);
 
     THeader deserializeHeader(ByteBuffer buf) throws MorphyInvalidDataException;

@@ -68,7 +68,12 @@ A single byte describing some additional information about the tournament.
 
 The original .cbt file doesn't allow records to be extended, so additional information
 is stored in the .cbtt file. The size of each record in this file is dynamic, and
-can differ between versions. As usual, the file starts with a header. 
+can differ between versions. As usual, the file starts with a header.
+
+If new tournaments are added to the main Tournament Index, but they haven't set any data that needs to be stored
+in this file, then they are not added in this extra storage file, they are added lazily as needed.
+The number of entries in this file can therefore differ from the main index. If because of this an entry needs to be
+stored beyond the end of the file, then all tournaments in between are filled up ("lazy adding").
 
 All integers are in Little Endian.
 
@@ -76,7 +81,7 @@ All integers are in Little Endian.
 | --- | --- | ---
 | 0 | 4 | Version number of this file.
 | 4 | 4 | Size of each record. 65 if version 3, 61 if version 2.
-| 8 | 4 | Numbers of tournaments?
+| 8 | 4 | The index of the last tournament stored in this file (0 can mean no entries or 1 entry).
 | 12 | 20 | Unused, usually trash bytes.
 
 Then follows each record. The first record corresponds to the tournament with index 0, and so on.

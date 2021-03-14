@@ -1,6 +1,7 @@
 package se.yarin.morphy.entities;
 
 import org.immutables.value.Value;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.cbhlib.entities.Nation;
@@ -13,8 +14,10 @@ import se.yarin.chess.Date;
 public abstract class Tournament extends Entity implements Comparable<Tournament> {
     private static final Logger log = LoggerFactory.getLogger(Tournament.class);
 
+    @NotNull
     public abstract String title();
 
+    @NotNull
     public abstract Date date();
 
     @Value.Default
@@ -24,6 +27,7 @@ public abstract class Tournament extends Entity implements Comparable<Tournament
     public int rounds() { return 0; }
 
     @Value.Default
+    @NotNull
     public TournamentType type() {
         return TournamentType.NONE;
     }
@@ -44,29 +48,35 @@ public abstract class Tournament extends Entity implements Comparable<Tournament
     public boolean boardPoints() { return false; }
 
     @Value.Default
+    @NotNull
     public TournamentTimeControl timeControl() {
         return TournamentTimeControl.NORMAL;
     }
 
     @Value.Default
+    @NotNull
     public String place() {
         return "";
     }
 
     @Value.Default
+    @NotNull
     public Nation nation() {
         return Nation.NONE;
     }
 
     @Value.Default
+    @NotNull
     public TournamentExtra extra() {
         return TournamentExtra.empty();
     }
 
+    @NotNull
     public static Tournament of(String title, Date date) {
         return ImmutableTournament.builder().title(title).date(date).build();
     }
 
+    @NotNull
     public static Tournament of(String title, String place, Date date) {
         return ImmutableTournament.builder().title(title).place(place).date(date).build();
     }
@@ -81,6 +91,7 @@ public abstract class Tournament extends Entity implements Comparable<Tournament
      * combining the type, time control and team status
      * @return
      */
+    @NotNull
     public String getPrettyTypeName() {
         String typeName = type().getLongName();
         if (timeControl() != TournamentTimeControl.NORMAL) {
@@ -128,6 +139,7 @@ public abstract class Tournament extends Entity implements Comparable<Tournament
         return title().hashCode() + this.date().year();
     }
 
+    @NotNull
     public String getCategoryRoman() {
         String[] roman = { "", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX"};
         int cat = category();

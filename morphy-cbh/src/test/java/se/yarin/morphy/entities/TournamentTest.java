@@ -87,6 +87,120 @@ public class TournamentTest {
         assertEquals(53.2046, tournament.extra().latitude(), 1e-6);
     }
 
+    // Since Tournament has an extra file outside the default EntityIndex,
+    // we need explicit test that it's updated correctly on changes
+
+    private Tournament testTournament(int startDay, int endDay) {
+        Date startDate = new Date(2021, 3, startDay);
+        Date endDate = new Date(2021, 3, endDay);
+        return ImmutableTournament.builder()
+                .title("foobar")
+                .date(startDate)
+                .extra(ImmutableTournamentExtra.builder()
+                        .endDate(endDate)
+                        .build())
+                .build();
+    }
+
+    @Test
+    public void testAddTournament() {
+        TournamentIndex tournamentIndex = new TournamentIndex();
+        Tournament newTournament = testTournament(1, 5);
+        int addedTournamentId = tournamentIndex.add(newTournament);
+        assertEquals(0, addedTournamentId);
+        Tournament addedTournament = tournamentIndex.get(addedTournamentId);
+        assertEquals(newTournament.date(), addedTournament.date());
+        assertEquals(newTournament.extra().endDate(), addedTournament.extra().endDate());
+        assertEquals(1, tournamentIndex.count());
+        assertEquals(1, tournamentIndex.extraStorage().numEntries());
+    }
+
+    @Test
+    public void testPutTournamentById() {
+        TournamentIndex tournamentIndex = new TournamentIndex();
+        int id = tournamentIndex.add(testTournament(1, 5));
+        assertEquals(0, id);
+
+        Tournament putTournament = testTournament(1, 6);  // Update with same primary key
+        tournamentIndex.put(0, putTournament);
+        Tournament updatedTournament = tournamentIndex.get(id);
+        assertEquals(updatedTournament.date(), putTournament.date());
+        assertEquals(updatedTournament.extra().endDate(), putTournament.extra().endDate());
+
+        putTournament = testTournament(2, 7);  // Update with different primary key
+        tournamentIndex.put(0, putTournament);
+        updatedTournament = tournamentIndex.get(id);
+        assertEquals(updatedTournament.date(), putTournament.date());
+        assertEquals(updatedTournament.extra().endDate(), putTournament.extra().endDate());
+    }
+
+    @Test
+    public void testPutTournamentByKey() {
+        TournamentIndex tournamentIndex = new TournamentIndex();
+        int id = tournamentIndex.add(testTournament(1, 5));
+        assertEquals(0, id);
+        Tournament putTournament = testTournament(1, 6);  // Same start date needed
+        int updatedId = tournamentIndex.put(putTournament);
+        assertEquals(id, updatedId);
+        Tournament updatedTournament = tournamentIndex.get(id);
+        assertEquals(updatedTournament.date(), putTournament.date());
+        assertEquals(updatedTournament.extra().endDate(), putTournament.extra().endDate());
+    }
+
+    @Test
+    public void testDeleteTournamentById() {
+        TournamentIndex tournamentIndex = new TournamentIndex();
+        int id = tournamentIndex.add(testTournament(1, 5));
+        assertEquals(0, id);
+        tournamentIndex.delete(0);
+        Tournament deletedTournament = tournamentIndex.get(id);
+        assertNull(deletedTournament);
+    }
+
+    @Test
+    public void testDeleteTournamentByKey() {
+        TournamentIndex tournamentIndex = new TournamentIndex();
+        int id = tournamentIndex.add(testTournament(1, 5));
+        assertEquals(0, id);
+        tournamentIndex.delete(testTournament(1, 6));  // The difference in extra date doesn't matter
+        Tournament deletedTournament = tournamentIndex.get(id);
+        assertNull(deletedTournament);
+    }
+
+    @Test
+    public void testAddTournamentWithoutExtraData() {
+        TournamentIndex tournamentIndex = new TournamentIndex();
+        tournamentIndex.add(Tournament.of("a", new Date(2021, 3, 1)));
+        tournamentIndex.add(Tournament.of("b", new Date(2021, 3, 1)));
+
+        assertEquals(2, tournamentIndex.count());
+        assertEquals(0, tournamentIndex.extraStorage().numEntries());
+
+        tournamentIndex.add(testTournament(1, 2));
+
+        assertEquals(3, tournamentIndex.count());
+        assertEquals(3, tournamentIndex.extraStorage().numEntries());
+    }
+
+    @Test
+    public void testRemoveExtraDataFromTournament() {
+        TournamentIndex tournamentIndex = new TournamentIndex();
+        tournamentIndex.add(Tournament.of("a", new Date(2021, 3, 1)));
+        tournamentIndex.add(Tournament.of("b", new Date(2021, 3, 1)));
+        Tournament tt = testTournament(1, 2);
+        tournamentIndex.add(tt);
+
+        assertEquals(3, tournamentIndex.count());
+        assertEquals(3, tournamentIndex.extraStorage().numEntries());
+
+        assertNotEquals(TournamentExtra.empty(), tournamentIndex.get(2).extra());
+
+        int id = tournamentIndex.put(ImmutableTournament.copyOf(tt).withExtra(TournamentExtra.empty()));
+        assertEquals(2, id);
+
+        assertEquals(TournamentExtra.empty(), tournamentIndex.get(id).extra());
+    }
+
     @Test
     public void testTournamentSerialization() {
         Tournament newTournament = ImmutableTournament.builder()
@@ -112,7 +226,7 @@ public class TournamentTest {
                 .build();
 
         TournamentIndex tournamentIndex = new TournamentIndex();
-        TournamentExtraSerializer extraSerializer = new TournamentExtraSerializer();
+        TournamentExtraStorage extraSerializer = new TournamentExtraStorage();
 
         ByteBuffer buf = ByteBuffer.allocate(1000);
         ByteBuffer bufExtra = ByteBuffer.allocate(1000);

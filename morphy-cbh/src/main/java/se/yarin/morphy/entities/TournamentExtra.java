@@ -30,4 +30,8 @@ public abstract class TournamentExtra {
     public static TournamentExtra empty() {
         return ImmutableTournamentExtra.builder().build();
     }
+
+    public boolean isEmpty() {
+        return this.equals(empty());
+    }
 }

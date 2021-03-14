@@ -1,6 +1,5 @@
 package se.yarin.morphy.storage;
 
-import se.yarin.cbhlib.storage.EntityNode;
 import se.yarin.morphy.exceptions.MorphyException;
 import se.yarin.morphy.exceptions.MorphyIOException;
 import se.yarin.morphy.exceptions.MorphyInvalidDataException;
@@ -64,6 +63,11 @@ public class FileItemStorage<THeader, TItem> implements ItemStorage<THeader, TIt
             throw new MorphyIOException(e);
         }
         this.header = header;
+    }
+
+    @Override
+    public boolean isEmpty() {
+        return this.fileSize <= serializer.expectedHeaderSize();
     }
 
     @Override

@@ -491,7 +491,11 @@ public class EntityIndexTransaction<T extends Entity & Comparable<T>> {
         } else {
             deleteEntity(entityId);
             int newEntityId = addEntity(entity);
-            assert entityId == newEntityId; // Important!
+            if (entityId != newEntityId) {
+                // Important to check this!! Could possibly happen due to race conditions if locking is not
+                // implement correctly. Could be a disaster, make sure to not finish such a transaction
+                throw new IllegalStateException("Internal error updating an entity; race condition?");
+            }
         }
     }
 
@@ -501,8 +505,9 @@ public class EntityIndexTransaction<T extends Entity & Comparable<T>> {
      * @param entity the new entity. {@link Entity#id()} will be ignored.
      * @throws IllegalArgumentException if there is no matching entity, or if there are
      * multiple matching entities
+     * @return the id of the entity that was updated
      */
-    public void putEntityByKey(T entity) {
+    public int putEntityByKey(T entity) {
         if (committed) {
             throw new IllegalStateException("The transaction has already been committed");
         }
@@ -512,7 +517,7 @@ public class EntityIndexTransaction<T extends Entity & Comparable<T>> {
             throw new IllegalArgumentException("The entity doesn't exist in the storage");
         }
         NodePath successor = treePath.successor();
-        if (successor.getEntity().compareTo(entity) == 0) {
+        if (!successor.isEnd() && successor.getEntity().compareTo(entity) == 0) {
             throw new IllegalArgumentException("More than one entity matched the key");
         }
 
@@ -520,6 +525,7 @@ public class EntityIndexTransaction<T extends Entity & Comparable<T>> {
         EntityNode newNode = new EntityNode(treePath.getEntityId(), node.getLeftChildId(), node.getRightChildId(),  node.getBalance(),
                 entity.count(), entity.firstGameId(), serializeEntity(entity));
         putNode(newNode);
+        return newNode.getId();
     }
 
     /**

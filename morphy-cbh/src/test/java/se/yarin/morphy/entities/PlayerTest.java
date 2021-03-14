@@ -171,7 +171,7 @@ public class PlayerTest {
                 .build();
         assertTrue(playerIndex.stream().noneMatch(e -> e.equals(newPlayer)));
 
-        Player entity = playerIndex.add(newPlayer);
+        Player entity = playerIndex.get(playerIndex.add(newPlayer));
 
         assertEquals(oldCount + 1, playerIndex.count());
         assertTrue(entity.id() >= 0);
@@ -183,7 +183,7 @@ public class PlayerTest {
     public void testAddPlayerWithTooLongName() throws IOException {
         PlayerIndex playerIndex = PlayerIndex.open(playerIndexFile, OpenOption.STRICT, OpenOption.WRITE);
         Player newPlayer = Player.of("Thisisaverylongnamethatwillgettruncated", "");
-        Player entity = playerIndex.add(newPlayer);
+        Player entity = playerIndex.get(playerIndex.add(newPlayer));
         assertEquals("Thisisaverylongnamethatwillget", entity.lastName());
     }
 
@@ -257,14 +257,14 @@ public class PlayerTest {
         playerIndex.delete(30);
         playerIndex.delete(57);
 
-        Player first = playerIndex.add(Player.of("First", ""));
-        assertEquals(57, first.id());
-        Player second = playerIndex.add(Player.of("Second", ""));
-        assertEquals(30, second.id());
-        Player third = playerIndex.add(Player.of("Third", ""));
-        assertEquals(10, third.id());
-        Player fourth = playerIndex.add(Player.of("Fourth", ""));
-        assertEquals(playerIndex.count() - 1, fourth.id());
+        int firstId = playerIndex.add(Player.of("First", ""));
+        assertEquals(57, firstId);
+        int secondId = playerIndex.add(Player.of("Second", ""));
+        assertEquals(30, secondId);
+        int thirdId = playerIndex.add(Player.of("Third", ""));
+        assertEquals(10, thirdId);
+        int fourthId = playerIndex.add(Player.of("Fourth", ""));
+        assertEquals(playerIndex.count() - 1, fourthId);
     }
 
     /*
