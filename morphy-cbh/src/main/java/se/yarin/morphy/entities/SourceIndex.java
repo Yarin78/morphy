@@ -1,5 +1,6 @@
 package se.yarin.morphy.entities;
 
+import org.jetbrains.annotations.NotNull;
 import se.yarin.cbhlib.entities.SourceQuality;
 import se.yarin.cbhlib.util.ByteBufferUtil;
 import se.yarin.cbhlib.util.CBUtil;
@@ -7,29 +8,48 @@ import se.yarin.morphy.exceptions.MorphyInvalidDataException;
 import se.yarin.morphy.storage.FileItemStorage;
 import se.yarin.morphy.storage.InMemoryItemStorage;
 import se.yarin.morphy.storage.ItemStorage;
-import se.yarin.morphy.storage.OpenOption;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.file.OpenOption;
 import java.util.Set;
+
+import static java.nio.file.StandardOpenOption.*;
 
 public class SourceIndex extends EntityIndex<Source> {
     private static final int SERIALIZED_SOURCE_SIZE = 59;
 
     public SourceIndex() {
-        this(new InMemoryItemStorage<>(EntityIndexHeader.empty(SERIALIZED_SOURCE_SIZE), OpenOption.RW()));
+        this(new InMemoryItemStorage<>(EntityIndexHeader.empty(SERIALIZED_SOURCE_SIZE)));
     }
 
     protected SourceIndex(ItemStorage<EntityIndexHeader, EntityNode> storage) {
         super(storage, "Source");
     }
 
-    public static SourceIndex open(File file, OpenOption... options)
+    public static SourceIndex create(@NotNull File file)
             throws IOException, MorphyInvalidDataException {
-        OpenOption.validate(options);
-        Set<OpenOption> optionSet = Set.of(options);
-        return new SourceIndex(new FileItemStorage<>(file, new EntityIndexSerializer(SERIALIZED_SOURCE_SIZE), optionSet));
+        return open(file, Set.of(READ, WRITE, CREATE_NEW), true);
+    }
+
+    public static SourceIndex open(@NotNull File file)
+            throws IOException, MorphyInvalidDataException {
+        return open(file, Set.of(READ, WRITE), true);
+    }
+
+    public static SourceIndex open(@NotNull File file, @NotNull Set<OpenOption> options, boolean strict)
+            throws IOException, MorphyInvalidDataException {
+        return new SourceIndex(new FileItemStorage<>(
+                file, new EntityIndexSerializer(SERIALIZED_SOURCE_SIZE), EntityIndexHeader.empty(SERIALIZED_SOURCE_SIZE), options, strict));
+    }
+
+    public static SourceIndex openInMemory(@NotNull File file, @NotNull Set<OpenOption> options, boolean strict)
+            throws IOException, MorphyInvalidDataException {
+        SourceIndex source = open(file, options, strict);
+        SourceIndex target = new SourceIndex();
+        source.copyEntities(target);
+        return target;
     }
 
     @Override

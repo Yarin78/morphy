@@ -11,12 +11,16 @@ import se.yarin.morphy.exceptions.MorphyNotSupportedException;
 import se.yarin.morphy.storage.FileItemStorage;
 import se.yarin.morphy.storage.InMemoryItemStorage;
 import se.yarin.morphy.storage.ItemStorage;
-import se.yarin.morphy.storage.OpenOption;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.file.OpenOption;
+import java.nio.file.StandardOpenOption;
+import java.util.HashSet;
 import java.util.Set;
+
+import static java.nio.file.StandardOpenOption.*;
 
 public class TournamentIndex extends EntityIndex<Tournament> {
     private static final Logger log = LoggerFactory.getLogger(TournamentIndex.class);
@@ -30,7 +34,7 @@ public class TournamentIndex extends EntityIndex<Tournament> {
     }
 
     public TournamentIndex() {
-        this(new InMemoryItemStorage<>(EntityIndexHeader.empty(SERIALIZED_TOURNAMENT_SIZE), OpenOption.RW()),
+        this(new InMemoryItemStorage<>(EntityIndexHeader.empty(SERIALIZED_TOURNAMENT_SIZE), true),
                 new TournamentExtraStorage());
     }
 
@@ -41,33 +45,35 @@ public class TournamentIndex extends EntityIndex<Tournament> {
         this.extraStorage = extraStorage;
     }
 
-    public static TournamentIndex open(@NotNull File file, @Nullable File extraFile, @NotNull OpenOption... options)
+    public static TournamentIndex create(@NotNull File file)
             throws IOException, MorphyInvalidDataException {
-        OpenOption.validate(options);
-        Set<OpenOption> optionSet = Set.of(options);
+        return open(file, Set.of(READ, WRITE, CREATE_NEW), true);
+    }
 
-        FileItemStorage<EntityIndexHeader, EntityNode> storage = new FileItemStorage<>(file, new EntityIndexSerializer(SERIALIZED_TOURNAMENT_SIZE), optionSet);
+    public static TournamentIndex open(@NotNull File file)
+            throws IOException, MorphyInvalidDataException {
+        return open(file, Set.of(READ, WRITE), true);
+    }
 
-        if (optionSet.contains(OpenOption.WRITE)) {
-            if (extraFile == null) {
-                extraFile = CBUtil.fileWithExtension(file, ".cbtt");
-                if (extraFile.exists()) {
-                    // We don't allow this to avoid accidental overwrite of a .cbtt file if it for some
-                    // reason was explicitly not wanted to read from.
-                    throw new IllegalArgumentException(String.format("No extra tournament file specified but can't create it because %s exists!", extraFile.getPath()));
-                }
-            }
-            if (!extraFile.exists()) {
-               throw new MorphyNotSupportedException("The extra tournament storage file is missing and creating it is not yet supported.");
-            }
+    public static TournamentIndex open(@NotNull File file, @NotNull Set<OpenOption> options, boolean strict)
+            throws IOException, MorphyInvalidDataException {
+        FileItemStorage<EntityIndexHeader, EntityNode> storage = new FileItemStorage<>(
+                file, new EntityIndexSerializer(SERIALIZED_TOURNAMENT_SIZE), EntityIndexHeader.empty(SERIALIZED_TOURNAMENT_SIZE), options, strict);
+
+        File extraFile = CBUtil.fileWithExtension(file, ".cbtt");
+
+        Set<OpenOption> extraOptions = new HashSet<>(options);
+        if (options.contains(StandardOpenOption.WRITE)) {
+            // Always create the extra tournament file if it's missing and we're in WRITE mode
+            extraOptions.add(StandardOpenOption.CREATE);
         }
 
         TournamentExtraStorage extraStorage;
-        if (extraFile != null && extraFile.exists()) {
-            extraStorage = TournamentExtraStorage.open(extraFile, optionSet);
-        } else {
-            assert !optionSet.contains(OpenOption.WRITE);
+        if (!extraFile.exists() && !extraOptions.contains(CREATE) && !extraOptions.contains(CREATE_NEW)) {
+            // If the extra storage file is missing and we can't create it, use an empty in-memory version instead
             extraStorage = new TournamentExtraStorage();
+        } else {
+            extraStorage = TournamentExtraStorage.open(extraFile, extraOptions, strict);
         }
 
         return new TournamentIndex(storage, extraStorage);

@@ -61,7 +61,7 @@ public class ResourceLoader {
                                 new File(targetDirectory, targetNameBase + extension)));
             }
         }
-        return extensionFiles.get(".cbh");
+        return extensionFiles.get(extensions[0]);
     }
 
     public static Database openWorldChDatabase() {

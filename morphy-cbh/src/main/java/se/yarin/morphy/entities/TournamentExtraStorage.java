@@ -10,6 +10,8 @@ import se.yarin.morphy.storage.*;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.file.OpenOption;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Set;
 
@@ -23,17 +25,17 @@ public class TournamentExtraStorage implements ItemStorageSerializer<TournamentE
     private final @NotNull ItemStorage<TournamentExtraHeader, TournamentExtra> storage;
 
     public TournamentExtraStorage() {
-        this.storage = new InMemoryItemStorage<>(TournamentExtraHeader.empty(), OpenOption.RW(), TournamentExtra.empty());
+        this.storage = new InMemoryItemStorage<>(TournamentExtraHeader.empty(), true, TournamentExtra.empty());
     }
 
     public TournamentExtraStorage(@NotNull ItemStorage<TournamentExtraHeader, TournamentExtra> storage) {
         this.storage = storage;
     }
 
-    private TournamentExtraStorage(@NotNull File file, Set<OpenOption> options) throws IOException {
-        this.storage = new FileItemStorage<>(file, this, options);
+    private TournamentExtraStorage(@NotNull File file, Set<OpenOption> options, boolean strict) throws IOException {
+        this.storage = new FileItemStorage<>(file, this, TournamentExtraHeader.empty(), options, strict);
 
-        if (options.contains(OpenOption.WRITE)) {
+        if (options.contains(StandardOpenOption.WRITE)) {
             if (storage.getHeader().version() < TournamentExtraHeader.DEFAULT_HEADER_VERSION) {
                 throw new MorphyNotSupportedException("Old extra tournament storage version; upgrade needed but not yet supported.");
             }
@@ -49,12 +51,17 @@ public class TournamentExtraStorage implements ItemStorageSerializer<TournamentE
         }
     }
 
-    public static TournamentExtraStorage open(@NotNull File file, Set<OpenOption> options) throws IOException {
-        return new TournamentExtraStorage(file, options);
+    public static TournamentExtraStorage open(@NotNull File file, Set<OpenOption> options, boolean strict) throws IOException {
+        return new TournamentExtraStorage(file, options, strict);
     }
 
     @Override
-    public int expectedHeaderSize() {
+    public int serializedHeaderSize() {
+        return 32;
+    }
+
+    @Override
+    public int headerSize(@NotNull TournamentExtraHeader header) {
         return 32;
     }
 
@@ -85,7 +92,7 @@ public class TournamentExtraStorage implements ItemStorageSerializer<TournamentE
 
     @Override
     public long itemOffset(TournamentExtraHeader header, int index) {
-        return expectedHeaderSize() + index * (long) itemSize(header);
+        return serializedHeaderSize() + index * (long) itemSize(header);
     }
 
     @Override

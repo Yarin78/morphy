@@ -367,6 +367,27 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
         storage.close();
     }
 
+    protected void copyEntities(EntityIndex<T> targetIndex) {
+        // Low level copy of all entities from one index to a new empty index
+        if (targetIndex.capacity() != 0) {
+            throw new IllegalStateException("The target index must be empty");
+        }
+
+        int batchSize = 1000, capacity = capacity(), currentIndex = 0;
+        for (int i = 0; i < capacity; i += batchSize) {
+            List<EntityNode> nodes = storage.getItems(i, Math.min(i + batchSize, capacity));
+            for (EntityNode node : nodes) {
+                targetIndex.storage.putItem(currentIndex, node);
+                currentIndex += 1;
+            }
+        }
+
+        // Copy all fields in the source header except the header size
+        ImmutableEntityIndexHeader newHeader = ImmutableEntityIndexHeader
+                .copyOf(storageHeader())
+                .withHeaderSize(targetIndex.storageHeader().headerSize());
+        targetIndex.storage.putHeader(newHeader);
+    }
 
     /**
      * Validates that the entity headers correctly reflects the order of the entities

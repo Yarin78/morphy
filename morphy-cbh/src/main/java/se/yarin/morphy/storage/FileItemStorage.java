@@ -1,19 +1,21 @@
 package se.yarin.morphy.storage;
 
+import org.jetbrains.annotations.NotNull;
 import se.yarin.morphy.exceptions.MorphyException;
 import se.yarin.morphy.exceptions.MorphyIOException;
 import se.yarin.morphy.exceptions.MorphyInvalidDataException;
+import se.yarin.morphy.exceptions.MorphyNotSupportedException;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import java.nio.file.OpenOption;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
-import static java.nio.file.StandardOpenOption.READ;
-import static java.nio.file.StandardOpenOption.WRITE;
+import static java.nio.file.StandardOpenOption.*;
 
 public class FileItemStorage<THeader, TItem> implements ItemStorage<THeader, TItem> {
     private long fileSize;
@@ -22,25 +24,45 @@ public class FileItemStorage<THeader, TItem> implements ItemStorage<THeader, TIt
     private final ItemStorageSerializer<THeader, TItem> serializer;
     private final boolean strict;
 
-    public FileItemStorage(File file, ItemStorageSerializer<THeader, TItem> serializer, Set<OpenOption> options)
+    public FileItemStorage(
+            @NotNull File file,
+            @NotNull ItemStorageSerializer<THeader, TItem> serializer,
+            @NotNull THeader emptyHeader,
+            @NotNull Set<OpenOption> options,
+            boolean strict)
             throws IOException, MorphyInvalidDataException {
 
-        strict = options.contains(OpenOption.STRICT);
-
-        if (options.contains(OpenOption.WRITE)) {
-            this.channel = FileChannel.open(file.toPath(), READ, WRITE);
-        } else {
-            this.channel = FileChannel.open(file.toPath(), READ);
+        if (!strict && options.contains(WRITE)) {
+            throw new IllegalArgumentException("A storage open in WRITE mode must also be in STRICT mode");
         }
 
+        this.channel = FileChannel.open(file.toPath(), options);
+        this.strict = strict;
         this.serializer = serializer;
         this.fileSize = this.channel.size();
-        refreshHeader();
+
+        if (this.fileSize == 0) {
+            if (options.contains(CREATE) || options.contains(CREATE_NEW)) {
+                // The storage was presumably created
+                putHeader(emptyHeader);
+                this.fileSize = this.channel.size();
+            } else {
+                throw new IllegalStateException("File was empty");
+            }
+        } else {
+            refreshHeader();
+            if (this.serializer.serializedHeaderSize() != this.serializer.headerSize(this.header)
+                && options.contains(WRITE)) {
+                throw new MorphyNotSupportedException(String.format(
+                        "The header in %s was %d bytes (%d bytes expected) and needs to be upgraded which is not yet supported",
+                        file, this.serializer.headerSize(this.header), this.serializer.serializedHeaderSize()));
+            }
+        }
     }
 
     private void refreshHeader() throws IOException, MorphyInvalidDataException {
         channel.position(0);
-        ByteBuffer buf = ByteBuffer.allocate(serializer.expectedHeaderSize());
+        ByteBuffer buf = ByteBuffer.allocate(serializer.serializedHeaderSize());
         channel.read(buf);
         buf.position(0); // No flip since serializer expects buf to be of length prefetchHeaderSize()
         this.header = this.serializer.deserializeHeader(buf);
@@ -53,7 +75,7 @@ public class FileItemStorage<THeader, TItem> implements ItemStorage<THeader, TIt
 
     @Override
     public void putHeader(THeader header) {
-        ByteBuffer buf = ByteBuffer.allocate(this.serializer.expectedHeaderSize());
+        ByteBuffer buf = ByteBuffer.allocate(this.serializer.serializedHeaderSize());
         this.serializer.serializeHeader(header, buf);
         buf.flip();
         try {
@@ -67,7 +89,7 @@ public class FileItemStorage<THeader, TItem> implements ItemStorage<THeader, TIt
 
     @Override
     public boolean isEmpty() {
-        return this.fileSize <= serializer.expectedHeaderSize();
+        return this.fileSize <= serializer.serializedHeaderSize();
     }
 
     @Override

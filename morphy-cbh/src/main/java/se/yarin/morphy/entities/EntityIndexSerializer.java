@@ -1,5 +1,6 @@
 package se.yarin.morphy.entities;
 
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.cbhlib.util.ByteBufferUtil;
@@ -20,7 +21,7 @@ public class EntityIndexSerializer implements ItemStorageSerializer<EntityIndexH
     }
 
     @Override
-    public int expectedHeaderSize() {
+    public int serializedHeaderSize() {
         return 32;
     }
 
@@ -32,6 +33,11 @@ public class EntityIndexSerializer implements ItemStorageSerializer<EntityIndexH
     @Override
     public int itemSize(EntityIndexHeader header) {
         return header.entitySize() + 9;  // 9 additional bytes for the node tree
+    }
+
+    @Override
+    public int headerSize(@NotNull EntityIndexHeader header) {
+        return header.headerSize();
     }
 
     @Override

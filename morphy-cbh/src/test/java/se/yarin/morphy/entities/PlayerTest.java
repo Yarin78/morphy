@@ -6,14 +6,18 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import se.yarin.morphy.ResourceLoader;
 import se.yarin.morphy.exceptions.MorphyIOException;
+import se.yarin.morphy.exceptions.MorphyNotSupportedException;
 import se.yarin.morphy.games.GameIndex;
-import se.yarin.morphy.storage.OpenOption;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.OpenOption;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
+import static java.nio.file.StandardOpenOption.READ;
+import static java.nio.file.StandardOpenOption.WRITE;
 import static org.junit.Assert.*;
 
 public class PlayerTest {
@@ -22,6 +26,7 @@ public class PlayerTest {
     public TemporaryFolder folder = new TemporaryFolder();
 
     private File playerIndexFile;
+    private File playerIndexSmallHeaderFile;
 
     @Before
     public void setupEntityTest() throws IOException {
@@ -29,11 +34,16 @@ public class PlayerTest {
                 "entity_test",
                 GameIndex.class.getResourceAsStream("entity_test.cbp"),
                 ".cbp");
+        playerIndexSmallHeaderFile = ResourceLoader.materializeStream(
+                "small_header",
+                GameIndex.class.getResourceAsStream("small_header.cbp"),
+                ".cbp");
     }
 
     @Test
     public void testPlayerBaseStatistics() throws IOException {
         PlayerIndex playerIndex = PlayerIndex.open(playerIndexFile);
+        assertEquals(32, playerIndex.storageHeader().headerSize());
         assertEquals(265, playerIndex.count());
     }
 
@@ -66,13 +76,13 @@ public class PlayerTest {
 
     @Test
     public void testGetInvalidPlayerByIdInSafeMode() throws IOException {
-        PlayerIndex playerIndex = PlayerIndex.open(playerIndexFile, OpenOption.READ);
+        PlayerIndex playerIndex = PlayerIndex.open(playerIndexFile, Set.of(READ), false);
         assertEquals("", playerIndex.get(1000000).getFullName());
     }
 
     @Test(expected = MorphyIOException.class)
     public void testGetInvalidPlayerByIdInStrictMode() throws IOException {
-        PlayerIndex playerIndex = PlayerIndex.open(playerIndexFile, OpenOption.READ, OpenOption.STRICT);
+        PlayerIndex playerIndex = PlayerIndex.open(playerIndexFile, Set.of(READ), true);
         playerIndex.get(1000000);
     }
 
@@ -160,7 +170,7 @@ public class PlayerTest {
 
     @Test
     public void testAddPlayer() throws IOException {
-        PlayerIndex playerIndex = PlayerIndex.open(playerIndexFile, OpenOption.STRICT, OpenOption.WRITE);
+        PlayerIndex playerIndex = PlayerIndex.open(playerIndexFile);
         int oldCount = playerIndex.count();
 
         Player newPlayer = ImmutablePlayer.builder()
@@ -181,7 +191,7 @@ public class PlayerTest {
 
     @Test
     public void testAddPlayerWithTooLongName() throws IOException {
-        PlayerIndex playerIndex = PlayerIndex.open(playerIndexFile, OpenOption.STRICT, OpenOption.WRITE);
+        PlayerIndex playerIndex = PlayerIndex.open(playerIndexFile);
         Player newPlayer = Player.of("Thisisaverylongnamethatwillgettruncated", "");
         Player entity = playerIndex.get(playerIndex.add(newPlayer));
         assertEquals("Thisisaverylongnamethatwillget", entity.lastName());
@@ -189,7 +199,7 @@ public class PlayerTest {
 
     @Test
     public void testRenamePlayer() throws IOException {
-        PlayerIndex playerIndex = PlayerIndex.open(playerIndexFile, OpenOption.STRICT, OpenOption.WRITE);
+        PlayerIndex playerIndex = PlayerIndex.open(playerIndexFile);
         Player player = playerIndex.get(Player.of("Carlsen", "Magnus"));
 
         assertNotEquals(player.id(), playerIndex.getLast().id());
@@ -204,7 +214,7 @@ public class PlayerTest {
 
     @Test
     public void testChangePlayerStats() throws IOException {
-        PlayerIndex playerIndex = PlayerIndex.open(playerIndexFile, OpenOption.STRICT, OpenOption.WRITE);
+        PlayerIndex playerIndex = PlayerIndex.open(playerIndexFile);
 
         Player player = playerIndex.get(Player.of("Carlsen", "Magnus"));
         int id = player.id();
@@ -222,7 +232,7 @@ public class PlayerTest {
 
     @Test
     public void testDeletePlayer() throws IOException {
-        PlayerIndex playerIndex = PlayerIndex.open(playerIndexFile, OpenOption.STRICT, OpenOption.WRITE);
+        PlayerIndex playerIndex = PlayerIndex.open(playerIndexFile);
         int oldCount = playerIndex.count();
 
         Player player = playerIndex.get(Player.of("Carlsen", "Magnus"));
@@ -236,7 +246,7 @@ public class PlayerTest {
 
     @Test
     public void testDeleteMissingPlayer() throws IOException {
-        PlayerIndex playerIndex = PlayerIndex.open(playerIndexFile, OpenOption.STRICT, OpenOption.WRITE);
+        PlayerIndex playerIndex = PlayerIndex.open(playerIndexFile);
         int oldCount = playerIndex.count();
 
         assertTrue(playerIndex.delete(100));
@@ -252,7 +262,7 @@ public class PlayerTest {
         // This should reuse player ids
         // Not sure that's the correct thing to test here though since it's an implementation detail?
 
-        PlayerIndex playerIndex = PlayerIndex.open(playerIndexFile, OpenOption.STRICT, OpenOption.WRITE);
+        PlayerIndex playerIndex = PlayerIndex.open(playerIndexFile);
         playerIndex.delete(10);
         playerIndex.delete(30);
         playerIndex.delete(57);
@@ -267,10 +277,23 @@ public class PlayerTest {
         assertEquals(playerIndex.count() - 1, fourthId);
     }
 
-    /*
+    @Test
+    public void testOpenIndexWithSmallHeader() throws IOException {
+        PlayerIndex playerIndex = PlayerIndex.open(playerIndexSmallHeaderFile, Set.of(READ), true);
+        assertEquals(28, playerIndex.storageHeader().headerSize());
+
+        Player player = playerIndex.get(0);
+        System.out.println(player.getFullName());
+    }
+
+    @Test(expected = MorphyNotSupportedException.class)
+    public void testOpenIndexWithSmallHeaderForWrite() throws IOException {
+        PlayerIndex.open(playerIndexSmallHeaderFile, Set.of(READ, WRITE), true);
+    }
+
     @Test
     public void testInMemoryStorage() throws IOException {
-        PlayerIndex playerIndex = PlayerIndex.openInMemory(playerIndexFile);
+        PlayerIndex playerIndex = PlayerIndex.openInMemory(playerIndexFile, Set.of(READ), true);
         assertEquals(playerIndex.count(), playerIndex.getAll().size());
     }
 
@@ -297,7 +320,7 @@ public class PlayerTest {
         Player player = playerIndex.get(1);
         assertEquals(Player.of("Karjakin", "Sergey"), player);
     }
-    */
+
     @Test
     public void testPlayerSortingOrder() {
         // Tested in ChessBase 16

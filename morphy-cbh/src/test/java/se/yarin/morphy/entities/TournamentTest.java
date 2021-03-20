@@ -7,6 +7,7 @@ import org.junit.rules.TemporaryFolder;
 import se.yarin.cbhlib.entities.Nation;
 import se.yarin.cbhlib.entities.TournamentTimeControl;
 import se.yarin.cbhlib.entities.TournamentType;
+import se.yarin.cbhlib.util.CBUtil;
 import se.yarin.chess.Date;
 import se.yarin.morphy.ResourceLoader;
 import se.yarin.morphy.exceptions.MorphyInvalidDataException;
@@ -15,8 +16,12 @@ import se.yarin.morphy.games.GameIndex;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Arrays;
+import java.util.Set;
 
+import static java.nio.file.StandardOpenOption.READ;
 import static org.junit.Assert.*;
 
 public class TournamentTest {
@@ -28,26 +33,26 @@ public class TournamentTest {
 
     @Before
     public void setupEntityTest() throws IOException {
-        tournamentIndexFile = ResourceLoader.materializeStream(
-                "worldch",
-                GameIndex.class.getResourceAsStream("World-ch/World-ch.cbt"),
-                ".cbt");
-        tournamentExtraFile = ResourceLoader.materializeStream(
-                "worldch",
-                GameIndex.class.getResourceAsStream("World-ch/World-ch.cbtt"),
-                ".cbtt");
-    }
+        Path worldChPath = Files.createTempDirectory("worldch");
 
+        tournamentIndexFile = ResourceLoader.materializeDatabaseStream(
+                GameIndex.class,
+                "World-ch/World-ch",
+                worldChPath.toFile(),
+                "World-ch", new String[] { ".cbt", ".cbtt"});
+
+        tournamentExtraFile = CBUtil.fileWithExtension(tournamentIndexFile, ".cbtt");
+    }
 
     @Test
     public void testTournamentIndexStatistics() throws IOException, MorphyInvalidDataException {
-        TournamentIndex tournamentIndex = TournamentIndex.open(tournamentIndexFile, tournamentExtraFile);
+        TournamentIndex tournamentIndex = TournamentIndex.open(tournamentIndexFile);
         assertEquals(52, tournamentIndex.count());
     }
 
     @Test
     public void testGetTournamentById() throws IOException, MorphyInvalidDataException {
-        TournamentIndex tournamentIndex = TournamentIndex.open(tournamentIndexFile, tournamentExtraFile);
+        TournamentIndex tournamentIndex = TournamentIndex.open(tournamentIndexFile);
 
         Tournament t41 = tournamentIndex.get(41);
         assertEquals("World-ch Tournament", t41.title());
@@ -69,8 +74,18 @@ public class TournamentTest {
 
     @Test
     public void testGetTournamentByIdWithoutExtra() throws IOException, MorphyInvalidDataException {
-        File missingFile = new File(tournamentExtraFile.getPath() + "_missing");
-        TournamentIndex tournamentIndex = TournamentIndex.open(tournamentIndexFile, missingFile);
+        tournamentExtraFile.delete();
+        TournamentIndex tournamentIndex = TournamentIndex.open(tournamentIndexFile);
+
+        Tournament t41 = tournamentIndex.get(41);
+        assertEquals("World-ch Tournament", t41.title());
+        assertEquals(0.0, t41.extra().latitude(), 0.001);
+    }
+
+    @Test
+    public void testGetTournamentByIdWithoutExtraReadMode() throws IOException, MorphyInvalidDataException {
+        tournamentExtraFile.delete();
+        TournamentIndex tournamentIndex = TournamentIndex.open(tournamentIndexFile, Set.of(READ), true);
 
         Tournament t41 = tournamentIndex.get(41);
         assertEquals("World-ch Tournament", t41.title());
@@ -79,7 +94,7 @@ public class TournamentTest {
 
     @Test
     public void testGetTournamentByKey() throws IOException, MorphyInvalidDataException {
-        TournamentIndex tournamentIndex = TournamentIndex.open(tournamentIndexFile, tournamentExtraFile);
+        TournamentIndex tournamentIndex = TournamentIndex.open(tournamentIndexFile);
         Tournament key = Tournament.of("World-ch Carlsen-Caruana", "London", new Date(2018, 11, 9));
         Tournament tournament = tournamentIndex.get(key);
         assertEquals(50, tournament.id());

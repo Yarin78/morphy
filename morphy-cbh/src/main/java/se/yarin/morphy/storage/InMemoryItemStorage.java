@@ -18,22 +18,20 @@ public class InMemoryItemStorage<THeader, TItem> implements ItemStorage<THeader,
     private @Nullable final TItem emptyItem;
     private @NotNull THeader header;
     private final boolean strict;
-    private final boolean readOnly;
 
     public InMemoryItemStorage(@NotNull THeader header) {
-        this(header, OpenOption.RW(), null);
+        this(header, true, null);
     }
 
-    public InMemoryItemStorage(@NotNull THeader header, Set<OpenOption> options) {
-        this(header, options, null);
+    public InMemoryItemStorage(@NotNull THeader header, boolean strict) {
+        this(header, strict, null);
     }
 
-    public InMemoryItemStorage(@NotNull THeader header, Set<OpenOption> options, @Nullable TItem emptyItem) {
+    public InMemoryItemStorage(@NotNull THeader header, boolean strict, @Nullable TItem emptyItem) {
         this.items = new ArrayList<>();
         this.header = header;
         this.emptyItem = emptyItem;
-        this.strict = options.contains(OpenOption.STRICT);
-        this.readOnly = !options.contains(OpenOption.WRITE);
+        this.strict = strict;
         if (!strict && emptyItem == null) {
             // This is required since otherwise we don't know what to return when trying to get an illegal id!
             // (for the FileItemStorage this is not necessary, there we just assume to read zeros)
@@ -48,9 +46,6 @@ public class InMemoryItemStorage<THeader, TItem> implements ItemStorage<THeader,
 
     @Override
     public void putHeader(@NotNull THeader header) {
-        if (this.readOnly) {
-            throw new IllegalStateException("Storage is read-only");
-        }
         this.header = header;
     }
 
@@ -95,9 +90,6 @@ public class InMemoryItemStorage<THeader, TItem> implements ItemStorage<THeader,
 
     @Override
     public void putItem(int index, @NotNull TItem item) {
-        if (this.readOnly) {
-            throw new IllegalStateException("Storage is read-only");
-        }
         if (index < 0) {
             throw new IllegalArgumentException("index must be non-negative");
         }

@@ -193,7 +193,11 @@ public final class CBUtil {
         if (!extension.startsWith(".")) {
             throw new IllegalArgumentException("Extension should start with a .");
         }
-        String base = file.getPath().substring(0, file.getPath().length() - 4);
+        int extensionStart = file.getPath().lastIndexOf(".");
+        if (extensionStart < 0) {
+            throw new IllegalArgumentException("The file must have an extension");
+        }
+        String base = file.getPath().substring(0, extensionStart);
         return new File(base + extension);
     }
 }
