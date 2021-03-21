@@ -28,23 +28,28 @@ public class FooBarEntityIndex extends EntityIndex<FooBarEntity> {
 
     public static FooBarEntityIndex create(@NotNull File file)
             throws IOException, MorphyInvalidDataException {
-        return open(file, Set.of(READ, WRITE, CREATE_NEW), true);
+        return open(file, Set.of(READ, WRITE, CREATE_NEW));
     }
 
     public static FooBarEntityIndex open(@NotNull File file)
             throws IOException, MorphyInvalidDataException {
-        return open(file, Set.of(READ, WRITE), true);
+        return open(file, Set.of(READ, WRITE));
     }
 
-    public static FooBarEntityIndex open(@NotNull File file, @NotNull Set<OpenOption> options, boolean strict)
+    public static FooBarEntityIndex open(@NotNull File file, @NotNull Set<OpenOption> options)
             throws IOException, MorphyInvalidDataException {
         return new FooBarEntityIndex(new FileItemStorage<>(
-                file, new EntityIndexSerializer(SERIALIZED_FOOBAR_SIZE), EntityIndexHeader.empty(SERIALIZED_FOOBAR_SIZE), options, strict));
+                file, new EntityIndexSerializer(SERIALIZED_FOOBAR_SIZE), EntityIndexHeader.empty(SERIALIZED_FOOBAR_SIZE), options));
     }
 
-    public static FooBarEntityIndex openInMemory(@NotNull File file, @NotNull Set<OpenOption> options, boolean strict)
+    public static FooBarEntityIndex openInMemory(@NotNull File file)
             throws IOException, MorphyInvalidDataException {
-        FooBarEntityIndex source = open(file, options, strict);
+        return openInMemory(file, Set.of(READ));
+    }
+
+    public static FooBarEntityIndex openInMemory(@NotNull File file, @NotNull Set<OpenOption> options)
+            throws IOException, MorphyInvalidDataException {
+        FooBarEntityIndex source = open(file, options);
         FooBarEntityIndex target = new FooBarEntityIndex();
         source.copyEntities(target);
         return target;

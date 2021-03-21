@@ -29,23 +29,28 @@ public class AnnotatorIndex extends EntityIndex<Annotator> {
 
     public static AnnotatorIndex create(@NotNull File file)
             throws IOException, MorphyInvalidDataException {
-        return open(file, Set.of(READ, WRITE, CREATE_NEW), true);
+        return open(file, Set.of(READ, WRITE, CREATE_NEW));
     }
 
     public static AnnotatorIndex open(@NotNull File file)
             throws IOException, MorphyInvalidDataException {
-        return open(file, Set.of(READ, WRITE), true);
+        return open(file, Set.of(READ, WRITE));
     }
 
-    public static AnnotatorIndex open(@NotNull File file, @NotNull Set<OpenOption> options, boolean strict)
+    public static AnnotatorIndex open(@NotNull File file, @NotNull Set<OpenOption> options)
             throws IOException, MorphyInvalidDataException {
         return new AnnotatorIndex(new FileItemStorage<>(
-                file, new EntityIndexSerializer(SERIALIZED_ANNOTATOR_SIZE), EntityIndexHeader.empty(SERIALIZED_ANNOTATOR_SIZE), options, strict));
+                file, new EntityIndexSerializer(SERIALIZED_ANNOTATOR_SIZE), EntityIndexHeader.empty(SERIALIZED_ANNOTATOR_SIZE), options));
     }
 
-    public static AnnotatorIndex openInMemory(@NotNull File file, @NotNull Set<OpenOption> options, boolean strict)
+    public static AnnotatorIndex openInMemory(@NotNull File file)
             throws IOException, MorphyInvalidDataException {
-        AnnotatorIndex source = open(file, options, strict);
+        return openInMemory(file, Set.of(READ));
+    }
+
+    public static AnnotatorIndex openInMemory(@NotNull File file, @NotNull Set<OpenOption> options)
+            throws IOException, MorphyInvalidDataException {
+        AnnotatorIndex source = open(file, options);
         AnnotatorIndex target = new AnnotatorIndex();
         source.copyEntities(target);
         return target;

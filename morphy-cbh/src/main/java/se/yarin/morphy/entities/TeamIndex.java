@@ -30,23 +30,28 @@ public class TeamIndex extends EntityIndex<Team> {
 
     public static TeamIndex create(@NotNull File file)
             throws IOException, MorphyInvalidDataException {
-        return open(file, Set.of(READ, WRITE, CREATE_NEW), true);
+        return open(file, Set.of(READ, WRITE, CREATE_NEW));
     }
 
     public static TeamIndex open(@NotNull File file)
             throws IOException, MorphyInvalidDataException {
-        return open(file, Set.of(READ, WRITE), true);
+        return open(file, Set.of(READ, WRITE));
     }
 
-    public static TeamIndex open(@NotNull File file, @NotNull Set<OpenOption> options, boolean strict)
+    public static TeamIndex open(@NotNull File file, @NotNull Set<OpenOption> options)
             throws IOException, MorphyInvalidDataException {
         return new TeamIndex(new FileItemStorage<>(
-                file, new EntityIndexSerializer(SERIALIZED_TEAM_SIZE), EntityIndexHeader.empty(SERIALIZED_TEAM_SIZE), options, strict));
+                file, new EntityIndexSerializer(SERIALIZED_TEAM_SIZE), EntityIndexHeader.empty(SERIALIZED_TEAM_SIZE), options));
     }
 
-    public static TeamIndex openInMemory(@NotNull File file, @NotNull Set<OpenOption> options, boolean strict)
+    public static TeamIndex openInMemory(@NotNull File file)
             throws IOException, MorphyInvalidDataException {
-        TeamIndex source = open(file, options, strict);
+        return openInMemory(file, Set.of(READ));
+    }
+
+    public static TeamIndex openInMemory(@NotNull File file, @NotNull Set<OpenOption> options)
+            throws IOException, MorphyInvalidDataException {
+        TeamIndex source = open(file, options);
         TeamIndex target = new TeamIndex();
         source.copyEntities(target);
         return target;

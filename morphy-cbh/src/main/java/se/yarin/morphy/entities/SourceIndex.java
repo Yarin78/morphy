@@ -30,23 +30,28 @@ public class SourceIndex extends EntityIndex<Source> {
 
     public static SourceIndex create(@NotNull File file)
             throws IOException, MorphyInvalidDataException {
-        return open(file, Set.of(READ, WRITE, CREATE_NEW), true);
+        return open(file, Set.of(READ, WRITE, CREATE_NEW));
     }
 
     public static SourceIndex open(@NotNull File file)
             throws IOException, MorphyInvalidDataException {
-        return open(file, Set.of(READ, WRITE), true);
+        return open(file, Set.of(READ, WRITE));
     }
 
-    public static SourceIndex open(@NotNull File file, @NotNull Set<OpenOption> options, boolean strict)
+    public static SourceIndex open(@NotNull File file, @NotNull Set<OpenOption> options)
             throws IOException, MorphyInvalidDataException {
         return new SourceIndex(new FileItemStorage<>(
-                file, new EntityIndexSerializer(SERIALIZED_SOURCE_SIZE), EntityIndexHeader.empty(SERIALIZED_SOURCE_SIZE), options, strict));
+                file, new EntityIndexSerializer(SERIALIZED_SOURCE_SIZE), EntityIndexHeader.empty(SERIALIZED_SOURCE_SIZE), options));
     }
 
-    public static SourceIndex openInMemory(@NotNull File file, @NotNull Set<OpenOption> options, boolean strict)
+    public static SourceIndex openInMemory(@NotNull File file)
             throws IOException, MorphyInvalidDataException {
-        SourceIndex source = open(file, options, strict);
+        return openInMemory(file, Set.of(READ));
+    }
+
+    public static SourceIndex openInMemory(@NotNull File file, @NotNull Set<OpenOption> options)
+            throws IOException, MorphyInvalidDataException {
+        SourceIndex source = open(file, options);
         SourceIndex target = new SourceIndex();
         source.copyEntities(target);
         return target;

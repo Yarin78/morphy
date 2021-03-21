@@ -664,7 +664,7 @@ public class EntityIndexTest {
         diskIndex.delete(8);
         diskIndex.close();
 
-        EntityIndex<FooEntity> index = FooEntityIndex.openInMemory(file, Set.of(READ), true);
+        EntityIndex<FooEntity> index = FooEntityIndex.openInMemory(file, Set.of(READ));
         assertEquals("d", index.get(0).key());
         assertEquals("b", index.get(2).key());
         assertEquals("q", index.get(4).key());

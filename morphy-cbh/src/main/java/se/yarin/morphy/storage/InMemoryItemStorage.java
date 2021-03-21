@@ -6,7 +6,6 @@ import se.yarin.morphy.exceptions.MorphyIOException;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 
 /**
  * An in-memory version of an {@link ItemStorage}.
@@ -15,28 +14,18 @@ import java.util.Set;
  */
 public class InMemoryItemStorage<THeader, TItem> implements ItemStorage<THeader, TItem> {
     private @NotNull final List<TItem> items;
+    // If an empty item is provided, we are in "non-strict" mode
     private @Nullable final TItem emptyItem;
     private @NotNull THeader header;
-    private final boolean strict;
 
     public InMemoryItemStorage(@NotNull THeader header) {
-        this(header, true, null);
+        this(header, null);
     }
 
-    public InMemoryItemStorage(@NotNull THeader header, boolean strict) {
-        this(header, strict, null);
-    }
-
-    public InMemoryItemStorage(@NotNull THeader header, boolean strict, @Nullable TItem emptyItem) {
+    public InMemoryItemStorage(@NotNull THeader header, @Nullable TItem emptyItem) {
         this.items = new ArrayList<>();
         this.header = header;
         this.emptyItem = emptyItem;
-        this.strict = strict;
-        if (!strict && emptyItem == null) {
-            // This is required since otherwise we don't know what to return when trying to get an illegal id!
-            // (for the FileItemStorage this is not necessary, there we just assume to read zeros)
-            throw new IllegalArgumentException("A valid emptyItem must be provided when an ItemStorage is used in non-strict mode");
-        }
     }
 
     @Override
@@ -76,7 +65,7 @@ public class InMemoryItemStorage<THeader, TItem> implements ItemStorage<THeader,
         }
         if (index + count - 1 >= items.size()) {
             // Some items that we want to get is outside the range
-            if (strict) {
+            if (emptyItem == null) {
                 throw new IllegalArgumentException(String.format("Tried to get item with id %d but InMemoryStorage only has %d items",
                         index + count - 1, this.items.size()));
             }

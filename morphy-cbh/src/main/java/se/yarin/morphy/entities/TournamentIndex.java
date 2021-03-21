@@ -34,7 +34,7 @@ public class TournamentIndex extends EntityIndex<Tournament> {
     }
 
     public TournamentIndex() {
-        this(new InMemoryItemStorage<>(EntityIndexHeader.empty(SERIALIZED_TOURNAMENT_SIZE), true),
+        this(new InMemoryItemStorage<>(EntityIndexHeader.empty(SERIALIZED_TOURNAMENT_SIZE), null),
                 new TournamentExtraStorage());
     }
 
@@ -47,18 +47,18 @@ public class TournamentIndex extends EntityIndex<Tournament> {
 
     public static TournamentIndex create(@NotNull File file)
             throws IOException, MorphyInvalidDataException {
-        return open(file, Set.of(READ, WRITE, CREATE_NEW), true);
+        return open(file, Set.of(READ, WRITE, CREATE_NEW));
     }
 
     public static TournamentIndex open(@NotNull File file)
             throws IOException, MorphyInvalidDataException {
-        return open(file, Set.of(READ, WRITE), true);
+        return open(file, Set.of(READ, WRITE));
     }
 
-    public static TournamentIndex open(@NotNull File file, @NotNull Set<OpenOption> options, boolean strict)
+    public static TournamentIndex open(@NotNull File file, @NotNull Set<OpenOption> options)
             throws IOException, MorphyInvalidDataException {
         FileItemStorage<EntityIndexHeader, EntityNode> storage = new FileItemStorage<>(
-                file, new EntityIndexSerializer(SERIALIZED_TOURNAMENT_SIZE), EntityIndexHeader.empty(SERIALIZED_TOURNAMENT_SIZE), options, strict);
+                file, new EntityIndexSerializer(SERIALIZED_TOURNAMENT_SIZE), EntityIndexHeader.empty(SERIALIZED_TOURNAMENT_SIZE), options);
 
         File extraFile = CBUtil.fileWithExtension(file, ".cbtt");
 
@@ -73,11 +73,30 @@ public class TournamentIndex extends EntityIndex<Tournament> {
             // If the extra storage file is missing and we can't create it, use an empty in-memory version instead
             extraStorage = new TournamentExtraStorage();
         } else {
-            extraStorage = TournamentExtraStorage.open(extraFile, extraOptions, strict);
+            extraStorage = TournamentExtraStorage.open(extraFile, extraOptions);
         }
 
         return new TournamentIndex(storage, extraStorage);
     }
+
+    public static TournamentIndex openInMemory(@NotNull File file)
+            throws IOException, MorphyInvalidDataException {
+        return openInMemory(file, Set.of(READ));
+    }
+
+    public static TournamentIndex openInMemory(@NotNull File file, @NotNull Set<OpenOption> options)
+            throws IOException, MorphyInvalidDataException {
+        TournamentIndex source = open(file, options);
+        TournamentIndex target = new TournamentIndex();
+        source.copyEntities(target);
+        return target;
+    }
+
+    protected void copyEntities(TournamentIndex targetIndex) {
+        super.copyEntities(targetIndex);
+        extraStorage.copyEntities(targetIndex.extraStorage);
+    }
+
 
     @Override
     public EntityIndexTransaction<Tournament> beginTransaction() {

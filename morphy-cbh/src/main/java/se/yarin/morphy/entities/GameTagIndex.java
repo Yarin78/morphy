@@ -1,9 +1,6 @@
 package se.yarin.morphy.entities;
 
-import lombok.NonNull;
 import org.jetbrains.annotations.NotNull;
-import se.yarin.cbhlib.entities.GameTagEntity;
-import se.yarin.cbhlib.storage.TreePath;
 import se.yarin.cbhlib.util.ByteBufferUtil;
 import se.yarin.morphy.exceptions.MorphyInvalidDataException;
 import se.yarin.morphy.storage.FileItemStorage;
@@ -15,7 +12,6 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.file.OpenOption;
 import java.util.Set;
-import java.util.stream.Stream;
 
 import static java.nio.file.StandardOpenOption.*;
 
@@ -32,23 +28,28 @@ public class GameTagIndex extends EntityIndex<GameTag> {
 
     public static GameTagIndex create(@NotNull File file)
             throws IOException, MorphyInvalidDataException {
-        return open(file, Set.of(READ, WRITE, CREATE_NEW), true);
+        return open(file, Set.of(READ, WRITE, CREATE_NEW));
     }
 
     public static GameTagIndex open(@NotNull File file)
             throws IOException, MorphyInvalidDataException {
-        return open(file, Set.of(READ, WRITE), true);
+        return open(file, Set.of(READ, WRITE));
     }
 
-    public static GameTagIndex open(@NotNull File file, @NotNull Set<OpenOption> options, boolean strict)
+    public static GameTagIndex open(@NotNull File file, @NotNull Set<OpenOption> options)
             throws IOException, MorphyInvalidDataException {
         return new GameTagIndex(new FileItemStorage<>(
-                file, new EntityIndexSerializer(SERIALIZED_GAME_TAG_SIZE), EntityIndexHeader.empty(SERIALIZED_GAME_TAG_SIZE), options, strict));
+                file, new EntityIndexSerializer(SERIALIZED_GAME_TAG_SIZE), EntityIndexHeader.empty(SERIALIZED_GAME_TAG_SIZE), options));
     }
 
-    public static GameTagIndex openInMemory(@NotNull File file, @NotNull Set<OpenOption> options, boolean strict)
+    public static GameTagIndex openInMemory(@NotNull File file)
             throws IOException, MorphyInvalidDataException {
-        GameTagIndex source = open(file, options, strict);
+        return openInMemory(file, Set.of(READ));
+    }
+
+    public static GameTagIndex openInMemory(@NotNull File file, @NotNull Set<OpenOption> options)
+            throws IOException, MorphyInvalidDataException {
+        GameTagIndex source = open(file, options);
         GameTagIndex target = new GameTagIndex();
         source.copyEntities(target);
         return target;

@@ -32,23 +32,28 @@ public class PlayerIndex extends EntityIndex<Player> {
 
     public static PlayerIndex create(@NotNull File file)
             throws IOException, MorphyInvalidDataException {
-        return open(file, Set.of(READ, WRITE, CREATE_NEW), true);
+        return open(file, Set.of(READ, WRITE, CREATE_NEW));
     }
 
     public static PlayerIndex open(@NotNull File file)
             throws IOException, MorphyInvalidDataException {
-        return open(file, Set.of(READ, WRITE), true);
+        return open(file, Set.of(READ, WRITE));
     }
 
-    public static PlayerIndex open(@NotNull File file, @NotNull Set<OpenOption> options, boolean strict)
+    public static PlayerIndex open(@NotNull File file, @NotNull Set<OpenOption> options)
             throws IOException, MorphyInvalidDataException {
         return new PlayerIndex(new FileItemStorage<>(
-                file, new EntityIndexSerializer(SERIALIZED_PLAYER_SIZE), EntityIndexHeader.empty(SERIALIZED_PLAYER_SIZE), options, strict));
+                file, new EntityIndexSerializer(SERIALIZED_PLAYER_SIZE), EntityIndexHeader.empty(SERIALIZED_PLAYER_SIZE), options));
     }
 
-    public static PlayerIndex openInMemory(@NotNull File file, @NotNull Set<OpenOption> options, boolean strict)
+    public static PlayerIndex openInMemory(@NotNull File file)
             throws IOException, MorphyInvalidDataException {
-        PlayerIndex source = open(file, options, strict);
+        return openInMemory(file, Set.of(READ));
+    }
+
+    public static PlayerIndex openInMemory(@NotNull File file, @NotNull Set<OpenOption> options)
+            throws IOException, MorphyInvalidDataException {
+        PlayerIndex source = open(file, options);
         PlayerIndex target = new PlayerIndex();
         source.copyEntities(target);
         return target;

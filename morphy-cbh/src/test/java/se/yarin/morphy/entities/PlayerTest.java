@@ -8,6 +8,7 @@ import se.yarin.morphy.ResourceLoader;
 import se.yarin.morphy.exceptions.MorphyIOException;
 import se.yarin.morphy.exceptions.MorphyNotSupportedException;
 import se.yarin.morphy.games.GameIndex;
+import se.yarin.morphy.storage.MorphyOpenOption;
 
 import java.io.File;
 import java.io.IOException;
@@ -76,13 +77,13 @@ public class PlayerTest {
 
     @Test
     public void testGetInvalidPlayerByIdInSafeMode() throws IOException {
-        PlayerIndex playerIndex = PlayerIndex.open(playerIndexFile, Set.of(READ), false);
+        PlayerIndex playerIndex = PlayerIndex.open(playerIndexFile, Set.of(READ, MorphyOpenOption.IGNORE_NON_CRITICAL_ERRORS));
         assertEquals("", playerIndex.get(1000000).getFullName());
     }
 
     @Test(expected = MorphyIOException.class)
     public void testGetInvalidPlayerByIdInStrictMode() throws IOException {
-        PlayerIndex playerIndex = PlayerIndex.open(playerIndexFile, Set.of(READ), true);
+        PlayerIndex playerIndex = PlayerIndex.open(playerIndexFile, Set.of(READ));
         playerIndex.get(1000000);
     }
 
@@ -279,7 +280,7 @@ public class PlayerTest {
 
     @Test
     public void testOpenIndexWithSmallHeader() throws IOException {
-        PlayerIndex playerIndex = PlayerIndex.open(playerIndexSmallHeaderFile, Set.of(READ), true);
+        PlayerIndex playerIndex = PlayerIndex.open(playerIndexSmallHeaderFile, Set.of(READ));
         assertEquals(28, playerIndex.storageHeader().headerSize());
 
         Player player = playerIndex.get(0);
@@ -288,12 +289,12 @@ public class PlayerTest {
 
     @Test(expected = MorphyNotSupportedException.class)
     public void testOpenIndexWithSmallHeaderForWrite() throws IOException {
-        PlayerIndex.open(playerIndexSmallHeaderFile, Set.of(READ, WRITE), true);
+        PlayerIndex.open(playerIndexSmallHeaderFile, Set.of(READ, WRITE));
     }
 
     @Test
     public void testInMemoryStorage() throws IOException {
-        PlayerIndex playerIndex = PlayerIndex.openInMemory(playerIndexFile, Set.of(READ), true);
+        PlayerIndex playerIndex = PlayerIndex.openInMemory(playerIndexFile, Set.of(READ));
         assertEquals(playerIndex.count(), playerIndex.getAll().size());
     }
 

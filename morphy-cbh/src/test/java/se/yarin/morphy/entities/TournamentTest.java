@@ -73,6 +73,14 @@ public class TournamentTest {
     }
 
     @Test
+    public void testGetTournamentByIdInMemoryMode() throws IOException, MorphyInvalidDataException {
+        TournamentIndex tournamentIndex = TournamentIndex.openInMemory(tournamentIndexFile);
+        Tournament t41 = tournamentIndex.get(41);
+        assertEquals("World-ch Tournament", t41.title());
+        assertEquals(19.4242, t41.extra().latitude(), 0.001);
+    }
+
+    @Test
     public void testGetTournamentByIdWithoutExtra() throws IOException, MorphyInvalidDataException {
         tournamentExtraFile.delete();
         TournamentIndex tournamentIndex = TournamentIndex.open(tournamentIndexFile);
@@ -85,7 +93,7 @@ public class TournamentTest {
     @Test
     public void testGetTournamentByIdWithoutExtraReadMode() throws IOException, MorphyInvalidDataException {
         tournamentExtraFile.delete();
-        TournamentIndex tournamentIndex = TournamentIndex.open(tournamentIndexFile, Set.of(READ), true);
+        TournamentIndex tournamentIndex = TournamentIndex.open(tournamentIndexFile, Set.of(READ));
 
         Tournament t41 = tournamentIndex.get(41);
         assertEquals("World-ch Tournament", t41.title());

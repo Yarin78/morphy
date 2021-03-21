@@ -28,16 +28,15 @@ public class FileItemStorage<THeader, TItem> implements ItemStorage<THeader, TIt
             @NotNull File file,
             @NotNull ItemStorageSerializer<THeader, TItem> serializer,
             @NotNull THeader emptyHeader,
-            @NotNull Set<OpenOption> options,
-            boolean strict)
+            @NotNull Set<OpenOption> options)
             throws IOException, MorphyInvalidDataException {
 
-        if (!strict && options.contains(WRITE)) {
-            throw new IllegalArgumentException("A storage open in WRITE mode must also be in STRICT mode");
+        if (options.contains(WRITE) && options.contains(MorphyOpenOption.IGNORE_NON_CRITICAL_ERRORS)) {
+            throw new IllegalArgumentException("A storage open in WRITE mode can't also ignore errors");
         }
 
-        this.channel = FileChannel.open(file.toPath(), options);
-        this.strict = strict;
+        this.channel = FileChannel.open(file.toPath(), MorphyOpenOption.valid(options));
+        this.strict = !options.contains(MorphyOpenOption.IGNORE_NON_CRITICAL_ERRORS);
         this.serializer = serializer;
         this.fileSize = this.channel.size();
 

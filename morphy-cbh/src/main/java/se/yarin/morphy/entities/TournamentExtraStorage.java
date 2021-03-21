@@ -13,6 +13,7 @@ import java.nio.ByteBuffer;
 import java.nio.file.OpenOption;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -25,15 +26,15 @@ public class TournamentExtraStorage implements ItemStorageSerializer<TournamentE
     private final @NotNull ItemStorage<TournamentExtraHeader, TournamentExtra> storage;
 
     public TournamentExtraStorage() {
-        this.storage = new InMemoryItemStorage<>(TournamentExtraHeader.empty(), true, TournamentExtra.empty());
+        this.storage = new InMemoryItemStorage<>(TournamentExtraHeader.empty(), TournamentExtra.empty());
     }
 
     public TournamentExtraStorage(@NotNull ItemStorage<TournamentExtraHeader, TournamentExtra> storage) {
         this.storage = storage;
     }
 
-    private TournamentExtraStorage(@NotNull File file, Set<OpenOption> options, boolean strict) throws IOException {
-        this.storage = new FileItemStorage<>(file, this, TournamentExtraHeader.empty(), options, strict);
+    private TournamentExtraStorage(@NotNull File file, Set<OpenOption> options) throws IOException {
+        this.storage = new FileItemStorage<>(file, this, TournamentExtraHeader.empty(), options);
 
         if (options.contains(StandardOpenOption.WRITE)) {
             if (storage.getHeader().version() < TournamentExtraHeader.DEFAULT_HEADER_VERSION) {
@@ -51,8 +52,8 @@ public class TournamentExtraStorage implements ItemStorageSerializer<TournamentE
         }
     }
 
-    public static TournamentExtraStorage open(@NotNull File file, Set<OpenOption> options, boolean strict) throws IOException {
-        return new TournamentExtraStorage(file, options, strict);
+    public static TournamentExtraStorage open(@NotNull File file, Set<OpenOption> options) throws IOException {
+        return new TournamentExtraStorage(file, options);
     }
 
     @Override
@@ -169,5 +170,28 @@ public class TournamentExtraStorage implements ItemStorageSerializer<TournamentE
         }
         ByteBufferUtil.putByte(buf, tournamentExtra.tiebreakRules().size());
         ByteBufferUtil.putIntL(buf, CBUtil.encodeDate(tournamentExtra.endDate()));
+    }
+
+    public void copyEntities(TournamentExtraStorage targetStorage) {
+        // Low level copy of all entities from one storage to a new empty storage
+        if (targetStorage.numEntries() != 0) {
+            throw new IllegalStateException("The target storage must be empty");
+        }
+
+        int batchSize = 1000, capacity = numEntries(), currentIndex = 0;
+        for (int i = 0; i < capacity; i += batchSize) {
+            List<TournamentExtra> items = storage.getItems(i, Math.min(i + batchSize, capacity));
+            for (TournamentExtra item : items) {
+                targetStorage.storage.putItem(currentIndex, item);
+                currentIndex += 1;
+            }
+        }
+        // Copy all fields in the source header except the header size
+        TournamentExtraHeader targetHeader = targetStorage.storage.getHeader();
+        ImmutableTournamentExtraHeader newHeader = ImmutableTournamentExtraHeader
+                .copyOf(storage.getHeader())
+                .withVersion(targetHeader.version())
+                .withRecordSize(targetHeader.recordSize());
+        targetStorage.storage.putHeader(newHeader);
     }
 }
