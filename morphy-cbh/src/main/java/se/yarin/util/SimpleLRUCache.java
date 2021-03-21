@@ -1,9 +1,7 @@
-package se.yarin.cbhlib.util;
+package se.yarin.util;
 
-import lombok.AllArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import se.yarin.cbhlib.storage.FileBlobStorage;
 
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -19,11 +17,14 @@ public class SimpleLRUCache<K, V> {
 
     private int cacheGetRequests = 0, cacheHits = 0, cacheMisses = 0;
 
-    @lombok.Data
-    @AllArgsConstructor
     private class Data {
-        private K key;
-        private V value;
+        private final K key;
+        private final V value;
+
+        public Data(K key, V value) {
+            this.key = key;
+            this.value = value;
+        }
     }
 
     public SimpleLRUCache(int capacity) {
@@ -42,7 +43,7 @@ public class SimpleLRUCache<K, V> {
             dataList.remove(data);
             // Add it to the end of the list
             dataList.add(data);
-            res = data.getValue();
+            res = data.value;
         } else {
             cacheMisses += 1;
         }
@@ -80,7 +81,7 @@ public class SimpleLRUCache<K, V> {
             Data data = new Data(key, value);
             if (cache.size() >= capacity) {
                 // Remove the oldest value from both map and linked list
-                cache.remove(dataList.pollFirst().getKey());
+                cache.remove(dataList.pollFirst().key);
             }
             cache.put(key, data);
             dataList.add(data);

@@ -8,7 +8,7 @@ import se.yarin.cbhlib.storage.BlobSizeRetriever;
 import se.yarin.cbhlib.storage.BlobStorage;
 import se.yarin.cbhlib.storage.FileBlobStorage;
 import se.yarin.cbhlib.storage.InMemoryBlobStorage;
-import se.yarin.cbhlib.util.ByteBufferUtil;
+import se.yarin.util.ByteBufferUtil;
 import se.yarin.chess.GameMovesModel;
 
 import java.io.File;

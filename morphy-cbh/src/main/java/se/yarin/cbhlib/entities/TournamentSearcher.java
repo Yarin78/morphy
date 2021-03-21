@@ -3,8 +3,8 @@ package se.yarin.cbhlib.entities;
 import lombok.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import se.yarin.cbhlib.util.parser.Expr;
-import se.yarin.cbhlib.util.parser.Interpreter;
+import se.yarin.util.parser.Expr;
+import se.yarin.util.parser.Interpreter;
 import se.yarin.chess.Date;
 
 import java.util.*;

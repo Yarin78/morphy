@@ -5,7 +5,7 @@ import lombok.Getter;
 import lombok.NonNull;
 import se.yarin.cbhlib.entities.Nation;
 import se.yarin.cbhlib.games.GameHeaderFlags;
-import se.yarin.cbhlib.util.ByteBufferUtil;
+import se.yarin.util.ByteBufferUtil;
 import se.yarin.chess.annotations.Annotation;
 import se.yarin.chess.annotations.CommentaryAfterMoveAnnotation;
 

@@ -1,4 +1,4 @@
-package se.yarin.cbhlib.util.parser;
+package se.yarin.util.parser;
 
 import lombok.AllArgsConstructor;
 

@@ -2,7 +2,7 @@ package se.yarin.cbhlib.media;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import se.yarin.cbhlib.util.ByteBufferUtil;
+import se.yarin.util.ByteBufferUtil;
 import se.yarin.chess.NavigableGameModel;
 import se.yarin.asflib.ASFScriptCommand;
 import se.yarin.asflib.ASFScriptCommandReader;

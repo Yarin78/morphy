@@ -2,7 +2,7 @@ package se.yarin.cbhlib.moves;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import se.yarin.cbhlib.util.ByteBufferUtil;
+import se.yarin.util.ByteBufferUtil;
 import se.yarin.chess.*;
 
 import java.nio.ByteBuffer;

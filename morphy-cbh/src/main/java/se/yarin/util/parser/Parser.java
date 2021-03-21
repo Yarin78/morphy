@@ -1,13 +1,13 @@
-package se.yarin.cbhlib.util.parser;
+package se.yarin.util.parser;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import se.yarin.cbhlib.util.ByteBufferUtil;
+import se.yarin.util.ByteBufferUtil;
 
 import java.util.List;
 import java.util.function.BiFunction;
 
-import static se.yarin.cbhlib.util.parser.TokenType.*;
+import static se.yarin.util.parser.TokenType.*;
 
 
 /**

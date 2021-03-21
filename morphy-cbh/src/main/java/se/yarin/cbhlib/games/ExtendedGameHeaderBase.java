@@ -3,8 +3,7 @@ package se.yarin.cbhlib.games;
 import lombok.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import se.yarin.cbhlib.entities.TournamentTimeControl;
-import se.yarin.cbhlib.util.ByteBufferUtil;
+import se.yarin.util.ByteBufferUtil;
 
 import java.io.File;
 import java.io.IOException;

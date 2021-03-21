@@ -1,4 +1,4 @@
-package se.yarin.cbhlib.util.parser;
+package se.yarin.util.parser;
 
 import org.junit.Test;
 
@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import static org.junit.Assert.assertEquals;
-import static se.yarin.cbhlib.util.parser.TokenType.*;
+import static se.yarin.util.parser.TokenType.*;
 
 public class ScannerTest {
     @Test

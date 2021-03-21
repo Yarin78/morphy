@@ -23,5 +23,5 @@ module se.yarin.morphy.cbh {
     exports se.yarin.cbhlib.storage.transaction to se.yarin.morphy.cli;
     exports se.yarin.cbhlib.validation to se.yarin.morphy.cli;
     exports se.yarin.cbhlib.util to se.yarin.morphy.cli, se.yarin.morphy.tools;
-    exports se.yarin.cbhlib.util.parser to se.yarin.morphy.cli;
+    exports se.yarin.util.parser to se.yarin.morphy.cli;
 }

@@ -7,7 +7,7 @@ import se.yarin.cbhlib.entities.ManualPlayerSearcher;
 import se.yarin.cbhlib.entities.PlayerEntity;
 import se.yarin.cbhlib.entities.PlayerSearcher;
 import se.yarin.cbhlib.games.SerializedGameHeaderFilter;
-import se.yarin.cbhlib.util.ByteBufferUtil;
+import se.yarin.util.ByteBufferUtil;
 
 import java.util.HashSet;
 import java.util.List;

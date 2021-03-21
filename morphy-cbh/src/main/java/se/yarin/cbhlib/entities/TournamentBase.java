@@ -8,7 +8,7 @@ import se.yarin.cbhlib.storage.PersistentEntityNodeStorage;
 import se.yarin.cbhlib.storage.TreePath;
 import se.yarin.cbhlib.storage.transaction.EntityStorage;
 import se.yarin.cbhlib.storage.transaction.EntityStorageImpl;
-import se.yarin.cbhlib.util.ByteBufferUtil;
+import se.yarin.util.ByteBufferUtil;
 import se.yarin.cbhlib.util.CBUtil;
 import se.yarin.chess.Date;
 

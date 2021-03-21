@@ -3,10 +3,10 @@ package se.yarin.cbhlib.games.search;
 import se.yarin.cbhlib.Database;
 import se.yarin.cbhlib.Game;
 import se.yarin.cbhlib.games.SerializedGameHeaderFilter;
-import se.yarin.cbhlib.util.parser.Expr;
-import se.yarin.cbhlib.util.parser.Interpreter;
-import se.yarin.cbhlib.util.parser.Parser;
-import se.yarin.cbhlib.util.parser.Scanner;
+import se.yarin.util.parser.Expr;
+import se.yarin.util.parser.Interpreter;
+import se.yarin.util.parser.Parser;
+import se.yarin.util.parser.Scanner;
 
 public class RawHeaderFilter extends SearchFilterBase implements SerializedGameHeaderFilter {
     private final Expr expr;

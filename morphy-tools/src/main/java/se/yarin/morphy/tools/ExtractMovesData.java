@@ -5,7 +5,7 @@ import org.apache.logging.log4j.Logger;
 import se.yarin.cbhlib.exceptions.ChessBaseInvalidDataException;
 import se.yarin.cbhlib.games.GameHeader;
 import se.yarin.cbhlib.games.GameHeaderBase;
-import se.yarin.cbhlib.util.ByteBufferUtil;
+import se.yarin.util.ByteBufferUtil;
 
 import java.io.File;
 import java.io.FileOutputStream;

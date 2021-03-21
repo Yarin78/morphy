@@ -1,7 +1,7 @@
 package se.yarin.cbhlib.annotations;
 
 import lombok.EqualsAndHashCode;
-import se.yarin.cbhlib.util.ByteBufferUtil;
+import se.yarin.util.ByteBufferUtil;
 import se.yarin.cbhlib.games.Medal;
 import se.yarin.chess.annotations.Annotation;
 

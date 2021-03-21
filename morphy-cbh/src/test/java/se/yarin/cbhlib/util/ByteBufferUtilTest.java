@@ -1,7 +1,7 @@
 package se.yarin.cbhlib.util;
 
 import org.junit.Test;
-import se.yarin.cbhlib.util.ByteBufferUtil;
+import se.yarin.util.ByteBufferUtil;
 
 import java.nio.ByteBuffer;
 

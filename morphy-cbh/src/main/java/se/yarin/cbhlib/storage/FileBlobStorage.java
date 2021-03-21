@@ -4,8 +4,8 @@ import lombok.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.cbhlib.exceptions.ChessBaseIOException;
-import se.yarin.cbhlib.util.BlobChannel;
-import se.yarin.cbhlib.util.ByteBufferUtil;
+import se.yarin.util.BlobChannel;
+import se.yarin.util.ByteBufferUtil;
 
 import java.io.File;
 import java.io.IOException;

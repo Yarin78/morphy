@@ -7,8 +7,8 @@ import org.slf4j.LoggerFactory;
 import se.yarin.cbhlib.entities.Nation;
 import se.yarin.cbhlib.entities.TournamentTimeControl;
 import se.yarin.cbhlib.entities.TournamentType;
-import se.yarin.cbhlib.util.parser.Expr;
-import se.yarin.cbhlib.util.parser.Interpreter;
+import se.yarin.util.parser.Expr;
+import se.yarin.util.parser.Interpreter;
 import se.yarin.chess.Date;
 
 import java.util.*;

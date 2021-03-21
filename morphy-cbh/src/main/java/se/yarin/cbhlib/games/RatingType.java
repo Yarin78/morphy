@@ -3,7 +3,7 @@ package se.yarin.cbhlib.games;
 import lombok.Data;
 import se.yarin.cbhlib.entities.Nation;
 import se.yarin.cbhlib.entities.TournamentTimeControl;
-import se.yarin.cbhlib.util.ByteBufferUtil;
+import se.yarin.util.ByteBufferUtil;
 import se.yarin.cbhlib.util.CBUtil;
 
 import java.nio.ByteBuffer;

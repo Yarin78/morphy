@@ -3,7 +3,7 @@ package se.yarin.cbhlib.games;
 import lombok.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import se.yarin.cbhlib.util.ByteBufferUtil;
+import se.yarin.util.ByteBufferUtil;
 import se.yarin.cbhlib.util.CBUtil;
 import se.yarin.chess.*;
 import se.yarin.chess.Date;

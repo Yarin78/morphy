@@ -4,7 +4,7 @@ import lombok.Getter;
 import se.yarin.cbhlib.Database;
 import se.yarin.cbhlib.Game;
 import se.yarin.cbhlib.games.SerializedGameHeaderFilter;
-import se.yarin.cbhlib.util.ByteBufferUtil;
+import se.yarin.util.ByteBufferUtil;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;

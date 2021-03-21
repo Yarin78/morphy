@@ -1,7 +1,7 @@
 package se.yarin.morphy.entities;
 
 import org.jetbrains.annotations.NotNull;
-import se.yarin.cbhlib.util.ByteBufferUtil;
+import se.yarin.util.ByteBufferUtil;
 import se.yarin.cbhlib.util.CBUtil;
 import se.yarin.chess.Date;
 import se.yarin.morphy.exceptions.MorphyNotSupportedException;

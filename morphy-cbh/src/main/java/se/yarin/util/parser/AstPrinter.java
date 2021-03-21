@@ -1,4 +1,4 @@
-package se.yarin.cbhlib.util.parser;
+package se.yarin.util.parser;
 
 public class AstPrinter implements Expr.Visitor<String> {
 

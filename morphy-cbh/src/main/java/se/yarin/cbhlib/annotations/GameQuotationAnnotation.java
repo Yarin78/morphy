@@ -12,7 +12,7 @@ import se.yarin.cbhlib.moves.ChessBaseMoveDecodingException;
 import se.yarin.cbhlib.moves.GameQuotationMoveEncoder;
 import se.yarin.cbhlib.moves.MoveEncoder;
 import se.yarin.cbhlib.moves.MovesSerializer;
-import se.yarin.cbhlib.util.ByteBufferUtil;
+import se.yarin.util.ByteBufferUtil;
 import se.yarin.cbhlib.util.CBUtil;
 import se.yarin.chess.*;
 import se.yarin.chess.annotations.Annotation;

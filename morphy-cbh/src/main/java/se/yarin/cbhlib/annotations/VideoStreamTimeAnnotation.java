@@ -1,7 +1,7 @@
 package se.yarin.cbhlib.annotations;
 
 import lombok.Getter;
-import se.yarin.cbhlib.util.ByteBufferUtil;
+import se.yarin.util.ByteBufferUtil;
 import se.yarin.chess.annotations.Annotation;
 
 import java.nio.ByteBuffer;

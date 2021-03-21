@@ -1,22 +1,16 @@
 package se.yarin.morphy.tools;
 
-import se.yarin.cbhlib.Database;
-import se.yarin.cbhlib.Game;
-import se.yarin.cbhlib.games.search.GameSearcher;
-import se.yarin.cbhlib.util.ByteBufferUtil;
+import se.yarin.util.ByteBufferUtil;
 
 import java.io.File;
 import java.io.IOException;
-import java.lang.reflect.Array;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Stream;
 
 public class ExploreCbmFile {
     public static void main(String[] args) throws IOException {

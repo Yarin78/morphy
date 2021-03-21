@@ -5,7 +5,7 @@ import se.yarin.cbhlib.Database;
 import se.yarin.cbhlib.Game;
 import se.yarin.cbhlib.entities.GameTagEntity;
 import se.yarin.cbhlib.games.SerializedExtendedGameHeaderFilter;
-import se.yarin.cbhlib.util.ByteBufferUtil;
+import se.yarin.util.ByteBufferUtil;
 
 import java.util.Arrays;
 import java.util.HashSet;
