@@ -19,7 +19,9 @@ import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import static java.nio.file.StandardOpenOption.READ;
 import static org.junit.Assert.*;
@@ -281,6 +283,25 @@ public class TournamentTest {
         assertEquals(2, tournament.extra().tiebreakRules().size());
         assertEquals(TiebreakRule.RR_NUM_WINS, tournament.extra().tiebreakRules().get(0));
         assertEquals(TiebreakRule.RR_POINT_GROUP, tournament.extra().tiebreakRules().get(1));
+    }
+
+    @Test
+    public void testPrefixSearch() throws IOException {
+        TournamentIndex tournamentIndex = TournamentIndex.open(tournamentIndexFile);
+        List<Tournament> list = tournamentIndex.prefixSearch(1951, "World-ch").collect(Collectors.toList());
+        assertEquals(1, list.size());
+        assertEquals("World-ch18 Botvinnik-Bronstein +5-5=14", list.get(0).title());
+    }
+
+    @Test
+    public void testRangeSearch() throws IOException {
+        TournamentIndex tournamentIndex = TournamentIndex.open(tournamentIndexFile);
+        List<Tournament> list = tournamentIndex.rangeSearch(1951, 1958).collect(Collectors.toList());
+        assertEquals(4, list.size());
+        assertEquals("World-ch21 Botvinnik-Symslov +7-5=11", list.get(0).title());
+        assertEquals("World-ch20 Smyslov-Botvinnik +6-3=13", list.get(1).title());
+        assertEquals("World-ch19 Botvinnik-Symslov +7-7=10", list.get(2).title());
+        assertEquals("World-ch18 Botvinnik-Bronstein +5-5=14", list.get(3).title());
     }
 
     @Test

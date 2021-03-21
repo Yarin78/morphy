@@ -1,6 +1,7 @@
 package se.yarin.morphy.entities;
 
 import org.immutables.value.Value;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.morphy.exceptions.MorphyEntityIndexException;
@@ -106,6 +107,17 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
             return foundEntity;
         }
         return null;
+    }
+
+    /**
+     * Gets the underlying raw data for an entity.
+     * For debugging purposes only.
+     * @param id the id of the entity to get
+     * @return a byte array containing a copy of the underlying data
+     */
+    public @NotNull byte[] getRaw(int id) {
+        EntityNode node = storage.getItem(id);
+        return node.getSerializedEntity().clone();
     }
 
     /**
@@ -225,6 +237,19 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
     }
 
     /**
+     * Gets an iterable of all entities in the index starting at a given key (inclusive),
+     * ending at a given key (exclusive), sorted by the default sorting order.
+     * @param start the starting key
+     * @param start the end key
+     * @return an iterable of entities
+     */
+    public Iterable<T> iterableAscending(T start, T end) {
+        EntityIndexTransaction<T> txn = beginTransaction();
+        EntityIndexTransaction<T>.NodePath endPath = txn.lowerBound(end);
+        return () -> new OrderedEntityAscendingIterator<>(txn.lowerBound(start), endPath.isEnd() ? -1 : endPath.getEntityId());
+    }
+
+    /**
      * Gets an iterable of all entities in the index in reverse default sorting order.
      * @return an iterable of entities
      */
@@ -277,6 +302,17 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
      */
     public Stream<T> streamOrderedAscending(T start) {
         return StreamSupport.stream(iterableAscending(start).spliterator(), false);
+    }
+
+    /**
+     * Gets a stream of all entities in the index starting at a given key (inclusive),
+     * and ending at a given key (exclusive), sorted by the default sorting order.
+     * @param start the starting key
+     * @param end the end key
+     * @return a stream of entities
+     */
+    public Stream<T> streamOrderedAscending(T start, T end) {
+        return StreamSupport.stream(iterableAscending(start, end).spliterator(), false);
     }
 
     /**

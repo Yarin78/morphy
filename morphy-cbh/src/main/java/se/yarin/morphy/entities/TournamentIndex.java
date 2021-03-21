@@ -1,13 +1,12 @@
 package se.yarin.morphy.entities;
 
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.cbhlib.util.ByteBufferUtil;
 import se.yarin.cbhlib.util.CBUtil;
+import se.yarin.chess.Date;
 import se.yarin.morphy.exceptions.MorphyInvalidDataException;
-import se.yarin.morphy.exceptions.MorphyNotSupportedException;
 import se.yarin.morphy.storage.FileItemStorage;
 import se.yarin.morphy.storage.InMemoryItemStorage;
 import se.yarin.morphy.storage.ItemStorage;
@@ -19,6 +18,7 @@ import java.nio.file.OpenOption;
 import java.nio.file.StandardOpenOption;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.stream.Stream;
 
 import static java.nio.file.StandardOpenOption.*;
 
@@ -102,6 +102,32 @@ public class TournamentIndex extends EntityIndex<Tournament> {
     public EntityIndexTransaction<Tournament> beginTransaction() {
         // TODO: Acquire read lock
         return new TournamentIndexTransaction(this);
+    }
+
+    /**
+     * Searches for tournaments using a case sensitive prefix search.
+     * The exact year must also be specified as the primary key starts with the year.
+     * @param year the exact year of the tournament
+     * @param name a prefix of the title of the tournament
+     * @return a stream over matching tournaments
+     */
+    public Stream<Tournament> prefixSearch(int year, @NotNull String name) {
+        Tournament startKey = Tournament.of(name, new Date(year));
+        Tournament endKey = Tournament.of(name + "zzz", new Date(year));
+        return streamOrderedAscending(startKey, endKey);
+    }
+
+    /**
+     * Searches for tournaments in the specified year range
+     * @param fromYear the start year, inclusive
+     * @param toYear the end year, inclusive
+     * @return a stream over matching tournaments, with the most recent tournament first
+     */
+    public Stream<Tournament> rangeSearch(int fromYear, int toYear) {
+        // Tournaments are sorted by year in reverse
+        Tournament startKey = Tournament.of("", new Date(toYear));
+        Tournament endKey = Tournament.of("", new Date(fromYear-1));
+        return streamOrderedAscending(startKey, endKey);
     }
 
     @Override

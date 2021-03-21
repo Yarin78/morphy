@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.file.OpenOption;
 import java.util.Set;
+import java.util.stream.Stream;
 
 import static java.nio.file.StandardOpenOption.*;
 
@@ -57,6 +58,33 @@ public class PlayerIndex extends EntityIndex<Player> {
         PlayerIndex target = new PlayerIndex();
         source.copyEntities(target);
         return target;
+    }
+
+    /**
+     * Searches for players using a case sensitive prefix search.
+     * @param name a prefix of the last name of the player; first name can be specified after a comma
+     * @return a stream over matching players
+     */
+    public Stream<Player> prefixSearch(@NotNull String name) {
+        if (name.contains(",")) {
+            String[] parts = name.split(",", 2);
+            return prefixSearch(parts[0].strip(), parts[1].strip());
+        }
+        return prefixSearch(name, null);
+    }
+
+    /**
+     * Searches for players using a case sensitive prefix search.
+     * If first name is specified, last name will have to match exactly.
+     * @param lastName a prefix of the last name of the player
+     * @param firstName a prefix of the first name of the player (or null/empty).
+     * @return a stream of matching players
+     */
+    public Stream<Player> prefixSearch(@NotNull String lastName, String firstName) {
+        Player startKey = Player.of(lastName, firstName == null ? "" : firstName);
+        Player endKey = firstName == null ? Player.of(lastName + "zzz", "") :
+                Player.of(lastName, firstName + "zzz");
+        return streamOrderedAscending(startKey, endKey);
     }
 
     @Override

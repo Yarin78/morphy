@@ -51,9 +51,7 @@ public class GameTagTest {
     @Test
     public void testGetTeamByKey() throws IOException {
         GameTagIndex gameTagIndex = GameTagIndex.open(gameTagIndexFile);
-        // TODO: prefix search instead
-        GameTag key = GameTag.of("This is English");
-        GameTag gameTag = gameTagIndex.get(key);
+        GameTag gameTag = gameTagIndex.prefixSearch("This is English").findFirst().orElse(null);
         assertEquals(3, gameTag.id());
     }
 

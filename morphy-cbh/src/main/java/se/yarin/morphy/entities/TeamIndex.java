@@ -13,6 +13,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.file.OpenOption;
 import java.util.Set;
+import java.util.stream.Stream;
 
 import static java.nio.file.StandardOpenOption.*;
 
@@ -55,6 +56,18 @@ public class TeamIndex extends EntityIndex<Team> {
         TeamIndex target = new TeamIndex();
         source.copyEntities(target);
         return target;
+    }
+
+    /**
+     * Searches for teams using a case sensitive prefix search.
+     * @param title a prefix of the team name
+     * @return a stream of matching teams
+     */
+    public Stream<Team> prefixSearch(@NotNull String title) {
+        Team startKey = Team.of(title);
+        Team endKey = Team.of(title + "zzz");
+
+        return streamOrderedAscending(startKey, endKey);
     }
 
     @Override
