@@ -4,10 +4,15 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.file.OpenOption;
 import java.nio.file.Path;
+import java.util.Set;
 
 public interface BlobChannel {
     static BlobChannel open(Path path, OpenOption... openOptions) throws IOException {
-        return BufferedBlobChannel.open(path, openOptions);
+        return PagedBlobChannel.open(path, openOptions);
+    }
+
+    static BlobChannel open(Path path, Set<? extends OpenOption> openOptions) throws IOException {
+        return PagedBlobChannel.open(path, openOptions);
     }
 
     void setChunkSize(int chunkSize);
@@ -20,6 +25,13 @@ public interface BlobChannel {
      * which may be less than length if end of file was reached
      */
     ByteBuffer read(long offset, int length) throws IOException;
+
+    /**
+     * Reads binary data at a given position into a buffer.
+     * @param offset the offset to start read data from
+     * @param buffer an existing buffer that the data is read to.
+     */
+    void read(long offset, ByteBuffer buffer) throws IOException;
 
     int append(ByteBuffer buf) throws IOException;
 

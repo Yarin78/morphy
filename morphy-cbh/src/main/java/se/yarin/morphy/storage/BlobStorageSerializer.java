@@ -1,7 +1,6 @@
 package se.yarin.morphy.storage;
 
 import org.jetbrains.annotations.NotNull;
-import se.yarin.cbhlib.storage.BlobStorage;
 import se.yarin.morphy.exceptions.MorphyInvalidDataException;
 
 import java.nio.ByteBuffer;

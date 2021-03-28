@@ -3,6 +3,7 @@ package se.yarin.morphy.storage;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 
 /**
  * <p>
@@ -15,9 +16,9 @@ import java.io.IOException;
  * where each blob starts, and to prevent that blobs overwrite each other.
  * </p>
  */
-public interface BlobStorage<THeader, TBlob> {
-    @NotNull THeader getHeader();
-    void putHeader(@NotNull THeader header);
+public interface BlobStorage {
+    @NotNull BlobStorageHeader getHeader();
+    void putHeader(@NotNull BlobStorageHeader header);
 
     /**
      * Reads a blob from the storage.
@@ -25,14 +26,14 @@ public interface BlobStorage<THeader, TBlob> {
      * @param offset to offset to where the blob begins
      * @return a buffer containing the blob
      */
-    TBlob getBlob(long offset);
+    ByteBuffer getBlob(long offset);
 
     /**
      * Writes a new blob to the end of the storage
      * @param blob the blob to append
      * @return the offset in the storage to the blob
      */
-    long appendBlob(@NotNull TBlob blob);
+    long appendBlob(@NotNull ByteBuffer blob);
 
     /**
      * Writes a blob to the storage at the specific offset.
@@ -40,7 +41,7 @@ public interface BlobStorage<THeader, TBlob> {
      * @param offset the offset to write the blob
      * @param blob the blob to write
      */
-    void putBlob(long offset, @NotNull TBlob blob);
+    void putBlob(long offset, @NotNull ByteBuffer blob);
 
     /**
      * Gets the current size of the storage.

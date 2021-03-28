@@ -7,8 +7,9 @@ import java.nio.file.OpenOption;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
-public class BufferedBlobChannel implements BlobChannel {
+public class PagedBlobChannel implements BlobChannel {
     private static final int PAGE_SIZE = 16384;
     private static final int DEFAULT_INSERT_CHUNK_SIZE = 1024*1024;
     private final FileChannel channel;
@@ -16,15 +17,19 @@ public class BufferedBlobChannel implements BlobChannel {
     private int chunkSize;
     private final SimpleLRUCache<Integer, ByteBuffer> pageCache;
 
-    public BufferedBlobChannel(FileChannel channel) throws IOException {
+    public PagedBlobChannel(FileChannel channel) throws IOException {
         this.channel = channel;
         this.size = this.channel.size();
         this.chunkSize = DEFAULT_INSERT_CHUNK_SIZE;
         this.pageCache = new SimpleLRUCache<>(8);
     }
 
-    public static BufferedBlobChannel open(Path path, OpenOption... openOptions) throws IOException {
-        return new BufferedBlobChannel(FileChannel.open(path, openOptions));
+    public static PagedBlobChannel open(Path path, OpenOption... openOptions) throws IOException {
+        return new PagedBlobChannel(FileChannel.open(path, openOptions));
+    }
+
+    public static PagedBlobChannel open(Path path, Set<? extends OpenOption> openOptions) throws IOException {
+        return new PagedBlobChannel(FileChannel.open(path, openOptions));
     }
 
     public void setChunkSize(int chunkSize) {
@@ -58,14 +63,10 @@ public class BufferedBlobChannel implements BlobChannel {
         return pages;
     }
 
-    public ByteBuffer read(long offset, int length) throws IOException {
-        if (length == 0) {
-            return ByteBuffer.allocate(0);
-        }
+    public void read(long offset, ByteBuffer buf) throws IOException {
+        int length = buf.remaining();
 
         int startPage = (int) (offset / PAGE_SIZE), lastPage = (int) ((offset + length) / PAGE_SIZE);
-
-        ByteBuffer buf = ByteBuffer.allocate(length);
 
         List<ByteBuffer> pages = getPages(startPage, lastPage);
 
@@ -85,7 +86,15 @@ public class BufferedBlobChannel implements BlobChannel {
             ByteBuffer page = pages.get(pages.size() - 1);
             buf.put(page.array(), 0, (int) ((offset + length) % PAGE_SIZE));
         }
+    }
 
+    public ByteBuffer read(long offset, int length) throws IOException {
+        if (length == 0) {
+            return ByteBuffer.allocate(0);
+        }
+
+        ByteBuffer buf = ByteBuffer.allocate(length);
+        read(offset, buf);
         buf.flip();
         return buf;
     }

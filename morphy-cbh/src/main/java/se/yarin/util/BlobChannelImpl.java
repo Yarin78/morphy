@@ -36,6 +36,12 @@ public class BlobChannelImpl implements BlobChannel {
     }
 
     @Override
+    public void read(long offset, ByteBuffer buf) throws IOException {
+        channel.position(offset);
+        channel.read(buf);
+    }
+
+    @Override
     public int append(ByteBuffer buf) throws IOException {
         return write(size, buf);
     }

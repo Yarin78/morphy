@@ -13,7 +13,11 @@ import java.util.HashMap;
 
 public class ResourceLoader {
     public static ByteBuffer loadResource(String resourceName) throws IOException {
-        InputStream stream = ResourceLoader.class.getResourceAsStream(resourceName);
+        return loadResource(ResourceLoader.class, resourceName);
+    }
+
+    public static ByteBuffer loadResource(Class<?> clazz, String resourceName) throws IOException {
+        InputStream stream = clazz.getResourceAsStream(resourceName);
 
         int bufSize = 8192;
         byte[] bytes = new byte[bufSize];
