@@ -1,9 +1,8 @@
 package se.yarin.morphy.games.annotations;
 
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import se.yarin.cbhlib.util.CBUtil;
-import se.yarin.cbhlib.games.GameHeaderFlags;
+import org.immutables.value.Value;
+import se.yarin.morphy.util.CBUtil;
+import se.yarin.morphy.games.GameHeaderFlags;
 import se.yarin.chess.annotations.Annotation;
 
 import java.nio.ByteBuffer;
@@ -13,18 +12,14 @@ import java.nio.ByteBuffer;
  * ChessBase 13 doesn't either - probably a deprecated feature?
  */
 @Deprecated
-@EqualsAndHashCode(callSuper = false)
-public class SoundAnnotation extends Annotation implements StatisticalAnnotation {
-    @Getter
-    private byte[] rawData;
-
-    public SoundAnnotation(byte[] rawData) {
-        this.rawData = rawData;
-    }
+@Value.Immutable
+public abstract class SoundAnnotation extends Annotation implements StatisticalAnnotation {
+    @Value.Parameter
+    public abstract byte[] rawData();
 
     @Override
     public String toString() {
-        return "SoundAnnotation = " + CBUtil.toHexString(rawData);
+        return "SoundAnnotation = " + CBUtil.toHexString(rawData());
     }
 
     @Override
@@ -35,7 +30,7 @@ public class SoundAnnotation extends Annotation implements StatisticalAnnotation
     public static class Serializer implements AnnotationSerializer {
         @Override
         public void serialize(ByteBuffer buf, Annotation annotation) {
-            buf.put(((SoundAnnotation) annotation).getRawData());
+            buf.put(((SoundAnnotation) annotation).rawData());
         }
 
         @Override
@@ -43,12 +38,12 @@ public class SoundAnnotation extends Annotation implements StatisticalAnnotation
             byte data[] = new byte[length];
             buf.get(data);
 
-            return new SoundAnnotation(data);
+            return ImmutableSoundAnnotation.of(data);
         }
 
         @Override
         public Class getAnnotationClass() {
-            return SoundAnnotation.class;
+            return ImmutableSoundAnnotation.class;
         }
 
         @Override

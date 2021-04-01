@@ -1,19 +1,16 @@
 package se.yarin.morphy.games.annotations;
 
-import lombok.AllArgsConstructor;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.NonNull;
+import org.immutables.value.Value;
 import se.yarin.morphy.exceptions.MorphyAnnotationExecption;
 import se.yarin.util.ByteBufferUtil;
-import se.yarin.cbhlib.games.GameHeaderFlags;
+import se.yarin.morphy.games.GameHeaderFlags;
 import se.yarin.chess.annotations.Annotation;
 
 import java.nio.ByteBuffer;
 import java.util.*;
 
-@EqualsAndHashCode(callSuper = false)
-public class GraphicalSquaresAnnotation extends Annotation implements StatisticalAnnotation {
+@Value.Immutable
+public abstract class GraphicalSquaresAnnotation extends Annotation implements StatisticalAnnotation {
 
     @Override
     public void updateStatistics(AnnotationStatistics stats) {
@@ -21,49 +18,29 @@ public class GraphicalSquaresAnnotation extends Annotation implements Statistica
         stats.flags.add(GameHeaderFlags.GRAPHICAL_SQUARES);
     }
 
-    @AllArgsConstructor
-    @EqualsAndHashCode
-    public static class Square {
-        @Getter private GraphicalAnnotationColor color;
-        @Getter private int sqi;
+    @Value.Immutable
+    public interface Square {
+        @Value.Parameter
+        GraphicalAnnotationColor color();
 
-        @Override
-        public String toString() {
-            return "Square{" +
-                    "color=" + color +
-                    ", sqi=" + sqi +
-                    '}';
-        }
+        @Value.Parameter
+        int sqi();
     }
 
-    private Square[] squares;
-
-    public Collection<Square> getSquares() {
-        return Arrays.asList(squares);
-    }
-
-    public GraphicalSquaresAnnotation(@NonNull List<Square> squares) {
-        this.squares = squares.toArray(new Square[0]);
-    }
+    @Value.Parameter
+    public abstract List<Square> squares();
 
     @Override
     public int priority() {
         return 6;
     }
 
-    @Override
-    public String toString() {
-        return "GraphicalSquaresAnnotation{" +
-                "squares=" + squares +
-                '}';
-    }
-
     public static class Serializer implements AnnotationSerializer {
         @Override
         public void serialize(ByteBuffer buf, Annotation annotation) {
-            for (Square square : ((GraphicalSquaresAnnotation) annotation).getSquares()) {
-                ByteBufferUtil.putByte(buf, square.getColor().getColorId());
-                ByteBufferUtil.putByte(buf, square.getSqi() + 1);
+            for (Square square : ((GraphicalSquaresAnnotation) annotation).squares()) {
+                ByteBufferUtil.putByte(buf, square.color().getColorId());
+                ByteBufferUtil.putByte(buf, square.sqi() + 1);
             }
         }
 
@@ -76,14 +53,14 @@ public class GraphicalSquaresAnnotation extends Annotation implements Statistica
                 int sqi = ByteBufferUtil.getUnsignedByte(buf) - 1;
                 if (sqi < 0 || sqi > 63 || color < 0 || color > GraphicalAnnotationColor.maxColor())
                     throw new MorphyAnnotationExecption("Invalid graphical squares annotation");
-                squares.add(new Square(GraphicalAnnotationColor.fromInt(color), sqi));
+                squares.add(ImmutableSquare.of(GraphicalAnnotationColor.fromInt(color), sqi));
             }
-            return new GraphicalSquaresAnnotation(squares);
+            return ImmutableGraphicalSquaresAnnotation.of(squares);
         }
 
         @Override
         public Class getAnnotationClass() {
-            return GraphicalSquaresAnnotation.class;
+            return ImmutableGraphicalSquaresAnnotation.class;
         }
 
         @Override

@@ -1,19 +1,18 @@
 package se.yarin.morphy.games.annotations;
 
-import lombok.Getter;
-import lombok.NonNull;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import se.yarin.cbhlib.entities.Nation;
-import se.yarin.cbhlib.entities.TournamentTimeControl;
-import se.yarin.cbhlib.entities.TournamentType;
-import se.yarin.cbhlib.games.GameHeaderFlags;
-import se.yarin.cbhlib.moves.ChessBaseMoveDecodingException;
-import se.yarin.cbhlib.moves.GameQuotationMoveEncoder;
-import se.yarin.cbhlib.moves.MoveEncoder;
-import se.yarin.cbhlib.moves.MovesSerializer;
+import se.yarin.morphy.entities.Nation;
+import se.yarin.morphy.entities.TournamentTimeControl;
+import se.yarin.morphy.entities.TournamentType;
+import se.yarin.morphy.exceptions.MorphyMoveDecodingException;
+import se.yarin.morphy.games.GameHeaderFlags;
+import se.yarin.morphy.games.moves.GameQuotationMoveEncoder;
+import se.yarin.morphy.games.moves.MoveEncoder;
+import se.yarin.morphy.games.moves.MoveSerializer;
+import se.yarin.morphy.util.CBUtil;
 import se.yarin.util.ByteBufferUtil;
-import se.yarin.cbhlib.util.CBUtil;
 import se.yarin.chess.*;
 import se.yarin.chess.annotations.Annotation;
 
@@ -25,21 +24,27 @@ public class GameQuotationAnnotation extends Annotation implements StatisticalAn
     private static final Logger log = LoggerFactory.getLogger(GameQuotationAnnotation.class);
 
     // TODO: The model should be read-only since annotations must be immutable
-    @Getter
     private final GameHeaderModel header;
+
+    public GameHeaderModel header() {
+        return header;
+    }
 
     // Deserialization is done lazily
     private byte[] setupPositionData;
     private byte[] gameData;
 
-    @Getter
     private int unknown;
+
+    public int unknown() {
+        return unknown;
+    }
 
     /**
      * Creates a new GameQuotation annotation that only contains the header information about the game.
      * @param header the header model of the game to quote
      */
-    public GameQuotationAnnotation(@NonNull GameHeaderModel header) {
+    public GameQuotationAnnotation(@NotNull GameHeaderModel header) {
         this.header = header;
         this.setupPositionData = null;
         this.gameData = null;
@@ -51,7 +56,7 @@ public class GameQuotationAnnotation extends Annotation implements StatisticalAn
      * Annotations and variations will be stripped
      * @param game the game model of the game to quote
      */
-    public GameQuotationAnnotation(@NonNull GameModel game) {
+    public GameQuotationAnnotation(@NotNull GameModel game) {
         this.header = game.header();
 
         // Only embed moves data if it's a regular chess game.
@@ -59,7 +64,7 @@ public class GameQuotationAnnotation extends Annotation implements StatisticalAn
         if (game.moves().root().position().isRegularChess()) {
             if (game.moves().isSetupPosition()) {
                 this.setupPositionData = new byte[28];
-                new MovesSerializer().serializeInitialPosition(game.moves(),
+                new MoveSerializer().serializeInitialPosition(game.moves(),
                         ByteBuffer.wrap(this.setupPositionData), false);
             }
 
@@ -72,7 +77,7 @@ public class GameQuotationAnnotation extends Annotation implements StatisticalAn
     }
 
     private GameQuotationAnnotation(
-            @NonNull GameHeaderModel header,
+            @NotNull GameHeaderModel header,
             byte[] setupPositionData,
             byte[] gameData,
             int unknown) {
@@ -88,21 +93,21 @@ public class GameQuotationAnnotation extends Annotation implements StatisticalAn
 
     public GameModel getGameModel()  {
         if (hasGame()) {
-            return new GameModel(getHeader(), getMoves());
+            return new GameModel(header(), getMoves());
         }
-        return new GameModel(getHeader(), new GameMovesModel());
+        return new GameModel(header(), new GameMovesModel());
     }
 
     private GameMovesModel getMoves() {
         GameMovesModel moves;
         try {
             if (setupPositionData != null) {
-                moves = new MovesSerializer().parseInitialPosition(ByteBuffer.wrap(setupPositionData), false, 0);
+                moves = new MoveSerializer().parseInitialPosition(ByteBuffer.wrap(setupPositionData), false, 0);
             } else {
                 moves = new GameMovesModel();
             }
         }
-        catch (ChessBaseMoveDecodingException e) {
+        catch (MorphyMoveDecodingException e) {
             log.warn("Error parsing initial position in game quotation", e);
             return new GameMovesModel();
         }
@@ -110,7 +115,7 @@ public class GameQuotationAnnotation extends Annotation implements StatisticalAn
         try {
             MoveEncoder encoder = new GameQuotationMoveEncoder();
             encoder.decode(ByteBuffer.wrap(gameData), moves, true);
-        } catch (ChessBaseMoveDecodingException e) {
+        } catch (MorphyMoveDecodingException e) {
             log.warn("Error parsing move in game quotation", e);
             moves = e.getModel();
         }
@@ -189,7 +194,7 @@ public class GameQuotationAnnotation extends Annotation implements StatisticalAn
             ByteBufferUtil.putByte(buf, valueOrDefault(qa.header.getSubRound(), 0));
             ByteBufferUtil.putByte(buf, valueOrDefault(qa.header.getRound(), 0));
             ByteBufferUtil.putByte(buf, CBUtil.encodeGameResult(valueOrDefault(qa.header.getResult(), GameResult.NOT_FINISHED)));
-            ByteBufferUtil.putShortB(buf, qa.getUnknown());
+            ByteBufferUtil.putShortB(buf, qa.unknown());
 
             if (qa.gameData != null) {
                 buf.put(qa.gameData);

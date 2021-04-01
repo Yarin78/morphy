@@ -1,33 +1,23 @@
 package se.yarin.morphy.games.annotations;
 
-import lombok.EqualsAndHashCode;
+import org.immutables.value.Value;
+import se.yarin.morphy.games.Medal;
 import se.yarin.util.ByteBufferUtil;
-import se.yarin.cbhlib.games.Medal;
 import se.yarin.chess.annotations.Annotation;
 
 import java.nio.ByteBuffer;
 import java.util.EnumSet;
 
-@EqualsAndHashCode(callSuper = false)
-public class MedalAnnotation extends Annotation implements StatisticalAnnotation {
-    private EnumSet<Medal> medals;
+@Value.Immutable
+public abstract class MedalAnnotation extends Annotation implements StatisticalAnnotation {
 
-    public EnumSet<Medal> getMedals() {
-        return medals.clone();
-    }
-
-    public MedalAnnotation(EnumSet<Medal> medals) {
-        this.medals = medals;
-    }
-
-    public MedalAnnotation(Medal first, Medal... rest) {
-        this(EnumSet.of(first, rest));
-    }
+    @Value.Parameter
+    public abstract EnumSet<Medal> medals();
 
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
-        for (Medal medal : medals) {
+        for (Medal medal : medals()) {
             if (sb.length() > 0) sb.append(", ");
             sb.append(medal);
         }
@@ -37,23 +27,23 @@ public class MedalAnnotation extends Annotation implements StatisticalAnnotation
 
     @Override
     public void updateStatistics(AnnotationStatistics stats) {
-        stats.medals.addAll(medals);
+        stats.medals.addAll(medals());
     }
 
     public static class Serializer implements AnnotationSerializer {
         @Override
         public void serialize(ByteBuffer buf, Annotation annotation) {
-            ByteBufferUtil.putIntB(buf, Medal.encode(((MedalAnnotation) annotation).getMedals()));
+            ByteBufferUtil.putIntB(buf, Medal.encode(((MedalAnnotation) annotation).medals()));
         }
 
         @Override
         public MedalAnnotation deserialize(ByteBuffer buf, int length) {
-            return new MedalAnnotation(Medal.decode(ByteBufferUtil.getIntB(buf)));
+            return ImmutableMedalAnnotation.of(Medal.decode(ByteBufferUtil.getIntB(buf)));
         }
 
         @Override
         public Class getAnnotationClass() {
-            return MedalAnnotation.class;
+            return ImmutableMedalAnnotation.class;
         }
 
         @Override

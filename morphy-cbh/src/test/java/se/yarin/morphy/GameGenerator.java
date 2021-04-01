@@ -1,8 +1,8 @@
 package se.yarin.morphy;
 
-import se.yarin.cbhlib.games.Medal;
 import se.yarin.chess.*;
 import se.yarin.chess.annotations.Annotation;
+import se.yarin.morphy.games.Medal;
 import se.yarin.morphy.games.annotations.*;
 
 import java.util.ArrayList;
@@ -15,9 +15,9 @@ import java.util.Random;
  */
 public class GameGenerator {
 
-    private Random random;
+    private final Random random;
 
-    private static String[] players = new String[] {
+    private static final String[] players = new String[] {
         "Carlsen, Magnus", "Vachier-Lagrave, Maxime", "Kramnik, Vladimir",
         "Caruana, Fabiano", "Aronian, Levon", "Nakamura, Hikaru",
         "So, Wesley", "Anand, Viswanathan", "Giri, Anish",
@@ -25,20 +25,20 @@ public class GameGenerator {
         "Ding, Liren", "Grischuk, Alexander", "Li, Chao b", "Harikrishna, P.",
         "Rapport, Richard", "Svidler, Peter", "Gelfand, Boris", "Navara, David" };
 
-    private static String[] teams = new String[] {
+    private static final String[] teams = new String[] {
         "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
         "Utrecht", "Vasas", "Ajka", "Haladas", "Torekves", "Clichy" };
 
-    private static String[] tournaments = new String[] {
+    private static final String[] tournaments = new String[] {
         "Bilbao 2016", "Shamkir 2016", "Stavanger 2016", "Moscow Candidates 2016",
         "Wijk aan Zee 2016", "London 2016", "Baku 2015", "Saint Louis 2015",
         "Biel 2015", "Dortmund 2015", "Khanty-Mansisyk 2015" };
 
-    private static String[] annotators = new String[] {
+    private static final String[] annotators = new String[] {
         "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
         "Ftacnik, L", "Bulletin", "ChessBase", "Ribli", "Hecht", "Finkel, A", "Stohl, I" };
 
-    private static String[] sources = new String[] {
+    private static final String[] sources = new String[] {
         "CBM 173", "CBM 172", "CBM 171", "CBM 170", "CBM 169", "CBM 168" };
 
     public GameGenerator() {
@@ -145,25 +145,19 @@ public class GameGenerator {
 
             Annotation annotation = null;
             switch (random.nextInt(12)) {
-                case 0 :case 1 :case 2 :case 3:
-                    annotation = new TextAfterMoveAnnotation(randomString(random.nextInt(15) + 3));
-                    break;
-                case 4:
-                    annotation = new TextBeforeMoveAnnotation(randomString(random.nextInt(15) + 3));
-                    break;
-                case 5 :case 6:case 7:case 8:
-                    annotation = new SymbolAnnotation(NAG.values()[1 + random.nextInt(6)]);
-                    break;
-                case 9:
+                case 0, 1, 2, 3 -> annotation = ImmutableTextAfterMoveAnnotation.of(randomString(random.nextInt(15) + 3));
+                case 4 -> annotation = ImmutableTextBeforeMoveAnnotation.of(randomString(random.nextInt(15) + 3));
+                case 5, 6, 7, 8 -> annotation = ImmutableSymbolAnnotation.of(NAG.values()[1 + random.nextInt(6)]);
+                case 9 -> {
                     ArrayList<GraphicalSquaresAnnotation.Square> squares = new ArrayList<>();
                     int cnt = random.nextInt(3) + 1;
                     for (int i = 0; i < cnt; i++) {
                         GraphicalAnnotationColor color = GraphicalAnnotationColor.values()[2 + random.nextInt(3)];
-                        squares.add(new GraphicalSquaresAnnotation.Square(color, random.nextInt(64)));
+                        squares.add(ImmutableSquare.of(color, random.nextInt(64)));
                     }
-                    annotation = new GraphicalSquaresAnnotation(squares);
-                    break;
-                case 10:
+                    annotation = ImmutableGraphicalSquaresAnnotation.of(squares);
+                }
+                case 10 -> {
                     EnumSet<Medal> medals = EnumSet.noneOf(Medal.class);
                     for (Medal medal : Medal.values()) {
                         if (random.nextInt(8) == 0) {
@@ -171,11 +165,9 @@ public class GameGenerator {
                         }
                     }
                     if (medals.size() == 0) medals.add(Medal.USER);
-                    annotation = new MedalAnnotation(medals);
-                    break;
-                case 11:
-                    annotation = new CriticalPositionAnnotation(CriticalPositionAnnotation.CriticalPositionType.OPENING);
-                    break;
+                    annotation = ImmutableMedalAnnotation.of(medals);
+                }
+                case 11 -> annotation = ImmutableCriticalPositionAnnotation.of(CriticalPositionAnnotation.CriticalPositionType.OPENING);
             }
 
             node.addAnnotation(annotation);

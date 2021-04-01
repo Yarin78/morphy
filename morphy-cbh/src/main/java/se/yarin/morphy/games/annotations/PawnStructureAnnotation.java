@@ -1,28 +1,20 @@
 package se.yarin.morphy.games.annotations;
 
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
+import org.immutables.value.Value;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.util.ByteBufferUtil;
-import se.yarin.cbhlib.games.GameHeaderFlags;
+import se.yarin.morphy.games.GameHeaderFlags;
 import se.yarin.chess.annotations.Annotation;
 
 import java.nio.ByteBuffer;
 
-@EqualsAndHashCode(callSuper = false)
-public class PawnStructureAnnotation extends Annotation implements StatisticalAnnotation {
+@Value.Immutable
+public abstract class PawnStructureAnnotation extends Annotation implements StatisticalAnnotation {
     private static final Logger log = LoggerFactory.getLogger(PawnStructureAnnotation.class);
 
-    @Getter
-    private int type; // ??
-
-    public PawnStructureAnnotation(int type) {
-        if (type != 3) {
-            log.warn("PawnStructure annotation of unknown type: " + type);
-        }
-        this.type = type;
-    }
+    @Value.Parameter
+    public abstract int type(); // ?? always 3?
 
     @Override
     public String toString() {
@@ -37,17 +29,17 @@ public class PawnStructureAnnotation extends Annotation implements StatisticalAn
     public static class Serializer implements AnnotationSerializer {
         @Override
         public void serialize(ByteBuffer buf, Annotation annotation) {
-            ByteBufferUtil.putByte(buf, ((PawnStructureAnnotation) annotation).getType());
+            ByteBufferUtil.putByte(buf, ((PawnStructureAnnotation) annotation).type());
         }
 
         @Override
         public PawnStructureAnnotation deserialize(ByteBuffer buf, int length) {
-            return new PawnStructureAnnotation(ByteBufferUtil.getUnsignedByte(buf));
+            return ImmutablePawnStructureAnnotation.of(ByteBufferUtil.getUnsignedByte(buf));
         }
 
         @Override
         public Class getAnnotationClass() {
-            return PawnStructureAnnotation.class;
+            return ImmutablePawnStructureAnnotation.class;
         }
 
         @Override

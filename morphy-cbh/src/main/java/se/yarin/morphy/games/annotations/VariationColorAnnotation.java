@@ -1,35 +1,32 @@
 package se.yarin.morphy.games.annotations;
 
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
+import org.immutables.value.Value;
 import se.yarin.util.ByteBufferUtil;
 import se.yarin.chess.annotations.Annotation;
 
 import java.nio.ByteBuffer;
 
-@EqualsAndHashCode(callSuper = false)
-public class VariationColorAnnotation extends Annotation {
-    @Getter
-    private int red, green, blue;
+@Value.Immutable
+public abstract class VariationColorAnnotation extends Annotation {
+    @Value.Parameter
+    public abstract int red();
 
-    @Getter
-    private boolean onlyMoves;
+    @Value.Parameter
+    public abstract int green();
 
-    @Getter
-    private boolean onlyMainline;
+    @Value.Parameter
+    public abstract int blue();
 
-    public VariationColorAnnotation(int red, int green, int blue, boolean onlyMoves, boolean onlyMainline) {
-        this.red = red;
-        this.green = green;
-        this.blue = blue;
-        this.onlyMoves = onlyMoves;
-        this.onlyMainline = onlyMainline;
-    }
+    @Value.Parameter
+    public abstract boolean onlyMoves();
+
+    @Value.Parameter
+    public abstract boolean onlyMainline();
 
     @Override
     public String toString() {
         return String.format("Variation color = #%02X%02X%02X (%s, %s)",
-                red, green, blue, onlyMoves ? "Moves only" : "Moves and annotations", onlyMainline ? "Mainline only" : "Include sublines");
+                red(), green(), blue(), onlyMoves() ? "Moves only" : "Moves and annotations", onlyMainline() ? "Mainline only" : "Include sublines");
     }
 
     public static class Serializer implements AnnotationSerializer {
@@ -37,12 +34,12 @@ public class VariationColorAnnotation extends Annotation {
         public void serialize(ByteBuffer buf, Annotation annotation) {
             VariationColorAnnotation vca = (VariationColorAnnotation) annotation;
             int flag = 0;
-            if (vca.isOnlyMainline()) flag += 1;
-            if (vca.isOnlyMoves()) flag += 2;
+            if (vca.onlyMainline()) flag += 1;
+            if (vca.onlyMoves()) flag += 2;
             ByteBufferUtil.putByte(buf, flag);
-            ByteBufferUtil.putByte(buf, vca.getBlue());
-            ByteBufferUtil.putByte(buf, vca.getGreen());
-            ByteBufferUtil.putByte(buf, vca.getRed());
+            ByteBufferUtil.putByte(buf, vca.blue());
+            ByteBufferUtil.putByte(buf, vca.green());
+            ByteBufferUtil.putByte(buf, vca.red());
         }
 
         @Override
@@ -55,12 +52,12 @@ public class VariationColorAnnotation extends Annotation {
             int g = ByteBufferUtil.getUnsignedByte(buf);
             int r = ByteBufferUtil.getUnsignedByte(buf);
 
-            return new VariationColorAnnotation(r, g, b, onlyMoves, onlyMainline);
+            return ImmutableVariationColorAnnotation.of(r, g, b, onlyMoves, onlyMainline);
         }
 
         @Override
         public Class getAnnotationClass() {
-            return VariationColorAnnotation.class;
+            return ImmutableVariationColorAnnotation.class;
         }
 
         @Override

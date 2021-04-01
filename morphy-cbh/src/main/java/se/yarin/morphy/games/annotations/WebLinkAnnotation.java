@@ -1,30 +1,26 @@
 package se.yarin.morphy.games.annotations;
 
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.NonNull;
+import org.immutables.value.Value;
+import org.jetbrains.annotations.NotNull;
 import se.yarin.util.ByteBufferUtil;
-import se.yarin.cbhlib.games.GameHeaderFlags;
+import se.yarin.morphy.games.GameHeaderFlags;
 import se.yarin.chess.annotations.Annotation;
 
 import java.nio.ByteBuffer;
 
-@EqualsAndHashCode(callSuper = false)
-public class WebLinkAnnotation extends Annotation implements StatisticalAnnotation {
-    @Getter @NonNull
-    private final String url;
+@Value.Immutable
+public abstract class WebLinkAnnotation extends Annotation implements StatisticalAnnotation {
+    @Value.Parameter
+    @NotNull
+    public abstract String url();
 
-    @Getter @NonNull
-    private final String text;
-
-    public WebLinkAnnotation(@NonNull String url, @NonNull String text) {
-        this.url = url;
-        this.text = text;
-    }
+    @Value.Parameter
+    @NotNull
+    public abstract String text();
 
     @Override
     public String toString() {
-        return "WebLinkAnnotation = " + text + " " + url;
+        return "WebLinkAnnotation = " + text() + " " + url();
     }
 
     @Override
@@ -36,9 +32,9 @@ public class WebLinkAnnotation extends Annotation implements StatisticalAnnotati
         @Override
         public void serialize(ByteBuffer buf, Annotation annotation) {
             WebLinkAnnotation wla = (WebLinkAnnotation) annotation;
-            ByteBufferUtil.putShortL(buf, wla.getUrl().length() + wla.getText().length() + 4);
-            ByteBufferUtil.putByteString(buf, wla.getUrl());
-            ByteBufferUtil.putByteString(buf, wla.getText());
+            ByteBufferUtil.putShortL(buf, wla.url().length() + wla.text().length() + 4);
+            ByteBufferUtil.putByteString(buf, wla.url());
+            ByteBufferUtil.putByteString(buf, wla.text());
         }
 
         @Override
@@ -48,12 +44,12 @@ public class WebLinkAnnotation extends Annotation implements StatisticalAnnotati
             // e.g. 2 + (1 + url length) + 1 + (text length)
             String url = ByteBufferUtil.getByteString(buf);
             String text = ByteBufferUtil.getByteString(buf);
-            return new WebLinkAnnotation(url, text);
+            return ImmutableWebLinkAnnotation.of(url, text);
         }
 
         @Override
         public Class getAnnotationClass() {
-            return WebLinkAnnotation.class;
+            return ImmutableWebLinkAnnotation.class;
         }
 
         @Override

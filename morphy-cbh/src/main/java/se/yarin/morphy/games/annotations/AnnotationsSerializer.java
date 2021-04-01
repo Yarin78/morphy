@@ -1,6 +1,6 @@
 package se.yarin.morphy.games.annotations;
 
-import lombok.NonNull;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.morphy.exceptions.MorphyAnnotationExecption;
@@ -23,29 +23,29 @@ public final class AnnotationsSerializer {
 
     static {
         Arrays.asList(
-            new BlackClockAnnotation.Serializer(),
-            new SymbolAnnotation.Serializer(),
-            new ComputerEvaluationAnnotation.Serializer(),
-            new CorrespondenceMoveAnnotation.Serializer(),
-            new CriticalPositionAnnotation.Serializer(),
+            new ImmutableBlackClockAnnotation.Serializer(),
+            new ImmutableSymbolAnnotation.Serializer(),
+            new ImmutableComputerEvaluationAnnotation.Serializer(),
+            new ImmutableCorrespondenceMoveAnnotation.Serializer(),
+            new ImmutableCriticalPositionAnnotation.Serializer(),
             new GameQuotationAnnotation.Serializer(),
-            new GraphicalArrowsAnnotation.Serializer(),
-            new GraphicalSquaresAnnotation.Serializer(),
-            new MedalAnnotation.Serializer(),
-            new PawnStructureAnnotation.Serializer(),
-            new PictureAnnotation.Serializer(),
-            new PiecePathAnnotation.Serializer(),
-            new SoundAnnotation.Serializer(),
-            new TextAfterMoveAnnotation.Serializer(),
-            new TextBeforeMoveAnnotation.Serializer(),
-            new TimeControlAnnotation.Serializer(),
-            new TimeSpentAnnotation.Serializer(),
-            new TrainingAnnotation.Serializer(),
-            new VariationColorAnnotation.Serializer(),
-            new VideoAnnotation.Serializer(),
-            new VideoStreamTimeAnnotation.Serializer(),
-            new WebLinkAnnotation.Serializer(),
-            new WhiteClockAnnotation.Serializer()
+            new ImmutableGraphicalArrowsAnnotation.Serializer(),
+            new ImmutableGraphicalSquaresAnnotation.Serializer(),
+            new ImmutableMedalAnnotation.Serializer(),
+            new ImmutablePawnStructureAnnotation.Serializer(),
+            new ImmutablePictureAnnotation.Serializer(),
+            new ImmutablePiecePathAnnotation.Serializer(),
+            new ImmutableSoundAnnotation.Serializer(),
+            new ImmutableTextAfterMoveAnnotation.Serializer(),
+            new ImmutableTextBeforeMoveAnnotation.Serializer(),
+            new ImmutableTimeControlAnnotation.Serializer(),
+            new ImmutableTimeSpentAnnotation.Serializer(),
+            new ImmutableTrainingAnnotation.Serializer(),
+            new ImmutableVariationColorAnnotation.Serializer(),
+            new ImmutableVideoAnnotation.Serializer(),
+            new ImmutableVideoStreamTimeAnnotation.Serializer(),
+            new ImmutableWebLinkAnnotation.Serializer(),
+            new ImmutableWhiteClockAnnotation.Serializer()
         ).forEach(AnnotationsSerializer::registerAnnotationSerializer);
     }
 
@@ -60,7 +60,7 @@ public final class AnnotationsSerializer {
      * @param model the game model
      * @return a buffer containing the serialized annotations
      */
-    public static ByteBuffer serializeAnnotations(int gameId, @NonNull GameMovesModel model) {
+    public static ByteBuffer serializeAnnotations(int gameId, @NotNull GameMovesModel model) {
         // TODO: Double size on demand
         ByteBuffer buf = ByteBuffer.allocate(16384*2);
         ByteBufferUtil.put24BitB(buf, gameId);
@@ -99,7 +99,7 @@ public final class AnnotationsSerializer {
         return buf;
     }
 
-    public static void deserializeAnnotations(@NonNull ByteBuffer buf, @NonNull GameMovesModel model) {
+    public static void deserializeAnnotations(@NotNull ByteBuffer buf, @NotNull GameMovesModel model) {
         if (!buf.hasRemaining()) {
             return;
         }
@@ -136,12 +136,12 @@ public final class AnnotationsSerializer {
      * @param buf the buffer to serialize to
      * @throws IllegalArgumentException if no serializer has been registered for the annotation class
      */
-    public static void serializeAnnotation(@NonNull Annotation annotation, ByteBuffer buf) {
+    public static void serializeAnnotation(@NotNull Annotation annotation, ByteBuffer buf) {
         if (annotation instanceof RawAnnotation) {
             RawAnnotation ra = (RawAnnotation) annotation;
-            ByteBufferUtil.putByte(buf, ra.getAnnotationType());
-            ByteBufferUtil.putShortB(buf, ra.getRawData().length + 6);
-            buf.put(ra.getRawData());
+            ByteBufferUtil.putByte(buf, ra.annotationType());
+            ByteBufferUtil.putShortB(buf, ra.rawData().length + 6);
+            buf.put(ra.rawData());
         } else {
             AnnotationSerializer serializer = annotationSerializersByClass.get(annotation.getClass());
             if (serializer == null) {
@@ -171,7 +171,7 @@ public final class AnnotationsSerializer {
      * @param buf the byte buffer
      * @return an annotation
      */
-    public static Annotation deserializeAnnotation(@NonNull ByteBuffer buf) {
+    public static Annotation deserializeAnnotation(@NotNull ByteBuffer buf) {
         int startPos = buf.position();
         int annotationType = ByteBufferUtil.getUnsignedByte(buf);
         int annotationSize = ByteBufferUtil.getSignedShortB(buf) - 6;
@@ -189,13 +189,13 @@ public final class AnnotationsSerializer {
 //                log.warn(String.format("Unknown annotation type %d containing %d bytes of data",                            annotationType, noBytes - 6));
                 byte[] unknownData = new byte[annotationSize];
                 buf.get(unknownData);
-                return new UnknownAnnotation(annotationType, unknownData);
+                return ImmutableUnknownAnnotation.of(annotationType, unknownData);
             }
         } catch (MorphyAnnotationExecption | IllegalArgumentException | BufferUnderflowException e) {
             buf.position(startPos);
             byte[] invalidData = new byte[annotationSize];
             buf.get(invalidData);
-            return new InvalidAnnotation(annotationType, invalidData);
+            return ImmutableInvalidAnnotation.of(annotationType, invalidData);
         } finally {
             buf.position(nextPosition);
         }

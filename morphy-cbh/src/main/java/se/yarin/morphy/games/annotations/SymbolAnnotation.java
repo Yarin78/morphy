@@ -1,24 +1,26 @@
 package se.yarin.morphy.games.annotations;
 
-import lombok.AllArgsConstructor;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.NonNull;
+import org.immutables.value.Value;
+import org.jetbrains.annotations.NotNull;
 import se.yarin.util.ByteBufferUtil;
-import se.yarin.cbhlib.games.GameHeaderFlags;
+import se.yarin.morphy.games.GameHeaderFlags;
 import se.yarin.chess.NAG;
 import se.yarin.chess.annotations.Annotation;
 
 import java.nio.ByteBuffer;
 
-@AllArgsConstructor
-@EqualsAndHashCode(callSuper = false)
-public class SymbolAnnotation extends Annotation implements StatisticalAnnotation {
-    @Getter private final NAG moveComment;
-    @Getter private final NAG movePrefix;
-    @Getter private final NAG lineEvaluation;
+@Value.Immutable
+public abstract class SymbolAnnotation extends Annotation implements StatisticalAnnotation {
+    @Value.Parameter
+    public abstract NAG moveComment();
 
-    public SymbolAnnotation(@NonNull NAG... nags) {
+    @Value.Parameter
+    public abstract NAG movePrefix();
+
+    @Value.Parameter
+    public abstract NAG lineEvaluation();
+
+    public static SymbolAnnotation of(@NotNull NAG... nags) {
         NAG comment = NAG.NONE;
         NAG prefix = NAG.NONE;
         NAG eval = NAG.NONE;
@@ -38,9 +40,7 @@ public class SymbolAnnotation extends Annotation implements StatisticalAnnotatio
                     break;
             }
         }
-        moveComment = comment;
-        movePrefix = prefix;
-        lineEvaluation = eval;
+        return ImmutableSymbolAnnotation.of(comment, prefix, eval);
     }
 
     @Override
@@ -49,9 +49,9 @@ public class SymbolAnnotation extends Annotation implements StatisticalAnnotatio
     }
 
     @Override
-    public String format(@NonNull String text, boolean ascii) {
+    public String format(@NotNull String text, boolean ascii) {
         // First add move comment
-        String symbol = ascii ? moveComment.toASCIIString() : moveComment.toUnicodeString();
+        String symbol = ascii ? moveComment().toASCIIString() : moveComment().toUnicodeString();
         if (symbol.length() <= 2) {
             text += symbol;
         } else {
@@ -59,13 +59,13 @@ public class SymbolAnnotation extends Annotation implements StatisticalAnnotatio
         }
 
         // Then move prefix
-        String pre = ascii ? movePrefix.toASCIIString() : movePrefix.toUnicodeString();
+        String pre = ascii ? movePrefix().toASCIIString() : movePrefix().toUnicodeString();
         if (pre.length() > 0) {
             text = pre + " " + text;
         }
 
         // Then line evaluation
-        String eval = ascii ? lineEvaluation.toASCIIString() : lineEvaluation.toUnicodeString();
+        String eval = ascii ? lineEvaluation().toASCIIString() : lineEvaluation().toUnicodeString();
         if (eval.length() > 0) {
             text += " " + eval;
         }
@@ -86,15 +86,15 @@ public class SymbolAnnotation extends Annotation implements StatisticalAnnotatio
             for (int i = 0; i < length; i++) {
                 symbols[i] = NAG.values()[ByteBufferUtil.getUnsignedByte(buf)];
             }
-            return new SymbolAnnotation(symbols);
+            return ImmutableSymbolAnnotation.of(symbols);
         }
 
         @Override
         public void serialize(ByteBuffer buf, Annotation annotation) {
             SymbolAnnotation symbolAnnotation = (SymbolAnnotation) annotation;
-            int b1 = symbolAnnotation.getMoveComment().ordinal();
-            int b2 = symbolAnnotation.getLineEvaluation().ordinal();
-            int b3 = symbolAnnotation.getMovePrefix().ordinal();
+            int b1 = symbolAnnotation.moveComment().ordinal();
+            int b2 = symbolAnnotation.lineEvaluation().ordinal();
+            int b3 = symbolAnnotation.movePrefix().ordinal();
             ByteBufferUtil.putByte(buf, b1);
             if (b2 != 0 || b3 !=0) ByteBufferUtil.putByte(buf, b2);
             if (b3 != 0) ByteBufferUtil.putByte(buf, b3);
@@ -107,7 +107,7 @@ public class SymbolAnnotation extends Annotation implements StatisticalAnnotatio
 
         @Override
         public Class getAnnotationClass() {
-            return SymbolAnnotation.class;
+            return ImmutableSymbolAnnotation.class;
         }
     }
 }

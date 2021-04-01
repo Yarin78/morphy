@@ -1,66 +1,66 @@
 package se.yarin.morphy.games.annotations;
 
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
 import lombok.NonNull;
-import se.yarin.cbhlib.entities.Nation;
-import se.yarin.cbhlib.games.GameHeaderFlags;
+import org.immutables.value.Value;
+import org.jetbrains.annotations.NotNull;
+import se.yarin.morphy.entities.Nation;
+import se.yarin.morphy.games.GameHeaderFlags;
 import se.yarin.util.ByteBufferUtil;
 import se.yarin.chess.annotations.Annotation;
-import se.yarin.chess.annotations.CommentaryAfterMoveAnnotation;
 
 import java.nio.ByteBuffer;
 
-@EqualsAndHashCode(callSuper = false)
-public class TextAfterMoveAnnotation extends CommentaryAfterMoveAnnotation
+@Value.Immutable
+public abstract class TextAfterMoveAnnotation extends Annotation
         implements StatisticalAnnotation {
 
-    @Getter
-    private Nation language;
+    @Value.Parameter
+    @NotNull
+    public abstract String text();
 
-    @Getter
-    private int unknown; // This value is sometimes 64 in Megabase 2016
+    @Value.Default
+    @NotNull
+    public Nation language() { return Nation.NONE; }
 
-    public String getText() {
-        return super.getCommentary();
-    }
-
-    public TextAfterMoveAnnotation(@NonNull String commentary) {
-        this(0, commentary, Nation.NONE);
-    }
-
-    public TextAfterMoveAnnotation(int unknown, @NonNull String commentary, @NonNull Nation language) {
-        super(commentary);
-        this.unknown = unknown;
-        this.language = language;
-    }
+    @Value.Default
+    public int unknown() { return 0; }; // This value is sometimes 64 in Megabase 2016
 
     @Override
     public void updateStatistics(AnnotationStatistics stats) {
-        stats.commentariesLength += getText().length();
+        stats.commentariesLength += text().length();
         stats.flags.add(GameHeaderFlags.COMMENTARY);
+    }
+
+    @Override
+    public String format(@NonNull String text, boolean ascii) {
+        String s = this.text();
+        if (ascii) {
+            s = s.replaceAll("[^\\x20-\\x7E]", "?");
+        }
+        return text + " { " + s + " }";
     }
 
     public static class Serializer implements AnnotationSerializer {
         @Override
         public void serialize(ByteBuffer buf, Annotation annotation) {
             TextAfterMoveAnnotation textAnno = (TextAfterMoveAnnotation) annotation;
-            ByteBufferUtil.putByte(buf, textAnno.getUnknown());
-            ByteBufferUtil.putByte(buf, textAnno.getLanguage().ordinal());
-            ByteBufferUtil.putFixedSizeByteString(buf, textAnno.getText(), textAnno.getText().length());
+            ByteBufferUtil.putByte(buf, textAnno.unknown());
+            ByteBufferUtil.putByte(buf, textAnno.language().ordinal());
+            ByteBufferUtil.putFixedSizeByteString(buf, textAnno.text(), textAnno.text().length());
         }
 
         @Override
         public TextAfterMoveAnnotation deserialize(ByteBuffer buf, int length) {
-            int unknown = buf.get();
-            Nation language = Nation.values()[ByteBufferUtil.getUnsignedByte(buf)];
-            String comment = ByteBufferUtil.getFixedSizeByteString(buf, length - 2);
-            return new TextAfterMoveAnnotation(unknown, comment, language);
+            return ImmutableTextAfterMoveAnnotation.builder()
+                    .unknown(buf.get())
+                    .language(Nation.values()[ByteBufferUtil.getUnsignedByte(buf)])
+                    .text(ByteBufferUtil.getFixedSizeByteString(buf, length - 2))
+                    .build();
         }
 
         @Override
         public Class getAnnotationClass() {
-            return TextAfterMoveAnnotation.class;
+            return ImmutableTextAfterMoveAnnotation.class;
         }
 
         @Override

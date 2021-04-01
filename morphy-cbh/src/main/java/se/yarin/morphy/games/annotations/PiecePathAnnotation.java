@@ -1,37 +1,28 @@
 package se.yarin.morphy.games.annotations;
 
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
+import org.immutables.value.Value;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import se.yarin.morphy.games.GameHeaderFlags;
 import se.yarin.util.ByteBufferUtil;
-import se.yarin.cbhlib.games.GameHeaderFlags;
 import se.yarin.chess.Chess;
 import se.yarin.chess.annotations.Annotation;
 
 import java.nio.ByteBuffer;
 
-@EqualsAndHashCode(callSuper = false)
-public class PiecePathAnnotation extends Annotation implements StatisticalAnnotation {
+@Value.Immutable
+public abstract class PiecePathAnnotation extends Annotation implements StatisticalAnnotation {
     private static final Logger log = LoggerFactory.getLogger(PiecePathAnnotation.class);
 
-    @Getter
-    private int type; // ??
+    @Value.Parameter
+    public abstract int type(); // ?? always 3?
 
-    @Getter
-    private int sqi;
-
-    public PiecePathAnnotation(int type, int sqi) {
-        if (type != 3) {
-            log.warn("PiecePath annotation of unknown type: " + type);
-        }
-        this.type = type;
-        this.sqi = sqi;
-    }
+    @Value.Parameter
+    public abstract int sqi();
 
     @Override
     public String toString() {
-        return "PiecePathAnnotation: " + Chess.sqiToStr(sqi);
+        return "PiecePathAnnotation: " + Chess.sqiToStr(sqi());
     }
 
     @Override
@@ -43,20 +34,20 @@ public class PiecePathAnnotation extends Annotation implements StatisticalAnnota
         @Override
         public void serialize(ByteBuffer buf, Annotation annotation) {
             PiecePathAnnotation ppa = (PiecePathAnnotation) annotation;
-            ByteBufferUtil.putByte(buf, ppa.getType());
-            ByteBufferUtil.putByte(buf, ppa.getSqi() + 1);
+            ByteBufferUtil.putByte(buf, ppa.type());
+            ByteBufferUtil.putByte(buf, ppa.sqi() + 1);
         }
 
         @Override
         public PiecePathAnnotation deserialize(ByteBuffer buf, int length) {
-            return new PiecePathAnnotation(
+            return ImmutablePiecePathAnnotation.of(
                     ByteBufferUtil.getUnsignedByte(buf),
                     ByteBufferUtil.getUnsignedByte(buf) - 1);
         }
 
         @Override
         public Class getAnnotationClass() {
-            return PiecePathAnnotation.class;
+            return ImmutablePiecePathAnnotation.class;
         }
 
         @Override

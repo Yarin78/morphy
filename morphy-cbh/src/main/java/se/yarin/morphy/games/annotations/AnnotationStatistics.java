@@ -1,8 +1,7 @@
 package se.yarin.morphy.games.annotations;
 
-import lombok.Getter;
-import se.yarin.cbhlib.games.GameHeaderFlags;
-import se.yarin.cbhlib.games.Medal;
+import se.yarin.morphy.games.GameHeaderFlags;
+import se.yarin.morphy.games.Medal;
 
 import java.util.EnumSet;
 
@@ -12,19 +11,28 @@ import java.util.EnumSet;
  * implementing the {@link StatisticalAnnotation} interface.
  */
 public class AnnotationStatistics {
-    @Getter
     EnumSet<Medal> medals = EnumSet.noneOf(Medal.class);
 
-    @Getter
     EnumSet<GameHeaderFlags> flags = EnumSet.noneOf(GameHeaderFlags.class);
 
-    @Getter
     int commentariesLength; // Number of characters of commentaries
     int noSymbols;
     int noGraphicalSquares;
     int noGraphicalArrows;
     int noTraining;
     int noTimeSpent;
+
+    public EnumSet<Medal> getMedals() {
+        return medals;
+    }
+
+    public EnumSet<GameHeaderFlags> getFlags() {
+        return flags;
+    }
+
+    public int getCommentariesLength() {
+        return commentariesLength;
+    }
 
     // TODO: All these boundaries need to be double checked
 

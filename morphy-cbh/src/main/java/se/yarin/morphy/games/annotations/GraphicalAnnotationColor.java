@@ -1,7 +1,5 @@
 package se.yarin.morphy.games.annotations;
 
-import lombok.Getter;
-
 public enum GraphicalAnnotationColor {
     NONE(0),
     NOT_USED(1),
@@ -9,8 +7,11 @@ public enum GraphicalAnnotationColor {
     YELLOW(3),
     RED(4);
 
-    @Getter
     private final int colorId;
+
+    public int getColorId() {
+        return colorId;
+    }
 
     GraphicalAnnotationColor(int colorId) {
         this.colorId = colorId;

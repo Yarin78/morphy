@@ -1,22 +1,19 @@
 package se.yarin.morphy.games.annotations;
 
-import lombok.AllArgsConstructor;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import se.yarin.cbhlib.util.CBUtil;
+import org.immutables.value.Value;
+import se.yarin.morphy.util.CBUtil;
 import se.yarin.chess.annotations.Annotation;
 
-@AllArgsConstructor
-@EqualsAndHashCode(callSuper = false)
-public class InvalidAnnotation extends Annotation implements RawAnnotation {
-    @Getter
-    private int annotationType;
+@Value.Immutable
+public abstract class InvalidAnnotation extends Annotation implements RawAnnotation {
+    @Value.Parameter
+    public abstract int annotationType();
 
-    @Getter
-    private byte[] rawData;
+    @Value.Parameter
+    public abstract byte[] rawData();
 
     @Override
     public String toString() {
-        return String.format("InvalidAnnotation %02x: %s", annotationType, CBUtil.toHexString(rawData));
+        return String.format("InvalidAnnotation %02x: %s", annotationType(), CBUtil.toHexString(rawData()));
     }
 }

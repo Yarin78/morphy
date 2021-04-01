@@ -1,23 +1,20 @@
 package se.yarin.morphy.games.annotations;
 
-import lombok.Getter;
-import se.yarin.cbhlib.util.CBUtil;
-import se.yarin.cbhlib.games.GameHeaderFlags;
+import org.immutables.value.Value;
 import se.yarin.chess.annotations.Annotation;
+import se.yarin.morphy.games.GameHeaderFlags;
+import se.yarin.morphy.util.CBUtil;
 
 import java.nio.ByteBuffer;
 
-public class CorrespondenceMoveAnnotation extends Annotation implements StatisticalAnnotation {
-    @Getter
-    private byte[] rawData;
-
-    public CorrespondenceMoveAnnotation(byte[] rawData) {
-        this.rawData = rawData;
-    }
+@Value.Immutable
+public abstract class CorrespondenceMoveAnnotation extends Annotation implements StatisticalAnnotation {
+    @Value.Parameter
+    public abstract byte[] rawData();
 
     @Override
     public String toString() {
-        return "CorrespondenceMoveAnnotation = " + CBUtil.toHexString(rawData);
+        return "CorrespondenceMoveAnnotation = " + CBUtil.toHexString(rawData());
     }
 
     @Override
@@ -28,7 +25,7 @@ public class CorrespondenceMoveAnnotation extends Annotation implements Statisti
     public static class Serializer implements AnnotationSerializer {
         @Override
         public void serialize(ByteBuffer buf, Annotation annotation) {
-            buf.put(((CorrespondenceMoveAnnotation) annotation).getRawData());
+            buf.put(((CorrespondenceMoveAnnotation) annotation).rawData());
         }
 
         @Override
@@ -37,12 +34,12 @@ public class CorrespondenceMoveAnnotation extends Annotation implements Statisti
             byte data[] = new byte[length];
             buf.get(data);
 
-            return new CorrespondenceMoveAnnotation(data);
+            return ImmutableCorrespondenceMoveAnnotation.of(data);
         }
 
         @Override
         public Class getAnnotationClass() {
-            return CorrespondenceMoveAnnotation.class;
+            return ImmutableCorrespondenceMoveAnnotation.class;
         }
 
         @Override

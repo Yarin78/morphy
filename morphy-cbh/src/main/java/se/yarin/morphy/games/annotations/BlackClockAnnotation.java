@@ -1,28 +1,22 @@
 package se.yarin.morphy.games.annotations;
 
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
+import org.immutables.value.Value;
+import se.yarin.morphy.games.GameHeaderFlags;
 import se.yarin.util.ByteBufferUtil;
-import se.yarin.cbhlib.games.GameHeaderFlags;
 import se.yarin.chess.annotations.Annotation;
 
 import java.nio.ByteBuffer;
 
-@EqualsAndHashCode(callSuper = false)
-public class BlackClockAnnotation extends Annotation implements StatisticalAnnotation {
-    @Getter
-    private int clockTime;
-
-    public BlackClockAnnotation(int clockTime) {
-        this.clockTime = clockTime;
-    }
-
+@Value.Immutable
+public abstract class BlackClockAnnotation extends Annotation implements StatisticalAnnotation {
+    @Value.Parameter
+    abstract int clockTime();
 
     @Override
     public String toString() {
-        int hours = clockTime / 100 / 3600;
-        int minutes = (clockTime / 100 / 60) % 60;
-        int seconds = (clockTime / 100) % 60;
+        int hours = clockTime() / 100 / 3600;
+        int minutes = (clockTime() / 100 / 60) % 60;
+        int seconds = (clockTime() / 100) % 60;
         return String.format("BlackClock = %02d:%02d:%02d", hours, minutes, seconds);
     }
 
@@ -34,17 +28,17 @@ public class BlackClockAnnotation extends Annotation implements StatisticalAnnot
     public static class Serializer implements AnnotationSerializer {
         @Override
         public void serialize(ByteBuffer buf, Annotation annotation) {
-            ByteBufferUtil.putIntB(buf, ((BlackClockAnnotation) annotation).getClockTime());
+            ByteBufferUtil.putIntB(buf, ((BlackClockAnnotation) annotation).clockTime());
         }
 
         @Override
         public BlackClockAnnotation deserialize(ByteBuffer buf, int length) {
-            return new BlackClockAnnotation(ByteBufferUtil.getIntB(buf));
+            return ImmutableBlackClockAnnotation.of(ByteBufferUtil.getIntB(buf));
         }
 
         @Override
         public Class getAnnotationClass() {
-            return BlackClockAnnotation.class;
+            return ImmutableBlackClockAnnotation.class;
         }
 
         @Override

@@ -1,9 +1,8 @@
 package se.yarin.morphy.games.annotations;
 
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import se.yarin.cbhlib.util.CBUtil;
-import se.yarin.cbhlib.games.GameHeaderFlags;
+import org.immutables.value.Value;
+import se.yarin.morphy.util.CBUtil;
+import se.yarin.morphy.games.GameHeaderFlags;
 import se.yarin.chess.annotations.Annotation;
 
 import java.nio.ByteBuffer;
@@ -13,18 +12,14 @@ import java.nio.ByteBuffer;
  * ChessBase 13 doesn't either - probably a deprecated feature?
  */
 @Deprecated
-@EqualsAndHashCode(callSuper = false)
-public class VideoAnnotation extends Annotation implements StatisticalAnnotation {
-    @Getter
-    private byte[] rawData;
-
-    public VideoAnnotation(byte[] rawData) {
-        this.rawData = rawData;
-    }
+@Value.Immutable
+public abstract class VideoAnnotation extends Annotation implements StatisticalAnnotation {
+    @Value.Parameter
+    public abstract byte[] rawData();
 
     @Override
     public String toString() {
-        return "VideoAnnotation = " + CBUtil.toHexString(rawData);
+        return "VideoAnnotation = " + CBUtil.toHexString(rawData());
     }
 
     @Override
@@ -36,7 +31,7 @@ public class VideoAnnotation extends Annotation implements StatisticalAnnotation
 
         @Override
         public void serialize(ByteBuffer buf, Annotation annotation) {
-            buf.put(((VideoAnnotation) annotation).getRawData());
+            buf.put(((VideoAnnotation) annotation).rawData());
         }
 
         @Override
@@ -48,12 +43,12 @@ public class VideoAnnotation extends Annotation implements StatisticalAnnotation
             byte data[] = new byte[length];
             buf.get(data);
 
-            return new VideoAnnotation(data);
+            return ImmutableVideoAnnotation.of(data);
         }
 
         @Override
         public Class getAnnotationClass() {
-            return VideoAnnotation.class;
+            return ImmutableVideoAnnotation.class;
         }
 
         @Override

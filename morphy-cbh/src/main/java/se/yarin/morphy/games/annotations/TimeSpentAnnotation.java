@@ -1,40 +1,36 @@
 package se.yarin.morphy.games.annotations;
 
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
+import org.immutables.value.Value;
 import se.yarin.util.ByteBufferUtil;
-import se.yarin.cbhlib.games.GameHeaderFlags;
+import se.yarin.morphy.games.GameHeaderFlags;
 import se.yarin.chess.annotations.Annotation;
 
 import java.nio.ByteBuffer;
 
-@EqualsAndHashCode(callSuper = false)
-public class TimeSpentAnnotation extends Annotation implements StatisticalAnnotation {
-    @Getter
-    private int hours;
-    @Getter
-    private int minutes;
-    @Getter
-    private int seconds;
-    @Getter
-    private int unknownByte;
+@Value.Immutable
+public abstract class TimeSpentAnnotation extends Annotation implements StatisticalAnnotation {
+    @Value.Parameter
+    public abstract int hours();
 
-    public TimeSpentAnnotation(int hours, int minutes, int seconds, int unknownByte) {
-        this.hours = hours;
-        this.minutes = minutes;
-        this.seconds = seconds;
-        this.unknownByte = unknownByte;
-    }
+    @Value.Parameter
+    public abstract int minutes();
+
+    @Value.Parameter
+    public abstract int seconds();
+
+    @Value.Parameter
+    public abstract int unknownByte();
+
 
     @Override
     public String toString() {
         String s;
-        if (hours == 0 && minutes == 0) {
-            s = Integer.toString(seconds);
-        } else if (hours == 0) {
-            s = String.format("%d:%02d", minutes, seconds);
+        if (hours() == 0 && minutes() == 0) {
+            s = Integer.toString(seconds());
+        } else if (hours() == 0) {
+            s = String.format("%d:%02d", minutes(), seconds());
         } else {
-            s = String.format("%d:%02d:%02d", hours, minutes, seconds);
+            s = String.format("%d:%02d:%02d", hours(), minutes(), seconds());
         }
         return "Time spent = " + s;
     }
@@ -49,15 +45,15 @@ public class TimeSpentAnnotation extends Annotation implements StatisticalAnnota
         @Override
         public void serialize(ByteBuffer buf, Annotation annotation) {
             TimeSpentAnnotation tsa = (TimeSpentAnnotation) annotation;
-            ByteBufferUtil.putByte(buf, tsa.getHours());
-            ByteBufferUtil.putByte(buf, tsa.getMinutes());
-            ByteBufferUtil.putByte(buf, tsa.getSeconds());
-            ByteBufferUtil.putByte(buf, tsa.getUnknownByte());
+            ByteBufferUtil.putByte(buf, tsa.hours());
+            ByteBufferUtil.putByte(buf, tsa.minutes());
+            ByteBufferUtil.putByte(buf, tsa.seconds());
+            ByteBufferUtil.putByte(buf, tsa.unknownByte());
         }
 
         @Override
         public TimeSpentAnnotation deserialize(ByteBuffer buf, int length) {
-            return new TimeSpentAnnotation(
+            return ImmutableTimeSpentAnnotation.of(
                     ByteBufferUtil.getUnsignedByte(buf),
                     ByteBufferUtil.getUnsignedByte(buf),
                     ByteBufferUtil.getUnsignedByte(buf),
@@ -66,7 +62,7 @@ public class TimeSpentAnnotation extends Annotation implements StatisticalAnnota
 
         @Override
         public Class getAnnotationClass() {
-            return TimeSpentAnnotation.class;
+            return ImmutableTimeSpentAnnotation.class;
         }
 
         @Override

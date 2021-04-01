@@ -1,9 +1,8 @@
 package se.yarin.morphy.games.annotations;
 
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import se.yarin.cbhlib.util.CBUtil;
-import se.yarin.cbhlib.games.GameHeaderFlags;
+import org.immutables.value.Value;
+import se.yarin.morphy.util.CBUtil;
+import se.yarin.morphy.games.GameHeaderFlags;
 import se.yarin.chess.annotations.Annotation;
 
 import java.nio.ByteBuffer;
@@ -13,18 +12,15 @@ import java.nio.ByteBuffer;
  * ChessBase 13 doesn't either - probably a deprecated feature?
  */
 @Deprecated
-@EqualsAndHashCode(callSuper = false)
-public class PictureAnnotation extends Annotation implements StatisticalAnnotation {
-    @Getter
-    private byte[] rawData;
+@Value.Immutable
+public abstract class PictureAnnotation extends Annotation implements StatisticalAnnotation {
 
-    public PictureAnnotation(byte[] rawData) {
-        this.rawData = rawData;
-    }
+    @Value.Parameter
+    public abstract byte[] rawData();
 
     @Override
     public String toString() {
-        return "PictureAnnotation = " + CBUtil.toHexString(rawData);
+        return "PictureAnnotation = " + CBUtil.toHexString(rawData());
     }
 
     @Override
@@ -35,7 +31,7 @@ public class PictureAnnotation extends Annotation implements StatisticalAnnotati
     public static class Serializer implements AnnotationSerializer {
         @Override
         public void serialize(ByteBuffer buf, Annotation annotation) {
-            buf.put(((PictureAnnotation) annotation).getRawData());
+            buf.put(((PictureAnnotation) annotation).rawData());
         }
 
         @Override
@@ -43,12 +39,12 @@ public class PictureAnnotation extends Annotation implements StatisticalAnnotati
             byte data[] = new byte[length];
             buf.get(data);
 
-            return new PictureAnnotation(data);
+            return ImmutablePictureAnnotation.of(data);
         }
 
         @Override
         public Class getAnnotationClass() {
-            return PictureAnnotation.class;
+            return ImmutablePictureAnnotation.class;
         }
 
         @Override

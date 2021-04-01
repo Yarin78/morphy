@@ -1,16 +1,13 @@
 package se.yarin.morphy.games.annotations;
 
-import lombok.AllArgsConstructor;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import se.yarin.cbhlib.games.GameHeaderFlags;
+import org.immutables.value.Value;
+import se.yarin.morphy.games.GameHeaderFlags;
 import se.yarin.chess.annotations.Annotation;
 
 import java.nio.ByteBuffer;
 
-@AllArgsConstructor
-@EqualsAndHashCode(callSuper = false)
-public class CriticalPositionAnnotation extends Annotation implements StatisticalAnnotation {
+@Value.Immutable
+public abstract class CriticalPositionAnnotation extends Annotation implements StatisticalAnnotation {
 
     @Override
     public void updateStatistics(AnnotationStatistics stats) {
@@ -24,23 +21,23 @@ public class CriticalPositionAnnotation extends Annotation implements Statistica
         ENDGAME
     }
 
-    @Getter
-    private CriticalPositionType type;
+    @Value.Parameter
+    public abstract CriticalPositionType type();
 
     public static class Serializer implements AnnotationSerializer {
         @Override
         public void serialize(ByteBuffer buf, Annotation annotation) {
-            buf.put((byte) ((CriticalPositionAnnotation) annotation).getType().ordinal());
+            buf.put((byte) ((CriticalPositionAnnotation) annotation).type().ordinal());
         }
 
         @Override
         public CriticalPositionAnnotation deserialize(ByteBuffer buf, int length) {
-            return new CriticalPositionAnnotation(CriticalPositionType.values()[buf.get()]);
+            return ImmutableCriticalPositionAnnotation.of(CriticalPositionType.values()[buf.get()]);
         }
 
         @Override
         public Class getAnnotationClass() {
-            return CriticalPositionAnnotation.class;
+            return ImmutableCriticalPositionAnnotation.class;
         }
 
         @Override

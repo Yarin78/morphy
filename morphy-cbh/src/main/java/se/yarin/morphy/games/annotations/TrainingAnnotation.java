@@ -1,25 +1,20 @@
 package se.yarin.morphy.games.annotations;
 
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import se.yarin.cbhlib.util.CBUtil;
-import se.yarin.cbhlib.games.GameHeaderFlags;
+import org.immutables.value.Value;
+import se.yarin.morphy.util.CBUtil;
+import se.yarin.morphy.games.GameHeaderFlags;
 import se.yarin.chess.annotations.Annotation;
 
 import java.nio.ByteBuffer;
 
-@EqualsAndHashCode(callSuper = false)
-public class TrainingAnnotation extends Annotation implements StatisticalAnnotation {
-    @Getter
-    private byte[] rawData;
-
-    public TrainingAnnotation(byte[] rawData) {
-        this.rawData = rawData;
-    }
+@Value.Immutable
+public abstract class TrainingAnnotation extends Annotation implements StatisticalAnnotation {
+    @Value.Parameter
+    public abstract byte[] rawData();
 
     @Override
     public String toString() {
-        return "TrainingAnnotation = " + CBUtil.toHexString(rawData);
+        return "TrainingAnnotation = " + CBUtil.toHexString(rawData());
     }
 
     @Override
@@ -31,7 +26,7 @@ public class TrainingAnnotation extends Annotation implements StatisticalAnnotat
     public static class Serializer implements AnnotationSerializer {
         @Override
         public void serialize(ByteBuffer buf, Annotation annotation) {
-            buf.put(((TrainingAnnotation) annotation).getRawData());
+            buf.put(((TrainingAnnotation) annotation).rawData());
         }
 
         @Override
@@ -40,12 +35,12 @@ public class TrainingAnnotation extends Annotation implements StatisticalAnnotat
             byte data[] = new byte[length];
             buf.get(data);
 
-            return new TrainingAnnotation(data);
+            return ImmutableTrainingAnnotation.of(data);
         }
 
         @Override
         public Class getAnnotationClass() {
-            return TrainingAnnotation.class;
+            return ImmutableTrainingAnnotation.class;
         }
 
         @Override

@@ -1,19 +1,16 @@
 package se.yarin.morphy.games.annotations;
 
-import lombok.AllArgsConstructor;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.NonNull;
+import org.immutables.value.Value;
 import se.yarin.morphy.exceptions.MorphyAnnotationExecption;
 import se.yarin.util.ByteBufferUtil;
-import se.yarin.cbhlib.games.GameHeaderFlags;
+import se.yarin.morphy.games.GameHeaderFlags;
 import se.yarin.chess.annotations.Annotation;
 
 import java.nio.ByteBuffer;
 import java.util.*;
 
-@EqualsAndHashCode(callSuper = false)
-public class GraphicalArrowsAnnotation extends Annotation implements StatisticalAnnotation {
+@Value.Immutable
+public abstract class GraphicalArrowsAnnotation extends Annotation implements StatisticalAnnotation {
 
     @Override
     public void updateStatistics(AnnotationStatistics stats) {
@@ -21,22 +18,20 @@ public class GraphicalArrowsAnnotation extends Annotation implements Statistical
         stats.flags.add(GameHeaderFlags.GRAPHICAL_ARROWS);
     }
 
-    @AllArgsConstructor
-    @EqualsAndHashCode
-    public static class Arrow {
-        @Getter private GraphicalAnnotationColor color;
-        @Getter private int fromSqi, toSqi;
+    @Value.Immutable
+    public interface Arrow {
+        @Value.Parameter
+        GraphicalAnnotationColor color();
+
+        @Value.Parameter
+        int fromSqi();
+
+        @Value.Parameter
+        int toSqi();
     }
 
-    private Arrow[] arrows;
-
-    public Collection<Arrow> getArrows() {
-        return Arrays.asList(arrows);
-    }
-
-    public GraphicalArrowsAnnotation(@NonNull List<Arrow> arrows) {
-        this.arrows = arrows.toArray(new Arrow[0]);
-    }
+    @Value.Parameter
+    public abstract List<Arrow> arrows();
 
     @Override
     public int priority() {
@@ -46,10 +41,10 @@ public class GraphicalArrowsAnnotation extends Annotation implements Statistical
     public static class Serializer implements AnnotationSerializer {
         @Override
         public void serialize(ByteBuffer buf, Annotation annotation) {
-            for (Arrow arrow : ((GraphicalArrowsAnnotation) annotation).getArrows()) {
-                ByteBufferUtil.putByte(buf, arrow.getColor().getColorId());
-                ByteBufferUtil.putByte(buf, arrow.getFromSqi() + 1);
-                ByteBufferUtil.putByte(buf, arrow.getToSqi() + 1);
+            for (Arrow arrow : ((GraphicalArrowsAnnotation) annotation).arrows()) {
+                ByteBufferUtil.putByte(buf, arrow.color().getColorId());
+                ByteBufferUtil.putByte(buf, arrow.fromSqi() + 1);
+                ByteBufferUtil.putByte(buf, arrow.toSqi() + 1);
             }
         }
 
@@ -64,14 +59,14 @@ public class GraphicalArrowsAnnotation extends Annotation implements Statistical
                 if (fromSqi < 0 || fromSqi > 63 || toSqi < 0 || toSqi > 63
                         || color < 0 || color > GraphicalAnnotationColor.maxColor())
                     throw new MorphyAnnotationExecption("Invalid graphical arrows annotation");
-                arrows.add(new Arrow(GraphicalAnnotationColor.fromInt(color), fromSqi, toSqi));
+                arrows.add(ImmutableArrow.of(GraphicalAnnotationColor.fromInt(color), fromSqi, toSqi));
             }
-            return new GraphicalArrowsAnnotation(arrows);
+            return ImmutableGraphicalArrowsAnnotation.of(arrows);
         }
 
         @Override
         public Class getAnnotationClass() {
-            return GraphicalArrowsAnnotation.class;
+            return ImmutableGraphicalArrowsAnnotation.class;
         }
 
         @Override
