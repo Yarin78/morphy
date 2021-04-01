@@ -18,7 +18,7 @@ import static se.yarin.chess.Chess.*;
  * Most moves are encoded as a single byte.
  */
 public class CompactMoveEncoder implements MoveEncoder {
-    private static final Logger log = LoggerFactory.getLogger(se.yarin.cbhlib.moves.CompactMoveEncoder.class);
+    private static final Logger log = LoggerFactory.getLogger(CompactMoveEncoder.class);
 
     // Enabling this will integrity check the two parallel position structures after parsing every move
     public static boolean INTEGRITY_CHECKS_ENABLED = false;

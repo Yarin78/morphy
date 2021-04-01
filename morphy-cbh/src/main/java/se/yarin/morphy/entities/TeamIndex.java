@@ -1,7 +1,6 @@
 package se.yarin.morphy.entities;
 
 import org.jetbrains.annotations.NotNull;
-import se.yarin.cbhlib.entities.Nation;
 import se.yarin.util.ByteBufferUtil;
 import se.yarin.morphy.exceptions.MorphyInvalidDataException;
 import se.yarin.morphy.storage.FileItemStorage;

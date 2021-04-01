@@ -18,7 +18,7 @@ import java.util.Stack;
  */
 
 public class SimpleMoveEncoder implements MoveEncoder {
-    private static final Logger log = LoggerFactory.getLogger(se.yarin.cbhlib.moves.SimpleMoveEncoder.class);
+    private static final Logger log = LoggerFactory.getLogger(SimpleMoveEncoder.class);
 
     private final boolean modifierFlag;
     private final boolean inverseSquareOrder;

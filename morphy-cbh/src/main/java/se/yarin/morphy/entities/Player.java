@@ -1,8 +1,7 @@
 package se.yarin.morphy.entities;
 
-import lombok.NonNull;
 import org.immutables.value.Value;
-import se.yarin.cbhlib.util.CBUtil;
+import se.yarin.morphy.util.CBUtil;
 
 @Value.Immutable
 public abstract class Player extends Entity implements Comparable<Player> {

@@ -1,8 +1,7 @@
 package se.yarin.morphy.entities;
 
 import org.immutables.value.Value;
-import se.yarin.cbhlib.entities.Nation;
-import se.yarin.cbhlib.util.CBUtil;
+import se.yarin.morphy.util.CBUtil;
 
 @Value.Immutable
 public abstract class Team extends Entity implements Comparable<Team> {

@@ -1,9 +1,8 @@
 package se.yarin.morphy.entities;
 
 import org.jetbrains.annotations.NotNull;
-import se.yarin.cbhlib.entities.SourceQuality;
+import se.yarin.morphy.util.CBUtil;
 import se.yarin.util.ByteBufferUtil;
-import se.yarin.cbhlib.util.CBUtil;
 import se.yarin.morphy.exceptions.MorphyInvalidDataException;
 import se.yarin.morphy.storage.FileItemStorage;
 import se.yarin.morphy.storage.InMemoryItemStorage;

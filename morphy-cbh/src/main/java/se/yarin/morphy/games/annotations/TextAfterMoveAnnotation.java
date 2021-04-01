@@ -1,6 +1,5 @@
 package se.yarin.morphy.games.annotations;
 
-import lombok.NonNull;
 import org.immutables.value.Value;
 import org.jetbrains.annotations.NotNull;
 import se.yarin.morphy.entities.Nation;
@@ -32,7 +31,7 @@ public abstract class TextAfterMoveAnnotation extends Annotation
     }
 
     @Override
-    public String format(@NonNull String text, boolean ascii) {
+    public String format(@NotNull String text, boolean ascii) {
         String s = this.text();
         if (ascii) {
             s = s.replaceAll("[^\\x20-\\x7E]", "?");

@@ -12,7 +12,7 @@ import java.io.InputStream;
  * An interface for getting Chessbase encryption and decryption keys
  */
 public abstract class KeyProvider {
-    private static final Logger log = LoggerFactory.getLogger(se.yarin.cbhlib.moves.KeyProvider.class);
+    private static final Logger log = LoggerFactory.getLogger(KeyProvider.class);
 
     private static final int GROUP_COUNT = 12;
 
@@ -24,7 +24,7 @@ public abstract class KeyProvider {
         byte[] buf = new byte[256];
 
         for (int i = 0; i < GROUP_COUNT; i++) {
-            InputStream stream = se.yarin.cbhlib.moves.KeyProvider.class.getResourceAsStream(String.format("keys/key_%d.bin", i));
+            InputStream stream = KeyProvider.class.getResourceAsStream(String.format("keys/key_%d.bin", i));
             try {
                 int noKeys = stream.available() / 256;
                 keyData[i] = new short[noKeys][];
@@ -53,7 +53,7 @@ public abstract class KeyProvider {
         byte[] buf = new byte[256];
         for (int group = 0; group < cb13Offsets.length; group++) {
             FileOutputStream fos = new FileOutputStream(String.format(
-                    "src/main/resources/se/yarin/cbhlib/keys/key_%d.bin", group));
+                    "src/main/resources/se/yarin/morphy/util/keys/key_%d.bin", group));
             for (int i = 0; i < cb13Offsets[group].length; i++) {
                 int ofs = cb13Offsets[group][i];
                 fis.skip(ofs - current);

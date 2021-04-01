@@ -4,14 +4,11 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
-import se.yarin.cbhlib.entities.Nation;
-import se.yarin.cbhlib.entities.TournamentTimeControl;
-import se.yarin.cbhlib.entities.TournamentType;
-import se.yarin.cbhlib.util.CBUtil;
 import se.yarin.chess.Date;
 import se.yarin.morphy.ResourceLoader;
 import se.yarin.morphy.exceptions.MorphyInvalidDataException;
 import se.yarin.morphy.games.GameIndex;
+import se.yarin.morphy.util.CBUtil;
 
 import java.io.File;
 import java.io.IOException;

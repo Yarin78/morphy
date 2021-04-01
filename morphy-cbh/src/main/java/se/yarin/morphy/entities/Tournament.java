@@ -4,11 +4,8 @@ import org.immutables.value.Value;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import se.yarin.cbhlib.entities.Nation;
-import se.yarin.cbhlib.entities.TournamentTimeControl;
-import se.yarin.cbhlib.entities.TournamentType;
-import se.yarin.cbhlib.util.CBUtil;
 import se.yarin.chess.Date;
+import se.yarin.morphy.util.CBUtil;
 
 @Value.Immutable
 public abstract class Tournament extends Entity implements Comparable<Tournament> {

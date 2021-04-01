@@ -4,7 +4,6 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
-import se.yarin.cbhlib.entities.Nation;
 import se.yarin.morphy.ResourceLoader;
 import se.yarin.morphy.games.GameIndex;
 

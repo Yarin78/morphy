@@ -1,9 +1,8 @@
 package se.yarin.morphy.entities;
 
 import org.immutables.value.Value;
-import se.yarin.cbhlib.entities.SourceQuality;
-import se.yarin.cbhlib.util.CBUtil;
 import se.yarin.chess.Date;
+import se.yarin.morphy.util.CBUtil;
 
 @Value.Immutable
 public abstract class Source extends Entity implements Comparable<Source> {
