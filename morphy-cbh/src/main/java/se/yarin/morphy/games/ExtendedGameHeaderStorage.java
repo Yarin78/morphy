@@ -5,6 +5,7 @@ import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.morphy.exceptions.MorphyException;
+import se.yarin.morphy.exceptions.MorphyIOException;
 import se.yarin.morphy.exceptions.MorphyInvalidDataException;
 import se.yarin.morphy.exceptions.MorphyNotSupportedException;
 import se.yarin.morphy.storage.FileItemStorage;
@@ -69,8 +70,23 @@ public class ExtendedGameHeaderStorage implements ItemStorageSerializer<Extended
         return open(file, Set.of(READ, WRITE, CREATE_NEW));
     }
 
+    public static ExtendedGameHeaderStorage open(@NotNull File file) throws IOException {
+        return open(file, Set.of(READ, WRITE));
+    }
+
     public static ExtendedGameHeaderStorage open(@NotNull File file, @NotNull Set<OpenOption> options) throws IOException {
         return new ExtendedGameHeaderStorage(file, options);
+    }
+
+    public static ExtendedGameHeaderStorage openInMemory(@NotNull File file) throws IOException {
+        return openInMemory(file, Set.of(READ));
+    }
+
+    public static ExtendedGameHeaderStorage openInMemory(@NotNull File file, @NotNull Set<OpenOption> options) throws IOException {
+        ExtendedGameHeaderStorage source = open(file, options);
+        ExtendedGameHeaderStorage target = new ExtendedGameHeaderStorage();
+        source.copyGameHeaders(target);
+        return target;
     }
 
     static ExtProlog peekProlog(@NotNull File file) throws IOException {
@@ -87,10 +103,15 @@ public class ExtendedGameHeaderStorage implements ItemStorageSerializer<Extended
     /**
      * Gets an extended game header from the base
      * @param gameId the id of the game
-     * @return an extended game header, or null if there was no extended game header with the specified id
+     * @return an extended game header
+     * @throws IllegalArgumentException if the gameId is invalid
      */
-    public ExtendedGameHeader get(int gameId) {
-        return storage.getItem(gameId );
+    public @NotNull ExtendedGameHeader get(int gameId) {
+        try {
+            return storage.getItem(gameId );
+        } catch (MorphyIOException e) {
+            throw new IllegalArgumentException(e);
+        }
     }
 
     /**
@@ -98,6 +119,7 @@ public class ExtendedGameHeaderStorage implements ItemStorageSerializer<Extended
      *   - create a new storage (if missing entirely)
      *   - upgrade an old version of the storage to a new one
      *   - pad missing entries
+     * The cbh file is needed for the upgrade since empty items need offset data from the cbh file
      */
     public static void upgrade(File cbhFile) throws IOException {
         if (!cbhFile.exists()) {

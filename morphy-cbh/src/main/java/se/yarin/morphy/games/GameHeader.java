@@ -153,10 +153,4 @@ public abstract class GameHeader {
     }
 
     public abstract int noMoves(); // -1 = More than 255 moves. Count the exact number upon demand.
-
-    @Value.Default
-    @NotNull
-    public ExtendedGameHeader extended() {
-        return ExtendedGameHeader.empty(this);
-    }
 }

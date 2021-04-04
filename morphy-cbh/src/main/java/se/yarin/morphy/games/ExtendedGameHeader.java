@@ -109,14 +109,14 @@ public abstract class ExtendedGameHeader {
         return -1;
     }
 
-    public static ExtendedGameHeader empty(long annotationOffset, long movesOffset) {
+    public static ImmutableExtendedGameHeader empty(long annotationOffset, long movesOffset) {
         return ImmutableExtendedGameHeader.builder()
                 .annotationOffset(annotationOffset)
                 .movesOffset(movesOffset)
                 .build();
     }
 
-    public static ExtendedGameHeader empty(GameHeader header) {
+    public static ImmutableExtendedGameHeader empty(GameHeader header) {
         return empty(header.annotationOffset(), header.movesOffset());
     }
 

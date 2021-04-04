@@ -7,6 +7,7 @@ import org.junit.rules.TemporaryFolder;
 import se.yarin.chess.GameResult;
 import se.yarin.morphy.ResourceLoader;
 import se.yarin.morphy.entities.Nation;
+import se.yarin.morphy.exceptions.MorphyIOException;
 import se.yarin.morphy.exceptions.MorphyInvalidDataException;
 
 import java.io.File;
@@ -47,6 +48,64 @@ public class GameHeaderIndexTest {
         index.close();
     }
 
+    @Test
+    public void getSimpleGame() throws IOException {
+        File cbh_only = ResourceLoader.materializeDatabaseStream(getClass(), "cbh_only");
+        GameHeaderIndex index = GameHeaderIndex.open(cbh_only);
+        assertEquals(4, index.count());
+
+        GameHeader game1 = index.getGameHeader(1);
+        assertEquals(1, game1.id());
+        assertEquals(0, game1.whitePlayerId());
+        assertEquals(2200, game1.whiteElo());
+        assertEquals(2, game1.round());
+        assertEquals(1, game1.subRound());
+        assertEquals(GameResult.DRAW, game1.result());
+
+        GameHeader game2 = index.getGameHeader(2);
+        assertEquals(2820, game2.blackElo());
+
+        GameHeader game4 = index.getGameHeader(4);
+        assertEquals(4, game4.id());
+    }
+
+    @Test
+    public void getSimpleGameFromInMemoryCopy() throws IOException {
+        File cbh_only = ResourceLoader.materializeDatabaseStream(getClass(), "cbh_only");
+        GameHeaderIndex index = GameHeaderIndex.openInMemory(cbh_only);
+        assertEquals(4, index.count());
+
+        GameHeader game1 = index.getGameHeader(1);
+        assertEquals(1, game1.id());
+        assertEquals(0, game1.whitePlayerId());
+        assertEquals(2200, game1.whiteElo());
+        assertEquals(2, game1.round());
+        assertEquals(1, game1.subRound());
+        assertEquals(GameResult.DRAW, game1.result());
+
+        GameHeader game2 = index.getGameHeader(2);
+        assertEquals(2820, game2.blackElo());
+
+        GameHeader game4 = index.getGameHeader(4);
+        assertEquals(4, game4.id());
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void getInvalidGame() throws IOException {
+        File cbh_only = ResourceLoader.materializeDatabaseStream(getClass(), "cbh_only");
+        GameHeaderIndex index = GameHeaderIndex.open(cbh_only);
+        index.getGameHeader(5);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void getInvalidGameInMemory() throws IOException {
+        File cbh_only = ResourceLoader.materializeDatabaseStream(getClass(), "cbh_only");
+        GameHeaderIndex index = GameHeaderIndex.openInMemory(cbh_only);
+        index.getGameHeader(5);
+    }
+
+
+    /*
     @Test
     public void getGameWithoutExtendedHeaderWrite() throws IOException {
         // cbj file is missing
@@ -228,6 +287,9 @@ public class GameHeaderIndexTest {
         GameHeaderIndex.openInMemory(cbh_cbj, Set.of(READ));
     }
 
+
+     */
+
     private ImmutableGameHeader emptyGame() {
         return ImmutableGameHeader.builder()
                 .movesOffset(0)
@@ -245,15 +307,13 @@ public class GameHeaderIndexTest {
         GameHeaderIndex index = GameHeaderIndex.open(gameHeaderFile);
         int oldSize = index.count();
 
-        GameHeader newGame = emptyGame().withWhiteElo(2100).withExtended(
-                ImmutableExtendedGameHeader.builder().gameTagId(5).build());
+        GameHeader newGame = emptyGame().withWhiteElo(2100);
         int id = index.add(newGame);
         assertEquals(oldSize + 1, id);
         assertEquals(oldSize + 1, index.count());
         GameHeader gameHeader = index.getGameHeader(id);
         assertEquals(id, gameHeader.id());
         assertEquals(2100, gameHeader.whiteElo());
-        assertEquals(5, gameHeader.extended().gameTagId());
 
         assertEquals(oldSize + 2, index.add(emptyGame()));
         assertEquals(oldSize + 2, index.count());
@@ -266,15 +326,13 @@ public class GameHeaderIndexTest {
         GameHeaderIndex index = GameHeaderIndex.openInMemory(gameHeaderFile);
         int oldSize = index.count();
 
-        GameHeader newGame = emptyGame().withWhiteElo(2100).withExtended(
-                ImmutableExtendedGameHeader.builder().gameTagId(5).build());
+        GameHeader newGame = emptyGame().withWhiteElo(2100);
         int id = index.add(newGame);
         assertEquals(oldSize + 1, id);
         assertEquals(oldSize + 1, index.count());
         GameHeader gameHeader = index.getGameHeader(id);
         assertEquals(id, gameHeader.id());
         assertEquals(2100, gameHeader.whiteElo());
-        assertEquals(5, gameHeader.extended().gameTagId());
 
         assertEquals(oldSize + 2, index.add(emptyGame()));
         assertEquals(oldSize + 2, index.count());
@@ -291,7 +349,7 @@ public class GameHeaderIndexTest {
         assertEquals(4, oldGame.whitePlayerId());
         assertEquals(1, oldGame.blackPlayerId());
 
-        GameHeader newGame = ImmutableGameHeader.builder().whitePlayerId(2).blackPlayerId(3).build();
+        GameHeader newGame = emptyGame().withWhitePlayerId(2).withBlackPlayerId(3);
         index.update(3, newGame);
 
         newGame = index.getGameHeader(3);

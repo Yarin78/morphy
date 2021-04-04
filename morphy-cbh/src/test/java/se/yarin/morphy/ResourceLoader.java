@@ -48,6 +48,10 @@ public class ResourceLoader {
         return materializeDatabaseStream(resourceRoot, baseName, Files.createTempDirectory(baseName).toFile(), baseName);
     }
 
+    public static File materializeDatabaseStream(Class resourceRoot, String baseName, String[] extensions) throws IOException {
+        return materializeDatabaseStream(resourceRoot, baseName, Files.createTempDirectory(baseName).toFile(), baseName, extensions);
+    }
+
     public static File materializeDatabaseStream(Class resourceRoot, String resourceNameRoot, File targetDirectory, String targetNameBase) throws IOException {
         // TODO: Make Database.openInMemory work directly with streams (BaseLocator/BaseLoader pattern?)
         return materializeDatabaseStream(resourceRoot, resourceNameRoot, targetDirectory, targetNameBase,

@@ -29,13 +29,9 @@ public class GameHeaderIndex implements ItemStorageSerializer<GameHeaderIndex.Pr
     private static final Logger log = LoggerFactory.getLogger(GameHeaderIndex.class);
 
     private final ItemStorage<GameHeaderIndex.Prolog, GameHeader> storage;
-    private final ExtendedGameHeaderStorage extendedStorage;
-    private final boolean ignoreExtendedHeaders;
 
     public GameHeaderIndex() {
         this.storage = new InMemoryItemStorage<>(Prolog.empty(), null, true);
-        this.extendedStorage = new ExtendedGameHeaderStorage();
-        this.ignoreExtendedHeaders = false;
     }
 
     private GameHeaderIndex(
@@ -53,23 +49,6 @@ public class GameHeaderIndex implements ItemStorageSerializer<GameHeaderIndex.Pr
                 throw new MorphyNotSupportedException("Game header item size mismatches; writes not possible.");
             }
         }
-
-        File extraFile = CBUtil.fileWithExtension(file, ".cbj");
-        if (!options.contains(IGNORE_EXTENDED_STORAGE) && extraFile.exists()) {
-            this.extendedStorage = ExtendedGameHeaderStorage.open(extraFile, options);
-            this.ignoreExtendedHeaders = false;
-
-            if (strict) {
-                if (this.extendedStorage.count() != this.count()) {
-                    // repair should already have fixed this
-                    throw new MorphyInvalidDataException("Extended game header storage contains a different number of entries than main header index.");
-                }
-            }
-        } else {
-            // Either repair mode, or read-only mode when .cbj is missing
-            this.extendedStorage = new ExtendedGameHeaderStorage();
-            this.ignoreExtendedHeaders = true;
-        }
     }
 
     public static GameHeaderIndex create(@NotNull File file)
@@ -82,9 +61,6 @@ public class GameHeaderIndex implements ItemStorageSerializer<GameHeaderIndex.Pr
     }
 
     public static GameHeaderIndex open(@NotNull File file, @NotNull Set<OpenOption> options) throws IOException {
-        if (options.contains(WRITE)) {
-            ExtendedGameHeaderStorage.upgrade(file);
-        }
         return new GameHeaderIndex(file, options);
     }
 
@@ -108,12 +84,6 @@ public class GameHeaderIndex implements ItemStorageSerializer<GameHeaderIndex.Pr
             target.storage.putItem(i, storage.getItem(i));
         }
         target.storage.putHeader(storage.getHeader());
-
-        extendedStorage.copyGameHeaders(target.extendedStorage);
-    }
-
-    ExtendedGameHeaderStorage getExtendedStorage() {
-        return extendedStorage;
     }
 
     /**
@@ -126,13 +96,16 @@ public class GameHeaderIndex implements ItemStorageSerializer<GameHeaderIndex.Pr
 
     /**
      * Gets a game header from the index
-     * If the id is invalid (larger than the capacity of the index), either an
-     * empty (non-null) item is returned or {@link MorphyIOException} is thrown, depending on the OpenOption of the index.
+     * If the id is invalid (larger than the capacity of the index), an {@link IllegalArgumentException} is thrown.
      * @param gameHeaderId the id of the game header to get
-     * @return a game header id, or null if there was no game header with the specified id
+     * @return a game header with the specified id
      */
-    public GameHeader getGameHeader(int gameHeaderId) {
-        return storage.getItem(gameHeaderId);
+    public @NotNull GameHeader getGameHeader(int gameHeaderId) {
+        try {
+            return storage.getItem(gameHeaderId);
+        } catch (MorphyIOException e) {
+            throw new IllegalArgumentException(e);
+        }
     }
 
     /**
@@ -150,15 +123,6 @@ public class GameHeaderIndex implements ItemStorageSerializer<GameHeaderIndex.Pr
      * @return the id that the game header received
      */
     public int add(@NotNull GameHeader gameHeader) {
-        if (ignoreExtendedHeaders) {
-            throw new IllegalStateException("Can't write to the GameHeaderIndex if extended headers are ignored");
-        }
-        // Sanity check, shouldn't happen
-        if (count() != extendedStorage.count()) {
-            throw new IllegalStateException(String.format("Number of headers in GameHeaderIndex and ExtendedGameHeaderStorage differs (%d != %d)",
-                    count(), extendedStorage.count()));
-        }
-
         int newGameId = 1 + count();
 
         // This is necessary for the InMemory storage
@@ -171,7 +135,6 @@ public class GameHeaderIndex implements ItemStorageSerializer<GameHeaderIndex.Pr
                 .withNextGameId2(newGameId + 1);
         storage.putHeader(newProlog);
 
-        extendedStorage.put(newGameId, gameHeader.extended());
         return newGameId;
     }
 
@@ -330,11 +293,7 @@ public class GameHeaderIndex implements ItemStorageSerializer<GameHeaderIndex.Pr
     }
 
     @Override
-    public @NotNull GameHeader deserializeItem(int id, @NotNull ByteBuffer buf) {
-        return deserializeItem(id, buf, ignoreExtendedHeaders ? null : extendedStorage.get(id));
-    }
-
-    public @NotNull GameHeader deserializeItem(int gameHeaderId, @NotNull ByteBuffer buf, @Nullable ExtendedGameHeader extended) {
+    public @NotNull GameHeader deserializeItem(int gameHeaderId, @NotNull ByteBuffer buf) {
         ImmutableGameHeader.Builder builder = ImmutableGameHeader.builder();
         builder.id(gameHeaderId);
         int type = ByteBufferUtil.getUnsignedByte(buf);
@@ -468,12 +427,6 @@ public class GameHeaderIndex implements ItemStorageSerializer<GameHeaderIndex.Pr
             }
 
             builder.noMoves(ByteBufferUtil.getUnsignedByte(buf));
-        }
-
-        if (extended != null) {
-            builder.extended(extended);
-        } else {
-            builder.extended(ExtendedGameHeader.empty(annotationOffset, movesOffset));
         }
 
         return builder.build();
