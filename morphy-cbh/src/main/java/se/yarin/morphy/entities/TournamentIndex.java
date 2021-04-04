@@ -3,20 +3,18 @@ package se.yarin.morphy.entities;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import se.yarin.morphy.util.CBUtil;
-import se.yarin.util.ByteBufferUtil;
 import se.yarin.chess.Date;
 import se.yarin.morphy.exceptions.MorphyInvalidDataException;
 import se.yarin.morphy.storage.FileItemStorage;
 import se.yarin.morphy.storage.InMemoryItemStorage;
 import se.yarin.morphy.storage.ItemStorage;
+import se.yarin.morphy.util.CBUtil;
+import se.yarin.util.ByteBufferUtil;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.file.OpenOption;
-import java.nio.file.StandardOpenOption;
-import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Stream;
 
@@ -27,22 +25,13 @@ public class TournamentIndex extends EntityIndex<Tournament> {
 
     private static final int SERIALIZED_TOURNAMENT_SIZE = 90;
 
-    private final TournamentExtraStorage extraStorage;
-
-    TournamentExtraStorage extraStorage() {
-        return this.extraStorage;
-    }
-
     public TournamentIndex() {
-        this(new InMemoryItemStorage<>(EntityIndexHeader.empty(SERIALIZED_TOURNAMENT_SIZE), null),
-                new TournamentExtraStorage());
+        this(new InMemoryItemStorage<>(EntityIndexHeader.empty(SERIALIZED_TOURNAMENT_SIZE), null));
     }
 
     protected TournamentIndex(
-            @NotNull ItemStorage<EntityIndexHeader, EntityNode> storage,
-            @NotNull TournamentExtraStorage extraStorage) {
+            @NotNull ItemStorage<EntityIndexHeader, EntityNode> storage) {
         super(storage, "Tournament");
-        this.extraStorage = extraStorage;
     }
 
     public static TournamentIndex create(@NotNull File file)
@@ -60,6 +49,7 @@ public class TournamentIndex extends EntityIndex<Tournament> {
         FileItemStorage<EntityIndexHeader, EntityNode> storage = new FileItemStorage<>(
                 file, new EntityIndexSerializer(SERIALIZED_TOURNAMENT_SIZE), EntityIndexHeader.empty(SERIALIZED_TOURNAMENT_SIZE), options);
 
+        /*
         File extraFile = CBUtil.fileWithExtension(file, ".cbtt");
 
         Set<OpenOption> extraOptions = new HashSet<>(options);
@@ -67,7 +57,6 @@ public class TournamentIndex extends EntityIndex<Tournament> {
             // Always create the extra tournament file if it's missing and we're in WRITE mode
             extraOptions.add(StandardOpenOption.CREATE);
         }
-
         TournamentExtraStorage extraStorage;
         if (!extraFile.exists() && !extraOptions.contains(CREATE) && !extraOptions.contains(CREATE_NEW)) {
             // If the extra storage file is missing and we can't create it, use an empty in-memory version instead
@@ -75,8 +64,8 @@ public class TournamentIndex extends EntityIndex<Tournament> {
         } else {
             extraStorage = TournamentExtraStorage.open(extraFile, extraOptions);
         }
-
-        return new TournamentIndex(storage, extraStorage);
+        */
+        return new TournamentIndex(storage);
     }
 
     public static TournamentIndex openInMemory(@NotNull File file)
@@ -91,12 +80,6 @@ public class TournamentIndex extends EntityIndex<Tournament> {
         source.copyEntities(target);
         return target;
     }
-
-    protected void copyEntities(TournamentIndex targetIndex) {
-        super.copyEntities(targetIndex);
-        extraStorage.copyEntities(targetIndex.extraStorage);
-    }
-
 
     @Override
     public EntityIndexTransaction<Tournament> beginTransaction() {
@@ -130,12 +113,7 @@ public class TournamentIndex extends EntityIndex<Tournament> {
         return streamOrderedAscending(startKey, endKey);
     }
 
-    @Override
     protected Tournament deserialize(int entityId, int count, int firstGameId, byte[] serializedData) {
-        return deserialize(entityId, count, firstGameId, serializedData, extraStorage.get(entityId));
-    }
-
-    protected Tournament deserialize(int entityId, int count, int firstGameId, byte[] serializedData, @NotNull TournamentExtra extra) {
         ByteBuffer buf = ByteBuffer.wrap(serializedData);
 
         ImmutableTournament.Builder builder = ImmutableTournament.builder()
@@ -145,7 +123,6 @@ public class TournamentIndex extends EntityIndex<Tournament> {
                 // .raw(serializedData)
                 .title(ByteBufferUtil.getFixedSizeByteString(buf, 40))
                 .place(ByteBufferUtil.getFixedSizeByteString(buf, 30))
-                .extra(extra)
                 .date(CBUtil.decodeDate(ByteBufferUtil.getIntL(buf)));
         int typeByte = ByteBufferUtil.getUnsignedByte(buf);
         int teamByte = ByteBufferUtil.getUnsignedByte(buf);

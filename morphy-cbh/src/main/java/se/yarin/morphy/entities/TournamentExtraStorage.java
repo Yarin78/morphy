@@ -16,6 +16,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
+import static java.nio.file.StandardOpenOption.READ;
+import static java.nio.file.StandardOpenOption.WRITE;
+
 /**
  * Represents the .cbtt file containing additional Tournament information.
  * May contain fewer entries than the .cbt file as entries are only written if they contain any real data,
@@ -36,7 +39,7 @@ public class TournamentExtraStorage implements ItemStorageSerializer<TournamentE
     private TournamentExtraStorage(@NotNull File file, Set<OpenOption> options) throws IOException {
         this.storage = new FileItemStorage<>(file, this, TournamentExtraHeader.empty(), options);
 
-        if (options.contains(StandardOpenOption.WRITE)) {
+        if (options.contains(WRITE)) {
             if (storage.getHeader().version() < TournamentExtraHeader.DEFAULT_HEADER_VERSION) {
                 throw new MorphyNotSupportedException("Old extra tournament storage version; upgrade needed but not yet supported.");
             }
@@ -52,8 +55,23 @@ public class TournamentExtraStorage implements ItemStorageSerializer<TournamentE
         }
     }
 
+    public static TournamentExtraStorage open(@NotNull File file) throws IOException {
+        return open(file, Set.of(READ, WRITE));
+    }
+
     public static TournamentExtraStorage open(@NotNull File file, Set<OpenOption> options) throws IOException {
         return new TournamentExtraStorage(file, options);
+    }
+
+    public static TournamentExtraStorage openInMemory(@NotNull File file) throws IOException {
+        return openInMemory(file, Set.of(READ));
+    }
+
+    public static TournamentExtraStorage openInMemory(@NotNull File file, Set<OpenOption> options) throws IOException {
+        TournamentExtraStorage source = open(file, options);
+        TournamentExtraStorage target = new TournamentExtraStorage();
+        source.copyEntities(target);
+        return target;
     }
 
     @Override

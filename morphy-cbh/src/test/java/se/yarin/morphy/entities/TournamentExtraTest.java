@@ -3,9 +3,11 @@ package se.yarin.morphy.entities;
 import org.junit.Test;
 import se.yarin.chess.Date;
 
+import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.Random;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.*;
 
 public class TournamentExtraTest {
 
@@ -22,6 +24,31 @@ public class TournamentExtraTest {
     private TournamentExtra createDummyItem() {
         return createItem(random.nextDouble(), random.nextDouble(),
                 new Date(2020, random.nextInt(12) + 1, random.nextInt(28) + 1));
+    }
+
+    @Test
+    public void testSerialization() {
+        ImmutableTournamentExtra newTournamentExtra = ImmutableTournamentExtra.builder()
+                .latitude(1.2)
+                .longitude(3.4)
+                .endDate(new Date(2016, 7, 13))
+                .tiebreakRules(Arrays.asList(TiebreakRule.RR_NUM_WINS, TiebreakRule.RR_POINT_GROUP))
+                .build();
+
+        TournamentExtraStorage extraSerializer = new TournamentExtraStorage();
+
+        ByteBuffer bufExtra = ByteBuffer.allocate(1000);
+        extraSerializer.serializeItem(newTournamentExtra, bufExtra);
+        bufExtra.flip();
+
+        TournamentExtra extra = extraSerializer.deserializeItem(0, bufExtra);
+
+        assertEquals(1.2, extra.latitude(), 1e-6);
+        assertEquals(3.4, extra.longitude(), 1e-6);
+        assertEquals(new Date(2016, 7, 13), extra.endDate());
+        assertEquals(2, extra.tiebreakRules().size());
+        assertEquals(TiebreakRule.RR_NUM_WINS, extra.tiebreakRules().get(0));
+        assertEquals(TiebreakRule.RR_POINT_GROUP, extra.tiebreakRules().get(1));
     }
 
     @Test

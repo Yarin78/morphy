@@ -62,12 +62,6 @@ public abstract class Tournament extends Entity implements Comparable<Tournament
         return Nation.NONE;
     }
 
-    @Value.Default
-    @NotNull
-    public TournamentExtra extra() {
-        return TournamentExtra.empty();
-    }
-
     @NotNull
     public static Tournament of(String title, Date date) {
         return ImmutableTournament.builder().title(title).date(date).build();
