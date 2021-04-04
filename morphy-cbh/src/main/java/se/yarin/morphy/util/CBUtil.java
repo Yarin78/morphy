@@ -14,6 +14,7 @@ import java.io.File;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.util.Locale;
 
 /**
  * Contains various utility functions for reading and parsing ChessBase data files.
@@ -199,5 +200,21 @@ public final class CBUtil {
         }
         String base = file.getPath().substring(0, extensionStart);
         return new File(base + extension);
+    }
+
+    public static String baseName(File file) {
+        // Gets the name of the file without path or extension
+        String name = file.getName();
+        int extensionStart = name.lastIndexOf(".");
+        return extensionStart < 0 ? name : name.substring(0, extensionStart);
+    }
+
+    public static String extension(File file) {
+        // Gets a normalized (lower case) version of the extension of the file
+        int extensionStart = file.getPath().lastIndexOf(".");
+        if (extensionStart < 0) {
+            throw new IllegalArgumentException("The file must have an extension");
+        }
+        return file.getPath().substring(extensionStart).toLowerCase(Locale.ROOT);
     }
 }

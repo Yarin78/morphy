@@ -22,15 +22,19 @@ public abstract class EndgameInfo {
      * Gets the endgame type that occurred for the longest time
      * @return a type of an endgame, or EndgameType.NONE if no endgame found
      */
-    @Value.Parameter
-    public abstract @NotNull EndgameType longestType();
+    @Value.Default
+    public @NotNull EndgameType longestType() {
+        return EndgameType.NONE;
+    }
 
     /**
      * Gets a list of the different endgame types and at what ply they start at
      * @return a list of endgames types with associated ply's
      */
-    @Value.Parameter
-    public abstract @NotNull List<PlyType> plyTypes();
+    @Value.Default
+    public @NotNull List<PlyType> plyTypes() {
+        return List.of();
+    }
 
     @Value.Immutable
     public interface PlyType {
@@ -39,6 +43,10 @@ public abstract class EndgameInfo {
 
         @Value.Parameter
         int ply();
+    }
+
+    public static EndgameInfo empty() {
+        return ImmutableEndgameInfo.builder().build();
     }
 
     public void serialize(ByteBuffer buf) {
@@ -57,23 +65,23 @@ public abstract class EndgameInfo {
 
     /**
      * Deserializes endgame information
-     * @return an instance of {@link EndgameInfo}, or null if not set
+     * @return an instance of {@link EndgameInfo}
      */
-    public static EndgameInfo deserialize(ByteBuffer buf) {
+    public static @NotNull EndgameInfo deserialize(ByteBuffer buf) {
         try {
             int version = ByteBufferUtil.getUnsignedShortB(buf);
             if (version != 1) {
-                return null;
+                return EndgameInfo.empty();
             }
             EndgameType longestType = EndgameType.decode(ByteBufferUtil.getUnsignedShortB(buf));
             List<PlyType> plyTypes = new ArrayList<>();
             for (int i = 0; i < 4; i++) {
                 plyTypes.add(ImmutablePlyType.of(EndgameType.decode(ByteBufferUtil.getUnsignedShortB(buf)), ByteBufferUtil.getUnsignedShortB(buf)));
             }
-            return ImmutableEndgameInfo.of(longestType, plyTypes);
+            return ImmutableEndgameInfo.builder().longestType(longestType).plyTypes(plyTypes).build();
         } catch (BufferUnderflowException e) {
             log.warn("Unexpected end of buffer", e);
-            return ImmutableEndgameInfo.of(EndgameType.NONE, new ArrayList<>());
+            return EndgameInfo.empty();
         }
     }
 }

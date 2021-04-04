@@ -100,7 +100,7 @@ All integers are stored in Big Endian (most significant byte first) unless other
 | --- | --- | ---
 | 0   | 4   | .cbj file version, see table below.
 | 4   | 4   | Size of the game records. `120` in newer database, but earlier versions have shorter headers; see table below.
-| 8   | 4   | Number of game records.
+| 8   | 4   | Number of game records. This should be one less than "next game id" field in the CBH header. 
 | 12  | 20  | Presumably random dirty bytes, perhaps reserved for future use (may contain parts of random strings etc).
 
 The version of the .cbj file loosely correspond to the ChessBase version. The .cbj file itself did not exist in the earliest versions

@@ -44,6 +44,10 @@ public class ResourceLoader {
         return file;
     }
 
+    public static File materializeDatabaseStream(Class resourceRoot, String baseName) throws IOException {
+        return materializeDatabaseStream(resourceRoot, baseName, Files.createTempDirectory(baseName).toFile(), baseName);
+    }
+
     public static File materializeDatabaseStream(Class resourceRoot, String resourceNameRoot, File targetDirectory, String targetNameBase) throws IOException {
         // TODO: Make Database.openInMemory work directly with streams (BaseLocator/BaseLoader pattern?)
         return materializeDatabaseStream(resourceRoot, resourceNameRoot, targetDirectory, targetNameBase,
@@ -57,15 +61,22 @@ public class ResourceLoader {
 
     public static File materializeDatabaseStream(Class resourceRoot, String resourceNameRoot, File targetDirectory, String targetNameBase, String[] extensions) throws IOException {
         HashMap<String, File> extensionFiles = new HashMap<>();
+        String firstMatchingExtension = null;
         for (String extension : extensions) {
             InputStream inputStream = resourceRoot.getResourceAsStream(resourceNameRoot + extension);
             if (inputStream != null) {
+                if (firstMatchingExtension == null) {
+                    firstMatchingExtension = extension;
+                }
                 extensionFiles.put(extension,
                         materializeStream(inputStream,
                                 new File(targetDirectory, targetNameBase + extension)));
             }
         }
-        return extensionFiles.get(extensions[0]);
+        if (firstMatchingExtension == null) {
+            throw new IllegalArgumentException("No matching streams found");
+        }
+        return extensionFiles.get(firstMatchingExtension);
     }
 
     public static Database openWorldChDatabase() {

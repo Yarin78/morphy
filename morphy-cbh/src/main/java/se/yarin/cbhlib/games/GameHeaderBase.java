@@ -408,7 +408,7 @@ public class GameHeaderBase implements GameHeaderSerializer {
     }
 
     public ByteBuffer serialize(GameHeader header) {
-            ByteBuffer buf = ByteBuffer.allocate(getSerializedGameHeaderLength());
+        ByteBuffer buf = ByteBuffer.allocate(getSerializedGameHeaderLength());
         int type = 0;
         if (header.isGame()) type += 1;
         if (header.isGuidingText()) type += 2;

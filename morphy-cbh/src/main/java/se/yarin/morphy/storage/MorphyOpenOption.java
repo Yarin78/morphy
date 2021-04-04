@@ -12,6 +12,12 @@ public enum MorphyOpenOption implements OpenOption {
      * This can not be used in combination with {@link java.nio.file.StandardOpenOption#WRITE}
      */
     IGNORE_NON_CRITICAL_ERRORS,
+
+    /**
+     * If set, any extended storage will be ignored (.cbj file will be ignored when reading from .cbh,
+     * .cbtt will be ignored when reading from .cbt). Typically only used in repair mode.
+     */
+    IGNORE_EXTENDED_STORAGE,
     ;
 
     /**

@@ -16,6 +16,7 @@ public class InMemoryItemStorage<THeader, TItem> implements ItemStorage<THeader,
     private @NotNull final List<TItem> items;
     // If an empty item is provided, we are in "non-strict" mode
     private @Nullable final TItem emptyItem;
+    private final boolean oneIndexed; // true if first id is 1, false if 0
     private @NotNull THeader header;
 
     public InMemoryItemStorage(@NotNull THeader header) {
@@ -23,9 +24,14 @@ public class InMemoryItemStorage<THeader, TItem> implements ItemStorage<THeader,
     }
 
     public InMemoryItemStorage(@NotNull THeader header, @Nullable TItem emptyItem) {
+        this(header, emptyItem, false);
+    }
+
+    public InMemoryItemStorage(@NotNull THeader header, @Nullable TItem emptyItem, boolean oneIndexed) {
         this.items = new ArrayList<>();
         this.header = header;
         this.emptyItem = emptyItem;
+        this.oneIndexed = oneIndexed;
     }
 
     @Override
@@ -45,8 +51,12 @@ public class InMemoryItemStorage<THeader, TItem> implements ItemStorage<THeader,
 
     @Override
     public @NotNull TItem getItem(int index) {
+        if (oneIndexed) {
+            index--;
+        }
+
         if (index < 0) {
-            throw new IllegalArgumentException("index must be non-negative");
+            throw new IllegalArgumentException("Invalid index");
         }
         if (index >= items.size()) {
             if (emptyItem == null) {
@@ -60,6 +70,10 @@ public class InMemoryItemStorage<THeader, TItem> implements ItemStorage<THeader,
 
     @Override
     public List<TItem> getItems(int index, int count) {
+        if (oneIndexed) {
+            index--;
+        }
+
         if (index < 0) {
             throw new IllegalArgumentException("index must be non-negative");
         }
@@ -79,12 +93,16 @@ public class InMemoryItemStorage<THeader, TItem> implements ItemStorage<THeader,
 
     @Override
     public void putItem(int index, @NotNull TItem item) {
+        if (oneIndexed) {
+            index--;
+        }
+
         if (index < 0) {
-            throw new IllegalArgumentException("index must be non-negative");
+            throw new IllegalArgumentException("Invalid index");
         }
         if (index > items.size()) {
             throw new IllegalArgumentException(String.format("Tried to put item with id %d but InMemoryStorage only has %d items",
-                    index, this.items.size()));
+                    index + (oneIndexed ? 1 : 0), this.items.size()));
         }
         if (index == items.size()) {
             items.add(item);

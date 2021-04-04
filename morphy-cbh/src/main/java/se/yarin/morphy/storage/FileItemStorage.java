@@ -1,6 +1,7 @@
 package se.yarin.morphy.storage;
 
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import se.yarin.morphy.exceptions.MorphyException;
 import se.yarin.morphy.exceptions.MorphyIOException;
 import se.yarin.morphy.exceptions.MorphyInvalidDataException;
@@ -20,6 +21,7 @@ import static java.nio.file.StandardOpenOption.*;
 public class FileItemStorage<THeader, TItem> implements ItemStorage<THeader, TItem> {
     private long fileSize;
     private THeader header;
+    private final TItem emptyItem;
     private final BlobChannel channel;
     private final ItemStorageSerializer<THeader, TItem> serializer;
     private final boolean strict;
@@ -28,6 +30,16 @@ public class FileItemStorage<THeader, TItem> implements ItemStorage<THeader, TIt
             @NotNull File file,
             @NotNull ItemStorageSerializer<THeader, TItem> serializer,
             @NotNull THeader emptyHeader,
+            @NotNull Set<OpenOption> options)
+            throws IOException, MorphyInvalidDataException {
+        this(file, serializer, emptyHeader, null, options);
+    }
+
+    public FileItemStorage(
+            @NotNull File file,
+            @NotNull ItemStorageSerializer<THeader, TItem> serializer,
+            @NotNull THeader emptyHeader,
+            @Nullable TItem emptyItem,
             @NotNull Set<OpenOption> options)
             throws IOException, MorphyInvalidDataException {
 
@@ -39,6 +51,7 @@ public class FileItemStorage<THeader, TItem> implements ItemStorage<THeader, TIt
         this.strict = !options.contains(MorphyOpenOption.IGNORE_NON_CRITICAL_ERRORS);
         this.serializer = serializer;
         this.fileSize = this.channel.size();
+        this.emptyItem = emptyItem;
 
         if (this.fileSize == 0) {
             if (options.contains(CREATE) || options.contains(CREATE_NEW)) {
@@ -102,6 +115,9 @@ public class FileItemStorage<THeader, TItem> implements ItemStorage<THeader, TIt
                 if (strict) {
                     throw new MorphyIOException(String.format("Tried to get item with id %d at offset %d but file size was %d",
                             index, offset, this.fileSize));
+                }
+                if (emptyItem != null) {
+                    return emptyItem;
                 }
             } else {
                 channel.read(offset, buf);
