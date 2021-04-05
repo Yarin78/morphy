@@ -2,9 +2,15 @@ package se.yarin.morphy.entities;
 
 import org.junit.Test;
 import se.yarin.chess.Date;
+import se.yarin.morphy.DatabaseMode;
+import se.yarin.morphy.ResourceLoader;
+import se.yarin.morphy.games.GameIndex;
 
+import java.io.File;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Random;
 
 import static org.junit.Assert.*;
@@ -106,5 +112,47 @@ public class TournamentExtraTest {
         assertEquals(1, storage.numEntries());
         assertEquals(TournamentExtra.empty(), storage.get(5));
         assertEquals(1, storage.numEntries());  // Ensure no fake entries was added on read
+    }
+
+    @Test
+    public void getItemFromOlderVersion() throws IOException {
+        File file = ResourceLoader.materializeDatabaseStream(GameIndex.class, "upgradable", List.of(".cbtt"));
+        TournamentExtraStorage storage = TournamentExtraStorage.open(file, DatabaseMode.READ_ONLY);
+        assertEquals(2, storage.getStorageVersion());
+
+        assertEquals(55.44959, storage.get(7).latitude(), 1e-6);
+        assertEquals(10.65779, storage.get(7).longitude(), 1e-6);
+    }
+
+    @Test
+    public void testUpgradeStorageVersion() throws IOException {
+        File oldStorageFile = ResourceLoader.materializeDatabaseStream(GameIndex.class, "upgradable", List.of(".cbtt"));
+        TournamentExtraHeader oldHeader = TournamentExtraStorage.peekHeader(oldStorageFile);
+        assertEquals(2, oldHeader.version());
+        int numRecords = oldHeader.highestIndex() + 1;
+        long oldFileSize = oldStorageFile.length();
+
+        TournamentExtraStorage.upgrade(oldStorageFile);
+
+        assertEquals(oldFileSize + 4L * numRecords, oldStorageFile.length());
+
+        TournamentExtraStorage upgradedStorage = TournamentExtraStorage.open(oldStorageFile, DatabaseMode.READ_ONLY);
+        assertEquals(TournamentExtraHeader.DEFAULT_HEADER_VERSION, upgradedStorage.getStorageVersion());
+
+        assertEquals(55.44959, upgradedStorage.get(7).latitude(), 1e-6);
+        assertEquals(10.65779, upgradedStorage.get(7).longitude(), 1e-6);
+    }
+
+    @Test
+    public void testUpgradeMissingStorage() throws IOException {
+        File file = File.createTempFile("dummy", ".cbtt");
+        file.delete();
+
+        TournamentExtraStorage.upgrade(file);
+
+        assertTrue(file.exists());
+        TournamentExtraStorage upgradedStorage = TournamentExtraStorage.open(file, DatabaseMode.READ_ONLY);
+        assertEquals(TournamentExtraHeader.DEFAULT_HEADER_VERSION, upgradedStorage.getStorageVersion());
+        assertEquals(0, upgradedStorage.numEntries());
     }
 }

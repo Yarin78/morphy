@@ -4,6 +4,7 @@ import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.chess.GameMovesModel;
+import se.yarin.morphy.DatabaseMode;
 import se.yarin.morphy.exceptions.MorphyInvalidDataException;
 import se.yarin.morphy.exceptions.MorphyMoveDecodingException;
 import se.yarin.morphy.games.moves.MoveSerializer;
@@ -18,8 +19,7 @@ import java.nio.channels.FileChannel;
 import java.nio.file.OpenOption;
 import java.util.Set;
 
-import static java.nio.file.StandardOpenOption.READ;
-import static java.nio.file.StandardOpenOption.WRITE;
+import static java.nio.file.StandardOpenOption.*;
 
 public class MoveRepository implements BlobSizeRetriever {
 
@@ -55,34 +55,31 @@ public class MoveRepository implements BlobSizeRetriever {
         this.moveSerializer = new MoveSerializer();
     }
 
-    /**
-     * Creates an in-memory move repository initially populated with the data from the file
-     * @param file the initial data of the repository
-     * @return an in-memory move repository
-     */
-    public static MoveRepository openInMemory(@NotNull File file) throws IOException {
-        return new MoveRepository(loadInMemoryStorage(file));
+    public static MoveRepository create(@NotNull File file) throws IOException {
+        return new MoveRepository(file, Set.of(READ, WRITE, CREATE_NEW));
     }
 
     /**
-     * Opens a move repository from disk
+     * Opens a move repository from disk for read-write
      * @param file the move repository to open
      * @return the opened repository
      * @throws IOException if something went wrong when opening the repository
      */
     public static MoveRepository open(@NotNull File file) throws IOException {
-        return new MoveRepository(file, Set.of(READ, WRITE));
+        return open(file, DatabaseMode.READ_WRITE);
     }
 
     /**
      * Opens a move repository from disk
      * @param file the move repository to open
-     * @param openOptions options specifying how the repository should be opened
+     * @param mode basic operations mode (typically read-only or read-write)
      * @return the opened repository
      * @throws IOException if something went wrong when opening the repository
      */
-    public static MoveRepository open(@NotNull File file, @NotNull Set<OpenOption> openOptions) throws IOException {
-        return new MoveRepository(file, openOptions);
+    public static MoveRepository open(@NotNull File file, @NotNull DatabaseMode mode) throws IOException {
+        return mode == DatabaseMode.IN_MEMORY
+                ? new MoveRepository(loadInMemoryStorage(file))
+                : new MoveRepository(file, mode.openOptions());
     }
 
     /**

@@ -1,6 +1,7 @@
 package se.yarin.morphy.entities;
 
 import org.jetbrains.annotations.NotNull;
+import se.yarin.morphy.DatabaseMode;
 import se.yarin.util.ByteBufferUtil;
 import se.yarin.morphy.exceptions.MorphyInvalidDataException;
 import se.yarin.morphy.storage.FileItemStorage;
@@ -24,37 +25,34 @@ public class TeamIndex extends EntityIndex<Team> {
         this(new InMemoryItemStorage<>(EntityIndexHeader.empty(SERIALIZED_TEAM_SIZE)));
     }
 
+    protected TeamIndex(@NotNull File file, @NotNull Set<OpenOption> openOptions) throws IOException {
+        this(new FileItemStorage<>(
+                file, new EntityIndexSerializer(SERIALIZED_TEAM_SIZE), EntityIndexHeader.empty(SERIALIZED_TEAM_SIZE), openOptions));
+    }
+
     protected TeamIndex(ItemStorage<EntityIndexHeader, EntityNode> storage) {
         super(storage, "Team");
     }
 
     public static TeamIndex create(@NotNull File file)
             throws IOException, MorphyInvalidDataException {
-        return open(file, Set.of(READ, WRITE, CREATE_NEW));
+        return new TeamIndex(file, Set.of(READ, WRITE, CREATE_NEW));
     }
 
     public static TeamIndex open(@NotNull File file)
             throws IOException, MorphyInvalidDataException {
-        return open(file, Set.of(READ, WRITE));
+        return open(file, DatabaseMode.READ_WRITE);
     }
 
-    public static TeamIndex open(@NotNull File file, @NotNull Set<OpenOption> options)
+    public static TeamIndex open(@NotNull File file, @NotNull DatabaseMode mode)
             throws IOException, MorphyInvalidDataException {
-        return new TeamIndex(new FileItemStorage<>(
-                file, new EntityIndexSerializer(SERIALIZED_TEAM_SIZE), EntityIndexHeader.empty(SERIALIZED_TEAM_SIZE), options));
-    }
-
-    public static TeamIndex openInMemory(@NotNull File file)
-            throws IOException, MorphyInvalidDataException {
-        return openInMemory(file, Set.of(READ));
-    }
-
-    public static TeamIndex openInMemory(@NotNull File file, @NotNull Set<OpenOption> options)
-            throws IOException, MorphyInvalidDataException {
-        TeamIndex source = open(file, options);
-        TeamIndex target = new TeamIndex();
-        source.copyEntities(target);
-        return target;
+        if (mode == DatabaseMode.IN_MEMORY) {
+            TeamIndex source = open(file, DatabaseMode.READ_ONLY);
+            TeamIndex target = new TeamIndex();
+            source.copyEntities(target);
+            return target;
+        }
+        return new TeamIndex(file, mode.openOptions());
     }
 
     /**
@@ -91,5 +89,9 @@ public class TeamIndex extends EntityIndex<Team> {
         ByteBufferUtil.putByte(buf, team.season() ? 1 : 0);
         ByteBufferUtil.putIntL(buf, team.year());
         ByteBufferUtil.putByte(buf, team.nation().ordinal());
+    }
+
+    public static void upgrade(@NotNull File file) throws IOException {
+        EntityIndex.upgrade(file, new EntityIndexSerializer(SERIALIZED_TEAM_SIZE));
     }
 }

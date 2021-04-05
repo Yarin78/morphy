@@ -1,6 +1,7 @@
 package se.yarin.morphy.entities;
 
 import org.jetbrains.annotations.NotNull;
+import se.yarin.morphy.DatabaseMode;
 import se.yarin.util.ByteBufferUtil;
 import se.yarin.morphy.exceptions.MorphyInvalidDataException;
 import se.yarin.morphy.storage.FileItemStorage;
@@ -23,37 +24,34 @@ public class AnnotatorIndex extends EntityIndex<Annotator> {
         this(new InMemoryItemStorage<>(EntityIndexHeader.empty(SERIALIZED_ANNOTATOR_SIZE)));
     }
 
+    protected AnnotatorIndex(@NotNull File file, @NotNull Set<OpenOption> openOptions) throws IOException {
+        this(new FileItemStorage<>(
+                file, new EntityIndexSerializer(SERIALIZED_ANNOTATOR_SIZE), EntityIndexHeader.empty(SERIALIZED_ANNOTATOR_SIZE), openOptions));
+    }
+
     protected AnnotatorIndex(ItemStorage<EntityIndexHeader, EntityNode> storage) {
         super(storage, "Annotator");
     }
 
     public static AnnotatorIndex create(@NotNull File file)
             throws IOException, MorphyInvalidDataException {
-        return open(file, Set.of(READ, WRITE, CREATE_NEW));
+        return new AnnotatorIndex(file, Set.of(READ, WRITE, CREATE_NEW));
     }
 
     public static AnnotatorIndex open(@NotNull File file)
             throws IOException, MorphyInvalidDataException {
-        return open(file, Set.of(READ, WRITE));
+        return open(file, DatabaseMode.READ_WRITE);
     }
 
-    public static AnnotatorIndex open(@NotNull File file, @NotNull Set<OpenOption> options)
+    public static AnnotatorIndex open(@NotNull File file, @NotNull DatabaseMode mode)
             throws IOException, MorphyInvalidDataException {
-        return new AnnotatorIndex(new FileItemStorage<>(
-                file, new EntityIndexSerializer(SERIALIZED_ANNOTATOR_SIZE), EntityIndexHeader.empty(SERIALIZED_ANNOTATOR_SIZE), options));
-    }
-
-    public static AnnotatorIndex openInMemory(@NotNull File file)
-            throws IOException, MorphyInvalidDataException {
-        return openInMemory(file, Set.of(READ));
-    }
-
-    public static AnnotatorIndex openInMemory(@NotNull File file, @NotNull Set<OpenOption> options)
-            throws IOException, MorphyInvalidDataException {
-        AnnotatorIndex source = open(file, options);
-        AnnotatorIndex target = new AnnotatorIndex();
-        source.copyEntities(target);
-        return target;
+        if (mode == DatabaseMode.IN_MEMORY) {
+            AnnotatorIndex source = open(file, DatabaseMode.READ_ONLY);
+            AnnotatorIndex target = new AnnotatorIndex();
+            source.copyEntities(target);
+            return target;
+        }
+        return new AnnotatorIndex(file, mode.openOptions());
     }
 
     @Override
@@ -70,5 +68,9 @@ public class AnnotatorIndex extends EntityIndex<Annotator> {
     @Override
     protected void serialize(Annotator annotator, ByteBuffer buf) {
         ByteBufferUtil.putFixedSizeByteString(buf, annotator.name(), 45);
+    }
+
+    public static void upgrade(@NotNull File file) throws IOException {
+        EntityIndex.upgrade(file, new EntityIndexSerializer(SERIALIZED_ANNOTATOR_SIZE));
     }
 }

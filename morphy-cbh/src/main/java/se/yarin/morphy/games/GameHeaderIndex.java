@@ -2,14 +2,17 @@ package se.yarin.morphy.games;
 
 import org.immutables.value.Value;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.chess.*;
+import se.yarin.morphy.DatabaseMode;
 import se.yarin.morphy.exceptions.MorphyIOException;
 import se.yarin.morphy.exceptions.MorphyInvalidDataException;
 import se.yarin.morphy.exceptions.MorphyNotSupportedException;
-import se.yarin.morphy.storage.*;
+import se.yarin.morphy.storage.FileItemStorage;
+import se.yarin.morphy.storage.InMemoryItemStorage;
+import se.yarin.morphy.storage.ItemStorage;
+import se.yarin.morphy.storage.ItemStorageSerializer;
 import se.yarin.morphy.util.CBUtil;
 import se.yarin.util.ByteBufferUtil;
 
@@ -21,7 +24,6 @@ import java.util.EnumSet;
 import java.util.Set;
 
 import static java.nio.file.StandardOpenOption.*;
-import static se.yarin.morphy.storage.MorphyOpenOption.IGNORE_EXTENDED_STORAGE;
 import static se.yarin.morphy.storage.MorphyOpenOption.IGNORE_NON_CRITICAL_ERRORS;
 
 public class GameHeaderIndex implements ItemStorageSerializer<GameHeaderIndex.Prolog, GameHeader> {
@@ -53,26 +55,21 @@ public class GameHeaderIndex implements ItemStorageSerializer<GameHeaderIndex.Pr
 
     public static GameHeaderIndex create(@NotNull File file)
             throws IOException, MorphyInvalidDataException {
-        return open(file, Set.of(READ, WRITE, CREATE_NEW));
+        return new GameHeaderIndex(file, Set.of(READ, WRITE, CREATE_NEW));
     }
 
     public static GameHeaderIndex open(@NotNull File file) throws IOException {
-        return open(file, Set.of(READ, WRITE));
+        return open(file, DatabaseMode.READ_WRITE);
     }
 
-    public static GameHeaderIndex open(@NotNull File file, @NotNull Set<OpenOption> options) throws IOException {
-        return new GameHeaderIndex(file, options);
-    }
-
-    public static GameHeaderIndex openInMemory(@NotNull File file) throws IOException {
-        return openInMemory(file, Set.of(READ));
-    }
-
-    public static GameHeaderIndex openInMemory(@NotNull File file, @NotNull Set<OpenOption> options) throws IOException {
-        GameHeaderIndex source = open(file, options);
-        GameHeaderIndex target = new GameHeaderIndex();
-        source.copyGameHeaders(target);
-        return target;
+    public static GameHeaderIndex open(@NotNull File file, @NotNull DatabaseMode mode) throws IOException {
+        if (mode == DatabaseMode.IN_MEMORY) {
+            GameHeaderIndex source = open(file, DatabaseMode.READ_ONLY);
+            GameHeaderIndex target = new GameHeaderIndex();
+            source.copyGameHeaders(target);
+            return target;
+        }
+        return new GameHeaderIndex(file, mode.openOptions());
     }
 
     private void copyGameHeaders(GameHeaderIndex target) {

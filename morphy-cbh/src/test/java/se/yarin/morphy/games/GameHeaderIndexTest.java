@@ -5,6 +5,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import se.yarin.chess.GameResult;
+import se.yarin.morphy.DatabaseMode;
 import se.yarin.morphy.ResourceLoader;
 import se.yarin.morphy.entities.Nation;
 import se.yarin.morphy.exceptions.MorphyIOException;
@@ -72,7 +73,7 @@ public class GameHeaderIndexTest {
     @Test
     public void getSimpleGameFromInMemoryCopy() throws IOException {
         File cbh_only = ResourceLoader.materializeDatabaseStream(getClass(), "cbh_only");
-        GameHeaderIndex index = GameHeaderIndex.openInMemory(cbh_only);
+        GameHeaderIndex index = GameHeaderIndex.open(cbh_only, DatabaseMode.IN_MEMORY);
         assertEquals(4, index.count());
 
         GameHeader game1 = index.getGameHeader(1);
@@ -100,7 +101,7 @@ public class GameHeaderIndexTest {
     @Test(expected = IllegalArgumentException.class)
     public void getInvalidGameInMemory() throws IOException {
         File cbh_only = ResourceLoader.materializeDatabaseStream(getClass(), "cbh_only");
-        GameHeaderIndex index = GameHeaderIndex.openInMemory(cbh_only);
+        GameHeaderIndex index = GameHeaderIndex.open(cbh_only, DatabaseMode.IN_MEMORY);
         index.getGameHeader(5);
     }
 
@@ -323,7 +324,7 @@ public class GameHeaderIndexTest {
 
     @Test
     public void testAddGameHeaderToInMemoryIndex() throws IOException {
-        GameHeaderIndex index = GameHeaderIndex.openInMemory(gameHeaderFile);
+        GameHeaderIndex index = GameHeaderIndex.open(gameHeaderFile, DatabaseMode.IN_MEMORY);
         int oldSize = index.count();
 
         GameHeader newGame = emptyGame().withWhiteElo(2100);
@@ -342,7 +343,7 @@ public class GameHeaderIndexTest {
 
     @Test
     public void testUpdateGameHeader() throws IOException {
-        GameHeaderIndex index = GameHeaderIndex.openInMemory(gameHeaderFile);
+        GameHeaderIndex index = GameHeaderIndex.open(gameHeaderFile, DatabaseMode.IN_MEMORY);
         int oldSize = index.count();
 
         GameHeader oldGame = index.getGameHeader(3);

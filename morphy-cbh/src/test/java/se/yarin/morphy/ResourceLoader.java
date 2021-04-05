@@ -1,18 +1,15 @@
 package se.yarin.morphy;
 
-import se.yarin.morphy.games.GameIndex;
-
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.List;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 public class ResourceLoader {
     public static ByteBuffer loadResource(String resourceName) throws IOException {
@@ -88,9 +85,42 @@ public class ResourceLoader {
         return extensionFiles.get(firstMatchingExtension);
     }
 
+    public static File materializeStreamPath(Class resourceRoot, String path) throws IOException {
+        // Copies everything, recursively, in the given resource path to a temporary directory
+        // and returns a reference to the directory
+
+        File tempDir = Files.createTempDirectory(null).toFile();
+        materializeStreamPathRecursively(resourceRoot, path, tempDir);
+        return tempDir;
+    }
+
+    private static void materializeStreamPathRecursively(Class resourceRoot, String path, File tempDir) throws IOException {
+        File[] files = listResourceFiles(resourceRoot, path);
+        for (File file : files) {
+            String relativePath = path == null || path.length() == 0 ? file.getName() : (path + "/" + file.getName());
+            if (file.isDirectory()) {
+                File dir = new File(tempDir, file.getName());
+                dir.mkdir();
+                materializeStreamPathRecursively(resourceRoot, relativePath, dir);
+            } else if (file.isFile()) {
+                InputStream stream = resourceRoot.getResourceAsStream(relativePath);
+                materializeStream(stream, new File(tempDir, file.getName()));
+            }
+        }
+    }
+
+    private static File[] listResourceFiles(Class resourceRoot, String path) {
+        String rootPath = resourceRoot.getPackageName().replace(".", "/");
+        if (path != null && path.length() > 0) {
+            rootPath += "/" + path;
+        }
+        URL url = resourceRoot.getClassLoader().getResource(rootPath);
+        return new File(url.getPath()).listFiles();
+    }
+
     public static Database openWorldChDatabase() {
         try {
-            File file = ResourceLoader.materializeDatabaseStream(GameIndex.class, "World-ch", "World-ch");
+            File file = ResourceLoader.materializeDatabaseStream(Database.class, "database/World-ch", "World-ch");
             // Can't openInMemory because the serializedFilter tests only works on persistent storage
             return Database.open(file);
         } catch (IOException e) {

@@ -1,6 +1,10 @@
 package se.yarin.morphy.entities;
 
 import org.jetbrains.annotations.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import se.yarin.morphy.DatabaseMode;
+import se.yarin.morphy.games.ExtendedGameHeaderStorage;
 import se.yarin.morphy.util.CBUtil;
 import se.yarin.util.ByteBufferUtil;
 import se.yarin.chess.Date;
@@ -16,8 +20,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
-import static java.nio.file.StandardOpenOption.READ;
-import static java.nio.file.StandardOpenOption.WRITE;
+import static java.nio.file.StandardOpenOption.*;
 
 /**
  * Represents the .cbtt file containing additional Tournament information.
@@ -25,6 +28,8 @@ import static java.nio.file.StandardOpenOption.WRITE;
  * or if needed to fill up the space up until such an entry.
  */
 public class TournamentExtraStorage implements ItemStorageSerializer<TournamentExtraHeader, TournamentExtra> {
+
+    private static final Logger log = LoggerFactory.getLogger(TournamentExtraStorage.class);
 
     private final @NotNull ItemStorage<TournamentExtraHeader, TournamentExtra> storage;
 
@@ -36,7 +41,7 @@ public class TournamentExtraStorage implements ItemStorageSerializer<TournamentE
         this.storage = storage;
     }
 
-    private TournamentExtraStorage(@NotNull File file, Set<OpenOption> options) throws IOException {
+    protected TournamentExtraStorage(@NotNull File file, Set<OpenOption> options) throws IOException {
         this.storage = new FileItemStorage<>(file, this, TournamentExtraHeader.empty(), options);
 
         if (options.contains(WRITE)) {
@@ -55,23 +60,33 @@ public class TournamentExtraStorage implements ItemStorageSerializer<TournamentE
         }
     }
 
+    public static TournamentExtraStorage create(@NotNull File file) throws IOException {
+        return new TournamentExtraStorage(file, Set.of(READ, WRITE, CREATE_NEW));
+    }
+
     public static TournamentExtraStorage open(@NotNull File file) throws IOException {
-        return open(file, Set.of(READ, WRITE));
+        return open(file, DatabaseMode.READ_WRITE);
     }
 
-    public static TournamentExtraStorage open(@NotNull File file, Set<OpenOption> options) throws IOException {
-        return new TournamentExtraStorage(file, options);
+    public static TournamentExtraStorage open(@NotNull File file, DatabaseMode mode) throws IOException {
+        if (mode == DatabaseMode.IN_MEMORY) {
+            TournamentExtraStorage source = open(file, DatabaseMode.READ_ONLY);
+            TournamentExtraStorage target = new TournamentExtraStorage();
+            source.copyEntities(target);
+            return target;
+        }
+        return new TournamentExtraStorage(file, mode.openOptions());
     }
 
-    public static TournamentExtraStorage openInMemory(@NotNull File file) throws IOException {
-        return openInMemory(file, Set.of(READ));
+    static TournamentExtraHeader peekHeader(File file) throws IOException {
+        TournamentExtraStorage storage = open(file, DatabaseMode.READ_ONLY);
+        TournamentExtraHeader header = storage.storage.getHeader();
+        storage.close();
+        return header;
     }
 
-    public static TournamentExtraStorage openInMemory(@NotNull File file, Set<OpenOption> options) throws IOException {
-        TournamentExtraStorage source = open(file, options);
-        TournamentExtraStorage target = new TournamentExtraStorage();
-        source.copyEntities(target);
-        return target;
+    int getStorageVersion() {
+        return storage.getHeader().version();
     }
 
     @Override
@@ -146,17 +161,27 @@ public class TournamentExtraStorage implements ItemStorageSerializer<TournamentE
     }
 
     @Override
-    public TournamentExtra deserializeItem(int id, ByteBuffer buf) {
+    public TournamentExtra deserializeItem(int id, @NotNull ByteBuffer buf) {
+        int itemSize = storage.getHeader().recordSize();
+
         double latitude = ByteBufferUtil.getDoubleL(buf);
         double longitude = ByteBufferUtil.getDoubleL(buf);
-        buf.position(buf.position() + 34);
 
+        Date endDate = Date.unset();
         ArrayList<TiebreakRule> rules = new ArrayList<>();
-        for (int i = 0; i < 10; i++) {
-            rules.add(TiebreakRule.fromId(ByteBufferUtil.getUnsignedByte(buf)));
+        int numRules = 0;
+
+        if (itemSize >= 61) {
+            buf.position(buf.position() + 34);
+
+            for (int i = 0; i < 10; i++) {
+                rules.add(TiebreakRule.fromId(ByteBufferUtil.getUnsignedByte(buf)));
+            }
+            numRules = ByteBufferUtil.getUnsignedByte(buf);
         }
-        int numRules = ByteBufferUtil.getUnsignedByte(buf);
-        Date endDate = CBUtil.decodeDate(ByteBufferUtil.getIntL(buf));
+        if (itemSize >= 65) {
+            endDate = CBUtil.decodeDate(ByteBufferUtil.getIntL(buf));
+        }
 
         return ImmutableTournamentExtra.builder()
                 .latitude(latitude)
@@ -212,4 +237,52 @@ public class TournamentExtraStorage implements ItemStorageSerializer<TournamentE
                 .withRecordSize(targetHeader.recordSize());
         targetStorage.storage.putHeader(newHeader);
     }
+
+    public void close() {
+        this.storage.close();
+    }
+
+    /**
+     * Upgrades the extra tournament storage to the latest version if necessary
+     * If the file doesn't exist, it will be created.
+     * @param file a .cbtt file that should be upgraded, or created if missing
+     * @throws IOException if something failed during the upgrade
+     */
+    public static void upgrade(@NotNull File file) throws IOException {
+        if (!CBUtil.extension(file).equals(".cbtt")) {
+            throw new IllegalArgumentException("The extension should be .cbtt");
+        }
+        if (!file.exists()) {
+            // No need to fill up with tournaments; it's done on demand
+            TournamentExtraStorage.create(file);
+            return;
+        }
+
+        TournamentExtraHeader currentHeader = peekHeader(file);
+        if (currentHeader.version() < TournamentExtraHeader.DEFAULT_HEADER_VERSION ||
+                currentHeader.recordSize() < TournamentExtraHeader.DEFAULT_RECORD_SIZE) {
+            log.info(String.format("Upgrading tournament extra storage from version %d (item size %d) to version %d (item size %d)",
+                    currentHeader.version(), currentHeader.recordSize(),
+                    TournamentExtraHeader.DEFAULT_HEADER_VERSION, TournamentExtraHeader.DEFAULT_RECORD_SIZE));
+
+            File upgradedStorageFile = File.createTempFile(CBUtil.baseName(file), ".cbtt");
+            upgradedStorageFile.delete();
+
+            TournamentExtraStorage oldStorage = TournamentExtraStorage.open(file, DatabaseMode.READ_ONLY);
+            TournamentExtraStorage upgradedStorage = null;
+            try {
+                upgradedStorage = TournamentExtraStorage.create(upgradedStorageFile);
+                oldStorage.copyEntities(upgradedStorage);
+            } finally {
+                oldStorage.close();
+                if (upgradedStorage != null) {
+                    upgradedStorage.close();
+                }
+            }
+
+            file.delete();
+            upgradedStorageFile.renameTo(file);
+        }
+    }
+
 }

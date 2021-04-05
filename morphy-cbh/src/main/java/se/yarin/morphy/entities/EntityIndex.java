@@ -6,15 +6,24 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.morphy.exceptions.MorphyEntityIndexException;
 import se.yarin.morphy.exceptions.MorphyIOException;
+import se.yarin.morphy.exceptions.MorphyNotSupportedException;
+import se.yarin.morphy.storage.FileItemStorage;
 import se.yarin.morphy.storage.ItemStorage;
+import se.yarin.morphy.util.CBUtil;
 
+import java.io.File;
+import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
+
+import static java.nio.file.StandardOpenOption.READ;
+import static java.nio.file.StandardOpenOption.WRITE;
 
 public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
     private static final Logger log = LoggerFactory.getLogger(EntityIndex.class);
@@ -499,6 +508,60 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
         }
 
         return ValidationResult.of(cnt, 1 + Math.max(leftHeight, rightHeight));
+    }
+
+    /**
+     * Upgrades an EntityIndex to the latest version of the file format if needed
+     * If the file doesn't exist or is already on the latest version, nothing is done.
+     * @param file an entity index file
+     */
+    protected static void upgrade(@NotNull File file, @NotNull EntityIndexSerializer serializer) throws IOException {
+        if (!file.exists()) {
+            return;
+        }
+
+        FileChannel inputChannel = FileChannel.open(file.toPath(), READ);
+        FileChannel outputChannel = null;
+        File upgradedFile;
+
+        try {
+            ByteBuffer inputBuffer = ByteBuffer.allocate(serializer.serializedHeaderSize());
+            inputChannel.read(inputBuffer);
+            inputBuffer.flip();
+            EntityIndexHeader header = serializer.deserializeHeader(inputBuffer);
+
+            if (header.headerSize() == 32) {
+                // Header size indicates latest version
+                inputChannel.close();
+                return;
+            }
+
+            if (header.headerSize() != 28) {
+                throw new MorphyNotSupportedException(String.format("Unsupported header size in %s (%d)", file, header.headerSize()));
+            }
+
+            upgradedFile = File.createTempFile(CBUtil.baseName(file), CBUtil.extension(file));
+            outputChannel = FileChannel.open(upgradedFile.toPath(), WRITE);
+
+            EntityIndexHeader upgradedHeader = ImmutableEntityIndexHeader.copyOf(header).withHeaderSize(32);
+            ByteBuffer outputBuffer = ByteBuffer.allocate(serializer.serializedHeaderSize());
+            serializer.serializeHeader(upgradedHeader, outputBuffer);
+            outputBuffer.flip();
+
+            outputChannel.write(outputBuffer);
+            inputChannel.transferTo(28, file.length() - 28, outputChannel);
+        }
+        finally {
+            if (inputChannel != null) {
+                inputChannel.close();
+            }
+            if (outputChannel != null) {
+                outputChannel.close();
+            }
+        }
+
+        file.delete();
+        upgradedFile.renameTo(file);
     }
 
 }

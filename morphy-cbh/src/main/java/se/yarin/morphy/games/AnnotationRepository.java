@@ -3,13 +3,14 @@ package se.yarin.morphy.games;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import se.yarin.chess.GameMovesModel;
+import se.yarin.morphy.DatabaseMode;
 import se.yarin.morphy.games.annotations.AnnotationsSerializer;
 import se.yarin.morphy.storage.BlobSizeRetriever;
 import se.yarin.morphy.storage.BlobStorage;
 import se.yarin.morphy.storage.FileBlobStorage;
 import se.yarin.morphy.storage.InMemoryBlobStorage;
 import se.yarin.util.ByteBufferUtil;
-import se.yarin.chess.GameMovesModel;
 
 import java.io.File;
 import java.io.IOException;
@@ -18,8 +19,7 @@ import java.nio.channels.FileChannel;
 import java.nio.file.OpenOption;
 import java.util.Set;
 
-import static java.nio.file.StandardOpenOption.READ;
-import static java.nio.file.StandardOpenOption.WRITE;
+import static java.nio.file.StandardOpenOption.*;
 
 public class AnnotationRepository implements BlobSizeRetriever {
     private static final Logger log = LoggerFactory.getLogger(AnnotationRepository.class);
@@ -41,34 +41,31 @@ public class AnnotationRepository implements BlobSizeRetriever {
         this.storage = new FileBlobStorage(file, this, openOptions);
     }
 
-    /**
-     * Creates an in-memory annotation repository initially populated with the data from the file
-     * @param file the initial data of the repository
-     * @return an in-memory annotation repository
-     */
-    public static AnnotationRepository openInMemory(@NotNull File file) throws IOException {
-        return new AnnotationRepository(loadInMemoryStorage(file));
+    public static AnnotationRepository create(@NotNull File file) throws IOException {
+        return new AnnotationRepository(file, Set.of(READ, WRITE, CREATE_NEW));
     }
 
     /**
-     * Opens an annotation repository from disk
+     * Opens an annotation repository from disk for read-write
      * @param file the annotation repository to open
      * @return the opened annotation repository
      * @throws IOException if something went wrong when opening the repository
      */
     public static AnnotationRepository open(@NotNull File file) throws IOException {
-        return new AnnotationRepository(file, Set.of(READ, WRITE));
+        return open(file, DatabaseMode.READ_WRITE);
     }
 
     /**
      * Opens an annotation repository from disk
      * @param file the annotation repository to open
-     * @param openOptions options specifying how the repository should be opened
+     * @param mode basic operations mode (typically read-only or read-write)
      * @return the opened annotation repository
      * @throws IOException if something went wrong when opening the repository
      */
-    public static AnnotationRepository open(@NotNull File file, @NotNull Set<OpenOption> openOptions) throws IOException {
-        return new AnnotationRepository(file, openOptions);
+    public static AnnotationRepository open(@NotNull File file, @NotNull DatabaseMode mode) throws IOException {
+        return mode == DatabaseMode.IN_MEMORY
+                ? new AnnotationRepository(loadInMemoryStorage(file))
+                : new AnnotationRepository(file, mode.openOptions());
     }
 
     /**

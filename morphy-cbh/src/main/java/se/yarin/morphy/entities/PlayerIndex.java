@@ -3,6 +3,7 @@ package se.yarin.morphy.entities;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import se.yarin.morphy.DatabaseMode;
 import se.yarin.util.ByteBufferUtil;
 import se.yarin.morphy.exceptions.MorphyInvalidDataException;
 import se.yarin.morphy.storage.FileItemStorage;
@@ -27,37 +28,35 @@ public class PlayerIndex extends EntityIndex<Player> {
         this(new InMemoryItemStorage<>(EntityIndexHeader.empty(SERIALIZED_PLAYER_SIZE)));
     }
 
+    protected PlayerIndex(@NotNull File file, @NotNull Set<OpenOption> openOptions) throws IOException {
+        this(new FileItemStorage<>(
+                file, new EntityIndexSerializer(SERIALIZED_PLAYER_SIZE), EntityIndexHeader.empty(SERIALIZED_PLAYER_SIZE), openOptions));
+    }
+
     protected PlayerIndex(@NotNull ItemStorage<EntityIndexHeader, EntityNode> storage) {
         super(storage, "Player");
     }
 
     public static PlayerIndex create(@NotNull File file)
             throws IOException, MorphyInvalidDataException {
-        return open(file, Set.of(READ, WRITE, CREATE_NEW));
+        return new PlayerIndex(file, Set.of(READ, WRITE, CREATE_NEW));
     }
 
     public static PlayerIndex open(@NotNull File file)
             throws IOException, MorphyInvalidDataException {
-        return open(file, Set.of(READ, WRITE));
+        return open(file, DatabaseMode.READ_WRITE);
     }
 
-    public static PlayerIndex open(@NotNull File file, @NotNull Set<OpenOption> options)
+    public static PlayerIndex open(@NotNull File file, @NotNull DatabaseMode mode)
             throws IOException, MorphyInvalidDataException {
-        return new PlayerIndex(new FileItemStorage<>(
-                file, new EntityIndexSerializer(SERIALIZED_PLAYER_SIZE), EntityIndexHeader.empty(SERIALIZED_PLAYER_SIZE), options));
-    }
+        if (mode == DatabaseMode.IN_MEMORY) {
+            PlayerIndex source = open(file, DatabaseMode.READ_ONLY);
+            PlayerIndex target = new PlayerIndex();
+            source.copyEntities(target);
+            return target;
+        }
 
-    public static PlayerIndex openInMemory(@NotNull File file)
-            throws IOException, MorphyInvalidDataException {
-        return openInMemory(file, Set.of(READ));
-    }
-
-    public static PlayerIndex openInMemory(@NotNull File file, @NotNull Set<OpenOption> options)
-            throws IOException, MorphyInvalidDataException {
-        PlayerIndex source = open(file, options);
-        PlayerIndex target = new PlayerIndex();
-        source.copyEntities(target);
-        return target;
+        return new PlayerIndex(file, mode.openOptions());
     }
 
     /**
@@ -103,5 +102,9 @@ public class PlayerIndex extends EntityIndex<Player> {
     protected void serialize(@NotNull Player player, @NotNull ByteBuffer buf) {
         ByteBufferUtil.putFixedSizeByteString(buf, player.lastName(), 30);
         ByteBufferUtil.putFixedSizeByteString(buf, player.firstName(), 20);
+    }
+
+    public static void upgrade(@NotNull File file) throws IOException {
+        EntityIndex.upgrade(file, new EntityIndexSerializer(SERIALIZED_PLAYER_SIZE));
     }
 }

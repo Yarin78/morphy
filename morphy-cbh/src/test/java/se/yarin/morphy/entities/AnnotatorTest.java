@@ -4,12 +4,14 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import se.yarin.morphy.Database;
 import se.yarin.morphy.ResourceLoader;
 import se.yarin.morphy.games.GameIndex;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.List;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -22,12 +24,9 @@ public class AnnotatorTest {
 
     @Before
     public void setupEntityTest() throws IOException {
-        annotatorIndexFile = ResourceLoader.materializeStream(
-                "worldch",
-                GameIndex.class.getResourceAsStream("World-ch/World-ch.cbc"),
-                ".cbc");
+        annotatorIndexFile = ResourceLoader.materializeDatabaseStream(
+                Database.class, "database/World-ch", "World-ch", List.of(".cbc"));
     }
-
 
     @Test
     public void testAnnotatorBaseStatistics() throws IOException {

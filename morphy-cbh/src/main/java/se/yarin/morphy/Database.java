@@ -12,14 +12,11 @@ import se.yarin.morphy.util.CBUtil;
 
 import java.io.File;
 import java.io.IOException;
-import java.lang.reflect.Array;
-import java.nio.file.OpenOption;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
+import java.util.Locale;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
-import static java.nio.file.StandardOpenOption.*;
 
 /**
  * Represents a ChessBase database.
@@ -94,8 +91,39 @@ public class Database {
         this.gameTagIndex = gameTagIndex;
     }
 
+    public static Database create(@NotNull File file) throws IOException {
+        return create(file, false);
+    }
+
+    public static Database create(@NotNull File file, boolean overwrite) throws IOException {
+        if (!CBUtil.extension(file).equals(".cbh")) {
+            throw new IllegalArgumentException("The extension of the database file must be .cbh");
+        }
+        if (overwrite) {
+            Database.delete(file);
+        }
+
+        ensureNoDatabaseExists(file);
+
+        GameHeaderIndex gameHeaderIndex = GameHeaderIndex.create(file);
+        MoveRepository moveRepository = MoveRepository.create(CBUtil.fileWithExtension(file, ".cbg"));
+        AnnotationRepository annotationRepository = AnnotationRepository.create(CBUtil.fileWithExtension(file, ".cba"));
+        PlayerIndex playerIndex = PlayerIndex.create(CBUtil.fileWithExtension(file, ".cbp"));
+        TournamentIndex tournamentIndex = TournamentIndex.create(CBUtil.fileWithExtension(file, ".cbt"));
+        AnnotatorIndex annotatorIndex = AnnotatorIndex.create(CBUtil.fileWithExtension(file, ".cbc"));
+        SourceIndex sourceIndex = SourceIndex.create(CBUtil.fileWithExtension(file, ".cbs"));
+
+        ExtendedGameHeaderStorage extendedGameHeaderStorage = ExtendedGameHeaderStorage.create(CBUtil.fileWithExtension(file, ".cbj"));
+        TournamentExtraStorage tournamentExtraStorage = TournamentExtraStorage.create(CBUtil.fileWithExtension(file, ".cbtt"));
+        TeamIndex teamIndex = TeamIndex.create(CBUtil.fileWithExtension(file, ".cbe"));
+        GameTagIndex gameTagIndex = GameTagIndex.create(CBUtil.fileWithExtension(file, ".cbl"));
+
+        return new Database(gameHeaderIndex, extendedGameHeaderStorage, moveRepository, annotationRepository,
+                playerIndex, tournamentIndex, tournamentExtraStorage, annotatorIndex, sourceIndex, teamIndex, gameTagIndex);
+    }
+
     public static Database open(@NotNull File file) throws IOException {
-        return open(file, Set.of(READ, WRITE));
+        return open(file, DatabaseMode.READ_WRITE);
     }
 
     /**
@@ -105,35 +133,38 @@ public class Database {
      * It's recommended that the caller keeps a lock on the database file itself.
      *
      * @param file the database file object
+     * @param mode basic operations mode (typically read-only or read-write)
      * @return an instance of this class, representing the opened database
      * @throws IOException if an IO error occurred when opening the database; this may happen
-     * if some mandator files are missing
+     * if some mandatory files are missing
      */
-    public static Database open(@NotNull File file, @NotNull Set<OpenOption> openOptions) throws IOException {
+    public static Database open(@NotNull File file, @NotNull DatabaseMode mode) throws IOException {
         if (!CBUtil.extension(file).equals(".cbh")) {
             throw new IllegalArgumentException("The extension of the database file must be .cbh");
         }
 
-        boolean create = openOptions.contains(CREATE) || openOptions.contains(CREATE_NEW);
-        if (create && !openOptions.contains(WRITE)) {
-            throw new IllegalArgumentException("Can't create a new database in read-only mode");
-        }
-
-        if (openOptions.contains(WRITE)) {
+        if (mode == DatabaseMode.READ_WRITE) {
             // TODO: Make simple validation that all essential files exist and have size > 0
             // before attempting anything
             ExtendedGameHeaderStorage.upgrade(file);
-            // TODO: Upgrade TournamentExtra as well
+            PlayerIndex.upgrade(CBUtil.fileWithExtension(file, ".cbp"));
+            TournamentIndex.upgrade(CBUtil.fileWithExtension(file, ".cbt"));
+            AnnotatorIndex.upgrade(CBUtil.fileWithExtension(file, ".cbc"));
+            SourceIndex.upgrade(CBUtil.fileWithExtension(file, ".cbs"));
+            TeamIndex.upgrade(CBUtil.fileWithExtension(file, ".cbe"));
+            GameTagIndex.upgrade(CBUtil.fileWithExtension(file, ".cbl"));
+            TournamentExtraStorage.upgrade(CBUtil.fileWithExtension(file, ".cbtt"));
+            // TODO: MoveRepository and AnnotationRepository upgrades
         }
 
         // The mandatory files
-        GameHeaderIndex gameHeaderIndex = GameHeaderIndex.open(file, openOptions);
-        MoveRepository moveRepository = MoveRepository.open(CBUtil.fileWithExtension(file, ".cbg"), openOptions);
-        AnnotationRepository annotationRepository = AnnotationRepository.open(CBUtil.fileWithExtension(file, ".cba"), openOptions);
-        PlayerIndex playerIndex = PlayerIndex.open(CBUtil.fileWithExtension(file, ".cbp"), openOptions);
-        TournamentIndex tournamentIndex = TournamentIndex.open(CBUtil.fileWithExtension(file, ".cbt"), openOptions);
-        AnnotatorIndex annotatorIndex = AnnotatorIndex.open(CBUtil.fileWithExtension(file, ".cbc"), openOptions);
-        SourceIndex sourceIndex = SourceIndex.open(CBUtil.fileWithExtension(file, ".cbs"), openOptions);
+        GameHeaderIndex gameHeaderIndex = GameHeaderIndex.open(file, mode);
+        MoveRepository moveRepository = MoveRepository.open(CBUtil.fileWithExtension(file, ".cbg"), mode);
+        AnnotationRepository annotationRepository = AnnotationRepository.open(CBUtil.fileWithExtension(file, ".cba"), mode);
+        PlayerIndex playerIndex = PlayerIndex.open(CBUtil.fileWithExtension(file, ".cbp"), mode);
+        TournamentIndex tournamentIndex = TournamentIndex.open(CBUtil.fileWithExtension(file, ".cbt"), mode);
+        AnnotatorIndex annotatorIndex = AnnotatorIndex.open(CBUtil.fileWithExtension(file, ".cbc"), mode);
+        SourceIndex sourceIndex = SourceIndex.open(CBUtil.fileWithExtension(file, ".cbs"), mode);
 
         // Optional files. Only in very early ChessBase databases are they missing.
         // If the database is opened in read-only mode, don't create them but instead provide empty versions
@@ -142,16 +173,71 @@ public class Database {
         File cbeFile = CBUtil.fileWithExtension(file, ".cbe");
         File cblFile = CBUtil.fileWithExtension(file, ".cbl");
 
-        ExtendedGameHeaderStorage extendedGameHeaderStorage = cbjFile.exists() || create
-                ? ExtendedGameHeaderStorage.open(cbjFile, openOptions)
+        ExtendedGameHeaderStorage extendedGameHeaderStorage = cbjFile.exists()
+                ? ExtendedGameHeaderStorage.open(cbjFile, mode)
                 : new ExtendedGameHeaderStorage();
-        TournamentExtraStorage tournamentExtraStorage = cbttFile.exists() || create
-                ? TournamentExtraStorage.open(cbttFile, openOptions)
+        TournamentExtraStorage tournamentExtraStorage = cbttFile.exists()
+                ? TournamentExtraStorage.open(cbttFile, mode)
                 : new TournamentExtraStorage();
-        TeamIndex teamIndex = cbeFile.exists() || create ? TeamIndex.open(cbeFile, openOptions) : new TeamIndex();
-        GameTagIndex gameTagIndex = cblFile.exists() || create ? GameTagIndex.open(cblFile, openOptions) : new GameTagIndex();
+        TeamIndex teamIndex = cbeFile.exists() ? TeamIndex.open(cbeFile, mode) : new TeamIndex();
+        GameTagIndex gameTagIndex = cblFile.exists() ? GameTagIndex.open(cblFile, mode) : new GameTagIndex();
 
         return new Database(gameHeaderIndex, extendedGameHeaderStorage, moveRepository, annotationRepository,
                 playerIndex, tournamentIndex, tournamentExtraStorage, annotatorIndex, sourceIndex, teamIndex, gameTagIndex);
+    }
+
+    /**
+     * Ensures that there are no traces of a database with the same name
+     * @param file a file name of a database that is intended to be created
+     * @throws IOException if there are some files in the same folder as file with the same name
+     * (case insensitive, excluding extension)
+     */
+    private static void ensureNoDatabaseExists(@NotNull File file) throws IOException {
+        String baseNameLower = CBUtil.baseName(file).toLowerCase(Locale.ROOT);
+        File[] files = file.getParentFile().listFiles((dir, name) -> name.toLowerCase(Locale.ROOT).startsWith(baseNameLower));
+        if (files.length > 0) {
+            throw new IOException(String.format("Can't create a database %s because file %s exists",
+                    file.getPath(), files[0].getPath()));
+        }
+    }
+
+    /**
+     * Deletes a database from disk by deleting all database related files and subdirectories
+     * with the same basename as the given file.
+     * @param file the name of the cbh file
+     */
+    public static void delete(@NotNull File file) throws IOException {
+        file = file.getAbsoluteFile();
+        String basename = file.getName().split("\\.")[0];
+        File directory = file.getParentFile();
+        List<File> toBeDeleted = new ArrayList<>();
+
+        // Collect all files that should be deleted and verify that the process has access to delete them all
+        // before carrying out the actual delete
+        File[] files = directory.listFiles((dir, name) -> name.split("\\.")[0].equals(basename));
+        assert files != null;
+        for(File databaseFile : files) {
+            if (databaseFile.isDirectory()) {
+                File[] subFiles = databaseFile.listFiles();
+                assert subFiles != null;
+                for(File subFile : subFiles) {
+                    if (subFile.isDirectory()) {
+                        throw new IOException("Database deletion aborted; unexpected subdirectory: " + subFile);
+                    }
+                    toBeDeleted.add(subFile);
+                }
+            }
+            if (!databaseFile.canWrite()) {
+                throw new IOException("Database deletion aborted; file can't be deleted: " + databaseFile);
+            }
+
+            toBeDeleted.add(databaseFile);
+        }
+
+        for (File databaseFile : toBeDeleted) {
+            if (!databaseFile.delete()) {
+                throw new IOException("Database deletion aborted; Failed to delete " + databaseFile);
+            }
+        }
     }
 }

@@ -5,6 +5,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import se.yarin.chess.Date;
+import se.yarin.morphy.Database;
+import se.yarin.morphy.DatabaseMode;
 import se.yarin.morphy.ResourceLoader;
 import se.yarin.morphy.exceptions.MorphyInvalidDataException;
 import se.yarin.morphy.games.GameIndex;
@@ -13,8 +15,6 @@ import se.yarin.morphy.util.CBUtil;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -30,7 +30,7 @@ public class TournamentTest {
     @Before
     public void setupEntityTest() throws IOException {
         tournamentIndexFile = ResourceLoader.materializeDatabaseStream(
-                GameIndex.class, "World-ch", "World-ch", List.of(".cbt", ".cbtt"));
+                Database.class, "database/World-ch", "World-ch", List.of(".cbt", ".cbtt"));
         tournamentExtraFile = CBUtil.fileWithExtension(tournamentIndexFile, ".cbtt");
     }
 
@@ -67,8 +67,8 @@ public class TournamentTest {
 
     @Test
     public void testGetTournamentByIdInMemoryMode() throws IOException, MorphyInvalidDataException {
-        TournamentIndex tournamentIndex = TournamentIndex.openInMemory(tournamentIndexFile);
-        TournamentExtraStorage tournamentExtraStorage = TournamentExtraStorage.openInMemory(tournamentExtraFile);
+        TournamentIndex tournamentIndex = TournamentIndex.open(tournamentIndexFile, DatabaseMode.IN_MEMORY);
+        TournamentExtraStorage tournamentExtraStorage = TournamentExtraStorage.open(tournamentExtraFile, DatabaseMode.IN_MEMORY);
         Tournament t41 = tournamentIndex.get(41);
         TournamentExtra extra = tournamentExtraStorage.get(41);
         assertEquals("World-ch Tournament", t41.title());

@@ -3,6 +3,7 @@ package se.yarin.morphy.games;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import se.yarin.morphy.DatabaseMode;
 import se.yarin.morphy.ResourceLoader;
 import se.yarin.morphy.entities.Nation;
 import se.yarin.morphy.util.CBUtil;
@@ -52,7 +53,7 @@ public class ExtendedGameHeaderStorageTest {
     @Test
     public void getItemInMemory() throws IOException {
         File cbh_cbj = ResourceLoader.materializeDatabaseStream(getClass(), "cbh_cbj_test", List.of(".cbj"));
-        ExtendedGameHeaderStorage index = ExtendedGameHeaderStorage.openInMemory(cbh_cbj);
+        ExtendedGameHeaderStorage index = ExtendedGameHeaderStorage.open(cbh_cbj, DatabaseMode.IN_MEMORY);
         assertEquals(4, index.count());
 
         ExtendedGameHeader game1 = index.get(1);
@@ -76,7 +77,7 @@ public class ExtendedGameHeaderStorageTest {
     @Test(expected = IllegalArgumentException.class)
     public void getInvalidGameInMemory() throws IOException {
         File cbh_cbj = ResourceLoader.materializeDatabaseStream(getClass(), "cbh_cbj_test", List.of(".cbj"));
-        ExtendedGameHeaderStorage index = ExtendedGameHeaderStorage.openInMemory(cbh_cbj);
+        ExtendedGameHeaderStorage index = ExtendedGameHeaderStorage.open(cbh_cbj, DatabaseMode.IN_MEMORY);
         index.get(5);
     }
 

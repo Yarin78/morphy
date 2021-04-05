@@ -1,6 +1,7 @@
 package se.yarin.morphy.entities;
 
 import org.jetbrains.annotations.NotNull;
+import se.yarin.morphy.DatabaseMode;
 import se.yarin.util.ByteBufferUtil;
 import se.yarin.morphy.exceptions.MorphyInvalidDataException;
 import se.yarin.morphy.storage.FileItemStorage;
@@ -23,37 +24,34 @@ public class GameTagIndex extends EntityIndex<GameTag> {
         this(new InMemoryItemStorage<>(EntityIndexHeader.empty(SERIALIZED_GAME_TAG_SIZE)));
     }
 
+    protected GameTagIndex(@NotNull File file, @NotNull Set<OpenOption> openOptions) throws IOException {
+        this(new FileItemStorage<>(
+                file, new EntityIndexSerializer(SERIALIZED_GAME_TAG_SIZE), EntityIndexHeader.empty(SERIALIZED_GAME_TAG_SIZE), openOptions));
+    }
+
     protected GameTagIndex(ItemStorage<EntityIndexHeader, EntityNode> storage) {
         super(storage, "GameTag");
     }
 
     public static GameTagIndex create(@NotNull File file)
             throws IOException, MorphyInvalidDataException {
-        return open(file, Set.of(READ, WRITE, CREATE_NEW));
+        return new GameTagIndex(file, Set.of(READ, WRITE, CREATE_NEW));
     }
 
     public static GameTagIndex open(@NotNull File file)
             throws IOException, MorphyInvalidDataException {
-        return open(file, Set.of(READ, WRITE));
+        return open(file, DatabaseMode.READ_WRITE);
     }
 
-    public static GameTagIndex open(@NotNull File file, @NotNull Set<OpenOption> options)
+    public static GameTagIndex open(@NotNull File file, @NotNull DatabaseMode mode)
             throws IOException, MorphyInvalidDataException {
-        return new GameTagIndex(new FileItemStorage<>(
-                file, new EntityIndexSerializer(SERIALIZED_GAME_TAG_SIZE), EntityIndexHeader.empty(SERIALIZED_GAME_TAG_SIZE), options));
-    }
-
-    public static GameTagIndex openInMemory(@NotNull File file)
-            throws IOException, MorphyInvalidDataException {
-        return openInMemory(file, Set.of(READ));
-    }
-
-    public static GameTagIndex openInMemory(@NotNull File file, @NotNull Set<OpenOption> options)
-            throws IOException, MorphyInvalidDataException {
-        GameTagIndex source = open(file, options);
-        GameTagIndex target = new GameTagIndex();
-        source.copyEntities(target);
-        return target;
+        if (mode == DatabaseMode.IN_MEMORY) {
+            GameTagIndex source = open(file, DatabaseMode.READ_ONLY);
+            GameTagIndex target = new GameTagIndex();
+            source.copyEntities(target);
+            return target;
+        }
+        return new GameTagIndex(file, mode.openOptions());
     }
 
 
@@ -97,5 +95,9 @@ public class GameTagIndex extends EntityIndex<GameTag> {
         ByteBufferUtil.putFixedSizeByteString(buf, gameTag.dutchTitle(), 200);
         ByteBufferUtil.putFixedSizeByteString(buf, gameTag.slovenianTitle(), 200);
         ByteBufferUtil.putFixedSizeByteString(buf, gameTag.resTitle(), 200);
+    }
+
+    public static void upgrade(@NotNull File file) throws IOException {
+        EntityIndex.upgrade(file, new EntityIndexSerializer(SERIALIZED_GAME_TAG_SIZE));
     }
 }

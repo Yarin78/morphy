@@ -1,6 +1,7 @@
 package se.yarin.morphy.entities;
 
 import org.jetbrains.annotations.NotNull;
+import se.yarin.morphy.DatabaseMode;
 import se.yarin.morphy.util.CBUtil;
 import se.yarin.util.ByteBufferUtil;
 import se.yarin.morphy.exceptions.MorphyInvalidDataException;
@@ -23,37 +24,34 @@ public class SourceIndex extends EntityIndex<Source> {
         this(new InMemoryItemStorage<>(EntityIndexHeader.empty(SERIALIZED_SOURCE_SIZE)));
     }
 
+    protected SourceIndex(@NotNull File file, @NotNull Set<OpenOption> openOptions) throws IOException {
+        this(new FileItemStorage<>(
+                file, new EntityIndexSerializer(SERIALIZED_SOURCE_SIZE), EntityIndexHeader.empty(SERIALIZED_SOURCE_SIZE), openOptions));
+    }
+
     protected SourceIndex(ItemStorage<EntityIndexHeader, EntityNode> storage) {
         super(storage, "Source");
     }
 
     public static SourceIndex create(@NotNull File file)
             throws IOException, MorphyInvalidDataException {
-        return open(file, Set.of(READ, WRITE, CREATE_NEW));
+        return new SourceIndex(file, Set.of(READ, WRITE, CREATE_NEW));
     }
 
     public static SourceIndex open(@NotNull File file)
             throws IOException, MorphyInvalidDataException {
-        return open(file, Set.of(READ, WRITE));
+        return open(file, DatabaseMode.READ_WRITE);
     }
 
-    public static SourceIndex open(@NotNull File file, @NotNull Set<OpenOption> options)
+    public static SourceIndex open(@NotNull File file, @NotNull DatabaseMode mode)
             throws IOException, MorphyInvalidDataException {
-        return new SourceIndex(new FileItemStorage<>(
-                file, new EntityIndexSerializer(SERIALIZED_SOURCE_SIZE), EntityIndexHeader.empty(SERIALIZED_SOURCE_SIZE), options));
-    }
-
-    public static SourceIndex openInMemory(@NotNull File file)
-            throws IOException, MorphyInvalidDataException {
-        return openInMemory(file, Set.of(READ));
-    }
-
-    public static SourceIndex openInMemory(@NotNull File file, @NotNull Set<OpenOption> options)
-            throws IOException, MorphyInvalidDataException {
-        SourceIndex source = open(file, options);
-        SourceIndex target = new SourceIndex();
-        source.copyEntities(target);
-        return target;
+        if (mode == DatabaseMode.IN_MEMORY) {
+            SourceIndex source = open(file, DatabaseMode.READ_ONLY);
+            SourceIndex target = new SourceIndex();
+            source.copyEntities(target);
+            return target;
+        }
+        return new SourceIndex(file, mode.openOptions());
     }
 
     @Override
@@ -80,5 +78,9 @@ public class SourceIndex extends EntityIndex<Source> {
         ByteBufferUtil.putIntL(buf, CBUtil.encodeDate(source.date()));
         ByteBufferUtil.putByte(buf, source.version());
         ByteBufferUtil.putByte(buf, source.quality().ordinal());
+    }
+
+    public static void upgrade(@NotNull File file) throws IOException {
+        EntityIndex.upgrade(file, new EntityIndexSerializer(SERIALIZED_SOURCE_SIZE));
     }
 }

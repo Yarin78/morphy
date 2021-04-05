@@ -4,21 +4,17 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import se.yarin.morphy.DatabaseMode;
 import se.yarin.morphy.ResourceLoader;
 import se.yarin.morphy.exceptions.MorphyIOException;
 import se.yarin.morphy.exceptions.MorphyNotSupportedException;
 import se.yarin.morphy.games.GameIndex;
-import se.yarin.morphy.storage.MorphyOpenOption;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.OpenOption;
 import java.util.List;
-import java.util.Set;
 import java.util.stream.Collectors;
 
-import static java.nio.file.StandardOpenOption.READ;
-import static java.nio.file.StandardOpenOption.WRITE;
 import static org.junit.Assert.*;
 
 public class PlayerTest {
@@ -77,13 +73,13 @@ public class PlayerTest {
 
     @Test
     public void testGetInvalidPlayerByIdInSafeMode() throws IOException {
-        PlayerIndex playerIndex = PlayerIndex.open(playerIndexFile, Set.of(READ, MorphyOpenOption.IGNORE_NON_CRITICAL_ERRORS));
+        PlayerIndex playerIndex = PlayerIndex.open(playerIndexFile, DatabaseMode.READ_REPAIR);
         assertEquals("", playerIndex.get(1000000).getFullName());
     }
 
     @Test(expected = MorphyIOException.class)
     public void testGetInvalidPlayerByIdInStrictMode() throws IOException {
-        PlayerIndex playerIndex = PlayerIndex.open(playerIndexFile, Set.of(READ));
+        PlayerIndex playerIndex = PlayerIndex.open(playerIndexFile, DatabaseMode.READ_ONLY);
         playerIndex.get(1000000);
     }
 
@@ -310,21 +306,21 @@ public class PlayerTest {
 
     @Test
     public void testOpenIndexWithSmallHeader() throws IOException {
-        PlayerIndex playerIndex = PlayerIndex.open(playerIndexSmallHeaderFile, Set.of(READ));
+        PlayerIndex playerIndex = PlayerIndex.open(playerIndexSmallHeaderFile, DatabaseMode.READ_ONLY);
         assertEquals(28, playerIndex.storageHeader().headerSize());
-
-        Player player = playerIndex.get(0);
-        System.out.println(player.getFullName());
+        assertEquals(169, playerIndex.count());
+        Player player = playerIndex.get(5);
+        assertEquals("Geller, Efim", player.getFullName());
     }
 
     @Test(expected = MorphyNotSupportedException.class)
     public void testOpenIndexWithSmallHeaderForWrite() throws IOException {
-        PlayerIndex.open(playerIndexSmallHeaderFile, Set.of(READ, WRITE));
+        PlayerIndex.open(playerIndexSmallHeaderFile);
     }
 
     @Test
     public void testInMemoryStorage() throws IOException {
-        PlayerIndex playerIndex = PlayerIndex.openInMemory(playerIndexFile, Set.of(READ));
+        PlayerIndex playerIndex = PlayerIndex.open(playerIndexFile, DatabaseMode.IN_MEMORY);
         assertEquals(playerIndex.count(), playerIndex.getAll().size());
     }
 
@@ -350,6 +346,25 @@ public class PlayerTest {
         playerIndex = PlayerIndex.open(file);
         Player player = playerIndex.get(1);
         assertEquals(Player.of("Karjakin", "Sergey"), player);
+    }
+
+    @Test
+    public void upgradeIndexWithSmallHeader() throws IOException {
+        long oldLength = playerIndexSmallHeaderFile.length();
+        PlayerIndex playerIndex = PlayerIndex.open(playerIndexSmallHeaderFile, DatabaseMode.READ_ONLY);
+        assertEquals(28, playerIndex.storageHeader().headerSize());
+        assertEquals(169, playerIndex.count());
+        assertEquals("Geller, Efim", playerIndex.get(5).getFullName());
+        playerIndex.close();
+
+        PlayerIndex.upgrade(playerIndexSmallHeaderFile);
+
+        assertEquals(4 + oldLength, playerIndexSmallHeaderFile.length());
+        playerIndex = PlayerIndex.open(playerIndexSmallHeaderFile, DatabaseMode.READ_ONLY);
+        assertEquals(32, playerIndex.storageHeader().headerSize());
+        assertEquals(169, playerIndex.count());
+        assertEquals("Geller, Efim", playerIndex.get(5).getFullName());
+        playerIndex.close();
     }
 
     @Test
