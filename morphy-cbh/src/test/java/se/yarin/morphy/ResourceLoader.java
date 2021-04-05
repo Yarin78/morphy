@@ -10,6 +10,9 @@ import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class ResourceLoader {
     public static ByteBuffer loadResource(String resourceName) throws IOException {
@@ -44,37 +47,39 @@ public class ResourceLoader {
         return file;
     }
 
-    public static File materializeDatabaseStream(Class resourceRoot, String baseName) throws IOException {
-        return materializeDatabaseStream(resourceRoot, baseName, Files.createTempDirectory(baseName).toFile(), baseName);
+    public static File materializeDatabaseStream(Class resourceRoot, String databaseName) throws IOException {
+        return materializeDatabaseStream(resourceRoot, "", databaseName, Database.ALL_EXTENSIONS);
     }
 
-    public static File materializeDatabaseStream(Class resourceRoot, String baseName, String[] extensions) throws IOException {
-        return materializeDatabaseStream(resourceRoot, baseName, Files.createTempDirectory(baseName).toFile(), baseName, extensions);
+    public static File materializeDatabaseStream(Class resourceRoot, String databaseName, List<String> extensions) throws IOException {
+        return materializeDatabaseStream(resourceRoot, "", databaseName, extensions);
     }
 
-    public static File materializeDatabaseStream(Class resourceRoot, String resourceNameRoot, File targetDirectory, String targetNameBase) throws IOException {
-        // TODO: Make Database.openInMemory work directly with streams (BaseLocator/BaseLoader pattern?)
-        return materializeDatabaseStream(resourceRoot, resourceNameRoot, targetDirectory, targetNameBase,
-                new String[] {
-                        // Database files
-                        ".cbh", ".cbg", ".cba", ".cbp", ".cbt", ".cbtt", ".cbc", ".cbs", ".cbj", ".cbe", ".cbl", ".cbm",
-                        // Search Boosters
-                        ".cbb", ".cbgi", ".cit", ".cib", ".cit2", ".cib2"
-                });
+    public static File materializeDatabaseStream(Class resourceRoot, String parentPath, String databaseName) throws IOException {
+        return materializeDatabaseStream(resourceRoot, parentPath, databaseName, Database.ALL_EXTENSIONS);
     }
 
-    public static File materializeDatabaseStream(Class resourceRoot, String resourceNameRoot, File targetDirectory, String targetNameBase, String[] extensions) throws IOException {
+    public static File materializeDatabaseStream(Class resourceRoot, String parentPath, String databaseName, List<String> extensions) throws IOException {
+        if (databaseName.contains("/") || databaseName.contains(".")) {
+            throw new IllegalArgumentException("Database name should not contain paths or extension");
+        }
+        if (parentPath == null) {
+            parentPath = "";
+        } else if (parentPath.length() > 0 && !parentPath.endsWith("/")) {
+            parentPath += "/";
+        }
+
+        File targetDirectory = Files.createTempDirectory(databaseName).toFile();
+
         HashMap<String, File> extensionFiles = new HashMap<>();
         String firstMatchingExtension = null;
         for (String extension : extensions) {
-            InputStream inputStream = resourceRoot.getResourceAsStream(resourceNameRoot + extension);
+            InputStream inputStream = resourceRoot.getResourceAsStream(parentPath + databaseName + extension);
             if (inputStream != null) {
                 if (firstMatchingExtension == null) {
                     firstMatchingExtension = extension;
                 }
-                extensionFiles.put(extension,
-                        materializeStream(inputStream,
-                                new File(targetDirectory, targetNameBase + extension)));
+                extensionFiles.put(extension, materializeStream(inputStream, new File(targetDirectory, databaseName + extension)));
             }
         }
         if (firstMatchingExtension == null) {
@@ -85,12 +90,7 @@ public class ResourceLoader {
 
     public static Database openWorldChDatabase() {
         try {
-            Path worldChPath = Files.createTempDirectory("worldch");
-            File file = ResourceLoader.materializeDatabaseStream(
-                    GameIndex.class,
-                    "World-ch/World-ch",
-                    worldChPath.toFile(),
-                    "World-ch");
+            File file = ResourceLoader.materializeDatabaseStream(GameIndex.class, "World-ch", "World-ch");
             // Can't openInMemory because the serializedFilter tests only works on persistent storage
             return Database.open(file);
         } catch (IOException e) {

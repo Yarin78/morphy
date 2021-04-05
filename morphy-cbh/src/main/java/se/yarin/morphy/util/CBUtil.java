@@ -209,8 +209,12 @@ public final class CBUtil {
         return extensionStart < 0 ? name : name.substring(0, extensionStart);
     }
 
+    /**
+     * Gets a normalized (lower case) version of the extension of a file
+     * @param file the file to get the extension
+     * @return the file extension, including the period
+     */
     public static String extension(File file) {
-        // Gets a normalized (lower case) version of the extension of the file
         int extensionStart = file.getPath().lastIndexOf(".");
         if (extensionStart < 0) {
             throw new IllegalArgumentException("The file must have an extension");

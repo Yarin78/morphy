@@ -9,6 +9,7 @@ import se.yarin.morphy.util.CBUtil;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.List;
 
 import static org.junit.Assert.*;
 
@@ -33,7 +34,7 @@ public class ExtendedGameHeaderStorageTest {
 
     @Test
     public void getItem() throws IOException {
-        File cbh_cbj = ResourceLoader.materializeDatabaseStream(getClass(), "cbh_cbj_test", new String[] { ".cbj" });
+        File cbh_cbj = ResourceLoader.materializeDatabaseStream(getClass(), "cbh_cbj_test", List.of(".cbj"));
         ExtendedGameHeaderStorage index = ExtendedGameHeaderStorage.open(cbh_cbj);
         assertEquals(4, index.count());
 
@@ -50,7 +51,7 @@ public class ExtendedGameHeaderStorageTest {
 
     @Test
     public void getItemInMemory() throws IOException {
-        File cbh_cbj = ResourceLoader.materializeDatabaseStream(getClass(), "cbh_cbj_test", new String[] { ".cbj" });
+        File cbh_cbj = ResourceLoader.materializeDatabaseStream(getClass(), "cbh_cbj_test", List.of(".cbj"));
         ExtendedGameHeaderStorage index = ExtendedGameHeaderStorage.openInMemory(cbh_cbj);
         assertEquals(4, index.count());
 
@@ -67,14 +68,14 @@ public class ExtendedGameHeaderStorageTest {
 
     @Test(expected = IllegalArgumentException.class)
     public void getInvalidGame() throws IOException {
-        File cbh_cbj = ResourceLoader.materializeDatabaseStream(getClass(), "cbh_cbj_test", new String[] { ".cbj" });
+        File cbh_cbj = ResourceLoader.materializeDatabaseStream(getClass(), "cbh_cbj_test", List.of(".cbj"));
         ExtendedGameHeaderStorage index = ExtendedGameHeaderStorage.open(cbh_cbj);
         index.get(5);
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void getInvalidGameInMemory() throws IOException {
-        File cbh_cbj = ResourceLoader.materializeDatabaseStream(getClass(), "cbh_cbj_test", new String[] { ".cbj" });
+        File cbh_cbj = ResourceLoader.materializeDatabaseStream(getClass(), "cbh_cbj_test", List.of(".cbj"));
         ExtendedGameHeaderStorage index = ExtendedGameHeaderStorage.openInMemory(cbh_cbj);
         index.get(5);
     }

@@ -29,14 +29,8 @@ public class TournamentTest {
 
     @Before
     public void setupEntityTest() throws IOException {
-        Path worldChPath = Files.createTempDirectory("worldch");
-
         tournamentIndexFile = ResourceLoader.materializeDatabaseStream(
-                GameIndex.class,
-                "World-ch/World-ch",
-                worldChPath.toFile(),
-                "World-ch", new String[] { ".cbt", ".cbtt"});
-
+                GameIndex.class, "World-ch", "World-ch", List.of(".cbt", ".cbtt"));
         tournamentExtraFile = CBUtil.fileWithExtension(tournamentIndexFile, ".cbtt");
     }
 
