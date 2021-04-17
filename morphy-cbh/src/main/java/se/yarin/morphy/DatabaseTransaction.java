@@ -32,25 +32,23 @@ import static se.yarin.morphy.games.GameLoader.*;
 public class DatabaseTransaction {
     private static final Logger log = LoggerFactory.getLogger(DatabaseTransaction.class);
 
-    private @NotNull Database database;
+    private final @NotNull Database database;
 
     private int currentGameCount;
-    private long currentMoveOffset;
-    private long currentAnnotationOffset;
 
     class GameData {
-        public @NotNull GameHeader gameHeader;
-        public @NotNull ExtendedGameHeader extendedGameHeader;
+        public ImmutableGameHeader.@NotNull Builder gameHeader;
+        public ImmutableExtendedGameHeader.@NotNull Builder extendedGameHeader;
         public @NotNull ByteBuffer moveBlob;
         public @Nullable ByteBuffer annotationBlob;
-
+/*
         public @NotNull Game game() {
-            return new Game(database, gameHeader, extendedGameHeader);
+            return new Game(database, gameHeader.build(), extendedGameHeader.build());
         }
-
+*/
         public GameData(
-                @NotNull GameHeader gameHeader,
-                @NotNull ExtendedGameHeader extendedGameHeader,
+                @NotNull ImmutableGameHeader.Builder gameHeader,
+                @NotNull ImmutableExtendedGameHeader.Builder extendedGameHeader,
                 @NotNull ByteBuffer moveBlob,
                 @Nullable ByteBuffer annotationBlob) {
             this.gameHeader = gameHeader;
@@ -79,8 +77,6 @@ public class DatabaseTransaction {
     public DatabaseTransaction(@NotNull Database database) {
         this.database = database;
         this.currentGameCount = database.gameHeaderIndex().count();
-        this.currentMoveOffset = database.moveRepository().getStorage().getSize();
-        this.currentAnnotationOffset = database.annotationRepository().getStorage().getSize();
 
         this.playerTransaction = database.playerIndex().beginTransaction();
         this.tournamentTransaction = database.tournamentIndex().beginTransaction();
@@ -97,13 +93,24 @@ public class DatabaseTransaction {
         this.gameTagDelta = new EntityDelta<>((game, gameTagId) -> game.gameTagId() == gameTagId);
     }
 
+    public void updatePlayerById(int id, @NotNull Player player) {
+        Player oldPlayer = playerTransaction.get(id);
+        // We must not update the count and firstGameId as it would get incorrect when committing the transaction
+        player = ImmutablePlayer.builder().from(player).count(oldPlayer.count()).firstGameId(oldPlayer.firstGameId()).build();
+        playerTransaction.putEntityById(id, player);
+    }
+
+    public <T extends Entity & Comparable<T>> void updateEntityByKey(T entity) {
+
+    }
+
     public @NotNull Game getGame(int id) {
         GameData updatedGame = updatedGames.get(id);
         GameHeader gameHeader;
         ExtendedGameHeader extendedGameHeader;
         if (updatedGame != null) {
-            gameHeader = updatedGame.gameHeader;
-            extendedGameHeader = updatedGame.extendedGameHeader;
+            gameHeader = updatedGame.gameHeader.build();
+            extendedGameHeader = updatedGame.extendedGameHeader.build();
         } else {
             gameHeader = database.gameHeaderIndex().getGameHeader(id);
             ExtendedGameHeaderStorage storage = database.extendedGameHeaderStorage();
@@ -178,118 +185,82 @@ public class DatabaseTransaction {
         Game previousGame = null;
         if (gameId == 0) {
             // Adding a new game
-            gameId = currentGameCount + 1;
             currentGameCount += 1;
-            gameHeaderBuilder.movesOffset((int) currentMoveOffset);
-            extendedGameHeaderBuilder.movesOffset(currentMoveOffset);
-            currentMoveOffset += movesBlob.limit();
-            if (annotationsBlob != null) {
-                gameHeaderBuilder.annotationOffset((int) currentAnnotationOffset);
-                extendedGameHeaderBuilder.annotationOffset(currentAnnotationOffset);
-                currentAnnotationOffset += annotationsBlob.limit();
-            } else {
-                gameHeaderBuilder.annotationOffset(0);
-                extendedGameHeaderBuilder.annotationOffset(0);
-            }
+            gameId = currentGameCount;
+
+            // These will be set later during the commit phase
+            gameHeaderBuilder.annotationOffset(0);
+            extendedGameHeaderBuilder.annotationOffset(0);
         } else {
-            // Get old moves and optionally annotation offsets from the original storage
-            Game oldGame = database.getGame(gameId);
             // But entity statistics are updated based on the last version in this transaction
             previousGame = getGame(gameId);
-            long movesOffset = oldGame.getMovesOffset();
-            gameHeaderBuilder.movesOffset((int) movesOffset);
-            extendedGameHeaderBuilder.movesOffset(movesOffset);
-
-            long annotationsOffset = oldGame.getAnnotationOffset();
-            // If the new game has annotations, but we're replacing a game without annotations,
-            // the annotation offset is deduced from the next annotation game in the database
-            if (annotationsOffset == 0 && annotationsBlob != null) {
-                int nextAnnotatedGameId = findNextGameIdWithAnnotations(gameId + 1);
-                if (nextAnnotatedGameId == 0) {
-                    // There is no next annotated game; annotation goes to the end of the annotation repository
-                    annotationsOffset = database.annotationRepository().getStorage().getSize();
-                } else {
-                    annotationsOffset = getGame(nextAnnotatedGameId).getAnnotationOffset();
-                }
-            }
-            if (annotationsOffset > 0) {
-                if (annotationsBlob == null) {
-                    // Annotations are being removed from a game
-                    annotationsOffset = 0;
-                }
-            }
-            gameHeaderBuilder.annotationOffset((int) annotationsOffset);
-            extendedGameHeaderBuilder.annotationOffset(annotationsOffset);
         }
 
-        ImmutableGameHeader gameHeader = gameHeaderBuilder.build();
-        ImmutableExtendedGameHeader extendedGameHeader = extendedGameHeaderBuilder.build();
-
-        updatedGames.put(gameId, new GameData(gameHeader, extendedGameHeader, movesBlob, annotationsBlob));
+        updatedGames.put(gameId, new GameData(gameHeaderBuilder, extendedGameHeaderBuilder, movesBlob, annotationsBlob));
         updateEntityStats(gameId, previousGame, gameHeaderBuilder.build(), extendedGameHeaderBuilder.build());
 
         return gameId;
     }
 
-    int findNextGameIdWithAnnotations(int gameId) {
+    long findNextAnnotationOffset(int gameId) {
         // In practice it does not matter if we check the original games or the updates ones in the transaction
         // The same annotation offset will be deduce regardless
         int gameCount = database.gameHeaderIndex().count();
         // NOTE: This could be optimized with a low-level search
         while (gameId <= gameCount) {
-            if (database.getGame(gameId).getAnnotationOffset() > 0) {
-                return gameId;
+            long annotationOffset = database.getGame(gameId).getAnnotationOffset();
+            if (annotationOffset > 0) {
+                return annotationOffset;
             }
             gameId += 1;
         }
         return 0;
     }
 
+
     public void commit() {
         // TODO: Get write lock
-
-        long moveOffsetAdjust = 0, annotationOffsetAdjust = 0;
-        long moveGapDelta = 0, annotationGapDelta = 0;
 
         // Before inserting any games, remove old blobs and if necessary make room in moves and annotations repository
         int oldGameCount = database.gameHeaderIndex().count();
         List<Integer> updatedGameIds = new ArrayList<>(updatedGames.keySet());
         for (int gameId : updatedGameIds) {
             if (gameId > oldGameCount) {
-                // Only games being replaced before the last game could be the cause of
-                // having to insert bytes in the moves/annotations repositories
+                // Only replaced games could be the cause of having to insert bytes in the moves/annotations repositories
                 break;
             }
             GameData updatedGameData = updatedGames.get(gameId);
             Game originalGame = database.getGame(gameId);
 
-            // Invariant: The move and annotation offset in updatedGameData is accurate an in accordance with
-            // originalGame, with the only exception that annotationOffset might be 0 in the old game _or_ the new game
-            // depending on if annotations were added or removed
-            assert updatedGameData.extendedGameHeader.movesOffset() == originalGame.getMovesOffset();
-            assert updatedGameData.extendedGameHeader.annotationOffset() == originalGame.getAnnotationOffset() ||
-                    originalGame.getAnnotationOffset() == 0 || updatedGameData.extendedGameHeader.annotationOffset() == 0;
-
             // Check if the new moves and annotations data will fit
             // Note: We're actually checking if the data is less than or equal to the game it's replacing;
-            // if there is a gap behind this game we're not taking advantage of that (would be easy to do for moves,
-            // a bit harder/less efficient for annotations)
-            long movesOffset = updatedGameData.extendedGameHeader.movesOffset();
-            long annotationOffset = updatedGameData.extendedGameHeader.annotationOffset();
+            // if there is a gap behind this game we're not taking advantage of that
+            // (would be easy to do for moves, a bit harder/less efficient for annotations)
 
             int oldMovesBlobSize = database.moveRepository().removeMovesBlob(originalGame.getMovesOffset());
             int newMovesBlobSize = updatedGameData.moveBlob.limit();
             int movesBlobSizeDelta = newMovesBlobSize - oldMovesBlobSize;
-            if (movesBlobSizeDelta < 0) {
-                moveGapDelta -= movesBlobSizeDelta;
-            }
 
             int oldAnnotationsBlobSize = database.annotationRepository().removeAnnotationsBlob(originalGame.getAnnotationOffset());
             int newAnnotationsBlobSize = updatedGameData.annotationBlob != null ? updatedGameData.annotationBlob.limit() : 0;
             int annotationsBlobSizeDelta = newAnnotationsBlobSize - oldAnnotationsBlobSize;
-            if (annotationsBlobSizeDelta < 0) {
-                annotationGapDelta -= annotationsBlobSizeDelta;
+
+            // Update the game data with the actual moves and annotation offsets
+            long movesOffset = originalGame.getMovesOffset();
+            long annotationOffset = originalGame.getAnnotationOffset();
+            if (newAnnotationsBlobSize > 0 && annotationOffset == 0) {
+                annotationOffset = findNextAnnotationOffset(gameId);
             }
+            if (newAnnotationsBlobSize == 0) {
+                annotationOffset = 0;
+            }
+
+            updatedGameData.gameHeader
+                .movesOffset((int) movesOffset)
+                .annotationOffset((int) annotationOffset);
+            updatedGameData.extendedGameHeader
+                .movesOffset(movesOffset)
+                .annotationOffset((int) annotationOffset);
 
             if (movesBlobSizeDelta > 0 || annotationsBlobSizeDelta > 0) {
                 // It doesn't fit, we need to shift the entire move and/or annotation repository :(
@@ -326,49 +297,43 @@ public class DatabaseTransaction {
                                     .annotationOffset(newAnnotationOffset)
                                     .build());
                 }
-
-                // Shift them in all updated games in the transaction not yet processed
-                // Note: This entire loop should not be necessary if we keep accumulated shifted offsets
-                for (int i : updatedGameIds) {
-                    if (i > gameId) {
-                        GameHeader oldHeader = updatedGames.get(i).gameHeader;
-                        ExtendedGameHeader oldExtendedHeader = updatedGames.get(i).extendedGameHeader;
-                        int newMovesOffset = oldHeader.movesOffset() + movesBlobSizeDelta;
-                        int newAnnotationOffset = oldHeader.annotationOffset() == 0 ? 0 : (oldHeader.annotationOffset() + annotationsBlobSizeDelta);
-                        updatedGames.get(i).gameHeader =
-                                ImmutableGameHeader.builder()
-                                        .from(oldHeader)
-                                        .movesOffset(newMovesOffset)
-                                        .annotationOffset(newAnnotationOffset)
-                                        .build();
-                        updatedGames.get(i).extendedGameHeader =
-                                ImmutableExtendedGameHeader.builder()
-                                        .from(oldExtendedHeader)
-                                        .movesOffset(newMovesOffset)
-                                        .annotationOffset(newAnnotationOffset)
-                                        .build();
-                    }
-                }
             }
         }
 
+        // TODO: Merge this for-loop with the previous one, should be possible
         int gameCount = database.gameHeaderIndex().count();
         for (int gameId : updatedGames.keySet()) {
-            GameData updatedGame = updatedGames.get(gameId);
+            GameData updatedGameData = updatedGames.get(gameId);
             if (gameId > gameCount) {
+                long movesOffset = database.moveRepository().putMovesBlob(0, updatedGameData.moveBlob);
+                long annotationsOffset = updatedGameData.annotationBlob != null ?
+                    database.annotationRepository().putAnnotationsBlob(0, updatedGameData.annotationBlob) : 0;
+
+                ImmutableGameHeader gameHeader = updatedGameData.gameHeader
+                        .movesOffset((int) movesOffset)
+                        .annotationOffset((int) annotationsOffset)
+                        .build();
+                ImmutableExtendedGameHeader extendedGameHeader = updatedGameData.extendedGameHeader
+                        .movesOffset(movesOffset)
+                        .annotationOffset((int) annotationsOffset)
+                        .build();
+
                 assert gameId == gameCount + 1;
-                int id = database.gameHeaderIndex().add(updatedGame.gameHeader);
+                int id = database.gameHeaderIndex().add(gameHeader);
                 assert gameId == id;
-                database.extendedGameHeaderStorage().put(gameId, updatedGame.extendedGameHeader);
+                database.extendedGameHeaderStorage().put(gameId, extendedGameHeader);
                 gameCount += 1;
             } else {
-                database.gameHeaderIndex().put(gameId, updatedGame.gameHeader);
-                database.extendedGameHeaderStorage().put(gameId, updatedGame.extendedGameHeader);
-            }
+                ImmutableGameHeader gameHeader = updatedGameData.gameHeader.build();
+                ImmutableExtendedGameHeader extendedGameHeader = updatedGameData.extendedGameHeader.build();
 
-            database.moveRepository().putMovesBlob(updatedGame.gameHeader.movesOffset() + moveOffsetAdjust, updatedGame.moveBlob);
-            if (updatedGame.annotationBlob != null) {
-                database.annotationRepository().putAnnotationsBlob(updatedGame.gameHeader.annotationOffset() + annotationOffsetAdjust, updatedGame.annotationBlob);
+                database.gameHeaderIndex().put(gameId, gameHeader);
+                database.extendedGameHeaderStorage().put(gameId, extendedGameHeader);
+
+                database.moveRepository().putMovesBlob(extendedGameHeader.movesOffset(), updatedGameData.moveBlob);
+                if (updatedGameData.annotationBlob != null) {
+                    database.annotationRepository().putAnnotationsBlob(extendedGameHeader.annotationOffset(), updatedGameData.annotationBlob);
+                }
             }
         }
 
@@ -622,7 +587,7 @@ public class DatabaseTransaction {
         // TODO: List<Integer> should be multi-sets (insertion order is not important) for better performance
         private final Map<Integer, List<Integer>> includes = new HashMap<>();
         private final Map<Integer, List<Integer>> excludes = new HashMap<>();
-        private BiPredicate<Game, Integer> hasEntity;
+        private final BiPredicate<Game, Integer> hasEntity;
 
         private EntityDelta(BiPredicate<Game, Integer> hasEntity) {
             this.hasEntity = hasEntity;

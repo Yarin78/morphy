@@ -2,7 +2,9 @@ package se.yarin.morphy;
 
 import org.junit.Test;
 import se.yarin.chess.Date;
-import se.yarin.morphy.entities.Player;
+import se.yarin.chess.GameHeaderModel;
+import se.yarin.morphy.entities.*;
+import se.yarin.morphy.games.ImmutableExtendedGameHeader;
 import se.yarin.morphy.games.ImmutableGameHeader;
 
 import static org.junit.Assert.assertEquals;
@@ -17,7 +19,7 @@ public class DatabaseManualTest extends DatabaseTestSetup {
         assertEquals(db.playerIndex().count(), 0);
 
         DatabaseTransaction txn = new DatabaseTransaction(db);
-        putTestGame(txn, 0, "Aronian - Ding", "tour2", null, null, "t1 - t2", 50, 0, 20, 0);
+        putTestGame(txn, 0, "Aronian - Ding", "tour2", null, null, "t1 - t2", null, 0, 20, 0, 50);
         txn.commit();
 
         assertEquals(db.count(), 1);
@@ -32,7 +34,7 @@ public class DatabaseManualTest extends DatabaseTestSetup {
     @Test
     public void addSingleGameWithExistingEntities() {
         DatabaseTransaction txn = new DatabaseTransaction(testBase);
-        putTestGame(txn, 0, "Aronian - Ding", "tour2", null, null, null, 50, 0, 20, 0);
+        putTestGame(txn, 0, "Aronian - Ding", "tour2", null, null, null, null, 0, 20, 0, 50);
         txn.commit();
 
         assertEquals(16, testBase.count());
@@ -42,7 +44,7 @@ public class DatabaseManualTest extends DatabaseTestSetup {
     @Test
     public void addSingleGameWithNewPlayer() {
         DatabaseTransaction txn = new DatabaseTransaction(testBase);
-        putTestGame(txn, 0, "Mardell, Jimmy - Carlsen", null, null, null, null, 50, 0, 20, 0);
+        putTestGame(txn, 0, "Mardell, Jimmy - Carlsen", null, null, null, null, null, 0, 20, 0, 50);
         txn.commit();
 
         assertEquals(11, testBase.playerIndex().count());
@@ -63,7 +65,7 @@ public class DatabaseManualTest extends DatabaseTestSetup {
 
         DatabaseTransaction txn = new DatabaseTransaction(testBase);
         // Replacing a game between Ding - Carlsen; tour3, ann2
-        putTestGame(txn, 13, "Aronian - So", "tour2", "ann2", null, null, 80, 500, 0, 0);
+        putTestGame(txn, 13, "Aronian - So", "tour2", "ann2", null, null, null, 500, 0, 0, 80);
         txn.commit();
 
         assertEquals(3, playerCount("Ding"));
@@ -79,7 +81,7 @@ public class DatabaseManualTest extends DatabaseTestSetup {
     @Test
     public void replaceLastGameLeavingMoveGapAtTheEnd() {
         DatabaseTransaction txn = new DatabaseTransaction(testBase);
-        putTestGame(txn, 15, "Carlsen - So", "tour1", null, null, null, 90, 0, 15, 0);
+        putTestGame(txn, 15, "Carlsen - So", "tour1", null, null, null, null, 0, 15, 0, 90);
         txn.commit();
 
         assertEquals(10, wastedMoveBytes());
@@ -88,7 +90,7 @@ public class DatabaseManualTest extends DatabaseTestSetup {
     @Test
     public void replaceLastGameWithAnnotations() {
         DatabaseTransaction txn = new DatabaseTransaction(testBase);
-        putTestGame(txn, 15, "Carlsen - So", "tour1", null, null, null, 100, 500, 15, 15);
+        putTestGame(txn, 15, "Carlsen - So", "tour1", null, null, null, null, 500, 15, 15, 100);
         txn.commit();
 
         assertEquals(0, wastedAnnotationBytes());
@@ -305,17 +307,59 @@ public class DatabaseManualTest extends DatabaseTestSetup {
 
     @Test
     public void addGameCausingNewEntitiesOfAllTypesToBeAdded() {
+        DatabaseTransaction txn = new DatabaseTransaction(testBase);
+        putTestGame(txn, 0, "foo - bar", "foo", "foo", "foo", "foo - bar",
+                "foo", 100, 0, 0, 100);
+        txn.commit();
 
+        Player fooPlayer = testBase.playerIndex().get(Player.ofFullName("foo"));
+        Player barPlayer = testBase.playerIndex().get(Player.ofFullName("bar"));
+        Tournament fooTournament = testBase.tournamentIndex().get(Tournament.of("foo", Date.unset()));
+        Annotator fooAnnotator = testBase.annotatorIndex().get(Annotator.of("foo"));
+        Source fooSource = testBase.sourceIndex().get(Source.of("foo"));
+        Team fooTeam = testBase.teamIndex().get(Team.of("foo"));
+        Team barTeam = testBase.teamIndex().get(Team.of("bar"));
+        GameTag fooGameTag = testBase.gameTagIndex().get(1);
+        assertEquals("foo", fooGameTag.englishTitle());
+
+        assertEquals(1, fooPlayer.count());
+        assertEquals(1, barPlayer.count());
+        assertEquals(1, fooTournament.count());
+        assertEquals(1, fooAnnotator.count());
+        assertEquals(1, fooSource.count());
+        assertEquals(1, fooTeam.count());
+        assertEquals(1, barTeam.count());
+        assertEquals(1, fooGameTag.count());
     }
 
     @Test
     public void addGameWithRenamedPlayerEntity() {
         // rename existing entity (key field), add new game using this entity
+        DatabaseTransaction txn = new DatabaseTransaction(testBase);
+
+        txn.updatePlayerById(0, Player.ofFullName("Carlsen, Magnus"));
+        putTestGame(txn, 0, "Carlsen, Magnus - Grischuk", 100, 0, 16, 0);
+        txn.commit();
+
+        assertEquals(6, playerCount("Carlsen, Magnus"));
+        assertEquals(0, playerCount("Carlsen"));
+    }
+
+    @Test
+    public void addGameWithPreviouslyNamedPlayerEntity() {
+        DatabaseTransaction txn = new DatabaseTransaction(testBase);
+
+        txn.updatePlayerById(0, Player.ofFullName("Carlsen, Magnus"));
+        putTestGame(txn, 0, "Carlsen - Grischuk", 100, 0, 16, 0);
+        txn.commit();
+
+        assertEquals(5, playerCount("Carlsen, Magnus"));
+        assertEquals(1, playerCount("Carlsen"));
     }
 
     @Test
     public void addGameWithNewTournamentIncludingExtraFields() {
-        // Ensure that when the new tournament is created, the extra storage fields are created as well
+
     }
 
     @Test

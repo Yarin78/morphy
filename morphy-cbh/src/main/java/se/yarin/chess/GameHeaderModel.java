@@ -50,6 +50,7 @@ public class GameHeaderModel {
     private static final String FIELD_SOURCE_TITLE = "sourceTitle";
     private static final String FIELD_SOURCE_DATE= "sourceDate";
     private static final String FIELD_ANNOTATOR = "annotator";
+    private static final String FIELD_GAME_TAG = "gameTag";
 
     @HeaderData @Getter private String white;
     @HeaderData @Getter private String black;
@@ -103,6 +104,7 @@ public class GameHeaderModel {
     public void setSource(String name) { setField(FIELD_SOURCE, name); }
     public void setSourceDate(Date date) { setField(FIELD_SOURCE_DATE, date); }
     public void setAnnotator(String annotator) { setField(FIELD_ANNOTATOR, annotator); }
+    public void setGameTag(String gameTag) { setField(FIELD_GAME_TAG, gameTag); }
 
     // This map contains all the fields, including the standard ones
     private final Map<String, Object> fields = new ConcurrentHashMap<>();

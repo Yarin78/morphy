@@ -65,21 +65,21 @@ public abstract class DatabaseTestSetup {
     public void setupTestDatabase() {
         this.testBase = new Database();
         DatabaseTransaction txn = new DatabaseTransaction(testBase);
-        putTestGame(txn, 0, "Carlsen - Ding", "tour2", null, null, null, 100, 0, 1, 0);
-        putTestGame(txn, 0, "Nepo - Giri", "tour1", null, null, null, 100, 0, 2, 0);
-        putTestGame(txn, 0, "Mamedyarov - So", "tour3", "ann2", null, null, 100, 2000, 3, 3);
-        putTestGame(txn, 0, "Nepo - Caruana", "tour2", "ann1", null, null, 100, 2000, 4, 4);
-        putTestGame(txn, 0, "Caruana - Radjabov", "tour1", null, null, null, 100, 0, 5, 0);
-        putTestGame(txn, 0, "Nepo - Grischuk", "tour1", "ann1", null, null, 100, 2000, 6, 6);
-        putTestGame(txn, 0, "So - Nepo", "tour2", null, null, null, 100, 0, 7, 0);
-        putTestGame(txn, 0, "Carlsen - Carlsen", "tour3", "ann2", null, null, 100, 2000, 8, 8);
-        putTestGame(txn, 0, "Radjabov - Nepo", "tour2", "ann3", null, null, 100, 2000, 9, 9);
-        putTestGame(txn, 0, "Ding - Giri", "tour1", null, null, null, 100, 0, 10, 0);
-        putTestGame(txn, 0, "So - Mamedyarov", "tour2", null, null, null, 100, 0, 11, 0);
-        putTestGame(txn, 0, "Aronian - Giri", "tour3", null, null, null, 100, 0, 12, 0);
-        putTestGame(txn, 0, "Ding - Carlsen", "tour3", "ann2", null, null, 100, 2000, 13, 13);
-        putTestGame(txn, 0, "Grischuk - Ding", "tour1", null, null, null, 100, 0, 14, 0);
-        putTestGame(txn, 0, "Carlsen - So", "tour1", null, null, null, 100, 0, 15, 0);
+        putTestGame(txn, 0, "Carlsen - Ding", "tour2", null, null, null, null, 0, 1, 0, 100);
+        putTestGame(txn, 0, "Nepo - Giri", "tour1", null, null, null, null, 0, 2, 0, 100);
+        putTestGame(txn, 0, "Mamedyarov - So", "tour3", "ann2", null, null, null, 2000, 3, 3, 100);
+        putTestGame(txn, 0, "Nepo - Caruana", "tour2", "ann1", null, null, null, 2000, 4, 4, 100);
+        putTestGame(txn, 0, "Caruana - Radjabov", "tour1", null, null, null, null, 0, 5, 0, 100);
+        putTestGame(txn, 0, "Nepo - Grischuk", "tour1", "ann1", null, null, null, 2000, 6, 6, 100);
+        putTestGame(txn, 0, "So - Nepo", "tour2", null, null, null, null, 0, 7, 0, 100);
+        putTestGame(txn, 0, "Carlsen - Carlsen", "tour3", "ann2", null, null, null, 2000, 8, 8, 100);
+        putTestGame(txn, 0, "Radjabov - Nepo", "tour2", "ann3", null, null, null, 2000, 9, 9, 100);
+        putTestGame(txn, 0, "Ding - Giri", "tour1", null, null, null, null, 0, 10, 0, 100);
+        putTestGame(txn, 0, "So - Mamedyarov", "tour2", null, null, null, null, 0, 11, 0, 100);
+        putTestGame(txn, 0, "Aronian - Giri", "tour3", null, null, null, null, 0, 12, 0, 100);
+        putTestGame(txn, 0, "Ding - Carlsen", "tour3", "ann2", null, null, null, 2000, 13, 13, 100);
+        putTestGame(txn, 0, "Grischuk - Ding", "tour1", null, null, null, null, 0, 14, 0, 100);
+        putTestGame(txn, 0, "Carlsen - So", "tour1", null, null, null, null, 0, 15, 0, 100);
         txn.commit();
 
         assertEquals(10, testBase.playerIndex().count());
@@ -163,13 +163,13 @@ public abstract class DatabaseTestSetup {
                             int movesSize, int annotationsSize, int movesSeed, int annotationsSeed) {
         return putTestGame(txn, gameId,
                 players, null, null, null, null,
-                movesSize, annotationsSize, movesSeed, annotationsSeed);
+                null, annotationsSize, movesSeed, annotationsSeed, movesSize);
     }
 
     protected int putTestGame(
             @NotNull DatabaseTransaction txn, int gameId,
             @NotNull String players, @Nullable String tournament, @Nullable String annotator, @Nullable String source, @Nullable String teams,
-            int movesSize, int annotationsSize, int movesSeed, int annotationsSeed) {
+            @Nullable String gameTag, int annotationsSize, int movesSeed, int annotationsSeed, int movesSize) {
         String[] twoPlayers = players.split(" - ");
         assert twoPlayers.length == 2;
         GameHeaderModel headerModel = new GameHeaderModel();
@@ -182,13 +182,16 @@ public abstract class DatabaseTestSetup {
             headerModel.setAnnotator(annotator);
         }
         if (source != null) {
-            headerModel.setSource(source);
+            headerModel.setSourceTitle(source);
         }
         if (teams != null) {
             String[] twoTeams = teams.split(" - ");
             assert twoTeams.length == 2;
             headerModel.setWhiteTeam(twoTeams[0]);
             headerModel.setBlackTeam(twoTeams[1]);
+        }
+        if (gameTag != null) {
+            headerModel.setGameTag(gameTag);
         }
         ImmutableGameHeader.Builder header = txn.createGameHeader(headerModel);
         ImmutableExtendedGameHeader.Builder extendedHeader = txn.createExtendedGameHeader(headerModel);
