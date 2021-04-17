@@ -124,7 +124,7 @@ public abstract class ExtendedGameHeader {
      * Gets the date and time when this game was first created.
      * @return a date and time in the default TimeZone
      */
-    public Calendar getCreationTime() {
+    public @NotNull Calendar creationTime() {
         // Creation time is based on a ChessBase specific date
         Calendar creationTime = Calendar.getInstance(TimeZone.getTimeZone("Europe/Berlin"));
         creationTime.set(2008, 11, 1, 0, 0, 0);
@@ -140,7 +140,7 @@ public abstract class ExtendedGameHeader {
      * If the game has never changed since it was created, the value is undefined.
      * @return a date and time in the default TimeZone
      */
-    public Calendar getLastChangedTime() {
+    public @NotNull Calendar lastChangedTime() {
         // Last changed time is based on the start of the Gregorian Calendar in UTC
         Calendar lastChangedTime = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
         lastChangedTime.set(1582, 9, 15, 0, 0, 0);

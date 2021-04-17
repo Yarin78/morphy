@@ -33,7 +33,11 @@ public abstract class GameHeader {
         return false;
     }
 
-    public abstract int movesOffset(); // Position in the .cbg file where the actual moves are stored
+    @Value.Default
+    public int movesOffset() {
+        // Position in the .cbg file where the actual moves are stored
+        return 0;
+    }
 
     @Value.Default
     public int annotationOffset() {
@@ -152,5 +156,9 @@ public abstract class GameHeader {
         return 0;
     }
 
-    public abstract int noMoves(); // -1 = More than 255 moves. Count the exact number upon demand.
+    @Value.Default
+    public int noMoves() {
+        // -1 = More than 255 moves. Count the exact number upon demand.
+        return 0;
+    }
 }

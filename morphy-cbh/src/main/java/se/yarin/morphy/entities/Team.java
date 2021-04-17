@@ -21,6 +21,11 @@ public abstract class Team extends Entity implements Comparable<Team> {
         return Nation.NONE;
     }
 
+    @Override
+    public Entity withCountAndFirstGameId(int count, int firstGameId) {
+        return ImmutableTeam.builder().from(this).count(count).firstGameId(firstGameId).build();
+    }
+
     public static Team of(String title) {
         return ImmutableTeam.builder().title(title).build();
     }

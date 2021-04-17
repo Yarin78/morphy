@@ -16,31 +16,31 @@ public class BlobStorageHeader {
     public static final int DEFAULT_SERIALIZED_HEADER_SIZE = 26;
 
     private final int headerSize;
-    private final int size;
-    private final int unused;
-    private final long sizeLong;
-    private final long unusedLong;
+    private final int size; // File size
+    private final int wasted; // Number of bytes in the file that's "unused" due to fragmentation
+    private final long sizeLong; // Same as size but 64 bit
+    private final long wastedLong; // Same as unused but 64 bit
 
     public static BlobStorageHeader empty() {
-        return of(DEFAULT_SERIALIZED_HEADER_SIZE, DEFAULT_SERIALIZED_HEADER_SIZE);
+        return of(DEFAULT_SERIALIZED_HEADER_SIZE, DEFAULT_SERIALIZED_HEADER_SIZE, 0);
     }
 
-    public static BlobStorageHeader of(int headerSize, long fileSize) {
-        return new BlobStorageHeader(headerSize, (int) fileSize, 0, fileSize, 0);
+    public static BlobStorageHeader of(int headerSize, long fileSize, long wasted) {
+        return new BlobStorageHeader(headerSize, (int) fileSize, (int) wasted, fileSize, wasted);
     }
 
-    int headerSize() { return headerSize;}
-    int size() { return size; };
-    int unused() { return unused; };
-    long sizeLong() { return sizeLong; }
-    long unusedLong() { return unusedLong; }
+    public int headerSize() { return headerSize;}
+    public int size() { return size; };
+    public int wasted() { return wasted; };
+    public long sizeLong() { return sizeLong; }
+    public long wastedLong() { return wastedLong; }
 
-    public BlobStorageHeader(int headerSize, int size, int unused, long sizeLong, long unusedLong) {
+    public BlobStorageHeader(int headerSize, int size, int wasted, long sizeLong, long wastedLong) {
         this.headerSize = headerSize;
         this.size = size;
-        this.unused = unused;
+        this.wasted = wasted;
         this.sizeLong = sizeLong;
-        this.unusedLong = unusedLong;
+        this.wastedLong = wastedLong;
     }
 
     public ByteBuffer serialize() {
@@ -50,10 +50,10 @@ public class BlobStorageHeader {
         ByteBuffer buf = ByteBuffer.allocate(headerSize());
         ByteBufferUtil.putShortB(buf, headerSize());
         ByteBufferUtil.putIntB(buf, size());
-        ByteBufferUtil.putIntB(buf, unused());
+        ByteBufferUtil.putIntB(buf, wasted());
         if (headerSize() == DEFAULT_SERIALIZED_HEADER_SIZE) {
             ByteBufferUtil.putLongB(buf, sizeLong());
-            ByteBufferUtil.putLongB(buf, unusedLong());
+            ByteBufferUtil.putLongB(buf, wastedLong());
         }
         buf.flip();
         return buf;
@@ -68,7 +68,7 @@ public class BlobStorageHeader {
 
         if (headerSize >= DEFAULT_SERIALIZED_HEADER_SIZE) {
             sizeLong = ByteBufferUtil.getLongB(buf);
-            unusedLong = ByteBufferUtil.getIntB(buf);
+            unusedLong = ByteBufferUtil.getLongB(buf);
         }
 
         return new BlobStorageHeader(headerSize, size, unused, sizeLong, unusedLong);
@@ -102,8 +102,8 @@ public class BlobStorageHeader {
             }
         }
 
-        if (unused() != (int) unusedLong()) {
-            String msg = String.format("Blob storage unused values don't match (%d != %d)", unused(), unusedLong());
+        if (wasted() != (int) wastedLong()) {
+            String msg = String.format("Blob storage wasted values don't match (%d != %d)", wasted(), wastedLong());
             if (strict) {
                 throw new MorphyInvalidDataException(msg);
             } else {

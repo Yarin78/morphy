@@ -84,6 +84,11 @@ public class TournamentIndex extends EntityIndex<Tournament> {
         return new TournamentIndexTransaction(this);
     }
 
+    public EntityIndexTransaction<Tournament> beginTransaction(@NotNull TournamentExtraStorage extraStorage) {
+        // TODO: Acquire read lock
+        return new TournamentIndexTransaction(this, extraStorage);
+    }
+
     /**
      * Searches for tournaments using a case sensitive prefix search.
      * The exact year must also be specified as the primary key starts with the year.

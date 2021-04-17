@@ -4,7 +4,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import se.yarin.morphy.ResourceLoader;
-import se.yarin.morphy.games.GameIndex;
 import se.yarin.morphy.util.CBUtil;
 
 import java.io.File;
@@ -72,6 +71,29 @@ public class FileBlobStorageTest {
         assertEquals(44, storage.appendBlob(createBlob("foo")));
         assertEquals(51, storage.appendBlob(createBlob("bar")));
         assertEquals(58, storage.getSize());
+        assertEquals(0, storage.getWastedBytes());
+    }
+
+    @Test
+    public void replaceBlobWithShorter() throws IOException {
+        BlobStorage storage = createStorage();
+        long ofs = storage.appendBlob(createBlob("hello"));
+        assertEquals(0, storage.getWastedBytes());
+        storage.removeBlob(ofs);
+        storage.putBlob(ofs, createBlob("foo"));
+        assertEquals(2, storage.getWastedBytes());
+    }
+
+    @Test
+    public void removeBlob() throws IOException {
+        BlobStorage storage = createStorage();
+        long ofs = storage.appendBlob(createBlob("hello"));
+        long ofs2 = storage.appendBlob(createBlob("world"));
+        assertEquals(0, storage.getWastedBytes());
+        storage.removeBlob(ofs);
+        assertEquals(9, storage.getWastedBytes());
+        storage.removeBlob(ofs2);
+        assertEquals(18, storage.getWastedBytes());
     }
 
     @Test
@@ -104,9 +126,12 @@ public class FileBlobStorageTest {
                 expected[i] = i;
             } else {
                 int oldSize = sizeRetriever.getBlobSize(storage.getBlob(offset[i % positions]));
+                storage.removeBlob(offset[i % positions]);
                 int delta = sizeRetriever.getBlobSize(blob) - oldSize;
                 if (delta > 0) {
-                    storage.insert(offset[i % positions], delta);
+                    if (i % positions + 1 < positions) {
+                        storage.insert(offset[i % positions + 1], delta);
+                    }
                     for (int j = i % positions + 1; j < positions; j++) {
                         if (offset[j] >= 0) offset[j] += delta;
                     }
@@ -122,6 +147,13 @@ public class FileBlobStorageTest {
                 }
             }
         }
+
+        int totSize = storage.getHeader().headerSize();
+        for (int i = 0; i < positions; i++) {
+            totSize += sizeRetriever.getBlobSize(storage.getBlob(offset[i]));
+        }
+        long expectedWaste = storage.getSize() - totSize;
+        assertEquals(expectedWaste, storage.getWastedBytes());
     }
 
     @Test
@@ -171,6 +203,8 @@ public class FileBlobStorageTest {
         assertEquals("foo", parseBlob(storage.getBlob(ofs1)));
         assertEquals("bar", parseBlob(storage.getBlob(ofs2 + 8)));
         assertEquals("yo", parseBlob(storage.getBlob(ofs3 + 8)));
+
+        assertEquals(8, storage.getWastedBytes());
     }
 
     @Test

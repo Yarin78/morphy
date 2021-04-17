@@ -51,6 +51,61 @@ public class InMemoryBlobStorageTest {
     }
 
     @Test
+    public void replaceLastBlobWithShorter() {
+        BlobStorage storage = new InMemoryBlobStorage(new StringBlobSizeRetriever());
+        long ofs = storage.appendBlob(createBlob("hello"));
+        assertEquals(0, storage.getWastedBytes());
+        storage.removeBlob(ofs);
+        storage.putBlob(ofs, createBlob("foo"));
+        assertEquals(2, storage.getWastedBytes());
+    }
+
+    @Test
+    public void replaceLastBlobWithLonger() {
+        BlobStorage storage = new InMemoryBlobStorage(new StringBlobSizeRetriever());
+        long ofs = storage.appendBlob(createBlob("hello"));
+        assertEquals(0, storage.getWastedBytes());
+        storage.removeBlob(ofs);
+        storage.putBlob(ofs, createBlob("hello world"));
+        assertEquals(0, storage.getWastedBytes());
+    }
+
+    @Test
+    public void replaceFirstBlobWithShorter() {
+        BlobStorage storage = new InMemoryBlobStorage(new StringBlobSizeRetriever());
+        long ofs = storage.appendBlob(createBlob("hello"));
+        storage.appendBlob(createBlob("world"));
+        assertEquals(0, storage.getWastedBytes());
+        storage.removeBlob(ofs);
+        storage.putBlob(ofs, createBlob("foo"));
+        assertEquals(2, storage.getWastedBytes());
+    }
+
+    @Test
+    public void replaceFirstBlobWithLonger() {
+        BlobStorage storage = new InMemoryBlobStorage(new StringBlobSizeRetriever());
+        long ofs = storage.appendBlob(createBlob("hello"));
+        long ofs2 = storage.appendBlob(createBlob("world"));
+        assertEquals(0, storage.getWastedBytes());
+        storage.insert(ofs2, 6);
+        storage.removeBlob(ofs);
+        storage.putBlob(ofs, createBlob("hello world"));
+        assertEquals(0, storage.getWastedBytes());
+    }
+
+    @Test
+    public void removeBlob() {
+        BlobStorage storage = new InMemoryBlobStorage(new StringBlobSizeRetriever());
+        long ofs = storage.appendBlob(createBlob("hello"));
+        long ofs2 = storage.appendBlob(createBlob("world"));
+        assertEquals(0, storage.getWastedBytes());
+        storage.removeBlob(ofs);
+        assertEquals(7, storage.getWastedBytes());
+        storage.removeBlob(ofs2);
+        assertEquals(14, storage.getWastedBytes());
+    }
+
+    @Test
     public void addAndReplaceRandomBlobs() {
         Random random = new Random(0);
         final int iter = 1000, positions = 20;
@@ -80,9 +135,12 @@ public class InMemoryBlobStorageTest {
                 expected[i] = i;
             } else {
                 int oldSize = sizeRetriever.getBlobSize(storage.getBlob(ofs[i % positions]));
+                storage.removeBlob(ofs[i % positions]);
                 int delta = sizeRetriever.getBlobSize(blob) - oldSize;
                 if (delta > 0) {
-                    storage.insert(ofs[i % positions], delta);
+                    if (i % positions + 1 < positions) {
+                        storage.insert(ofs[i % positions + 1], delta);
+                    }
                     for (int j = i % positions + 1; j < positions; j++) {
                         if (ofs[j] >= 0) ofs[j] += delta;
                     }
@@ -98,6 +156,13 @@ public class InMemoryBlobStorageTest {
                 }
             }
         }
+
+        int totSize = storage.getHeader().headerSize();
+        for (int i = 0; i < positions; i++) {
+            totSize += sizeRetriever.getBlobSize(storage.getBlob(ofs[i]));
+        }
+        long expectedWaste = storage.getSize() - totSize;
+        assertEquals(expectedWaste, storage.getWastedBytes());
     }
 
     @Test

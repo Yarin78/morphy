@@ -5,9 +5,14 @@ import se.yarin.morphy.util.CBUtil;
 
 @Value.Immutable
 public abstract class Player extends Entity implements Comparable<Player> {
-    abstract String lastName();
+    public abstract String lastName();
 
-    abstract String firstName();
+    public abstract String firstName();
+
+    @Override
+    public Entity withCountAndFirstGameId(int count, int firstGameId) {
+        return ImmutablePlayer.builder().from(this).count(count).firstGameId(firstGameId).build();
+    }
 
     public static Player ofFullName(String fullName) {
         String firstName = "", lastName = fullName.trim();

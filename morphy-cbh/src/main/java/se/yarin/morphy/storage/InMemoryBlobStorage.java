@@ -2,16 +2,11 @@ package se.yarin.morphy.storage;
 
 import org.jetbrains.annotations.NotNull;
 import se.yarin.morphy.exceptions.MorphyInvalidDataException;
-import se.yarin.morphy.exceptions.MorphyNotSupportedException;
-import se.yarin.util.BlobChannel;
 
-import java.io.File;
 import java.io.IOException;
-import java.nio.BufferOverflowException;
 import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 
-import static java.nio.file.StandardOpenOption.WRITE;
 import static se.yarin.morphy.storage.BlobStorageHeader.DEFAULT_SERIALIZED_HEADER_SIZE;
 
 public class InMemoryBlobStorage implements BlobStorage {
@@ -89,6 +84,19 @@ public class InMemoryBlobStorage implements BlobStorage {
     }
 
     @Override
+    public @NotNull int getBlobSize(long offset) {
+        if (offset < 0) {
+            throw new IllegalArgumentException("offset must be non-negative");
+        }
+
+        try {
+            return blobSizeRetriever.getBlobSize(data.slice((int) offset, data.limit() - (int) offset));
+        } catch (BufferUnderflowException e) {
+            throw new MorphyInvalidDataException("Failed to get blob at offset " + offset);
+        }
+    }
+
+    @Override
     public long appendBlob(@NotNull ByteBuffer blob) {
         long offset = data.limit();
         putBlob(offset, blob);
@@ -104,10 +112,15 @@ public class InMemoryBlobStorage implements BlobStorage {
         while (offset + blob.limit() > data.capacity()) {
             grow();
         }
+        long wasted = getWastedBytes();
+        if (offset < data.limit()) {
+            wasted -= Math.min(data.limit() - offset, blob.limit());
+        }
         data.position((int) offset);
         data.limit((int) Math.max(data.limit(), offset + blob.limit()));
         data.put(blob);
-        putHeader(BlobStorageHeader.of(this.header.headerSize(), getSize()));
+
+        putHeader(BlobStorageHeader.of(this.header.headerSize(), getSize(), wasted));
     }
 
     @Override
@@ -125,7 +138,7 @@ public class InMemoryBlobStorage implements BlobStorage {
             byte b = data.get((int) (i - noBytes));
             data.put(i, b);
         }
-        putHeader(BlobStorageHeader.of(this.header.headerSize(), getSize()));
+        putHeader(BlobStorageHeader.of(this.header.headerSize(), getSize(), getWastedBytes() + noBytes));
     }
 
     @Override

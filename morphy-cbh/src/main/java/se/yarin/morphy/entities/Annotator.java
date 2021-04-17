@@ -7,6 +7,11 @@ import se.yarin.morphy.util.CBUtil;
 public abstract class Annotator extends Entity implements Comparable<Annotator> {
     public abstract String name();
 
+    @Override
+    public Entity withCountAndFirstGameId(int count, int firstGameId) {
+        return ImmutableAnnotator.builder().from(this).count(count).firstGameId(firstGameId).build();
+    }
+
     public static Annotator of(String name) {
         return ImmutableAnnotator.builder().name(name).build();
     }

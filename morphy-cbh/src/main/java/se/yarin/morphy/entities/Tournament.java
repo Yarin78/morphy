@@ -62,6 +62,11 @@ public abstract class Tournament extends Entity implements Comparable<Tournament
         return Nation.NONE;
     }
 
+    @Override
+    public Entity withCountAndFirstGameId(int count, int firstGameId) {
+        return ImmutableTournament.builder().from(this).count(count).firstGameId(firstGameId).build();
+    }
+
     @NotNull
     public static Tournament of(String title, Date date) {
         return ImmutableTournament.builder().title(title).date(date).build();

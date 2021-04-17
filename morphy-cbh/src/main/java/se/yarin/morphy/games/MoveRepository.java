@@ -25,11 +25,15 @@ public class MoveRepository implements BlobSizeRetriever {
 
     private static final Logger log = LoggerFactory.getLogger(MoveRepository.class);
 
-    private final BlobStorage storage;
-    private final MoveSerializer moveSerializer;
+    private final @NotNull BlobStorage storage;
+    private final @NotNull MoveSerializer moveSerializer;
     private int overrideEncodingMode = -1; // The encoding mode to use when writing games, -1 = default based on type
 
     private boolean validateDecodedMoves = true; // If true, validate all moves when decoding
+
+    public @NotNull BlobStorage getStorage() { return storage; }
+
+    public @NotNull MoveSerializer getMoveSerializer() { return moveSerializer; }
 
     public void setEncodingMode(int encodingMode) {
         this.overrideEncodingMode = encodingMode;
@@ -117,6 +121,15 @@ public class MoveRepository implements BlobSizeRetriever {
     }
 
     /**
+     * Gets the size of the moves blob that make up the moves of the game.
+     * @param offset the offset in the repository where the game moves (or text) data are stored
+     * @return the size of the blob
+     */
+    public int getMovesBlobSize(long offset) {
+        return storage.getBlobSize(offset);
+    }
+
+    /**
      * Gets the moves of a game from the move repository
      * @param offset the offset in the repository where the game moves data is stored
      * @param gameId the id of the game to load; only used in logging statements
@@ -186,6 +199,18 @@ public class MoveRepository implements BlobSizeRetriever {
         return storage.appendBlob(blob);
     }
 
+    /**
+     * Removes a moves blob
+     * @param offset the offset of the blob
+     * @return the size of the removed blob
+     */
+    public int removeMovesBlob(long offset) {
+        if (offset > 0) {
+            return storage.removeBlob(offset);
+        }
+        return 0;
+    }
+
     public int preparePutBlob(long offset, GameMovesModel model) {
         ByteBuffer buf = moveSerializer.serializeMoves(model, resolveEncodingMode(model));
         int oldGameSize = getBlobSize(storage.getBlob(offset));
@@ -196,6 +221,10 @@ public class MoveRepository implements BlobSizeRetriever {
         int delta = newGameSize - oldGameSize;
         storage.insert(offset, delta);
         return delta;
+    }
+
+    public void insert(long offset, int delta) {
+        storage.insert(offset, delta);
     }
 
     private int resolveEncodingMode(GameMovesModel model) {
@@ -210,9 +239,5 @@ public class MoveRepository implements BlobSizeRetriever {
 
     public void close() throws IOException {
         storage.close();
-    }
-
-    public FileBlobStorage getStorage() {
-        return (FileBlobStorage) storage;
     }
 }

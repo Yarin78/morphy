@@ -1,5 +1,7 @@
 package se.yarin.morphy.entities;
 
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.morphy.exceptions.MorphyEntityIndexException;
@@ -7,6 +9,7 @@ import se.yarin.morphy.exceptions.MorphyEntityIndexException;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.TreeMap;
 
 public class EntityIndexTransaction<T extends Entity & Comparable<T>> {
     private static final Logger log = LoggerFactory.getLogger(EntityIndexTransaction.class);
@@ -20,7 +23,8 @@ public class EntityIndexTransaction<T extends Entity & Comparable<T>> {
     private EntityIndexHeader header;
 
     // Changes made to the EntityIndex in this transaction
-    private final Map<Integer, EntityNode> changes = new HashMap<>();
+    // Important that they are stored in increasing entity id order
+    private final Map<Integer, EntityNode> changes = new TreeMap<>();
 
     private boolean committed;
 
@@ -47,7 +51,7 @@ public class EntityIndexTransaction<T extends Entity & Comparable<T>> {
      * @param entityKey the key of the entity
      * @return the entity, or null if there was no entity with that key
      */
-    public T get(T entityKey) {
+    public @Nullable T get(@NotNull T entityKey) {
         EntityIndexTransaction<T>.NodePath treePath = lowerBound(entityKey);
         if (treePath.isEnd()) {
             return null;
@@ -66,7 +70,8 @@ public class EntityIndexTransaction<T extends Entity & Comparable<T>> {
             return node;
         }
         if (this.index.getNumCommittedTxn() != indexNumCommittedTxn) {
-            throw new IllegalStateException("Entity index has changed since transaction started");
+            throw new IllegalStateException(String.format("Entity index has changed since transaction started (%d != %d)",
+                    this.index.getNumCommittedTxn(), indexNumCommittedTxn));
         }
         // TODO: This needs to be made thread-safe
         node = index.getNode(id);
@@ -117,11 +122,11 @@ public class EntityIndexTransaction<T extends Entity & Comparable<T>> {
      * Returns a NodePath to the first node which does not compare less than entity, or NodePath.end if no such node exists.
      * If nodes exists with that compares equally to entity, the first of those nodes will be returned.
      */
-    public NodePath lowerBound(T entity) {
+    public @NotNull NodePath lowerBound(@NotNull T entity) {
         return lowerBound(entity, header.rootNodeId(), null);
     }
 
-    private NodePath lowerBound(T entity, int currentId, NodePath path) {
+    private @NotNull NodePath lowerBound(T entity, int currentId, @Nullable NodePath path) {
         if (currentId < 0) {
             return end();
         }

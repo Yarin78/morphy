@@ -3,11 +3,11 @@ package se.yarin.morphy;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import se.yarin.chess.GameModel;
 import se.yarin.morphy.entities.*;
-import se.yarin.morphy.games.AnnotationRepository;
-import se.yarin.morphy.games.ExtendedGameHeaderStorage;
-import se.yarin.morphy.games.GameHeaderIndex;
-import se.yarin.morphy.games.MoveRepository;
+import se.yarin.morphy.exceptions.MorphyException;
+import se.yarin.morphy.games.*;
+import se.yarin.morphy.text.TextModel;
 import se.yarin.morphy.util.CBUtil;
 
 import java.io.File;
@@ -56,6 +56,54 @@ public class Database {
     @NotNull private final TeamIndex teamIndex;
     @NotNull private final GameTagIndex gameTagIndex;
 
+    @NotNull private final GameLoader loader;
+
+    @NotNull public GameHeaderIndex gameHeaderIndex() {
+        return gameHeaderIndex;
+    }
+
+    @NotNull public ExtendedGameHeaderStorage extendedGameHeaderStorage() {
+        return extendedGameHeaderStorage;
+    }
+
+    @NotNull public MoveRepository moveRepository() {
+        return moveRepository;
+    }
+
+    @NotNull public AnnotationRepository annotationRepository() {
+        return annotationRepository;
+    }
+
+    @NotNull public PlayerIndex playerIndex() {
+        return playerIndex;
+    }
+
+    @NotNull public TournamentIndex tournamentIndex() {
+        return tournamentIndex;
+    }
+
+    @NotNull public TournamentExtraStorage tournamentExtraStorage() {
+        return tournamentExtraStorage;
+    }
+
+    @NotNull public AnnotatorIndex annotatorIndex() {
+        return annotatorIndex;
+    }
+
+    @NotNull public SourceIndex sourceIndex() {
+        return sourceIndex;
+    }
+
+    @NotNull public TeamIndex teamIndex() {
+        return teamIndex;
+    }
+
+    @NotNull public GameTagIndex gameTagIndex() {
+        return gameTagIndex;
+    }
+
+    @NotNull public GameLoader loader() { return loader; }
+
     /**
      * Creates a new in-memory ChessBase database.
      *
@@ -89,6 +137,8 @@ public class Database {
         this.sourceIndex = sourceIndex;
         this.teamIndex = teamIndex;
         this.gameTagIndex = gameTagIndex;
+
+        this.loader = new GameLoader(this);
     }
 
     public static Database create(@NotNull File file) throws IOException {
@@ -239,5 +289,74 @@ public class Database {
                 throw new IOException("Database deletion aborted; Failed to delete " + databaseFile);
             }
         }
+    }
+
+    public void close() throws IOException {
+        this.gameHeaderIndex.close();
+        extendedGameHeaderStorage.close();
+        moveRepository.close();
+        annotationRepository.close();
+        playerIndex.close();
+        tournamentIndex.close();
+        tournamentExtraStorage.close();
+        annotatorIndex.close();
+        sourceIndex.close();
+        teamIndex.close();
+        gameTagIndex.close();
+    }
+
+    /**
+     * Gets a game model
+     * @param game the game
+     * @return a model of the game
+     * @throws MorphyException if an internal error occurred when fetching the game
+     * @throws IllegalArgumentException if the game is actually a text
+     */
+    public GameModel getGameModel(Game game) throws MorphyException {
+        return loader.getGameModel(game);
+    }
+
+    /**
+     * Gets a text model
+     * @param game the game
+     * @return a model of the text
+     * @throws MorphyException if an internal error occurred when fetching the game
+     * @throws IllegalArgumentException if the text is actually a game
+     */
+    public TextModel getTextModel(Game game) throws MorphyException {
+        return loader.getTextModel(game);
+    }
+
+    /**
+     * Gets a game from the database
+     * @param gameId the id of the game to get
+     * @return a model of the game
+     * @throws IllegalArgumentException if no game with the specified ID exists
+     */
+    public Game getGame(int gameId) {
+        // TODO: consolidate this, it's also in DatabaseTransaction
+        if (gameId < 1) {
+            throw new IllegalArgumentException("Invalid game id: " + gameId);
+        }
+        GameHeader header = gameHeaderIndex.getGameHeader(gameId);
+        ExtendedGameHeader extendedGameHeader = gameId <= extendedGameHeaderStorage.count() ? extendedGameHeaderStorage.get(gameId) : ExtendedGameHeader.empty(header);
+        return new Game(this, header, extendedGameHeader);
+    }
+
+    public int count() {
+        return gameHeaderIndex.count();
+    }
+
+    public int addGame(GameModel game) {
+        DatabaseTransaction txn = new DatabaseTransaction(this);
+        int id = txn.addGame(game);
+        txn.commit();
+        return id;
+    }
+
+    public void replaceGame(int gameId, GameModel game) {
+        DatabaseTransaction txn = new DatabaseTransaction(this);
+        txn.replaceGame(gameId, game);
+        txn.commit();
     }
 }

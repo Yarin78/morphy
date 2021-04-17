@@ -28,6 +28,11 @@ public abstract class GameTag extends Entity implements Comparable<GameTag> {
     @Value.Default
     public String resTitle() { return ""; };
 
+    @Override
+    public Entity withCountAndFirstGameId(int count, int firstGameId) {
+        return ImmutableGameTag.builder().from(this).count(count).firstGameId(firstGameId).build();
+    }
+
     public static GameTag of(String englishTitle) {
         return ImmutableGameTag.builder().englishTitle(englishTitle).build();
     }

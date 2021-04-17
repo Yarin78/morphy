@@ -24,7 +24,7 @@ import static java.nio.file.StandardOpenOption.*;
 public class AnnotationRepository implements BlobSizeRetriever {
     private static final Logger log = LoggerFactory.getLogger(AnnotationRepository.class);
 
-    private final BlobStorage storage;
+    private final @NotNull BlobStorage storage;
 
     /**
      * Creates a new in-memory annotation repository that is initially empty.
@@ -40,6 +40,9 @@ public class AnnotationRepository implements BlobSizeRetriever {
     private AnnotationRepository(@NotNull File file, @NotNull Set<OpenOption> openOptions) throws IOException {
         this.storage = new FileBlobStorage(file, this, openOptions);
     }
+
+
+    public @NotNull BlobStorage getStorage() { return storage; }
 
     public static AnnotationRepository create(@NotNull File file) throws IOException {
         return new AnnotationRepository(file, Set.of(READ, WRITE, CREATE_NEW));
@@ -119,6 +122,19 @@ public class AnnotationRepository implements BlobSizeRetriever {
     }
 
     /**
+     * Gets the size of the annotation blob that make up the annotations of the game.
+     * @param ofs the offset in the repository where the annotations data are stored
+     * @return the size of the blob
+     * @throws IllegalArgumentException if ofs is not set
+     */
+    public int getAnnotationsBlobSize(long ofs) {
+        if (ofs <= 0) {
+            throw new IllegalArgumentException("There are no annotations in this game");
+        }
+        return storage.getBlobSize(ofs);
+    }
+
+    /**
      * Stores annotations for a game in the annotation repository.
      * @param gameId the id of the game to store annotations for
      * @param ofs the old offset where annotations of this game was stored,
@@ -151,6 +167,18 @@ public class AnnotationRepository implements BlobSizeRetriever {
         return storage.appendBlob(blob);
     }
 
+    /**
+     * Removes an annotation blob
+     * @param offset the offset of the blob; if 0, nothing is done
+     * @return the size of the removed blob
+     */
+    public int removeAnnotationsBlob(long offset) {
+        if (offset > 0) {
+            return storage.removeBlob(offset);
+        }
+        return 0;
+    }
+
     public int preparePutBlob(long currentAnnotationOffset, long targetAnnotationOffset, GameMovesModel model) {
         if (model.countAnnotations() == 0 || targetAnnotationOffset == 0) {
             return 0;
@@ -172,11 +200,12 @@ public class AnnotationRepository implements BlobSizeRetriever {
         }
     }
 
+    public void insert(long offset, int delta) {
+        storage.insert(offset, delta);
+    }
+
     public void close() throws IOException {
         storage.close();
     }
 
-    public FileBlobStorage getStorage() {
-        return (FileBlobStorage) storage;
-    }
 }

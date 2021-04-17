@@ -113,6 +113,21 @@ public class FileBlobStorage implements BlobStorage {
     }
 
     @Override
+    public int getBlobSize(long offset) {
+        if (offset < 0) {
+            throw new IllegalArgumentException("offset must be non-negative");
+        }
+        try {
+            ByteBuffer buf = ByteBuffer.allocate(DEFAULT_PREFETCH_SIZE);
+            channel.read(offset, buf);
+            buf.position(0);
+            return blobSizeRetriever.getBlobSize(buf);
+        } catch (IOException e) {
+            throw new MorphyIOException("Failed to get blob at offset " + offset + " in " + file.getName());
+        }
+    }
+
+    @Override
     public long appendBlob(@NotNull ByteBuffer blob) {
         long offset = getSize();
         putBlob(offset, blob);
@@ -125,9 +140,13 @@ public class FileBlobStorage implements BlobStorage {
             throw new MorphyIOException(String.format("Tried to put blob at offset %d but file size was %d",
                     offset, getSize()));
         }
+        long wasted = getWastedBytes();
+        if (offset < getSize()) {
+            wasted -= Math.min(getSize() - offset, blob.limit());
+        }
         try {
             channel.write(offset, blob);
-            putHeader(BlobStorageHeader.of(this.header.headerSize(), getSize()));
+            putHeader(BlobStorageHeader.of(this.header.headerSize(), getSize(), wasted));
         } catch (IOException e) {
             throw new MorphyIOException(e);
         }
@@ -140,7 +159,7 @@ public class FileBlobStorage implements BlobStorage {
         } catch (IOException e) {
             throw new MorphyIOException("Failed to insert " + noBytes + " in blob " + file.getName());
         }
-        putHeader(BlobStorageHeader.of(this.header.headerSize(), getSize()));
+        putHeader(BlobStorageHeader.of(this.header.headerSize(), getSize(), getWastedBytes() + noBytes));
     }
 
     @Override

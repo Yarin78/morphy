@@ -20,7 +20,9 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.file.OpenOption;
+import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.List;
 import java.util.Set;
 
 import static java.nio.file.StandardOpenOption.*;
@@ -133,6 +135,32 @@ public class GameHeaderIndex implements ItemStorageSerializer<GameHeaderIndex.Pr
         storage.putHeader(newProlog);
 
         return newGameId;
+    }
+
+    /**
+     * Updates a game header in the index. The id field in gameHeader will be ignored
+     * @param gameId the id to replace
+     * @param gameHeader the new game header
+     */
+    public void put(int gameId, @NotNull GameHeader gameHeader) {
+        if (gameId > count()) {
+            throw new IllegalArgumentException("Can't put a game beyond the end of the storage");
+        }
+        // This is necessary for the InMemory storage
+        gameHeader = ImmutableGameHeader.copyOf(gameHeader).withId(gameId);
+        storage.putItem(gameId, gameHeader);
+    }
+
+    /**
+     * Gets a list of all game headers in the index.
+     * @return a list of all GameHeaders
+     */
+    public List<GameHeader> getAll() {
+        ArrayList<GameHeader> result = new ArrayList<>(count());
+        for (int i = 1; i <= count(); i++) {
+            result.add(storage.getItem(i));
+        }
+        return result;
     }
 
     /**

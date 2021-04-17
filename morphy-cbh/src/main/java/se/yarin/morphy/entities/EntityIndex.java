@@ -2,12 +2,12 @@ package se.yarin.morphy.entities;
 
 import org.immutables.value.Value;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.morphy.exceptions.MorphyEntityIndexException;
 import se.yarin.morphy.exceptions.MorphyIOException;
 import se.yarin.morphy.exceptions.MorphyNotSupportedException;
-import se.yarin.morphy.storage.FileItemStorage;
 import se.yarin.morphy.storage.ItemStorage;
 import se.yarin.morphy.util.CBUtil;
 
@@ -73,7 +73,7 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
     }
 
     public EntityIndexTransaction<T> beginTransaction() {
-        // TODO: Acquire read lock
+        // TODO: Acquire read lock (probably better in constructor)
         return new EntityIndexTransaction<>(this);
     }
 
@@ -92,7 +92,7 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
      * @param id the id of the entity
      * @return the entity
      */
-    public T get(int id) {
+    public @Nullable T get(int id) {
         EntityNode node = getNode(id);
         if (node == null) {
             return null;
@@ -105,7 +105,7 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
      * @param entityKey the key of the entity
      * @return the entity, or null if there was no entity with that key
      */
-    public T get(T entityKey) {
+    public @Nullable T get(T entityKey) {
         EntityIndexTransaction<T> txn = beginTransaction();
         EntityIndexTransaction<T>.NodePath treePath = txn.lowerBound(entityKey);
         if (treePath.isEnd()) {
@@ -456,6 +456,24 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
                     "Found %d entities when traversing the %s base but the header says there should be %d entities.",
                     result.count(), entityType.toLowerCase(), storageHeader().numEntities()));
         }
+    }
+
+    /**
+     * Gets a list of all node ids that are marked as deleted and can be reused.
+     * For internal use only.
+     * @return a list of deleted entity ids.
+     */
+    public List<Integer> getDeletedEntityIds() {
+        ArrayList<Integer> ids = new ArrayList<>();
+        int id = storageHeader().deletedEntityId();
+        while (id >= 0 && !ids.contains(id)) {
+            ids.add(id);
+            id = storage.getItem(id).getRightChildId();
+        }
+        if (id >= 0) {
+            log.warn(String.format("Loop in deleted id chain in entity %s", entityType.toLowerCase()));
+        }
+        return ids;
     }
 
     @Value.Immutable

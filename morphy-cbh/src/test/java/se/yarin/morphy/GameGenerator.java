@@ -59,6 +59,7 @@ public class GameGenerator {
         if (withVariations) {
             addRandomVariationMoves(moves, random.nextInt(200) + 5);
         }
+        withAnnotations = false;
         if (withAnnotations) {
             int posCnt = moves.getAllNodes().size();
             addRandomAnnotations(moves, random.nextInt(posCnt) + 5);

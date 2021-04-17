@@ -165,6 +165,29 @@ public class DatabaseTest {
         assertEquals(0, file.listFiles().length);
     }
 
+
+    @Test
+    public void getSingleGame() {
+        Database database = ResourceLoader.openWorldChDatabase();
+
+        Game game = database.getGame(73);
+        assertEquals("Chigorin, Mikhail Ivanovich", game.white().getFullName());
+        assertEquals("Steinitz, William", game.black().getFullName());
+        assertEquals("World-ch04 Steinitz-Chigorin +10-8=5", game.tournament().title());
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void getGame0() {
+        Database database = ResourceLoader.openWorldChDatabase();
+        database.getGame(0);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void getSingleMissingGame() {
+        Database database = ResourceLoader.openWorldChDatabase();
+        database.getGame(100000);
+    }
+
     // TODO: Some tests when opening a database where the filenames have different casing
     // This is not uncommon on Windows system
 

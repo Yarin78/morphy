@@ -31,6 +31,11 @@ public abstract class Source extends Entity implements Comparable<Source> {
         return SourceQuality.UNSET;
     }
 
+    @Override
+    public Entity withCountAndFirstGameId(int count, int firstGameId) {
+        return ImmutableSource.builder().from(this).count(count).firstGameId(firstGameId).build();
+    }
+
     public static Source of(String title) {
         return ImmutableSource.builder().title(title).build();
     }

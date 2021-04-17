@@ -9,6 +9,11 @@ public abstract class FooBarEntity extends Entity implements Comparable<FooBarEn
     public abstract int extraValue();
     public abstract String extraString();
 
+    @Override
+    public Entity withCountAndFirstGameId(int count, int firstGameId) {
+        return ImmutableFooBarEntity.builder().from(this).count(count).firstGameId(firstGameId).build();
+    }
+
     public static FooBarEntity of(String key) {
         return ImmutableFooBarEntity.builder().key(key).build();
     }

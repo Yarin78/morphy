@@ -21,6 +21,8 @@ import java.io.IOException;
 import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 import java.nio.file.OpenOption;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 
 import static java.nio.file.StandardOpenOption.*;
@@ -103,7 +105,7 @@ public class ExtendedGameHeaderStorage implements ItemStorageSerializer<Extended
      */
     public @NotNull ExtendedGameHeader get(int gameId) {
         try {
-            return storage.getItem(gameId );
+            return storage.getItem(gameId);
         } catch (MorphyIOException e) {
             throw new IllegalArgumentException(e);
         }
@@ -192,6 +194,18 @@ public class ExtendedGameHeaderStorage implements ItemStorageSerializer<Extended
         if (gameId > count()) {
             storage.putHeader(ExtProlog.withCount(gameId));
         }
+    }
+
+    /**
+     * Gets a list of all extended game headers in the storage.
+     * @return a list of all ExtendedGameHeaders
+     */
+    public List<ExtendedGameHeader> getAll() {
+        ArrayList<ExtendedGameHeader> result = new ArrayList<>(count());
+        for (int i = 1; i <= count(); i++) {
+            result.add(storage.getItem(i));
+        }
+        return result;
     }
 
     public void copyGameHeaders(ExtendedGameHeaderStorage target) {
