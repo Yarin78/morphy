@@ -78,6 +78,17 @@ public class EntityIndexTransaction<T extends Entity & Comparable<T>> {
         return node;
     }
 
+    /**
+     * Looks up an entity based on key and returns the id.
+     * If the entity is missing, it's created in the transaction.
+     * @param entity the entity to lookup
+     * @return the id of an existing matching entity, or the id of the newly created entity
+     */
+    public int getOrCreate(T entity) {
+        T existing = this.get(entity);
+        return existing == null ? addEntity(entity) : existing.id();
+    }
+
     protected void putNode(EntityNode node) {
         changes.put(node.getId(), node);
     }

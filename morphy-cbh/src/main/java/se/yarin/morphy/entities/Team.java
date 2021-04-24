@@ -1,11 +1,15 @@
 package se.yarin.morphy.entities;
 
 import org.immutables.value.Value;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import se.yarin.morphy.util.CBUtil;
 
 @Value.Immutable
 public abstract class Team extends Entity implements Comparable<Team> {
-    public abstract String title();
+    @Value.Default
+    @NotNull
+    public String title() { return "";}
 
     @Value.Default
     public int teamNumber() { return 0; }
@@ -17,7 +21,7 @@ public abstract class Team extends Entity implements Comparable<Team> {
     public int year() { return 0; }
 
     @Value.Default
-    public Nation nation() {
+    public @NotNull Nation nation() {
         return Nation.NONE;
     }
 
@@ -26,18 +30,27 @@ public abstract class Team extends Entity implements Comparable<Team> {
         return ImmutableTeam.builder().from(this).count(count).firstGameId(firstGameId).build();
     }
 
-    public static Team of(String title) {
-        return ImmutableTeam.builder().title(title).build();
+    public static Team of(@Nullable String title) {
+        ImmutableTeam.Builder builder = ImmutableTeam.builder();
+        if (title != null) {
+            builder.title(title);
+        }
+        return builder.build();
     }
 
-    public static Team of(String title, int teamNumber, boolean season, int year, Nation nation) {
-        return ImmutableTeam.builder()
-                .title(title)
-                .teamNumber(teamNumber)
-                .season(season)
-                .year(year)
-                .nation(nation)
-                .build();
+    public static Team of(@Nullable String title, int teamNumber, boolean season, int year, @Nullable Nation nation) {
+        ImmutableTeam.Builder builder = ImmutableTeam.builder();
+        if (title != null) {
+            builder.title(title);
+        }
+        if (nation != null) {
+            builder.nation(nation);
+        }
+        return builder
+            .teamNumber(teamNumber)
+            .season(season)
+            .year(year)
+            .build();
     }
 
     @Override

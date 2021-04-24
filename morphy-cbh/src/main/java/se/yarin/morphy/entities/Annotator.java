@@ -1,19 +1,29 @@
 package se.yarin.morphy.entities;
 
 import org.immutables.value.Value;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import se.yarin.morphy.util.CBUtil;
 
 @Value.Immutable
 public abstract class Annotator extends Entity implements Comparable<Annotator> {
-    public abstract String name();
+    @Value.Default
+    @NotNull
+    public String name() {
+        return "";
+    }
 
     @Override
     public Entity withCountAndFirstGameId(int count, int firstGameId) {
         return ImmutableAnnotator.builder().from(this).count(count).firstGameId(firstGameId).build();
     }
 
-    public static Annotator of(String name) {
-        return ImmutableAnnotator.builder().name(name).build();
+    public static Annotator of(@Nullable String name) {
+        ImmutableAnnotator.Builder builder = ImmutableAnnotator.builder();
+        if (name != null) {
+            builder.name(name);
+        }
+        return builder.build();
     }
 
     @Override

@@ -11,11 +11,17 @@ import se.yarin.morphy.util.CBUtil;
 public abstract class Tournament extends Entity implements Comparable<Tournament> {
     private static final Logger log = LoggerFactory.getLogger(Tournament.class);
 
+    @Value.Default
     @NotNull
-    public abstract String title();
+    public String title() {
+        return "";
+    }
 
+    @Value.Default
     @NotNull
-    public abstract Date date();
+    public Date date() {
+        return Date.unset();
+    }
 
     @Value.Default
     public int category() { return 0; }

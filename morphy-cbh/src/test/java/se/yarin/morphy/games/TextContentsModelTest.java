@@ -43,7 +43,7 @@ public class TextContentsModelTest {
         assertEquals("Stockholm", game3.tournament().title());
         assertEquals(3, game3.round());
 
-        TextHeaderModel headerModel = textDatabase.getTextModel(game3).header();
+        TextHeaderModel headerModel = game3.getTextModel().header();
         assertEquals("Stockholm", headerModel.tournament());
         assertEquals(3, headerModel.round());
     }

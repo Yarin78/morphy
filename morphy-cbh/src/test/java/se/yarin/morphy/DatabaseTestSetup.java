@@ -193,8 +193,13 @@ public abstract class DatabaseTestSetup {
         if (gameTag != null) {
             headerModel.setGameTag(gameTag);
         }
-        ImmutableGameHeader.Builder header = txn.createGameHeader(headerModel);
-        ImmutableExtendedGameHeader.Builder extendedHeader = txn.createExtendedGameHeader(headerModel);
+
+        ImmutableGameHeader.Builder header = ImmutableGameHeader.builder();
+        ImmutableExtendedGameHeader.Builder extendedHeader = ImmutableExtendedGameHeader.builder();
+
+        txn.buildEntities(header, extendedHeader, headerModel);
+        GameAdapter gameAdapter = new GameAdapter();
+        gameAdapter.setHeaderGameData(header, extendedHeader, headerModel);
 
         return txn.putGame(
                 gameId,

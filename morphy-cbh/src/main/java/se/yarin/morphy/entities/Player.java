@@ -1,28 +1,41 @@
 package se.yarin.morphy.entities;
 
 import org.immutables.value.Value;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import se.yarin.morphy.util.CBUtil;
 
 @Value.Immutable
 public abstract class Player extends Entity implements Comparable<Player> {
-    public abstract String lastName();
+    @Value.Default
+    @NotNull
+    public String lastName() {
+        return "";
+    }
 
-    public abstract String firstName();
+    @Value.Default
+    @NotNull
+    public String firstName() {
+        return "";
+    }
 
     @Override
     public Entity withCountAndFirstGameId(int count, int firstGameId) {
         return ImmutablePlayer.builder().from(this).count(count).firstGameId(firstGameId).build();
     }
 
-    public static Player ofFullName(String fullName) {
-        String firstName = "", lastName = fullName.trim();
-        int comma = lastName.indexOf(",");
-        if (comma > 0) {
-            firstName = lastName.substring(comma + 1).trim();
-            lastName = lastName.substring(0, comma).trim();
+    public static Player ofFullName(@Nullable String fullName) {
+        ImmutablePlayer.Builder builder = ImmutablePlayer.builder();
+        if (fullName != null) {
+            String firstName = "", lastName = fullName.trim();
+            int comma = lastName.indexOf(",");
+            if (comma > 0) {
+                firstName = lastName.substring(comma + 1).trim();
+                lastName = lastName.substring(0, comma).trim();
+            }
+            builder.lastName(lastName).firstName(firstName);
         }
-
-        return ImmutablePlayer.builder().lastName(lastName).firstName(firstName).build();
+        return builder.build();
     }
 
     public static Player of(String lastName, String firstName) {

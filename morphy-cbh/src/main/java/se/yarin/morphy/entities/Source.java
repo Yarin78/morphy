@@ -6,7 +6,8 @@ import se.yarin.morphy.util.CBUtil;
 
 @Value.Immutable
 public abstract class Source extends Entity implements Comparable<Source> {
-    public abstract String title();
+    @Value.Default
+    public String title() { return ""; }
 
     @Value.Default
     public String publisher() {

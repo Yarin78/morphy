@@ -39,6 +39,7 @@ public class GameHeaderModel {
 
     private static final String FIELD_EVENT = "event";
     private static final String FIELD_EVENT_DATE = "eventDate";
+    private static final String FIELD_EVENT_END_DATE = "eventEndDate";
     private static final String FIELD_EVENT_SITE = "eventSite";
     private static final String FIELD_EVENT_COUNTRY = "eventCountry";
     private static final String FIELD_EVENT_CATEGORY = "eventCategory";
@@ -67,6 +68,7 @@ public class GameHeaderModel {
 
     @HeaderData @Getter private String event;
     @HeaderData @Getter private Date eventDate;
+    @HeaderData @Getter private Date eventEndDate;
     @HeaderData @Getter private String eventSite;
     @HeaderData @Getter private String eventCountry;
     @HeaderData @Getter private Integer eventCategory;
@@ -94,6 +96,7 @@ public class GameHeaderModel {
     public void setSubRound(int subRound) { setField(FIELD_SUB_ROUND, subRound); }
     public void setEvent(String name) { setField(FIELD_EVENT, name); }
     public void setEventDate(Date date) { setField(FIELD_EVENT_DATE, date); }
+    public void setEventEndDate(Date date) { setField(FIELD_EVENT_END_DATE, date); }
     public void setEventSite(String site) { setField(FIELD_EVENT_SITE, site); }
     public void setEventCountry(String country) { setField(FIELD_EVENT_COUNTRY, country); }
     public void setEventRounds(int rounds) { setField(FIELD_EVENT_ROUNDS, rounds); }
@@ -213,6 +216,16 @@ public class GameHeaderModel {
      */
     public Object getField(String fieldName) {
         return fields.get(fieldName);
+    }
+
+    /**
+     * Gets the header value for the specified field.
+     * @param fieldName the name of the field
+     * @param defaultValue the value to return if the field isn't set
+     * @return the value of the field, or null if not set
+     */
+    public Object getField(String fieldName, Object defaultValue) {
+        return fields.getOrDefault(fieldName, defaultValue);
     }
 
     /**

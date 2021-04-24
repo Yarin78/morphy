@@ -3,11 +3,14 @@ package se.yarin.morphy;
 import org.junit.Test;
 import se.yarin.chess.Date;
 import se.yarin.chess.GameHeaderModel;
+import se.yarin.chess.GameModel;
 import se.yarin.morphy.entities.*;
+import se.yarin.morphy.exceptions.MorphyInvalidDataException;
 import se.yarin.morphy.games.ImmutableExtendedGameHeader;
 import se.yarin.morphy.games.ImmutableGameHeader;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 
 public class DatabaseManualTest extends DatabaseTestSetup {
 
@@ -319,7 +322,7 @@ public class DatabaseManualTest extends DatabaseTestSetup {
         Source fooSource = testBase.sourceIndex().get(Source.of("foo"));
         Team fooTeam = testBase.teamIndex().get(Team.of("foo"));
         Team barTeam = testBase.teamIndex().get(Team.of("bar"));
-        GameTag fooGameTag = testBase.gameTagIndex().get(1);
+        GameTag fooGameTag = testBase.gameTagIndex().get(0);
         assertEquals("foo", fooGameTag.englishTitle());
 
         assertEquals(1, fooPlayer.count());
@@ -333,8 +336,24 @@ public class DatabaseManualTest extends DatabaseTestSetup {
     }
 
     @Test
+    public void addGameWithNoEntitiesSpecified() {
+        // test correct defaults used in GameHeaderModel
+        DatabaseTransaction txn = new DatabaseTransaction(testBase);
+        int id = txn.addGame(new GameModel());
+        txn.commit();
+
+        Game game = testBase.getGame(id);
+        assertEquals("", game.white().getFullName());
+        assertEquals("", game.black().getFullName());
+        assertEquals("", game.annotator().name());
+        assertEquals("", game.source().title());
+        assertNull(game.whiteTeam());
+        assertNull(game.blackTeam());
+        assertNull(game.gameTag());
+    }
+
+    @Test
     public void addGameWithRenamedPlayerEntity() {
-        // rename existing entity (key field), add new game using this entity
         DatabaseTransaction txn = new DatabaseTransaction(testBase);
 
         txn.updatePlayerById(0, Player.ofFullName("Carlsen, Magnus"));
@@ -358,30 +377,181 @@ public class DatabaseManualTest extends DatabaseTestSetup {
     }
 
     @Test
-    public void addGameWithNewTournamentIncludingExtraFields() {
+    public void updateNewlyCreatedEntityInSameBatch() {
+        GameModel gameModel = new GameModel();
+        gameModel.header().setEvent("mytour");
 
+        DatabaseTransaction txn = new DatabaseTransaction(testBase);
+        int id = txn.addGame(gameModel);
+        Game game = txn.getGame(id);
+        txn.updateTournamentById(
+                game.tournamentId(),
+                Tournament.of("renamed tour", Date.unset()),
+                ImmutableTournamentExtra.builder().longitude(50).build());
+        txn.commit();
+
+        Game addedGame = testBase.getGame(id);
+        assertEquals("renamed tour", addedGame.tournament().title());
+        assertEquals(50, addedGame.tournamentExtra().longitude(), 1e-6);
+
+        assertNull(testBase.tournamentIndex().get(Tournament.of("mytour", Date.unset())));
+    }
+
+    @Test
+    public void addGameWithNewEntityThenReplaceWithExistingEntity() {
+        // The temporary new entity shouldn't exist after commit,
+        // but capacity should be increased (this is implementation dependent)
+        DatabaseTransaction txn = new DatabaseTransaction(testBase);
+        putTestGame(txn, 0, "foo - Carlsen", 100, 0, 16, 0);
+        putTestGame(txn, 16, "Caruana - Carlsen", 100, 0, 16, 0);
+        txn.commit();
+
+        assertEquals(11, testBase.playerIndex().capacity());
+        assertEquals(10, testBase.playerIndex().count());
+        assertNull(testBase.playerIndex().get(Player.ofFullName("foo")));
+    }
+
+    @Test
+    public void addGameFromSameDatabasePreferExplicitId() {
+        GameModel gameModel = testBase.getGameModel(1);
+        assertEquals("Carlsen", gameModel.header().getWhite());
+        gameModel.header().setWhite("foo");
+
+        DatabaseTransaction txn = new DatabaseTransaction(testBase);
+        txn.addGame(gameModel);
+        txn.commit();
+
+        assertEquals("Carlsen", testBase.getGame(16).white().getFullName());
+    }
+
+    @Test
+    public void addGameFromDifferentDatabaseDoesNotUseExplicitId() {
+        GameModel gameModel = testBase.getGameModel(1);
+        assertEquals("Carlsen", gameModel.header().getWhite());
+        gameModel.header().setWhite("foo");
+
+        Database database = new Database();
+        DatabaseTransaction txn = new DatabaseTransaction(database);
+        txn.addGame(gameModel);
+        txn.commit();
+
+        assertEquals("foo", database.getGame(1).white().getFullName());
+    }
+
+    @Test(expected = MorphyInvalidDataException.class)
+    public void addGameWithInvalidExplicitEntityIdSet() {
+        // WHITE_ID is set in a game model but pointing to a missing player
+        GameModel gameModel = testBase.getGameModel(1);
+        assertEquals("Carlsen", gameModel.header().getWhite());
+        gameModel.header().setField(GameAdapter.WHITE_ID, 100);
+
+        DatabaseTransaction txn = new DatabaseTransaction(testBase);
+        txn.addGame(gameModel);
+        txn.commit();
+    }
+
+    @Test
+    public void addGameWithNewSource() {
+        // Check that if a new source is created when a game is added, all the metadata fields are also set
+        GameModel gameModel = new GameModel();
+        gameModel.header().setSourceTitle("my source");
+        gameModel.header().setSource("publisher");
+        gameModel.header().setSourceDate(new Date(2021, 4, 1));
+
+        DatabaseTransaction txn = new DatabaseTransaction(testBase);
+        int id = txn.addGame(gameModel);
+        txn.commit();
+
+        Game game = testBase.getGame(id);
+        Source source = game.source();
+
+        assertEquals("my source", source.title());
+        assertEquals("publisher", source.publisher());
+        assertEquals(new Date(2021, 4, 1), source.date());
+    }
+
+    @Test
+    public void addGameWithNewTournamentIncludingExtraFields() {
+        // Check that if a new event is created when a game is added, all the metadata fields are also set
+        // For tournaments it's a bit special since there's TournamentExtra
+        GameModel gameModel = new GameModel();
+        gameModel.header().setEvent("tour");
+        gameModel.header().setEventSite("London");
+        gameModel.header().setEventCategory(10);
+        gameModel.header().setEventCountry("SWE");
+        gameModel.header().setEventTimeControl("blitz");
+        gameModel.header().setEventDate(new Date(2021, 4, 1));
+        gameModel.header().setEventEndDate(new Date(2021, 4, 5));
+
+        DatabaseTransaction txn = new DatabaseTransaction(testBase);
+        int id = txn.addGame(gameModel);
+        txn.commit();
+
+        Game game = testBase.getGame(id);
+        Tournament tournament = game.tournament();
+        TournamentExtra tournamentExtra = game.tournamentExtra();
+
+        assertEquals("tour", tournament.title());
+        assertEquals("London", tournament.place());
+        assertEquals(10, tournament.category());
+        assertEquals(Nation.SWEDEN, tournament.nation());
+        assertEquals(TournamentTimeControl.BLITZ, tournament.timeControl());
+        assertEquals(new Date(2021, 4, 1), tournament.date());
+        assertEquals(new Date(2021, 4, 5), tournamentExtra.endDate());
     }
 
     @Test
     public void addGameWithExistingTournamentHavingMoreDetails() {
         // If a game references an existing tournament and there are more details set,
         // it will _not_ get updated
+
+        GameModel gameModel1 = new GameModel();
+        gameModel1.header().setEvent("tour1");  // exists
+        gameModel1.header().setEventRounds(5);  // will not be set
+        gameModel1.header().setEventEndDate(new Date(2021, 4, 10));
+
+        GameModel gameModel2 = new GameModel();
+        gameModel2.header().setEvent("newtour"); // doesn't exist
+        gameModel2.header().setEventRounds(8);   // so this will be set
+        gameModel2.header().setEventEndDate(new Date(2021, 4, 15));
+
+        DatabaseTransaction txn = new DatabaseTransaction(testBase);
+        txn.addGame(gameModel1);
+        txn.addGame(gameModel2);
+        txn.commit();
+
+        Tournament tour1 = testBase.tournamentIndex().get(Tournament.of("tour1", Date.unset()));
+        assertEquals(0, tour1.rounds());
+        assertEquals(Date.unset(), testBase.tournamentExtraStorage().get(tour1.id()).endDate());
+
+        Tournament tour2 = testBase.tournamentIndex().get(Tournament.of("newtour", Date.unset()));
+        assertEquals(8, tour2.rounds());
+        assertEquals(new Date(2021, 4, 15), testBase.tournamentExtraStorage().get(tour2.id()).endDate());
     }
 
     @Test
-    public void addGameWithUpdatedTournamentEntity() {
-        // change metadata field for tournament (including extra storage fields),
-        // add new game specifying the tournament but with fewer fields specified
+    public void useEntityFromEntityTransaction() {
+        GameModel gameModel = new GameModel();
+        gameModel.header().setWhite("Carlsen, Magnus");
+
+        DatabaseTransaction txn = new DatabaseTransaction(testBase);
+        txn.updatePlayerById(0, Player.ofFullName("Carlsen, Magnus"));
+        int id = txn.addGame(gameModel);
+        txn.commit();
+
+        assertEquals("Carlsen, Magnus", testBase.getGame(id).white().getFullName());
     }
 
-    @Test
-    public void getEntityThatWasCreatedInSameBatch() {
-
+    @Test(expected = IllegalArgumentException.class)
+    public void updateInvalidPlayer() {
+        DatabaseTransaction txn = new DatabaseTransaction(testBase);
+        txn.updatePlayerById(-1, Player.ofFullName("Carlsen, Magnus"));
     }
 
-    @Test
-    public void getUpdatedEntityInSameBatch() {
-        // Change some additional fields
+    @Test(expected = IllegalArgumentException.class)
+    public void updateInvalidAnnotator() {
+        DatabaseTransaction txn = new DatabaseTransaction(testBase);
+        txn.updateAnnotatorById(1000, Annotator.of("foo"));
     }
 
     @Test
@@ -390,7 +560,12 @@ public class DatabaseManualTest extends DatabaseTestSetup {
     }
 
     @Test
-    public void committingTwoTransactionsFromTheSameVersionFails() {
+    public void committingTwoDatabaseTransactionsFromTheSameVersionFails() {
+
+    }
+
+    @Test
+    public void committingDatabaseAndEntityTransactionsFromTheSameVersionFails() {
 
     }
 

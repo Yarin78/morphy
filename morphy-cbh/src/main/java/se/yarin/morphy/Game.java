@@ -18,7 +18,7 @@ import java.nio.ByteBuffer;
 import java.util.Calendar;
 
 /**
- * Class that represents a game stored in a {@link Database}.
+ * Class that represents a game that is bound to a {@link Database}.
  */
 public class Game {
     // TODO: This should only represent a game; Text should be a separate class
@@ -175,7 +175,7 @@ public class Game {
         return header.noMoves();
     }
 
-    public Eco ec() {
+    public Eco eco() {
         return header.eco();
     }
 
@@ -236,15 +236,15 @@ public class Game {
     }
 
     public GameModel getModel() throws MorphyException {
-        return database.getGameModel(this);
+        return database.gameAdapter().getGameModel(this);
     }
 
     public TextModel getTextModel() throws MorphyException {
-        return database.getTextModel(this);
+        return database.gameAdapter().getTextModel(this);
     }
 
     public GameHeaderModel getGameHeaderModel() {
-        return database.loader().getGameHeaderModel(this);
+        return database.gameAdapter().getGameHeaderModel(this);
     }
 
     public String getTextTitle() {

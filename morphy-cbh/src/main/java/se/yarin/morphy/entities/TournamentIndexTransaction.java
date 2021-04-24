@@ -47,7 +47,7 @@ public class TournamentIndexTransaction extends EntityIndexTransaction<Tournamen
     }
 
     @Override
-    public int addEntity(Tournament entity) {
+    public int addEntity(@NotNull Tournament entity) {
         return addEntity(entity, null);
     }
 

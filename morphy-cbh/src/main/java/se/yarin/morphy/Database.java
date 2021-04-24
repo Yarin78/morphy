@@ -56,7 +56,7 @@ public class Database {
     @NotNull private final TeamIndex teamIndex;
     @NotNull private final GameTagIndex gameTagIndex;
 
-    @NotNull private final GameLoader loader;
+    @NotNull private final GameAdapter gameAdapter;
 
     @NotNull public GameHeaderIndex gameHeaderIndex() {
         return gameHeaderIndex;
@@ -102,7 +102,7 @@ public class Database {
         return gameTagIndex;
     }
 
-    @NotNull public GameLoader loader() { return loader; }
+    @NotNull public GameAdapter gameAdapter() { return gameAdapter; }
 
     /**
      * Creates a new in-memory ChessBase database.
@@ -138,7 +138,7 @@ public class Database {
         this.teamIndex = teamIndex;
         this.gameTagIndex = gameTagIndex;
 
-        this.loader = new GameLoader(this);
+        this.gameAdapter = new GameAdapter();
     }
 
     public static Database create(@NotNull File file) throws IOException {
@@ -306,34 +306,12 @@ public class Database {
     }
 
     /**
-     * Gets a game model
-     * @param game the game
-     * @return a model of the game
-     * @throws MorphyException if an internal error occurred when fetching the game
-     * @throws IllegalArgumentException if the game is actually a text
-     */
-    public GameModel getGameModel(Game game) throws MorphyException {
-        return loader.getGameModel(game);
-    }
-
-    /**
-     * Gets a text model
-     * @param game the game
-     * @return a model of the text
-     * @throws MorphyException if an internal error occurred when fetching the game
-     * @throws IllegalArgumentException if the text is actually a game
-     */
-    public TextModel getTextModel(Game game) throws MorphyException {
-        return loader.getTextModel(game);
-    }
-
-    /**
      * Gets a game from the database
      * @param gameId the id of the game to get
-     * @return a model of the game
+     * @return the game
      * @throws IllegalArgumentException if no game with the specified ID exists
      */
-    public Game getGame(int gameId) {
+    public @NotNull Game getGame(int gameId) {
         // TODO: consolidate this, it's also in DatabaseTransaction
         if (gameId < 1) {
             throw new IllegalArgumentException("Invalid game id: " + gameId);
@@ -343,18 +321,40 @@ public class Database {
         return new Game(this, header, extendedGameHeader);
     }
 
+    /**
+     * Gets a game model
+     * @param gameId the id of the game to get
+     * @return a model of the game
+     * @throws MorphyException if an internal error occurred when fetching the game
+     * @throws IllegalArgumentException if the game is actually a text
+     */
+    public @NotNull GameModel getGameModel(int gameId) throws MorphyException {
+        return getGame(gameId).getModel();
+    }
+
+    /**
+     * Gets a text model
+     * @param gameId the id of the text to get
+     * @return a model of the text
+     * @throws MorphyException if an internal error occurred when fetching the game
+     * @throws IllegalArgumentException if the text is actually a game
+     */
+    public @NotNull TextModel getTextModel(int gameId) throws MorphyException {
+        return getGame(gameId).getTextModel();
+    }
+
     public int count() {
         return gameHeaderIndex.count();
     }
 
-    public int addGame(GameModel game) {
+    public int addGame(@NotNull GameModel game) {
         DatabaseTransaction txn = new DatabaseTransaction(this);
         int id = txn.addGame(game);
         txn.commit();
         return id;
     }
 
-    public void replaceGame(int gameId, GameModel game) {
+    public void replaceGame(int gameId, @NotNull GameModel game) {
         DatabaseTransaction txn = new DatabaseTransaction(this);
         txn.replaceGame(gameId, game);
         txn.commit();
