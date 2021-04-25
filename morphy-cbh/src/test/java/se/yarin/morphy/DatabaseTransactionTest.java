@@ -2,9 +2,14 @@ package se.yarin.morphy;
 
 import org.junit.Test;
 import se.yarin.chess.Date;
+import se.yarin.chess.GameHeaderModel;
 import se.yarin.chess.GameModel;
 import se.yarin.morphy.entities.*;
 import se.yarin.morphy.exceptions.MorphyInvalidDataException;
+
+import java.util.Arrays;
+import java.util.List;
+import java.util.function.Consumer;
 
 import static org.junit.Assert.*;
 
@@ -18,7 +23,7 @@ public class DatabaseTransactionTest extends DatabaseTestSetup {
         assertEquals(db.playerIndex().count(), 0);
 
         DatabaseTransaction txn = new DatabaseTransaction(db);
-        putTestGame(txn, 0, "Aronian - Ding", "tour2", null, null, "t1 - t2", null, 0, 20, 0, 50);
+        putTestGame(txn, 0, "Aronian - Ding", "tour2", null, null, "t1 - t2", null, 50, 0, 20, 0);
         txn.commit();
 
         assertEquals(db.count(), 1);
@@ -33,7 +38,7 @@ public class DatabaseTransactionTest extends DatabaseTestSetup {
     @Test
     public void addSingleGameWithExistingEntities() {
         DatabaseTransaction txn = new DatabaseTransaction(testBase);
-        putTestGame(txn, 0, "Aronian - Ding", "tour2", null, null, null, null, 0, 20, 0, 50);
+        putTestGame(txn, 0, "Aronian - Ding", "tour2", null, null, null, null, 50, 0, 20, 0);
         txn.commit();
 
         assertEquals(16, testBase.count());
@@ -43,7 +48,7 @@ public class DatabaseTransactionTest extends DatabaseTestSetup {
     @Test
     public void addSingleGameWithNewPlayer() {
         DatabaseTransaction txn = new DatabaseTransaction(testBase);
-        putTestGame(txn, 0, "Mardell, Jimmy - Carlsen", null, null, null, null, null, 0, 20, 0, 50);
+        putTestGame(txn, 0, "Mardell, Jimmy - Carlsen", null, null, null, null, null, 50, 0, 20, 0);
         txn.commit();
 
         assertEquals(11, testBase.playerIndex().count());
@@ -64,7 +69,7 @@ public class DatabaseTransactionTest extends DatabaseTestSetup {
 
         DatabaseTransaction txn = new DatabaseTransaction(testBase);
         // Replacing a game between Ding - Carlsen; tour3, ann2
-        putTestGame(txn, 13, "Aronian - So", "tour2", "ann2", null, null, null, 500, 0, 0, 80);
+        putTestGame(txn, 13, "Aronian - So", "tour2", "ann2", null, null, null, 80, 500, 0, 0);
         txn.commit();
 
         assertEquals(3, playerCount("Ding"));
@@ -80,7 +85,7 @@ public class DatabaseTransactionTest extends DatabaseTestSetup {
     @Test
     public void replaceLastGameLeavingMoveGapAtTheEnd() {
         DatabaseTransaction txn = new DatabaseTransaction(testBase);
-        putTestGame(txn, 15, "Carlsen - So", "tour1", null, null, null, null, 0, 15, 0, 90);
+        putTestGame(txn, 15, "Carlsen - So", "tour1", null, null, null, null, 90, 0, 15, 0);
         txn.commit();
 
         assertEquals(10, wastedMoveBytes());
@@ -89,7 +94,7 @@ public class DatabaseTransactionTest extends DatabaseTestSetup {
     @Test
     public void replaceLastGameWithAnnotations() {
         DatabaseTransaction txn = new DatabaseTransaction(testBase);
-        putTestGame(txn, 15, "Carlsen - So", "tour1", null, null, null, null, 500, 15, 15, 100);
+        putTestGame(txn, 15, "Carlsen - So", "tour1", null, null, null, null, 100, 500, 15, 15);
         txn.commit();
 
         assertEquals(0, wastedAnnotationBytes());
@@ -303,7 +308,7 @@ public class DatabaseTransactionTest extends DatabaseTestSetup {
     public void addGameCausingNewEntitiesOfAllTypesToBeAdded() {
         DatabaseTransaction txn = new DatabaseTransaction(testBase);
         putTestGame(txn, 0, "foo - bar", "foo", "foo", "foo", "foo - bar",
-                "foo", 100, 0, 0, 100);
+                "foo", 100, 100, 0, 0);
         txn.commit();
 
         Player fooPlayer = testBase.playerIndex().get(Player.ofFullName("foo"));
@@ -629,6 +634,107 @@ public class DatabaseTransactionTest extends DatabaseTestSetup {
         testBase.playerIndex().get(playerId);
     }
 
+    @Test
+    public void setEntityAfterGameUpdate() {
+        DatabaseTransaction txn = new DatabaseTransaction(testBase);
+        Game game = putTestGame(txn, 0, "Kasparov - Carlsen", "new tour", "new anno", "new source", "q1 - q2", "tag", 100, 200, 1, 2);
+        txn.updatePlayerById(game.whitePlayerId(), Player.ofFullName("Kasparov, Garry"));
+        txn.updateTournamentById(game.tournamentId(), Tournament.of("updated tour", "place", new Date(2021, 1, 2)),
+                ImmutableTournamentExtra.builder().longitude(50).build());
+        txn.updateAnnotatorById(game.annotatorId(), Annotator.of("updated annotator"));
+        txn.updateSourceById(game.sourceId(), ImmutableSource.builder().title("updated source").publisher("publisher").build());
+        txn.updateTeamById(game.whiteTeamId(), Team.of("updated team", 2, true, 2021, Nation.SWEDEN));
+        txn.updateGameTagById(game.gameTagId(), ImmutableGameTag.builder().englishTitle("eng").germanTitle("ger").build());
+        txn.commit();
+
+        Game committedGame = testBase.getGame(game.id());
+        assertEquals(Player.ofFullName("Kasparov, Garry"), committedGame.white());
+        assertEquals(Tournament.of("updated tour", "place", new Date(2021, 1, 2)), committedGame.tournament());
+        assertEquals(ImmutableTournamentExtra.builder().longitude(50).build(), committedGame.tournamentExtra());
+        assertEquals(Annotator.of("updated annotator"), committedGame.annotator());
+        assertEquals(ImmutableSource.builder().title("updated source").publisher("publisher").build(), committedGame.source());
+        assertEquals(Team.of("updated team", 2, true, 2021, Nation.SWEDEN), committedGame.whiteTeam());
+        assertEquals(ImmutableGameTag.builder().englishTitle("eng").germanTitle("ger").build(), committedGame.gameTag());
+    }
+
+    @Test
+    public void multipleAddsAndReplacesInSameBatchInMixedOrder() {
+        List<Consumer<DatabaseTransaction>> operations = Arrays.asList(
+                // #16 Add new game with new player, no annotations
+                (DatabaseTransaction txn) -> putTestGame(txn, 0, "Ding - Mardell", 120, 0, 16, 0),
+                // Update old game, changing first game id of one player, creating new entites
+                (DatabaseTransaction txn) -> putTestGame(txn, 5, "Carlsen - So", "new tour", "new annotator", "new source", "q1 - q2", "taggy", 190, 130, 5, 16),
+                // Update old game, adding annotations to existing game
+                (DatabaseTransaction txn) -> putTestGame(txn, 11, "So - Mamedyarov", 130, 500, 16, 11),
+                // #17 Add new game, same players, with annotations
+                (DatabaseTransaction txn) -> putTestGame(txn, 0, "Giri - Giri", 150, 300, 17, 17),
+                // Change old game, causing player to not exist
+                (DatabaseTransaction txn) -> putTestGame(txn, 12, "Carlsen - Grischuk", 120, 200, 18, 18),
+                // #18 Add new game with new player
+                (DatabaseTransaction txn) -> putTestGame(txn, 0, "Kramnik - Kasparov", 200, 2000, 18, 18),
+                // Update last game so new player no longer exists
+                (DatabaseTransaction txn) -> putTestGame(txn, 18, "Kasparov - Carlsen", 200, 0, 18, 18),
+                // Rename player
+                (DatabaseTransaction txn) -> txn.updatePlayerById(txn.getGame(18).whitePlayerId(), Player.ofFullName("Kasparov, Garry")),
+                // #19 Add with newly renamed entity
+                (DatabaseTransaction txn) -> putTestGame(txn, 0, "Caruana - Kasparov, Garry", 30, 100, 19, 19),
+                // Update annotations to old game
+                (DatabaseTransaction txn) -> putTestGame(txn, 9, "Radjabov - Nepo", 900, 20000, 18, 18)
+        );
+
+        // The database resulting resulting from committing after each operation will be the expected result
+        for (Consumer<DatabaseTransaction> operation : operations) {
+            DatabaseTransaction txn = new DatabaseTransaction(testBase);
+            operation.accept(txn);
+            txn.commit();
+        }
+
+        // Try split up the operations into three batches, to make sure all subsets combinations are tried in a batch
+        for (int i = 0; i < operations.size(); i++) {
+            for (int j = i + 1; j < operations.size(); j++) {
+                Database db = new Database();
+                populateDatabase(db);
+
+                // PRE
+                final DatabaseTransaction txn1 = new DatabaseTransaction(db);
+                operations.subList(0, i).forEach(x -> x.accept(txn1));
+                txn1.commit();
+
+                // MAIN
+                final DatabaseTransaction txn2 = new DatabaseTransaction(db);
+                operations.subList(i, j).forEach(x -> x.accept(txn2));
+                txn2.commit();
+
+                // POST
+                final DatabaseTransaction txn3 = new DatabaseTransaction(db);
+                operations.subList(j, operations.size()).forEach(x -> x.accept(txn3));
+                txn3.commit();
+
+                validate(db);
+
+                // Check that the games in the resulting database matches the expected database
+                assertEquals(db.count(), testBase.count());
+                for (int gameId = 1; gameId <= db.count(); gameId++) {
+                    Game actualGame = db.getGame(gameId);
+                    Game expectedGame = testBase.getGame(gameId);
+
+                    // The id's of the entities may differ depending on when the commits were done
+                    // so we have to check the actual entity names
+                    assertEquals(expectedGame.white().getFullName(), actualGame.white().getFullName());
+                    assertEquals(expectedGame.black().getFullName(), actualGame.black().getFullName());
+                    assertEquals(expectedGame.tournament().title(), actualGame.tournament().title());
+                    assertEquals(expectedGame.annotator().name(), actualGame.annotator().name());
+                    assertEquals(expectedGame.source().title(), actualGame.source().title());
+                    assertEquals(expectedGame.getMovesBlob(), actualGame.getMovesBlob());
+                    if (expectedGame.getAnnotationOffset() > 0 || actualGame.getAnnotationOffset() > 0) {
+                        assertEquals(expectedGame.getAnnotationsBlob(), actualGame.getAnnotationsBlob());
+                    }
+                }
+            }
+        }
+    }
+
+
 
     @Test
     public void transactionIsIsolated() {
@@ -644,10 +750,4 @@ public class DatabaseTransactionTest extends DatabaseTestSetup {
     public void committingDatabaseAndEntityTransactionsFromTheSameVersionFails() {
 
     }
-
-    @Test
-    public void multipleAddsAndReplacesInSameBatchInMixedOrder() {
-        // TODO:
-    }
-
 }
