@@ -28,6 +28,8 @@ public class Game {
 
     private final @Nullable DatabaseTransaction transaction;
 
+    private final @NotNull EntityRetriever entityRetriever;
+
     private final @NotNull GameHeader header;
 
     private final @NotNull ExtendedGameHeader extendedHeader;
@@ -37,6 +39,7 @@ public class Game {
         this.transaction = null;
         this.header = header;
         this.extendedHeader = extendedHeader;
+        this.entityRetriever = database;
     }
 
     public Game(@NotNull DatabaseTransaction transaction, @NotNull GameHeader header, @NotNull ExtendedGameHeader extendedHeader) {
@@ -44,6 +47,7 @@ public class Game {
         this.transaction = transaction;
         this.header = header;
         this.extendedHeader = extendedHeader;
+        this.entityRetriever = transaction;
     }
 
     public @NotNull Database database() {
@@ -81,16 +85,11 @@ public class Game {
     }
 
     public @NotNull Player white() {
-        return transaction == null ?
-                database.playerIndex().get(header.whitePlayerId()) :
-                transaction.getPlayer(header.whitePlayerId());
-
+        return entityRetriever.getPlayer(whitePlayerId());
     }
 
     public @NotNull Player black() {
-        return transaction == null ?
-                database.playerIndex().get(header.blackPlayerId()) :
-                transaction.getPlayer(header.blackPlayerId());
+        return entityRetriever.getPlayer(blackPlayerId());
     }
 
     public int whiteElo() {
@@ -106,15 +105,11 @@ public class Game {
     }
 
     public @NotNull Tournament tournament() {
-        return transaction == null ?
-                database.tournamentIndex().get(header.tournamentId()) :
-                transaction.getTournament(header.tournamentId());
+        return entityRetriever.getTournament(tournamentId());
     }
 
     public @NotNull TournamentExtra tournamentExtra() {
-        return transaction == null ?
-                database.tournamentExtraStorage().get(header.tournamentId()) :
-                transaction.getTournamentExtra(header.tournamentId());
+        return entityRetriever.getTournamentExtra(tournamentId());
     }
 
     public int annotatorId() {
@@ -122,9 +117,7 @@ public class Game {
     }
 
     public @NotNull Annotator annotator() {
-        return transaction == null ?
-                database.annotatorIndex().get(header.annotatorId()) :
-                transaction.getAnnotator(header.annotatorId());
+        return entityRetriever.getAnnotator(annotatorId());
     }
 
     public int sourceId() {
@@ -132,9 +125,7 @@ public class Game {
     }
 
     public @NotNull Source source() {
-        return transaction == null ?
-                database.sourceIndex().get(header.sourceId()) :
-                transaction.getSource(header.sourceId());
+        return entityRetriever.getSource(sourceId());
     }
 
     public int whiteTeamId() {
@@ -146,25 +137,20 @@ public class Game {
     }
 
     public @Nullable Team whiteTeam() {
-        int teamId = extendedHeader.whiteTeamId();
-        return teamId == -1 ? null : (transaction == null ?
-                database.teamIndex().get(teamId) :
-                transaction.getTeam(extendedHeader.whiteTeamId()));
+        int teamId = whiteTeamId();
+        return teamId == -1 ? null : entityRetriever.getTeam(teamId);
     }
 
     public @Nullable Team blackTeam() {
-        int teamId = extendedHeader.blackTeamId();
-        return teamId == -1 ? null : (transaction == null ?
-                database.teamIndex().get(teamId) :
-                transaction.getTeam(extendedHeader.blackTeamId()));
+        int teamId = blackTeamId();
+        return teamId == -1 ? null : entityRetriever.getTeam(teamId);
     }
 
-    public @Nullable int gameTagId() { return extendedHeader.gameTagId(); }
+    public int gameTagId() { return extendedHeader.gameTagId(); }
 
-    public GameTag gameTag() {
-        return gameTagId() == -1 ? null : (transaction == null ?
-                database.gameTagIndex().get(gameTagId()) :
-                transaction.getGameTag(gameTagId()));
+    public @Nullable GameTag gameTag() {
+        int tagId = gameTagId();
+        return tagId == -1 ? null : entityRetriever.getGameTag(tagId);
     }
 
     public boolean guidingText() {
@@ -211,7 +197,7 @@ public class Game {
         return header.noMoves();
     }
 
-    public Eco eco() {
+    public @NotNull Eco eco() {
         return header.eco();
     }
 
@@ -251,7 +237,7 @@ public class Game {
         return resolveOffset(header.annotationOffset(), extendedHeader.annotationOffset(), "annotation");
     }
 
-    private long resolveOffset(int shortOffset, long longOffset, String type) {
+    private long resolveOffset(int shortOffset, long longOffset, @NotNull String type) {
         if (shortOffset == longOffset) {
             return longOffset;
         }
@@ -271,27 +257,27 @@ public class Game {
         return shortOffset;
     }
 
-    public GameModel getModel() throws MorphyException {
+    public @NotNull GameModel getModel() throws MorphyException {
         return database.gameAdapter().getGameModel(this);
     }
 
-    public TextModel getTextModel() throws MorphyException {
+    public @NotNull TextModel getTextModel() throws MorphyException {
         return database.gameAdapter().getTextModel(this);
     }
 
-    public GameHeaderModel getGameHeaderModel() {
+    public @NotNull GameHeaderModel getGameHeaderModel() {
         return database.gameAdapter().getGameHeaderModel(this);
     }
 
-    public String getTextTitle() {
+    public @NotNull String getTextTitle() {
         return TextContentsModel.deserializeTitle(id(), getMovesBlob());
     }
 
-    public ByteBuffer getMovesBlob() {
+    public @NotNull ByteBuffer getMovesBlob() {
         return database.moveRepository().getMovesBlob(getMovesOffset());
     }
 
-    public ByteBuffer getAnnotationsBlob() {
+    public @NotNull ByteBuffer getAnnotationsBlob() {
         return database.annotationRepository().getAnnotationsBlob(getAnnotationOffset());
     }
 

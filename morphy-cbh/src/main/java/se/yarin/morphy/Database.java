@@ -31,7 +31,7 @@ import java.util.stream.Stream;
  * the different indexes, such as {@link GameHeaderIndex}, {@link PlayerIndex} etc
  * But beware that invoking write operations on these may cause the database to end up in an inconsistent state.
  */
-public class Database {
+public class Database implements EntityRetriever {
     private static final Logger log = LoggerFactory.getLogger(Database.class);
 
     // Not a complete list, but the files supported
@@ -358,5 +358,40 @@ public class Database {
         DatabaseTransaction txn = new DatabaseTransaction(this);
         txn.replaceGame(gameId, game);
         txn.commit();
+    }
+
+    @Override
+    public @NotNull Player getPlayer(int id) {
+        return playerIndex.get(id);
+    }
+
+    @Override
+    public @NotNull Annotator getAnnotator(int id) {
+        return annotatorIndex.get(id);
+    }
+
+    @Override
+    public @NotNull Source getSource(int id) {
+        return sourceIndex.get(id);
+    }
+
+    @Override
+    public @NotNull Tournament getTournament(int id) {
+        return tournamentIndex.get(id);
+    }
+
+    @Override
+    public @NotNull TournamentExtra getTournamentExtra(int id) {
+        return tournamentExtraStorage.get(id);
+    }
+
+    @Override
+    public @NotNull Team getTeam(int id) {
+        return teamIndex.get(id);
+    }
+
+    @Override
+    public @NotNull GameTag getGameTag(int id) {
+        return gameTagIndex.get(id);
     }
 }

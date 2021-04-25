@@ -115,7 +115,7 @@ public class MoveRepository implements BlobSizeRetriever {
      * @return a read only byte buffer containing the game moves
      * @throws se.yarin.morphy.exceptions.MorphyIOException if there was some IO errors when reading the moves
      */
-    public ByteBuffer getMovesBlob(long offset) {
+    public @NotNull ByteBuffer getMovesBlob(long offset) {
         ByteBuffer blob = storage.getBlob(offset);
         return blob.asReadOnlyBuffer();
     }

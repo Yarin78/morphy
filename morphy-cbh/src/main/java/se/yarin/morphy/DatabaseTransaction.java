@@ -27,7 +27,7 @@ import java.util.function.BiPredicate;
  * with as much metadata as is given. However, if the entities already exist, metadata will not be updated
  * as a side effect even it's different. Use the update* methods in the transaction to change metadata about entities.
  */
-public class DatabaseTransaction {
+public class DatabaseTransaction implements EntityRetriever {
     private static final Logger log = LoggerFactory.getLogger(DatabaseTransaction.class);
 
     private final @NotNull Database database;
