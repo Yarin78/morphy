@@ -82,7 +82,7 @@ public class EntityIndexTransactionTest {
         assertEquals(2, index.count());
         assertEquals("a", index.get(0).key());
         assertEquals("d", index.get(1).key());
-        assertNull(index.get(2));
+        assertTrue(index.getNode(2).isDeleted());
     }
 
     @Test

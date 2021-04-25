@@ -37,17 +37,17 @@ public class PlayerIndex extends EntityIndex<Player> {
         super(storage, "Player");
     }
 
-    public static PlayerIndex create(@NotNull File file)
+    public static @NotNull PlayerIndex create(@NotNull File file)
             throws IOException, MorphyInvalidDataException {
         return new PlayerIndex(file, Set.of(READ, WRITE, CREATE_NEW));
     }
 
-    public static PlayerIndex open(@NotNull File file)
+    public static @NotNull PlayerIndex open(@NotNull File file)
             throws IOException, MorphyInvalidDataException {
         return open(file, DatabaseMode.READ_WRITE);
     }
 
-    public static PlayerIndex open(@NotNull File file, @NotNull DatabaseMode mode)
+    public static @NotNull PlayerIndex open(@NotNull File file, @NotNull DatabaseMode mode)
             throws IOException, MorphyInvalidDataException {
         if (mode == DatabaseMode.IN_MEMORY) {
             PlayerIndex source = open(file, DatabaseMode.READ_ONLY);
@@ -64,7 +64,7 @@ public class PlayerIndex extends EntityIndex<Player> {
      * @param name a prefix of the last name of the player; first name can be specified after a comma
      * @return a stream over matching players
      */
-    public Stream<Player> prefixSearch(@NotNull String name) {
+    public @NotNull Stream<Player> prefixSearch(@NotNull String name) {
         if (name.contains(",")) {
             String[] parts = name.split(",", 2);
             return prefixSearch(parts[0].strip(), parts[1].strip());
@@ -79,7 +79,7 @@ public class PlayerIndex extends EntityIndex<Player> {
      * @param firstName a prefix of the first name of the player (or null/empty).
      * @return a stream of matching players
      */
-    public Stream<Player> prefixSearch(@NotNull String lastName, String firstName) {
+    public @NotNull Stream<Player> prefixSearch(@NotNull String lastName, String firstName) {
         Player startKey = Player.of(lastName, firstName == null ? "" : firstName);
         Player endKey = firstName == null ? Player.of(lastName + "zzz", "") :
                 Player.of(lastName, firstName + "zzz");
@@ -87,7 +87,7 @@ public class PlayerIndex extends EntityIndex<Player> {
     }
 
     @Override
-    protected Player deserialize(int entityId, int count, int firstGameId, @NotNull byte[] serializedData) {
+    protected @NotNull Player deserialize(int entityId, int count, int firstGameId, @NotNull byte[] serializedData) {
         ByteBuffer buf = ByteBuffer.wrap(serializedData);
         return ImmutablePlayer.builder()
                 .id(entityId)

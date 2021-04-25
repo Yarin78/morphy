@@ -26,12 +26,12 @@ public class EntityIndexSerializer implements ItemStorageSerializer<EntityIndexH
     }
 
     @Override
-    public long itemOffset(EntityIndexHeader header, int index) {
+    public long itemOffset(@NotNull EntityIndexHeader header, int index) {
         return header.headerSize() + (long) index * itemSize(header);
     }
 
     @Override
-    public int itemSize(EntityIndexHeader header) {
+    public int itemSize(@NotNull EntityIndexHeader header) {
         return header.entitySize() + 9;  // 9 additional bytes for the node tree
     }
 
@@ -41,7 +41,8 @@ public class EntityIndexSerializer implements ItemStorageSerializer<EntityIndexH
     }
 
     @Override
-    public EntityIndexHeader deserializeHeader(ByteBuffer buf) throws MorphyInvalidDataException {
+    public @NotNull EntityIndexHeader deserializeHeader(@NotNull ByteBuffer buf)
+            throws MorphyInvalidDataException {
         int capacity = ByteBufferUtil.getIntL(buf);
         int rootEntityId = ByteBufferUtil.getIntL(buf);
         if (capacity == 0 && rootEntityId == 0) {
@@ -76,7 +77,7 @@ public class EntityIndexSerializer implements ItemStorageSerializer<EntityIndexH
     }
 
     @Override
-    public void serializeHeader(EntityIndexHeader header, ByteBuffer buf) {
+    public void serializeHeader(@NotNull EntityIndexHeader header, @NotNull ByteBuffer buf) {
         ByteBufferUtil.putIntL(buf, header.capacity());
         ByteBufferUtil.putIntL(buf, header.rootNodeId());
         ByteBufferUtil.putIntL(buf, EntityIndexHeader.MAGIC_CONSTANT);
@@ -88,7 +89,7 @@ public class EntityIndexSerializer implements ItemStorageSerializer<EntityIndexH
     }
 
     @Override
-    public EntityNode deserializeItem(int id, ByteBuffer buf) {
+    public @NotNull EntityNode deserializeItem(int id, @NotNull ByteBuffer buf) {
         byte[] serializedEntity = new byte[recordSize - 8];
 
         int leftEntityId = ByteBufferUtil.getIntL(buf);
@@ -101,7 +102,7 @@ public class EntityIndexSerializer implements ItemStorageSerializer<EntityIndexH
     }
 
     @Override
-    public void serializeItem(EntityNode node, ByteBuffer buf) {
+    public void serializeItem(@NotNull EntityNode node, @NotNull ByteBuffer buf) {
         ByteBufferUtil.putIntL(buf, node.getLeftChildId());
         ByteBufferUtil.putIntL(buf, node.getRightChildId());
         ByteBufferUtil.putByte(buf, node.getBalance());
@@ -110,5 +111,10 @@ public class EntityIndexSerializer implements ItemStorageSerializer<EntityIndexH
         buf.put(serializedEntity);
         ByteBufferUtil.putIntL(buf, node.getGameCount());
         ByteBufferUtil.putIntL(buf, node.getFirstGameId());
+    }
+
+    @Override
+    public @NotNull EntityNode emptyItem(int id) {
+        return new EntityNode(id, 0, 0, 0, 0, 0, new byte[recordSize - 8]);
     }
 }

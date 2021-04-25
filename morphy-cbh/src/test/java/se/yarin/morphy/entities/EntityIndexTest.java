@@ -121,6 +121,7 @@ public class EntityIndexTest {
         index.add(hello);
 
         FooEntity entity = index.get(FooEntity.of("hello", 0));
+        assertNotNull(entity);
         assertEquals("hello", entity.key());
         assertEquals(0, entity.id());
         assertEquals(7, entity.value());
@@ -147,6 +148,7 @@ public class EntityIndexTest {
         index.add(FooEntity.of("y", 9));
         index.add(FooEntity.of("foo", 11));
         FooEntity foo = index.get(FooEntity.of("foo"));
+        assertNotNull(foo);
         assertTrue(foo.value() == 7 || foo.value() == 11);
     }
 
@@ -241,11 +243,19 @@ public class EntityIndexTest {
         assertTrue(index.delete(id1));
 
         assertEquals(1, index.count());
-        FooEntity object = index.get(id1);
-        assertNull(object);
-        assertNotNull(index.get(id2));
+        assertTrue(index.getNode(id1).isDeleted());
+        assertFalse(index.getNode(id2).isDeleted());
 
         index.validateStructure();
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testGetDeletedEntityThrowsException() {
+        FooEntityIndex index = createIndex();
+        int id1 = index.add(FooEntity.of("hello"));
+        assertTrue(index.delete(id1));
+        assertTrue(index.getNode(id1).isDeleted());
+        index.get(id1);
     }
 
     @Test
@@ -287,8 +297,8 @@ public class EntityIndexTest {
         assertTrue(index.delete(FooEntity.of("world")));
 
         assertEquals(1, index.count());
-        assertNull(index.get(id2));
-        assertNotNull(index.get(id1));
+        assertTrue(index.getNode(id2).isDeleted());
+        assertFalse(index.getNode(id1).isDeleted());
 
         index.validateStructure();
     }
@@ -328,7 +338,7 @@ public class EntityIndexTest {
         index.add(FooEntity.of("G"));
 
         index.delete(2);
-        assertNull(index.get(2));
+        assertTrue(index.getNode(2).isDeleted());
         assertEquals("B", index.get(0).key());
         assertEquals("F", index.get(4).key());
         assertEquals("E", index.get(5).key());
@@ -347,7 +357,7 @@ public class EntityIndexTest {
         index.add(FooEntity.of("F"));
 
         index.delete(2);
-        assertNull(index.get(2));
+        assertTrue(index.getNode(2).isDeleted());
         assertEquals("B", index.get(0).key());
         assertEquals("C", index.get(3).key());
         assertEquals("E", index.get(4).key());
@@ -670,8 +680,8 @@ public class EntityIndexTest {
         assertEquals("q", index.get(4).key());
         assertEquals("l", index.get(7).key());
         assertEquals("v", index.get(9).key());
-        assertNull(index.get(3));
-        assertNull(index.get(8));
+        assertTrue(index.getNode(3).isDeleted());
+        assertTrue(index.getNode(8).isDeleted());
         assertEquals(values.length - 2, index.count());
     }
 }

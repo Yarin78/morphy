@@ -124,8 +124,7 @@ public class TournamentIndexTransactionTest {
         txn.deleteEntity(0);
         txn.commit();
 
-        Tournament deletedTournament = index.get(id);
-        assertNull(deletedTournament);
+        assertTrue(index.getNode(id).isDeleted());
     }
 
     @Test
@@ -142,8 +141,7 @@ public class TournamentIndexTransactionTest {
         txn.deleteEntity(testTournament(1));
         txn.commit();
 
-        Tournament deletedTournament = index.get(id);
-        assertNull(deletedTournament);
+        assertTrue(index.getNode(id).isDeleted());
     }
 
     @Test

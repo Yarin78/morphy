@@ -28,15 +28,15 @@ import static java.nio.file.StandardOpenOption.WRITE;
 public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
     private static final Logger log = LoggerFactory.getLogger(EntityIndex.class);
 
-    protected final ItemStorage<EntityIndexHeader, EntityNode> storage;
-    private final String entityType;
+    protected final @NotNull ItemStorage<EntityIndexHeader, EntityNode> storage;
+    private final @NotNull String entityType;
     private int numCommittedTxn;
 
-    EntityIndexHeader storageHeader() {
+    @NotNull EntityIndexHeader storageHeader() {
         return storage.getHeader();
     }
 
-    protected EntityIndex(ItemStorage<EntityIndexHeader, EntityNode> storage, String entityType) {
+    protected EntityIndex(@NotNull ItemStorage<EntityIndexHeader, EntityNode> storage, @NotNull String entityType) {
         this.storage = storage;
         this.entityType = entityType;
     }
@@ -61,13 +61,28 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
         return storage.getHeader().capacity();
     }
 
-    EntityNode getNode(int id) {
+    /**
+     * Gets an entity node in the index
+     * If the index is invalid, either an empty (non-null) item is returned,
+     * or {@link IllegalArgumentException} is thrown depending on the open option.
+     * @param id the id of the entity
+     * @return an entity node
+     * @throws IllegalArgumentException if the index points to an item outside of the storage and the storage is open in strict mode
+     * @throws MorphyIOException if an IO error occurred when reading the data
+     */
+    @NotNull EntityNode getNode(int id) {
         return storage.getItem(id);
     }
 
-    protected T resolveEntity(EntityNode node) {
+    /**
+     * Gets the entity from a node
+     * @param node the entity node
+     * @return an entity
+     * @throws IllegalArgumentException if the entity refers to a deleted node
+     */
+    protected @NotNull T resolveEntity(@NotNull EntityNode node) throws IllegalArgumentException {
         if (node.isDeleted()) {
-            return null;
+            throw new IllegalArgumentException(String.format("The %s node with id %d is deleted", entityType, node.getId()));
         }
         return deserialize(node.getId(), node.getGameCount(), node.getFirstGameId(), node.getSerializedEntity());
     }
@@ -86,18 +101,13 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
 
     /**
      * Gets an entity by id.
-     * If the id refers to an entity that has been logically deleted, null is returned.
-     * If the id is invalid (larger than the capacity of the index), either an
-     * empty (non-null) item is returned or {@link MorphyIOException} is thrown, depending on the OpenOption of the index.
+     * If the id is invalid (outside of the index, or the item has been deleted),
+     * empty (non-null) item is returned or {@link IllegalArgumentException} is thrown, depending on the OpenOption of the index.
      * @param id the id of the entity
      * @return the entity
      */
-    public @Nullable T get(int id) {
-        EntityNode node = getNode(id);
-        if (node == null) {
-            return null;
-        }
-        return resolveEntity(node);
+    public @NotNull T get(int id) {
+        return resolveEntity(getNode(id));
     }
 
     /**
@@ -134,7 +144,7 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
      * @param entityKey the key of the entity
      * @return a list of all matching entities.
      */
-    public List<T> getAll(T entityKey) {
+    public @NotNull List<T> getAll(@NotNull T entityKey) {
         return streamOrderedAscending(entityKey)
                 .takeWhile(e -> e.compareTo(entityKey) == 0)
                 .collect(Collectors.toList());
@@ -144,7 +154,7 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
      * Gets a list of all entities in the database, ordered by id
      * @return a list of all entities
      */
-    public List<T> getAll() {
+    public @NotNull List<T> getAll() {
         ArrayList<T> result = new ArrayList<>();
         iterable().forEach(result::add);
         return result;
@@ -154,7 +164,7 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
      * Gets a list of all entities in the database, ordered by key
      * @return a list of all entities
      */
-    public List<T> getAllOrdered() {
+    public @NotNull List<T> getAllOrdered() {
         ArrayList<T> result = new ArrayList<>();
         iterableAscending().forEach(result::add);
         return result;
@@ -164,7 +174,7 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
      * Gets the first entity in the index according to the default sort order
      * @return the first entity, or null if there are no entities in the database
      */
-    public T getFirst() {
+    public @Nullable T getFirst() {
         Iterator<T> iterator = iterableAscending().iterator();
         return iterator.hasNext() ? iterator.next() : null;
     }
@@ -173,7 +183,7 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
      * Gets the last entity in the index according to the default sort order
      * @return the last entity, or null if there are no entities in the database
      */
-    public T getLast() {
+    public @Nullable T getLast() {
         Iterator<T> iterator = iterableDescending().iterator();
         return iterator.hasNext() ? iterator.next() : null;
     }
@@ -184,7 +194,7 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
      * @param entity an entity or an entity key
      * @return the succeeding entity, or null if there are no succeeding entities
      */
-    public T getNext(T entity) {
+    public @Nullable T getNext(T entity) {
         for (T e : iterableAscending(entity)) {
             if (!e.equals(entity)) {
                 return e;
@@ -199,7 +209,7 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
      * @param entity an entity or an entity key
      * @return the preceding entity, or null if there are no preceding entities
      */
-    public T getPrevious(T entity) {
+    public @Nullable T getPrevious(T entity) {
         for (T e : iterableDescending(entity)) {
             if (!e.equals(entity)) {
                 return e;
@@ -212,7 +222,7 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
      * Returns an iterable of all entities in the index, sorted by id.
      * @return an iterable of all entities
      */
-    public Iterable<T> iterable() {
+    public @NotNull Iterable<T> iterable() {
         return iterable(0);
     }
 
@@ -221,7 +231,7 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
      * @param startId the first id in the iterable
      * @return an iterable of all entities
      */
-    public Iterable<T> iterable(int startId) {
+    public @NotNull Iterable<T> iterable(int startId) {
         return () -> new EntityBatchIterator<>(this, startId);
     }
 
@@ -229,7 +239,7 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
      * Gets an iterable of all entities in the index sorted by the default sorting order.
      * @return an iterable of entities
      */
-    public Iterable<T> iterableAscending() {
+    public @NotNull Iterable<T> iterableAscending() {
         EntityIndexTransaction<T> txn = beginTransaction();
         return () -> new OrderedEntityAscendingIterator<>(txn.begin(), -1);
     }
@@ -240,7 +250,7 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
      * @param start the starting key
      * @return an iterable of entities
      */
-    public Iterable<T> iterableAscending(T start) {
+    public @NotNull Iterable<T> iterableAscending(@NotNull T start) {
         EntityIndexTransaction<T> txn = beginTransaction();
         return () -> new OrderedEntityAscendingIterator<>(txn.lowerBound(start), -1);
     }
@@ -249,10 +259,10 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
      * Gets an iterable of all entities in the index starting at a given key (inclusive),
      * ending at a given key (exclusive), sorted by the default sorting order.
      * @param start the starting key
-     * @param start the end key
+     * @param end the end key
      * @return an iterable of entities
      */
-    public Iterable<T> iterableAscending(T start, T end) {
+    public @NotNull Iterable<T> iterableAscending(@NotNull T start, @NotNull T end) {
         EntityIndexTransaction<T> txn = beginTransaction();
         EntityIndexTransaction<T>.NodePath endPath = txn.lowerBound(end);
         return () -> new OrderedEntityAscendingIterator<>(txn.lowerBound(start), endPath.isEnd() ? -1 : endPath.getEntityId());
@@ -262,7 +272,7 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
      * Gets an iterable of all entities in the index in reverse default sorting order.
      * @return an iterable of entities
      */
-    public Iterable<T> iterableDescending() {
+    public @NotNull Iterable<T> iterableDescending() {
         EntityIndexTransaction<T> txn = beginTransaction();
         return () -> new OrderedEntityDescendingIterator<>(txn.end());
     }
@@ -273,7 +283,7 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
      * @param start the starting key
      * @return an iterable of entities
      */
-    public Iterable<T> iterableDescending(T start) {
+    public @NotNull Iterable<T> iterableDescending(T start) {
         EntityIndexTransaction<T> txn = beginTransaction();
         return () -> new OrderedEntityDescendingIterator<>(txn.upperBound(start));
     }
@@ -282,7 +292,7 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
      * Returns a stream of all entities in the index, sorted by id.
      * @return a stream of all entities
      */
-    public Stream<T> stream() {
+    public @NotNull Stream<T> stream() {
         return StreamSupport.stream(iterable().spliterator(), false);
     }
 
@@ -291,7 +301,7 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
      * @param startId the first id in the stream
      * @return a stream of all entities
      */
-    public Stream<T> stream(int startId) {
+    public @NotNull Stream<T> stream(int startId) {
         return StreamSupport.stream(iterable(startId).spliterator(), false);
     }
 
@@ -299,7 +309,7 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
      * Gets a stream of all entities in the index, sorted by the default sorting order.
      * @return a stream of all entities
      */
-    public Stream<T> streamOrderedAscending() {
+    public @NotNull Stream<T> streamOrderedAscending() {
         return StreamSupport.stream(iterableAscending().spliterator(), false);
     }
 
@@ -309,7 +319,7 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
      * @param start the starting key
      * @return a stream of entities
      */
-    public Stream<T> streamOrderedAscending(T start) {
+    public @NotNull Stream<T> streamOrderedAscending(@NotNull T start) {
         return StreamSupport.stream(iterableAscending(start).spliterator(), false);
     }
 
@@ -320,7 +330,7 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
      * @param end the end key
      * @return a stream of entities
      */
-    public Stream<T> streamOrderedAscending(T start, T end) {
+    public @NotNull Stream<T> streamOrderedAscending(@NotNull T start, @NotNull T end) {
         return StreamSupport.stream(iterableAscending(start, end).spliterator(), false);
     }
 
@@ -328,7 +338,7 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
      * Gets a stream of all entities in the index in reverse default sorting order.
      * @return a stream of all entities
      */
-    public Stream<T> streamOrderedDescending() {
+    public @NotNull Stream<T> streamOrderedDescending() {
         return StreamSupport.stream(iterableDescending().spliterator(), false);
     }
 
@@ -338,20 +348,20 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
      * @param start the starting key
      * @return a stream of entities
      */
-    public Stream<T> streamOrderedDescending(T start) {
+    public @NotNull Stream<T> streamOrderedDescending(@NotNull T start) {
         return StreamSupport.stream(iterableDescending(start).spliterator(), false);
     }
 
-    protected abstract T deserialize(int entityId, int count, int firstGameId, byte[] serializedData);
+    protected abstract @NotNull T deserialize(int entityId, int count, int firstGameId, byte[] serializedData);
 
-    protected abstract void serialize(T entity, ByteBuffer buf);
+    protected abstract void serialize(T entity, @NotNull ByteBuffer buf);
 
     /**
      * Adds a new entity to the index
      * @param entity the entity to add
      * @return the id of the added entity
      */
-    public int add(T entity) {
+    public int add(@NotNull T entity) {
         EntityIndexTransaction<T> txn = beginTransaction();
         int id = txn.addEntity(entity);
         txn.commit();
@@ -363,7 +373,7 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
      * @param id the id of the entity to update
      * @param entity the new entity (the id field will be ignored)
      */
-    public void put(int id, T entity) {
+    public void put(int id, @NotNull T entity) {
         EntityIndexTransaction<T> txn = beginTransaction();
         txn.putEntityById(id, entity);
         txn.commit();
@@ -376,7 +386,7 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
      * @throws IllegalArgumentException if there is no matching entity, or if there are
      * @return the id of the entity that was updated
      */
-    public int put(T entity) {
+    public int put(@NotNull T entity) {
         EntityIndexTransaction<T> txn = beginTransaction();
         int id = txn.putEntityByKey(entity);
         txn.commit();
@@ -401,7 +411,7 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
      * @return true if the entity was deleted; false if there was no entity with that key in the index
      * @throws IllegalArgumentException if there are multiple entities with the given key
      */
-    public boolean delete(T entity) {
+    public boolean delete(@NotNull T entity) {
         EntityIndexTransaction<T> txn = beginTransaction();
         boolean deleted = txn.deleteEntity(entity);
         txn.commit();
@@ -412,7 +422,7 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
         storage.close();
     }
 
-    protected void copyEntities(EntityIndex<T> targetIndex) {
+    protected void copyEntities(@NotNull EntityIndex<T> targetIndex) {
         // Low level copy of all entities from one index to a new empty index
         if (targetIndex.capacity() != 0) {
             throw new IllegalStateException("The target index must be empty");
@@ -463,7 +473,7 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
      * For internal use only.
      * @return a list of deleted entity ids.
      */
-    public List<Integer> getDeletedEntityIds() {
+    public @NotNull List<Integer> getDeletedEntityIds() {
         ArrayList<Integer> ids = new ArrayList<>();
         int id = storageHeader().deletedEntityId();
         while (id >= 0 && !ids.contains(id)) {
@@ -481,18 +491,18 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
         public abstract int count();
         public abstract int height();
 
-        public static ValidationResult of(int count, int height) {
+        public static @NotNull ValidationResult of(int count, int height) {
             return ImmutableValidationResult.builder().count(count).height(height).build();
         }
     }
 
-    private ValidationResult validate(int entityId, T min, T max, int depth) throws MorphyEntityIndexException {
+    private @NotNull ValidationResult validate(int entityId, @Nullable T min, @Nullable T max, int depth) throws MorphyEntityIndexException {
         if (depth > 40) {
             throw new MorphyEntityIndexException("Infinite loop when verifying storage structure for entity " + entityType.toLowerCase());
         }
         EntityNode node = getNode(entityId);
         T entity = resolveEntity(node);
-        if (node.isDeleted() || entity == null) {
+        if (node.isDeleted()) {
             throw new MorphyEntityIndexException(String.format(
                     "Reached deleted %s entity %d when validating the storage structure.", entityType.toLowerCase(), entityId));
         }

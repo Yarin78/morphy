@@ -19,14 +19,31 @@ public class InMemoryItemStorage<THeader, TItem> implements ItemStorage<THeader,
     private final boolean oneIndexed; // true if first id is 1, false if 0
     private @NotNull THeader header;
 
+    /**
+     * Creates a new empty zero-indexed in-memory storage
+     * @param header a header representing an empty storage
+     */
     public InMemoryItemStorage(@NotNull THeader header) {
         this(header, null);
     }
 
+    /**
+     * Creates a new empty zero-indexed in-memory storage
+     * @param header a header representing an empty storage
+     * @param emptyItem the item to be returned when trying to read outside the index boundaries of the storage;
+     *                  if null, the storage is opened in strict mode
+     */
     public InMemoryItemStorage(@NotNull THeader header, @Nullable TItem emptyItem) {
         this(header, emptyItem, false);
     }
 
+    /**
+     * Creates a new empty in-memory storage
+     * @param header a header representing an empty storage
+     * @param emptyItem the item to be returned when trying to read outside the index boundaries of the storage;
+     *                  if null, the storage is opened in strict mode
+     * @param oneIndexed if true, the first item in the storage has index 1; otherwise it has index 0
+     */
     public InMemoryItemStorage(@NotNull THeader header, @Nullable TItem emptyItem, boolean oneIndexed) {
         this.items = new ArrayList<>();
         this.header = header;
@@ -55,13 +72,10 @@ public class InMemoryItemStorage<THeader, TItem> implements ItemStorage<THeader,
             index--;
         }
 
-        if (index < 0) {
-            throw new IllegalArgumentException("Invalid index");
-        }
-        if (index >= items.size()) {
+        if (index < 0 || index >= items.size()) {
             if (emptyItem == null) {
-                throw new IllegalArgumentException(String.format("Tried to get item with id %d but InMemoryStorage only has %d items",
-                        index, this.items.size()));
+                throw new IllegalArgumentException(String.format("Tried to get item at index %d but InMemoryStorage has %d items",
+                        index + (oneIndexed ? 1 : 0), this.items.size()));
             }
             return emptyItem;
         }
@@ -69,24 +83,31 @@ public class InMemoryItemStorage<THeader, TItem> implements ItemStorage<THeader,
     }
 
     @Override
-    public List<TItem> getItems(int index, int count) {
+    public @NotNull List<TItem> getItems(int index, int count) {
+        if (count < 0 ) {
+            throw new IllegalArgumentException("count must be non-negative");
+        }
+
         if (oneIndexed) {
             index--;
         }
 
-        if (index < 0) {
-            throw new IllegalArgumentException("index must be non-negative");
-        }
-        if (index + count - 1 >= items.size()) {
+        if (index < 0 || index + count - 1 >= items.size()) {
             // Some items that we want to get is outside the range
-            if (emptyItem == null) {
-                throw new IllegalArgumentException(String.format("Tried to get item with id %d but InMemoryStorage only has %d items",
-                        index + count - 1, this.items.size()));
-            }
             ArrayList<TItem> result = new ArrayList<>(count);
             for (int i = 0; i < count; i++) {
-                result.add(index + i < items.size() ? items.get(index + i) : emptyItem);
+                int j = index + i;
+                if (j < 0 || j >= items.size()) {
+                    if (emptyItem == null) {
+                        throw new IllegalArgumentException(String.format("Tried to get item with id %d but InMemoryStorage only has %d items",
+                                j + (oneIndexed ? 1 : 0), this.items.size()));
+                    }
+                    result.add(emptyItem);
+                } else {
+                    result.add(items.get(j));
+                }
             }
+            return result;
         }
         return new ArrayList<>(items.subList(index, index + count));
     }

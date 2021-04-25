@@ -26,28 +26,28 @@ public class FooBarEntityIndex extends EntityIndex<FooBarEntity> {
         super(storage, "FooBar");
     }
 
-    public static FooBarEntityIndex create(@NotNull File file)
+    public static @NotNull FooBarEntityIndex create(@NotNull File file)
             throws IOException, MorphyInvalidDataException {
         return open(file, Set.of(READ, WRITE, CREATE_NEW));
     }
 
-    public static FooBarEntityIndex open(@NotNull File file)
+    public static @NotNull FooBarEntityIndex open(@NotNull File file)
             throws IOException, MorphyInvalidDataException {
         return open(file, Set.of(READ, WRITE));
     }
 
-    public static FooBarEntityIndex open(@NotNull File file, @NotNull Set<OpenOption> options)
+    public static @NotNull FooBarEntityIndex open(@NotNull File file, @NotNull Set<OpenOption> options)
             throws IOException, MorphyInvalidDataException {
         return new FooBarEntityIndex(new FileItemStorage<>(
                 file, new EntityIndexSerializer(SERIALIZED_FOOBAR_SIZE), EntityIndexHeader.empty(SERIALIZED_FOOBAR_SIZE), options));
     }
 
-    public static FooBarEntityIndex openInMemory(@NotNull File file)
+    public static @NotNull FooBarEntityIndex openInMemory(@NotNull File file)
             throws IOException, MorphyInvalidDataException {
         return openInMemory(file, Set.of(READ));
     }
 
-    public static FooBarEntityIndex openInMemory(@NotNull File file, @NotNull Set<OpenOption> options)
+    public static @NotNull FooBarEntityIndex openInMemory(@NotNull File file, @NotNull Set<OpenOption> options)
             throws IOException, MorphyInvalidDataException {
         FooBarEntityIndex source = open(file, options);
         FooBarEntityIndex target = new FooBarEntityIndex();
@@ -56,7 +56,7 @@ public class FooBarEntityIndex extends EntityIndex<FooBarEntity> {
     }
 
     @Override
-    protected FooBarEntity deserialize(int entityId, int count, int firstGameId, byte[] serializedData) {
+    protected @NotNull FooBarEntity deserialize(int entityId, int count, int firstGameId, byte[] serializedData) {
         ByteBuffer buf = ByteBuffer.wrap(serializedData);
         return ImmutableFooBarEntity.builder()
                 .id(entityId)
@@ -68,7 +68,7 @@ public class FooBarEntityIndex extends EntityIndex<FooBarEntity> {
     }
 
     @Override
-    protected void serialize(FooBarEntity entity, ByteBuffer buf) {
+    protected void serialize(@NotNull FooBarEntity entity, @NotNull ByteBuffer buf) {
         ByteBufferUtil.putFixedSizeByteString(buf, entity.key(), 20);
         ByteBufferUtil.putIntB(buf, entity.value());
         ByteBufferUtil.putIntB(buf, entity.extraValue());

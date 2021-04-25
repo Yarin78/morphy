@@ -159,14 +159,14 @@ public abstract class DatabaseTestSetup {
         return buf;
     }
 
-    protected int putTestGame(@NotNull DatabaseTransaction txn, int gameId, @NotNull String players,
+    protected Game putTestGame(@NotNull DatabaseTransaction txn, int gameId, @NotNull String players,
                             int movesSize, int annotationsSize, int movesSeed, int annotationsSeed) {
         return putTestGame(txn, gameId,
                 players, null, null, null, null,
                 null, annotationsSize, movesSeed, annotationsSeed, movesSize);
     }
 
-    protected int putTestGame(
+    protected Game putTestGame(
             @NotNull DatabaseTransaction txn, int gameId,
             @NotNull String players, @Nullable String tournament, @Nullable String annotator, @Nullable String source, @Nullable String teams,
             @Nullable String gameTag, int annotationsSize, int movesSeed, int annotationsSeed, int movesSize) {

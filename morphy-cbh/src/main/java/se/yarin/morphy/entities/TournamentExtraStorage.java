@@ -125,17 +125,17 @@ public class TournamentExtraStorage implements ItemStorageSerializer<TournamentE
     }
 
     @Override
-    public long itemOffset(TournamentExtraHeader header, int index) {
+    public long itemOffset(@NotNull TournamentExtraHeader header, int index) {
         return serializedHeaderSize() + index * (long) itemSize(header);
     }
 
     @Override
-    public int itemSize(TournamentExtraHeader header) {
+    public int itemSize(@NotNull TournamentExtraHeader header) {
         return header.recordSize();
     }
 
     @Override
-    public TournamentExtraHeader deserializeHeader(ByteBuffer buf) {
+    public @NotNull TournamentExtraHeader deserializeHeader(@NotNull ByteBuffer buf) {
         int version = ByteBufferUtil.getIntL(buf);
         int recordSize = ByteBufferUtil.getIntL(buf);
         int highestIndex = ByteBufferUtil.getIntL(buf);
@@ -149,7 +149,7 @@ public class TournamentExtraStorage implements ItemStorageSerializer<TournamentE
     }
 
     @Override
-    public void serializeHeader(TournamentExtraHeader header, ByteBuffer buf) {
+    public void serializeHeader(@NotNull TournamentExtraHeader header, @NotNull ByteBuffer buf) {
         ByteBufferUtil.putIntL(buf, header.version());
         ByteBufferUtil.putIntL(buf, header.recordSize());
         ByteBufferUtil.putIntL(buf, header.highestIndex());
@@ -161,7 +161,7 @@ public class TournamentExtraStorage implements ItemStorageSerializer<TournamentE
     }
 
     @Override
-    public TournamentExtra deserializeItem(int id, @NotNull ByteBuffer buf) {
+    public @NotNull TournamentExtra deserializeItem(int id, @NotNull ByteBuffer buf) {
         int itemSize = storage.getHeader().recordSize();
 
         double latitude = ByteBufferUtil.getDoubleL(buf);
@@ -192,7 +192,7 @@ public class TournamentExtraStorage implements ItemStorageSerializer<TournamentE
     }
 
     @Override
-    public void serializeItem(TournamentExtra tournamentExtra, ByteBuffer buf) {
+    public void serializeItem(@NotNull TournamentExtra tournamentExtra, @NotNull ByteBuffer buf) {
         ByteBufferUtil.putDoubleL(buf, tournamentExtra.latitude());
         ByteBufferUtil.putDoubleL(buf, tournamentExtra.longitude());
 
@@ -215,7 +215,7 @@ public class TournamentExtraStorage implements ItemStorageSerializer<TournamentE
         ByteBufferUtil.putIntL(buf, CBUtil.encodeDate(tournamentExtra.endDate()));
     }
 
-    public void copyEntities(TournamentExtraStorage targetStorage) {
+    public void copyEntities(@NotNull TournamentExtraStorage targetStorage) {
         // Low level copy of all entities from one storage to a new empty storage
         if (targetStorage.numEntries() != 0) {
             throw new IllegalStateException("The target storage must be empty");
@@ -285,4 +285,8 @@ public class TournamentExtraStorage implements ItemStorageSerializer<TournamentE
         }
     }
 
+    @Override
+    public @NotNull TournamentExtra emptyItem(int id) {
+        return ImmutableTournamentExtra.empty();
+    }
 }

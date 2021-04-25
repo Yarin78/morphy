@@ -223,13 +223,13 @@ public class EntityIndexTransaction<T extends Entity & Comparable<T>> {
      */
     public class NodePath {
         private final int entityId;
-        private final NodePath parent;
+        private final @Nullable NodePath parent;
 
         public int getEntityId() {
             return entityId;
         }
 
-        public NodePath(int entityId, NodePath parent) {
+        public NodePath(int entityId, @Nullable NodePath parent) {
             this.entityId = entityId;
             this.parent = parent;
         }
@@ -255,7 +255,7 @@ public class EntityIndexTransaction<T extends Entity & Comparable<T>> {
             return this.entityId < 0;
         }
 
-        public EntityNode getNode() {
+        public @NotNull EntityNode getNode() {
             if (isEnd()) {
                 throw new IllegalStateException("Tried to getNode at end of TreePath");
             }
@@ -265,7 +265,7 @@ public class EntityIndexTransaction<T extends Entity & Comparable<T>> {
             return EntityIndexTransaction.this.getNode(entityId);
         }
 
-        public T getEntity() {
+        public @NotNull T getEntity() {
             return deserializeEntity(getNode());
         }
 
@@ -298,7 +298,7 @@ public class EntityIndexTransaction<T extends Entity & Comparable<T>> {
             return parent == null;
         }
 
-        public NodePath appendToTail(NodePath newTail) {
+        public @NotNull NodePath appendToTail(@NotNull NodePath newTail) {
             return new NodePath(entityId, parent == null ? newTail : parent.appendToTail(newTail));
         }
 
@@ -327,7 +327,7 @@ public class EntityIndexTransaction<T extends Entity & Comparable<T>> {
             return getNode().getRightChildId() >= 0;
         }
 
-        public NodePath successor() {
+        public @NotNull NodePath successor() {
             if (isEnd()) {
                 throw new IllegalStateException("Tried to get successor at end of TreePath");
             }
@@ -350,7 +350,7 @@ public class EntityIndexTransaction<T extends Entity & Comparable<T>> {
             return successorPath;
         }
 
-        public NodePath predecessor() {
+        public @NotNull NodePath predecessor() {
             if (isBegin()) {
                 throw new IllegalStateException("Tried to get predecessor at begin of TreePath");
             }
@@ -386,7 +386,7 @@ public class EntityIndexTransaction<T extends Entity & Comparable<T>> {
      * @param entity the entity to add
      * @return the id of the new entity
      */
-    public int addEntity(T entity) {
+    public int addEntity(@NotNull T entity) {
         if (committed) {
             throw new IllegalStateException("The transaction has already been committed");
         }
@@ -485,7 +485,7 @@ public class EntityIndexTransaction<T extends Entity & Comparable<T>> {
      * @param entityId the entity id to update.
      * @param entity the new entity. {@link Entity#id()} will be ignored.
      */
-    public void putEntityById(int entityId, T entity) {
+    public void putEntityById(int entityId, @NotNull T entity) {
         if (committed) {
             throw new IllegalStateException("The transaction has already been committed");
         }
@@ -523,7 +523,7 @@ public class EntityIndexTransaction<T extends Entity & Comparable<T>> {
      * multiple matching entities
      * @return the id of the entity that was updated
      */
-    public int putEntityByKey(T entity) {
+    public int putEntityByKey(@NotNull T entity) {
         if (committed) {
             throw new IllegalStateException("The transaction has already been committed");
         }
@@ -589,7 +589,7 @@ public class EntityIndexTransaction<T extends Entity & Comparable<T>> {
      * @return true if an entity was deleted; false if there was no entity with that key
      * @throws IllegalArgumentException if there are multiple entities with the given key
      */
-    public boolean deleteEntity(T entity) {
+    public boolean deleteEntity(@NotNull T entity) {
         if (committed) {
             throw new IllegalStateException("The transaction has already been committed");
         }
@@ -608,7 +608,7 @@ public class EntityIndexTransaction<T extends Entity & Comparable<T>> {
         return internalDeleteEntity(nodePath);
     }
 
-    private boolean internalDeleteEntity(NodePath deleteEntityPath) {
+    private boolean internalDeleteEntity(@NotNull NodePath deleteEntityPath) {
         EntityNode deleteNode = deleteEntityPath.getNode();
         int deleteEntityId = deleteNode.getId();
         NodePath parentPath = deleteEntityPath.parent;
@@ -717,7 +717,7 @@ public class EntityIndexTransaction<T extends Entity & Comparable<T>> {
         return true;
     }
 
-    private void replaceChild(NodePath path, boolean replaceLeftChild, int newChildId) {
+    private void replaceChild(@Nullable NodePath path, boolean replaceLeftChild, int newChildId) {
         if (path == null) {
             // The root node has no parent
             header = ImmutableEntityIndexHeader.copyOf(header).withRootNodeId(newChildId);
@@ -733,21 +733,21 @@ public class EntityIndexTransaction<T extends Entity & Comparable<T>> {
     }
 
     // Rotates the tree rooted at x with right child z to the left and returns the new root
-    private EntityNode rotateLeft(EntityNode x, EntityNode z) {
+    private @NotNull EntityNode rotateLeft(@NotNull EntityNode x, @NotNull EntityNode z) {
         putNode(x.update(x.getLeftChildId(), z.getLeftChildId(), z.getBalance() == 0 ? 1 : 0));
         putNode(z.update(x.getId(), z.getRightChildId(), z.getBalance() == 0 ? -1 : 0));
         return z;
     }
 
     // Rotates the tree rooted at x with the left child z to the right and returns the new root
-    private EntityNode rotateRight(EntityNode x, EntityNode z) {
+    private @NotNull EntityNode rotateRight(@NotNull EntityNode x, @NotNull EntityNode z) {
         putNode(x.update(z.getRightChildId(), x.getRightChildId(), z.getBalance() == 0 ? -1 : 0));
         putNode(z.update(z.getLeftChildId(), x.getId(), z.getBalance() == 0 ? 1 : 0));
         return z;
     }
 
     // Rotates the tree rooted at x with right child z first to the right then to the left and returns the new root
-    private EntityNode rotateRightLeft(EntityNode x, EntityNode z) {
+    private @NotNull EntityNode rotateRightLeft(@NotNull EntityNode x, @NotNull EntityNode z) {
         EntityNode y = getNode(z.getLeftChildId());
         putNode(x.update(x.getLeftChildId(), y.getLeftChildId(), y.getBalance() > 0 ? -1 : 0));
         putNode(y.update(x.getId(), z.getId(), 0));
@@ -756,7 +756,7 @@ public class EntityIndexTransaction<T extends Entity & Comparable<T>> {
     }
 
     // Rotates the tree rooted at x with left child z first to the left then to the right and returns the new root
-    private EntityNode rotateLeftRight(EntityNode x, EntityNode z) {
+    private @NotNull EntityNode rotateLeftRight(@NotNull EntityNode x, @NotNull EntityNode z) {
         EntityNode y = getNode(z.getRightChildId());
         putNode(x.update(y.getRightChildId(), x.getRightChildId(), y.getBalance() < 0 ? 1 : 0));
         putNode(y.update(z.getId(), x.getId(), 0));

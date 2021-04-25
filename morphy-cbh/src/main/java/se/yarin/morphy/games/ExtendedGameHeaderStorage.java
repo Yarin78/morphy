@@ -49,7 +49,7 @@ public class ExtendedGameHeaderStorage implements ItemStorageSerializer<Extended
         if (!CBUtil.extension(file).equals(".cbj")) {
             throw new IllegalArgumentException("The file extension of an extended GameHeader storage must be .cbj");
         }
-        this.storage = new FileItemStorage<>(file, this, ExtProlog.empty(), ExtendedGameHeader.empty(0, 0), options);
+        this.storage = new FileItemStorage<>(file, this, ExtProlog.empty(), options);
 
         if (options.contains(WRITE)) {
             if (storage.getHeader().version() < ExtProlog.DEFAULT_VERSION) {
@@ -405,6 +405,11 @@ public class ExtendedGameHeaderStorage implements ItemStorageSerializer<Extended
         for (int i = ExtProlog.DEFAULT_SERIALIZED_ITEM_SIZE; i < this.storage.getHeader().serializedItemSize(); i++) {
             buf.put((byte) 0);
         }
+    }
+
+    @Override
+    public @NotNull ExtendedGameHeader emptyItem(int id) {
+        return ExtendedGameHeader.empty(0, 0);
     }
 
     public void close() {

@@ -1,7 +1,6 @@
 package se.yarin.morphy.storage;
 
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import se.yarin.morphy.exceptions.MorphyException;
 import se.yarin.morphy.exceptions.MorphyIOException;
 import se.yarin.morphy.exceptions.MorphyInvalidDataException;
@@ -21,10 +20,9 @@ import static java.nio.file.StandardOpenOption.*;
 public class FileItemStorage<THeader, TItem> implements ItemStorage<THeader, TItem> {
     private long fileSize;
     private THeader header;
-    private final TItem emptyItem;
     private final BlobChannel channel;
+    private final boolean laxMode;
     private final ItemStorageSerializer<THeader, TItem> serializer;
-    private final boolean strict;
 
     public FileItemStorage(
             @NotNull File file,
@@ -32,26 +30,17 @@ public class FileItemStorage<THeader, TItem> implements ItemStorage<THeader, TIt
             @NotNull THeader emptyHeader,
             @NotNull Set<OpenOption> options)
             throws IOException, MorphyInvalidDataException {
-        this(file, serializer, emptyHeader, null, options);
-    }
 
-    public FileItemStorage(
-            @NotNull File file,
-            @NotNull ItemStorageSerializer<THeader, TItem> serializer,
-            @NotNull THeader emptyHeader,
-            @Nullable TItem emptyItem,
-            @NotNull Set<OpenOption> options)
-            throws IOException, MorphyInvalidDataException {
+        boolean laxMode = options.contains(MorphyOpenOption.IGNORE_NON_CRITICAL_ERRORS);
 
-        if (options.contains(WRITE) && options.contains(MorphyOpenOption.IGNORE_NON_CRITICAL_ERRORS)) {
-            throw new IllegalArgumentException("A storage open in WRITE mode can't also ignore errors");
+        if (options.contains(WRITE) && laxMode) {
+            throw new IllegalArgumentException("A storage open in WRITE mode can't also ignore non critical errors");
         }
 
         this.channel = BlobChannel.open(file.toPath(), MorphyOpenOption.valid(options));
-        this.strict = !options.contains(MorphyOpenOption.IGNORE_NON_CRITICAL_ERRORS);
         this.serializer = serializer;
         this.fileSize = this.channel.size();
-        this.emptyItem = emptyItem;
+        this.laxMode = laxMode;
 
         if (this.fileSize == 0) {
             if (options.contains(CREATE) || options.contains(CREATE_NEW)) {
@@ -104,21 +93,16 @@ public class FileItemStorage<THeader, TItem> implements ItemStorage<THeader, TIt
 
     @Override
     public @NotNull TItem getItem(int index) {
-        if (index < 0) {
-            throw new IllegalArgumentException("index must be non-negative");
-        }
         ByteBuffer buf = ByteBuffer.allocate(serializer.itemSize(this.header));
 
         try {
             long offset = serializer.itemOffset(this.header, index);
-            if (offset >= this.fileSize) {
-                if (strict) {
-                    throw new MorphyIOException(String.format("Tried to get item with id %d at offset %d but file size was %d",
+            if (offset < 0 || offset >= this.fileSize) {
+                if (!laxMode) {
+                    throw new IllegalArgumentException(String.format("Tried to get item with id %d at offset %d but file size was %d",
                             index, offset, this.fileSize));
                 }
-                if (emptyItem != null) {
-                    return emptyItem;
-                }
+                return serializer.emptyItem(index);
             } else {
                 channel.read(offset, buf);
                 buf.rewind();
@@ -132,20 +116,21 @@ public class FileItemStorage<THeader, TItem> implements ItemStorage<THeader, TIt
 
     @Override
     public @NotNull List<TItem> getItems(int index, int count) {
-        if (index < 0 || count < 0 ) {
-            throw new IllegalArgumentException("index and count must be non-negative");
+        if (count < 0 ) {
+            throw new IllegalArgumentException("count must be non-negative");
         }
 
         ByteBuffer buf = ByteBuffer.allocate(serializer.itemSize(this.header) * count);
         try {
             long offset = serializer.itemOffset(this.header, index);
-            if (offset >= this.fileSize) {
-                if (strict) {
-                    throw new MorphyIOException(String.format("Tried to get item with id %d at offset %d but file size was %d",
-                            index, offset, this.fileSize));
-                }
+            if (offset < 0 || offset >= this.fileSize) {
+                return getItemsSimple(index, count);
             } else {
                 channel.read(offset, buf);
+                if (buf.position() != buf.limit()) {
+                    // Fewer bytes than expected were read
+                    return getItemsSimple(index, count);
+                }
                 buf.rewind();
             }
         } catch (IOException e) {
@@ -159,6 +144,13 @@ public class FileItemStorage<THeader, TItem> implements ItemStorage<THeader, TIt
         return result;
     }
 
+    private @NotNull List<TItem> getItemsSimple(int index, int count) {
+        ArrayList<TItem> result = new ArrayList<>(count);
+        for (int i = 0; i < count; i++) {
+            result.add(getItem(index + i));
+        }
+        return result;
+    }
 
     @Override
     public void putItem(int index, @NotNull TItem item) {

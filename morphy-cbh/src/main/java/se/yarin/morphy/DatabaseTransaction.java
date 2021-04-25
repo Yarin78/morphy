@@ -35,6 +35,10 @@ public class DatabaseTransaction {
 
     private int currentGameCount;
 
+    public Database database() {
+        return database;
+    }
+
     class GameData {
         public ImmutableGameHeader.@NotNull Builder gameHeader;
         public ImmutableExtendedGameHeader.@NotNull Builder extendedGameHeader;
@@ -159,6 +163,34 @@ public class DatabaseTransaction {
         gameTagTransaction.putEntityById(id, gameTag);
     }
 
+    public @NotNull Player getPlayer(int id) {
+        return playerTransaction.get(id);
+    }
+
+    public @NotNull Annotator getAnnotator(int id) {
+        return annotatorTransaction.get(id);
+    }
+
+    public @NotNull Source getSource(int id) {
+        return sourceTransaction.get(id);
+    }
+
+    public @NotNull Tournament getTournament(int id) {
+        return tournamentTransaction.get(id);
+    }
+
+    public @NotNull TournamentExtra getTournamentExtra(int id) {
+        return tournamentTransaction.getExtra(id);
+    }
+
+    public @NotNull Team getTeam(int id) {
+        return teamTransaction.get(id);
+    }
+
+    public @NotNull GameTag getGameTag(int id) {
+        return gameTagTransaction.get(id);
+    }
+
     public @NotNull Game getGame(int id) {
         GameData updatedGame = updatedGames.get(id);
         GameHeader gameHeader;
@@ -179,9 +211,9 @@ public class DatabaseTransaction {
     /**
      * Adds a new game to the transaction
      * @param game the game to add (can be from the same or another database)
-     * @return the id of the added game
+     * @return the added game
      */
-    public int addGame(@NotNull Game game) {
+    public Game addGame(@NotNull Game game) {
         return replaceGame(0, game);
     }
 
@@ -189,9 +221,9 @@ public class DatabaseTransaction {
      * Replaces a game in the transaction
      * @param gameId the id of the game to replace
      * @param game the game to replace with (can be from the same or another database)
-     * @return the id of the replaced game
+     * @return the replaced game
      */
-    public int replaceGame(int gameId, @NotNull Game game) {
+    public Game replaceGame(int gameId, @NotNull Game game) {
         // We can use most of the metadata from the old game header
         ImmutableGameHeader.Builder header = ImmutableGameHeader.builder().from(game.header());
         ImmutableExtendedGameHeader.Builder extendedHeader = ImmutableExtendedGameHeader.builder().from(game.extendedHeader());
@@ -212,7 +244,7 @@ public class DatabaseTransaction {
      * @param model the model of the game to add
      * @return the added game
      */
-    public int addGame(@NotNull GameModel model) {
+    public Game addGame(@NotNull GameModel model) {
         return replaceGame(0, model);
     }
 
@@ -220,9 +252,9 @@ public class DatabaseTransaction {
      * Replaces a game in the transaction
      * @param gameId the id of the game to replace
      * @param model the model of the game to add
-     * @return the id of the replaced game
+     * @return the replaced game
      */
-    public int replaceGame(int gameId, @NotNull GameModel model) {
+    public Game replaceGame(int gameId, @NotNull GameModel model) {
         ImmutableGameHeader.Builder header = ImmutableGameHeader.builder();
         ImmutableExtendedGameHeader.Builder extendedHeader = ImmutableExtendedGameHeader.builder();
 
@@ -243,7 +275,7 @@ public class DatabaseTransaction {
      * The move and annotations offsets that are set are not final; if needed, they will be adjusted
      * during commit if moves/annotations when replacing old games don't fit.
      */
-    int putGame(
+    Game putGame(
             int gameId,
             @NotNull ImmutableGameHeader.Builder gameHeaderBuilder,
             @NotNull ImmutableExtendedGameHeader.Builder extendedGameHeaderBuilder,
@@ -263,10 +295,15 @@ public class DatabaseTransaction {
             previousGame = getGame(gameId);
         }
 
+        gameHeaderBuilder.id(gameId);
         updatedGames.put(gameId, new GameData(gameHeaderBuilder, extendedGameHeaderBuilder, movesBlob, annotationsBlob));
-        updateEntityStats(gameId, previousGame, gameHeaderBuilder.build(), extendedGameHeaderBuilder.build());
+        ImmutableGameHeader header = gameHeaderBuilder.build();
+        ImmutableExtendedGameHeader extendedHeader = extendedGameHeaderBuilder.build();
+        updateEntityStats(gameId, previousGame, header, extendedHeader);
 
-        return gameId;
+        Game game = new Game(this, header, extendedHeader);
+        assert game.id() > 0;
+        return game;
     }
 
     long findNextAnnotationOffset(int gameId) {

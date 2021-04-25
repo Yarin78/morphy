@@ -40,17 +40,17 @@ public class TournamentIndex extends EntityIndex<Tournament> {
         super(storage, "Tournament");
     }
 
-    public static TournamentIndex create(@NotNull File file)
+    public static @NotNull TournamentIndex create(@NotNull File file)
             throws IOException, MorphyInvalidDataException {
         return new TournamentIndex(file, Set.of(READ, WRITE, CREATE_NEW));
     }
 
-    public static TournamentIndex open(@NotNull File file)
+    public static @NotNull TournamentIndex open(@NotNull File file)
             throws IOException, MorphyInvalidDataException {
         return open(file, DatabaseMode.READ_WRITE);
     }
 
-    public static TournamentIndex open(@NotNull File file, @NotNull DatabaseMode mode)
+    public static @NotNull TournamentIndex open(@NotNull File file, @NotNull DatabaseMode mode)
             throws IOException, MorphyInvalidDataException {
         if (mode == DatabaseMode.IN_MEMORY) {
             TournamentIndex source = open(file, DatabaseMode.READ_ONLY);
@@ -79,12 +79,12 @@ public class TournamentIndex extends EntityIndex<Tournament> {
     }
 
     @Override
-    public EntityIndexTransaction<Tournament> beginTransaction() {
+    public @NotNull EntityIndexTransaction<Tournament> beginTransaction() {
         // TODO: Acquire read lock
         return new TournamentIndexTransaction(this);
     }
 
-    public TournamentIndexTransaction beginTransaction(@NotNull TournamentExtraStorage extraStorage) {
+    public @NotNull TournamentIndexTransaction beginTransaction(@NotNull TournamentExtraStorage extraStorage) {
         // TODO: Acquire read lock
         return new TournamentIndexTransaction(this, extraStorage);
     }
@@ -96,7 +96,7 @@ public class TournamentIndex extends EntityIndex<Tournament> {
      * @param name a prefix of the title of the tournament
      * @return a stream over matching tournaments
      */
-    public Stream<Tournament> prefixSearch(int year, @NotNull String name) {
+    public @NotNull Stream<Tournament> prefixSearch(int year, @NotNull String name) {
         Tournament startKey = Tournament.of(name, new Date(year));
         Tournament endKey = Tournament.of(name + "zzz", new Date(year));
         return streamOrderedAscending(startKey, endKey);
@@ -108,14 +108,14 @@ public class TournamentIndex extends EntityIndex<Tournament> {
      * @param toYear the end year, inclusive
      * @return a stream over matching tournaments, with the most recent tournament first
      */
-    public Stream<Tournament> rangeSearch(int fromYear, int toYear) {
+    public @NotNull Stream<Tournament> rangeSearch(int fromYear, int toYear) {
         // Tournaments are sorted by year in reverse
         Tournament startKey = Tournament.of("", new Date(toYear));
         Tournament endKey = Tournament.of("", new Date(fromYear-1));
         return streamOrderedAscending(startKey, endKey);
     }
 
-    protected Tournament deserialize(int entityId, int count, int firstGameId, byte[] serializedData) {
+    protected @NotNull Tournament deserialize(int entityId, int count, int firstGameId, byte[] serializedData) {
         ByteBuffer buf = ByteBuffer.wrap(serializedData);
 
         ImmutableTournament.Builder builder = ImmutableTournament.builder()
@@ -164,7 +164,7 @@ public class TournamentIndex extends EntityIndex<Tournament> {
     }
 
     @Override
-    protected void serialize(Tournament tournament, ByteBuffer buf) {
+    protected void serialize(@NotNull Tournament tournament, @NotNull ByteBuffer buf) {
         int typeByte = CBUtil.encodeTournamentType(tournament.type(), tournament.timeControl());
 
         int optionByte =

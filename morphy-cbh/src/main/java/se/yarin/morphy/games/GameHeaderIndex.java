@@ -537,6 +537,18 @@ public class GameHeaderIndex implements ItemStorageSerializer<GameHeaderIndex.Pr
         }
     }
 
+    @Override
+    public @NotNull GameHeader emptyItem(int id) {
+        return ImmutableGameHeader.builder()
+                .id(id)
+                .whitePlayerId(0)
+                .blackPlayerId(0)
+                .tournamentId(0)
+                .annotatorId(0)
+                .sourceId(0)
+                .build();
+    }
+
     public void close() {
         storage.close();
     }

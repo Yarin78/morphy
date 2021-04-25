@@ -26,28 +26,28 @@ public class FooEntityIndex extends EntityIndex<FooEntity> {
         super(storage, "Foo");
     }
 
-    public static FooEntityIndex create(@NotNull File file)
+    public static @NotNull FooEntityIndex create(@NotNull File file)
             throws IOException, MorphyInvalidDataException {
         return open(file, Set.of(READ, WRITE, CREATE_NEW));
     }
 
-    public static FooEntityIndex open(@NotNull File file)
+    public static @NotNull FooEntityIndex open(@NotNull File file)
             throws IOException, MorphyInvalidDataException {
         return open(file, Set.of(READ, WRITE));
     }
 
-    public static FooEntityIndex open(@NotNull File file, @NotNull Set<OpenOption> options)
+    public static @NotNull FooEntityIndex open(@NotNull File file, @NotNull Set<OpenOption> options)
             throws IOException, MorphyInvalidDataException {
         return new FooEntityIndex(new FileItemStorage<>(
                 file, new EntityIndexSerializer(SERIALIZED_FOO_SIZE), EntityIndexHeader.empty(SERIALIZED_FOO_SIZE), options));
     }
 
-    public static FooEntityIndex openInMemory(@NotNull File file)
+    public static @NotNull FooEntityIndex openInMemory(@NotNull File file)
             throws IOException, MorphyInvalidDataException {
         return openInMemory(file, Set.of(READ));
     }
 
-    public static FooEntityIndex openInMemory(@NotNull File file, @NotNull Set<OpenOption> options)
+    public static @NotNull FooEntityIndex openInMemory(@NotNull File file, @NotNull Set<OpenOption> options)
             throws IOException, MorphyInvalidDataException {
         FooEntityIndex source = open(file, options);
         FooEntityIndex target = new FooEntityIndex();
@@ -56,7 +56,7 @@ public class FooEntityIndex extends EntityIndex<FooEntity> {
     }
 
     @Override
-    protected FooEntity deserialize(int entityId, int count, int firstGameId, byte[] serializedData) {
+    protected @NotNull FooEntity deserialize(int entityId, int count, int firstGameId, byte[] serializedData) {
         ByteBuffer buf = ByteBuffer.wrap(serializedData);
         return ImmutableFooEntity.builder()
                 .id(entityId)
@@ -68,7 +68,7 @@ public class FooEntityIndex extends EntityIndex<FooEntity> {
     }
 
     @Override
-    protected void serialize(FooEntity entity, ByteBuffer buf) {
+    protected void serialize(@NotNull FooEntity entity, @NotNull ByteBuffer buf) {
         ByteBufferUtil.putFixedSizeByteString(buf, entity.key(), 20);
         ByteBufferUtil.putIntB(buf, entity.value());
     }

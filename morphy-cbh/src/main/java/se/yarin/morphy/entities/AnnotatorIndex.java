@@ -33,17 +33,17 @@ public class AnnotatorIndex extends EntityIndex<Annotator> {
         super(storage, "Annotator");
     }
 
-    public static AnnotatorIndex create(@NotNull File file)
+    public static @NotNull AnnotatorIndex create(@NotNull File file)
             throws IOException, MorphyInvalidDataException {
         return new AnnotatorIndex(file, Set.of(READ, WRITE, CREATE_NEW));
     }
 
-    public static AnnotatorIndex open(@NotNull File file)
+    public static @NotNull AnnotatorIndex open(@NotNull File file)
             throws IOException, MorphyInvalidDataException {
         return open(file, DatabaseMode.READ_WRITE);
     }
 
-    public static AnnotatorIndex open(@NotNull File file, @NotNull DatabaseMode mode)
+    public static @NotNull AnnotatorIndex open(@NotNull File file, @NotNull DatabaseMode mode)
             throws IOException, MorphyInvalidDataException {
         if (mode == DatabaseMode.IN_MEMORY) {
             AnnotatorIndex source = open(file, DatabaseMode.READ_ONLY);
@@ -55,7 +55,7 @@ public class AnnotatorIndex extends EntityIndex<Annotator> {
     }
 
     @Override
-    protected Annotator deserialize(int entityId, int count, int firstGameId, byte[] serializedData) {
+    protected @NotNull Annotator deserialize(int entityId, int count, int firstGameId, byte[] serializedData) {
         ByteBuffer buf = ByteBuffer.wrap(serializedData);
         return ImmutableAnnotator.builder()
                 .id(entityId)
@@ -66,7 +66,7 @@ public class AnnotatorIndex extends EntityIndex<Annotator> {
     }
 
     @Override
-    protected void serialize(Annotator annotator, ByteBuffer buf) {
+    protected void serialize(@NotNull Annotator annotator, @NotNull ByteBuffer buf) {
         ByteBufferUtil.putFixedSizeByteString(buf, annotator.name(), 45);
     }
 

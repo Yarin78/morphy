@@ -34,17 +34,17 @@ public class TeamIndex extends EntityIndex<Team> {
         super(storage, "Team");
     }
 
-    public static TeamIndex create(@NotNull File file)
+    public static @NotNull TeamIndex create(@NotNull File file)
             throws IOException, MorphyInvalidDataException {
         return new TeamIndex(file, Set.of(READ, WRITE, CREATE_NEW));
     }
 
-    public static TeamIndex open(@NotNull File file)
+    public static @NotNull TeamIndex open(@NotNull File file)
             throws IOException, MorphyInvalidDataException {
         return open(file, DatabaseMode.READ_WRITE);
     }
 
-    public static TeamIndex open(@NotNull File file, @NotNull DatabaseMode mode)
+    public static @NotNull TeamIndex open(@NotNull File file, @NotNull DatabaseMode mode)
             throws IOException, MorphyInvalidDataException {
         if (mode == DatabaseMode.IN_MEMORY) {
             TeamIndex source = open(file, DatabaseMode.READ_ONLY);
@@ -60,7 +60,7 @@ public class TeamIndex extends EntityIndex<Team> {
      * @param title a prefix of the team name
      * @return a stream of matching teams
      */
-    public Stream<Team> prefixSearch(@NotNull String title) {
+    public @NotNull Stream<Team> prefixSearch(@NotNull String title) {
         Team startKey = Team.of(title);
         Team endKey = Team.of(title + "zzz");
 
@@ -68,7 +68,7 @@ public class TeamIndex extends EntityIndex<Team> {
     }
 
     @Override
-    protected Team deserialize(int entityId, int count, int firstGameId, byte[] serializedData) {
+    protected @NotNull Team deserialize(int entityId, int count, int firstGameId, byte[] serializedData) {
         ByteBuffer buf = ByteBuffer.wrap(serializedData);
         return ImmutableTeam.builder()
                 .id(entityId)
@@ -83,7 +83,7 @@ public class TeamIndex extends EntityIndex<Team> {
     }
 
     @Override
-    protected void serialize(Team team, ByteBuffer buf) {
+    protected void serialize(@NotNull Team team, @NotNull ByteBuffer buf) {
         ByteBufferUtil.putFixedSizeByteString(buf, team.title(), 45);
         ByteBufferUtil.putIntL(buf, team.teamNumber());
         ByteBufferUtil.putByte(buf, team.season() ? 1 : 0);

@@ -1,9 +1,7 @@
 package se.yarin.morphy;
 
-import se.yarin.chess.GameMovesModel;
-import se.yarin.chess.Player;
-import se.yarin.chess.Position;
-import se.yarin.chess.Stone;
+import se.yarin.chess.*;
+import se.yarin.morphy.games.annotations.ImmutableTextAfterMoveAnnotation;
 
 import static se.yarin.chess.Chess.*;
 import static se.yarin.chess.Chess.F1;
@@ -122,5 +120,26 @@ public class TestGames {
                 .addMove(F2, F1, Stone.BLACK_QUEEN);
 
         return moves;
+    }
+
+    public static GameModel getSimpleGame(String white, String black) {
+        return getSimpleGame(white, black, "", "", "");
+    }
+
+    public static GameModel getSimpleGame(String white, String black, String event, String source, String annotator) {
+        GameHeaderModel header = new GameHeaderModel();
+        header.setWhite(white);
+        header.setBlack(black);
+        header.setResult(GameResult.DRAW);
+        header.setDate(new Date(2016, 8, 10));
+        header.setEvent(event);
+        header.setSourceTitle(source);
+        header.setAnnotator(annotator);
+        GameMovesModel movesModel = new GameMovesModel();
+        movesModel.root().addMove(E2, E4).addMove(C7, C5);
+        movesModel.root().addAnnotation(ImmutableTextAfterMoveAnnotation.builder().text("Interesting game!").build());
+
+        GameModel gameModel = new GameModel(header, movesModel);
+        return gameModel;
     }
 }

@@ -34,6 +34,12 @@ public interface ItemStorageSerializer<THeader, TItem> {
      */
     @NotNull TItem deserializeItem(int id, @NotNull ByteBuffer buf);
 
+    /**
+     * Gets the item that result from deserializing an empty byte array
+     * @return an empty item
+     */
+    @NotNull TItem emptyItem(int id);
+
     void serializeHeader(@NotNull THeader header, @NotNull ByteBuffer buf);
     void serializeItem(@NotNull TItem item, @NotNull ByteBuffer buf);
 }

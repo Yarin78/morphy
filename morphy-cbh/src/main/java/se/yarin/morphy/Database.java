@@ -349,7 +349,7 @@ public class Database {
 
     public int addGame(@NotNull GameModel game) {
         DatabaseTransaction txn = new DatabaseTransaction(this);
-        int id = txn.addGame(game);
+        int id = txn.addGame(game).id();
         txn.commit();
         return id;
     }

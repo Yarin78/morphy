@@ -26,18 +26,35 @@ public class Game {
 
     private final @NotNull Database database;
 
+    private final @Nullable DatabaseTransaction transaction;
+
     private final @NotNull GameHeader header;
 
     private final @NotNull ExtendedGameHeader extendedHeader;
 
     public Game(@NotNull Database database, @NotNull GameHeader header, @NotNull ExtendedGameHeader extendedHeader) {
         this.database = database;
+        this.transaction = null;
+        this.header = header;
+        this.extendedHeader = extendedHeader;
+    }
+
+    public Game(@NotNull DatabaseTransaction transaction, @NotNull GameHeader header, @NotNull ExtendedGameHeader extendedHeader) {
+        this.database = transaction.database();
+        this.transaction = transaction;
         this.header = header;
         this.extendedHeader = extendedHeader;
     }
 
     public @NotNull Database database() {
         return this.database;
+    }
+
+    /**
+     * @return the transaction the game is part of, or null if the game is already committed to the database
+     */
+    public @Nullable DatabaseTransaction transaction() {
+        return transaction;
     }
 
     public @NotNull GameHeader header() {
@@ -64,11 +81,16 @@ public class Game {
     }
 
     public @NotNull Player white() {
-        return database.playerIndex().get(header.whitePlayerId());
+        return transaction == null ?
+                database.playerIndex().get(header.whitePlayerId()) :
+                transaction.getPlayer(header.whitePlayerId());
+
     }
 
     public @NotNull Player black() {
-        return database.playerIndex().get(header.blackPlayerId());
+        return transaction == null ?
+                database.playerIndex().get(header.blackPlayerId()) :
+                transaction.getPlayer(header.blackPlayerId());
     }
 
     public int whiteElo() {
@@ -84,11 +106,15 @@ public class Game {
     }
 
     public @NotNull Tournament tournament() {
-        return database.tournamentIndex().get(header.tournamentId());
+        return transaction == null ?
+                database.tournamentIndex().get(header.tournamentId()) :
+                transaction.getTournament(header.tournamentId());
     }
 
     public @NotNull TournamentExtra tournamentExtra() {
-        return database.tournamentExtraStorage().get(header.tournamentId());
+        return transaction == null ?
+                database.tournamentExtraStorage().get(header.tournamentId()) :
+                transaction.getTournamentExtra(header.tournamentId());
     }
 
     public int annotatorId() {
@@ -96,7 +122,9 @@ public class Game {
     }
 
     public @NotNull Annotator annotator() {
-        return database.annotatorIndex().get(header.annotatorId());
+        return transaction == null ?
+                database.annotatorIndex().get(header.annotatorId()) :
+                transaction.getAnnotator(header.annotatorId());
     }
 
     public int sourceId() {
@@ -104,7 +132,9 @@ public class Game {
     }
 
     public @NotNull Source source() {
-        return database.sourceIndex().get(header.sourceId());
+        return transaction == null ?
+                database.sourceIndex().get(header.sourceId()) :
+                transaction.getSource(header.sourceId());
     }
 
     public int whiteTeamId() {
@@ -117,18 +147,24 @@ public class Game {
 
     public @Nullable Team whiteTeam() {
         int teamId = extendedHeader.whiteTeamId();
-        return teamId == -1 ? null : database.teamIndex().get(teamId);
+        return teamId == -1 ? null : (transaction == null ?
+                database.teamIndex().get(teamId) :
+                transaction.getTeam(extendedHeader.whiteTeamId()));
     }
 
     public @Nullable Team blackTeam() {
         int teamId = extendedHeader.blackTeamId();
-        return teamId == -1 ? null : database.teamIndex().get(teamId);
+        return teamId == -1 ? null : (transaction == null ?
+                database.teamIndex().get(teamId) :
+                transaction.getTeam(extendedHeader.blackTeamId()));
     }
 
     public @Nullable int gameTagId() { return extendedHeader.gameTagId(); }
 
     public GameTag gameTag() {
-        return gameTagId() == -1 ? null : database.gameTagIndex().get(gameTagId());
+        return gameTagId() == -1 ? null : (transaction == null ?
+                database.gameTagIndex().get(gameTagId()) :
+                transaction.getGameTag(gameTagId()));
     }
 
     public boolean guidingText() {

@@ -60,7 +60,7 @@ public class GameTagIndex extends EntityIndex<GameTag> {
      * @param title a prefix of the game tag
      * @return a stream of matching game tags
      */
-    public Stream<GameTag> prefixSearch(@NotNull String title) {
+    public @NotNull Stream<GameTag> prefixSearch(@NotNull String title) {
         GameTag startKey = GameTag.of(title);
         GameTag endKey = GameTag.of(title + "zzz");
 
@@ -68,7 +68,7 @@ public class GameTagIndex extends EntityIndex<GameTag> {
     }
 
     @Override
-    protected GameTag deserialize(int entityId, int count, int firstGameId, byte[] serializedData) {
+    protected @NotNull GameTag deserialize(int entityId, int count, int firstGameId, byte[] serializedData) {
         ByteBuffer buf = ByteBuffer.wrap(serializedData);
         return ImmutableGameTag.builder()
                 .id(entityId)
@@ -86,7 +86,7 @@ public class GameTagIndex extends EntityIndex<GameTag> {
     }
 
     @Override
-    protected void serialize(GameTag gameTag, ByteBuffer buf) {
+    protected void serialize(@NotNull GameTag gameTag, @NotNull ByteBuffer buf) {
         ByteBufferUtil.putFixedSizeByteString(buf, gameTag.englishTitle(), 200);
         ByteBufferUtil.putFixedSizeByteString(buf, gameTag.germanTitle(), 200);
         ByteBufferUtil.putFixedSizeByteString(buf, gameTag.frenchTitle(), 200);

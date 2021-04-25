@@ -77,7 +77,7 @@ public class PlayerTest {
         assertEquals("", playerIndex.get(1000000).getFullName());
     }
 
-    @Test(expected = MorphyIOException.class)
+    @Test(expected = IllegalArgumentException.class)
     public void testGetInvalidPlayerByIdInStrictMode() throws IOException {
         PlayerIndex playerIndex = PlayerIndex.open(playerIndexFile, DatabaseMode.READ_ONLY);
         playerIndex.get(1000000);

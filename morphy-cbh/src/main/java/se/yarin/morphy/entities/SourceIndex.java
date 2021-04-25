@@ -33,17 +33,17 @@ public class SourceIndex extends EntityIndex<Source> {
         super(storage, "Source");
     }
 
-    public static SourceIndex create(@NotNull File file)
+    public static @NotNull SourceIndex create(@NotNull File file)
             throws IOException, MorphyInvalidDataException {
         return new SourceIndex(file, Set.of(READ, WRITE, CREATE_NEW));
     }
 
-    public static SourceIndex open(@NotNull File file)
+    public static @NotNull SourceIndex open(@NotNull File file)
             throws IOException, MorphyInvalidDataException {
         return open(file, DatabaseMode.READ_WRITE);
     }
 
-    public static SourceIndex open(@NotNull File file, @NotNull DatabaseMode mode)
+    public static @NotNull SourceIndex open(@NotNull File file, @NotNull DatabaseMode mode)
             throws IOException, MorphyInvalidDataException {
         if (mode == DatabaseMode.IN_MEMORY) {
             SourceIndex source = open(file, DatabaseMode.READ_ONLY);
@@ -55,7 +55,7 @@ public class SourceIndex extends EntityIndex<Source> {
     }
 
     @Override
-    protected Source deserialize(int entityId, int count, int firstGameId, byte[] serializedData) {
+    protected @NotNull Source deserialize(int entityId, int count, int firstGameId, byte[] serializedData) {
         ByteBuffer buf = ByteBuffer.wrap(serializedData);
         return ImmutableSource.builder()
                 .id(entityId)
@@ -71,7 +71,7 @@ public class SourceIndex extends EntityIndex<Source> {
     }
 
     @Override
-    protected void serialize(Source source, ByteBuffer buf) {
+    protected void serialize(@NotNull Source source, @NotNull ByteBuffer buf) {
         ByteBufferUtil.putFixedSizeByteString(buf, source.title(), 25);
         ByteBufferUtil.putFixedSizeByteString(buf, source.publisher(), 16);
         ByteBufferUtil.putIntL(buf, CBUtil.encodeDate(source.publication()));
