@@ -1,6 +1,8 @@
 package se.yarin.morphy.entities;
 
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+import se.yarin.morphy.DatabaseContext;
 import se.yarin.morphy.DatabaseMode;
 import se.yarin.morphy.util.CBUtil;
 import se.yarin.util.ByteBufferUtil;
@@ -21,37 +23,41 @@ public class SourceIndex extends EntityIndex<Source> {
     private static final int SERIALIZED_SOURCE_SIZE = 59;
 
     public SourceIndex() {
-        this(new InMemoryItemStorage<>(EntityIndexHeader.empty(SERIALIZED_SOURCE_SIZE)));
+        this(null);
     }
 
-    protected SourceIndex(@NotNull File file, @NotNull Set<OpenOption> openOptions) throws IOException {
+    public SourceIndex(@Nullable DatabaseContext context) {
+        this(new InMemoryItemStorage<>(EntityIndexHeader.empty(SERIALIZED_SOURCE_SIZE)), context);
+    }
+
+    protected SourceIndex(@NotNull File file, @NotNull Set<OpenOption> openOptions, @Nullable DatabaseContext context) throws IOException {
         this(new FileItemStorage<>(
-                file, new EntityIndexSerializer(SERIALIZED_SOURCE_SIZE), EntityIndexHeader.empty(SERIALIZED_SOURCE_SIZE), openOptions));
+                file, new EntityIndexSerializer(SERIALIZED_SOURCE_SIZE), EntityIndexHeader.empty(SERIALIZED_SOURCE_SIZE), openOptions), context);
     }
 
-    protected SourceIndex(ItemStorage<EntityIndexHeader, EntityNode> storage) {
-        super(storage, "Source");
+    protected SourceIndex(@NotNull ItemStorage<EntityIndexHeader, EntityNode> storage, @Nullable DatabaseContext context) {
+        super(storage, "Source", context);
     }
 
-    public static @NotNull SourceIndex create(@NotNull File file)
+    public static @NotNull SourceIndex create(@NotNull File file, @Nullable DatabaseContext context)
             throws IOException, MorphyInvalidDataException {
-        return new SourceIndex(file, Set.of(READ, WRITE, CREATE_NEW));
+        return new SourceIndex(file, Set.of(READ, WRITE, CREATE_NEW), context);
     }
 
-    public static @NotNull SourceIndex open(@NotNull File file)
+    public static @NotNull SourceIndex open(@NotNull File file, @Nullable DatabaseContext context)
             throws IOException, MorphyInvalidDataException {
-        return open(file, DatabaseMode.READ_WRITE);
+        return open(file, DatabaseMode.READ_WRITE, context);
     }
 
-    public static @NotNull SourceIndex open(@NotNull File file, @NotNull DatabaseMode mode)
+    public static @NotNull SourceIndex open(@NotNull File file, @NotNull DatabaseMode mode, @Nullable DatabaseContext context)
             throws IOException, MorphyInvalidDataException {
         if (mode == DatabaseMode.IN_MEMORY) {
-            SourceIndex source = open(file, DatabaseMode.READ_ONLY);
-            SourceIndex target = new SourceIndex();
+            SourceIndex source = open(file, DatabaseMode.READ_ONLY, context);
+            SourceIndex target = new SourceIndex(context);
             source.copyEntities(target);
             return target;
         }
-        return new SourceIndex(file, mode.openOptions());
+        return new SourceIndex(file, mode.openOptions(), context);
     }
 
     @Override

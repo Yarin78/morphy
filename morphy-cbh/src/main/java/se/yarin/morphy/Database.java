@@ -12,9 +12,7 @@ import se.yarin.morphy.util.CBUtil;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -57,6 +55,7 @@ public class Database implements EntityRetriever {
     @NotNull private final GameTagIndex gameTagIndex;
 
     @NotNull private final GameAdapter gameAdapter;
+    @NotNull private final DatabaseContext context;
 
     @NotNull public GameHeaderIndex gameHeaderIndex() {
         return gameHeaderIndex;
@@ -104,17 +103,35 @@ public class Database implements EntityRetriever {
 
     @NotNull public GameAdapter gameAdapter() { return gameAdapter; }
 
+    @NotNull public DatabaseContext context() {
+        return context;
+    }
+
     /**
      * Creates a new in-memory ChessBase database.
      *
      * Important: Write operations to the database will not be persisted to disk.
      */
     public Database() {
-        this(new GameHeaderIndex(), new ExtendedGameHeaderStorage(), new MoveRepository(), new AnnotationRepository(), new PlayerIndex(),
-                new TournamentIndex(), new TournamentExtraStorage(), new AnnotatorIndex(), new SourceIndex(), new TeamIndex(), new GameTagIndex());
+        this.context = new DatabaseContext();
+
+        this.gameHeaderIndex = new GameHeaderIndex(this.context);
+        this.extendedGameHeaderStorage = new ExtendedGameHeaderStorage(this.context);
+        this.moveRepository = new MoveRepository(this.context);
+        this.annotationRepository = new AnnotationRepository(this.context);
+        this.playerIndex = new PlayerIndex(this.context);
+        this.tournamentIndex = new TournamentIndex(this.context);
+        this.tournamentExtraStorage = new TournamentExtraStorage(this.context);
+        this.annotatorIndex = new AnnotatorIndex(this.context);
+        this.sourceIndex = new SourceIndex(this.context);
+        this.teamIndex = new TeamIndex(this.context);
+        this.gameTagIndex = new GameTagIndex(this.context);
+
+        this.gameAdapter = new GameAdapter();
     }
 
     private Database(
+            @NotNull DatabaseContext context,
             @NotNull GameHeaderIndex gameHeaderIndex,
             @NotNull ExtendedGameHeaderStorage extendedGameHeaderStorage,
             @NotNull MoveRepository moveRepository,
@@ -126,6 +143,15 @@ public class Database implements EntityRetriever {
             @NotNull SourceIndex sourceIndex,
             @NotNull TeamIndex teamIndex,
             @NotNull GameTagIndex gameTagIndex) {
+
+        Set<DatabaseContext> contexts = new HashSet<>(Arrays.asList(context, gameHeaderIndex.context(), extendedGameHeaderStorage.context(), moveRepository.context(),
+                annotationRepository.context(), playerIndex.context(), tournamentIndex.context(), tournamentExtraStorage.context(),
+                annotatorIndex.context(), sourceIndex.context(), teamIndex.context(), gameTagIndex.context()));
+        if (contexts.size() > 1) {
+            throw new IllegalArgumentException("All indexes in a Database must share the same context");
+        }
+
+        this.context = context;
         this.gameHeaderIndex = gameHeaderIndex;
         this.extendedGameHeaderStorage = extendedGameHeaderStorage;
         this.moveRepository = moveRepository;
@@ -155,20 +181,22 @@ public class Database implements EntityRetriever {
 
         ensureNoDatabaseExists(file);
 
-        GameHeaderIndex gameHeaderIndex = GameHeaderIndex.create(file);
-        MoveRepository moveRepository = MoveRepository.create(CBUtil.fileWithExtension(file, ".cbg"));
-        AnnotationRepository annotationRepository = AnnotationRepository.create(CBUtil.fileWithExtension(file, ".cba"));
-        PlayerIndex playerIndex = PlayerIndex.create(CBUtil.fileWithExtension(file, ".cbp"));
-        TournamentIndex tournamentIndex = TournamentIndex.create(CBUtil.fileWithExtension(file, ".cbt"));
-        AnnotatorIndex annotatorIndex = AnnotatorIndex.create(CBUtil.fileWithExtension(file, ".cbc"));
-        SourceIndex sourceIndex = SourceIndex.create(CBUtil.fileWithExtension(file, ".cbs"));
+        DatabaseContext context = new DatabaseContext();
 
-        ExtendedGameHeaderStorage extendedGameHeaderStorage = ExtendedGameHeaderStorage.create(CBUtil.fileWithExtension(file, ".cbj"));
-        TournamentExtraStorage tournamentExtraStorage = TournamentExtraStorage.create(CBUtil.fileWithExtension(file, ".cbtt"));
-        TeamIndex teamIndex = TeamIndex.create(CBUtil.fileWithExtension(file, ".cbe"));
-        GameTagIndex gameTagIndex = GameTagIndex.create(CBUtil.fileWithExtension(file, ".cbl"));
+        GameHeaderIndex gameHeaderIndex = GameHeaderIndex.create(file, context);
+        MoveRepository moveRepository = MoveRepository.create(CBUtil.fileWithExtension(file, ".cbg"), context);
+        AnnotationRepository annotationRepository = AnnotationRepository.create(CBUtil.fileWithExtension(file, ".cba"), context);
+        PlayerIndex playerIndex = PlayerIndex.create(CBUtil.fileWithExtension(file, ".cbp"), context);
+        TournamentIndex tournamentIndex = TournamentIndex.create(CBUtil.fileWithExtension(file, ".cbt"), context);
+        AnnotatorIndex annotatorIndex = AnnotatorIndex.create(CBUtil.fileWithExtension(file, ".cbc"), context);
+        SourceIndex sourceIndex = SourceIndex.create(CBUtil.fileWithExtension(file, ".cbs"), context);
 
-        return new Database(gameHeaderIndex, extendedGameHeaderStorage, moveRepository, annotationRepository,
+        ExtendedGameHeaderStorage extendedGameHeaderStorage = ExtendedGameHeaderStorage.create(CBUtil.fileWithExtension(file, ".cbj"), context);
+        TournamentExtraStorage tournamentExtraStorage = TournamentExtraStorage.create(CBUtil.fileWithExtension(file, ".cbtt"), context);
+        TeamIndex teamIndex = TeamIndex.create(CBUtil.fileWithExtension(file, ".cbe"), context);
+        GameTagIndex gameTagIndex = GameTagIndex.create(CBUtil.fileWithExtension(file, ".cbl"), context);
+
+        return new Database(context, gameHeaderIndex, extendedGameHeaderStorage, moveRepository, annotationRepository,
                 playerIndex, tournamentIndex, tournamentExtraStorage, annotatorIndex, sourceIndex, teamIndex, gameTagIndex);
     }
 
@@ -196,6 +224,7 @@ public class Database implements EntityRetriever {
         if (mode == DatabaseMode.READ_WRITE) {
             // TODO: Make simple validation that all essential files exist and have size > 0
             // before attempting anything
+            // Add context?
             ExtendedGameHeaderStorage.upgrade(file);
             PlayerIndex.upgrade(CBUtil.fileWithExtension(file, ".cbp"));
             TournamentIndex.upgrade(CBUtil.fileWithExtension(file, ".cbt"));
@@ -207,14 +236,16 @@ public class Database implements EntityRetriever {
             // TODO: MoveRepository and AnnotationRepository upgrades
         }
 
+        DatabaseContext context = new DatabaseContext();
+
         // The mandatory files
-        GameHeaderIndex gameHeaderIndex = GameHeaderIndex.open(file, mode);
-        MoveRepository moveRepository = MoveRepository.open(CBUtil.fileWithExtension(file, ".cbg"), mode);
-        AnnotationRepository annotationRepository = AnnotationRepository.open(CBUtil.fileWithExtension(file, ".cba"), mode);
-        PlayerIndex playerIndex = PlayerIndex.open(CBUtil.fileWithExtension(file, ".cbp"), mode);
-        TournamentIndex tournamentIndex = TournamentIndex.open(CBUtil.fileWithExtension(file, ".cbt"), mode);
-        AnnotatorIndex annotatorIndex = AnnotatorIndex.open(CBUtil.fileWithExtension(file, ".cbc"), mode);
-        SourceIndex sourceIndex = SourceIndex.open(CBUtil.fileWithExtension(file, ".cbs"), mode);
+        GameHeaderIndex gameHeaderIndex = GameHeaderIndex.open(file, mode, context);
+        MoveRepository moveRepository = MoveRepository.open(CBUtil.fileWithExtension(file, ".cbg"), mode, context);
+        AnnotationRepository annotationRepository = AnnotationRepository.open(CBUtil.fileWithExtension(file, ".cba"), mode, context);
+        PlayerIndex playerIndex = PlayerIndex.open(CBUtil.fileWithExtension(file, ".cbp"), mode, context);
+        TournamentIndex tournamentIndex = TournamentIndex.open(CBUtil.fileWithExtension(file, ".cbt"), mode, context);
+        AnnotatorIndex annotatorIndex = AnnotatorIndex.open(CBUtil.fileWithExtension(file, ".cbc"), mode, context);
+        SourceIndex sourceIndex = SourceIndex.open(CBUtil.fileWithExtension(file, ".cbs"), mode, context);
 
         // Optional files. Only in very early ChessBase databases are they missing.
         // If the database is opened in read-only mode, don't create them but instead provide empty versions
@@ -224,15 +255,15 @@ public class Database implements EntityRetriever {
         File cblFile = CBUtil.fileWithExtension(file, ".cbl");
 
         ExtendedGameHeaderStorage extendedGameHeaderStorage = cbjFile.exists()
-                ? ExtendedGameHeaderStorage.open(cbjFile, mode)
-                : new ExtendedGameHeaderStorage();
+                ? ExtendedGameHeaderStorage.open(cbjFile, mode, context)
+                : new ExtendedGameHeaderStorage(context);
         TournamentExtraStorage tournamentExtraStorage = cbttFile.exists()
-                ? TournamentExtraStorage.open(cbttFile, mode)
-                : new TournamentExtraStorage();
-        TeamIndex teamIndex = cbeFile.exists() ? TeamIndex.open(cbeFile, mode) : new TeamIndex();
-        GameTagIndex gameTagIndex = cblFile.exists() ? GameTagIndex.open(cblFile, mode) : new GameTagIndex();
+                ? TournamentExtraStorage.open(cbttFile, mode, context)
+                : new TournamentExtraStorage(context);
+        TeamIndex teamIndex = cbeFile.exists() ? TeamIndex.open(cbeFile, mode, context) : new TeamIndex(context);
+        GameTagIndex gameTagIndex = cblFile.exists() ? GameTagIndex.open(cblFile, mode, context) : new GameTagIndex(context);
 
-        return new Database(gameHeaderIndex, extendedGameHeaderStorage, moveRepository, annotationRepository,
+        return new Database(context, gameHeaderIndex, extendedGameHeaderStorage, moveRepository, annotationRepository,
                 playerIndex, tournamentIndex, tournamentExtraStorage, annotatorIndex, sourceIndex, teamIndex, gameTagIndex);
     }
 

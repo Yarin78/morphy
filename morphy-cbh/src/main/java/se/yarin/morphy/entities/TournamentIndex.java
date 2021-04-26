@@ -1,9 +1,11 @@
 package se.yarin.morphy.entities;
 
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.chess.Date;
+import se.yarin.morphy.DatabaseContext;
 import se.yarin.morphy.DatabaseMode;
 import se.yarin.morphy.exceptions.MorphyInvalidDataException;
 import se.yarin.morphy.storage.FileItemStorage;
@@ -27,38 +29,42 @@ public class TournamentIndex extends EntityIndex<Tournament> {
     private static final int SERIALIZED_TOURNAMENT_SIZE = 90;
 
     public TournamentIndex() {
-        this(new InMemoryItemStorage<>(EntityIndexHeader.empty(SERIALIZED_TOURNAMENT_SIZE), null));
+        this(null);
     }
 
-    protected TournamentIndex(@NotNull File file, @NotNull Set<OpenOption> openOptions) throws IOException {
+    public TournamentIndex(@Nullable DatabaseContext context) {
+        this(new InMemoryItemStorage<>(EntityIndexHeader.empty(SERIALIZED_TOURNAMENT_SIZE), null), context);
+    }
+
+    protected TournamentIndex(@NotNull File file, @NotNull Set<OpenOption> openOptions, @Nullable DatabaseContext context) throws IOException {
         this(new FileItemStorage<>(
-                file, new EntityIndexSerializer(SERIALIZED_TOURNAMENT_SIZE), EntityIndexHeader.empty(SERIALIZED_TOURNAMENT_SIZE), openOptions));
+                file, new EntityIndexSerializer(SERIALIZED_TOURNAMENT_SIZE), EntityIndexHeader.empty(SERIALIZED_TOURNAMENT_SIZE), openOptions), context);
     }
 
     protected TournamentIndex(
-            @NotNull ItemStorage<EntityIndexHeader, EntityNode> storage) {
-        super(storage, "Tournament");
+            @NotNull ItemStorage<EntityIndexHeader, EntityNode> storage, @Nullable DatabaseContext context) {
+        super(storage, "Tournament", context);
     }
 
-    public static @NotNull TournamentIndex create(@NotNull File file)
+    public static @NotNull TournamentIndex create(@NotNull File file, @Nullable DatabaseContext context)
             throws IOException, MorphyInvalidDataException {
-        return new TournamentIndex(file, Set.of(READ, WRITE, CREATE_NEW));
+        return new TournamentIndex(file, Set.of(READ, WRITE, CREATE_NEW), context);
     }
 
-    public static @NotNull TournamentIndex open(@NotNull File file)
+    public static @NotNull TournamentIndex open(@NotNull File file, @Nullable DatabaseContext context)
             throws IOException, MorphyInvalidDataException {
-        return open(file, DatabaseMode.READ_WRITE);
+        return open(file, DatabaseMode.READ_WRITE, context);
     }
 
-    public static @NotNull TournamentIndex open(@NotNull File file, @NotNull DatabaseMode mode)
+    public static @NotNull TournamentIndex open(@NotNull File file, @NotNull DatabaseMode mode, @Nullable DatabaseContext context)
             throws IOException, MorphyInvalidDataException {
         if (mode == DatabaseMode.IN_MEMORY) {
-            TournamentIndex source = open(file, DatabaseMode.READ_ONLY);
-            TournamentIndex target = new TournamentIndex();
+            TournamentIndex source = open(file, DatabaseMode.READ_ONLY, context);
+            TournamentIndex target = new TournamentIndex(context);
             source.copyEntities(target);
             return target;
         }
-        return new TournamentIndex(file, mode.openOptions());
+        return new TournamentIndex(file, mode.openOptions(), context);
 
         /*
         File extraFile = CBUtil.fileWithExtension(file, ".cbtt");

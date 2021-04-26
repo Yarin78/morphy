@@ -31,13 +31,13 @@ public class SourceTest {
 
     @Test
     public void testSourceBaseStatistics() throws IOException {
-        SourceIndex sourceIndex = SourceIndex.open(sourceIndexFile);
+        SourceIndex sourceIndex = SourceIndex.open(sourceIndexFile, null);
         assertEquals(24, sourceIndex.count());
     }
 
     @Test
     public void testGetSourceById() throws IOException {
-        SourceIndex sourceIndex = SourceIndex.open(sourceIndexFile);
+        SourceIndex sourceIndex = SourceIndex.open(sourceIndexFile, null);
 
         Source s1 = sourceIndex.get(1);
         assertEquals("100 Jahre Schach", s1.title());
@@ -51,7 +51,7 @@ public class SourceTest {
 
     @Test
     public void testGetSourceByKey() throws IOException {
-        SourceIndex sourceIndex = SourceIndex.open(sourceIndexFile);
+        SourceIndex sourceIndex = SourceIndex.open(sourceIndexFile, null);
         Source source = sourceIndex.get(Source.of("CBM 127"));
         assertEquals(12, source.count());
     }

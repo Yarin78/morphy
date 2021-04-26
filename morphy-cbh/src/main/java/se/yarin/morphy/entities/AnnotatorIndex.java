@@ -1,6 +1,8 @@
 package se.yarin.morphy.entities;
 
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+import se.yarin.morphy.DatabaseContext;
 import se.yarin.morphy.DatabaseMode;
 import se.yarin.util.ByteBufferUtil;
 import se.yarin.morphy.exceptions.MorphyInvalidDataException;
@@ -21,37 +23,41 @@ public class AnnotatorIndex extends EntityIndex<Annotator> {
     private static final int SERIALIZED_ANNOTATOR_SIZE = 53;
 
     public AnnotatorIndex() {
-        this(new InMemoryItemStorage<>(EntityIndexHeader.empty(SERIALIZED_ANNOTATOR_SIZE)));
+        this(null);
     }
 
-    protected AnnotatorIndex(@NotNull File file, @NotNull Set<OpenOption> openOptions) throws IOException {
+    public AnnotatorIndex(@Nullable DatabaseContext context) {
+        this(new InMemoryItemStorage<>(EntityIndexHeader.empty(SERIALIZED_ANNOTATOR_SIZE)), context);
+    }
+
+    protected AnnotatorIndex(@NotNull File file, @NotNull Set<OpenOption> openOptions, @Nullable DatabaseContext context) throws IOException {
         this(new FileItemStorage<>(
-                file, new EntityIndexSerializer(SERIALIZED_ANNOTATOR_SIZE), EntityIndexHeader.empty(SERIALIZED_ANNOTATOR_SIZE), openOptions));
+                file, new EntityIndexSerializer(SERIALIZED_ANNOTATOR_SIZE), EntityIndexHeader.empty(SERIALIZED_ANNOTATOR_SIZE), openOptions), context);
     }
 
-    protected AnnotatorIndex(ItemStorage<EntityIndexHeader, EntityNode> storage) {
-        super(storage, "Annotator");
+    protected AnnotatorIndex(@NotNull ItemStorage<EntityIndexHeader, EntityNode> storage, @Nullable DatabaseContext context) {
+        super(storage, "Annotator", context);
     }
 
-    public static @NotNull AnnotatorIndex create(@NotNull File file)
+    public static @NotNull AnnotatorIndex create(@NotNull File file, @Nullable DatabaseContext context)
             throws IOException, MorphyInvalidDataException {
-        return new AnnotatorIndex(file, Set.of(READ, WRITE, CREATE_NEW));
+        return new AnnotatorIndex(file, Set.of(READ, WRITE, CREATE_NEW), context);
     }
 
-    public static @NotNull AnnotatorIndex open(@NotNull File file)
+    public static @NotNull AnnotatorIndex open(@NotNull File file, @Nullable DatabaseContext context)
             throws IOException, MorphyInvalidDataException {
-        return open(file, DatabaseMode.READ_WRITE);
+        return open(file, DatabaseMode.READ_WRITE, context);
     }
 
-    public static @NotNull AnnotatorIndex open(@NotNull File file, @NotNull DatabaseMode mode)
+    public static @NotNull AnnotatorIndex open(@NotNull File file, @NotNull DatabaseMode mode, @Nullable DatabaseContext context)
             throws IOException, MorphyInvalidDataException {
         if (mode == DatabaseMode.IN_MEMORY) {
-            AnnotatorIndex source = open(file, DatabaseMode.READ_ONLY);
-            AnnotatorIndex target = new AnnotatorIndex();
+            AnnotatorIndex source = open(file, DatabaseMode.READ_ONLY, context);
+            AnnotatorIndex target = new AnnotatorIndex(context);
             source.copyEntities(target);
             return target;
         }
-        return new AnnotatorIndex(file, mode.openOptions());
+        return new AnnotatorIndex(file, mode.openOptions(), context);
     }
 
     @Override

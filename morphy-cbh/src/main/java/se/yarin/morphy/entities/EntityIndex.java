@@ -5,6 +5,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import se.yarin.morphy.DatabaseContext;
 import se.yarin.morphy.exceptions.MorphyEntityIndexException;
 import se.yarin.morphy.exceptions.MorphyIOException;
 import se.yarin.morphy.exceptions.MorphyNotSupportedException;
@@ -30,15 +31,21 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
 
     protected final @NotNull ItemStorage<EntityIndexHeader, EntityNode> storage;
     private final @NotNull String entityType;
+    private final @NotNull DatabaseContext context;
     private int numCommittedTxn;
 
     @NotNull EntityIndexHeader storageHeader() {
         return storage.getHeader();
     }
 
-    protected EntityIndex(@NotNull ItemStorage<EntityIndexHeader, EntityNode> storage, @NotNull String entityType) {
+    protected EntityIndex(@NotNull ItemStorage<EntityIndexHeader, EntityNode> storage, @NotNull String entityType, @Nullable DatabaseContext context) {
         this.storage = storage;
         this.entityType = entityType;
+        this.context = context == null ? new DatabaseContext() : context;
+    }
+
+    public @NotNull DatabaseContext context() {
+        return context;
     }
 
     public int getNumCommittedTxn() {

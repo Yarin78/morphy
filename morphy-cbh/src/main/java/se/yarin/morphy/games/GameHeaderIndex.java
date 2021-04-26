@@ -2,9 +2,11 @@ package se.yarin.morphy.games;
 
 import org.immutables.value.Value;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.chess.*;
+import se.yarin.morphy.DatabaseContext;
 import se.yarin.morphy.DatabaseMode;
 import se.yarin.morphy.exceptions.MorphyIOException;
 import se.yarin.morphy.exceptions.MorphyInvalidDataException;
@@ -32,15 +34,23 @@ public class GameHeaderIndex implements ItemStorageSerializer<GameHeaderIndex.Pr
 
     private static final Logger log = LoggerFactory.getLogger(GameHeaderIndex.class);
 
-    private final ItemStorage<GameHeaderIndex.Prolog, GameHeader> storage;
+    private final @NotNull ItemStorage<GameHeaderIndex.Prolog, GameHeader> storage;
+    private final @NotNull DatabaseContext context;
 
     public GameHeaderIndex() {
+        this(null);
+    }
+
+    public GameHeaderIndex(@Nullable DatabaseContext context) {
         this.storage = new InMemoryItemStorage<>(Prolog.empty(), null, true);
+        this.context = context == null ? new DatabaseContext() : context;
     }
 
     private GameHeaderIndex(
             @NotNull File file,
-            @NotNull Set<OpenOption> options) throws IOException {
+            @NotNull Set<OpenOption> options,
+            @Nullable DatabaseContext context) throws IOException {
+        this.context = context == null ? new DatabaseContext() : context;
         if (!CBUtil.extension(file).equals(".cbh")) {
             throw new IllegalArgumentException("The file extension of a GameHeader index must be .cbh");
         }
@@ -55,26 +65,30 @@ public class GameHeaderIndex implements ItemStorageSerializer<GameHeaderIndex.Pr
         }
     }
 
-    public static GameHeaderIndex create(@NotNull File file)
+    public static GameHeaderIndex create(@NotNull File file, @Nullable DatabaseContext context)
             throws IOException, MorphyInvalidDataException {
-        return new GameHeaderIndex(file, Set.of(READ, WRITE, CREATE_NEW));
+        return new GameHeaderIndex(file, Set.of(READ, WRITE, CREATE_NEW), context);
     }
 
-    public static GameHeaderIndex open(@NotNull File file) throws IOException {
-        return open(file, DatabaseMode.READ_WRITE);
+    public static GameHeaderIndex open(@NotNull File file, @Nullable DatabaseContext context) throws IOException {
+        return open(file, DatabaseMode.READ_WRITE, context);
     }
 
-    public static GameHeaderIndex open(@NotNull File file, @NotNull DatabaseMode mode) throws IOException {
+    public static GameHeaderIndex open(@NotNull File file, @NotNull DatabaseMode mode, @Nullable DatabaseContext context) throws IOException {
         if (mode == DatabaseMode.IN_MEMORY) {
-            GameHeaderIndex source = open(file, DatabaseMode.READ_ONLY);
-            GameHeaderIndex target = new GameHeaderIndex();
+            GameHeaderIndex source = open(file, DatabaseMode.READ_ONLY, context);
+            GameHeaderIndex target = new GameHeaderIndex(context);
             source.copyGameHeaders(target);
             return target;
         }
-        return new GameHeaderIndex(file, mode.openOptions());
+        return new GameHeaderIndex(file, mode.openOptions(), context);
     }
 
-    private void copyGameHeaders(GameHeaderIndex target) {
+    public @NotNull DatabaseContext context() {
+        return context;
+    }
+
+    private void copyGameHeaders(@NotNull GameHeaderIndex target) {
         if (target.count() != 0) {
             // Since this is a low-level copy, things will not work if there already are games in the target index
             throw new IllegalStateException("Target index must be empty");

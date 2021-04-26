@@ -117,7 +117,7 @@ public class TournamentExtraTest {
     @Test
     public void getItemFromOlderVersion() throws IOException {
         File file = ResourceLoader.materializeDatabaseStream(GameIndex.class, "upgradable", List.of(".cbtt"));
-        TournamentExtraStorage storage = TournamentExtraStorage.open(file, DatabaseMode.READ_ONLY);
+        TournamentExtraStorage storage = TournamentExtraStorage.open(file, DatabaseMode.READ_ONLY, null);
         assertEquals(2, storage.getStorageVersion());
 
         assertEquals(55.44959, storage.get(7).latitude(), 1e-6);
@@ -136,7 +136,7 @@ public class TournamentExtraTest {
 
         assertEquals(oldFileSize + 4L * numRecords, oldStorageFile.length());
 
-        TournamentExtraStorage upgradedStorage = TournamentExtraStorage.open(oldStorageFile, DatabaseMode.READ_ONLY);
+        TournamentExtraStorage upgradedStorage = TournamentExtraStorage.open(oldStorageFile, DatabaseMode.READ_ONLY, null);
         assertEquals(TournamentExtraHeader.DEFAULT_HEADER_VERSION, upgradedStorage.getStorageVersion());
 
         assertEquals(55.44959, upgradedStorage.get(7).latitude(), 1e-6);
@@ -151,7 +151,7 @@ public class TournamentExtraTest {
         TournamentExtraStorage.upgrade(file);
 
         assertTrue(file.exists());
-        TournamentExtraStorage upgradedStorage = TournamentExtraStorage.open(file, DatabaseMode.READ_ONLY);
+        TournamentExtraStorage upgradedStorage = TournamentExtraStorage.open(file, DatabaseMode.READ_ONLY, null);
         assertEquals(TournamentExtraHeader.DEFAULT_HEADER_VERSION, upgradedStorage.getStorageVersion());
         assertEquals(0, upgradedStorage.numEntries());
     }

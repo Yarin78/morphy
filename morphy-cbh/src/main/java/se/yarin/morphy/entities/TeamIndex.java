@@ -1,6 +1,8 @@
 package se.yarin.morphy.entities;
 
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+import se.yarin.morphy.DatabaseContext;
 import se.yarin.morphy.DatabaseMode;
 import se.yarin.util.ByteBufferUtil;
 import se.yarin.morphy.exceptions.MorphyInvalidDataException;
@@ -22,37 +24,41 @@ public class TeamIndex extends EntityIndex<Team> {
     private static final int SERIALIZED_TEAM_SIZE = 63;
 
     public TeamIndex() {
-        this(new InMemoryItemStorage<>(EntityIndexHeader.empty(SERIALIZED_TEAM_SIZE)));
+       this(null);
     }
 
-    protected TeamIndex(@NotNull File file, @NotNull Set<OpenOption> openOptions) throws IOException {
+    public TeamIndex(@Nullable DatabaseContext context) {
+        this(new InMemoryItemStorage<>(EntityIndexHeader.empty(SERIALIZED_TEAM_SIZE)), context);
+    }
+
+    protected TeamIndex(@NotNull File file, @NotNull Set<OpenOption> openOptions, @Nullable DatabaseContext context) throws IOException {
         this(new FileItemStorage<>(
-                file, new EntityIndexSerializer(SERIALIZED_TEAM_SIZE), EntityIndexHeader.empty(SERIALIZED_TEAM_SIZE), openOptions));
+                file, new EntityIndexSerializer(SERIALIZED_TEAM_SIZE), EntityIndexHeader.empty(SERIALIZED_TEAM_SIZE), openOptions), context);
     }
 
-    protected TeamIndex(ItemStorage<EntityIndexHeader, EntityNode> storage) {
-        super(storage, "Team");
+    protected TeamIndex(@NotNull ItemStorage<EntityIndexHeader, EntityNode> storage, @Nullable DatabaseContext context) {
+        super(storage, "Team", context);
     }
 
-    public static @NotNull TeamIndex create(@NotNull File file)
+    public static @NotNull TeamIndex create(@NotNull File file, @Nullable DatabaseContext context)
             throws IOException, MorphyInvalidDataException {
-        return new TeamIndex(file, Set.of(READ, WRITE, CREATE_NEW));
+        return new TeamIndex(file, Set.of(READ, WRITE, CREATE_NEW), context);
     }
 
-    public static @NotNull TeamIndex open(@NotNull File file)
+    public static @NotNull TeamIndex open(@NotNull File file, @Nullable DatabaseContext context)
             throws IOException, MorphyInvalidDataException {
-        return open(file, DatabaseMode.READ_WRITE);
+        return open(file, DatabaseMode.READ_WRITE, context);
     }
 
-    public static @NotNull TeamIndex open(@NotNull File file, @NotNull DatabaseMode mode)
+    public static @NotNull TeamIndex open(@NotNull File file, @NotNull DatabaseMode mode, @Nullable DatabaseContext context)
             throws IOException, MorphyInvalidDataException {
         if (mode == DatabaseMode.IN_MEMORY) {
-            TeamIndex source = open(file, DatabaseMode.READ_ONLY);
-            TeamIndex target = new TeamIndex();
+            TeamIndex source = open(file, DatabaseMode.READ_ONLY, context);
+            TeamIndex target = new TeamIndex(context);
             source.copyEntities(target);
             return target;
         }
-        return new TeamIndex(file, mode.openOptions());
+        return new TeamIndex(file, mode.openOptions(), context);
     }
 
     /**

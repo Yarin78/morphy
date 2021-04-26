@@ -31,13 +31,13 @@ public class TeamTest {
 
     @Test
     public void testTeamBaseStatistics() throws IOException {
-        TeamIndex teamIndex = TeamIndex.open(teamIndexFile);
+        TeamIndex teamIndex = TeamIndex.open(teamIndexFile, null);
         assertEquals(17, teamIndex.count());
     }
 
     @Test
     public void testGetTeamById() throws IOException {
-        TeamIndex teamIndex = TeamIndex.open(teamIndexFile);
+        TeamIndex teamIndex = TeamIndex.open(teamIndexFile, null);
 
         Team s1 = teamIndex.get(1);
         assertEquals("Baden-Baden", s1.title());
@@ -50,7 +50,7 @@ public class TeamTest {
 
     @Test
     public void testGetTeamByKey() throws IOException {
-        TeamIndex teamIndex = TeamIndex.open(teamIndexFile);
+        TeamIndex teamIndex = TeamIndex.open(teamIndexFile, null);
 
         Team key = Team.of("Hamburger SK", 0, true, 2015, Nation.GERMANY);
         Team team = teamIndex.get(key);

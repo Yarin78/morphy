@@ -1,9 +1,11 @@
 package se.yarin.morphy.games;
 
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.chess.GameMovesModel;
+import se.yarin.morphy.DatabaseContext;
 import se.yarin.morphy.DatabaseMode;
 import se.yarin.morphy.exceptions.MorphyInvalidDataException;
 import se.yarin.morphy.exceptions.MorphyMoveDecodingException;
@@ -26,6 +28,7 @@ public class MoveRepository implements BlobSizeRetriever {
     private static final Logger log = LoggerFactory.getLogger(MoveRepository.class);
 
     private final @NotNull BlobStorage storage;
+    private final @NotNull DatabaseContext context;
     private final @NotNull MoveSerializer moveSerializer;
     private int overrideEncodingMode = -1; // The encoding mode to use when writing games, -1 = default based on type
 
@@ -34,6 +37,10 @@ public class MoveRepository implements BlobSizeRetriever {
     public @NotNull BlobStorage getStorage() { return storage; }
 
     public @NotNull MoveSerializer getMoveSerializer() { return moveSerializer; }
+
+    public @NotNull DatabaseContext context() {
+        return context;
+    }
 
     public void setEncodingMode(int encodingMode) {
         this.overrideEncodingMode = encodingMode;
@@ -45,22 +52,32 @@ public class MoveRepository implements BlobSizeRetriever {
      * Creates a new in-memory move repository that is initially empty.
      */
     public MoveRepository() {
+        this(null);
+    }
+
+    /**
+     * Creates a new in-memory move repository that is initially empty.
+     */
+    public MoveRepository(@Nullable DatabaseContext context) {
         this.storage = new InMemoryBlobStorage(this);
         this.moveSerializer = new MoveSerializer();
+        this.context = context == null ? new DatabaseContext() : context;
     }
 
-    private MoveRepository(@NotNull BlobStorage storage) {
+    private MoveRepository(@NotNull BlobStorage storage, @Nullable DatabaseContext context) {
         this.storage = storage;
         this.moveSerializer = new MoveSerializer();
+        this.context = context == null ? new DatabaseContext() : context;
     }
 
-    private MoveRepository(@NotNull File file, @NotNull Set<OpenOption> openOptions) throws IOException {
+    private MoveRepository(@NotNull File file, @NotNull Set<OpenOption> openOptions, @Nullable DatabaseContext context) throws IOException {
         this.storage = new FileBlobStorage(file, this, openOptions);
         this.moveSerializer = new MoveSerializer();
+        this.context = context == null ? new DatabaseContext() : context;
     }
 
-    public static MoveRepository create(@NotNull File file) throws IOException {
-        return new MoveRepository(file, Set.of(READ, WRITE, CREATE_NEW));
+    public static MoveRepository create(@NotNull File file, @Nullable DatabaseContext context) throws IOException {
+        return new MoveRepository(file, Set.of(READ, WRITE, CREATE_NEW), context);
     }
 
     /**
@@ -69,8 +86,8 @@ public class MoveRepository implements BlobSizeRetriever {
      * @return the opened repository
      * @throws IOException if something went wrong when opening the repository
      */
-    public static MoveRepository open(@NotNull File file) throws IOException {
-        return open(file, DatabaseMode.READ_WRITE);
+    public static MoveRepository open(@NotNull File file, @Nullable DatabaseContext context) throws IOException {
+        return open(file, DatabaseMode.READ_WRITE, context);
     }
 
     /**
@@ -80,10 +97,10 @@ public class MoveRepository implements BlobSizeRetriever {
      * @return the opened repository
      * @throws IOException if something went wrong when opening the repository
      */
-    public static MoveRepository open(@NotNull File file, @NotNull DatabaseMode mode) throws IOException {
+    public static MoveRepository open(@NotNull File file, @NotNull DatabaseMode mode, @Nullable DatabaseContext context) throws IOException {
         return mode == DatabaseMode.IN_MEMORY
-                ? new MoveRepository(loadInMemoryStorage(file))
-                : new MoveRepository(file, mode.openOptions());
+                ? new MoveRepository(loadInMemoryStorage(file, context), context)
+                : new MoveRepository(file, mode.openOptions(), context);
     }
 
     /**
@@ -92,13 +109,13 @@ public class MoveRepository implements BlobSizeRetriever {
      * @param file the file to populate the in-memory repository with
      * @return an open in-memory repository
      */
-    protected static BlobStorage loadInMemoryStorage(@NotNull File file) throws IOException {
+    protected static BlobStorage loadInMemoryStorage(@NotNull File file, @Nullable DatabaseContext context) throws IOException {
         FileChannel channel = FileChannel.open(file.toPath(), READ);
         ByteBuffer buf = ByteBuffer.allocate((int) channel.size());
         channel.read(buf);
         channel.close();
         buf.flip();
-        return new InMemoryBlobStorage(buf, new MoveRepository());
+        return new InMemoryBlobStorage(buf, new MoveRepository(context));
     }
 
     @Override

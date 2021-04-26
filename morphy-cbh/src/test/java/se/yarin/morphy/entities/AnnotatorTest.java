@@ -30,13 +30,13 @@ public class AnnotatorTest {
 
     @Test
     public void testAnnotatorBaseStatistics() throws IOException {
-        AnnotatorIndex annotatorIndex = AnnotatorIndex.open(annotatorIndexFile);
+        AnnotatorIndex annotatorIndex = AnnotatorIndex.open(annotatorIndexFile, null);
         assertEquals(82, annotatorIndex.count());
     }
 
     @Test
     public void testGetAnnotatorById() throws IOException {
-        AnnotatorIndex annotatorIndex = AnnotatorIndex.open(annotatorIndexFile);
+        AnnotatorIndex annotatorIndex = AnnotatorIndex.open(annotatorIndexFile, null);
 
         Annotator a2 = annotatorIndex.get(2);
         assertEquals("Knaak,R", a2.name());
@@ -49,7 +49,7 @@ public class AnnotatorTest {
 
     @Test
     public void testGetAnnotatorByKey() throws IOException {
-        AnnotatorIndex annotatorIndex = AnnotatorIndex.open(annotatorIndexFile);
+        AnnotatorIndex annotatorIndex = AnnotatorIndex.open(annotatorIndexFile, null);
         Annotator annotator = annotatorIndex.get(Annotator.of("Stohl,I"));
         assertEquals(11, annotator.count());
     }

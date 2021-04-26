@@ -22,8 +22,8 @@ public class FooEntityIndex extends EntityIndex<FooEntity> {
         this(new InMemoryItemStorage<>(EntityIndexHeader.empty(SERIALIZED_FOO_SIZE)));
     }
 
-    protected FooEntityIndex(ItemStorage<EntityIndexHeader, EntityNode> storage) {
-        super(storage, "Foo");
+    protected FooEntityIndex(@NotNull ItemStorage<EntityIndexHeader, EntityNode> storage) {
+        super(storage, "Foo", null);
     }
 
     public static @NotNull FooEntityIndex create(@NotNull File file)

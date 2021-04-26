@@ -36,14 +36,14 @@ public class TournamentTest {
 
     @Test
     public void testTournamentIndexStatistics() throws IOException, MorphyInvalidDataException {
-        TournamentIndex tournamentIndex = TournamentIndex.open(tournamentIndexFile);
+        TournamentIndex tournamentIndex = TournamentIndex.open(tournamentIndexFile, null);
         assertEquals(52, tournamentIndex.count());
     }
 
     @Test
     public void testGetTournamentById() throws IOException, MorphyInvalidDataException {
-        TournamentIndex tournamentIndex = TournamentIndex.open(tournamentIndexFile);
-        TournamentExtraStorage tournamentExtraStorage = TournamentExtraStorage.open(tournamentExtraFile);
+        TournamentIndex tournamentIndex = TournamentIndex.open(tournamentIndexFile, null);
+        TournamentExtraStorage tournamentExtraStorage = TournamentExtraStorage.open(tournamentExtraFile, null);
 
         Tournament t41 = tournamentIndex.get(41);
         assertEquals("World-ch Tournament", t41.title());
@@ -67,8 +67,8 @@ public class TournamentTest {
 
     @Test
     public void testGetTournamentByIdInMemoryMode() throws IOException, MorphyInvalidDataException {
-        TournamentIndex tournamentIndex = TournamentIndex.open(tournamentIndexFile, DatabaseMode.IN_MEMORY);
-        TournamentExtraStorage tournamentExtraStorage = TournamentExtraStorage.open(tournamentExtraFile, DatabaseMode.IN_MEMORY);
+        TournamentIndex tournamentIndex = TournamentIndex.open(tournamentIndexFile, DatabaseMode.IN_MEMORY, null);
+        TournamentExtraStorage tournamentExtraStorage = TournamentExtraStorage.open(tournamentExtraFile, DatabaseMode.IN_MEMORY, null);
         Tournament t41 = tournamentIndex.get(41);
         TournamentExtra extra = tournamentExtraStorage.get(41);
         assertEquals("World-ch Tournament", t41.title());
@@ -77,7 +77,7 @@ public class TournamentTest {
 
     @Test
     public void testGetTournamentByKey() throws IOException, MorphyInvalidDataException {
-        TournamentIndex tournamentIndex = TournamentIndex.open(tournamentIndexFile);
+        TournamentIndex tournamentIndex = TournamentIndex.open(tournamentIndexFile, null);
         Tournament key = Tournament.of("World-ch Carlsen-Caruana", "London", new Date(2018, 11, 9));
         Tournament tournament = tournamentIndex.get(key);
         assertEquals(50, tournament.id());
@@ -127,7 +127,7 @@ public class TournamentTest {
 
     @Test
     public void testPrefixSearch() throws IOException {
-        TournamentIndex tournamentIndex = TournamentIndex.open(tournamentIndexFile);
+        TournamentIndex tournamentIndex = TournamentIndex.open(tournamentIndexFile, null);
         List<Tournament> list = tournamentIndex.prefixSearch(1951, "World-ch").collect(Collectors.toList());
         assertEquals(1, list.size());
         assertEquals("World-ch18 Botvinnik-Bronstein +5-5=14", list.get(0).title());
@@ -135,7 +135,7 @@ public class TournamentTest {
 
     @Test
     public void testRangeSearch() throws IOException {
-        TournamentIndex tournamentIndex = TournamentIndex.open(tournamentIndexFile);
+        TournamentIndex tournamentIndex = TournamentIndex.open(tournamentIndexFile, null);
         List<Tournament> list = tournamentIndex.rangeSearch(1951, 1958).collect(Collectors.toList());
         assertEquals(4, list.size());
         assertEquals("World-ch21 Botvinnik-Symslov +7-5=11", list.get(0).title());

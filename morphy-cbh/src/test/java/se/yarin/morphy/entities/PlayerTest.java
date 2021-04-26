@@ -328,7 +328,7 @@ public class PlayerTest {
     public void testCreatePlayerIndex() throws IOException {
         File file = folder.newFile("newbase.cbp");
         file.delete(); // Need to delete it first so we can create it in PlayerBase
-        PlayerIndex playerIndex = PlayerIndex.create(file);
+        PlayerIndex playerIndex = PlayerIndex.create(file, null);
         assertEquals(0, playerIndex.count());
     }
 
@@ -337,7 +337,7 @@ public class PlayerTest {
         File file = folder.newFile("newbase.cbp");
         file.delete(); // Need to delete it first so we can create it in PlayerBase
 
-        PlayerIndex playerIndex = PlayerIndex.create(file);
+        PlayerIndex playerIndex = PlayerIndex.create(file, null);
         playerIndex.add(Player.of("Carlsen", "Magnus"));
         playerIndex.add(Player.of("Karjakin", "Sergey"));
         playerIndex.add(Player.of("Svidler", "Peter"));

@@ -1,8 +1,10 @@
 package se.yarin.morphy.entities;
 
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import se.yarin.morphy.DatabaseContext;
 import se.yarin.morphy.DatabaseMode;
 import se.yarin.util.ByteBufferUtil;
 import se.yarin.morphy.exceptions.MorphyInvalidDataException;
@@ -25,38 +27,50 @@ public class PlayerIndex extends EntityIndex<Player> {
     private static final int SERIALIZED_PLAYER_SIZE = 58;
 
     public PlayerIndex() {
-        this(new InMemoryItemStorage<>(EntityIndexHeader.empty(SERIALIZED_PLAYER_SIZE)));
+        this(null);
     }
 
-    protected PlayerIndex(@NotNull File file, @NotNull Set<OpenOption> openOptions) throws IOException {
+    public PlayerIndex(@Nullable DatabaseContext context) {
+        this(new InMemoryItemStorage<>(EntityIndexHeader.empty(SERIALIZED_PLAYER_SIZE)), context);
+    }
+
+    protected PlayerIndex(@NotNull File file, @NotNull Set<OpenOption> openOptions, @Nullable DatabaseContext context) throws IOException {
         this(new FileItemStorage<>(
-                file, new EntityIndexSerializer(SERIALIZED_PLAYER_SIZE), EntityIndexHeader.empty(SERIALIZED_PLAYER_SIZE), openOptions));
+                file, new EntityIndexSerializer(SERIALIZED_PLAYER_SIZE), EntityIndexHeader.empty(SERIALIZED_PLAYER_SIZE), openOptions), context);
     }
 
-    protected PlayerIndex(@NotNull ItemStorage<EntityIndexHeader, EntityNode> storage) {
-        super(storage, "Player");
+    protected PlayerIndex(@NotNull ItemStorage<EntityIndexHeader, EntityNode> storage, @Nullable DatabaseContext context) {
+        super(storage, "Player", context);
     }
 
-    public static @NotNull PlayerIndex create(@NotNull File file)
+    public static @NotNull PlayerIndex create(@NotNull File file, @Nullable DatabaseContext context)
             throws IOException, MorphyInvalidDataException {
-        return new PlayerIndex(file, Set.of(READ, WRITE, CREATE_NEW));
+        return new PlayerIndex(file, Set.of(READ, WRITE, CREATE_NEW), context);
     }
 
-    public static @NotNull PlayerIndex open(@NotNull File file)
+    public static @NotNull PlayerIndex open(@NotNull File file) throws IOException {
+        return PlayerIndex.open(file, (DatabaseContext) null);
+    }
+
+    public static @NotNull PlayerIndex open(@NotNull File file, @Nullable DatabaseContext context)
             throws IOException, MorphyInvalidDataException {
-        return open(file, DatabaseMode.READ_WRITE);
+        return open(file, DatabaseMode.READ_WRITE, context);
     }
 
-    public static @NotNull PlayerIndex open(@NotNull File file, @NotNull DatabaseMode mode)
+    public static @NotNull PlayerIndex open(@NotNull File file, @NotNull DatabaseMode mode) throws IOException {
+        return open(file, mode, null);
+    }
+
+    public static @NotNull PlayerIndex open(@NotNull File file, @NotNull DatabaseMode mode, @Nullable DatabaseContext context)
             throws IOException, MorphyInvalidDataException {
         if (mode == DatabaseMode.IN_MEMORY) {
-            PlayerIndex source = open(file, DatabaseMode.READ_ONLY);
-            PlayerIndex target = new PlayerIndex();
+            PlayerIndex source = open(file, DatabaseMode.READ_ONLY, context);
+            PlayerIndex target = new PlayerIndex(context);
             source.copyEntities(target);
             return target;
         }
 
-        return new PlayerIndex(file, mode.openOptions());
+        return new PlayerIndex(file, mode.openOptions(), context);
     }
 
     /**

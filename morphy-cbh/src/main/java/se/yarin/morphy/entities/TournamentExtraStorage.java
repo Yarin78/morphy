@@ -1,8 +1,10 @@
 package se.yarin.morphy.entities;
 
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import se.yarin.morphy.DatabaseContext;
 import se.yarin.morphy.DatabaseMode;
 import se.yarin.morphy.games.ExtendedGameHeaderStorage;
 import se.yarin.morphy.util.CBUtil;
@@ -32,17 +34,25 @@ public class TournamentExtraStorage implements ItemStorageSerializer<TournamentE
     private static final Logger log = LoggerFactory.getLogger(TournamentExtraStorage.class);
 
     private final @NotNull ItemStorage<TournamentExtraHeader, TournamentExtra> storage;
+    private final @NotNull DatabaseContext context;
 
     public TournamentExtraStorage() {
+        this(null);
+    }
+
+    public TournamentExtraStorage(@Nullable DatabaseContext context) {
         this.storage = new InMemoryItemStorage<>(TournamentExtraHeader.empty(), TournamentExtra.empty());
+        this.context = context == null ? new DatabaseContext() : context;
     }
 
-    public TournamentExtraStorage(@NotNull ItemStorage<TournamentExtraHeader, TournamentExtra> storage) {
+    public TournamentExtraStorage(@NotNull ItemStorage<TournamentExtraHeader, TournamentExtra> storage, @Nullable DatabaseContext context) {
         this.storage = storage;
+        this.context = context == null ? new DatabaseContext() : context;
     }
 
-    protected TournamentExtraStorage(@NotNull File file, Set<OpenOption> options) throws IOException {
+    protected TournamentExtraStorage(@NotNull File file, @NotNull Set<OpenOption> options, @Nullable DatabaseContext context) throws IOException {
         this.storage = new FileItemStorage<>(file, this, TournamentExtraHeader.empty(), options);
+        this.context = context == null ? new DatabaseContext() : context;
 
         if (options.contains(WRITE)) {
             if (storage.getHeader().version() < TournamentExtraHeader.DEFAULT_HEADER_VERSION) {
@@ -60,26 +70,30 @@ public class TournamentExtraStorage implements ItemStorageSerializer<TournamentE
         }
     }
 
-    public static TournamentExtraStorage create(@NotNull File file) throws IOException {
-        return new TournamentExtraStorage(file, Set.of(READ, WRITE, CREATE_NEW));
+    public static TournamentExtraStorage create(@NotNull File file, @Nullable DatabaseContext context) throws IOException {
+        return new TournamentExtraStorage(file, Set.of(READ, WRITE, CREATE_NEW), context);
     }
 
-    public static TournamentExtraStorage open(@NotNull File file) throws IOException {
-        return open(file, DatabaseMode.READ_WRITE);
+    public static TournamentExtraStorage open(@NotNull File file, @Nullable DatabaseContext context) throws IOException {
+        return open(file, DatabaseMode.READ_WRITE, context);
     }
 
-    public static TournamentExtraStorage open(@NotNull File file, DatabaseMode mode) throws IOException {
+    public static TournamentExtraStorage open(@NotNull File file, @NotNull DatabaseMode mode, @Nullable DatabaseContext context) throws IOException {
         if (mode == DatabaseMode.IN_MEMORY) {
-            TournamentExtraStorage source = open(file, DatabaseMode.READ_ONLY);
+            TournamentExtraStorage source = open(file, DatabaseMode.READ_ONLY, context);
             TournamentExtraStorage target = new TournamentExtraStorage();
             source.copyEntities(target);
             return target;
         }
-        return new TournamentExtraStorage(file, mode.openOptions());
+        return new TournamentExtraStorage(file, mode.openOptions(), context);
+    }
+
+    public @NotNull DatabaseContext context() {
+        return context;
     }
 
     static TournamentExtraHeader peekHeader(File file) throws IOException {
-        TournamentExtraStorage storage = open(file, DatabaseMode.READ_ONLY);
+        TournamentExtraStorage storage = open(file, DatabaseMode.READ_ONLY, null);
         TournamentExtraHeader header = storage.storage.getHeader();
         storage.close();
         return header;
@@ -254,7 +268,7 @@ public class TournamentExtraStorage implements ItemStorageSerializer<TournamentE
         }
         if (!file.exists()) {
             // No need to fill up with tournaments; it's done on demand
-            TournamentExtraStorage.create(file);
+            TournamentExtraStorage.create(file, null);
             return;
         }
 
@@ -268,10 +282,10 @@ public class TournamentExtraStorage implements ItemStorageSerializer<TournamentE
             File upgradedStorageFile = File.createTempFile(CBUtil.baseName(file), ".cbtt");
             upgradedStorageFile.delete();
 
-            TournamentExtraStorage oldStorage = TournamentExtraStorage.open(file, DatabaseMode.READ_ONLY);
+            TournamentExtraStorage oldStorage = TournamentExtraStorage.open(file, DatabaseMode.READ_ONLY, null);
             TournamentExtraStorage upgradedStorage = null;
             try {
-                upgradedStorage = TournamentExtraStorage.create(upgradedStorageFile);
+                upgradedStorage = TournamentExtraStorage.create(upgradedStorageFile, null);
                 oldStorage.copyEntities(upgradedStorage);
             } finally {
                 oldStorage.close();

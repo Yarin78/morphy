@@ -2,8 +2,10 @@ package se.yarin.morphy.games;
 
 import org.immutables.value.Value;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import se.yarin.morphy.DatabaseContext;
 import se.yarin.morphy.DatabaseMode;
 import se.yarin.morphy.exceptions.MorphyException;
 import se.yarin.morphy.exceptions.MorphyIOException;
@@ -35,21 +37,28 @@ import static java.nio.file.StandardOpenOption.*;
 public class ExtendedGameHeaderStorage implements ItemStorageSerializer<ExtendedGameHeaderStorage.ExtProlog, ExtendedGameHeader> {
     private static final Logger log = LoggerFactory.getLogger(ExtendedGameHeaderStorage.class);
 
-    private final ItemStorage<ExtendedGameHeaderStorage.ExtProlog, ExtendedGameHeader> storage;
+    private final @NotNull ItemStorage<ExtendedGameHeaderStorage.ExtProlog, ExtendedGameHeader> storage;
+    private final @NotNull DatabaseContext context;
 
     public ExtendedGameHeaderStorage() {
-        this(new InMemoryItemStorage<>(ExtProlog.empty(), null, true));
+        this(null);
     }
 
-    private ExtendedGameHeaderStorage(@NotNull ItemStorage<ExtProlog, ExtendedGameHeader> storage) {
+    public ExtendedGameHeaderStorage(@Nullable DatabaseContext context) {
+        this(new InMemoryItemStorage<>(ExtProlog.empty(), null, true), context);
+    }
+
+    private ExtendedGameHeaderStorage(@NotNull ItemStorage<ExtProlog, ExtendedGameHeader> storage, @Nullable DatabaseContext context) {
         this.storage = storage;
+        this.context = context == null ? new DatabaseContext() : context;
     }
 
-    private ExtendedGameHeaderStorage(@NotNull File file, @NotNull Set<OpenOption> options) throws IOException {
+    private ExtendedGameHeaderStorage(@NotNull File file, @NotNull Set<OpenOption> options, @Nullable DatabaseContext context) throws IOException {
         if (!CBUtil.extension(file).equals(".cbj")) {
             throw new IllegalArgumentException("The file extension of an extended GameHeader storage must be .cbj");
         }
         this.storage = new FileItemStorage<>(file, this, ExtProlog.empty(), options);
+        this.context = context == null ? new DatabaseContext() : context;
 
         if (options.contains(WRITE)) {
             if (storage.getHeader().version() < ExtProlog.DEFAULT_VERSION) {
@@ -67,27 +76,31 @@ public class ExtendedGameHeaderStorage implements ItemStorageSerializer<Extended
         }
     }
 
-    public static ExtendedGameHeaderStorage create(@NotNull File file)
+    public static ExtendedGameHeaderStorage create(@NotNull File file, @Nullable DatabaseContext context)
             throws IOException, MorphyInvalidDataException {
-        return new ExtendedGameHeaderStorage(file, Set.of(READ, WRITE, CREATE_NEW));
+        return new ExtendedGameHeaderStorage(file, Set.of(READ, WRITE, CREATE_NEW), context);
     }
 
-    public static ExtendedGameHeaderStorage open(@NotNull File file) throws IOException {
-        return open(file, DatabaseMode.READ_WRITE);
+    public static ExtendedGameHeaderStorage open(@NotNull File file, @Nullable DatabaseContext context) throws IOException {
+        return open(file, DatabaseMode.READ_WRITE, context);
     }
 
-    public static ExtendedGameHeaderStorage open(@NotNull File file, @NotNull DatabaseMode mode) throws IOException {
+    public static ExtendedGameHeaderStorage open(@NotNull File file, @NotNull DatabaseMode mode, @Nullable DatabaseContext context) throws IOException {
         if (mode == DatabaseMode.IN_MEMORY) {
-            ExtendedGameHeaderStorage source = open(file, DatabaseMode.READ_ONLY);
-            ExtendedGameHeaderStorage target = new ExtendedGameHeaderStorage();
+            ExtendedGameHeaderStorage source = open(file, DatabaseMode.READ_ONLY, context);
+            ExtendedGameHeaderStorage target = new ExtendedGameHeaderStorage(context);
             source.copyGameHeaders(target);
             return target;
         }
-        return new ExtendedGameHeaderStorage(file, mode.openOptions());
+        return new ExtendedGameHeaderStorage(file, mode.openOptions(), context);
+    }
+
+    public DatabaseContext context() {
+        return context;
     }
 
     static ExtProlog peekProlog(@NotNull File file) throws IOException {
-        ExtendedGameHeaderStorage storage = open(file, DatabaseMode.READ_ONLY);
+        ExtendedGameHeaderStorage storage = open(file, DatabaseMode.READ_ONLY, null);
         ExtProlog prolog = storage.storage.getHeader();
         storage.close();
         return prolog;
@@ -127,11 +140,12 @@ public class ExtendedGameHeaderStorage implements ItemStorageSerializer<Extended
             return;
         }
 
-        GameHeaderIndex index = GameHeaderIndex.open(cbhFile, DatabaseMode.READ_ONLY);
+        DatabaseContext context = new DatabaseContext();
+        GameHeaderIndex index = GameHeaderIndex.open(cbhFile, DatabaseMode.READ_ONLY, context);
         File cbjFile = CBUtil.fileWithExtension(cbhFile, ".cbj");
         if (!cbjFile.exists()) {
             log.info("Creating missing cbj file");
-            ExtendedGameHeaderStorage extendedStorage = ExtendedGameHeaderStorage.create(cbjFile);
+            ExtendedGameHeaderStorage extendedStorage = ExtendedGameHeaderStorage.create(cbjFile, null);
             for (int i = 1; i <= index.count(); i++) {
                 GameHeader gameHeader = index.getGameHeader(i);
                 extendedStorage.storage.putItem(i, ExtendedGameHeader.empty(gameHeader));
@@ -145,10 +159,10 @@ public class ExtendedGameHeaderStorage implements ItemStorageSerializer<Extended
                         currentProlog.version(), currentProlog.serializedItemSize(),
                         ExtProlog.DEFAULT_VERSION, ExtProlog.DEFAULT_SERIALIZED_ITEM_SIZE));
 
-                ExtendedGameHeaderStorage extendedStorage = ExtendedGameHeaderStorage.open(cbjFile, DatabaseMode.READ_ONLY);
+                ExtendedGameHeaderStorage extendedStorage = ExtendedGameHeaderStorage.open(cbjFile, DatabaseMode.READ_ONLY, null);
                 File upgradedStorageFile = File.createTempFile(CBUtil.baseName(cbhFile), ".cbj");
                 upgradedStorageFile.delete();
-                ExtendedGameHeaderStorage upgradedStorage = ExtendedGameHeaderStorage.create(upgradedStorageFile);
+                ExtendedGameHeaderStorage upgradedStorage = ExtendedGameHeaderStorage.create(upgradedStorageFile, null);
                 for (int i = 1; i <= extendedStorage.count(); i++) {
                     ExtendedGameHeader extHeader = extendedStorage.get(i);
                     upgradedStorage.storage.putItem(i, extHeader);
@@ -167,7 +181,7 @@ public class ExtendedGameHeaderStorage implements ItemStorageSerializer<Extended
             }
 
             if (currentProlog.numHeaders() < index.count()) {
-                ExtendedGameHeaderStorage extendedStorage = ExtendedGameHeaderStorage.open(cbjFile, DatabaseMode.READ_WRITE);
+                ExtendedGameHeaderStorage extendedStorage = ExtendedGameHeaderStorage.open(cbjFile, DatabaseMode.READ_WRITE, null);
 
                 log.warn("Extended storage contains fewer entries than expected; padding it");
                 for (int i = extendedStorage.count() + 1; i <= index.count(); i++) {

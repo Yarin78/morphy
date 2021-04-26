@@ -29,13 +29,13 @@ public class GameTagTest {
 
     @Test
     public void testGameTagBaseStatistics() throws IOException {
-        GameTagIndex gameTagIndex = GameTagIndex.open(gameTagIndexFile);
+        GameTagIndex gameTagIndex = GameTagIndex.open(gameTagIndexFile, null);
         assertEquals(3, gameTagIndex.count());
     }
 
     @Test
     public void testGetGameTagById() throws IOException {
-        GameTagIndex gameTagIndex = GameTagIndex.open(gameTagIndexFile);
+        GameTagIndex gameTagIndex = GameTagIndex.open(gameTagIndexFile, null);
 
         GameTag s1 = gameTagIndex.get(3);
         assertEquals("This is English", s1.englishTitle());
@@ -50,7 +50,7 @@ public class GameTagTest {
 
     @Test
     public void testGetTeamByKey() throws IOException {
-        GameTagIndex gameTagIndex = GameTagIndex.open(gameTagIndexFile);
+        GameTagIndex gameTagIndex = GameTagIndex.open(gameTagIndexFile, null);
         GameTag gameTag = gameTagIndex.prefixSearch("This is English").findFirst().orElse(null);
         assertEquals(3, gameTag.id());
     }

@@ -23,7 +23,7 @@ public class ExtendedGameHeaderStorageTest {
     public void createEmpty() throws IOException {
         File file = folder.newFile("newstorage.cbj");
         file.delete();
-        ExtendedGameHeaderStorage storage = ExtendedGameHeaderStorage.create(file);
+        ExtendedGameHeaderStorage storage = ExtendedGameHeaderStorage.create(file, null);
         assertEquals(0, storage.count());
     }
 
@@ -36,7 +36,7 @@ public class ExtendedGameHeaderStorageTest {
     @Test
     public void getItem() throws IOException {
         File cbh_cbj = ResourceLoader.materializeDatabaseStream(getClass(), "cbh_cbj_test", List.of(".cbj"));
-        ExtendedGameHeaderStorage index = ExtendedGameHeaderStorage.open(cbh_cbj);
+        ExtendedGameHeaderStorage index = ExtendedGameHeaderStorage.open(cbh_cbj, null);
         assertEquals(4, index.count());
 
         ExtendedGameHeader game1 = index.get(1);
@@ -53,7 +53,7 @@ public class ExtendedGameHeaderStorageTest {
     @Test
     public void getItemInMemory() throws IOException {
         File cbh_cbj = ResourceLoader.materializeDatabaseStream(getClass(), "cbh_cbj_test", List.of(".cbj"));
-        ExtendedGameHeaderStorage index = ExtendedGameHeaderStorage.open(cbh_cbj, DatabaseMode.IN_MEMORY);
+        ExtendedGameHeaderStorage index = ExtendedGameHeaderStorage.open(cbh_cbj, DatabaseMode.IN_MEMORY, null);
         assertEquals(4, index.count());
 
         ExtendedGameHeader game1 = index.get(1);
@@ -70,14 +70,14 @@ public class ExtendedGameHeaderStorageTest {
     @Test(expected = IllegalArgumentException.class)
     public void getInvalidGame() throws IOException {
         File cbh_cbj = ResourceLoader.materializeDatabaseStream(getClass(), "cbh_cbj_test", List.of(".cbj"));
-        ExtendedGameHeaderStorage index = ExtendedGameHeaderStorage.open(cbh_cbj);
+        ExtendedGameHeaderStorage index = ExtendedGameHeaderStorage.open(cbh_cbj, null);
         index.get(5);
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void getInvalidGameInMemory() throws IOException {
         File cbh_cbj = ResourceLoader.materializeDatabaseStream(getClass(), "cbh_cbj_test", List.of(".cbj"));
-        ExtendedGameHeaderStorage index = ExtendedGameHeaderStorage.open(cbh_cbj, DatabaseMode.IN_MEMORY);
+        ExtendedGameHeaderStorage index = ExtendedGameHeaderStorage.open(cbh_cbj, DatabaseMode.IN_MEMORY, null);
         index.get(5);
     }
 
@@ -99,7 +99,7 @@ public class ExtendedGameHeaderStorageTest {
     public void putItem() throws IOException {
         File file = folder.newFile("newstorage.cbj");
         file.delete();
-        ExtendedGameHeaderStorage storage = ExtendedGameHeaderStorage.create(file);
+        ExtendedGameHeaderStorage storage = ExtendedGameHeaderStorage.create(file, null);
 
         storage.put(1, ExtendedGameHeader.empty(1, 2).withGameTagId(2).withWhiteTeamId(3));
 
@@ -120,8 +120,8 @@ public class ExtendedGameHeaderStorageTest {
         ExtendedGameHeaderStorage.upgrade(cbh);
         assertTrue(cbj.exists());
 
-        GameHeaderIndex index = GameHeaderIndex.open(cbh);
-        ExtendedGameHeaderStorage extendedStorage = ExtendedGameHeaderStorage.open(cbj);
+        GameHeaderIndex index = GameHeaderIndex.open(cbh, null);
+        ExtendedGameHeaderStorage extendedStorage = ExtendedGameHeaderStorage.open(cbj, null);
         assertEquals(index.count(), extendedStorage.count());
         assertTrue(index.count() > 0);
         for (int i = 1; i <= index.count(); i++) {
@@ -143,7 +143,7 @@ public class ExtendedGameHeaderStorageTest {
 
         ExtendedGameHeaderStorage.upgrade(cbh);
 
-        ExtendedGameHeaderStorage extendedStorage = ExtendedGameHeaderStorage.open(cbj);
+        ExtendedGameHeaderStorage extendedStorage = ExtendedGameHeaderStorage.open(cbj, null);
         assertEquals(ExtendedGameHeaderStorage.ExtProlog.DEFAULT_VERSION, extendedStorage.getStorageVersion());
 
         ExtendedGameHeader game16 = extendedStorage.get(16);

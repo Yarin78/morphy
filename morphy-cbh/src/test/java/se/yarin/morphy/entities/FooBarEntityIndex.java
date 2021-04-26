@@ -22,8 +22,8 @@ public class FooBarEntityIndex extends EntityIndex<FooBarEntity> {
         this(new InMemoryItemStorage<>(EntityIndexHeader.empty(SERIALIZED_FOOBAR_SIZE)));
     }
 
-    protected FooBarEntityIndex(ItemStorage<EntityIndexHeader, EntityNode> storage) {
-        super(storage, "FooBar");
+    protected FooBarEntityIndex(@NotNull ItemStorage<EntityIndexHeader, EntityNode> storage) {
+        super(storage, "FooBar", null);
     }
 
     public static @NotNull FooBarEntityIndex create(@NotNull File file)
