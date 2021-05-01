@@ -8,22 +8,26 @@ import java.util.NoSuchElementException;
 public class EntityBatchIterator<T extends Entity & Comparable<T>> implements Iterator<T> {
     private static final int BATCH_SIZE = 1000;
 
-    private final EntityIndex<T> index;
+    private final EntityIndexReadTransaction<T> transaction;
     private List<EntityNode> batch = new ArrayList<>();
     private int batchPos, nextBatchStart;
 
-    public EntityBatchIterator(EntityIndex<T> index, int startId) {
-        this.index = index;
+    public EntityBatchIterator(EntityIndexReadTransaction<T> transaction, int startId) {
+        // The batch reader only works in read transactions because it's optimized to read from
+        // the storage directly, not supporting changes within a transaction
+        this.transaction = transaction;
         this.nextBatchStart = startId;
         skipDeleted();
     }
 
     private void getNextBatch() {
-        int endId = Math.min(index.capacity(), nextBatchStart + BATCH_SIZE);
+        transaction.ensureTransactionIsOpen();
+
+        int endId = Math.min(transaction.index().capacity(), nextBatchStart + BATCH_SIZE);
         if (nextBatchStart >= endId) {
             batch = null;
         } else {
-            batch = index.storage.getItems(nextBatchStart, endId - nextBatchStart);
+            batch = transaction.index().storage.getItems(nextBatchStart, endId - nextBatchStart);
             nextBatchStart = endId;
         }
         batchPos = 0;
@@ -51,6 +55,6 @@ public class EntityBatchIterator<T extends Entity & Comparable<T>> implements It
         }
         EntityNode node = batch.get(batchPos++);
         skipDeleted();
-        return index.resolveEntity(node);
+        return transaction.index().resolveEntity(node);
     }
 }

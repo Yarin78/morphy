@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 
 public class GameTagTest {
     @Rule
@@ -51,12 +52,13 @@ public class GameTagTest {
     @Test
     public void testGetTeamByKey() throws IOException {
         GameTagIndex gameTagIndex = GameTagIndex.open(gameTagIndexFile, null);
-        GameTag gameTag = gameTagIndex.prefixSearch("This is English").findFirst().orElse(null);
+        GameTag gameTag = gameTagIndex.prefixSearch("This is English").stream().findFirst().orElse(null);
+        assertNotNull(gameTag);
         assertEquals(3, gameTag.id());
     }
 
     @Test
-    public void testGameTagSerialization() throws IOException {
+    public void testGameTagSerialization() {
         GameTag newGameTag = ImmutableGameTag.builder()
                 .englishTitle("eng")
                 .germanTitle("ger")

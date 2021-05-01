@@ -21,8 +21,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
 
 import static java.nio.file.StandardOpenOption.READ;
 import static java.nio.file.StandardOpenOption.WRITE;
@@ -42,6 +40,8 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
     @NotNull EntityIndexHeader storageHeader() {
         return storage.getHeader();
     }
+
+    @NotNull String entityType() { return this.entityType; }
 
     protected EntityIndex(@NotNull ItemStorage<EntityIndexHeader, EntityNode> storage, @NotNull String entityType, @Nullable DatabaseContext context) {
         this.storage = storage;
@@ -96,8 +96,12 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
         return deserialize(node.getId(), node.getGameCount(), node.getFirstGameId(), node.getSerializedEntity());
     }
 
-    public EntityIndexTransaction<T> beginTransaction() {
-        return new EntityIndexTransaction<>(this);
+    public EntityIndexWriteTransaction<T> beginWriteTransaction() {
+        return new EntityIndexWriteTransaction<>(this);
+    }
+
+    public EntityIndexReadTransaction<T> beginReadTransaction() {
+        return new EntityIndexReadTransaction<>(this);
     }
 
     void bumpVersion() {
@@ -125,16 +129,20 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
      * @return the entity, or null if there was no entity with that key
      */
     public @Nullable T get(T entityKey) {
-        EntityIndexTransaction<T> txn = beginTransaction();
-        EntityIndexTransaction<T>.NodePath treePath = txn.lowerBound(entityKey);
-        if (treePath.isEnd()) {
+        EntityIndexReadTransaction<T> txn = beginReadTransaction();
+        try {
+            EntityIndexReadTransaction<T>.NodePath treePath = txn.lowerBound(entityKey);
+            if (treePath.isEnd()) {
+                return null;
+            }
+            T foundEntity = treePath.getEntity();
+            if (foundEntity.compareTo(entityKey) == 0) {
+                return foundEntity;
+            }
             return null;
+        } finally {
+            txn.close();
         }
-        T foundEntity = treePath.getEntity();
-        if (foundEntity.compareTo(entityKey) == 0) {
-            return foundEntity;
-        }
-        return null;
     }
 
     /**
@@ -143,7 +151,7 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
      * @param id the id of the entity to get
      * @return a byte array containing a copy of the underlying data
      */
-    public @NotNull byte[] getRaw(int id) {
+    public byte[] getRaw(int id) {
         EntityNode node = storage.getItem(id);
         return node.getSerializedEntity().clone();
     }
@@ -154,9 +162,14 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
      * @return a list of all matching entities.
      */
     public @NotNull List<T> getAll(@NotNull T entityKey) {
-        return streamOrderedAscending(entityKey)
-                .takeWhile(e -> e.compareTo(entityKey) == 0)
-                .collect(Collectors.toList());
+        EntityIndexReadTransaction<T> txn = new EntityIndexReadTransaction<>(this);
+        try {
+            return txn.streamOrderedAscending(entityKey)
+                    .takeWhile(e -> e.compareTo(entityKey) == 0)
+                    .collect(Collectors.toList());
+        } finally {
+            txn.close();
+        }
     }
 
     /**
@@ -164,9 +177,14 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
      * @return a list of all entities
      */
     public @NotNull List<T> getAll() {
-        ArrayList<T> result = new ArrayList<>();
-        iterable().forEach(result::add);
-        return result;
+        EntityIndexReadTransaction<T> txn = new EntityIndexReadTransaction<>(this);
+        try {
+            ArrayList<T> result = new ArrayList<>();
+            txn.iterable().forEach(result::add);
+            return result;
+        } finally {
+            txn.close();
+        }
     }
 
     /**
@@ -174,9 +192,14 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
      * @return a list of all entities
      */
     public @NotNull List<T> getAllOrdered() {
-        ArrayList<T> result = new ArrayList<>();
-        iterableAscending().forEach(result::add);
-        return result;
+        EntityIndexReadTransaction<T> txn = new EntityIndexReadTransaction<>(this);
+        try {
+            ArrayList<T> result = new ArrayList<>();
+            txn.iterableAscending().forEach(result::add);
+            return result;
+        } finally {
+            txn.close();
+        }
     }
 
     /**
@@ -184,8 +207,13 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
      * @return the first entity, or null if there are no entities in the database
      */
     public @Nullable T getFirst() {
-        Iterator<T> iterator = iterableAscending().iterator();
-        return iterator.hasNext() ? iterator.next() : null;
+        EntityIndexReadTransaction<T> txn = new EntityIndexReadTransaction<>(this);
+        try {
+            Iterator<T> iterator = txn.iterableAscending().iterator();
+            return iterator.hasNext() ? iterator.next() : null;
+        } finally {
+            txn.close();
+        }
     }
 
     /**
@@ -193,8 +221,13 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
      * @return the last entity, or null if there are no entities in the database
      */
     public @Nullable T getLast() {
-        Iterator<T> iterator = iterableDescending().iterator();
-        return iterator.hasNext() ? iterator.next() : null;
+        EntityIndexReadTransaction<T> txn = new EntityIndexReadTransaction<>(this);
+        try {
+            Iterator<T> iterator = txn.iterableDescending().iterator();
+            return iterator.hasNext() ? iterator.next() : null;
+        } finally {
+            txn.close();
+        }
     }
 
     /**
@@ -204,12 +237,17 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
      * @return the succeeding entity, or null if there are no succeeding entities
      */
     public @Nullable T getNext(T entity) {
-        for (T e : iterableAscending(entity)) {
-            if (!e.equals(entity)) {
-                return e;
+        EntityIndexReadTransaction<T> txn = new EntityIndexReadTransaction<>(this);
+        try {
+            for (T e : txn.iterableAscending(entity)) {
+                if (!e.equals(entity)) {
+                    return e;
+                }
             }
+            return null;
+        } finally {
+            txn.close();
         }
-        return null;
     }
 
     /**
@@ -218,148 +256,20 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
      * @param entity an entity or an entity key
      * @return the preceding entity, or null if there are no preceding entities
      */
-    public @Nullable T getPrevious(T entity) {
-        for (T e : iterableDescending(entity)) {
-            if (!e.equals(entity)) {
-                return e;
+    public @Nullable T getPrevious(@NotNull T entity) {
+        EntityIndexReadTransaction<T> txn = new EntityIndexReadTransaction<>(this);
+        try {
+            for (T e : txn.iterableDescending(entity)) {
+                if (!e.equals(entity)) {
+                    return e;
+                }
             }
+            return null;
+        } finally {
+            txn.close();
         }
-        return null;
     }
 
-    /**
-     * Returns an iterable of all entities in the index, sorted by id.
-     * @return an iterable of all entities
-     */
-    public @NotNull Iterable<T> iterable() {
-        return iterable(0);
-    }
-
-    /**
-     * Returns an iterable of all entities in the index, sorted by id.
-     * @param startId the first id in the iterable
-     * @return an iterable of all entities
-     */
-    public @NotNull Iterable<T> iterable(int startId) {
-        return () -> new EntityBatchIterator<>(this, startId);
-    }
-
-    /**
-     * Gets an iterable of all entities in the index sorted by the default sorting order.
-     * @return an iterable of entities
-     */
-    public @NotNull Iterable<T> iterableAscending() {
-        EntityIndexTransaction<T> txn = beginTransaction();
-        return () -> new OrderedEntityAscendingIterator<>(txn.begin(), -1);
-    }
-
-    /**
-     * Gets an iterable of all entities in the index starting at the given key (inclusive),
-     * sorted by the default sorting order.
-     * @param start the starting key
-     * @return an iterable of entities
-     */
-    public @NotNull Iterable<T> iterableAscending(@NotNull T start) {
-        EntityIndexTransaction<T> txn = beginTransaction();
-        return () -> new OrderedEntityAscendingIterator<>(txn.lowerBound(start), -1);
-    }
-
-    /**
-     * Gets an iterable of all entities in the index starting at a given key (inclusive),
-     * ending at a given key (exclusive), sorted by the default sorting order.
-     * @param start the starting key
-     * @param end the end key
-     * @return an iterable of entities
-     */
-    public @NotNull Iterable<T> iterableAscending(@NotNull T start, @NotNull T end) {
-        EntityIndexTransaction<T> txn = beginTransaction();
-        EntityIndexTransaction<T>.NodePath endPath = txn.lowerBound(end);
-        return () -> new OrderedEntityAscendingIterator<>(txn.lowerBound(start), endPath.isEnd() ? -1 : endPath.getEntityId());
-    }
-
-    /**
-     * Gets an iterable of all entities in the index in reverse default sorting order.
-     * @return an iterable of entities
-     */
-    public @NotNull Iterable<T> iterableDescending() {
-        EntityIndexTransaction<T> txn = beginTransaction();
-        return () -> new OrderedEntityDescendingIterator<>(txn.end());
-    }
-
-    /**
-     * Gets an iterable of all entities in the index starting at the given key (inclusive),
-     * in reverse default sorting order.
-     * @param start the starting key
-     * @return an iterable of entities
-     */
-    public @NotNull Iterable<T> iterableDescending(T start) {
-        EntityIndexTransaction<T> txn = beginTransaction();
-        return () -> new OrderedEntityDescendingIterator<>(txn.upperBound(start));
-    }
-
-    /**
-     * Returns a stream of all entities in the index, sorted by id.
-     * @return a stream of all entities
-     */
-    public @NotNull Stream<T> stream() {
-        return StreamSupport.stream(iterable().spliterator(), false);
-    }
-
-    /**
-     * Returns a stream of all entities in the index, sorted by id.
-     * @param startId the first id in the stream
-     * @return a stream of all entities
-     */
-    public @NotNull Stream<T> stream(int startId) {
-        return StreamSupport.stream(iterable(startId).spliterator(), false);
-    }
-
-    /**
-     * Gets a stream of all entities in the index, sorted by the default sorting order.
-     * @return a stream of all entities
-     */
-    public @NotNull Stream<T> streamOrderedAscending() {
-        return StreamSupport.stream(iterableAscending().spliterator(), false);
-    }
-
-    /**
-     * Gets a stream of all entities in the index starting at the given key (inclusive),
-     * sorted by the default sorting order.
-     * @param start the starting key
-     * @return a stream of entities
-     */
-    public @NotNull Stream<T> streamOrderedAscending(@NotNull T start) {
-        return StreamSupport.stream(iterableAscending(start).spliterator(), false);
-    }
-
-    /**
-     * Gets a stream of all entities in the index starting at a given key (inclusive),
-     * and ending at a given key (exclusive), sorted by the default sorting order.
-     * @param start the starting key
-     * @param end the end key
-     * @return a stream of entities
-     */
-    public @NotNull Stream<T> streamOrderedAscending(@NotNull T start, @NotNull T end) {
-        return StreamSupport.stream(iterableAscending(start, end).spliterator(), false);
-    }
-
-    /**
-     * Gets a stream of all entities in the index in reverse default sorting order.
-     * @return a stream of all entities
-     */
-    public @NotNull Stream<T> streamOrderedDescending() {
-        return StreamSupport.stream(iterableDescending().spliterator(), false);
-    }
-
-    /**
-     * Gets a stream of all entities in the index starting at the given key (inclusive),
-     * in reverse default sorting order.
-     * @param start the starting key
-     * @return a stream of entities
-     */
-    public @NotNull Stream<T> streamOrderedDescending(@NotNull T start) {
-        return StreamSupport.stream(iterableDescending(start).spliterator(), false);
-    }
 
     protected abstract @NotNull T deserialize(int entityId, int count, int firstGameId, byte[] serializedData);
 
@@ -371,10 +281,15 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
      * @return the id of the added entity
      */
     public int add(@NotNull T entity) {
-        EntityIndexTransaction<T> txn = beginTransaction();
-        int id = txn.addEntity(entity);
-        txn.commit();
-        return id;
+        EntityIndexWriteTransaction<T> txn = beginWriteTransaction();
+        try {
+            int id = txn.addEntity(entity);
+            txn.commit();
+            return id;
+        } catch (Exception e) {
+            txn.rollback();
+            throw e;
+        }
     }
 
     /**
@@ -383,9 +298,14 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
      * @param entity the new entity (the id field will be ignored)
      */
     public void put(int id, @NotNull T entity) {
-        EntityIndexTransaction<T> txn = beginTransaction();
-        txn.putEntityById(id, entity);
-        txn.commit();
+        EntityIndexWriteTransaction<T> txn = beginWriteTransaction();
+        try {
+            txn.putEntityById(id, entity);
+            txn.commit();
+        } catch (Exception e) {
+            txn.rollback();
+            throw e;
+        }
     }
 
     /**
@@ -396,10 +316,15 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
      * @return the id of the entity that was updated
      */
     public int put(@NotNull T entity) {
-        EntityIndexTransaction<T> txn = beginTransaction();
-        int id = txn.putEntityByKey(entity);
-        txn.commit();
-        return id;
+        EntityIndexWriteTransaction<T> txn = beginWriteTransaction();
+        try {
+            int id = txn.putEntityByKey(entity);
+            txn.commit();
+            return id;
+        } catch (Exception e) {
+            txn.rollback();
+            throw e;
+        }
     }
 
     /**
@@ -408,10 +333,15 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
      * @return true if the entity was deleted; false if there was no entity with that id in the index
      */
     public boolean delete(int entityId) {
-        EntityIndexTransaction<T> txn = beginTransaction();
-        boolean deleted = txn.deleteEntity(entityId);
-        txn.commit();
-        return deleted;
+        EntityIndexWriteTransaction<T> txn = beginWriteTransaction();
+        try {
+            boolean deleted = txn.deleteEntity(entityId);
+            txn.commit();
+            return deleted;
+        } catch (Exception e) {
+            txn.rollback();
+            throw e;
+        }
     }
 
     /**
@@ -421,10 +351,15 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
      * @throws IllegalArgumentException if there are multiple entities with the given key
      */
     public boolean delete(@NotNull T entity) {
-        EntityIndexTransaction<T> txn = beginTransaction();
-        boolean deleted = txn.deleteEntity(entity);
-        txn.commit();
-        return deleted;
+        EntityIndexWriteTransaction<T> txn = beginWriteTransaction();
+        try {
+            boolean deleted = txn.deleteEntity(entity);
+            txn.commit();
+            return deleted;
+        } catch (Exception e) {
+            txn.rollback();
+            throw e;
+        }
     }
 
     public void close() throws MorphyIOException {
@@ -483,16 +418,12 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
      * @return a list of deleted entity ids.
      */
     public @NotNull List<Integer> getDeletedEntityIds() {
-        ArrayList<Integer> ids = new ArrayList<>();
-        int id = storageHeader().deletedEntityId();
-        while (id >= 0 && !ids.contains(id)) {
-            ids.add(id);
-            id = storage.getItem(id).getRightChildId();
+        EntityIndexReadTransaction<T> txn = new EntityIndexReadTransaction<>(this);
+        try {
+            return txn.getDeletedEntityIds();
+        } finally {
+            txn.close();
         }
-        if (id >= 0) {
-            log.warn(String.format("Loop in deleted id chain in entity %s", entityType.toLowerCase()));
-        }
-        return ids;
     }
 
     @Value.Immutable

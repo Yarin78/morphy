@@ -16,7 +16,9 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.file.OpenOption;
+import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static java.nio.file.StandardOpenOption.*;
@@ -78,12 +80,13 @@ public class PlayerIndex extends EntityIndex<Player> {
      * @param name a prefix of the last name of the player; first name can be specified after a comma
      * @return a stream over matching players
      */
-    public @NotNull Stream<Player> prefixSearch(@NotNull String name) {
-        if (name.contains(",")) {
-            String[] parts = name.split(",", 2);
-            return prefixSearch(parts[0].strip(), parts[1].strip());
+    public @NotNull List<Player> prefixSearch(@NotNull String name) {
+        EntityIndexReadTransaction<Player> txn = beginReadTransaction();
+        try {
+            return prefixStream(txn, name).collect(Collectors.toList());
+        } finally {
+            txn.close();
         }
-        return prefixSearch(name, null);
     }
 
     /**
@@ -91,17 +94,37 @@ public class PlayerIndex extends EntityIndex<Player> {
      * If first name is specified, last name will have to match exactly.
      * @param lastName a prefix of the last name of the player
      * @param firstName a prefix of the first name of the player (or null/empty).
-     * @return a stream of matching players
+     * @return a list of matching players
      */
-    public @NotNull Stream<Player> prefixSearch(@NotNull String lastName, String firstName) {
+    public @NotNull List<Player> prefixSearch(@NotNull String lastName, String firstName) {
+        EntityIndexReadTransaction<Player> txn = beginReadTransaction();
+        try {
+            return prefixStream(txn, lastName, firstName).collect(Collectors.toList());
+        } finally {
+            txn.close();
+        }
+    }
+
+    @NotNull Stream<Player> prefixStream(@NotNull EntityIndexReadTransaction<Player> transaction, @NotNull String name) {
+        if (name.contains(",")) {
+            String[] parts = name.split(",", 2);
+            return prefixStream(transaction, parts[0].strip(), parts[1].strip());
+        }
+        return prefixStream(transaction, name, null);
+    }
+
+    @NotNull Stream<Player> prefixStream(@NotNull EntityIndexReadTransaction<Player> transaction, @NotNull String lastName, String firstName) {
+        if (transaction.index() != this) {
+            throw new IllegalArgumentException("Mismatching index in transaction");
+        }
         Player startKey = Player.of(lastName, firstName == null ? "" : firstName);
         Player endKey = firstName == null ? Player.of(lastName + "zzz", "") :
                 Player.of(lastName, firstName + "zzz");
-        return streamOrderedAscending(startKey, endKey);
+        return transaction.streamOrderedAscending(startKey, endKey);
     }
 
     @Override
-    protected @NotNull Player deserialize(int entityId, int count, int firstGameId, @NotNull byte[] serializedData) {
+    protected @NotNull Player deserialize(int entityId, int count, int firstGameId, byte[] serializedData) {
         ByteBuffer buf = ByteBuffer.wrap(serializedData);
         return ImmutablePlayer.builder()
                 .id(entityId)

@@ -1,6 +1,7 @@
 package se.yarin.morphy;
 
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.chess.GameModel;
@@ -113,7 +114,11 @@ public class Database implements EntityRetriever {
      * Important: Write operations to the database will not be persisted to disk.
      */
     public Database() {
-        this.context = new DatabaseContext();
+        this(null);
+    }
+
+    public Database(@Nullable DatabaseContext context) {
+        this.context = context != null ? context : new DatabaseContext();
 
         this.gameHeaderIndex = new GameHeaderIndex(this.context);
         this.extendedGameHeaderStorage = new ExtendedGameHeaderStorage(this.context);

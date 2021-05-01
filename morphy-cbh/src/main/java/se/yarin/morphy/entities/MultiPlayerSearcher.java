@@ -1,6 +1,7 @@
 package se.yarin.morphy.entities;
 
 
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -17,16 +18,18 @@ import java.util.stream.Stream;
 public class MultiPlayerSearcher implements PlayerSearcher {
     private static final Logger log = LoggerFactory.getLogger(MultiPlayerSearcher.class);
 
-    private final PlayerIndex playerBase;
+    private final @NotNull PlayerIndex index;
+    private final @NotNull EntityIndexReadTransaction<Player> transaction;
     private final List<String> names;
 
-    public MultiPlayerSearcher(PlayerIndex playerBase, String names) {
-        this.playerBase = playerBase;
+    public MultiPlayerSearcher(@NotNull EntityIndexReadTransaction<Player> playerTransaction, String names) {
+        this.transaction = playerTransaction;
+        this.index = (PlayerIndex) playerTransaction.index();
         this.names = Arrays.stream(names.split("\\|")).map(String::strip).collect(Collectors.toList());
     }
 
     public Stream<Hit> search() {
-        return playerBase.stream().filter(this::matches).map(MultiPlayerSearcher.Hit::new);
+        return transaction.stream().filter(this::matches).map(MultiPlayerSearcher.Hit::new);
     }
 
     @Override
@@ -35,7 +38,7 @@ public class MultiPlayerSearcher implements PlayerSearcher {
         long start = System.currentTimeMillis();
         ArrayList<Player> players = new ArrayList<>();
         for (String name : names) {
-            List<Player> matches = playerBase.prefixSearch(name).limit(2).collect(Collectors.toList());
+            List<Player> matches = index.prefixStream(transaction, name).limit(2).collect(Collectors.toList());
             if (matches.size() == 2) {
                 log.warn(String.format("%s matches at least two players: %s and %s", name, matches.get(0).getFullName(), matches.get(1).getFullName()));
                 notUnique = true;

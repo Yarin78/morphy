@@ -121,7 +121,7 @@ public class TournamentExtraStorage implements ItemStorageSerializer<TournamentE
         return this.storage.isEmpty() ? 0 : this.storage.getHeader().highestIndex() + 1;
     }
 
-    public TournamentExtra get(int id) {
+    public @NotNull TournamentExtra get(int id) {
         // It's okay to get entries beyond the last because in this particular file,
         // ChessBase lazily adds data.
         return id < numEntries() ? this.storage.getItem(id) : TournamentExtra.empty();

@@ -1,6 +1,8 @@
 package se.yarin.morphy.entities;
 
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+import se.yarin.morphy.DatabaseContext;
 import se.yarin.util.ByteBufferUtil;
 import se.yarin.morphy.exceptions.MorphyInvalidDataException;
 import se.yarin.morphy.storage.FileItemStorage;
@@ -23,7 +25,11 @@ public class FooEntityIndex extends EntityIndex<FooEntity> {
     }
 
     protected FooEntityIndex(@NotNull ItemStorage<EntityIndexHeader, EntityNode> storage) {
-        super(storage, "Foo", null);
+        this(storage, null);
+    }
+
+    protected FooEntityIndex(@NotNull ItemStorage<EntityIndexHeader, EntityNode> storage, @Nullable DatabaseContext context) {
+        super(storage, "Foo", context);
     }
 
     public static @NotNull FooEntityIndex create(@NotNull File file)

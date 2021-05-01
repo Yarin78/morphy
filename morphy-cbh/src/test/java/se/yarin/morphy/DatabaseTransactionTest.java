@@ -2,13 +2,13 @@ package se.yarin.morphy;
 
 import org.junit.Test;
 import se.yarin.chess.Date;
-import se.yarin.chess.GameHeaderModel;
 import se.yarin.chess.GameModel;
 import se.yarin.morphy.entities.*;
 import se.yarin.morphy.exceptions.MorphyInvalidDataException;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
 import java.util.function.Consumer;
 
 import static org.junit.Assert.*;
@@ -102,12 +102,11 @@ public class DatabaseTransactionTest extends DatabaseTestSetup {
 
     @Test
     public void replaceSingleGameCausingFirstGameToChange() {
-        DatabaseTransaction txn = new DatabaseTransaction(testBase);
-
         assertEquals(3, playerFirstGameId("Mamedyarov"));
         assertEquals(3, playerFirstGameId("So"));
         assertEquals(4, playerFirstGameId("Caruana"));
 
+        DatabaseTransaction txn = new DatabaseTransaction(testBase);
         putTestGame(txn, 3, "Caruana - Mardell", 50, 0, 0, 0);
         txn.commit();
 
@@ -442,8 +441,13 @@ public class DatabaseTransactionTest extends DatabaseTestSetup {
         gameModel.header().setField(GameAdapter.WHITE_ID, 100);
 
         DatabaseTransaction txn = new DatabaseTransaction(testBase);
-        txn.addGame(gameModel);
-        txn.commit();
+        try {
+            txn.addGame(gameModel);
+            txn.commit();
+        }
+        finally {
+            txn.rollback();
+        }
     }
 
     @Test
@@ -543,30 +547,47 @@ public class DatabaseTransactionTest extends DatabaseTestSetup {
         DatabaseTransaction txn = new DatabaseTransaction(testBase);
         Player player = txn.getPlayer(0);
         assertEquals("Carlsen", player.getFullName());
+        txn.rollback();
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void getInvalidEntityInTransactionNegativeId() {
         DatabaseTransaction txn = new DatabaseTransaction(testBase);
-        txn.getPlayer(-1);
+        try {
+            txn.getPlayer(-1);
+        } finally {
+            txn.rollback();
+        }
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void getInvalidEntityInTransactionTooHighId() {
         DatabaseTransaction txn = new DatabaseTransaction(testBase);
-        txn.getTournament(1000);
+        try {
+            txn.getTournament(1000);
+        } finally {
+            txn.rollback();
+        }
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void updateInvalidPlayer() {
         DatabaseTransaction txn = new DatabaseTransaction(testBase);
-        txn.updatePlayerById(-1, Player.ofFullName("Carlsen, Magnus"));
+        try {
+            txn.updatePlayerById(-1, Player.ofFullName("Carlsen, Magnus"));
+        } finally {
+            txn.rollback();
+        }
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void updateInvalidAnnotator() {
         DatabaseTransaction txn = new DatabaseTransaction(testBase);
-        txn.updateAnnotatorById(1000, Annotator.of("foo"));
+        try {
+            txn.updateAnnotatorById(1000, Annotator.of("foo"));
+        } finally {
+            txn.rollback();
+        }
     }
 
     @Test
@@ -610,6 +631,8 @@ public class DatabaseTransactionTest extends DatabaseTestSetup {
         // Can still get player in transaction, with old count
         Player player = txn.getPlayer(playerId);
         assertEquals(1, player.count());
+
+        txn.rollback();
     }
 
     @Test(expected = IllegalArgumentException.class)
@@ -756,7 +779,11 @@ public class DatabaseTransactionTest extends DatabaseTestSetup {
         putTestGame(txn2, 5, "So - Mamedyarov", 100, 0, 10, 0);
 
         txn1.commit();
-        txn2.commit();
+        try {
+            txn2.commit();
+        } finally {
+            txn2.rollback();
+        }
     }
 
     @Test(expected = IllegalStateException.class)
@@ -764,7 +791,7 @@ public class DatabaseTransactionTest extends DatabaseTestSetup {
         DatabaseTransaction txn1 = new DatabaseTransaction(testBase);
         putTestGame(txn1, 1, "Giri - Carlsen", 100, 0, 10, 0);
 
-        EntityIndexTransaction<Player> txn2 = testBase.playerIndex().beginTransaction();
+        EntityIndexWriteTransaction<Player> txn2 = testBase.playerIndex().beginWriteTransaction();
         txn2.addEntity(Player.ofFullName("Kasparov"));
 
         txn1.commit();
@@ -782,7 +809,7 @@ public class DatabaseTransactionTest extends DatabaseTestSetup {
         DatabaseTransaction txn1 = new DatabaseTransaction(testBase);
         putTestGame(txn1, 1, "Giri - Carlsen", "new tour", "new anno", "new source", "q1 - q2", "new tag", 100, 0, 10, 0);
 
-        EntityIndexTransaction<Player> txn2 = testBase.playerIndex().beginTransaction();
+        EntityIndexWriteTransaction<Player> txn2 = testBase.playerIndex().beginWriteTransaction();
         txn2.putEntityById(2, ImmutablePlayer.builder().from(txn2.get(2)).lastName("Kasparov").build());
 
         // Different order compared to previous test
@@ -792,6 +819,7 @@ public class DatabaseTransactionTest extends DatabaseTestSetup {
             txn1.commit();
         } catch(IllegalStateException e) {
             illegalState = true;
+            txn1.rollback();
         }
         // The second transaction should not partially have been applied
         assertTrue(illegalState);
@@ -824,5 +852,19 @@ public class DatabaseTransactionTest extends DatabaseTestSetup {
 
         assertEquals("So", testBase.getGame(3).white().lastName()); // new game
         assertEquals("Carlsen", testBase.getGame(1).white().lastName()); // same game as before
+    }
+
+    @Test(expected = IllegalStateException.class)
+    public void testBeginTwoWriteTransactionsInDifferentThreads() throws InterruptedException {
+        Database db = new Database(new DatabaseContext(-1, -1));
+        CountDownLatch latch = new CountDownLatch(1);
+        Thread thread = new Thread(() -> {
+            new DatabaseTransaction(db);
+            latch.countDown();
+        });
+        thread.start();
+
+        latch.await();
+        new DatabaseTransaction(db);
     }
 }

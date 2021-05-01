@@ -21,8 +21,8 @@ public class TournamentSearcher {
     private static final int QUICK_SEARCH_MIN_TRAVERSE = 10;
     private static final int QUICK_SEARCH_MAX_TIME_IN_MS = 50;
 
-    @NotNull
-    private final TournamentIndex tournamentIndex;
+    @NotNull private final TournamentIndex tournamentIndex;
+    @NotNull private final EntityIndexReadTransaction<Tournament> transaction;
 
     //@Getter
     private String name = "";
@@ -71,17 +71,19 @@ public class TournamentSearcher {
         long elapsedTime();
     }
 
-    public TournamentSearcher(@NotNull TournamentIndex tournamentIndex) {
-        this.tournamentIndex = tournamentIndex;
+    public TournamentSearcher(@NotNull EntityIndexReadTransaction<Tournament> transaction) {
+        this.transaction = transaction;
+        this.tournamentIndex = (TournamentIndex) transaction.index();
     }
 
-    public TournamentSearcher(@NotNull TournamentIndex tournamentIndex, Tournament tournament) {
-        this(tournamentIndex);
+    public TournamentSearcher(@NotNull EntityIndexReadTransaction<Tournament> transaction, @NotNull Tournament tournament) {
+        this(transaction);
         this.manual = Arrays.asList(tournament);
     }
 
-    public TournamentSearcher(@NotNull TournamentIndex tournamentIndex, String name, boolean caseSensitive, boolean exactMatch) {
-        this.tournamentIndex = tournamentIndex;
+    public TournamentSearcher(@NotNull EntityIndexReadTransaction<Tournament> transaction, String name, boolean caseSensitive, boolean exactMatch) {
+        this.transaction = transaction;
+        this.tournamentIndex = (TournamentIndex) transaction.index();
         setSearchString(name, caseSensitive, exactMatch);
     }
 
@@ -109,14 +111,14 @@ public class TournamentSearcher {
         }
 
         Stream<Tournament> baseStream = sortByYearTitle
-                ? tournamentIndex.streamOrderedAscending()
-                : tournamentIndex.stream();
+                ? transaction.streamOrderedAscending()
+                : transaction.stream();
         if (this.caseSensitive) {
             if (this.year > 0) {
-                baseStream = this.tournamentIndex.prefixSearch(this.year, this.name);
+                baseStream = this.tournamentIndex.prefixStream(transaction, this.year, this.name);
             } else if (this.fromDate.year() > 0) {
                 int endYear = this.toDate.year() == 0 ? 9999 : this.toDate.year();
-                baseStream = this.tournamentIndex.rangeSearch(this.fromDate.year(), endYear);
+                baseStream = this.tournamentIndex.rangeStream(transaction, this.fromDate.year(), endYear);
             }
         }
 

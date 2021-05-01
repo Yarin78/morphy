@@ -18,7 +18,9 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.file.OpenOption;
+import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static java.nio.file.StandardOpenOption.*;
@@ -85,12 +87,21 @@ public class TournamentIndex extends EntityIndex<Tournament> {
     }
 
     @Override
-    public @NotNull EntityIndexTransaction<Tournament> beginTransaction() {
-        return new TournamentIndexTransaction(this);
+    public @NotNull EntityIndexWriteTransaction<Tournament> beginWriteTransaction() {
+        return new TournamentIndexWriteTransaction(this);
     }
 
-    public @NotNull TournamentIndexTransaction beginTransaction(@NotNull TournamentExtraStorage extraStorage) {
-        return new TournamentIndexTransaction(this, extraStorage);
+    public @NotNull TournamentIndexWriteTransaction beginWriteTransaction(@NotNull TournamentExtraStorage extraStorage) {
+        return new TournamentIndexWriteTransaction(this, extraStorage);
+    }
+
+    @Override
+    public @NotNull EntityIndexReadTransaction<Tournament> beginReadTransaction() {
+        return new TournamentIndexReadTransaction(this);
+    }
+
+    public @NotNull TournamentIndexReadTransaction beginReadTransaction(@Nullable TournamentExtraStorage extraStorage) {
+        return new TournamentIndexReadTransaction(this, extraStorage);
     }
 
     /**
@@ -98,25 +109,51 @@ public class TournamentIndex extends EntityIndex<Tournament> {
      * The exact year must also be specified as the primary key starts with the year.
      * @param year the exact year of the tournament
      * @param name a prefix of the title of the tournament
-     * @return a stream over matching tournaments
+     * @param extraStorage the extra storage
+     * @return a list over matching tournaments
      */
-    public @NotNull Stream<Tournament> prefixSearch(int year, @NotNull String name) {
+    public @NotNull List<Tournament> prefixSearch(int year, @NotNull String name, @Nullable TournamentExtraStorage extraStorage) {
+        EntityIndexReadTransaction<Tournament> txn = beginReadTransaction(extraStorage);
+        try {
+            return prefixStream(txn, year, name).collect(Collectors.toList());
+        } finally {
+            txn.close();
+        }
+    }
+
+    @NotNull Stream<Tournament> prefixStream(@NotNull EntityIndexReadTransaction<Tournament> transaction, int year, @NotNull String name) {
+        if (transaction.index() != this) {
+            throw new IllegalArgumentException("Mismatching index in transaction");
+        }
         Tournament startKey = Tournament.of(name, new Date(year));
         Tournament endKey = Tournament.of(name + "zzz", new Date(year));
-        return streamOrderedAscending(startKey, endKey);
+        return transaction.streamOrderedAscending(startKey, endKey);
     }
 
     /**
      * Searches for tournaments in the specified year range
      * @param fromYear the start year, inclusive
      * @param toYear the end year, inclusive
-     * @return a stream over matching tournaments, with the most recent tournament first
+     * @param extraStorage the extra storage
+     * @return a list over matching tournaments, with the most recent tournament first
      */
-    public @NotNull Stream<Tournament> rangeSearch(int fromYear, int toYear) {
+    public @NotNull List<Tournament> rangeSearch(int fromYear, int toYear, @Nullable TournamentExtraStorage extraStorage) {
+        TournamentIndexReadTransaction txn = beginReadTransaction(extraStorage);
+        try {
+            return rangeStream(txn, fromYear, toYear).collect(Collectors.toList());
+        } finally {
+            txn.close();
+        }
+    }
+
+    public @NotNull Stream<Tournament> rangeStream(@NotNull EntityIndexReadTransaction<Tournament> transaction, int fromYear, int toYear) {
+        if (transaction.index() != this) {
+            throw new IllegalArgumentException("Mismatching index in transaction");
+        }
         // Tournaments are sorted by year in reverse
         Tournament startKey = Tournament.of("", new Date(toYear));
         Tournament endKey = Tournament.of("", new Date(fromYear-1));
-        return streamOrderedAscending(startKey, endKey);
+        return transaction.streamOrderedAscending(startKey, endKey);
     }
 
     protected @NotNull Tournament deserialize(int entityId, int count, int firstGameId, byte[] serializedData) {

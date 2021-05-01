@@ -1,5 +1,7 @@
 package se.yarin.morphy.entities;
 
+import org.jetbrains.annotations.NotNull;
+
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
@@ -7,21 +9,22 @@ public class OrderedEntityAscendingIterator<T extends Entity & Comparable<T>> im
 
     // Invariant: current.node is the next entity to be returned
     // If current.isEnd(), there are no more entities to be returned
-    private EntityIndexTransaction<T>.NodePath current;
+    private @NotNull EntityIndexTransaction<T>.NodePath current;
     private final int stopId;
 
-    OrderedEntityAscendingIterator(EntityIndexTransaction<T>.NodePath start, int stopId) {
+    OrderedEntityAscendingIterator(@NotNull EntityIndexTransaction<T>.NodePath start, int stopId) {
         this.current = start;
         this.stopId = stopId;
     }
 
     @Override
     public boolean hasNext() {
+        current.ensureTransactionIsOpen();
         return !current.isEnd() && current.getEntityId() != stopId;
     }
 
     @Override
-    public T next() {
+    public @NotNull T next() {
         if (!hasNext()) {
             throw new NoSuchElementException("End of entity iteration reached");
         }

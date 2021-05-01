@@ -14,7 +14,9 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.file.OpenOption;
+import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static java.nio.file.StandardOpenOption.*;
@@ -60,17 +62,21 @@ public class GameTagIndex extends EntityIndex<GameTag> {
         return new GameTagIndex(file, mode.openOptions(), context);
     }
 
-
     /**
      * Searches for game tags using a case sensitive prefix search.
      * @param title a prefix of the game tag
-     * @return a stream of matching game tags
+     * @return a list of matching game tags
      */
-    public @NotNull Stream<GameTag> prefixSearch(@NotNull String title) {
+    public @NotNull List<GameTag> prefixSearch(@NotNull String title) {
         GameTag startKey = GameTag.of(title);
         GameTag endKey = GameTag.of(title + "zzz");
 
-        return streamOrderedAscending(startKey, endKey);
+        EntityIndexReadTransaction<GameTag> txn = beginReadTransaction();
+        try {
+            return txn.streamOrderedAscending(startKey, endKey).collect(Collectors.toList());
+        } finally {
+            txn.close();
+        }
     }
 
     @Override

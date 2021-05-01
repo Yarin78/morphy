@@ -1,5 +1,6 @@
 package se.yarin.morphy.entities;
 
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -18,7 +19,8 @@ public class SinglePlayerSearcher implements PlayerSearcher {
     private static final int QUICK_SEARCH_MIN_TRAVERSE = 10;
     private static final int QUICK_SEARCH_MAX_TIME_IN_MS = 50;
 
-    private final PlayerIndex playerIndex;
+    private final @NotNull PlayerIndex index;
+    private final @NotNull EntityIndexReadTransaction<Player> transaction;
     //@Getter
     private final String firstName;
     //@Getter
@@ -47,12 +49,13 @@ public class SinglePlayerSearcher implements PlayerSearcher {
         return name;
     }
 
-    public SinglePlayerSearcher(PlayerIndex playerIndex, String name, boolean caseSensitive, boolean exactMatch) {
-        this(playerIndex, resolveLastName(name), resolveFirstName(name), caseSensitive, exactMatch);
+    public SinglePlayerSearcher(@NotNull EntityIndexReadTransaction<Player> playerTransaction, @NotNull String name, boolean caseSensitive, boolean exactMatch) {
+        this(playerTransaction, resolveLastName(name), resolveFirstName(name), caseSensitive, exactMatch);
     }
 
-    public SinglePlayerSearcher(PlayerIndex playerIndex, String lastName, String firstName, boolean caseSensitive, boolean exactMatch) {
-        this.playerIndex = playerIndex;
+    public SinglePlayerSearcher(@NotNull EntityIndexReadTransaction<Player> playerTransaction, @NotNull String lastName, @NotNull String firstName, boolean caseSensitive, boolean exactMatch) {
+        this.transaction = playerTransaction;
+        this.index = (PlayerIndex) playerTransaction.index();
         this.firstName = firstName;
         this.lastName = lastName;
         this.caseSensitive = caseSensitive;
@@ -61,9 +64,9 @@ public class SinglePlayerSearcher implements PlayerSearcher {
     }
 
     private Stream<Player> getBaseStream() {
-        Stream<Player> baseStream = playerIndex.stream();
+        Stream<Player> baseStream = transaction.stream();
         if (this.caseSensitive) {
-            baseStream = this.playerIndex.prefixSearch(this.lastName);
+            baseStream = this.index.prefixStream(transaction, this.lastName);
         }
         return baseStream;
     }

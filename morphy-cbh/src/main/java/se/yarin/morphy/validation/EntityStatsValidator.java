@@ -7,6 +7,8 @@ import se.yarin.morphy.Database;
 import se.yarin.morphy.Game;
 import se.yarin.morphy.entities.Entity;
 import se.yarin.morphy.entities.EntityIndex;
+import se.yarin.morphy.entities.EntityIndexReadTransaction;
+import se.yarin.morphy.entities.EntityIndexWriteTransaction;
 import se.yarin.morphy.exceptions.MorphyEntityIndexException;
 import se.yarin.morphy.games.GameSearcher;
 
@@ -87,79 +89,84 @@ public class EntityStatsValidator {
         int numInvalid = 0;
         T last = null;
 
-        for (T current : entityIndex.iterableAscending()) {
-            if (numInvalid >= maxInvalid) break;
-            existingIds.add(current.id());
+        EntityIndexReadTransaction<T> txn = entityIndex.beginReadTransaction();
+        try {
+            for (T current : txn.iterableAscending()) {
+                if (numInvalid >= maxInvalid) break;
+                existingIds.add(current.id());
 
-            entityIndex.get(current.id()); // Sanity check that we can do this lookup as well
+                entityIndex.get(current.id()); // Sanity check that we can do this lookup as well
 
-            boolean isValidEntity = true;
-            if (checks.contains(Validator.Checks.ENTITY_STATISTICS)) {
-                EntityStats.Stats stats = expectedStats.get(current.id());
-                if (stats == null) {
-                    String msg = String.format("Entity in %s base with id %d (%s) occurs in 0 games but stats says %d games and first game %d",
-                            entityType, current.id(), current, current.count(), current.firstGameId());
+                boolean isValidEntity = true;
+                if (checks.contains(Validator.Checks.ENTITY_STATISTICS)) {
+                    EntityStats.Stats stats = expectedStats.get(current.id());
+                    if (stats == null) {
+                        String msg = String.format("Entity in %s base with id %d (%s) occurs in 0 games but stats says %d games and first game %d",
+                                entityType, current.id(), current, current.count(), current.firstGameId());
+                        if (throwOnError) {
+                            throw new MorphyEntityIndexException(msg);
+                        }
+                        log.warn(msg);
+                        isValidEntity = false;
+                    } else {
+                        if (stats.getCount() != current.count()) {
+                            String msg = String.format("Entity in %s base with id %d (%s) has %d games but entity count says %d",
+                                    entityType, current.id(), current, stats.getCount(), current.count());
+                            if (throwOnError) {
+                                throw new MorphyEntityIndexException(msg);
+                            }
+                            log.warn(msg);
+                            isValidEntity = false;
+                        }
+
+                        if (stats.getFirstGameId() != current.firstGameId()) {
+                            String msg = String.format("Entity in %s base with id %d (%s) first game is %d but stats says %d",
+                                    entityType, current.id(), current.toString(), stats.getFirstGameId(), current.firstGameId());
+                            if (throwOnError) {
+                                throw new MorphyEntityIndexException(msg);
+                            }
+                            log.warn(msg);
+                            isValidEntity = false;
+                        }
+                    }
+                }
+
+                if (current.count() == 0) {
+                    // This is a critical error in the ChessBase integrity checker
+                    String msg = String.format("Entity in %s base with %d (%s) has 0 count", entityType, current.id(), current.toString());
                     if (throwOnError) {
                         throw new MorphyEntityIndexException(msg);
                     }
                     log.warn(msg);
                     isValidEntity = false;
-                } else {
-                    if (stats.getCount() != current.count()) {
-                        String msg = String.format("Entity in %s base with id %d (%s) has %d games but entity count says %d",
-                                entityType, current.id(), current, stats.getCount(), current.count());
-                        if (throwOnError) {
-                            throw new MorphyEntityIndexException(msg);
-                        }
-                        log.warn(msg);
-                        isValidEntity = false;
-                    }
+                }
 
-                    if (stats.getFirstGameId() != current.firstGameId()) {
-                        String msg = String.format("Entity in %s base with id %d (%s) first game is %d but stats says %d",
-                                entityType, current.id(), current.toString(), stats.getFirstGameId(), current.firstGameId());
-                        if (throwOnError) {
-                            throw new MorphyEntityIndexException(msg);
+                if (checks.contains(Validator.Checks.ENTITY_SORT_ORDER)) {
+                    if (numEntities > 0) {
+                        if (current.compareTo(last) < 0) {
+                            String msg = "Wrong order in %s: was (%d) '%s' < (%d) '%s' but expected opposite".formatted(
+                                    entityType, last.id(), last, current.id(), current);
+                            if (throwOnError) {
+                                throw new MorphyEntityIndexException(msg);
+                            }
+                            log.warn(msg);
+                            isValidEntity = false;
                         }
-                        log.warn(msg);
-                        isValidEntity = false;
+                        if (current.compareTo(last) == 0) {
+                            numEqual += 1;
+                        }
                     }
                 }
-            }
-
-            if (current.count() == 0) {
-                // This is a critical error in the ChessBase integrity checker
-                String msg = String.format("Entity in %s base with %d (%s) has 0 count", entityType, current.id(), current.toString());
-                if (throwOnError) {
-                    throw new MorphyEntityIndexException(msg);
+                last = current;
+                numEntities += 1;
+                if (!isValidEntity) {
+                    numInvalid++;
                 }
-                log.warn(msg);
-                isValidEntity = false;
-            }
 
-            if (checks.contains(Validator.Checks.ENTITY_SORT_ORDER)) {
-                if (numEntities > 0) {
-                    if (current.compareTo(last) < 0) {
-                        String msg = "Wrong order in %s: was (%d) '%s' < (%d) '%s' but expected opposite".formatted(
-                                entityType, last.id(), last, current.id(), current);
-                        if (throwOnError) {
-                            throw new MorphyEntityIndexException(msg);
-                        }
-                        log.warn(msg);
-                        isValidEntity = false;
-                    }
-                    if (current.compareTo(last) == 0) {
-                        numEqual += 1;
-                    }
-                }
+                progressCallback.run();
             }
-            last = current;
-            numEntities += 1;
-            if (!isValidEntity) {
-                numInvalid++;
-            }
-
-            progressCallback.run();
+        } finally {
+            txn.close();
         }
 
         if (existingIds.size() != numEntities) {

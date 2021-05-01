@@ -65,12 +65,12 @@ public class DatabaseTransaction implements EntityRetriever {
 
     private final Map<Integer, GameData> updatedGames = new TreeMap<>();
 
-    private final EntityIndexTransaction<Player> playerTransaction;
-    private final TournamentIndexTransaction tournamentTransaction;
-    private final EntityIndexTransaction<Annotator> annotatorTransaction;
-    private final EntityIndexTransaction<Source> sourceTransaction;
-    private final EntityIndexTransaction<Team> teamTransaction;
-    private final EntityIndexTransaction<GameTag> gameTagTransaction;
+    private final EntityIndexWriteTransaction<Player> playerTransaction;
+    private final TournamentIndexWriteTransaction tournamentTransaction;
+    private final EntityIndexWriteTransaction<Annotator> annotatorTransaction;
+    private final EntityIndexWriteTransaction<Source> sourceTransaction;
+    private final EntityIndexWriteTransaction<Team> teamTransaction;
+    private final EntityIndexWriteTransaction<GameTag> gameTagTransaction;
 
     private final EntityDelta<Player> playerDelta;
     private final EntityDelta<Tournament> tournamentDelta;
@@ -92,16 +92,16 @@ public class DatabaseTransaction implements EntityRetriever {
         this.database = database;
         this.currentGameCount = database.gameHeaderIndex().count();
 
-        this.database.context().lock().updateLock().lock();
+        this.database.context().acquireLock(DatabaseContext.DatabaseLock.UPDATE);
 
         this.version = this.database.context().currentVersion();
 
-        this.playerTransaction = database.playerIndex().beginTransaction();
-        this.tournamentTransaction = database.tournamentIndex().beginTransaction(database.tournamentExtraStorage());
-        this.annotatorTransaction = database.annotatorIndex().beginTransaction();
-        this.sourceTransaction = database.sourceIndex().beginTransaction();
-        this.teamTransaction = database.teamIndex().beginTransaction();
-        this.gameTagTransaction = database.gameTagIndex().beginTransaction();
+        this.playerTransaction = database.playerIndex().beginWriteTransaction();
+        this.tournamentTransaction = database.tournamentIndex().beginWriteTransaction(database.tournamentExtraStorage());
+        this.annotatorTransaction = database.annotatorIndex().beginWriteTransaction();
+        this.sourceTransaction = database.sourceIndex().beginWriteTransaction();
+        this.teamTransaction = database.teamIndex().beginWriteTransaction();
+        this.gameTagTransaction = database.gameTagIndex().beginWriteTransaction();
 
         this.playerDelta = new EntityDelta<>((game, playerId) -> game.whitePlayerId() == playerId || game.blackPlayerId() == playerId);
         this.tournamentDelta = new EntityDelta<>((game, tournamentId) -> game.tournamentId() == tournamentId);
@@ -362,7 +362,7 @@ public class DatabaseTransaction implements EntityRetriever {
             throw new IllegalStateException("The transaction has already been committed");
         }
 
-        database.context().lock().writeLock().lock();
+        database.context().acquireLock(DatabaseContext.DatabaseLock.WRITE);
         try {
             validateCommit();
 
@@ -499,8 +499,8 @@ public class DatabaseTransaction implements EntityRetriever {
             database.context().bumpVersion();
         } finally {
             committed = true;
-            database.context().lock().writeLock().unlock();
-            database.context().lock().updateLock().unlock();
+            database.context().releaseLock(DatabaseContext.DatabaseLock.WRITE);
+            database.context().releaseLock(DatabaseContext.DatabaseLock.UPDATE);
         }
     }
 
@@ -515,9 +515,10 @@ public class DatabaseTransaction implements EntityRetriever {
         teamTransaction.rollback();
         gameTagTransaction.rollback();
 
-        committed = true;
-
-        database.context().lock().updateLock().unlock();
+        if (!committed) {
+            committed = true;
+            database.context().releaseLock(DatabaseContext.DatabaseLock.UPDATE);
+        }
     }
 
     /**
@@ -584,7 +585,7 @@ public class DatabaseTransaction implements EntityRetriever {
     }
 
     private <T extends Entity & Comparable<T>> int validIdReference(
-            @NotNull EntityIndexTransaction<T> entityIndexTransaction,
+            @NotNull EntityIndexWriteTransaction<T> entityIndexWriteTransaction,
             @NotNull GameHeaderModel headerModel,
             @NotNull String fieldName) {
         Object idRef = headerModel.getField(fieldName);
@@ -594,7 +595,7 @@ public class DatabaseTransaction implements EntityRetriever {
         int id = (int) idRef;
         T entity = null;
         try {
-            entity = entityIndexTransaction.get(id);
+            entity = entityIndexWriteTransaction.get(id);
         } catch (IllegalArgumentException e) {
             // Ignore, exception will be thrown below
         }
@@ -645,7 +646,7 @@ public class DatabaseTransaction implements EntityRetriever {
             includes.computeIfAbsent(entityId, k -> new ArrayList<>()).add(gameId);
         }
 
-        public void apply(EntityIndexTransaction<T> entityTransaction) {
+        public void apply(EntityIndexWriteTransaction<T> entityTransaction) {
             HashSet<Integer> entityIds = new HashSet<>();
             entityIds.addAll(includes.keySet());
             entityIds.addAll(excludes.keySet());

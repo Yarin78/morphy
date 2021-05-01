@@ -110,7 +110,8 @@ public class PlayerTest {
     @Test
     public void testGetAscendingRangeOfPlayers() throws IOException {
         PlayerIndex playerIndex = PlayerIndex.open(playerIndexFile);
-        List<Player> list = playerIndex.streamOrderedAscending(Player.of("M", ""))
+        EntityIndexReadTransaction<Player> txn = playerIndex.beginReadTransaction();
+        List<Player> list = txn.streamOrderedAscending(Player.of("M", ""))
                 .limit(3)
                 .collect(Collectors.toList());
         assertEquals(3, list.size());
@@ -122,7 +123,8 @@ public class PlayerTest {
     @Test
     public void testGetAscendingRangeOfPlayersWithExclusiveEnd() throws IOException {
         PlayerIndex playerIndex = PlayerIndex.open(playerIndexFile);
-        List<Player> list = playerIndex.streamOrderedAscending(
+        EntityIndexReadTransaction<Player> txn = playerIndex.beginReadTransaction();
+        List<Player> list = txn.streamOrderedAscending(
                 Player.of("Machelett", "Heiko"),
                 Player.of("Maiwald", "Jens Uwe"))
                 .collect(Collectors.toList());
@@ -134,7 +136,8 @@ public class PlayerTest {
     @Test
     public void testGetDescendingRangeOfPlayers() throws IOException {
         PlayerIndex playerIndex = PlayerIndex.open(playerIndexFile);
-        List<Player> list = playerIndex.streamOrderedDescending(Player.of("Sp", ""))
+        EntityIndexReadTransaction<Player> txn = playerIndex.beginReadTransaction();
+        List<Player> list = txn.streamOrderedDescending(Player.of("Sp", ""))
                 .limit(3)
                 .collect(Collectors.toList());
         assertEquals(3, list.size());
@@ -146,7 +149,7 @@ public class PlayerTest {
     @Test
     public void testPrefixSearchLastName() throws IOException {
         PlayerIndex playerIndex = PlayerIndex.open(playerIndexFile);
-        List<Player> list = playerIndex.prefixSearch("Carl").collect(Collectors.toList());
+        List<Player> list = playerIndex.prefixSearch("Carl");
         assertEquals(2, list.size());
         assertEquals(Player.of("Carlsen", "Magnus"), list.get(0));
         assertEquals(Player.of("Carlstedt", "Jonathan"), list.get(1));
@@ -155,7 +158,7 @@ public class PlayerTest {
     @Test
     public void testPrefixSearchFullName() throws IOException {
         PlayerIndex playerIndex = PlayerIndex.open(playerIndexFile);
-        List<Player> list = playerIndex.prefixSearch("Walter", "Stefan" ).collect(Collectors.toList());
+        List<Player> list = playerIndex.prefixSearch("Walter", "Stefan" );
         assertEquals(2, list.size());
         assertEquals(Player.of("Walter", "Stefan1"), list.get(0));
         assertEquals(Player.of("Walter", "Stefan2"), list.get(1));
@@ -190,9 +193,10 @@ public class PlayerTest {
     @Test
     public void testStreamAllPlayers() throws IOException {
         PlayerIndex playerIndex = PlayerIndex.open(playerIndexFile);
+        EntityIndexReadTransaction<Player> txn = playerIndex.beginReadTransaction();
 
-        assertEquals(playerIndex.count(), playerIndex.streamOrderedAscending().count());
-        assertEquals(playerIndex.count(), playerIndex.streamOrderedDescending().count());
+        assertEquals(playerIndex.count(), txn.streamOrderedAscending().count());
+        assertEquals(playerIndex.count(), txn.streamOrderedDescending().count());
     }
 
     @Test
@@ -206,14 +210,14 @@ public class PlayerTest {
                 .count(10)
                 .firstGameId(7)
                 .build();
-        assertTrue(playerIndex.stream().noneMatch(e -> e.equals(newPlayer)));
+        assertTrue(playerIndex.getAll().stream().noneMatch(e -> e.equals(newPlayer)));
 
         Player entity = playerIndex.get(playerIndex.add(newPlayer));
 
         assertEquals(oldCount + 1, playerIndex.count());
         assertTrue(entity.id() >= 0);
 
-        assertTrue(playerIndex.stream().anyMatch(e -> e.equals(newPlayer)));
+        assertTrue(playerIndex.getAll().stream().anyMatch(e -> e.equals(newPlayer)));
     }
 
     @Test
@@ -263,12 +267,12 @@ public class PlayerTest {
         int oldCount = playerIndex.count();
 
         Player player = playerIndex.get(Player.of("Carlsen", "Magnus"));
-        assertTrue(playerIndex.stream().anyMatch(e -> e.equals(player)));
+        assertTrue(playerIndex.getAll().stream().anyMatch(e -> e.equals(player)));
 
         assertTrue(playerIndex.delete(player.id()));
 
         assertEquals(oldCount - 1, playerIndex.count());
-        assertTrue(playerIndex.stream().noneMatch(e -> e.equals(player)));
+        assertTrue(playerIndex.getAll().stream().noneMatch(e -> e.equals(player)));
     }
 
     @Test

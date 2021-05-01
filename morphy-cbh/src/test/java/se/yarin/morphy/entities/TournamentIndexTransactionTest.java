@@ -29,7 +29,7 @@ public class TournamentIndexTransactionTest {
     public void testAddTournament() {
         TournamentIndex index = new TournamentIndex();
         TournamentExtraStorage extraStorage = new TournamentExtraStorage();
-        TournamentIndexTransaction txn = new TournamentIndexTransaction(index, extraStorage);
+        TournamentIndexWriteTransaction txn = new TournamentIndexWriteTransaction(index, extraStorage);
 
         Tournament newTournament = testTournament(1);
         TournamentExtra newTournamentExtra = testTournamentExtra(5);
@@ -57,13 +57,13 @@ public class TournamentIndexTransactionTest {
     public void testPutTournamentById() {
         TournamentIndex index = new TournamentIndex();
         TournamentExtraStorage extraStorage = new TournamentExtraStorage();
-        TournamentIndexTransaction txn = new TournamentIndexTransaction(index, extraStorage);
+        TournamentIndexWriteTransaction txn = new TournamentIndexWriteTransaction(index, extraStorage);
 
         int id = txn.addEntity(testTournament(1), testTournamentExtra(5));
         assertEquals(0, id);
         txn.commit();
 
-        txn = new TournamentIndexTransaction(index, extraStorage);
+        txn = new TournamentIndexWriteTransaction(index, extraStorage);
         Tournament putTournament = testTournament(1);  // Update with same primary key
         TournamentExtra putTournamentExtra = testTournamentExtra(6);  // Update with same primary key
         txn.putEntityById(0, putTournament, putTournamentExtra);
@@ -76,7 +76,7 @@ public class TournamentIndexTransactionTest {
 
         putTournament = testTournament(2);  // Update with different primary key
         putTournamentExtra = testTournamentExtra(7);  // Update with different primary key
-        txn = new TournamentIndexTransaction(index, extraStorage);
+        txn = new TournamentIndexWriteTransaction(index, extraStorage);
         txn.putEntityById(0, putTournament, putTournamentExtra);
         txn.commit();
 
@@ -90,7 +90,7 @@ public class TournamentIndexTransactionTest {
     public void testPutTournamentByKey() {
         TournamentIndex index = new TournamentIndex();
         TournamentExtraStorage extraStorage = new TournamentExtraStorage();
-        TournamentIndexTransaction txn = new TournamentIndexTransaction(index, extraStorage);
+        TournamentIndexWriteTransaction txn = new TournamentIndexWriteTransaction(index, extraStorage);
 
         int id = txn.addEntity(testTournament(1), testTournamentExtra(5));
         assertEquals(0, id);
@@ -99,7 +99,7 @@ public class TournamentIndexTransactionTest {
         Tournament putTournament = testTournament(1);  // Same start date needed
         TournamentExtra putTournamentExtra = testTournamentExtra(6);  // Same start date needed
 
-        txn = new TournamentIndexTransaction(index, extraStorage);
+        txn = new TournamentIndexWriteTransaction(index, extraStorage);
         int updatedId = txn.putEntityByKey(putTournament, putTournamentExtra);
         assertEquals(id, updatedId);
         txn.commit();
@@ -114,13 +114,13 @@ public class TournamentIndexTransactionTest {
     public void testDeleteTournamentById() {
         TournamentIndex index = new TournamentIndex();
         TournamentExtraStorage extraStorage = new TournamentExtraStorage();
-        TournamentIndexTransaction txn = new TournamentIndexTransaction(index, extraStorage);
+        TournamentIndexWriteTransaction txn = new TournamentIndexWriteTransaction(index, extraStorage);
 
         int id = txn.addEntity(testTournament(1), testTournamentExtra(5));
         assertEquals(0, id);
         txn.commit();
 
-        txn = new TournamentIndexTransaction(index, extraStorage);
+        txn = new TournamentIndexWriteTransaction(index, extraStorage);
         txn.deleteEntity(0);
         txn.commit();
 
@@ -131,13 +131,13 @@ public class TournamentIndexTransactionTest {
     public void testDeleteTournamentByKey() {
         TournamentIndex index = new TournamentIndex();
         TournamentExtraStorage extraStorage = new TournamentExtraStorage();
-        TournamentIndexTransaction txn = new TournamentIndexTransaction(index, extraStorage);
+        TournamentIndexWriteTransaction txn = new TournamentIndexWriteTransaction(index, extraStorage);
 
         int id = txn.addEntity(testTournament(1));
         assertEquals(0, id);
         txn.commit();
 
-        txn = new TournamentIndexTransaction(index, extraStorage);
+        txn = new TournamentIndexWriteTransaction(index, extraStorage);
         txn.deleteEntity(testTournament(1));
         txn.commit();
 
@@ -149,7 +149,7 @@ public class TournamentIndexTransactionTest {
         TournamentIndex index = new TournamentIndex();
         TournamentExtraStorage extraStorage = new TournamentExtraStorage();
 
-        TournamentIndexTransaction txn = new TournamentIndexTransaction(index);
+        TournamentIndexWriteTransaction txn = new TournamentIndexWriteTransaction(index);
         txn.addEntity(Tournament.of("a", new Date(2021, 3, 1)));
         txn.addEntity(Tournament.of("b", new Date(2021, 3, 1)));
         txn.commit();
@@ -157,7 +157,7 @@ public class TournamentIndexTransactionTest {
         assertEquals(2, index.count());
         assertEquals(0, extraStorage.numEntries());
 
-        txn = new TournamentIndexTransaction(index, extraStorage);
+        txn = new TournamentIndexWriteTransaction(index, extraStorage);
         txn.addEntity(testTournament(1), testTournamentExtra(2));
         txn.commit();
 
@@ -170,7 +170,7 @@ public class TournamentIndexTransactionTest {
         TournamentIndex index = new TournamentIndex();
         TournamentExtraStorage extraStorage = new TournamentExtraStorage();
 
-        TournamentIndexTransaction txn = new TournamentIndexTransaction(index, extraStorage);
+        TournamentIndexWriteTransaction txn = new TournamentIndexWriteTransaction(index, extraStorage);
         txn.addEntity(Tournament.of("a", new Date(2021, 3, 1)));
         txn.addEntity(Tournament.of("b", new Date(2021, 3, 1)));
         txn.addEntity(testTournament(1), testTournamentExtra(2));
@@ -181,7 +181,7 @@ public class TournamentIndexTransactionTest {
 
         assertNotEquals(TournamentExtra.empty(), extraStorage.get(2));
 
-        txn = new TournamentIndexTransaction(index, extraStorage);
+        txn = new TournamentIndexWriteTransaction(index, extraStorage);
         int id = txn.putEntityByKey(testTournament(1), TournamentExtra.empty());
         assertEquals(2, id);
         txn.commit();

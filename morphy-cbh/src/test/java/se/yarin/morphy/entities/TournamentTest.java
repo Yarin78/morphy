@@ -9,14 +9,12 @@ import se.yarin.morphy.Database;
 import se.yarin.morphy.DatabaseMode;
 import se.yarin.morphy.ResourceLoader;
 import se.yarin.morphy.exceptions.MorphyInvalidDataException;
-import se.yarin.morphy.games.GameIndex;
 import se.yarin.morphy.util.CBUtil;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import static org.junit.Assert.*;
 
@@ -80,6 +78,7 @@ public class TournamentTest {
         TournamentIndex tournamentIndex = TournamentIndex.open(tournamentIndexFile, null);
         Tournament key = Tournament.of("World-ch Carlsen-Caruana", "London", new Date(2018, 11, 9));
         Tournament tournament = tournamentIndex.get(key);
+        assertNotNull(tournament);
         assertEquals(50, tournament.id());
         assertEquals(12, tournament.count());
     }
@@ -128,7 +127,7 @@ public class TournamentTest {
     @Test
     public void testPrefixSearch() throws IOException {
         TournamentIndex tournamentIndex = TournamentIndex.open(tournamentIndexFile, null);
-        List<Tournament> list = tournamentIndex.prefixSearch(1951, "World-ch").collect(Collectors.toList());
+        List<Tournament> list = tournamentIndex.prefixSearch(1951, "World-ch", null);
         assertEquals(1, list.size());
         assertEquals("World-ch18 Botvinnik-Bronstein +5-5=14", list.get(0).title());
     }
@@ -136,7 +135,7 @@ public class TournamentTest {
     @Test
     public void testRangeSearch() throws IOException {
         TournamentIndex tournamentIndex = TournamentIndex.open(tournamentIndexFile, null);
-        List<Tournament> list = tournamentIndex.rangeSearch(1951, 1958).collect(Collectors.toList());
+        List<Tournament> list = tournamentIndex.rangeSearch(1951, 1958, null);
         assertEquals(4, list.size());
         assertEquals("World-ch21 Botvinnik-Symslov +7-5=11", list.get(0).title());
         assertEquals("World-ch20 Smyslov-Botvinnik +6-3=13", list.get(1).title());
