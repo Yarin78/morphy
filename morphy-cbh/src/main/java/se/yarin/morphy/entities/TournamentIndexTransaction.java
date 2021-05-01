@@ -21,19 +21,19 @@ public class TournamentIndexTransaction extends EntityIndexTransaction<Tournamen
 
     @Override
     public void commit() {
-        super.commit();
-
-        if (tournamentExtraStorage != null) {
-            // Don't put extra elements if 1) they contain no data and 2) is beyond the end of the file
-            // This simulates the ChessBase behavior
-            for (Map.Entry<Integer, TournamentExtra> entry : extraChanges.entrySet()) {
-                int id = entry.getKey();
-                TournamentExtra extra = entry.getValue();
-                if (!extra.isEmpty() || id < tournamentExtraStorage.numEntries()) {
-                    tournamentExtraStorage.put(id, extra);
+        super.commit(() -> {
+            if (tournamentExtraStorage != null) {
+                // Don't put extra elements if 1) they contain no data and 2) is beyond the end of the file
+                // This simulates the ChessBase behavior
+                for (Map.Entry<Integer, TournamentExtra> entry : extraChanges.entrySet()) {
+                    int id = entry.getKey();
+                    TournamentExtra extra = entry.getValue();
+                    if (!extra.isEmpty() || id < tournamentExtraStorage.numEntries()) {
+                        tournamentExtraStorage.put(id, extra);
+                    }
                 }
             }
-        }
+        });
     }
 
     public TournamentExtra getExtra(int id) {

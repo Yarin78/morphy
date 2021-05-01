@@ -7,7 +7,6 @@ import org.slf4j.LoggerFactory;
 import se.yarin.morphy.exceptions.MorphyEntityIndexException;
 
 import java.nio.ByteBuffer;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -16,11 +15,11 @@ public class EntityIndexTransaction<T extends Entity & Comparable<T>> {
 
     private static final int ENTITY_DELETED = -999;
 
-    private final EntityIndex<T> index;
-    private final int indexNumCommittedTxn;
+    private final @NotNull EntityIndex<T> index;
+    private final int version;  // The version of the entity index where the transaction starts from
 
     // The header reference may be updated
-    private EntityIndexHeader header;
+    private @NotNull EntityIndexHeader header;
 
     // Changes made to the EntityIndex in this transaction
     // Important that they are stored in increasing entity id order
@@ -28,21 +27,24 @@ public class EntityIndexTransaction<T extends Entity & Comparable<T>> {
 
     private boolean committed;
 
-    public EntityIndexTransaction(EntityIndex<T> index) {
+    public EntityIndexTransaction(@NotNull EntityIndex<T> index) {
+        // TODO: Separate between read and write entity transactions!
+        index.context().lock().updateLock().lock();
+
         this.index = index;
-        this.indexNumCommittedTxn = this.index.getNumCommittedTxn();
+        this.version = this.index.currentVersion();
         this.header = index.storage.getHeader();
     }
 
-    public EntityIndexHeader header() {
+    public @NotNull EntityIndexHeader header() {
         return header;
     }
 
-    public boolean isCommitted() {
+    public boolean hasCommitted() {
         return committed;
     }
 
-    public T get(int id) {
+    public @NotNull T get(int id) {
         return deserializeEntity(getNode(id));
     }
 
@@ -63,19 +65,13 @@ public class EntityIndexTransaction<T extends Entity & Comparable<T>> {
         return null;
     }
 
-    protected EntityNode getNode(int id) {
+    protected @NotNull EntityNode getNode(int id) {
         // When resolving nodes in the transaction, always first check non-committed changes
         EntityNode node = changes.get(id);
         if (node != null) {
             return node;
         }
-        if (this.index.getNumCommittedTxn() != indexNumCommittedTxn) {
-            throw new IllegalStateException(String.format("Entity index has changed since transaction started (%d != %d)",
-                    this.index.getNumCommittedTxn(), indexNumCommittedTxn));
-        }
-        // TODO: This needs to be made thread-safe
-        node = index.getNode(id);
-        return node;
+        return index.getNode(id);
     }
 
     /**
@@ -93,7 +89,7 @@ public class EntityIndexTransaction<T extends Entity & Comparable<T>> {
         changes.put(node.getId(), node);
     }
 
-    protected T deserializeEntity(EntityNode node) {
+    protected @NotNull T deserializeEntity(EntityNode node) {
         return index.deserialize(node.getId(), node.getGameCount(), node.getFirstGameId(), node.getSerializedEntity());
     }
 
@@ -103,30 +99,58 @@ public class EntityIndexTransaction<T extends Entity & Comparable<T>> {
         return buf.array();
     }
 
+    /**
+     * Commits the transaction to the database
+     */
     public void commit() {
+        commit(null);
+    }
+
+    /**
+     * Checks that the commit is not outdated (already committed or based on a version that's not the current version)
+     * @throws IllegalStateException if the commit can't be committed because it's outdated
+     */
+    public void validateCommit() {
+        // Need to check this in case there are two active transactions in the same thread
+        if (index.currentVersion() != version) {
+            throw new IllegalStateException("The database has changed since the transaction started");
+        }
+    }
+
+    void commit(@Nullable Runnable additionalCommitAction) {
+        // Don't attempt to grab the write lock before ensuring that we still have the update lock
         if (committed) {
             throw new IllegalStateException("The transaction has already been committed");
         }
 
-        // TODO: Acquire write lock, then verify that version haven't changed, then write
+        index.context().lock().writeLock().lock();
+        try {
+            validateCommit();
 
-        if (this.index.getNumCommittedTxn() != indexNumCommittedTxn) {
-            throw new IllegalStateException("Entity index has changed since transaction started");
+            for (EntityNode node : changes.values()) {
+                index.storage.putItem(node.getId(), node);
+            }
+            index.storage.putHeader(header);
+
+            if (additionalCommitAction != null) {
+                additionalCommitAction.run();
+            }
+
+            if (log.isDebugEnabled()) {
+                log.debug(String.format("Committed transaction containing %d node changes",
+                        changes.values().size()));
+            }
+            index.bumpVersion();
+        } finally {
+            committed = true;
+            index.context().lock().writeLock().unlock();
+            index.context().lock().updateLock().unlock();
         }
+    }
 
-        for (EntityNode node : changes.values()) {
-            index.storage.putItem(node.getId(), node);
-        }
-        index.storage.putHeader(header);
-
-        if (log.isDebugEnabled()) {
-            log.debug(String.format("Committed transaction containing %d node changes",
-                    changes.values().size()));
-        }
-
+    public void rollback() {
         committed = true;
-
-        index.transactionCommitted(this);
+        index.context().lock().updateLock().unlock();
     }
 
     /**

@@ -545,13 +545,6 @@ public class DatabaseTransactionTest extends DatabaseTestSetup {
         assertEquals("Carlsen", player.getFullName());
     }
 
-    @Test(expected = IllegalStateException.class)
-    public void getEntityInTransactionAfterCommit() {
-        DatabaseTransaction txn = new DatabaseTransaction(testBase);
-        txn.commit();
-        txn.getPlayer(0);
-    }
-
     @Test(expected = IllegalArgumentException.class)
     public void getInvalidEntityInTransactionNegativeId() {
         DatabaseTransaction txn = new DatabaseTransaction(testBase);
@@ -734,20 +727,102 @@ public class DatabaseTransactionTest extends DatabaseTestSetup {
         }
     }
 
-
-
     @Test
     public void transactionIsIsolated() {
+        int numGames = testBase.count();
+        int numPlayers = testBase.playerIndex().count();
+        int numTournaments = testBase.tournamentIndex().count();
 
+        DatabaseTransaction txn = new DatabaseTransaction(testBase);
+        putTestGame(txn, 0, "Kasparov - Carlsen", "new tour", "new anno", "new source", "q1 - q2", "tag", 100, 200, 1, 2);
+
+        assertEquals(numGames, testBase.count());
+        assertEquals(numPlayers, testBase.playerIndex().count());
+        assertEquals(numTournaments, testBase.tournamentIndex().count());
+
+        txn.commit();
+
+        assertNotEquals(numGames, testBase.count());
+        assertNotEquals(numPlayers, testBase.playerIndex().count());
+        assertNotEquals(numTournaments, testBase.tournamentIndex().count());
     }
 
-    @Test
-    public void committingTwoDatabaseTransactionsFromTheSameVersionFails() {
+    @Test(expected = IllegalStateException.class)
+    public void committingTwoDatabaseTransactionsFromSameVersionFails() {
+        DatabaseTransaction txn1 = new DatabaseTransaction(testBase);
+        putTestGame(txn1, 1, "Giri - Carlsen", 100, 0, 10, 0);
 
+        DatabaseTransaction txn2 = new DatabaseTransaction(testBase);
+        putTestGame(txn2, 5, "So - Mamedyarov", 100, 0, 10, 0);
+
+        txn1.commit();
+        txn2.commit();
     }
 
-    @Test
+    @Test(expected = IllegalStateException.class)
     public void committingDatabaseAndEntityTransactionsFromTheSameVersionFails() {
+        DatabaseTransaction txn1 = new DatabaseTransaction(testBase);
+        putTestGame(txn1, 1, "Giri - Carlsen", 100, 0, 10, 0);
 
+        EntityIndexTransaction<Player> txn2 = testBase.playerIndex().beginTransaction();
+        txn2.addEntity(Player.ofFullName("Kasparov"));
+
+        txn1.commit();
+        txn2.commit();
+    }
+
+    @Test
+    public void committingEntityAndDatabaseTransactionsFromTheSameVersionFails() {
+        int numTournaments = testBase.tournamentIndex().count();
+        int numAnnotators = testBase.annotatorIndex().count();
+        int numSources = testBase.sourceIndex().count();
+        int numTeams = testBase.teamIndex().count();
+        int numTags = testBase.gameTagIndex().count();;
+
+        DatabaseTransaction txn1 = new DatabaseTransaction(testBase);
+        putTestGame(txn1, 1, "Giri - Carlsen", "new tour", "new anno", "new source", "q1 - q2", "new tag", 100, 0, 10, 0);
+
+        EntityIndexTransaction<Player> txn2 = testBase.playerIndex().beginTransaction();
+        txn2.putEntityById(2, ImmutablePlayer.builder().from(txn2.get(2)).lastName("Kasparov").build());
+
+        // Different order compared to previous test
+        txn2.commit();
+        boolean illegalState = false;
+        try {
+            txn1.commit();
+        } catch(IllegalStateException e) {
+            illegalState = true;
+        }
+        // The second transaction should not partially have been applied
+        assertTrue(illegalState);
+        assertEquals(15, testBase.count()); // No games should have been committed
+        assertEquals(numTournaments, testBase.tournamentIndex().count());
+        assertEquals(numAnnotators, testBase.annotatorIndex().count());
+        assertEquals(numSources, testBase.sourceIndex().count());
+        assertEquals(numTeams, testBase.teamIndex().count());
+        assertEquals(numTags, testBase.gameTagIndex().count());
+    }
+
+    @Test(expected = IllegalStateException.class)
+    public void commitSameTransactionMultipleTimesFails() {
+        DatabaseTransaction txn = new DatabaseTransaction(testBase);
+        putTestGame(txn, 1, "Giri - Carlsen", 100, 0, 10, 0);
+        txn.commit();
+        txn.commit();
+    }
+
+    @Test
+    public void commitNewTransactionAfterRollback() {
+        DatabaseTransaction txn1 = new DatabaseTransaction(testBase);
+        putTestGame(txn1, 1, "Giri - Carlsen", 100, 0, 10, 0);
+
+        DatabaseTransaction txn2 = new DatabaseTransaction(testBase);
+        putTestGame(txn2, 3, "So - Aronian", 100, 0, 10, 0);
+
+        txn1.rollback();
+        txn2.commit();
+
+        assertEquals("So", testBase.getGame(3).white().lastName()); // new game
+        assertEquals("Carlsen", testBase.getGame(1).white().lastName()); // same game as before
     }
 }

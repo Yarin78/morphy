@@ -86,12 +86,10 @@ public class TournamentIndex extends EntityIndex<Tournament> {
 
     @Override
     public @NotNull EntityIndexTransaction<Tournament> beginTransaction() {
-        // TODO: Acquire read lock
         return new TournamentIndexTransaction(this);
     }
 
     public @NotNull TournamentIndexTransaction beginTransaction(@NotNull TournamentExtraStorage extraStorage) {
-        // TODO: Acquire read lock
         return new TournamentIndexTransaction(this, extraStorage);
     }
 

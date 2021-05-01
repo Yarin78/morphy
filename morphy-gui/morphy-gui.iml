@@ -24,6 +24,7 @@
     <orderEntry type="library" name="Maven: org.openjfx:javafx-fxml:15.0.1" level="project" />
     <orderEntry type="library" name="Maven: org.openjfx:javafx-fxml:mac:15.0.1" level="project" />
     <orderEntry type="module" module-name="morphy-cbh" />
+    <orderEntry type="library" name="Maven: com.googlecode.concurrent-locks:concurrent-locks:1.0.0" level="project" />
     <orderEntry type="library" name="Maven: me.tongfei:progressbar:0.9.0" level="project" />
     <orderEntry type="library" name="Maven: org.jline:jline:3.16.0" level="project" />
     <orderEntry type="library" name="Maven: org.jetbrains:annotations:20.1.0" level="project" />

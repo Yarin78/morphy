@@ -34,6 +34,8 @@ public class DatabaseTransaction implements EntityRetriever {
     private final @NotNull GameAdapter gameAdapter = new GameAdapter();
 
     private int currentGameCount;
+    private final int version;  // The version of the database where the transaction starts from
+    private boolean committed = false;
 
     public Database database() {
         return database;
@@ -77,9 +79,22 @@ public class DatabaseTransaction implements EntityRetriever {
     private final EntityDelta<Team> teamDelta;
     private final EntityDelta<GameTag> gameTagDelta;
 
+    /**
+     * Creates a new database transaction.
+     *
+     * This will acquire the database update lock.
+     * It's up to the caller to ensure that either {@link #commit()} or {@link #rollback()}
+     * is called so the lock gets released.
+     *
+     * @param database the target database
+     */
     public DatabaseTransaction(@NotNull Database database) {
         this.database = database;
         this.currentGameCount = database.gameHeaderIndex().count();
+
+        this.database.context().lock().updateLock().lock();
+
+        this.version = this.database.context().currentVersion();
 
         this.playerTransaction = database.playerIndex().beginTransaction();
         this.tournamentTransaction = database.tournamentIndex().beginTransaction(database.tournamentExtraStorage());
@@ -321,139 +336,188 @@ public class DatabaseTransaction implements EntityRetriever {
         return 0;
     }
 
+    /**
+     * Checks that the commit is not outdated (already committed or based on a version that's not the current version)
+     * @throws IllegalStateException if the commit can't be committed because it's outdated
+     */
+    public void validateCommit() {
+        // Need to check this in case there are two active transactions in the same thread
+        if (database.context().currentVersion() != version) {
+            throw new IllegalStateException("The database has changed since the transaction started");
+        }
+        playerTransaction.validateCommit();
+        tournamentTransaction.validateCommit();
+        annotatorTransaction.validateCommit();
+        sourceTransaction.validateCommit();
+        teamTransaction.validateCommit();
+        gameTagTransaction.validateCommit();
+    }
 
+    /**
+     * Commits the transaction to the database
+     */
     public void commit() {
-        // TODO: Get write lock
-
-        // Before inserting any games, remove old blobs and if necessary make room in moves and annotations repository
-        int oldGameCount = database.gameHeaderIndex().count();
-        List<Integer> updatedGameIds = new ArrayList<>(updatedGames.keySet());
-        for (int gameId : updatedGameIds) {
-            if (gameId > oldGameCount) {
-                // Only replaced games could be the cause of having to insert bytes in the moves/annotations repositories
-                break;
-            }
-            GameData updatedGameData = updatedGames.get(gameId);
-            Game originalGame = database.getGame(gameId);
-
-            // Check if the new moves and annotations data will fit
-            // Note: We're actually checking if the data is less than or equal to the game it's replacing;
-            // if there is a gap behind this game we're not taking advantage of that
-            // (would be easy to do for moves, a bit harder/less efficient for annotations)
-
-            int oldMovesBlobSize = database.moveRepository().removeMovesBlob(originalGame.getMovesOffset());
-            int newMovesBlobSize = updatedGameData.moveBlob.limit();
-            int movesBlobSizeDelta = newMovesBlobSize - oldMovesBlobSize;
-
-            int oldAnnotationsBlobSize = database.annotationRepository().removeAnnotationsBlob(originalGame.getAnnotationOffset());
-            int newAnnotationsBlobSize = updatedGameData.annotationBlob != null ? updatedGameData.annotationBlob.limit() : 0;
-            int annotationsBlobSizeDelta = newAnnotationsBlobSize - oldAnnotationsBlobSize;
-
-            // Update the game data with the actual moves and annotation offsets
-            long movesOffset = originalGame.getMovesOffset();
-            long annotationOffset = originalGame.getAnnotationOffset();
-            if (newAnnotationsBlobSize > 0 && annotationOffset == 0) {
-                annotationOffset = findNextAnnotationOffset(gameId);
-            }
-            if (newAnnotationsBlobSize == 0) {
-                annotationOffset = 0;
-            }
-
-            updatedGameData.gameHeader
-                .movesOffset((int) movesOffset)
-                .annotationOffset((int) annotationOffset);
-            updatedGameData.extendedGameHeader
-                .movesOffset(movesOffset)
-                .annotationOffset((int) annotationOffset);
-
-            if (movesBlobSizeDelta > 0 || annotationsBlobSizeDelta > 0) {
-                // It doesn't fit, we need to shift the entire move and/or annotation repository :(
-                // This also means we need to update the offset in all game headers after this game,
-                // both those outside the transaction and those within the transaction
-
-                if (movesBlobSizeDelta > 0) {
-                    log.info(String.format("Move blob in game %d is %d bytes longer; adjusting", gameId, movesBlobSizeDelta));
-                    database.moveRepository().insert(movesOffset, movesBlobSizeDelta);
-                }
-                if (annotationsBlobSizeDelta > 0 && annotationOffset > 0) {
-                    log.info(String.format("Annotation blob in game %d is %d bytes longer; adjusting", gameId, annotationsBlobSizeDelta));
-                    database.annotationRepository().insert(annotationOffset, annotationsBlobSizeDelta);
-                }
-
-                // Shift all move and annotations offsets in the persistent storage
-                // Note: This could be done much more efficiently with low-level operations
-                // Note: Only process the games until the next game in the transaction, and accumulate the shifted offsets
-                for (int i = gameId + 1; i <= oldGameCount; i++) {
-                    GameHeader oldHeader = database.gameHeaderIndex().getGameHeader(i);
-                    ExtendedGameHeader oldExtendedHeader = database.extendedGameHeaderStorage().get(i);
-                    int newMovesOffset = oldHeader.movesOffset() + Math.max(0, movesBlobSizeDelta);
-                    int newAnnotationOffset = oldHeader.annotationOffset() == 0 ? 0 : (oldHeader.annotationOffset() + Math.max(0, annotationsBlobSizeDelta));
-                    database.gameHeaderIndex().put(i,
-                        ImmutableGameHeader.builder()
-                                .from(oldHeader)
-                                .movesOffset(newMovesOffset)
-                                .annotationOffset(newAnnotationOffset)
-                                .build());
-                    database.extendedGameHeaderStorage().put(i,
-                            ImmutableExtendedGameHeader.builder()
-                                    .from(oldExtendedHeader)
-                                    .movesOffset(newMovesOffset)
-                                    .annotationOffset(newAnnotationOffset)
-                                    .build());
-                }
-            }
+        // Don't attempt to grab the write lock before ensuring that we still have the update lock
+        if (committed) {
+            throw new IllegalStateException("The transaction has already been committed");
         }
 
-        // TODO: Merge this for-loop with the previous one, should be possible
-        int gameCount = database.gameHeaderIndex().count();
-        for (int gameId : updatedGames.keySet()) {
-            GameData updatedGameData = updatedGames.get(gameId);
-            if (gameId > gameCount) {
-                long movesOffset = database.moveRepository().putMovesBlob(0, updatedGameData.moveBlob);
-                long annotationsOffset = updatedGameData.annotationBlob != null ?
-                    database.annotationRepository().putAnnotationsBlob(0, updatedGameData.annotationBlob) : 0;
+        database.context().lock().writeLock().lock();
+        try {
+            validateCommit();
 
-                ImmutableGameHeader gameHeader = updatedGameData.gameHeader
+            // Before inserting any games, remove old blobs and if necessary make room in moves and annotations repository
+            int oldGameCount = database.gameHeaderIndex().count();
+            List<Integer> updatedGameIds = new ArrayList<>(updatedGames.keySet());
+            for (int gameId : updatedGameIds) {
+                if (gameId > oldGameCount) {
+                    // Only replaced games could be the cause of having to insert bytes in the moves/annotations repositories
+                    break;
+                }
+                GameData updatedGameData = updatedGames.get(gameId);
+                Game originalGame = database.getGame(gameId);
+
+                // Check if the new moves and annotations data will fit
+                // Note: We're actually checking if the data is less than or equal to the game it's replacing;
+                // if there is a gap behind this game we're not taking advantage of that
+                // (would be easy to do for moves, a bit harder/less efficient for annotations)
+
+                int oldMovesBlobSize = database.moveRepository().removeMovesBlob(originalGame.getMovesOffset());
+                int newMovesBlobSize = updatedGameData.moveBlob.limit();
+                int movesBlobSizeDelta = newMovesBlobSize - oldMovesBlobSize;
+
+                int oldAnnotationsBlobSize = database.annotationRepository().removeAnnotationsBlob(originalGame.getAnnotationOffset());
+                int newAnnotationsBlobSize = updatedGameData.annotationBlob != null ? updatedGameData.annotationBlob.limit() : 0;
+                int annotationsBlobSizeDelta = newAnnotationsBlobSize - oldAnnotationsBlobSize;
+
+                // Update the game data with the actual moves and annotation offsets
+                long movesOffset = originalGame.getMovesOffset();
+                long annotationOffset = originalGame.getAnnotationOffset();
+                if (newAnnotationsBlobSize > 0 && annotationOffset == 0) {
+                    annotationOffset = findNextAnnotationOffset(gameId);
+                }
+                if (newAnnotationsBlobSize == 0) {
+                    annotationOffset = 0;
+                }
+
+                updatedGameData.gameHeader
                         .movesOffset((int) movesOffset)
-                        .annotationOffset((int) annotationsOffset)
-                        .build();
-                ImmutableExtendedGameHeader extendedGameHeader = updatedGameData.extendedGameHeader
+                        .annotationOffset((int) annotationOffset);
+                updatedGameData.extendedGameHeader
                         .movesOffset(movesOffset)
-                        .annotationOffset((int) annotationsOffset)
-                        .build();
+                        .annotationOffset((int) annotationOffset);
 
-                assert gameId == gameCount + 1;
-                int id = database.gameHeaderIndex().add(gameHeader);
-                assert gameId == id;
-                database.extendedGameHeaderStorage().put(gameId, extendedGameHeader);
-                gameCount += 1;
-            } else {
-                ImmutableGameHeader gameHeader = updatedGameData.gameHeader.build();
-                ImmutableExtendedGameHeader extendedGameHeader = updatedGameData.extendedGameHeader.build();
+                if (movesBlobSizeDelta > 0 || annotationsBlobSizeDelta > 0) {
+                    // It doesn't fit, we need to shift the entire move and/or annotation repository :(
+                    // This also means we need to update the offset in all game headers after this game,
+                    // both those outside the transaction and those within the transaction
 
-                database.gameHeaderIndex().put(gameId, gameHeader);
-                database.extendedGameHeaderStorage().put(gameId, extendedGameHeader);
+                    if (movesBlobSizeDelta > 0) {
+                        log.info(String.format("Move blob in game %d is %d bytes longer; adjusting", gameId, movesBlobSizeDelta));
+                        database.moveRepository().insert(movesOffset, movesBlobSizeDelta);
+                    }
+                    if (annotationsBlobSizeDelta > 0 && annotationOffset > 0) {
+                        log.info(String.format("Annotation blob in game %d is %d bytes longer; adjusting", gameId, annotationsBlobSizeDelta));
+                        database.annotationRepository().insert(annotationOffset, annotationsBlobSizeDelta);
+                    }
 
-                database.moveRepository().putMovesBlob(extendedGameHeader.movesOffset(), updatedGameData.moveBlob);
-                if (updatedGameData.annotationBlob != null) {
-                    database.annotationRepository().putAnnotationsBlob(extendedGameHeader.annotationOffset(), updatedGameData.annotationBlob);
+                    // Shift all move and annotations offsets in the persistent storage
+                    // Note: This could be done much more efficiently with low-level operations
+                    // Note: Only process the games until the next game in the transaction, and accumulate the shifted offsets
+                    for (int i = gameId + 1; i <= oldGameCount; i++) {
+                        GameHeader oldHeader = database.gameHeaderIndex().getGameHeader(i);
+                        ExtendedGameHeader oldExtendedHeader = database.extendedGameHeaderStorage().get(i);
+                        int newMovesOffset = oldHeader.movesOffset() + Math.max(0, movesBlobSizeDelta);
+                        int newAnnotationOffset = oldHeader.annotationOffset() == 0 ? 0 : (oldHeader.annotationOffset() + Math.max(0, annotationsBlobSizeDelta));
+                        database.gameHeaderIndex().put(i,
+                                ImmutableGameHeader.builder()
+                                        .from(oldHeader)
+                                        .movesOffset(newMovesOffset)
+                                        .annotationOffset(newAnnotationOffset)
+                                        .build());
+                        database.extendedGameHeaderStorage().put(i,
+                                ImmutableExtendedGameHeader.builder()
+                                        .from(oldExtendedHeader)
+                                        .movesOffset(newMovesOffset)
+                                        .annotationOffset(newAnnotationOffset)
+                                        .build());
+                    }
                 }
             }
+
+            // TODO: Merge this for-loop with the previous one, should be possible
+            int gameCount = database.gameHeaderIndex().count();
+            for (int gameId : updatedGames.keySet()) {
+                GameData updatedGameData = updatedGames.get(gameId);
+                if (gameId > gameCount) {
+                    long movesOffset = database.moveRepository().putMovesBlob(0, updatedGameData.moveBlob);
+                    long annotationsOffset = updatedGameData.annotationBlob != null ?
+                            database.annotationRepository().putAnnotationsBlob(0, updatedGameData.annotationBlob) : 0;
+
+                    ImmutableGameHeader gameHeader = updatedGameData.gameHeader
+                            .movesOffset((int) movesOffset)
+                            .annotationOffset((int) annotationsOffset)
+                            .build();
+                    ImmutableExtendedGameHeader extendedGameHeader = updatedGameData.extendedGameHeader
+                            .movesOffset(movesOffset)
+                            .annotationOffset((int) annotationsOffset)
+                            .build();
+
+                    assert gameId == gameCount + 1;
+                    int id = database.gameHeaderIndex().add(gameHeader);
+                    assert gameId == id;
+                    database.extendedGameHeaderStorage().put(gameId, extendedGameHeader);
+                    gameCount += 1;
+                } else {
+                    ImmutableGameHeader gameHeader = updatedGameData.gameHeader.build();
+                    ImmutableExtendedGameHeader extendedGameHeader = updatedGameData.extendedGameHeader.build();
+
+                    database.gameHeaderIndex().put(gameId, gameHeader);
+                    database.extendedGameHeaderStorage().put(gameId, extendedGameHeader);
+
+                    database.moveRepository().putMovesBlob(extendedGameHeader.movesOffset(), updatedGameData.moveBlob);
+                    if (updatedGameData.annotationBlob != null) {
+                        database.annotationRepository().putAnnotationsBlob(extendedGameHeader.annotationOffset(), updatedGameData.annotationBlob);
+                    }
+                }
+            }
+
+            playerDelta.apply(playerTransaction);
+            tournamentDelta.apply(tournamentTransaction);
+            annotatorDelta.apply(annotatorTransaction);
+            sourceDelta.apply(sourceTransaction);
+            teamDelta.apply(teamTransaction);
+            gameTagDelta.apply(gameTagTransaction);
+
+            playerTransaction.commit();
+            tournamentTransaction.commit();
+            annotatorTransaction.commit();
+            sourceTransaction.commit();
+            teamTransaction.commit();
+            gameTagTransaction.commit();
+
+            database.context().bumpVersion();
+        } finally {
+            committed = true;
+            database.context().lock().writeLock().unlock();
+            database.context().lock().updateLock().unlock();
         }
+    }
 
-        playerDelta.apply(playerTransaction);
-        tournamentDelta.apply(tournamentTransaction);
-        annotatorDelta.apply(annotatorTransaction);
-        sourceDelta.apply(sourceTransaction);
-        teamDelta.apply(teamTransaction);
-        gameTagDelta.apply(gameTagTransaction);
+    /**
+     * Aborts the transaction and releases the update lock.
+     */
+    public void rollback() {
+        playerTransaction.rollback();
+        tournamentTransaction.rollback();
+        annotatorTransaction.rollback();
+        sourceTransaction.rollback();
+        teamTransaction.rollback();
+        gameTagTransaction.rollback();
 
-        playerTransaction.commit();
-        tournamentTransaction.commit();
-        annotatorTransaction.commit();
-        sourceTransaction.commit();
-        teamTransaction.commit();
-        gameTagTransaction.commit();
+        committed = true;
+
+        database.context().lock().updateLock().unlock();
     }
 
     /**

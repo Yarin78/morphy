@@ -19,6 +19,7 @@ import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
@@ -32,7 +33,11 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
     protected final @NotNull ItemStorage<EntityIndexHeader, EntityNode> storage;
     private final @NotNull String entityType;
     private final @NotNull DatabaseContext context;
-    private int numCommittedTxn;
+
+    // Number of successfully committed transactions to the EntityIndex
+    // Is typically the same as version in DatabaseContext but may differ
+    // if transactions are done explicitly on an entity index instead of the whole database
+    private final AtomicInteger currentVersion;
 
     @NotNull EntityIndexHeader storageHeader() {
         return storage.getHeader();
@@ -42,14 +47,11 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
         this.storage = storage;
         this.entityType = entityType;
         this.context = context == null ? new DatabaseContext() : context;
+        this.currentVersion = new AtomicInteger(0);
     }
 
     public @NotNull DatabaseContext context() {
         return context;
-    }
-
-    public int getNumCommittedTxn() {
-        return numCommittedTxn;
     }
 
     /**
@@ -95,15 +97,15 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
     }
 
     public EntityIndexTransaction<T> beginTransaction() {
-        // TODO: Acquire read lock (probably better in constructor)
         return new EntityIndexTransaction<>(this);
     }
 
-    void transactionCommitted(EntityIndexTransaction<T> txn) {
-        if (!txn.isCommitted()) {
-            throw new IllegalStateException("Transaction hasn't been committed!");
-        }
-        numCommittedTxn += 1;
+    void bumpVersion() {
+        this.currentVersion.incrementAndGet();
+    }
+
+    int currentVersion() {
+        return this.currentVersion.get();
     }
 
     /**

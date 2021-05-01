@@ -5,6 +5,7 @@ module se.yarin.morphy.cbh {
     requires progressbar;
     requires java.compiler;
     requires org.jetbrains.annotations;
+    requires concurrent.locks;
 
     exports se.yarin.chess;
     exports se.yarin.chess.annotations;
