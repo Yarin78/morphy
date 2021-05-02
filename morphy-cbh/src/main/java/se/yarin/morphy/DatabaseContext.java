@@ -7,7 +7,7 @@ import java.util.concurrent.locks.Lock;
 import com.googlecode.concurentlocks.ReadWriteUpdateLock;
 import com.googlecode.concurentlocks.ReentrantReadWriteUpdateLock;
 import org.jetbrains.annotations.NotNull;
-import se.yarin.morphy.entities.EntityIndexTransaction;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * The DatabaseContext is a mutable object coordinating database locking and instrumentation.
@@ -28,23 +28,23 @@ import se.yarin.morphy.entities.EntityIndexTransaction;
  * or iterate over a set of games.
  */
 public class DatabaseContext {
-    private static final long DEFAULT_WRITE_LOCK_WAIT_TIMEOUT_IN_SECONDS = 5;
-    private static final long DEFAULT_READ_LOCK_WAIT_TIMEOUT_IN_SECONDS = 5;
+    private final @NotNull DatabaseConfig config;
+    private final @NotNull ReadWriteUpdateLock lock;
 
-    private final ReadWriteUpdateLock lock;
-    private final long writeLockWaitTimeoutInSeconds; // -1 = non-blocking, 0 = block forever
-    private final long readLockWaitTimeoutInSeconds;
-    private final AtomicInteger currentVersion;
+    private final @NotNull AtomicInteger currentVersion;
 
     public DatabaseContext() {
-        this(DEFAULT_READ_LOCK_WAIT_TIMEOUT_IN_SECONDS, DEFAULT_WRITE_LOCK_WAIT_TIMEOUT_IN_SECONDS);
+        this(null);
     }
 
-    public DatabaseContext(long readLockWaitTimeoutInSeconds, long writeLockWaitTimeoutInSeconds) {
-        this.readLockWaitTimeoutInSeconds = readLockWaitTimeoutInSeconds;
-        this.writeLockWaitTimeoutInSeconds = writeLockWaitTimeoutInSeconds;
+    public DatabaseContext(@Nullable DatabaseConfig config) {
         this.lock = new ReentrantReadWriteUpdateLock();
         this.currentVersion = new AtomicInteger(0);
+        this.config = config == null ? new DatabaseConfig() : config;
+    }
+
+    public @NotNull DatabaseConfig config() {
+        return config;
     }
 
     public int currentVersion() {
@@ -61,7 +61,7 @@ public class DatabaseContext {
         WRITE
     }
 
-    private Lock getLock(@NotNull DatabaseLock lockType) {
+    private @NotNull Lock getLock(@NotNull DatabaseLock lockType) {
         return switch (lockType) {
             case READ -> this.lock.readLock();
             case WRITE -> this.lock.writeLock();
@@ -71,7 +71,7 @@ public class DatabaseContext {
 
     public void acquireLock(@NotNull DatabaseLock lockType) {
         Lock lock = getLock(lockType);
-        long timeout = lockType == DatabaseLock.READ ? readLockWaitTimeoutInSeconds : writeLockWaitTimeoutInSeconds;
+        long timeout = lockType == DatabaseLock.READ ? config.readLockWaitTimeoutInSeconds() : config.writeLockWaitTimeoutInSeconds();
         if (timeout == 0) {
             lock.lock();
         } else if (timeout < 0) {

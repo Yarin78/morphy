@@ -1,10 +1,10 @@
 package se.yarin.morphy.entities;
 
 import org.junit.Test;
+import se.yarin.morphy.DatabaseConfig;
 import se.yarin.morphy.DatabaseContext;
 import se.yarin.morphy.storage.InMemoryItemStorage;
 
-import java.util.Iterator;
 import java.util.concurrent.CountDownLatch;
 
 import static org.junit.Assert.*;
@@ -14,7 +14,10 @@ public class EntityIndexWriteTransactionTest {
     private FooEntityIndex createIndex() {
         return new FooEntityIndex(
                 new InMemoryItemStorage<>(EntityIndexHeader.empty(FooEntityIndex.SERIALIZED_FOO_SIZE)),
-                new DatabaseContext(-1, -1)
+                new DatabaseContext(new DatabaseConfig() {{
+                    setWriteLockWaitTimeoutInSeconds(-1);
+                    setReadLockWaitTimeoutInSeconds(-1);
+                }})
             );
     }
 

@@ -26,7 +26,7 @@ public class Game {
 
     private final @NotNull Database database;
 
-    private final @Nullable DatabaseTransaction transaction;
+    private final @Nullable DatabaseWriteTransaction transaction;
 
     private final @NotNull EntityRetriever entityRetriever;
 
@@ -42,7 +42,7 @@ public class Game {
         this.entityRetriever = database;
     }
 
-    public Game(@NotNull DatabaseTransaction transaction, @NotNull GameHeader header, @NotNull ExtendedGameHeader extendedHeader) {
+    public Game(@NotNull DatabaseWriteTransaction transaction, @NotNull GameHeader header, @NotNull ExtendedGameHeader extendedHeader) {
         this.database = transaction.database();
         this.transaction = transaction;
         this.header = header;
@@ -57,7 +57,7 @@ public class Game {
     /**
      * @return the transaction the game is part of, or null if the game is already committed to the database
      */
-    public @Nullable DatabaseTransaction transaction() {
+    public @Nullable DatabaseWriteTransaction transaction() {
         return transaction;
     }
 

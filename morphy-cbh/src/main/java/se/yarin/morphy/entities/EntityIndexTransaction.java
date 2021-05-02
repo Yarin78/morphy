@@ -7,8 +7,6 @@ import org.slf4j.LoggerFactory;
 import se.yarin.morphy.DatabaseContext;
 import se.yarin.morphy.exceptions.MorphyInternalException;
 
-import java.util.concurrent.locks.Lock;
-
 public abstract class EntityIndexTransaction<T extends Entity & Comparable<T>> {
     private static final Logger log = LoggerFactory.getLogger(EntityIndexTransaction.class);
 
@@ -17,7 +15,7 @@ public abstract class EntityIndexTransaction<T extends Entity & Comparable<T>> {
     private final @NotNull DatabaseContext.DatabaseLock lock;
 
     // If the transaction is closed, no further operations can be done to it
-    private volatile boolean closed;
+    private boolean closed;
 
     protected EntityIndexTransaction(@NotNull DatabaseContext.DatabaseLock lock, @NotNull EntityIndex<T> index) {
         index.context().acquireLock(lock);

@@ -117,8 +117,8 @@ public class Database implements EntityRetriever {
         this(null);
     }
 
-    public Database(@Nullable DatabaseContext context) {
-        this.context = context != null ? context : new DatabaseContext();
+    public Database(@Nullable DatabaseConfig config) {
+        this.context = new DatabaseContext(config);
 
         this.gameHeaderIndex = new GameHeaderIndex(this.context);
         this.extendedGameHeaderStorage = new ExtendedGameHeaderStorage(this.context);
@@ -384,14 +384,14 @@ public class Database implements EntityRetriever {
     }
 
     public int addGame(@NotNull GameModel game) {
-        DatabaseTransaction txn = new DatabaseTransaction(this);
+        DatabaseWriteTransaction txn = new DatabaseWriteTransaction(this);
         int id = txn.addGame(game).id();
         txn.commit();
         return id;
     }
 
     public void replaceGame(int gameId, @NotNull GameModel game) {
-        DatabaseTransaction txn = new DatabaseTransaction(this);
+        DatabaseWriteTransaction txn = new DatabaseWriteTransaction(this);
         txn.replaceGame(gameId, game);
         txn.commit();
     }

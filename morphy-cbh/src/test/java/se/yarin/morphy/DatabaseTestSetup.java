@@ -71,7 +71,7 @@ public abstract class DatabaseTestSetup {
     }
 
     public void populateDatabase(Database database) {
-        DatabaseTransaction txn = new DatabaseTransaction(database);
+        DatabaseWriteTransaction txn = new DatabaseWriteTransaction(database);
         putTestGame(txn, 0, "Carlsen - Ding", "tour2", null, null, null, null, 100, 0, 1, 0);
         putTestGame(txn, 0, "Nepo - Giri", "tour1", null, null, null, null, 100, 0, 2, 0);
         putTestGame(txn, 0, "Mamedyarov - So", "tour3", "ann2", null, null, null, 100, 2000, 3, 3);
@@ -162,15 +162,15 @@ public abstract class DatabaseTestSetup {
         return buf;
     }
 
-    protected Game putTestGame(@NotNull DatabaseTransaction txn, int gameId, @NotNull String players,
-                            int movesSize, int annotationsSize, int movesSeed, int annotationsSeed) {
+    protected Game putTestGame(@NotNull DatabaseWriteTransaction txn, int gameId, @NotNull String players,
+                               int movesSize, int annotationsSize, int movesSeed, int annotationsSeed) {
         return putTestGame(txn, gameId,
                 players, null, null, null, null,
                 null, movesSize, annotationsSize, movesSeed, annotationsSeed);
     }
 
     protected Game putTestGame(
-            @NotNull DatabaseTransaction txn, int gameId,
+            @NotNull DatabaseWriteTransaction txn, int gameId,
             @NotNull String players, @Nullable String tournament, @Nullable String annotator, @Nullable String source, @Nullable String teams,
             @Nullable String gameTag, int movesSize, int annotationsSize, int movesSeed, int annotationsSeed) {
         String[] twoPlayers = players.split(" - ");
