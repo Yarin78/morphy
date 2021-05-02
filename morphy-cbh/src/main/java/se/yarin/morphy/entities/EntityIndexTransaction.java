@@ -5,24 +5,22 @@ import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.morphy.DatabaseContext;
+import se.yarin.morphy.TransactionBase;
 import se.yarin.morphy.exceptions.MorphyInternalException;
 
-public abstract class EntityIndexTransaction<T extends Entity & Comparable<T>> {
+public abstract class EntityIndexTransaction<T extends Entity & Comparable<T>> extends TransactionBase {
     private static final Logger log = LoggerFactory.getLogger(EntityIndexTransaction.class);
 
     private final @NotNull EntityIndex<T> index;
-    private final int version;  // The version of the entity index where the transaction starts from
-    private final @NotNull DatabaseContext.DatabaseLock lock;
 
-    // If the transaction is closed, no further operations can be done to it
-    private boolean closed;
+    // The version of the database the transaction starts from
+    private final int version;
 
     protected EntityIndexTransaction(@NotNull DatabaseContext.DatabaseLock lock, @NotNull EntityIndex<T> index) {
-        index.context().acquireLock(lock);
+        super(lock, index.context());
 
         this.index = index;
         this.version = this.index.currentVersion();
-        this.lock = lock;
     }
 
     public @NotNull EntityIndex<T> index() {
@@ -31,10 +29,6 @@ public abstract class EntityIndexTransaction<T extends Entity & Comparable<T>> {
 
     protected int version() {
         return version;
-    }
-
-    public boolean isClosed() {
-        return closed;
     }
 
     /**
@@ -64,17 +58,6 @@ public abstract class EntityIndexTransaction<T extends Entity & Comparable<T>> {
             return foundEntity;
         }
         return null;
-    }
-
-    protected void ensureTransactionIsOpen() {
-        if (isClosed()) {
-            throw new IllegalStateException("The transaction is closed");
-        }
-    }
-
-    protected void closeTransaction() {
-        closed = true;
-        index.context().releaseLock(this.lock);
     }
 
     protected @NotNull EntityIndexHeader header() {

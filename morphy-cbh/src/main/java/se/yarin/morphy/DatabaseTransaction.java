@@ -8,17 +8,14 @@ import se.yarin.morphy.games.ExtendedGameHeader;
 import se.yarin.morphy.games.ExtendedGameHeaderStorage;
 import se.yarin.morphy.games.GameHeader;
 
-public abstract class DatabaseTransaction implements EntityRetriever {
+public abstract class DatabaseTransaction extends TransactionBase implements EntityRetriever {
     private static final Logger log = LoggerFactory.getLogger(DatabaseTransaction.class);
 
-    private final @NotNull Database database;
     private final @NotNull GameAdapter gameAdapter = new GameAdapter();
+    private final @NotNull Database database;
 
-    private final int version;  // The version of the database where the transaction starts from
-    private final DatabaseContext.DatabaseLock lock;
-
-    // If the transaction is closed, no further operations can be done to it
-    private boolean closed;
+    // The version of the database the transaction starts from
+    private final int version;
 
     public Database database() {
         return database;
@@ -32,10 +29,6 @@ public abstract class DatabaseTransaction implements EntityRetriever {
         return version;
     }
 
-    public boolean isClosed() {
-        return closed;
-    }
-
     public abstract EntityIndexTransaction<Player> playerTransaction();
     public abstract TournamentIndexTransaction tournamentTransaction();
     public abstract EntityIndexTransaction<Annotator> annotatorTransaction();
@@ -44,22 +37,10 @@ public abstract class DatabaseTransaction implements EntityRetriever {
     public abstract EntityIndexTransaction<GameTag> gameTagTransaction();
 
     public DatabaseTransaction(@NotNull DatabaseContext.DatabaseLock lock, @NotNull Database database) {
-        database.context().acquireLock(lock);
+        super(lock, database.context());
 
         this.database = database;
         this.version = this.database.context().currentVersion();
-        this.lock = lock;
-    }
-
-    protected void ensureTransactionIsOpen() {
-        if (isClosed()) {
-            throw new IllegalStateException("The transaction is closed");
-        }
-    }
-
-    protected void closeTransaction() {
-        closed = true;
-        database.context().releaseLock(this.lock);
     }
 
     public @NotNull Game getGame(int id) {
