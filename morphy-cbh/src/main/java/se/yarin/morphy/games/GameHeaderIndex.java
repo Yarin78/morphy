@@ -9,6 +9,7 @@ import se.yarin.chess.*;
 import se.yarin.morphy.DatabaseContext;
 import se.yarin.morphy.DatabaseMode;
 import se.yarin.morphy.exceptions.MorphyIOException;
+import se.yarin.morphy.exceptions.MorphyInternalException;
 import se.yarin.morphy.exceptions.MorphyInvalidDataException;
 import se.yarin.morphy.exceptions.MorphyNotSupportedException;
 import se.yarin.morphy.storage.FileItemStorage;
@@ -170,11 +171,20 @@ public class GameHeaderIndex implements ItemStorageSerializer<GameHeaderIndex.Pr
      * @return a list of all GameHeaders
      */
     public List<GameHeader> getAll() {
-        ArrayList<GameHeader> result = new ArrayList<>(count());
-        for (int i = 1; i <= count(); i++) {
-            result.add(storage.getItem(i));
+        return getRange(1, count() + 1);
+    }
+
+    /**
+     * Gets a list of all game headers between startId (inclusive) and endId (exclusive)
+     * @param startId the id of first game header (inclusive)
+     * @param endId the id of the last game header (exclusive)
+     * @return a list of game headers
+     */
+    public List<GameHeader> getRange(int startId, int endId) {
+        if (endId < startId) {
+            throw new IllegalArgumentException(String.format("endId can't be less than startId (%d < %d)", endId, startId));
         }
-        return result;
+        return storage.getItems(startId, endId - startId);
     }
 
     /**
@@ -333,6 +343,8 @@ public class GameHeaderIndex implements ItemStorageSerializer<GameHeaderIndex.Pr
 
     @Override
     public @NotNull GameHeader deserializeItem(int gameHeaderId, @NotNull ByteBuffer buf) {
+        int oldPosition = buf.position();
+
         ImmutableGameHeader.Builder builder = ImmutableGameHeader.builder();
         builder.id(gameHeaderId);
         int type = ByteBufferUtil.getUnsignedByte(buf);
@@ -380,13 +392,11 @@ public class GameHeaderIndex implements ItemStorageSerializer<GameHeaderIndex.Pr
             // TODO: Check what flags can actually be set in texts, update in GameLoader accordingly
             builder.flags(GameHeaderFlags.decodeFlags(flagInt));
 
-            int i = 0;
-            while (buf.hasRemaining()) {
+            for (int i = 0; i < 24; i++) {
                 byte b = buf.get();
                 if (b != 0) {
                     log.warn("Trailing bytes in guiding text are not 0: byte " + i + " is " + b);
                 }
-                i++;
             }
         } else {
             annotationOffset = ByteBufferUtil.getIntB(buf);
@@ -466,6 +476,11 @@ public class GameHeaderIndex implements ItemStorageSerializer<GameHeaderIndex.Pr
             }
 
             builder.noMoves(ByteBufferUtil.getUnsignedByte(buf));
+        }
+
+        if (buf.position() - oldPosition != Prolog.DEFAULT_SERIALIZED_ITEM_SIZE) {
+            throw new MorphyInternalException(String.format("Internal error deserializing GameHeader with id %d; %d bytes deserialized, expected %d bytes",
+                    gameHeaderId, buf.position() - oldPosition, Prolog.DEFAULT_SERIALIZED_ITEM_SIZE));
         }
 
         return builder.build();

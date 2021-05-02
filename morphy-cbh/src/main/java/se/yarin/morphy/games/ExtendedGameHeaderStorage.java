@@ -215,11 +215,20 @@ public class ExtendedGameHeaderStorage implements ItemStorageSerializer<Extended
      * @return a list of all ExtendedGameHeaders
      */
     public List<ExtendedGameHeader> getAll() {
-        ArrayList<ExtendedGameHeader> result = new ArrayList<>(count());
-        for (int i = 1; i <= count(); i++) {
-            result.add(storage.getItem(i));
+        return getRange(1, count() + 1);
+    }
+
+    /**
+     * Gets a list of all extended game headers between startId (inclusive) and endId (exclusive)
+     * @param startId the id of first game header (inclusive)
+     * @param endId the id of the last game header (exclusive)
+     * @return a list of game headers
+     */
+    public List<ExtendedGameHeader> getRange(int startId, int endId) {
+        if (endId < startId) {
+            throw new IllegalArgumentException(String.format("endId can't be less than startId (%d < %d)", endId, startId));
         }
-        return result;
+        return storage.getItems(startId, endId - startId);
     }
 
     public void copyGameHeaders(ExtendedGameHeaderStorage target) {

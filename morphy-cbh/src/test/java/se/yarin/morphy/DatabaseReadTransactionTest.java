@@ -10,14 +10,45 @@ public class DatabaseReadTransactionTest {
     public void getGame() {
         Database database = ResourceLoader.openWorldChDatabase();
 
-        DatabaseReadTransaction txn = new DatabaseReadTransaction(database);
-        Game game = txn.getGame(10);
+        try (DatabaseReadTransaction txn = new DatabaseReadTransaction(database)) {
+            Game game = txn.getGame(10);
 
-        assertEquals(database, game.database());
-        assertEquals(10, game.id());
-        assertEquals("Steinitz, William", game.white().getFullName());
-        assertEquals(new Date(1886, 02, 26), game.playedDate());
-        assertEquals(20, game.tournament().rounds());
-        System.out.println(game.getGameHeaderModel());
+            assertEquals(database, game.database());
+            assertEquals(10, game.id());
+            assertEquals("Steinitz, William", game.white().getFullName());
+            assertEquals(new Date(1886, 02, 26), game.playedDate());
+            assertEquals(20, game.tournament().rounds());
+        }
+    }
+
+    @Test
+    public void getText() {
+        Database database = ResourceLoader.openWorldChDatabase();
+
+        try (DatabaseReadTransaction txn = new DatabaseReadTransaction(database)) {
+            Game text = txn.getGame(99);
+            // TODO: asserts
+        }
+    }
+
+    @Test
+    public void iterateGames() {
+        Database database = ResourceLoader.openWorldChDatabase();
+
+        int startId = 20;
+
+        try (DatabaseReadTransaction txn = new DatabaseReadTransaction(database)) {
+            Iterable<Game> games = txn.iterable(startId);
+            int expectedId = startId;
+            Game lastGame = null;
+            for (Game game : games) {
+                assertEquals(expectedId, game.id());
+                expectedId += 1;
+                lastGame = game;
+            }
+            assertNotNull(lastGame);
+            assertEquals(database.count() + 1, expectedId);
+            assertEquals("Carlsen, Magnus", lastGame.white().getFullName());
+        }
     }
 }

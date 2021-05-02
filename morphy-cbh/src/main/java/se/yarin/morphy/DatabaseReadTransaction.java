@@ -3,6 +3,9 @@ package se.yarin.morphy;
 import org.jetbrains.annotations.NotNull;
 import se.yarin.morphy.entities.*;
 
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
+
 public class DatabaseReadTransaction extends DatabaseTransaction {
     private final int version;
 
@@ -57,5 +60,40 @@ public class DatabaseReadTransaction extends DatabaseTransaction {
     @Override
     public EntityIndexTransaction<GameTag> gameTagTransaction() {
         return gameTagTransaction;
+    }
+
+    /**
+     * Returns an iterable of all games in the database, sorted by id.
+     * @return an iterable of all games
+     */
+    public @NotNull Iterable<Game> iterable() {
+        return iterable(0);
+    }
+
+    /**
+     * Returns an iterable of all games in the index, sorted by id.
+     * @param startId the first id in the iterable
+     * @return an iterable of all games
+     */
+    public @NotNull Iterable<Game> iterable(int startId) {
+        return () -> new GameIterator(this, startId);
+    }
+
+
+    /**
+     * Returns a stream of all games in the index, sorted by id.
+     * @return a stream of all games
+     */
+    public @NotNull Stream<Game> stream() {
+        return StreamSupport.stream(iterable().spliterator(), false);
+    }
+
+    /**
+     * Returns a stream of all games in the index, sorted by id.
+     * @param startId the first id in the stream
+     * @return a stream of all games
+     */
+    public @NotNull Stream<Game> stream(int startId) {
+        return StreamSupport.stream(iterable(startId).spliterator(), false);
     }
 }
