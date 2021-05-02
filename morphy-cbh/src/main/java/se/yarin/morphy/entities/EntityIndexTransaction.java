@@ -13,23 +13,17 @@ public abstract class EntityIndexTransaction<T extends Entity & Comparable<T>> e
 
     private final @NotNull EntityIndex<T> index;
 
-    // The version of the database the transaction starts from
-    private final int version;
-
     protected EntityIndexTransaction(@NotNull DatabaseContext.DatabaseLock lock, @NotNull EntityIndex<T> index) {
         super(lock, index.context());
 
         this.index = index;
-        this.version = this.index.currentVersion();
     }
 
     public @NotNull EntityIndex<T> index() {
         return index;
     }
 
-    protected int version() {
-        return version;
-    }
+    protected abstract int version();
 
     /**
      * Gets an entity by id.

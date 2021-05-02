@@ -14,9 +14,6 @@ public abstract class DatabaseTransaction extends TransactionBase implements Ent
     private final @NotNull GameAdapter gameAdapter = new GameAdapter();
     private final @NotNull Database database;
 
-    // The version of the database the transaction starts from
-    private final int version;
-
     public Database database() {
         return database;
     }
@@ -25,9 +22,7 @@ public abstract class DatabaseTransaction extends TransactionBase implements Ent
         return gameAdapter;
     }
 
-    public int version() {
-        return version;
-    }
+    public abstract int version();
 
     public abstract EntityIndexTransaction<Player> playerTransaction();
     public abstract TournamentIndexTransaction tournamentTransaction();
@@ -40,14 +35,16 @@ public abstract class DatabaseTransaction extends TransactionBase implements Ent
         super(lock, database.context());
 
         this.database = database;
-        this.version = this.database.context().currentVersion();
     }
 
-    public @NotNull Game getGame(int id) {
-        GameHeader gameHeader = database.gameHeaderIndex().getGameHeader(id);
+    public @NotNull Game getGame(int gameId) {
+        if (gameId < 1) {
+            throw new IllegalArgumentException("Invalid game id: " + gameId);
+        }
+        GameHeader gameHeader = database.gameHeaderIndex().getGameHeader(gameId);
         ExtendedGameHeaderStorage storage = database.extendedGameHeaderStorage();
         // TODO: ext storage should either be empty (if cbj file is missing) or hold enough items
-        ExtendedGameHeader extendedGameHeader = id <= storage.count() ? storage.get(id) : ExtendedGameHeader.empty(gameHeader);
+        ExtendedGameHeader extendedGameHeader = gameId <= storage.count() ? storage.get(gameId) : ExtendedGameHeader.empty(gameHeader);
 
         return new Game(database, gameHeader, extendedGameHeader);
     }
@@ -80,4 +77,14 @@ public abstract class DatabaseTransaction extends TransactionBase implements Ent
         return gameTagTransaction().get(id);
     }
 
+    public void close() {
+        playerTransaction().close();
+        tournamentTransaction().close();
+        annotatorTransaction().close();
+        sourceTransaction().close();
+        teamTransaction().close();
+        gameTagTransaction().close();
+
+        super.close();
+    }
 }

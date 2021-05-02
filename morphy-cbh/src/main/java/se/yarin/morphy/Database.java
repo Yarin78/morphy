@@ -348,13 +348,9 @@ public class Database implements EntityRetriever {
      * @throws IllegalArgumentException if no game with the specified ID exists
      */
     public @NotNull Game getGame(int gameId) {
-        // TODO: consolidate this, it's also in DatabaseTransaction
-        if (gameId < 1) {
-            throw new IllegalArgumentException("Invalid game id: " + gameId);
+        try (var txn = new DatabaseReadTransaction(this)) {
+            return txn.getGame(gameId);
         }
-        GameHeader header = gameHeaderIndex.getGameHeader(gameId);
-        ExtendedGameHeader extendedGameHeader = gameId <= extendedGameHeaderStorage.count() ? extendedGameHeaderStorage.get(gameId) : ExtendedGameHeader.empty(header);
-        return new Game(this, header, extendedGameHeader);
     }
 
     /**
@@ -384,16 +380,19 @@ public class Database implements EntityRetriever {
     }
 
     public int addGame(@NotNull GameModel game) {
-        DatabaseWriteTransaction txn = new DatabaseWriteTransaction(this);
-        int id = txn.addGame(game).id();
-        txn.commit();
+        int id;
+        try (var txn = new DatabaseWriteTransaction(this)) {
+            id = txn.addGame(game).id();
+            txn.commit();
+        }
         return id;
     }
 
     public void replaceGame(int gameId, @NotNull GameModel game) {
-        DatabaseWriteTransaction txn = new DatabaseWriteTransaction(this);
-        txn.replaceGame(gameId, game);
-        txn.commit();
+        try (var txn = new DatabaseWriteTransaction(this)) {
+            txn.replaceGame(gameId, game);
+            txn.commit();
+        }
     }
 
     @Override

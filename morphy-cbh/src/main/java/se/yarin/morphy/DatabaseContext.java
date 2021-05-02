@@ -51,8 +51,8 @@ public class DatabaseContext {
         return currentVersion.get();
     }
 
-    public void bumpVersion() {
-        currentVersion.incrementAndGet();
+    public int bumpVersion() {
+        return currentVersion.incrementAndGet();
     }
 
     public enum DatabaseLock {

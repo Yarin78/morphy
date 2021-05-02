@@ -19,13 +19,23 @@ public class EntityIndexWriteTransaction<T extends Entity & Comparable<T>> exten
     // Represents the header within the write transaction
     private @NotNull EntityIndexHeader header;
 
+    // The version of the database the transaction starts from
+    private int version;
+
     // Changes made to the EntityIndex in this transaction
     // Important that they are stored in increasing entity id order
-    private final Map<Integer, EntityNode> changes = new TreeMap<>();
+    private final Map<Integer, EntityNode> changes;
 
     public EntityIndexWriteTransaction(@NotNull EntityIndex<T> index) {
         super(DatabaseContext.DatabaseLock.UPDATE, index);
         this.header = index.storage.getHeader();
+        this.version = index.currentVersion();
+        this.changes = new TreeMap<>();
+    }
+
+    @Override
+    protected int version() {
+        return version;
     }
 
     protected @NotNull EntityIndexHeader header() {
@@ -76,7 +86,8 @@ public class EntityIndexWriteTransaction<T extends Entity & Comparable<T>> exten
     public void validateCommit() {
         // Need to check this in case there are two active transactions in the same thread
         if (index().currentVersion() != version()) {
-            throw new IllegalStateException("The database has changed since the transaction started");
+            throw new IllegalStateException(String.format("The database has changed since the transaction started (current version = %d, transaction version = %d)",
+                    index().currentVersion(), version()));
         }
     }
 
@@ -84,7 +95,7 @@ public class EntityIndexWriteTransaction<T extends Entity & Comparable<T>> exten
         // Don't attempt to grab the write lock before ensuring that we still have the update lock
         ensureTransactionIsOpen();
 
-        index().context().acquireLock(DatabaseContext.DatabaseLock.WRITE);
+        acquireLock(DatabaseContext.DatabaseLock.WRITE);
         try {
             validateCommit();
 
@@ -102,16 +113,21 @@ public class EntityIndexWriteTransaction<T extends Entity & Comparable<T>> exten
                         changes.values().size()));
             }
             index().bumpVersion();
+            clearChanges();
         } finally {
-            index().context().releaseLock(DatabaseContext.DatabaseLock.WRITE);
-            closeTransaction();
+            releaseLock(DatabaseContext.DatabaseLock.WRITE);
         }
     }
 
+    protected void clearChanges() {
+        this.header = index().storage.getHeader();
+        this.version = index().currentVersion();
+        this.changes.clear();
+    }
+
     public void rollback() {
-        if (!isClosed()) {
-            closeTransaction();
-        }
+        ensureTransactionIsOpen();
+        clearChanges();
     }
 
     /**

@@ -36,6 +36,12 @@ public class TournamentIndexWriteTransaction extends EntityIndexWriteTransaction
         });
     }
 
+    @Override
+    protected void clearChanges() {
+        super.clearChanges();
+        extraChanges.clear();
+    }
+
     public @NotNull TournamentExtra getExtra(int id) {
         if (tournamentExtraStorage == null) {
             throw new IllegalStateException("Transaction does not contain extra storage");

@@ -104,8 +104,8 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
         return new EntityIndexReadTransaction<>(this);
     }
 
-    void bumpVersion() {
-        this.currentVersion.incrementAndGet();
+    int bumpVersion() {
+        return this.currentVersion.incrementAndGet();
     }
 
     int currentVersion() {
@@ -129,8 +129,7 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
      * @return the entity, or null if there was no entity with that key
      */
     public @Nullable T get(T entityKey) {
-        EntityIndexReadTransaction<T> txn = beginReadTransaction();
-        try {
+        try (var txn = beginReadTransaction()) {
             EntityIndexReadTransaction<T>.NodePath treePath = txn.lowerBound(entityKey);
             if (treePath.isEnd()) {
                 return null;
@@ -140,8 +139,6 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
                 return foundEntity;
             }
             return null;
-        } finally {
-            txn.close();
         }
     }
 
@@ -162,13 +159,10 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
      * @return a list of all matching entities.
      */
     public @NotNull List<T> getAll(@NotNull T entityKey) {
-        EntityIndexReadTransaction<T> txn = new EntityIndexReadTransaction<>(this);
-        try {
+        try (var txn = beginReadTransaction()) {
             return txn.streamOrderedAscending(entityKey)
                     .takeWhile(e -> e.compareTo(entityKey) == 0)
                     .collect(Collectors.toList());
-        } finally {
-            txn.close();
         }
     }
 
@@ -177,13 +171,10 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
      * @return a list of all entities
      */
     public @NotNull List<T> getAll() {
-        EntityIndexReadTransaction<T> txn = new EntityIndexReadTransaction<>(this);
-        try {
+        try (var txn = beginReadTransaction()) {
             ArrayList<T> result = new ArrayList<>();
             txn.iterable().forEach(result::add);
             return result;
-        } finally {
-            txn.close();
         }
     }
 
@@ -192,13 +183,10 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
      * @return a list of all entities
      */
     public @NotNull List<T> getAllOrdered() {
-        EntityIndexReadTransaction<T> txn = new EntityIndexReadTransaction<>(this);
-        try {
+        try (var txn = beginReadTransaction()) {
             ArrayList<T> result = new ArrayList<>();
             txn.iterableAscending().forEach(result::add);
             return result;
-        } finally {
-            txn.close();
         }
     }
 
@@ -207,12 +195,9 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
      * @return the first entity, or null if there are no entities in the database
      */
     public @Nullable T getFirst() {
-        EntityIndexReadTransaction<T> txn = new EntityIndexReadTransaction<>(this);
-        try {
+        try (var txn = beginReadTransaction()) {
             Iterator<T> iterator = txn.iterableAscending().iterator();
             return iterator.hasNext() ? iterator.next() : null;
-        } finally {
-            txn.close();
         }
     }
 
@@ -221,12 +206,9 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
      * @return the last entity, or null if there are no entities in the database
      */
     public @Nullable T getLast() {
-        EntityIndexReadTransaction<T> txn = new EntityIndexReadTransaction<>(this);
-        try {
+        try (var txn = beginReadTransaction()) {
             Iterator<T> iterator = txn.iterableDescending().iterator();
             return iterator.hasNext() ? iterator.next() : null;
-        } finally {
-            txn.close();
         }
     }
 
@@ -237,16 +219,13 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
      * @return the succeeding entity, or null if there are no succeeding entities
      */
     public @Nullable T getNext(T entity) {
-        EntityIndexReadTransaction<T> txn = new EntityIndexReadTransaction<>(this);
-        try {
+        try (var txn = beginReadTransaction()) {
             for (T e : txn.iterableAscending(entity)) {
                 if (!e.equals(entity)) {
                     return e;
                 }
             }
             return null;
-        } finally {
-            txn.close();
         }
     }
 
@@ -257,16 +236,13 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
      * @return the preceding entity, or null if there are no preceding entities
      */
     public @Nullable T getPrevious(@NotNull T entity) {
-        EntityIndexReadTransaction<T> txn = new EntityIndexReadTransaction<>(this);
-        try {
+        try (var txn = beginReadTransaction()) {
             for (T e : txn.iterableDescending(entity)) {
                 if (!e.equals(entity)) {
                     return e;
                 }
             }
             return null;
-        } finally {
-            txn.close();
         }
     }
 
@@ -281,14 +257,10 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
      * @return the id of the added entity
      */
     public int add(@NotNull T entity) {
-        EntityIndexWriteTransaction<T> txn = beginWriteTransaction();
-        try {
+        try (var txn = beginWriteTransaction()) {
             int id = txn.addEntity(entity);
             txn.commit();
             return id;
-        } catch (Exception e) {
-            txn.rollback();
-            throw e;
         }
     }
 
@@ -298,13 +270,9 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
      * @param entity the new entity (the id field will be ignored)
      */
     public void put(int id, @NotNull T entity) {
-        EntityIndexWriteTransaction<T> txn = beginWriteTransaction();
-        try {
+        try (var txn = beginWriteTransaction()) {
             txn.putEntityById(id, entity);
             txn.commit();
-        } catch (Exception e) {
-            txn.rollback();
-            throw e;
         }
     }
 
@@ -316,14 +284,10 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
      * @return the id of the entity that was updated
      */
     public int put(@NotNull T entity) {
-        EntityIndexWriteTransaction<T> txn = beginWriteTransaction();
-        try {
+        try (var txn = beginWriteTransaction()) {
             int id = txn.putEntityByKey(entity);
             txn.commit();
             return id;
-        } catch (Exception e) {
-            txn.rollback();
-            throw e;
         }
     }
 
@@ -333,14 +297,10 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
      * @return true if the entity was deleted; false if there was no entity with that id in the index
      */
     public boolean delete(int entityId) {
-        EntityIndexWriteTransaction<T> txn = beginWriteTransaction();
-        try {
+        try (var txn = beginWriteTransaction()) {
             boolean deleted = txn.deleteEntity(entityId);
             txn.commit();
             return deleted;
-        } catch (Exception e) {
-            txn.rollback();
-            throw e;
         }
     }
 
@@ -351,14 +311,10 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
      * @throws IllegalArgumentException if there are multiple entities with the given key
      */
     public boolean delete(@NotNull T entity) {
-        EntityIndexWriteTransaction<T> txn = beginWriteTransaction();
-        try {
+        try (var txn = beginWriteTransaction()) {
             boolean deleted = txn.deleteEntity(entity);
             txn.commit();
             return deleted;
-        } catch (Exception e) {
-            txn.rollback();
-            throw e;
         }
     }
 

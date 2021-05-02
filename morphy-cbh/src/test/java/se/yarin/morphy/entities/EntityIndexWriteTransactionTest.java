@@ -41,15 +41,6 @@ public class EntityIndexWriteTransactionTest {
         assertEquals("a", index.get(0).key());
     }
 
-    @Test(expected = IllegalStateException.class)
-    public void testCommitSameTransactionTwice() {
-        EntityIndex<FooEntity> index = createIndex();
-
-        EntityIndexWriteTransaction<FooEntity> txn = index.beginWriteTransaction();
-        txn.commit();
-        txn.commit();
-    }
-
     @Test
     public void testCommitTwoTransactionsSequentially() {
         EntityIndex<FooEntity> index = createIndex();
@@ -65,6 +56,39 @@ public class EntityIndexWriteTransactionTest {
         assertEquals(2, index.count());
         assertEquals("a", index.get(0).key());
         assertEquals("b", index.get(1).key());
+    }
+
+    @Test
+    public void testCommitSameTransactionTwice() {
+        EntityIndex<FooEntity> index = createIndex();
+
+        try (var txn= index.beginWriteTransaction()) {
+            txn.addEntity(FooEntity.of("a"));
+            txn.commit();
+
+            txn.addEntity(FooEntity.of("b"));
+            txn.commit();
+        }
+
+        assertEquals(2, index.count());
+        assertEquals("a", index.get(0).key());
+        assertEquals("b", index.get(1).key());
+    }
+
+    @Test
+    public void testCommitAfterRollback() {
+        EntityIndex<FooEntity> index = createIndex();
+
+        try (var txn= index.beginWriteTransaction()) {
+            txn.addEntity(FooEntity.of("a"));
+            txn.rollback();
+
+            txn.addEntity(FooEntity.of("b"));
+            txn.commit();
+        }
+
+        assertEquals(1, index.count());
+        assertEquals("b", index.get(0).key());
     }
 
     @Test(expected = IllegalStateException.class)

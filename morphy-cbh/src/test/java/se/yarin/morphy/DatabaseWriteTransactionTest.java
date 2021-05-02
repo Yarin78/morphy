@@ -22,9 +22,10 @@ public class DatabaseWriteTransactionTest extends DatabaseTestSetup {
         assertEquals(db.count(), 0);
         assertEquals(db.playerIndex().count(), 0);
 
-        DatabaseWriteTransaction txn = new DatabaseWriteTransaction(db);
-        putTestGame(txn, 0, "Aronian - Ding", "tour2", null, null, "t1 - t2", null, 50, 0, 20, 0);
-        txn.commit();
+        try (var txn = new DatabaseWriteTransaction(db)) {
+            putTestGame(txn, 0, "Aronian - Ding", "tour2", null, null, "t1 - t2", null, 50, 0, 20, 0);
+            txn.commit();
+        }
 
         assertEquals(db.count(), 1);
         assertEquals(db.playerIndex().count(), 2);
@@ -37,9 +38,10 @@ public class DatabaseWriteTransactionTest extends DatabaseTestSetup {
 
     @Test
     public void addSingleGameWithExistingEntities() {
-        DatabaseWriteTransaction txn = new DatabaseWriteTransaction(testBase);
-        putTestGame(txn, 0, "Aronian - Ding", "tour2", null, null, null, null, 50, 0, 20, 0);
-        txn.commit();
+        try (var txn = new DatabaseWriteTransaction(testBase)) {
+            putTestGame(txn, 0, "Aronian - Ding", "tour2", null, null, null, null, 50, 0, 20, 0);
+            txn.commit();
+        }
 
         assertEquals(16, testBase.count());
         assertEquals(2, testBase.playerIndex().get(Player.of("Aronian", "")).count());
@@ -47,9 +49,10 @@ public class DatabaseWriteTransactionTest extends DatabaseTestSetup {
 
     @Test
     public void addSingleGameWithNewPlayer() {
-        DatabaseWriteTransaction txn = new DatabaseWriteTransaction(testBase);
-        putTestGame(txn, 0, "Mardell, Jimmy - Carlsen", null, null, null, null, null, 50, 0, 20, 0);
-        txn.commit();
+        try (var txn = new DatabaseWriteTransaction(testBase)) {
+            putTestGame(txn, 0, "Mardell, Jimmy - Carlsen", null, null, null, null, null, 50, 0, 20, 0);
+            txn.commit();
+        }
 
         assertEquals(11, testBase.playerIndex().count());
         assertEquals("Mardell", testBase.playerIndex().get(10).lastName());
@@ -67,10 +70,11 @@ public class DatabaseWriteTransactionTest extends DatabaseTestSetup {
         assertEquals(0, wastedMoveBytes());
         assertEquals(0, wastedAnnotationBytes());
 
-        DatabaseWriteTransaction txn = new DatabaseWriteTransaction(testBase);
-        // Replacing a game between Ding - Carlsen; tour3, ann2
-        putTestGame(txn, 13, "Aronian - So", "tour2", "ann2", null, null, null, 80, 500, 0, 0);
-        txn.commit();
+        try (var txn = new DatabaseWriteTransaction(testBase)) {
+            // Replacing a game between Ding - Carlsen; tour3, ann2
+            putTestGame(txn, 13, "Aronian - So", "tour2", "ann2", null, null, null, 80, 500, 0, 0);
+            txn.commit();
+        }
 
         assertEquals(3, playerCount("Ding"));
         assertEquals(4, playerCount("Carlsen"));
@@ -84,18 +88,20 @@ public class DatabaseWriteTransactionTest extends DatabaseTestSetup {
 
     @Test
     public void replaceLastGameLeavingMoveGapAtTheEnd() {
-        DatabaseWriteTransaction txn = new DatabaseWriteTransaction(testBase);
-        putTestGame(txn, 15, "Carlsen - So", "tour1", null, null, null, null, 90, 0, 15, 0);
-        txn.commit();
+        try (var txn = new DatabaseWriteTransaction(testBase)) {
+            putTestGame(txn, 15, "Carlsen - So", "tour1", null, null, null, null, 90, 0, 15, 0);
+            txn.commit();
+        }
 
         assertEquals(10, wastedMoveBytes());
     }
 
     @Test
     public void replaceLastGameWithAnnotations() {
-        DatabaseWriteTransaction txn = new DatabaseWriteTransaction(testBase);
-        putTestGame(txn, 15, "Carlsen - So", "tour1", null, null, null, null, 100, 500, 15, 15);
-        txn.commit();
+        try (var txn = new DatabaseWriteTransaction(testBase)) {
+            putTestGame(txn, 15, "Carlsen - So", "tour1", null, null, null, null, 100, 500, 15, 15);
+            txn.commit();
+        }
 
         assertEquals(0, wastedAnnotationBytes());
     }
@@ -106,9 +112,10 @@ public class DatabaseWriteTransactionTest extends DatabaseTestSetup {
         assertEquals(3, playerFirstGameId("So"));
         assertEquals(4, playerFirstGameId("Caruana"));
 
-        DatabaseWriteTransaction txn = new DatabaseWriteTransaction(testBase);
-        putTestGame(txn, 3, "Caruana - Mardell", 50, 0, 0, 0);
-        txn.commit();
+        try (var txn = new DatabaseWriteTransaction(testBase)) {
+            putTestGame(txn, 3, "Caruana - Mardell", 50, 0, 0, 0);
+            txn.commit();
+        }
 
         assertEquals(11, playerFirstGameId("Mamedyarov"));
         assertEquals(7, playerFirstGameId("So"));
@@ -120,9 +127,10 @@ public class DatabaseWriteTransactionTest extends DatabaseTestSetup {
     public void replaceSingleGameCausingEntityToBeRemoved() {
         assertEquals(10, testBase.playerIndex().count());
 
-        DatabaseWriteTransaction txn = new DatabaseWriteTransaction(testBase);
-        putTestGame(txn, 12, "Ding - Giri", 50, 0, 0, 0);
-        txn.commit();
+        try (var txn = new DatabaseWriteTransaction(testBase)) {
+            putTestGame(txn, 12, "Ding - Giri", 50, 0, 0, 0);
+            txn.commit();
+        }
 
         assertEquals(9, testBase.playerIndex().count());
         assertEquals(0, playerCount("Aronian"));
@@ -133,9 +141,10 @@ public class DatabaseWriteTransactionTest extends DatabaseTestSetup {
         long oldMovesOffset = testBase.getGame(6).getMovesOffset();
         assertEquals(generateMovesBlob(100, 6), testBase.getGame(6).getMovesBlob());;
 
-        DatabaseWriteTransaction txn = new DatabaseWriteTransaction(testBase);
-        putTestGame(txn, 5, "Caruana - Radjabov", 250, 0, 20, 0);
-        txn.commit();
+        try (var txn = new DatabaseWriteTransaction(testBase)) {
+            putTestGame(txn, 5, "Caruana - Radjabov", 250, 0, 20, 0);
+            txn.commit();
+        }
 
         assertEquals(generateMovesBlob(250, 20), testBase.getGame(5).getMovesBlob());
 
@@ -148,9 +157,10 @@ public class DatabaseWriteTransactionTest extends DatabaseTestSetup {
         long oldAnnotationOffset = testBase.getGame(6).getAnnotationOffset();
         assertEquals(generateAnnotationsBlob(2000, 6), testBase.getGame(6).getAnnotationsBlob());;
 
-        DatabaseWriteTransaction txn = new DatabaseWriteTransaction(testBase);
-        putTestGame(txn, 4, "Nepo - Caruana", 50, 10000, 20, 20);
-        txn.commit();
+        try (var txn = new DatabaseWriteTransaction(testBase)) {
+            putTestGame(txn, 4, "Nepo - Caruana", 50, 10000, 20, 20);
+            txn.commit();
+        }
 
         assertEquals(generateAnnotationsBlob(10000, 20), testBase.getGame(4).getAnnotationsBlob());
 
@@ -163,9 +173,10 @@ public class DatabaseWriteTransactionTest extends DatabaseTestSetup {
         long oldAnnotationOffset = testBase.getGame(13).getAnnotationOffset();
         assertEquals(generateAnnotationsBlob(2000, 13), testBase.getGame(13).getAnnotationsBlob());;
 
-        DatabaseWriteTransaction txn = new DatabaseWriteTransaction(testBase);
-        putTestGame(txn, 10, "Ding - Giri", 100, 5000, 20, 21);
-        txn.commit();
+        try (var txn = new DatabaseWriteTransaction(testBase)) {
+            putTestGame(txn, 10, "Ding - Giri", 100, 5000, 20, 21);
+            txn.commit();
+        }
 
         assertEquals(generateAnnotationsBlob(5000, 21), testBase.getGame(10).getAnnotationsBlob());
 
@@ -175,9 +186,10 @@ public class DatabaseWriteTransactionTest extends DatabaseTestSetup {
 
     @Test
     public void replaceSingleGameRemovingAnnotations() {
-        DatabaseWriteTransaction txn = new DatabaseWriteTransaction(testBase);
-        putTestGame(txn, 4, "Nepo - Caruana", 100, 0, 20, 0);
-        txn.commit();
+        try (var txn = new DatabaseWriteTransaction(testBase)) {
+            putTestGame(txn, 4, "Nepo - Caruana", 100, 0, 20, 0);
+            txn.commit();
+        }
 
         assertEquals(0, testBase.getGame(4).getAnnotationOffset());
 
@@ -188,9 +200,10 @@ public class DatabaseWriteTransactionTest extends DatabaseTestSetup {
     public void replaceGameContainingSameEntityTwice() {
         assertEquals(5, playerCount("Carlsen"));
 
-        DatabaseWriteTransaction txn = new DatabaseWriteTransaction(testBase);
-        putTestGame(txn, 8, "Nepo - Caruana", 100, 0, 20, 0);
-        txn.commit();
+        try (var txn = new DatabaseWriteTransaction(testBase)) {
+            putTestGame(txn, 8, "Nepo - Caruana", 100, 0, 20, 0);
+            txn.commit();
+        }
 
         assertEquals(3, playerCount("Carlsen"));
     }
@@ -199,29 +212,32 @@ public class DatabaseWriteTransactionTest extends DatabaseTestSetup {
     public void addGameWithSameEntityTwice() {
         assertEquals(3, playerCount("Giri"));
 
-        DatabaseWriteTransaction txn = new DatabaseWriteTransaction(testBase);
-        putTestGame(txn, 0, "Giri - Giri", 100, 0, 20, 0);
-        txn.commit();
+        try (var txn = new DatabaseWriteTransaction(testBase)) {
+            putTestGame(txn, 0, "Giri - Giri", 100, 0, 20, 0);
+            txn.commit();
+        }
 
         assertEquals(5, playerCount("Giri"));
     }
 
     @Test
     public void addMultipleGamesInBatch() {
-        DatabaseWriteTransaction txn = new DatabaseWriteTransaction(testBase);
-        putTestGame(txn, 0, "Nepo - Caruana", 100, 0, 16, 0);
-        putTestGame(txn, 0, "Carlsen - Mamedyarov", 120, 500, 17, 17);
-        txn.commit();
+        try (var txn = new DatabaseWriteTransaction(testBase)) {
+            putTestGame(txn, 0, "Nepo - Caruana", 100, 0, 16, 0);
+            putTestGame(txn, 0, "Carlsen - Mamedyarov", 120, 500, 17, 17);
+            txn.commit();
+        }
 
         assertEquals(17, testBase.count());
     }
 
     @Test
     public void addGameAndThenReplaceOlderCausingInsertInBatch() {
-        DatabaseWriteTransaction txn = new DatabaseWriteTransaction(testBase);
-        putTestGame(txn, 0, "So - Ding", 100, 200, 16, 16);
-        putTestGame(txn, 5, "Carlsen - Radjabov", 930, 2900, 17, 17);
-        txn.commit();
+        try (var txn = new DatabaseWriteTransaction(testBase)) {
+            putTestGame(txn, 0, "So - Ding", 100, 200, 16, 16);
+            putTestGame(txn, 5, "Carlsen - Radjabov", 930, 2900, 17, 17);
+            txn.commit();
+        }
 
         assertEquals(16, testBase.count());
         assertEquals(generateMovesBlob(100, 16), testBase.getGame(16).getMovesBlob());;
@@ -230,10 +246,11 @@ public class DatabaseWriteTransactionTest extends DatabaseTestSetup {
 
     @Test
     public void replaceSameGameMultipleTimesInBatch() {
-        DatabaseWriteTransaction txn = new DatabaseWriteTransaction(testBase);
-        putTestGame(txn, 3, "Nepo - Caruana", 130, 1500, 16, 16);
-        putTestGame(txn, 3, "Carlsen - Mamedyarov", 90, 1700, 17, 17);
-        txn.commit();
+        try (var txn = new DatabaseWriteTransaction(testBase)) {
+            putTestGame(txn, 3, "Nepo - Caruana", 130, 1500, 16, 16);
+            putTestGame(txn, 3, "Carlsen - Mamedyarov", 90, 1700, 17, 17);
+            txn.commit();
+        }
 
         assertEquals(5, playerCount("Nepo"));
         assertEquals(6, playerCount("Carlsen"));
@@ -245,10 +262,11 @@ public class DatabaseWriteTransactionTest extends DatabaseTestSetup {
 
     @Test
     public void removeAndRestoreAnnotationsToSameGameInBatch() {
-        DatabaseWriteTransaction txn = new DatabaseWriteTransaction(testBase);
-        putTestGame(txn, 4, "Nepo - Caruana", 100, 0, 20, 0);
-        putTestGame(txn, 4, "Nepo - Caruana", 100, 50, 20, 9);
-        txn.commit();
+        try (var txn = new DatabaseWriteTransaction(testBase)) {
+            putTestGame(txn, 4, "Nepo - Caruana", 100, 0, 20, 0);
+            putTestGame(txn, 4, "Nepo - Caruana", 100, 50, 20, 9);
+            txn.commit();
+        }
 
         assertEquals(generateAnnotationsBlob(50, 9), testBase.getGame(4).getAnnotationsBlob());;
         assertEquals(1950, wastedAnnotationBytes());
@@ -256,11 +274,12 @@ public class DatabaseWriteTransactionTest extends DatabaseTestSetup {
 
     @Test
     public void replaceAddedGameInBatch() {
-        DatabaseWriteTransaction txn = new DatabaseWriteTransaction(testBase);
-        int id = putTestGame(txn, 0, "Nepo - Caruana", 100, 0, 16, 0).id();
-        assertEquals(16, id);
-        putTestGame(txn, 16, "Carlsen - Mamedyarov", 90, 1700, 17, 17);
-        txn.commit();
+        try (var txn = new DatabaseWriteTransaction(testBase)) {
+            int id = putTestGame(txn, 0, "Nepo - Caruana", 100, 0, 16, 0).id();
+            assertEquals(16, id);
+            putTestGame(txn, 16, "Carlsen - Mamedyarov", 90, 1700, 17, 17);
+            txn.commit();
+        }
 
         assertEquals(5, playerCount("Nepo"));
         assertEquals(6, playerCount("Carlsen"));
@@ -269,11 +288,12 @@ public class DatabaseWriteTransactionTest extends DatabaseTestSetup {
 
     @Test
     public void addGameWithAnnotationsAndReplaceLastGameWithAnnotations() {
-        DatabaseWriteTransaction txn = new DatabaseWriteTransaction(testBase);
-        int id = putTestGame(txn, 0, "Nepo - Caruana", 100, 1500, 16, 16).id();
-        assertEquals(16, id);
-        putTestGame(txn, 15, "Carlsen - Mamedyarov", 90, 1700, 17, 17);
-        txn.commit();
+        try (var txn = new DatabaseWriteTransaction(testBase)) {
+            int id = putTestGame(txn, 0, "Nepo - Caruana", 100, 1500, 16, 16).id();
+            assertEquals(16, id);
+            putTestGame(txn, 15, "Carlsen - Mamedyarov", 90, 1700, 17, 17);
+            txn.commit();
+        }
 
         assertEquals(generateAnnotationsBlob(1500, 16), testBase.getGame(16).getAnnotationsBlob());;
     }
@@ -281,10 +301,11 @@ public class DatabaseWriteTransactionTest extends DatabaseTestSetup {
     @Test
     public void replaceGamesAndAddAnnotationsToThem() {
         // The annotations in both these games will want to go to the same annotation offset
-        DatabaseWriteTransaction txn = new DatabaseWriteTransaction(testBase);
-        putTestGame(txn, 11, "So - Mamedyarov", 100, 1300, 11, 11);
-        putTestGame(txn, 10, "Ding - Giri", 100, 900, 10, 10);
-        txn.commit();
+        try (var txn = new DatabaseWriteTransaction(testBase)) {
+            putTestGame(txn, 11, "So - Mamedyarov", 100, 1300, 11, 11);
+            putTestGame(txn, 10, "Ding - Giri", 100, 900, 10, 10);
+            txn.commit();
+        }
 
         assertEquals(generateAnnotationsBlob(1300, 11), testBase.getGame(11).getAnnotationsBlob());;
         assertEquals(generateAnnotationsBlob(900, 10), testBase.getGame(10).getAnnotationsBlob());;
@@ -293,11 +314,12 @@ public class DatabaseWriteTransactionTest extends DatabaseTestSetup {
 
     @Test
     public void addTwoGamesThenMakeFirstOneShorterInSameBatch() {
-        DatabaseWriteTransaction txn = new DatabaseWriteTransaction(testBase);
-        putTestGame(txn, 0, "Aronian - Mamedyarov", 120, 1300, 16, 16);
-        putTestGame(txn, 0, "Giri - Caruana", 130, 900, 17, 17);
-        putTestGame(txn, 16, "Carlsen - Grischuk", 110, 1200, 16, 16);
-        txn.commit();
+        try (var txn = new DatabaseWriteTransaction(testBase)) {
+            putTestGame(txn, 0, "Aronian - Mamedyarov", 120, 1300, 16, 16);
+            putTestGame(txn, 0, "Giri - Caruana", 130, 900, 17, 17);
+            putTestGame(txn, 16, "Carlsen - Grischuk", 110, 1200, 16, 16);
+            txn.commit();
+        }
 
         assertEquals(0, wastedMoveBytes());
         assertEquals(0, wastedAnnotationBytes());
@@ -305,10 +327,11 @@ public class DatabaseWriteTransactionTest extends DatabaseTestSetup {
 
     @Test
     public void addGameCausingNewEntitiesOfAllTypesToBeAdded() {
-        DatabaseWriteTransaction txn = new DatabaseWriteTransaction(testBase);
-        putTestGame(txn, 0, "foo - bar", "foo", "foo", "foo", "foo - bar",
-                "foo", 100, 100, 0, 0);
-        txn.commit();
+        try (var txn = new DatabaseWriteTransaction(testBase)) {
+            putTestGame(txn, 0, "foo - bar", "foo", "foo", "foo", "foo - bar",
+                    "foo", 100, 100, 0, 0);
+            txn.commit();
+        }
 
         Player fooPlayer = testBase.playerIndex().get(Player.ofFullName("foo"));
         Player barPlayer = testBase.playerIndex().get(Player.ofFullName("bar"));
@@ -333,9 +356,11 @@ public class DatabaseWriteTransactionTest extends DatabaseTestSetup {
     @Test
     public void addGameWithNoEntitiesSpecified() {
         // test correct defaults used in GameHeaderModel
-        DatabaseWriteTransaction txn = new DatabaseWriteTransaction(testBase);
-        int id = txn.addGame(new GameModel()).id();
-        txn.commit();
+        int id;
+        try (var txn = new DatabaseWriteTransaction(testBase)) {
+            id = txn.addGame(new GameModel()).id();
+            txn.commit();
+        }
 
         Game game = testBase.getGame(id);
         assertEquals("", game.white().getFullName());
@@ -349,11 +374,11 @@ public class DatabaseWriteTransactionTest extends DatabaseTestSetup {
 
     @Test
     public void addGameWithRenamedPlayerEntity() {
-        DatabaseWriteTransaction txn = new DatabaseWriteTransaction(testBase);
-
-        txn.updatePlayerById(0, Player.ofFullName("Carlsen, Magnus"));
-        putTestGame(txn, 0, "Carlsen, Magnus - Grischuk", 100, 0, 16, 0);
-        txn.commit();
+        try (var txn = new DatabaseWriteTransaction(testBase)) {
+            txn.updatePlayerById(0, Player.ofFullName("Carlsen, Magnus"));
+            putTestGame(txn, 0, "Carlsen, Magnus - Grischuk", 100, 0, 16, 0);
+            txn.commit();
+        }
 
         assertEquals(6, playerCount("Carlsen, Magnus"));
         assertEquals(0, playerCount("Carlsen"));
@@ -361,11 +386,11 @@ public class DatabaseWriteTransactionTest extends DatabaseTestSetup {
 
     @Test
     public void addGameWithPreviouslyNamedPlayerEntity() {
-        DatabaseWriteTransaction txn = new DatabaseWriteTransaction(testBase);
-
-        txn.updatePlayerById(0, Player.ofFullName("Carlsen, Magnus"));
-        putTestGame(txn, 0, "Carlsen - Grischuk", 100, 0, 16, 0);
-        txn.commit();
+        try (var txn = new DatabaseWriteTransaction(testBase)) {
+            txn.updatePlayerById(0, Player.ofFullName("Carlsen, Magnus"));
+            putTestGame(txn, 0, "Carlsen - Grischuk", 100, 0, 16, 0);
+            txn.commit();
+        }
 
         assertEquals(5, playerCount("Carlsen, Magnus"));
         assertEquals(1, playerCount("Carlsen"));
@@ -375,15 +400,17 @@ public class DatabaseWriteTransactionTest extends DatabaseTestSetup {
     public void updateNewlyCreatedEntityInSameBatch() {
         GameModel gameModel = new GameModel();
         gameModel.header().setEvent("mytour");
+        int id;
 
-        DatabaseWriteTransaction txn = new DatabaseWriteTransaction(testBase);
-        int id = txn.addGame(gameModel).id();
-        Game game = txn.getGame(id);
-        txn.updateTournamentById(
-                game.tournamentId(),
-                Tournament.of("renamed tour", Date.unset()),
-                ImmutableTournamentExtra.builder().longitude(50).build());
-        txn.commit();
+        try (var txn = new DatabaseWriteTransaction(testBase)) {
+            id = txn.addGame(gameModel).id();
+            Game game = txn.getGame(id);
+            txn.updateTournamentById(
+                    game.tournamentId(),
+                    Tournament.of("renamed tour", Date.unset()),
+                    ImmutableTournamentExtra.builder().longitude(50).build());
+            txn.commit();
+        }
 
         Game addedGame = testBase.getGame(id);
         assertEquals("renamed tour", addedGame.tournament().title());
@@ -396,10 +423,11 @@ public class DatabaseWriteTransactionTest extends DatabaseTestSetup {
     public void addGameWithNewEntityThenReplaceWithExistingEntity() {
         // The temporary new entity shouldn't exist after commit,
         // but capacity should be increased (this is implementation dependent)
-        DatabaseWriteTransaction txn = new DatabaseWriteTransaction(testBase);
-        putTestGame(txn, 0, "foo - Carlsen", 100, 0, 16, 0);
-        putTestGame(txn, 16, "Caruana - Carlsen", 100, 0, 16, 0);
-        txn.commit();
+        try (var txn = new DatabaseWriteTransaction(testBase)) {
+            putTestGame(txn, 0, "foo - Carlsen", 100, 0, 16, 0);
+            putTestGame(txn, 16, "Caruana - Carlsen", 100, 0, 16, 0);
+            txn.commit();
+        }
 
         assertEquals(11, testBase.playerIndex().capacity());
         assertEquals(10, testBase.playerIndex().count());
@@ -412,9 +440,10 @@ public class DatabaseWriteTransactionTest extends DatabaseTestSetup {
         assertEquals("Carlsen", gameModel.header().getWhite());
         gameModel.header().setWhite("foo");
 
-        DatabaseWriteTransaction txn = new DatabaseWriteTransaction(testBase);
-        txn.addGame(gameModel);
-        txn.commit();
+        try (var txn = new DatabaseWriteTransaction(testBase)) {
+            txn.addGame(gameModel);
+            txn.commit();
+        }
 
         assertEquals("Carlsen", testBase.getGame(16).white().getFullName());
     }
@@ -426,9 +455,10 @@ public class DatabaseWriteTransactionTest extends DatabaseTestSetup {
         gameModel.header().setWhite("foo");
 
         Database database = new Database();
-        DatabaseWriteTransaction txn = new DatabaseWriteTransaction(database);
-        txn.addGame(gameModel);
-        txn.commit();
+        try (var txn = new DatabaseWriteTransaction(database)) {
+            txn.addGame(gameModel);
+            txn.commit();
+        }
 
         assertEquals("foo", database.getGame(1).white().getFullName());
     }
@@ -440,13 +470,9 @@ public class DatabaseWriteTransactionTest extends DatabaseTestSetup {
         assertEquals("Carlsen", gameModel.header().getWhite());
         gameModel.header().setField(GameAdapter.WHITE_ID, 100);
 
-        DatabaseWriteTransaction txn = new DatabaseWriteTransaction(testBase);
-        try {
+        try (var txn = new DatabaseWriteTransaction(testBase)) {
             txn.addGame(gameModel);
             txn.commit();
-        }
-        finally {
-            txn.rollback();
         }
     }
 
@@ -458,9 +484,11 @@ public class DatabaseWriteTransactionTest extends DatabaseTestSetup {
         gameModel.header().setSource("publisher");
         gameModel.header().setSourceDate(new Date(2021, 4, 1));
 
-        DatabaseWriteTransaction txn = new DatabaseWriteTransaction(testBase);
-        int id = txn.addGame(gameModel).id();
-        txn.commit();
+        int id;
+        try (var txn = new DatabaseWriteTransaction(testBase)) {
+            id = txn.addGame(gameModel).id();
+            txn.commit();
+        }
 
         Game game = testBase.getGame(id);
         Source source = game.source();
@@ -483,9 +511,11 @@ public class DatabaseWriteTransactionTest extends DatabaseTestSetup {
         gameModel.header().setEventDate(new Date(2021, 4, 1));
         gameModel.header().setEventEndDate(new Date(2021, 4, 5));
 
-        DatabaseWriteTransaction txn = new DatabaseWriteTransaction(testBase);
-        int id = txn.addGame(gameModel).id();
-        txn.commit();
+        int id;
+        try (var txn = new DatabaseWriteTransaction(testBase)) {
+            id = txn.addGame(gameModel).id();
+            txn.commit();
+        }
 
         Game game = testBase.getGame(id);
         Tournament tournament = game.tournament();
@@ -515,10 +545,11 @@ public class DatabaseWriteTransactionTest extends DatabaseTestSetup {
         gameModel2.header().setEventRounds(8);   // so this will be set
         gameModel2.header().setEventEndDate(new Date(2021, 4, 15));
 
-        DatabaseWriteTransaction txn = new DatabaseWriteTransaction(testBase);
-        txn.addGame(gameModel1);
-        txn.addGame(gameModel2);
-        txn.commit();
+        try (var txn = new DatabaseWriteTransaction(testBase)) {
+            txn.addGame(gameModel1);
+            txn.addGame(gameModel2);
+            txn.commit();
+        }
 
         Tournament tour1 = testBase.tournamentIndex().get(Tournament.of("tour1", Date.unset()));
         assertEquals(0, tour1.rounds());
@@ -534,59 +565,50 @@ public class DatabaseWriteTransactionTest extends DatabaseTestSetup {
         GameModel gameModel = new GameModel();
         gameModel.header().setWhite("Carlsen, Magnus");
 
-        DatabaseWriteTransaction txn = new DatabaseWriteTransaction(testBase);
-        txn.updatePlayerById(0, Player.ofFullName("Carlsen, Magnus"));
-        int id = txn.addGame(gameModel).id();
-        txn.commit();
+        int id;
+        try (var txn = new DatabaseWriteTransaction(testBase)) {
+            txn.updatePlayerById(0, Player.ofFullName("Carlsen, Magnus"));
+            id = txn.addGame(gameModel).id();
+            txn.commit();
+        }
 
         assertEquals("Carlsen, Magnus", testBase.getGame(id).white().getFullName());
     }
 
     @Test
     public void getEntityInTransaction() {
-        DatabaseWriteTransaction txn = new DatabaseWriteTransaction(testBase);
-        Player player = txn.getPlayer(0);
-        assertEquals("Carlsen", player.getFullName());
-        txn.rollback();
+        try (var txn = new DatabaseWriteTransaction(testBase)) {
+            Player player = txn.getPlayer(0);
+            assertEquals("Carlsen", player.getFullName());
+        }
+
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void getInvalidEntityInTransactionNegativeId() {
-        DatabaseWriteTransaction txn = new DatabaseWriteTransaction(testBase);
-        try {
+        try (var txn = new DatabaseWriteTransaction(testBase)) {
             txn.getPlayer(-1);
-        } finally {
-            txn.rollback();
         }
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void getInvalidEntityInTransactionTooHighId() {
-        DatabaseWriteTransaction txn = new DatabaseWriteTransaction(testBase);
-        try {
+        try (var txn = new DatabaseWriteTransaction(testBase)) {
             txn.getTournament(1000);
-        } finally {
-            txn.rollback();
         }
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void updateInvalidPlayer() {
-        DatabaseWriteTransaction txn = new DatabaseWriteTransaction(testBase);
-        try {
+        try (var txn = new DatabaseWriteTransaction(testBase)) {
             txn.updatePlayerById(-1, Player.ofFullName("Carlsen, Magnus"));
-        } finally {
-            txn.rollback();
         }
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void updateInvalidAnnotator() {
-        DatabaseWriteTransaction txn = new DatabaseWriteTransaction(testBase);
-        try {
+        try (var txn = new DatabaseWriteTransaction(testBase)) {
             txn.updateAnnotatorById(1000, Annotator.of("foo"));
-        } finally {
-            txn.rollback();
         }
     }
 
@@ -595,21 +617,24 @@ public class DatabaseWriteTransactionTest extends DatabaseTestSetup {
         // We don't keep the first game and count statistics updated during the transaction
         // If this is fixed, then update this test.
         int aronianId = testBase.playerIndex().get(Player.ofFullName("Aronian")).id();
+        Player aronian, mardell;
+        int mardellId;
 
-        DatabaseWriteTransaction txn = new DatabaseWriteTransaction(testBase);
-        Game game = putTestGame(txn, 5, "Aronian - Mardell", 100, 0, 1, 0);
+        try (var txn = new DatabaseWriteTransaction(testBase)) {
+            Game game = putTestGame(txn, 5, "Aronian - Mardell", 100, 0, 1, 0);
 
-        Player aronian = txn.getPlayer(aronianId);
-        assertEquals(12, aronian.firstGameId());
-        assertEquals(1, aronian.count());
+            aronian = txn.getPlayer(aronianId);
+            assertEquals(12, aronian.firstGameId());
+            assertEquals(1, aronian.count());
 
-        Player mardell = game.black();
-        int mardellId = mardell.id();
-        assertEquals("Mardell", mardell.getFullName());
-        assertEquals(0, mardell.firstGameId());
-        assertEquals(0, mardell.count());
+            mardell = game.black();
+            mardellId = mardell.id();
+            assertEquals("Mardell", mardell.getFullName());
+            assertEquals(0, mardell.firstGameId());
+            assertEquals(0, mardell.count());
 
-        txn.commit();
+            txn.commit();
+        }
         aronian = testBase.playerIndex().get(aronianId);
         assertEquals(5, aronian.firstGameId());
         assertEquals(2, aronian.count());
@@ -624,15 +649,14 @@ public class DatabaseWriteTransactionTest extends DatabaseTestSetup {
         int playerId = testBase.playerIndex().get(Player.ofFullName("Aronian")).id();
         assertTrue(playerId >= 0);
 
-        DatabaseWriteTransaction txn = new DatabaseWriteTransaction(testBase);
-        // This removes Aronian
-        putTestGame(txn, 12, "Nepo - Caruana", 100, 0, 1, 0);
+        try (var txn = new DatabaseWriteTransaction(testBase)) {
+            // This removes Aronian
+            putTestGame(txn, 12, "Nepo - Caruana", 100, 0, 1, 0);
 
-        // Can still get player in transaction, with old count
-        Player player = txn.getPlayer(playerId);
-        assertEquals(1, player.count());
-
-        txn.rollback();
+            // Can still get player in transaction, with old count
+            Player player = txn.getPlayer(playerId);
+            assertEquals(1, player.count());
+        }
     }
 
     @Test(expected = IllegalArgumentException.class)
@@ -642,26 +666,29 @@ public class DatabaseWriteTransactionTest extends DatabaseTestSetup {
 
         // Update a game in the database so that one entity is deleted
         // Then get that entity in the same transaction
-        DatabaseWriteTransaction txn = new DatabaseWriteTransaction(testBase);
-        // This removes Aronian
-        putTestGame(txn, 12, "Nepo - Caruana", 100, 0, 1, 0);
-        txn.commit();
+        try (var txn = new DatabaseWriteTransaction(testBase)) {
+            // This removes Aronian
+            putTestGame(txn, 12, "Nepo - Caruana", 100, 0, 1, 0);
+            txn.commit();
+        }
 
         testBase.playerIndex().get(playerId);
     }
 
     @Test
     public void setEntityAfterGameUpdate() {
-        DatabaseWriteTransaction txn = new DatabaseWriteTransaction(testBase);
-        Game game = putTestGame(txn, 0, "Kasparov - Carlsen", "new tour", "new anno", "new source", "q1 - q2", "tag", 100, 200, 1, 2);
-        txn.updatePlayerById(game.whitePlayerId(), Player.ofFullName("Kasparov, Garry"));
-        txn.updateTournamentById(game.tournamentId(), Tournament.of("updated tour", "place", new Date(2021, 1, 2)),
-                ImmutableTournamentExtra.builder().longitude(50).build());
-        txn.updateAnnotatorById(game.annotatorId(), Annotator.of("updated annotator"));
-        txn.updateSourceById(game.sourceId(), ImmutableSource.builder().title("updated source").publisher("publisher").build());
-        txn.updateTeamById(game.whiteTeamId(), Team.of("updated team", 2, true, 2021, Nation.SWEDEN));
-        txn.updateGameTagById(game.gameTagId(), ImmutableGameTag.builder().englishTitle("eng").germanTitle("ger").build());
-        txn.commit();
+        Game game;
+        try (var txn = new DatabaseWriteTransaction(testBase)) {
+            game = putTestGame(txn, 0, "Kasparov - Carlsen", "new tour", "new anno", "new source", "q1 - q2", "tag", 100, 200, 1, 2);
+            txn.updatePlayerById(game.whitePlayerId(), Player.ofFullName("Kasparov, Garry"));
+            txn.updateTournamentById(game.tournamentId(), Tournament.of("updated tour", "place", new Date(2021, 1, 2)),
+                    ImmutableTournamentExtra.builder().longitude(50).build());
+            txn.updateAnnotatorById(game.annotatorId(), Annotator.of("updated annotator"));
+            txn.updateSourceById(game.sourceId(), ImmutableSource.builder().title("updated source").publisher("publisher").build());
+            txn.updateTeamById(game.whiteTeamId(), Team.of("updated team", 2, true, 2021, Nation.SWEDEN));
+            txn.updateGameTagById(game.gameTagId(), ImmutableGameTag.builder().englishTitle("eng").germanTitle("ger").build());
+            txn.commit();
+        }
 
         Game committedGame = testBase.getGame(game.id());
         assertEquals(Player.ofFullName("Kasparov, Garry"), committedGame.white());
@@ -700,9 +727,10 @@ public class DatabaseWriteTransactionTest extends DatabaseTestSetup {
 
         // The database resulting resulting from committing after each operation will be the expected result
         for (Consumer<DatabaseWriteTransaction> operation : operations) {
-            DatabaseWriteTransaction txn = new DatabaseWriteTransaction(testBase);
-            operation.accept(txn);
-            txn.commit();
+            try (var txn = new DatabaseWriteTransaction(testBase)) {
+                operation.accept(txn);
+                txn.commit();
+            }
         }
 
         // Try split up the operations into three batches, to make sure all subsets combinations are tried in a batch
@@ -712,19 +740,22 @@ public class DatabaseWriteTransactionTest extends DatabaseTestSetup {
                 populateDatabase(db);
 
                 // PRE
-                final DatabaseWriteTransaction txn1 = new DatabaseWriteTransaction(db);
-                operations.subList(0, i).forEach(x -> x.accept(txn1));
-                txn1.commit();
+                try (var txn1 = new DatabaseWriteTransaction(db)) {
+                    operations.subList(0, i).forEach(x -> x.accept(txn1));
+                    txn1.commit();
+                }
 
                 // MAIN
-                final DatabaseWriteTransaction txn2 = new DatabaseWriteTransaction(db);
-                operations.subList(i, j).forEach(x -> x.accept(txn2));
-                txn2.commit();
+                try (var txn2 = new DatabaseWriteTransaction(db)) {
+                    operations.subList(i, j).forEach(x -> x.accept(txn2));
+                    txn2.commit();
+                }
 
                 // POST
-                final DatabaseWriteTransaction txn3 = new DatabaseWriteTransaction(db);
-                operations.subList(j, operations.size()).forEach(x -> x.accept(txn3));
-                txn3.commit();
+                try (var txn3 = new DatabaseWriteTransaction(db)) {
+                    operations.subList(j, operations.size()).forEach(x -> x.accept(txn3));
+                    txn3.commit();
+                }
 
                 validate(db);
 
@@ -751,19 +782,67 @@ public class DatabaseWriteTransactionTest extends DatabaseTestSetup {
     }
 
     @Test
+    public void testCommitMultipleTimesInSameTransaction() throws InterruptedException {
+        assertEquals(15, testBase.count());
+
+        CountDownLatch latch1 = new CountDownLatch(1);
+        CountDownLatch latch2 = new CountDownLatch(1);
+        CountDownLatch latch3 = new CountDownLatch(1);
+
+        Thread t = new Thread(() -> {
+            try (var txn = new DatabaseWriteTransaction(testBase)) {
+                putTestGame(txn, 0, "Ding - Mardell", 120, 0, 16, 0);
+                txn.commit();
+                latch1.countDown();
+                try {
+                    latch2.await();
+                    putTestGame(txn, 0, "Mardell - Carlsen", 120, 0, 16, 0);
+                    txn.commit();
+                } catch (InterruptedException ignored) {
+                }
+            }
+            latch3.countDown();
+        });
+        t.start();
+        latch1.await();
+
+        assertEquals(16, testBase.count());
+        assertEquals("Mardell", testBase.getGame(16).black().getFullName());
+        latch2.countDown();
+        latch3.await();
+
+        assertEquals(17, testBase.count());
+        assertEquals("Mardell", testBase.getGame(17).white().getFullName());
+    }
+
+    @Test
+    public void testCommitAfterRollback() {
+        try (var txn = new DatabaseWriteTransaction(testBase)) {
+            putTestGame(txn, 0, "Ding - Mardell", 120, 0, 16, 0);
+            txn.rollback();
+            putTestGame(txn, 0, "Mardell - Carlsen", 120, 0, 16, 0);
+            txn.commit();
+        }
+
+        assertEquals(16, testBase.count());
+        assertEquals("Mardell", testBase.getGame(16).white().getFullName());
+    }
+
+    @Test
     public void transactionIsIsolated() {
         int numGames = testBase.count();
         int numPlayers = testBase.playerIndex().count();
         int numTournaments = testBase.tournamentIndex().count();
 
-        DatabaseWriteTransaction txn = new DatabaseWriteTransaction(testBase);
-        putTestGame(txn, 0, "Kasparov - Carlsen", "new tour", "new anno", "new source", "q1 - q2", "tag", 100, 200, 1, 2);
+        try (var txn = new DatabaseWriteTransaction(testBase)) {
+            putTestGame(txn, 0, "Kasparov - Carlsen", "new tour", "new anno", "new source", "q1 - q2", "tag", 100, 200, 1, 2);
 
-        assertEquals(numGames, testBase.count());
-        assertEquals(numPlayers, testBase.playerIndex().count());
-        assertEquals(numTournaments, testBase.tournamentIndex().count());
+            assertEquals(numGames, testBase.count());
+            assertEquals(numPlayers, testBase.playerIndex().count());
+            assertEquals(numTournaments, testBase.tournamentIndex().count());
 
-        txn.commit();
+            txn.commit();
+        }
 
         assertNotEquals(numGames, testBase.count());
         assertNotEquals(numPlayers, testBase.playerIndex().count());
@@ -778,11 +857,12 @@ public class DatabaseWriteTransactionTest extends DatabaseTestSetup {
         DatabaseWriteTransaction txn2 = new DatabaseWriteTransaction(testBase);
         putTestGame(txn2, 5, "So - Mamedyarov", 100, 0, 10, 0);
 
-        txn1.commit();
         try {
+            txn1.commit();
             txn2.commit();
         } finally {
-            txn2.rollback();
+            txn1.close();
+            txn2.close();
         }
     }
 
@@ -794,8 +874,13 @@ public class DatabaseWriteTransactionTest extends DatabaseTestSetup {
         EntityIndexWriteTransaction<Player> txn2 = testBase.playerIndex().beginWriteTransaction();
         txn2.addEntity(Player.ofFullName("Kasparov"));
 
-        txn1.commit();
-        txn2.commit();
+        try {
+            txn1.commit();
+            txn2.commit();
+        } finally {
+            txn1.close();
+            txn2.close();
+        }
     }
 
     @Test
@@ -812,14 +897,18 @@ public class DatabaseWriteTransactionTest extends DatabaseTestSetup {
         EntityIndexWriteTransaction<Player> txn2 = testBase.playerIndex().beginWriteTransaction();
         txn2.putEntityById(2, ImmutablePlayer.builder().from(txn2.get(2)).lastName("Kasparov").build());
 
-        // Different order compared to previous test
-        txn2.commit();
         boolean illegalState = false;
         try {
-            txn1.commit();
-        } catch(IllegalStateException e) {
-            illegalState = true;
-            txn1.rollback();
+            // Different order compared to previous test
+            txn2.commit();
+            try {
+                txn1.commit();
+            } catch (IllegalStateException e) {
+                illegalState = true;
+            }
+        } finally {
+            txn1.close();
+            txn2.close();
         }
         // The second transaction should not partially have been applied
         assertTrue(illegalState);
@@ -832,23 +921,24 @@ public class DatabaseWriteTransactionTest extends DatabaseTestSetup {
     }
 
     @Test(expected = IllegalStateException.class)
-    public void commitSameTransactionMultipleTimesFails() {
+    public void commitClosedTransactionFails() {
         DatabaseWriteTransaction txn = new DatabaseWriteTransaction(testBase);
         putTestGame(txn, 1, "Giri - Carlsen", 100, 0, 10, 0);
         txn.commit();
+        txn.close();
         txn.commit();
     }
 
     @Test
-    public void commitNewTransactionAfterRollback() {
+    public void commitNewTransactionAfterClose() {
         DatabaseWriteTransaction txn1 = new DatabaseWriteTransaction(testBase);
         putTestGame(txn1, 1, "Giri - Carlsen", 100, 0, 10, 0);
 
-        DatabaseWriteTransaction txn2 = new DatabaseWriteTransaction(testBase);
-        putTestGame(txn2, 3, "So - Aronian", 100, 0, 10, 0);
-
-        txn1.rollback();
-        txn2.commit();
+        try (DatabaseWriteTransaction txn2 = new DatabaseWriteTransaction(testBase);) {
+            putTestGame(txn2, 3, "So - Aronian", 100, 0, 10, 0);
+            txn1.close();
+            txn2.commit();
+        }
 
         assertEquals("So", testBase.getGame(3).white().lastName()); // new game
         assertEquals("Carlsen", testBase.getGame(1).white().lastName()); // same game as before
@@ -872,4 +962,5 @@ public class DatabaseWriteTransactionTest extends DatabaseTestSetup {
         latch.await();
         new DatabaseWriteTransaction(db);
     }
+
 }

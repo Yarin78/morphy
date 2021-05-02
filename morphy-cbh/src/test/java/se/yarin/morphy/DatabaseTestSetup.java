@@ -70,24 +70,25 @@ public abstract class DatabaseTestSetup {
         assertEquals(6, tournamentCount("tour1", Date.unset()));
     }
 
-    public void populateDatabase(Database database) {
-        DatabaseWriteTransaction txn = new DatabaseWriteTransaction(database);
-        putTestGame(txn, 0, "Carlsen - Ding", "tour2", null, null, null, null, 100, 0, 1, 0);
-        putTestGame(txn, 0, "Nepo - Giri", "tour1", null, null, null, null, 100, 0, 2, 0);
-        putTestGame(txn, 0, "Mamedyarov - So", "tour3", "ann2", null, null, null, 100, 2000, 3, 3);
-        putTestGame(txn, 0, "Nepo - Caruana", "tour2", "ann1", null, null, null, 100, 2000, 4, 4);
-        putTestGame(txn, 0, "Caruana - Radjabov", "tour1", null, null, null, null, 100, 0, 5, 0);
-        putTestGame(txn, 0, "Nepo - Grischuk", "tour1", "ann1", null, null, null, 100, 2000, 6, 6);
-        putTestGame(txn, 0, "So - Nepo", "tour2", null, null, null, null, 100, 0, 7, 0);
-        putTestGame(txn, 0, "Carlsen - Carlsen", "tour3", "ann2", null, null, null, 100, 2000, 8, 8);
-        putTestGame(txn, 0, "Radjabov - Nepo", "tour2", "ann3", null, null, null, 100, 2000, 9, 9);
-        putTestGame(txn, 0, "Ding - Giri", "tour1", null, null, null, null, 100, 0, 10, 0);
-        putTestGame(txn, 0, "So - Mamedyarov", "tour2", null, null, null, null, 100, 0, 11, 0);
-        putTestGame(txn, 0, "Aronian - Giri", "tour3", null, null, null, null, 100, 0, 12, 0);
-        putTestGame(txn, 0, "Ding - Carlsen", "tour3", "ann2", null, null, null, 100, 2000, 13, 13);
-        putTestGame(txn, 0, "Grischuk - Ding", "tour1", null, null, null, null, 100, 0, 14, 0);
-        putTestGame(txn, 0, "Carlsen - So", "tour1", null, null, null, null, 100, 0, 15, 0);
-        txn.commit();
+    public void populateDatabase(@NotNull Database database) {
+        try (var txn = new DatabaseWriteTransaction(database)) {
+            putTestGame(txn, 0, "Carlsen - Ding", "tour2", null, null, null, null, 100, 0, 1, 0);
+            putTestGame(txn, 0, "Nepo - Giri", "tour1", null, null, null, null, 100, 0, 2, 0);
+            putTestGame(txn, 0, "Mamedyarov - So", "tour3", "ann2", null, null, null, 100, 2000, 3, 3);
+            putTestGame(txn, 0, "Nepo - Caruana", "tour2", "ann1", null, null, null, 100, 2000, 4, 4);
+            putTestGame(txn, 0, "Caruana - Radjabov", "tour1", null, null, null, null, 100, 0, 5, 0);
+            putTestGame(txn, 0, "Nepo - Grischuk", "tour1", "ann1", null, null, null, 100, 2000, 6, 6);
+            putTestGame(txn, 0, "So - Nepo", "tour2", null, null, null, null, 100, 0, 7, 0);
+            putTestGame(txn, 0, "Carlsen - Carlsen", "tour3", "ann2", null, null, null, 100, 2000, 8, 8);
+            putTestGame(txn, 0, "Radjabov - Nepo", "tour2", "ann3", null, null, null, 100, 2000, 9, 9);
+            putTestGame(txn, 0, "Ding - Giri", "tour1", null, null, null, null, 100, 0, 10, 0);
+            putTestGame(txn, 0, "So - Mamedyarov", "tour2", null, null, null, null, 100, 0, 11, 0);
+            putTestGame(txn, 0, "Aronian - Giri", "tour3", null, null, null, null, 100, 0, 12, 0);
+            putTestGame(txn, 0, "Ding - Carlsen", "tour3", "ann2", null, null, null, 100, 2000, 13, 13);
+            putTestGame(txn, 0, "Grischuk - Ding", "tour1", null, null, null, null, 100, 0, 14, 0);
+            putTestGame(txn, 0, "Carlsen - So", "tour1", null, null, null, null, 100, 0, 15, 0);
+            txn.commit();
+        }
     }
 
     @After

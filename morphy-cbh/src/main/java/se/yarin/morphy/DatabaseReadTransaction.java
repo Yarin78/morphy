@@ -4,6 +4,8 @@ import org.jetbrains.annotations.NotNull;
 import se.yarin.morphy.entities.*;
 
 public class DatabaseReadTransaction extends DatabaseTransaction {
+    private final int version;
+
     private final EntityIndexReadTransaction<Player> playerTransaction;
     private final TournamentIndexReadTransaction tournamentTransaction;
     private final EntityIndexReadTransaction<Annotator> annotatorTransaction;
@@ -14,12 +16,17 @@ public class DatabaseReadTransaction extends DatabaseTransaction {
     public DatabaseReadTransaction(@NotNull Database database) {
         super(DatabaseContext.DatabaseLock.READ, database);
 
+        this.version = database.context().currentVersion();
         this.playerTransaction = database.playerIndex().beginReadTransaction();
         this.tournamentTransaction = database.tournamentIndex().beginReadTransaction(database.tournamentExtraStorage());
         this.annotatorTransaction = database.annotatorIndex().beginReadTransaction();
         this.sourceTransaction = database.sourceIndex().beginReadTransaction();
         this.teamTransaction = database.teamIndex().beginReadTransaction();
         this.gameTagTransaction = database.gameTagIndex().beginReadTransaction();
+    }
+
+    public int version() {
+        return version;
     }
 
     @Override

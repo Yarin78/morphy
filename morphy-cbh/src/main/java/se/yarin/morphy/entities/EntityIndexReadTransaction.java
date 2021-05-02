@@ -13,14 +13,19 @@ import java.util.stream.StreamSupport;
 public class EntityIndexReadTransaction<T extends Entity & Comparable<T>> extends EntityIndexTransaction<T> {
     private static final Logger log = LoggerFactory.getLogger(EntityIndexReadTransaction.class);
 
+    // The version of the database the transaction starts from
+    private final int version;
+
     public EntityIndexReadTransaction(@NotNull EntityIndex<T> index) {
         super(DatabaseContext.DatabaseLock.READ, index);
+
+        this.version = index.currentVersion();
     }
 
-    public void close() {
-        closeTransaction();
+    @Override
+    protected int version() {
+        return version;
     }
-
 
     /**
      * Gets a list of all node ids that are marked as deleted and can be reused.

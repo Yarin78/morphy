@@ -30,8 +30,6 @@ import java.util.function.BiPredicate;
 public class DatabaseWriteTransaction extends DatabaseTransaction {
     private static final Logger log = LoggerFactory.getLogger(DatabaseWriteTransaction.class);
 
-    private int currentGameCount;
-
     class GameData {
         public ImmutableGameHeader.@NotNull Builder gameHeader;
         public ImmutableExtendedGameHeader.@NotNull Builder extendedGameHeader;
@@ -54,6 +52,9 @@ public class DatabaseWriteTransaction extends DatabaseTransaction {
         }
     }
 
+    private int currentGameCount;
+    private int version; // The version of the database the transaction starts from
+
     private final Map<Integer, GameData> updatedGames = new TreeMap<>();
 
     private final EntityIndexWriteTransaction<Player> playerTransaction;
@@ -62,6 +63,10 @@ public class DatabaseWriteTransaction extends DatabaseTransaction {
     private final EntityIndexWriteTransaction<Source> sourceTransaction;
     private final EntityIndexWriteTransaction<Team> teamTransaction;
     private final EntityIndexWriteTransaction<GameTag> gameTagTransaction;
+
+    public int version() {
+        return version;
+    }
 
     @Override
     public EntityIndexTransaction<Player> playerTransaction() {
@@ -112,6 +117,7 @@ public class DatabaseWriteTransaction extends DatabaseTransaction {
     public DatabaseWriteTransaction(@NotNull Database database) {
         super(DatabaseContext.DatabaseLock.UPDATE, database);
         this.currentGameCount = database.gameHeaderIndex().count();
+        this.version = database.context().currentVersion();
 
         this.playerTransaction = database.playerIndex().beginWriteTransaction();
         this.tournamentTransaction = database.tournamentIndex().beginWriteTransaction(database.tournamentExtraStorage());
@@ -313,7 +319,7 @@ public class DatabaseWriteTransaction extends DatabaseTransaction {
         int gameCount = database().gameHeaderIndex().count();
         // NOTE: This could be optimized with a low-level search
         while (gameId <= gameCount) {
-            long annotationOffset = database().getGame(gameId).getAnnotationOffset();
+            long annotationOffset = super.getGame(gameId).getAnnotationOffset();
             if (annotationOffset > 0) {
                 return annotationOffset;
             }
@@ -346,7 +352,7 @@ public class DatabaseWriteTransaction extends DatabaseTransaction {
         // Don't attempt to grab the write lock before ensuring that we still have the update lock
         ensureTransactionIsOpen();
 
-        database().context().acquireLock(DatabaseContext.DatabaseLock.WRITE);
+        acquireLock(DatabaseContext.DatabaseLock.WRITE);
         try {
             validateCommit();
 
@@ -359,7 +365,7 @@ public class DatabaseWriteTransaction extends DatabaseTransaction {
                     break;
                 }
                 GameData updatedGameData = updatedGames.get(gameId);
-                Game originalGame = database().getGame(gameId);
+                Game originalGame = super.getGame(gameId);
 
                 // Check if the new moves and annotations data will fit
                 // Note: We're actually checking if the data is less than or equal to the game it's replacing;
@@ -481,27 +487,43 @@ public class DatabaseWriteTransaction extends DatabaseTransaction {
             gameTagTransaction.commit();
 
             database().context().bumpVersion();
+
+            // Clear transaction, enabling further commits
+            clearChanges();
         } finally {
-            database().context().releaseLock(DatabaseContext.DatabaseLock.WRITE);
-            closeTransaction();
+            releaseLock(DatabaseContext.DatabaseLock.WRITE);
         }
     }
 
     /**
-     * Aborts the transaction and releases the update lock.
+     * Clears all changes in the transaction.
+     * The transaction will remain open.
      */
     public void rollback() {
+        ensureTransactionIsOpen();
+
+        clearChanges();
+
         playerTransaction.rollback();
         tournamentTransaction.rollback();
         annotatorTransaction.rollback();
         sourceTransaction.rollback();
         teamTransaction.rollback();
         gameTagTransaction.rollback();
-
-        if (!isClosed()) {
-            closeTransaction();
-        }
     }
+
+    private void clearChanges() {
+        this.updatedGames.clear();
+        this.currentGameCount = database().gameHeaderIndex().count();
+        this.version = database().context().currentVersion();
+        this.playerDelta.clear();
+        this.tournamentDelta.clear();
+        this.annotatorDelta.clear();
+        this.sourceDelta.clear();
+        this.teamDelta.clear();
+        this.gameTagDelta.clear();
+    }
+
 
     /**
      * Assigns entity id's to the game header builds based on data in the model.
@@ -604,6 +626,11 @@ public class DatabaseWriteTransaction extends DatabaseTransaction {
             this.hasEntity = hasEntity;
         }
 
+        private void clear() {
+            includes.clear();
+            excludes.clear();
+        }
+
         private void remove(int gameId, int entityId) {
             if (entityId < 0) {
                 return;
@@ -658,7 +685,7 @@ public class DatabaseWriteTransaction extends DatabaseTransaction {
                         GameHeaderIndex ix = DatabaseWriteTransaction.this.database().gameHeaderIndex();
                         newFirstGameId = 0;
                         for (int i = 1; i <= ix.count(); i++) {
-                            if (hasEntity.test(DatabaseWriteTransaction.this.database().getGame(i), entityId)) {
+                            if (hasEntity.test(DatabaseWriteTransaction.super.getGame(i), entityId)) {
                                 newFirstGameId = i;
                                 break;
                             }
