@@ -1,6 +1,7 @@
 package se.yarin.morphy.storage;
 
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import se.yarin.morphy.exceptions.MorphyException;
 import se.yarin.morphy.exceptions.MorphyIOException;
 import se.yarin.morphy.exceptions.MorphyInvalidDataException;
@@ -116,20 +117,29 @@ public class FileItemStorage<THeader, TItem> implements ItemStorage<THeader, TIt
 
     @Override
     public @NotNull List<TItem> getItems(int index, int count) {
-        if (count < 0 ) {
+        return getItems(index, count, null);
+    }
+
+    @Override
+    public @NotNull List<TItem> getItems(int index, int count, @Nullable ItemStorageFilter<TItem> filter) {
+        if (count < 0) {
             throw new IllegalArgumentException("count must be non-negative");
         }
 
-        ByteBuffer buf = ByteBuffer.allocate(serializer.itemSize(this.header) * count);
+        int serializedItemSize = serializer.itemSize(this.header);
+        ByteBuffer buf = ByteBuffer.allocate(serializedItemSize * count);
         try {
             long offset = serializer.itemOffset(this.header, index);
+            // If there's something weird with the input parameters, fall back to getting items
+            // in a slightly un-optimized way to ensure we get the same behaviour
+            // as multiple calls to getItem would yield
             if (offset < 0 || offset >= this.fileSize) {
-                return getItemsSimple(index, count);
+                return getItemsSimple(index, count, filter);
             } else {
                 channel.read(offset, buf);
                 if (buf.position() != buf.limit()) {
                     // Fewer bytes than expected were read
-                    return getItemsSimple(index, count);
+                    return getItemsSimple(index, count, filter);
                 }
                 buf.rewind();
             }
@@ -139,15 +149,26 @@ public class FileItemStorage<THeader, TItem> implements ItemStorage<THeader, TIt
 
         ArrayList<TItem> result = new ArrayList<>(count);
         for (int i = 0; i < count; i++) {
-            result.add(serializer.deserializeItem(index + i, buf));
+            if (filter == null) {
+                result.add(serializer.deserializeItem(index + i, buf));
+            } else {
+                if (filter.matchesSerialized(buf)) {
+                    TItem item = serializer.deserializeItem(index + i, buf);
+                    result.add(filter.matches(item) ? item : null);
+                } else {
+                    buf.position(buf.position() + serializedItemSize);
+                    result.add(null);
+                }
+            }
         }
         return result;
     }
 
-    private @NotNull List<TItem> getItemsSimple(int index, int count) {
+    private @NotNull List<TItem> getItemsSimple(int index, int count, @Nullable ItemStorageFilter<TItem> filter) {
         ArrayList<TItem> result = new ArrayList<>(count);
         for (int i = 0; i < count; i++) {
-            result.add(getItem(index + i));
+            TItem item = getItem(index + i);
+            result.add(filter == null || filter.matches(item) ? item : null);
         }
         return result;
     }

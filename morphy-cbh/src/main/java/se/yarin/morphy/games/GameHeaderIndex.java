@@ -12,10 +12,7 @@ import se.yarin.morphy.exceptions.MorphyIOException;
 import se.yarin.morphy.exceptions.MorphyInternalException;
 import se.yarin.morphy.exceptions.MorphyInvalidDataException;
 import se.yarin.morphy.exceptions.MorphyNotSupportedException;
-import se.yarin.morphy.storage.FileItemStorage;
-import se.yarin.morphy.storage.InMemoryItemStorage;
-import se.yarin.morphy.storage.ItemStorage;
-import se.yarin.morphy.storage.ItemStorageSerializer;
+import se.yarin.morphy.storage.*;
 import se.yarin.morphy.util.CBUtil;
 import se.yarin.util.ByteBufferUtil;
 
@@ -23,7 +20,6 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.file.OpenOption;
-import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
@@ -170,7 +166,7 @@ public class GameHeaderIndex implements ItemStorageSerializer<GameHeaderIndex.Pr
      * Gets a list of all game headers in the index.
      * @return a list of all GameHeaders
      */
-    public List<GameHeader> getAll() {
+    public @NotNull List<GameHeader> getAll() {
         return getRange(1, count() + 1);
     }
 
@@ -180,11 +176,23 @@ public class GameHeaderIndex implements ItemStorageSerializer<GameHeaderIndex.Pr
      * @param endId the id of the last game header (exclusive)
      * @return a list of game headers
      */
-    public List<GameHeader> getRange(int startId, int endId) {
+    public @NotNull List<GameHeader> getRange(int startId, int endId) {
+        return getRange(startId, endId, null);
+    }
+
+    /**
+     * Gets a list of all game headers that matches a filter between startId (inclusive) and endId (exclusive)
+     * @param startId the id of first game header (inclusive)
+     * @param endId the id of the last game header (exclusive)
+     * @param filter the filter, or null to match all game headers
+     * @return a list of game headers. If a filter is specified and a header doesn't match, that position
+     * in the list will have a null value.
+     */
+    public @NotNull List<GameHeader> getRange(int startId, int endId, @Nullable ItemStorageFilter<GameHeader> filter) {
         if (endId < startId) {
             throw new IllegalArgumentException(String.format("endId can't be less than startId (%d < %d)", endId, startId));
         }
-        return storage.getItems(startId, endId - startId);
+        return storage.getItems(startId, endId - startId, filter);
     }
 
     /**

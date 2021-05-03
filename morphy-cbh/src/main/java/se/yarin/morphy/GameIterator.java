@@ -5,6 +5,7 @@ import org.jetbrains.annotations.Nullable;
 import se.yarin.morphy.exceptions.MorphyInternalException;
 import se.yarin.morphy.games.ExtendedGameHeader;
 import se.yarin.morphy.games.GameHeader;
+import se.yarin.morphy.search.GameIteratorFilter;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -15,35 +16,48 @@ public class GameIterator implements Iterator<Game> {
     private static final int BATCH_SIZE = 1000;
 
     private final @NotNull DatabaseReadTransaction transaction;
+    private @Nullable final GameIteratorFilter filter;
     private @Nullable List<Game> batch = new ArrayList<>();
     private int batchPos, nextBatchStart;
 
-    public GameIterator(@NotNull DatabaseReadTransaction transaction, int startId) {
+    public GameIterator(@NotNull DatabaseReadTransaction transaction, int startId, @Nullable GameIteratorFilter filter) {
         this.transaction = transaction;
         this.nextBatchStart = startId;
+        this.filter = filter;
         getNextBatch();
     }
 
     private void getNextBatch() {
         transaction.ensureTransactionIsOpen();
 
-        int endIdExclusive = Math.min(transaction.database().count() + 1, nextBatchStart + BATCH_SIZE);
-        if (nextBatchStart >= endIdExclusive) {
-            batch = null;
-        } else {
-            List<GameHeader> gameHeaders = transaction.database().gameHeaderIndex().getRange(nextBatchStart, endIdExclusive);
-            List<ExtendedGameHeader> extendedGameHeaders = transaction.database().extendedGameHeaderStorage().getRange(nextBatchStart, endIdExclusive);
-            if (gameHeaders.size() != extendedGameHeaders.size()) {
-                throw new MorphyInternalException("Number of elements returned from the GameHeader and ExtendedGameHeader storage mismatches");
+        // Since we have an optional filter, we may have to try multiple times to get a new batch
+        // because the next batch might be empty
+        while (batch != null && batchPos >= batch.size()) {
+            int endIdExclusive = Math.min(transaction.database().count() + 1, nextBatchStart + BATCH_SIZE);
+            if (nextBatchStart >= endIdExclusive) {
+                batch = null;
+            } else {
+                List<GameHeader> gameHeaders = transaction.database().gameHeaderIndex().getRange(
+                        nextBatchStart, endIdExclusive, filter == null ? null : filter.gameHeaderFilter());
+                List<ExtendedGameHeader> extendedGameHeaders = transaction.database().extendedGameHeaderStorage().getRange(
+                        nextBatchStart, endIdExclusive, filter == null ? null : filter.extendedGameHeaderFilter());
+                if (gameHeaders.size() != extendedGameHeaders.size()) {
+                    throw new MorphyInternalException("Number of elements returned from the GameHeader and ExtendedGameHeader storage mismatches");
+                }
+                ArrayList<Game> games = new ArrayList<>(gameHeaders.size());
+                for (int i = 0; i < gameHeaders.size(); i++) {
+                    GameHeader header = gameHeaders.get(i);
+                    ExtendedGameHeader extendedHeader = extendedGameHeaders.get(i);
+                    // null values mean it didn't match the filter
+                    if (header != null && extendedHeader != null) {
+                        games.add(new Game(transaction.database(), header, extendedHeader));
+                    }
+                }
+                this.batch = games;
+                nextBatchStart = endIdExclusive;
+                batchPos = 0;
             }
-            ArrayList<Game> games = new ArrayList<>(gameHeaders.size());
-            for (int i = 0; i < gameHeaders.size(); i++) {
-                games.add(new Game(transaction.database(), gameHeaders.get(i), extendedGameHeaders.get(i)));
-            }
-            this.batch = games;
-            nextBatchStart = endIdExclusive;
         }
-        batchPos = 0;
     }
 
     @Override

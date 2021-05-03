@@ -1,6 +1,7 @@
 package se.yarin.morphy.storage;
 
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import se.yarin.morphy.exceptions.MorphyIOException;
 
 import java.util.List;
@@ -64,6 +65,19 @@ public interface ItemStorage<THeader, TItem> {
      * @throws MorphyIOException if an IO error occurred when reading the data
      */
     @NotNull List<TItem> getItems(int index, int count);
+
+    /**
+     * Gets a range of items from the storage that matches the given filter
+     * If any index in the range is invalid, {@link IllegalArgumentException} should be thrown, unless
+     * the storage is opened in non-strict (safe) mode, in which case empty items can be returned.
+     * @param index the id of the first item
+     * @param count the number of items to return
+     * @param filter the filter to match items against
+     * @return a list of items. Will always contain count items; non-matching items will have null values
+     * @throws IllegalArgumentException if any index in the range points to an item outside of the storage and the storage is open in strict mode
+     * @throws MorphyIOException if an IO error occurred when reading the data
+     */
+    @NotNull List<TItem> getItems(int index, int count, @Nullable ItemStorageFilter<TItem> filter);
 
     /**
      * Closes the estorage

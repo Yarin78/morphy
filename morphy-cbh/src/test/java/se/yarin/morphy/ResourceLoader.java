@@ -128,4 +128,13 @@ public class ResourceLoader {
         }
     }
 
+    public static Database openWorldChDatabaseInMemory() {
+        try {
+            File file = ResourceLoader.materializeDatabaseStream(Database.class, "database/World-ch", "World-ch");
+            return Database.open(file, DatabaseMode.IN_MEMORY);
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to open World-ch test database");
+        }
+    }
+
 }

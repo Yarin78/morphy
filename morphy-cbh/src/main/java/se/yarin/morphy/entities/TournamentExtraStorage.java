@@ -81,7 +81,7 @@ public class TournamentExtraStorage implements ItemStorageSerializer<TournamentE
     public static TournamentExtraStorage open(@NotNull File file, @NotNull DatabaseMode mode, @Nullable DatabaseContext context) throws IOException {
         if (mode == DatabaseMode.IN_MEMORY) {
             TournamentExtraStorage source = open(file, DatabaseMode.READ_ONLY, context);
-            TournamentExtraStorage target = new TournamentExtraStorage();
+            TournamentExtraStorage target = new TournamentExtraStorage(context);
             source.copyEntities(target);
             return target;
         }

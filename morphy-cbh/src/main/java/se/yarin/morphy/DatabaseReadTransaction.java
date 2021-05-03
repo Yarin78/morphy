@@ -1,7 +1,9 @@
 package se.yarin.morphy;
 
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import se.yarin.morphy.entities.*;
+import se.yarin.morphy.search.GameIteratorFilter;
 
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
@@ -67,7 +69,7 @@ public class DatabaseReadTransaction extends DatabaseTransaction {
      * @return an iterable of all games
      */
     public @NotNull Iterable<Game> iterable() {
-        return iterable(0);
+        return iterable(1);
     }
 
     /**
@@ -76,7 +78,17 @@ public class DatabaseReadTransaction extends DatabaseTransaction {
      * @return an iterable of all games
      */
     public @NotNull Iterable<Game> iterable(int startId) {
-        return () -> new GameIterator(this, startId);
+        return iterable(startId, null);
+    }
+
+    /**
+     * Returns an iterable of all games matching the given filter in the index, sorted by id.
+     * @param startId the first id in the iterable
+     * @param filter a search filter; null will return all games
+     * @return an iterable of all games
+     */
+    public @NotNull Iterable<Game> iterable(int startId, @Nullable GameIteratorFilter filter) {
+        return () -> new GameIterator(this, startId, filter);
     }
 
 
@@ -95,5 +107,15 @@ public class DatabaseReadTransaction extends DatabaseTransaction {
      */
     public @NotNull Stream<Game> stream(int startId) {
         return StreamSupport.stream(iterable(startId).spliterator(), false);
+    }
+
+    /**
+     * Returns a stream of all games matching the given filter in the index, sorted by id.
+     * @param startId the first id in the stream
+     * @param filter a search filter; null will return all games
+     * @return a stream of all games
+     */
+    public @NotNull Stream<Game> stream(int startId, @Nullable GameIteratorFilter filter) {
+        return StreamSupport.stream(iterable(startId, filter).spliterator(), false);
     }
 }

@@ -84,6 +84,11 @@ public class InMemoryItemStorage<THeader, TItem> implements ItemStorage<THeader,
 
     @Override
     public @NotNull List<TItem> getItems(int index, int count) {
+        return getItems(index, count, null);
+    }
+
+    @Override
+    public @NotNull List<TItem> getItems(int index, int count, @Nullable ItemStorageFilter<TItem> filter) {
         if (count < 0 ) {
             throw new IllegalArgumentException("count must be non-negative");
         }
@@ -92,23 +97,26 @@ public class InMemoryItemStorage<THeader, TItem> implements ItemStorage<THeader,
             index--;
         }
 
-        if (index < 0 || index + count - 1 >= items.size()) {
-            // Some items that we want to get is outside the range
+        if (index < 0 || index + count - 1 >= items.size() || filter != null) {
+            // Some items that we want to get is outside the range or we have a filter
             ArrayList<TItem> result = new ArrayList<>(count);
             for (int i = 0; i < count; i++) {
                 int j = index + i;
+                TItem item;
                 if (j < 0 || j >= items.size()) {
                     if (emptyItem == null) {
                         throw new IllegalArgumentException(String.format("Tried to get item with id %d but InMemoryStorage only has %d items",
                                 j + (oneIndexed ? 1 : 0), this.items.size()));
                     }
-                    result.add(emptyItem);
+                    item = emptyItem;
                 } else {
-                    result.add(items.get(j));
+                    item = items.get(j);
                 }
+                result.add(filter == null || filter.matches(item) ? item : null);
             }
             return result;
         }
+        // Fast unfiltered version; just return a sublist
         return new ArrayList<>(items.subList(index, index + count));
     }
 

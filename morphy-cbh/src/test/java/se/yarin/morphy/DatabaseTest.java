@@ -45,6 +45,12 @@ public class DatabaseTest {
     }
 
     @Test
+    public void openDatabaseInMemory() {
+        // Ensures the context is the same in the newly opened database
+        ResourceLoader.openWorldChDatabaseInMemory();
+    }
+
+    @Test
     public void openVeryOldDatabaseInMemory() throws IOException {
         // Open a database with only the minimum files; make sure no new files are created
         File file = ResourceLoader.materializeDatabaseStream(getClass(), "database/veryold", "Mate2");

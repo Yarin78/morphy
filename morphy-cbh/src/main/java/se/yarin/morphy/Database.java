@@ -8,6 +8,7 @@ import se.yarin.chess.GameModel;
 import se.yarin.morphy.entities.*;
 import se.yarin.morphy.exceptions.MorphyException;
 import se.yarin.morphy.games.*;
+import se.yarin.morphy.search.GameIteratorFilter;
 import se.yarin.morphy.text.TextModel;
 import se.yarin.morphy.util.CBUtil;
 
@@ -350,6 +351,26 @@ public class Database implements EntityRetriever {
     public @NotNull Game getGame(int gameId) {
         try (var txn = new DatabaseReadTransaction(this)) {
             return txn.getGame(gameId);
+        }
+    }
+
+    /**
+     * Gets all games in the database
+     * If the database is large, use the iterable options in DatabaseReadTransaction instead.
+     * @return a list of all games in the database, ordered by id
+     */
+    public @NotNull List<Game> getGames() {
+        return getGames(null);
+    }
+
+    /**
+     * Gets all games in the database matching a filter by doing a sequence scan.
+     * Consider using the GameSearcher instead for more performant game searches.
+     * @return a list of all games in the database matching the filter, ordered by id
+     */
+    public @NotNull List<Game> getGames(@Nullable GameIteratorFilter filter) {
+        try (var txn = new DatabaseReadTransaction(this)) {
+            return txn.stream(1, filter).collect(Collectors.toList());
         }
     }
 
