@@ -102,6 +102,10 @@ public class ExtendedGameHeaderStorage implements ItemStorageSerializer<Extended
         return prolog;
     }
 
+    public ExtProlog prolog() {
+        return storage.getHeader();
+    }
+
     int getStorageVersion() {
         return storage.getHeader().version();
     }

@@ -5,7 +5,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import se.yarin.morphy.ResourceLoader;
-import se.yarin.morphy.games.GameIndex;
+import se.yarin.morphy.games.GameHeaderIndex;
 
 import java.io.File;
 import java.io.IOException;
@@ -25,7 +25,7 @@ public class TeamTest {
     public void setupEntityTest() throws IOException {
         teamIndexFile = ResourceLoader.materializeStream(
                 "entity_test",
-                GameIndex.class.getResourceAsStream("entity_test.cbe"),
+                GameHeaderIndex.class.getResourceAsStream("entity_test.cbe"),
                 ".cbe");
     }
 

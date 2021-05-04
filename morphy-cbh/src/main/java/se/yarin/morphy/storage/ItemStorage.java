@@ -41,7 +41,7 @@ public interface ItemStorage<THeader, TItem> {
      * @param index the id of the item
      * @return an item
      * @throws IllegalArgumentException if the index points to an item outside of the storage and the storage is open in strict mode
-     * @throws MorphyIOException if an IO error occurred when reading data frmo IO
+     * @throws MorphyIOException if an IO error occurred when reading data from IO
      */
     @NotNull TItem getItem(int index);
 

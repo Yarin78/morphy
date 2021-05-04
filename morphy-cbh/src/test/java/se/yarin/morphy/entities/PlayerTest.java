@@ -8,7 +8,7 @@ import se.yarin.morphy.DatabaseMode;
 import se.yarin.morphy.ResourceLoader;
 import se.yarin.morphy.exceptions.MorphyIOException;
 import se.yarin.morphy.exceptions.MorphyNotSupportedException;
-import se.yarin.morphy.games.GameIndex;
+import se.yarin.morphy.games.GameHeaderIndex;
 
 import java.io.File;
 import java.io.IOException;
@@ -29,11 +29,11 @@ public class PlayerTest {
     public void setupEntityTest() throws IOException {
         playerIndexFile = ResourceLoader.materializeStream(
                 "entity_test",
-                GameIndex.class.getResourceAsStream("entity_test.cbp"),
+                GameHeaderIndex.class.getResourceAsStream("entity_test.cbp"),
                 ".cbp");
         playerIndexSmallHeaderFile = ResourceLoader.materializeStream(
                 "small_header",
-                GameIndex.class.getResourceAsStream("small_header.cbp"),
+                GameHeaderIndex.class.getResourceAsStream("small_header.cbp"),
                 ".cbp");
     }
 

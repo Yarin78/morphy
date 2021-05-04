@@ -43,7 +43,8 @@ public abstract class DatabaseTransaction extends TransactionBase implements Ent
         }
         GameHeader gameHeader = database.gameHeaderIndex().getGameHeader(gameId);
         ExtendedGameHeaderStorage storage = database.extendedGameHeaderStorage();
-        // TODO: ext storage should either be empty (if cbj file is missing) or hold enough items
+        // We've already verified when opening the database that it's okay to fill out with empty extended headers
+        // if they are missing entirely or just fewer
         ExtendedGameHeader extendedGameHeader = gameId <= storage.count() ? storage.get(gameId) : ExtendedGameHeader.empty(gameHeader);
 
         return new Game(database, gameHeader, extendedGameHeader);

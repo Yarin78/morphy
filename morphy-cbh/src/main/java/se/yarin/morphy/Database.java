@@ -7,6 +7,7 @@ import org.slf4j.LoggerFactory;
 import se.yarin.chess.GameModel;
 import se.yarin.morphy.entities.*;
 import se.yarin.morphy.exceptions.MorphyException;
+import se.yarin.morphy.exceptions.MorphyInvalidDataException;
 import se.yarin.morphy.games.*;
 import se.yarin.morphy.search.GameIteratorFilter;
 import se.yarin.morphy.text.TextModel;
@@ -229,7 +230,7 @@ public class Database implements EntityRetriever {
 
         if (mode == DatabaseMode.READ_WRITE) {
             // TODO: Make simple validation that all essential files exist and have size > 0
-            // before attempting anything
+            // before attempting anything, and that cbj file contains correct number of headers
             // Add context?
             ExtendedGameHeaderStorage.upgrade(file);
             PlayerIndex.upgrade(CBUtil.fileWithExtension(file, ".cbp"));
@@ -268,6 +269,18 @@ public class Database implements EntityRetriever {
                 : new TournamentExtraStorage(context);
         TeamIndex teamIndex = cbeFile.exists() ? TeamIndex.open(cbeFile, mode, context) : new TeamIndex(context);
         GameTagIndex gameTagIndex = cblFile.exists() ? GameTagIndex.open(cblFile, mode, context) : new GameTagIndex(context);
+
+        // TODO: Move this to constructor, add mode to DatabaseContext
+        int headerCount = gameHeaderIndex.count(), extHeaderCount = extendedGameHeaderStorage.count();
+        boolean mismatch = switch (mode) {
+            case READ_WRITE -> headerCount != extHeaderCount;
+            case READ_ONLY, IN_MEMORY -> headerCount != extHeaderCount && extHeaderCount > 0;
+            case READ_REPAIR -> false;
+        };
+        if (mismatch) {
+            throw new MorphyInvalidDataException(String.format("The number of headers mismatch in the cbh and cbj files mismatch (%d != %d)",
+                    headerCount, extHeaderCount));
+        }
 
         return new Database(context, gameHeaderIndex, extendedGameHeaderStorage, moveRepository, annotationRepository,
                 playerIndex, tournamentIndex, tournamentExtraStorage, annotatorIndex, sourceIndex, teamIndex, gameTagIndex);

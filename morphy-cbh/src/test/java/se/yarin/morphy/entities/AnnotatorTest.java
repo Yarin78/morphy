@@ -6,7 +6,6 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import se.yarin.morphy.Database;
 import se.yarin.morphy.ResourceLoader;
-import se.yarin.morphy.games.GameIndex;
 
 import java.io.File;
 import java.io.IOException;

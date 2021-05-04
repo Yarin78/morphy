@@ -4,7 +4,7 @@ import org.junit.Test;
 import se.yarin.chess.Date;
 import se.yarin.morphy.DatabaseMode;
 import se.yarin.morphy.ResourceLoader;
-import se.yarin.morphy.games.GameIndex;
+import se.yarin.morphy.games.GameHeader;
 
 import java.io.File;
 import java.io.IOException;
@@ -116,7 +116,7 @@ public class TournamentExtraTest {
 
     @Test
     public void getItemFromOlderVersion() throws IOException {
-        File file = ResourceLoader.materializeDatabaseStream(GameIndex.class, "upgradable", List.of(".cbtt"));
+        File file = ResourceLoader.materializeDatabaseStream(GameHeader.class, "upgradable", List.of(".cbtt"));
         TournamentExtraStorage storage = TournamentExtraStorage.open(file, DatabaseMode.READ_ONLY, null);
         assertEquals(2, storage.getStorageVersion());
 
@@ -126,7 +126,7 @@ public class TournamentExtraTest {
 
     @Test
     public void testUpgradeStorageVersion() throws IOException {
-        File oldStorageFile = ResourceLoader.materializeDatabaseStream(GameIndex.class, "upgradable", List.of(".cbtt"));
+        File oldStorageFile = ResourceLoader.materializeDatabaseStream(GameHeader.class, "upgradable", List.of(".cbtt"));
         TournamentExtraHeader oldHeader = TournamentExtraStorage.peekHeader(oldStorageFile);
         assertEquals(2, oldHeader.version());
         int numRecords = oldHeader.highestIndex() + 1;

@@ -7,6 +7,7 @@ import org.junit.rules.TemporaryFolder;
 import se.yarin.chess.GameModel;
 import se.yarin.morphy.entities.Player;
 import se.yarin.morphy.entities.Tournament;
+import se.yarin.morphy.exceptions.MorphyInvalidDataException;
 import se.yarin.morphy.games.annotations.ImmutableTextAfterMoveAnnotation;
 import se.yarin.morphy.util.CBUtil;
 import se.yarin.morphy.validation.EntityStatsValidator;
@@ -112,6 +113,21 @@ public class DatabaseTest {
         assertEquals(numFiles + 1, countDatabaseFiles(file));  // the .cbtt file got created
         assertTrue(oldFileSize < CBUtil.fileWithExtension(file, ".cbj").length());
         assertTrue(CBUtil.fileWithExtension(file, ".cbtt").exists());
+    }
+
+
+    @Test(expected = MorphyInvalidDataException.class)
+    public void getGameWithShorterExtendedHeaderStrict() throws IOException {
+        // cbj file exists but contains fewer games than the cbh file
+        // Database won't even open
+        File cbh_cbj = ResourceLoader.materializeDatabaseStream(Database.class, "database/shorter_cbj_test", "shorter_cbj_test");
+        Database.open(cbh_cbj, DatabaseMode.READ_ONLY);
+    }
+
+    @Test(expected = MorphyInvalidDataException.class)
+    public void getGameAfterOpenInMemoryWithShorterExtendedHeaders() throws IOException {
+        File cbh_cbj = ResourceLoader.materializeDatabaseStream(Database.class, "database/shorter_cbj_test", "shorter_cbj_test");
+        Database.open(cbh_cbj, DatabaseMode.IN_MEMORY);
     }
 
     @Test
