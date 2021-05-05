@@ -171,6 +171,18 @@ public class GameHeaderIndex implements ItemStorageSerializer<GameHeaderIndex.Pr
     }
 
     /**
+     * Gets a list of all game headers matching a filter in the index.
+     * The filter is applied on the serialized data, making this operation fast.
+     * @param filter the filter, or null to match all game headers
+     * @return a list of game headers. If a header doesn't match the filter, that position
+     * in the list will have a null value. This is to allow easy zip join with
+     * {@link ExtendedGameHeaderStorage#getFiltered(ItemStorageFilter)}
+     */
+    public @NotNull List<GameHeader> getFiltered(@Nullable ItemStorageFilter<GameHeader> filter) {
+        return getRange(1, count() + 1, filter);
+    }
+
+    /**
      * Gets a list of all game headers between startId (inclusive) and endId (exclusive)
      * @param startId the id of first game header (inclusive)
      * @param endId the id of the last game header (exclusive)

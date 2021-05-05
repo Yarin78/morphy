@@ -1,5 +1,6 @@
-package se.yarin.morphy.search;
+package se.yarin.morphy.games.filters;
 
+import org.jetbrains.annotations.NotNull;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -7,6 +8,10 @@ import org.junit.rules.TemporaryFolder;
 import se.yarin.chess.Date;
 import se.yarin.morphy.Database;
 import se.yarin.morphy.ResourceLoader;
+import se.yarin.morphy.games.GameHeader;
+import se.yarin.morphy.storage.ItemStorageFilter;
+
+import java.util.Objects;
 
 import static org.junit.Assert.assertEquals;
 
@@ -40,15 +45,19 @@ public class DateRangeFilterTest {
         assertEquals(Date.unset(), df4.getToDate());
     }
 
+    private int countMatches(@NotNull Database database, @NotNull ItemStorageFilter<GameHeader> filter) {
+        return (int) database.gameHeaderIndex().getFiltered(filter).stream().filter(Objects::nonNull).count();
+    }
+
     @Test
     public void testFromRange() {
         DateRangeFilter filter = new DateRangeFilter("1950-");
 
         // Non-serialized filtering
-        assertEquals(649, databaseInMemory.getGames(filter).size());
+        assertEquals(649, countMatches(databaseInMemory, filter));
 
         // Serialized filtering
-        assertEquals(649, database.getGames(filter).size());
+        assertEquals(649, countMatches(database, filter));
     }
 
     @Test
@@ -56,9 +65,9 @@ public class DateRangeFilterTest {
         DateRangeFilter filter = new DateRangeFilter("1921-04-1927-10-13");
 
         // Non-serialized filtering
-        assertEquals(21, databaseInMemory.getGames(filter).size());
+        assertEquals(21, countMatches(databaseInMemory, filter));
 
         // Serialized filtering
-        assertEquals(21, database.getGames(filter).size());
+        assertEquals(21, countMatches(database, filter));
     }
 }

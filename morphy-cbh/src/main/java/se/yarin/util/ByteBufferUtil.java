@@ -134,6 +134,10 @@ public final class ByteBufferUtil {
         return buf.get() & 0xff;
     }
 
+    public static int getUnsignedByte(ByteBuffer buf, int offset) {
+        return buf.get(buf.position() + offset) & 0xff;
+    }
+
     public static int getUnsignedByte(byte[] buf, int offset) {
         return buf[offset] & 0xff;
     }
@@ -153,6 +157,11 @@ public final class ByteBufferUtil {
         return (b1 << 8) + b2;
     }
 
+    public static int getUnsignedShortB(ByteBuffer buf, int offset) {
+        int b1 = getUnsignedByte(buf, offset), b2 = getUnsignedByte(buf, offset + 1);
+        return (b1 << 8) + b2;
+    }
+
     public static short getSignedShortB(ByteBuffer buf) {
         int val = getUnsignedShortB(buf);
         if (val >= (1 << 15));
@@ -162,6 +171,11 @@ public final class ByteBufferUtil {
 
     public static int getUnsigned24BitB(ByteBuffer buf) {
         int b1 = getUnsignedByte(buf), b2 = getUnsignedByte(buf), b3 = getUnsignedByte(buf);
+        return (b1 << 16) + (b2 << 8) + b3;
+    }
+
+    public static int getUnsigned24BitB(ByteBuffer buf, int offset) {
+        int b1 = getUnsignedByte(buf, offset), b2 = getUnsignedByte(buf, offset + 1), b3 = getUnsignedByte(buf, offset + 2);
         return (b1 << 16) + (b2 << 8) + b3;
     }
 
@@ -180,6 +194,12 @@ public final class ByteBufferUtil {
     public static int getIntB(ByteBuffer buf) {
         int b1 = getUnsignedByte(buf), b2 = getUnsignedByte(buf);
         int b3 = getUnsignedByte(buf), b4 = getUnsignedByte(buf);
+        return (b1 << 24) + (b2 << 16) + (b3 << 8) + b4;
+    }
+
+    public static int getIntB(ByteBuffer buf, int offset) {
+        int b1 = getUnsignedByte(buf, offset), b2 = getUnsignedByte(buf, offset + 1);
+        int b3 = getUnsignedByte(buf, offset + 2), b4 = getUnsignedByte(buf, offset + 3);
         return (b1 << 24) + (b2 << 16) + (b3 << 8) + b4;
     }
 

@@ -1,12 +1,13 @@
-package se.yarin.morphy.search;
+package se.yarin.morphy.games.filters;
 
 import org.jetbrains.annotations.NotNull;
 import se.yarin.morphy.games.GameHeader;
 import se.yarin.morphy.storage.ItemStorageFilter;
+import se.yarin.util.ByteBufferUtil;
 
 import java.nio.ByteBuffer;
 
-public class GameHeaderGameFilter implements ItemStorageFilter<GameHeader> {
+public class GameStorageFilter implements ItemStorageFilter<GameHeader> {
     @Override
     public boolean matches(@NotNull GameHeader gameHeader) {
         return !gameHeader.guidingText();
@@ -14,6 +15,10 @@ public class GameHeaderGameFilter implements ItemStorageFilter<GameHeader> {
 
     @Override
     public boolean matchesSerialized(@NotNull ByteBuffer buf) {
-        return (buf.get(0) & 2) == 0;
+        return isGame(buf);
+    }
+
+    static boolean isGame(@NotNull ByteBuffer buf) {
+        return (ByteBufferUtil.getUnsignedByte(buf, 0) & 2) == 0;
     }
 }

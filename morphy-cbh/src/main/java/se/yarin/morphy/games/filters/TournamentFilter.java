@@ -1,0 +1,44 @@
+package se.yarin.morphy.games.filters;
+
+import org.jetbrains.annotations.NotNull;
+import se.yarin.morphy.entities.Tournament;
+import se.yarin.morphy.games.GameHeader;
+import se.yarin.morphy.storage.ItemStorageFilter;
+import se.yarin.util.ByteBufferUtil;
+
+import java.nio.ByteBuffer;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.stream.Collectors;
+
+public class TournamentFilter implements ItemStorageFilter<GameHeader> {
+    private final @NotNull HashSet<Integer> tournamentIds;
+
+    public TournamentFilter(@NotNull Tournament tournament) {
+        this(Collections.singleton(tournament));
+    }
+
+    public TournamentFilter(@NotNull Collection<Tournament> tournaments) {
+        this.tournamentIds = tournaments.stream().map(Tournament::id).collect(Collectors.toCollection(HashSet::new));
+    }
+
+    @Override
+    public boolean matches(@NotNull GameHeader gameHeader) {
+        return tournamentIds.contains(gameHeader.tournamentId());
+    }
+
+    @Override
+    public boolean matchesSerialized(@NotNull ByteBuffer buf) {
+        int tournamentId;
+
+        if (GameStorageFilter.isGame(buf)) {
+            // Regular game
+            tournamentId = ByteBufferUtil.getUnsigned24BitB(buf, 15);
+        } else {
+            // Guiding text
+            tournamentId = ByteBufferUtil.getUnsigned24BitB(buf, 7);
+        }
+        return tournamentIds.contains(tournamentId);
+    }
+}

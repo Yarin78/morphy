@@ -1,4 +1,4 @@
-package se.yarin.morphy.search;
+package se.yarin.morphy.games.filters;
 
 import lombok.Getter;
 import lombok.NonNull;
@@ -7,14 +7,13 @@ import org.jetbrains.annotations.Nullable;
 import se.yarin.cbhlib.util.CBUtil;
 import se.yarin.chess.Date;
 import se.yarin.morphy.games.GameHeader;
-import se.yarin.morphy.storage.ItemStorageFilter;
 import se.yarin.util.ByteBufferUtil;
 
 import java.nio.ByteBuffer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class DateRangeFilter implements GameIteratorFilter {
+public class DateRangeFilter extends GameStorageFilter {
     private static final Pattern dateRangePattern = Pattern.compile("^(([0-9]{4})(-([0-9]{2})(-([0-9]{2}))?)?)?-(([0-9]{4})(-([0-9]{2})(-([0-9]{2}))?)?)?$");
 
     @Getter
@@ -64,27 +63,22 @@ public class DateRangeFilter implements GameIteratorFilter {
     }
 
     @Override
-    public @Nullable ItemStorageFilter<GameHeader> gameHeaderFilter() {
-        return new GameHeaderGameFilter() {
-            @Override
-            public boolean matches(@NotNull GameHeader gameHeader) {
-                return super.matches(gameHeader) && matches(gameHeader.playedDate());
-            }
+    public boolean matches(@NotNull GameHeader gameHeader) {
+        return super.matches(gameHeader) && matches(gameHeader.playedDate());
+    }
 
-            @Override
-            public boolean matchesSerialized(@NotNull ByteBuffer buf) {
-                return super.matchesSerialized(buf) && matches(CBUtil.decodeDate(ByteBufferUtil.getUnsigned24BitB(buf.slice(buf.position() + 24, 3))));
-            }
+    @Override
+    public boolean matchesSerialized(@NotNull ByteBuffer buf) {
+        return super.matchesSerialized(buf) && matches(CBUtil.decodeDate(ByteBufferUtil.getUnsigned24BitB(buf, 24)));
+    }
 
-            public boolean matches(@NotNull Date playedDate) {
-                if (!fromDate.isUnset() && fromDate.compareTo(playedDate) > 0) {
-                    return false;
-                }
-                if (!toDate.isUnset() && toDate.compareTo(playedDate) < 0) {
-                    return false;
-                }
-                return true;
-            }
-        };
+    public boolean matches(@NotNull Date playedDate) {
+        if (!fromDate.isUnset() && fromDate.compareTo(playedDate) > 0) {
+            return false;
+        }
+        if (!toDate.isUnset() && toDate.compareTo(playedDate) < 0) {
+            return false;
+        }
+        return true;
     }
 }

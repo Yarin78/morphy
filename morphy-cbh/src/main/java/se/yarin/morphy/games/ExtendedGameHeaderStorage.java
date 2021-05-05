@@ -219,6 +219,18 @@ public class ExtendedGameHeaderStorage implements ItemStorageSerializer<Extended
     }
 
     /**
+     * Gets a list of all extended game headers between startId (inclusive) and endId (exclusive).
+     * The filter is applied on the serialized data, making this operation fast.
+     * @param filter the filter, or null to match all extended game headers
+     * @return a list of extended game headers. If a header doesn't match the filter, that position
+     * in the list will have a null value. This is to allow easy zip join with
+     * {@link GameHeaderIndex#getFiltered(ItemStorageFilter)}
+     */
+    public @NotNull List<ExtendedGameHeader> getFiltered(@Nullable ItemStorageFilter<ExtendedGameHeader> filter) {
+        return getRange(1, count() + 1, filter);
+    }
+
+    /**
      * Gets a list of all extended game headers between startId (inclusive) and endId (exclusive)
      * @param startId the id of first game header (inclusive)
      * @param endId the id of the last game header (exclusive)
