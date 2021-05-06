@@ -1,6 +1,7 @@
 package se.yarin.morphy.text;
 
 import org.immutables.value.Value;
+import se.yarin.chess.Date;
 
 @Value.Immutable
 public abstract class TextHeaderModel {
@@ -10,8 +11,8 @@ public abstract class TextHeaderModel {
     }
 
     @Value.Default
-    public int tournamentYear() {
-        return 0;
+    public Date tournamentDate() {
+        return Date.unset();
     }
 
     @Value.Default

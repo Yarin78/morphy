@@ -422,9 +422,25 @@ public class Database implements EntityRetriever {
         return id;
     }
 
+    public int addText(@NotNull TextModel text) {
+        int id;
+        try (var txn = new DatabaseWriteTransaction(this)) {
+            id = txn.addText(text).id();
+            txn.commit();
+        }
+        return id;
+    }
+
     public void replaceGame(int gameId, @NotNull GameModel game) {
         try (var txn = new DatabaseWriteTransaction(this)) {
             txn.replaceGame(gameId, game);
+            txn.commit();
+        }
+    }
+
+    public void replaceText(int gameId, @NotNull TextModel text) {
+        try (var txn = new DatabaseWriteTransaction(this)) {
+            txn.replaceText(gameId, text);
             txn.commit();
         }
     }

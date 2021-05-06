@@ -10,6 +10,7 @@ import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * A model of a Text entry in a ChessBase database
@@ -38,16 +39,25 @@ public class TextContentsModel {
         this.unknown = 1;
     }
 
-    public TextContentsModel(int format,
-                             Map<TextLanguage, String> titles,
-                             Map<TextLanguage, String> contents,
-                             Map<TextLanguage, byte[]> formatting,
-                             int unknown) {
+    public TextContentsModel(
+            int format,
+            @NotNull Map<TextLanguage, String> titles,
+            @NotNull Map<TextLanguage, String> contents,
+            @NotNull Map<TextLanguage, byte[]> formatting,
+            int unknown) {
         this.format = format;  // 1 (old) or 3 (new)
         this.titles = titles;
         this.contents = contents;
         this.formatting = formatting;  // Only if format = 1
         this.unknown = unknown;
+    }
+
+    public @NotNull Set<TextLanguage> titleLanguages() {
+        return this.titles.keySet();
+    }
+
+    public @NotNull Set<TextLanguage> contentLanguages() {
+        return this.contents.keySet();
     }
 
     public static TextContentsModel deserialize(int gameId, ByteBuffer buf) throws MorphyMoveDecodingException {

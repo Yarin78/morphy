@@ -64,7 +64,7 @@ public class GameAdapter {
                 .round(header.round())
                 .subRound(header.round())
                 .tournament(tournament.title())
-                .tournamentYear(tournament.date().year())
+                .tournamentDate(tournament.date())
                 .source(source.title())
                 .annotator(annotator.name())
                 .build();
@@ -79,7 +79,6 @@ public class GameAdapter {
                 .contents(contents)
                 .build();
     }
-
 
     /**
      * Creates a mutable model of the game header
@@ -183,6 +182,13 @@ public class GameAdapter {
         setMovesGameData(gameHeader, extendedGameHeader, model.moves());
     }
 
+    public void setTextData(
+            @NotNull ImmutableGameHeader.Builder gameHeader,
+            @NotNull ImmutableExtendedGameHeader.Builder extendedGameHeader,
+            @NotNull TextModel model) {
+        setHeaderTextData(gameHeader, extendedGameHeader, model.header());
+    }
+
     public void setHeaderGameData(
             @NotNull ImmutableGameHeader.Builder gameHeader,
             @NotNull ImmutableExtendedGameHeader.Builder extendedGameHeader,
@@ -255,6 +261,25 @@ public class GameAdapter {
         extendedGameHeader
                 .finalMaterial(false) // TODO
                 .endgameInfo(EndgameInfo.empty()); // TODO
+    }
+
+    public void setHeaderTextData(
+            @NotNull ImmutableGameHeader.Builder gameHeader,
+            @NotNull ImmutableExtendedGameHeader.Builder extendedGameHeader,
+            @NotNull TextHeaderModel headerModel) {
+
+        gameHeader.guidingText(true);
+        if (headerModel.round() != 0) {
+            gameHeader.round(headerModel.round());
+        }
+        if (headerModel.subRound() != 0) {
+            gameHeader.subRound(headerModel.subRound());
+        }
+
+        extendedGameHeader
+            .creationTimestamp(0) // TODO
+            .lastChangedTimestamp(0) // TODO
+            .build();
     }
 
     private void collectStats(@NotNull GameMovesModel.Node node, @NotNull AnnotationStatistics stats) {

@@ -2,6 +2,10 @@ package se.yarin.morphy;
 
 import org.junit.Test;
 import se.yarin.chess.Date;
+import se.yarin.morphy.text.TextLanguage;
+import se.yarin.morphy.text.TextModel;
+
+import java.util.Set;
 
 import static org.junit.Assert.*;
 
@@ -13,6 +17,7 @@ public class DatabaseReadTransactionTest {
         try (DatabaseReadTransaction txn = new DatabaseReadTransaction(database)) {
             Game game = txn.getGame(10);
 
+            assertFalse(game.guidingText());
             assertEquals(database, game.database());
             assertEquals(10, game.id());
             assertEquals("Steinitz, William", game.white().getFullName());
@@ -26,8 +31,15 @@ public class DatabaseReadTransactionTest {
         Database database = ResourceLoader.openWorldChDatabase();
 
         try (DatabaseReadTransaction txn = new DatabaseReadTransaction(database)) {
+            String expected = "World-ch06 Lasker-Steinitz +10-2=5";
             Game text = txn.getGame(99);
-            // TODO: asserts
+            assertTrue(text.guidingText());
+            assertTrue(text.tournament().title().startsWith(expected));
+
+            TextModel model = text.getTextModel();
+            assertTrue(model.header().tournament().startsWith(expected));
+            assertEquals(Set.of(TextLanguage.GERMAN), model.contents().titleLanguages());
+            assertEquals(expected, model.contents().getTitle(TextLanguage.GERMAN));
         }
     }
 

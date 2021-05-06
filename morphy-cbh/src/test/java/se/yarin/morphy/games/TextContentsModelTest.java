@@ -2,6 +2,7 @@ package se.yarin.morphy.games;
 
 import org.junit.BeforeClass;
 import org.junit.Test;
+import se.yarin.chess.Date;
 import se.yarin.morphy.Database;
 import se.yarin.morphy.Game;
 import se.yarin.morphy.ResourceLoader;
@@ -67,12 +68,12 @@ public class TextContentsModelTest {
         Game game = textDatabase.getGame(7);
 
         TextContentsModel text = game.getTextModel().contents();
-        assertTrue(text.getTitle(TextLanguage.ENGLISH).equals("Staunton"));
-        assertTrue(text.getTitle(TextLanguage.GERMAN).equals("German title"));
-        assertTrue(text.getTitle(TextLanguage.FRENCH).equals("Fra title"));
-        assertTrue(text.getTitle(TextLanguage.SPANISH).equals("Esp title"));
-        assertTrue(text.getTitle(TextLanguage.ITALIAN).equals("Ita title"));
-        assertTrue(text.getTitle(TextLanguage.DUTCH).equals("Ned title"));
+        assertEquals("Staunton", text.getTitle(TextLanguage.ENGLISH));
+        assertEquals("German title", text.getTitle(TextLanguage.GERMAN));
+        assertEquals("Fra title", text.getTitle(TextLanguage.FRENCH));
+        assertEquals("Esp title", text.getTitle(TextLanguage.SPANISH));
+        assertEquals("Ita title", text.getTitle(TextLanguage.ITALIAN));
+        assertEquals("Ned title", text.getTitle(TextLanguage.DUTCH));
     }
 
     @Test
@@ -81,7 +82,7 @@ public class TextContentsModelTest {
 
         TextHeaderModel header = ImmutableTextHeaderModel.builder()
             .tournament("Rilton Cup")
-            .tournamentYear(2020)
+            .tournamentDate(new Date(2020, 1, 1))
             .annotator("Mårdell")
             .round(1)
             .build();
@@ -93,7 +94,8 @@ public class TextContentsModelTest {
 
         TextModel textModel = ImmutableTextModel.builder().header(header).contents(contents).build();
 
-        Game game = null; //database.addText(textModel);
+        int gameId = database.addText(textModel);
+        Game game = database.getGame(gameId);
 
         assertEquals(1, game.id());
         assertTrue(game.guidingText());

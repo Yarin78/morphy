@@ -5,6 +5,10 @@ import se.yarin.chess.Date;
 import se.yarin.chess.GameModel;
 import se.yarin.morphy.entities.*;
 import se.yarin.morphy.exceptions.MorphyInvalidDataException;
+import se.yarin.morphy.text.ImmutableTextHeaderModel;
+import se.yarin.morphy.text.ImmutableTextModel;
+import se.yarin.morphy.text.TextContentsModel;
+import se.yarin.morphy.text.TextModel;
 
 import java.util.Arrays;
 import java.util.List;
@@ -963,4 +967,32 @@ public class DatabaseWriteTransactionTest extends DatabaseTestSetup {
         new DatabaseWriteTransaction(db);
     }
 
+
+    @Test
+    public void addTextToDatabase() {
+        try (var txn = new DatabaseWriteTransaction(testBase)) {
+            TextContentsModel tcm = new TextContentsModel();
+            tcm.setTitle("title");
+            TextModel textModel = ImmutableTextModel.builder()
+                    .header(ImmutableTextHeaderModel.builder()
+                            .annotator("anno")
+                            .tournament("tour-with-text")
+                            .source("src")
+                            .round(5)
+                            .tournamentDate(new Date(2021, 5, 1))
+                            .build())
+                    .contents(tcm)
+                    .build();
+            txn.addText(textModel);
+            txn.commit();
+        }
+
+        assertEquals(16, testBase.count());
+        assertEquals(1, testBase.tournamentIndex().get(Tournament.of("tour-with-text", new Date(2021,5,1))).count());
+
+        Game game = testBase.getGame(16);
+        assertEquals(5, game.round());
+        assertEquals("anno", game.annotator().name());
+        assertEquals("src", game.source().title());
+    }
 }

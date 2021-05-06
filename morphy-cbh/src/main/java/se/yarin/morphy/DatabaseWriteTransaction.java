@@ -11,6 +11,8 @@ import se.yarin.morphy.exceptions.MorphyInvalidDataException;
 import se.yarin.morphy.exceptions.MorphyNotSupportedException;
 import se.yarin.morphy.games.*;
 import se.yarin.morphy.games.annotations.AnnotationsSerializer;
+import se.yarin.morphy.text.TextHeaderModel;
+import se.yarin.morphy.text.TextModel;
 
 import java.nio.ByteBuffer;
 import java.util.*;
@@ -220,7 +222,7 @@ public class DatabaseWriteTransaction extends DatabaseTransaction {
      * @param game the game to add (can be from the same or another database)
      * @return the added game
      */
-    public Game addGame(@NotNull Game game) {
+    public @NotNull Game addGame(@NotNull Game game) {
         return replaceGame(0, game);
     }
 
@@ -230,7 +232,7 @@ public class DatabaseWriteTransaction extends DatabaseTransaction {
      * @param game the game to replace with (can be from the same or another database)
      * @return the replaced game
      */
-    public Game replaceGame(int gameId, @NotNull Game game) {
+    public @NotNull Game replaceGame(int gameId, @NotNull Game game) {
         // We can use most of the metadata from the old game header
         ImmutableGameHeader.Builder header = ImmutableGameHeader.builder().from(game.header());
         ImmutableExtendedGameHeader.Builder extendedHeader = ImmutableExtendedGameHeader.builder().from(game.extendedHeader());
@@ -251,8 +253,17 @@ public class DatabaseWriteTransaction extends DatabaseTransaction {
      * @param model the model of the game to add
      * @return the added game
      */
-    public Game addGame(@NotNull GameModel model) {
+    public @NotNull Game addGame(@NotNull GameModel model) {
         return replaceGame(0, model);
+    }
+
+    /**
+     * Adds a new text to the transaction
+     * @param model the model of the text to add
+     * @return the added text
+     */
+    public @NotNull Game addText(@NotNull TextModel model) {
+        return replaceText(0, model);
     }
 
     /**
@@ -261,7 +272,7 @@ public class DatabaseWriteTransaction extends DatabaseTransaction {
      * @param model the model of the game to add
      * @return the replaced game
      */
-    public Game replaceGame(int gameId, @NotNull GameModel model) {
+    public @NotNull Game replaceGame(int gameId, @NotNull GameModel model) {
         ImmutableGameHeader.Builder header = ImmutableGameHeader.builder();
         ImmutableExtendedGameHeader.Builder extendedHeader = ImmutableExtendedGameHeader.builder();
 
@@ -277,12 +288,33 @@ public class DatabaseWriteTransaction extends DatabaseTransaction {
     }
 
     /**
+     * Replaces a text in the transaction
+     * @param gameId the id of the text to replace
+     * @param model the model of the text to add
+     * @return the replaced text
+     */
+    public @NotNull Game replaceText(int gameId, @NotNull TextModel model) {
+        ImmutableGameHeader.Builder header = ImmutableGameHeader.builder();
+        ImmutableExtendedGameHeader.Builder extendedHeader = ImmutableExtendedGameHeader.builder();
+
+        gameAdapter().setTextData(header, extendedHeader, model);
+        buildEntities(header, model.header());
+
+        return putGame(
+                gameId,
+                header,
+                extendedHeader,
+                model.contents().serialize(),
+                null);
+    }
+
+    /**
      * Internal method that adds/replaces a game in the transaction and updates the current state
      *
      * The move and annotations offsets that are set are not final; if needed, they will be adjusted
      * during commit if moves/annotations when replacing old games don't fit.
      */
-    Game putGame(
+    @NotNull Game putGame(
             int gameId,
             @NotNull ImmutableGameHeader.Builder gameHeaderBuilder,
             @NotNull ImmutableExtendedGameHeader.Builder extendedGameHeaderBuilder,
@@ -580,11 +612,29 @@ public class DatabaseWriteTransaction extends DatabaseTransaction {
         }
     }
 
+    /**
+     * Assigns entity id's to the game header builds based on data in the model.
+     * References to new entities will be created in their respective entity index transaction.
+     * @param header the game header being created
+     * @param headerModel the source data for the entities in the game being created
+     */
+    void buildEntities(
+            @NotNull ImmutableGameHeader.Builder header,
+            @NotNull TextHeaderModel headerModel) {
+        header
+            .whitePlayerId(-1)
+            .blackPlayerId(-1)
+            .tournamentId(tournamentTransaction.getOrCreate(Tournament.of(headerModel.tournament(), headerModel.tournamentDate())))
+            .annotatorId(annotatorTransaction.getOrCreate(Annotator.of(headerModel.annotator())))
+            .sourceId(sourceTransaction.getOrCreate(Source.of(headerModel.source())));
+    }
+
     public void buildEntities(
             @NotNull ImmutableGameHeader.Builder header,
             @NotNull ImmutableExtendedGameHeader.Builder extendedHeader,
             @NotNull Game game) {
 
+        // TODO: Implement this
         throw new MorphyNotSupportedException("not done yet");
     }
 

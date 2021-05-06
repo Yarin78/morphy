@@ -21,7 +21,6 @@ import java.util.Calendar;
  * Class that represents a game that is bound to a {@link Database}.
  */
 public class Game {
-    // TODO: This should only represent a game; Text should be a separate class
     private static final Logger log = LoggerFactory.getLogger(Game.class);
 
     private final @NotNull Database database;
