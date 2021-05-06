@@ -1,9 +1,9 @@
 package se.yarin.morphy;
 
 import org.junit.Test;
-import se.yarin.chess.Date;
-import se.yarin.chess.GameModel;
+import se.yarin.chess.*;
 import se.yarin.morphy.entities.*;
+import se.yarin.morphy.entities.Player;
 import se.yarin.morphy.exceptions.MorphyInvalidDataException;
 import se.yarin.morphy.text.ImmutableTextHeaderModel;
 import se.yarin.morphy.text.ImmutableTextModel;
@@ -16,6 +16,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.function.Consumer;
 
 import static org.junit.Assert.*;
+import static se.yarin.chess.Chess.*;
 
 public class DatabaseWriteTransactionTest extends DatabaseTestSetup {
 
@@ -88,6 +89,33 @@ public class DatabaseWriteTransactionTest extends DatabaseTestSetup {
 
         assertEquals(20, wastedMoveBytes());
         assertEquals(1500, wastedAnnotationBytes());
+    }
+
+    @Test
+    public void resolveEntityInGameAfterChangingEntityInTransaction() {
+        assertEquals("Carlsen", testBase.getPlayer(0).getFullName());
+        assertEquals("Carlsen", testBase.getGame(1).white().getFullName());
+
+        try (var txn = new DatabaseWriteTransaction(testBase)) {
+            txn.updatePlayerById(0, Player.ofFullName("Carlsen, Magnus"));
+            assertEquals("Carlsen, Magnus", txn.getGame(1).white().getFullName());
+
+            txn.commit();
+        }
+    }
+
+    @Test
+    public void resolveEntityInUpdatedGameAfterChangingEntityInTransaction() {
+        assertEquals("Carlsen", testBase.getPlayer(0).getFullName());
+        assertEquals("Carlsen", testBase.getGame(1).white().getFullName());
+
+        try (var txn = new DatabaseWriteTransaction(testBase)) {
+            putTestGame(txn, 1, "Carlsen - So", "tour1", null, null, null, null, 90, 0, 15, 0);
+            txn.updatePlayerById(0, Player.ofFullName("Carlsen, Magnus"));
+            assertEquals("Carlsen, Magnus", txn.getGame(1).white().getFullName());
+
+            txn.commit();
+        }
     }
 
     @Test
@@ -465,6 +493,61 @@ public class DatabaseWriteTransactionTest extends DatabaseTestSetup {
         }
 
         assertEquals("foo", database.getGame(1).white().getFullName());
+    }
+
+    @Test
+    public void addGameDirectlyFromSameDatabase() {
+        Game game1 = testBase.getGame(1);
+        try (var txn = new DatabaseWriteTransaction(testBase)) {
+            txn.addGame(game1);
+            txn.commit();
+        }
+        assertEquals(16, testBase.count());
+        Game game16 = testBase.getGame(16);
+        assertEquals("Carlsen", game16.white().getFullName());
+        assertEquals("Ding", game16.black().getFullName());
+        assertEquals(game1.getMovesBlob(), game16.getMovesBlob());
+    }
+
+    @Test
+    public void addGameDirectlyFromDifferentDatabase() {
+        Database db = new Database();
+        try (var txn = new DatabaseWriteTransaction(db)) {
+            GameHeaderModel hm = new GameHeaderModel();
+            hm.setWhite("Nepo");
+            hm.setBlack("Aronian");
+            hm.setEvent("tour3");
+            hm.setEventDate(new Date(2021, 4, 30));
+            hm.setEventEndDate(new Date(2021, 5, 10));
+            hm.setWhiteTeam("red");
+            hm.setBlackTeam("blue");
+            hm.setGameTag("my tag");
+            hm.setDate(new Date(2021, 5, 1));
+            hm.setRound(7);
+            hm.setResult(GameResult.WHITE_WINS);
+            GameMovesModel moves = new GameMovesModel();
+            moves.root().addMove(E2, E4).addMove(E7, E5);
+            txn.addGame(new GameModel(hm, moves));
+            txn.commit();
+        }
+        Game srcGame = db.getGame(1);
+        try (var txn = new DatabaseWriteTransaction(testBase)) {
+            txn.addGame(srcGame);
+            txn.commit();
+        }
+        assertEquals(16, testBase.count());
+        Game game16 = testBase.getGame(16);
+        assertEquals("Nepo", game16.white().getFullName());
+        assertEquals("Aronian", game16.black().getFullName());
+        assertEquals("red", game16.whiteTeam().title());
+        assertEquals("blue", game16.blackTeam().title());
+        assertEquals("my tag", game16.gameTag().englishTitle());
+        assertEquals(new Date(2021, 5, 1), game16.playedDate());
+        assertEquals(new Date(2021, 4, 30), game16.tournament().date());
+        assertEquals(new Date(2021, 5, 10), game16.tournamentExtra().endDate());
+        assertEquals(7, game16.round());
+        assertEquals(GameResult.WHITE_WINS, game16.result());
+        assertEquals("1.e4 e5", game16.getModel().moves().root().toSAN());
     }
 
     @Test(expected = MorphyInvalidDataException.class)
@@ -984,6 +1067,43 @@ public class DatabaseWriteTransactionTest extends DatabaseTestSetup {
                     .contents(tcm)
                     .build();
             txn.addText(textModel);
+            txn.commit();
+        }
+
+        assertEquals(16, testBase.count());
+        assertEquals(1, testBase.tournamentIndex().get(Tournament.of("tour-with-text", new Date(2021,5,1))).count());
+
+        Game game = testBase.getGame(16);
+        assertEquals(5, game.round());
+        assertEquals("anno", game.annotator().name());
+        assertEquals("src", game.source().title());
+    }
+
+    @Test
+    public void addTextDirectlyFromOtherDatabase() {
+        Database db = new Database();
+        try (var txn = new DatabaseWriteTransaction(db)) {
+            TextContentsModel tcm = new TextContentsModel();
+            tcm.setTitle("title");
+            TextModel textModel = ImmutableTextModel.builder()
+                    .header(ImmutableTextHeaderModel.builder()
+                            .annotator("anno")
+                            .tournament("tour-with-text")
+                            .source("src")
+                            .round(5)
+                            .tournamentDate(new Date(2021, 5, 1))
+                            .build())
+                    .contents(tcm)
+                    .build();
+            txn.addText(textModel);
+            txn.commit();
+        }
+
+        Game text = db.getGame(1);
+        assertTrue(text.guidingText());
+
+        try (var txn = new DatabaseWriteTransaction(testBase)) {
+            txn.addGame(text);
             txn.commit();
         }
 

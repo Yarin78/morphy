@@ -52,6 +52,27 @@ public class TournamentIndexWriteTransaction extends EntityIndexWriteTransaction
         return tournamentExtraStorage.get(id);
     }
 
+    /**
+     * Looks up an entity based on key and returns the id.
+     * If the entity is missing, it's created in the transaction with 0 count in the statistics.
+     * @param tournament the entity to lookup
+     * @return the id of an existing matching entity, or the id of the newly created entity
+     */
+    public int getOrCreate(@NotNull Tournament tournament, @Nullable TournamentExtra extra) {
+        Tournament existing = this.get(tournament);
+        if (existing != null) {
+            return existing.id();
+        }
+
+        if (tournament.count() != 0 || tournament.firstGameId() != 0) {
+            // New entities should always have 0 in the stats
+            // In case entities are added from another database, this might not be the case
+            // so they have to be reset before added to this index.
+            tournament = (Tournament) tournament.withCountAndFirstGameId(0, 0);
+        }
+        return addEntity(tournament, extra);
+    }
+
     @Override
     public int addEntity(@NotNull Tournament entity) {
         return addEntity(entity, null);

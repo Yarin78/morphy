@@ -53,13 +53,23 @@ public class EntityIndexWriteTransaction<T extends Entity & Comparable<T>> exten
 
     /**
      * Looks up an entity based on key and returns the id.
-     * If the entity is missing, it's created in the transaction.
+     * If the entity is missing, it's created in the transaction with 0 count in the statistics.
      * @param entity the entity to lookup
      * @return the id of an existing matching entity, or the id of the newly created entity
      */
-    public int getOrCreate(T entity) {
+    public int getOrCreate(@NotNull T entity) {
         T existing = this.get(entity);
-        return existing == null ? addEntity(entity) : existing.id();
+        if (existing != null) {
+            return existing.id();
+        }
+
+        if (entity.count() != 0 || entity.firstGameId() != 0) {
+            // New entities should always have 0 in the stats
+            // In case entities are added from another database, this might not be the case
+            // so they have to be reset before added to this index.
+            entity = (T) entity.withCountAndFirstGameId(0, 0);
+        }
+        return addEntity(entity);
     }
 
     protected void putNode(EntityNode node) {

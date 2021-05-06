@@ -210,10 +210,12 @@ public class DatabaseWriteTransaction extends DatabaseTransaction {
         if (updatedGame != null) {
             gameHeader = updatedGame.gameHeader.build();
             extendedGameHeader = updatedGame.extendedGameHeader.build();
-            // TODO: database() should be this; add test that captures this
-            return new Game(database(), gameHeader, extendedGameHeader);
+            return new Game(this, gameHeader, extendedGameHeader);
         } else {
-            return super.getGame(id);
+            Game game = super.getGame(id);
+            // Wrap it in this transaction instead of the original database
+            // to ensure entities are correctly resolved from transactions
+            return new Game(this, game.header(), game.extendedHeader());
         }
     }
 
@@ -583,21 +585,11 @@ public class DatabaseWriteTransaction extends DatabaseTransaction {
             gameTagId = validIdReference(gameTagTransaction, headerModel, GameAdapter.GAME_TAG_ID);
         }
 
-        // Tournament is a special case, since if it's missing we need to create a TournamentExtra entry as well
-        if (tournamentId < 0) {
-            Tournament tournamentKey = gameAdapter().toTournament(headerModel);
-            Tournament existingTournament = tournamentTransaction.get(tournamentKey);
-            if (existingTournament == null) {
-                tournamentId = tournamentTransaction.addEntity(tournamentKey, gameAdapter().toTournamentExtra(headerModel));
-            } else {
-                tournamentId = existingTournament.id();
-            }
-        }
-
         header
             .whitePlayerId(whitePlayerId >= 0 ? whitePlayerId : playerTransaction.getOrCreate(Player.ofFullName(headerModel.getWhite())))
             .blackPlayerId(blackPlayerId >= 0 ? blackPlayerId : playerTransaction.getOrCreate(Player.ofFullName(headerModel.getBlack())))
-            .tournamentId(tournamentId)
+            .tournamentId(tournamentId >= 0 ? tournamentId : tournamentTransaction.getOrCreate(
+                    gameAdapter().toTournament(headerModel), gameAdapter().toTournamentExtra(headerModel)))
             .annotatorId(annotatorId >= 0 ? annotatorId : annotatorTransaction.getOrCreate(Annotator.of(headerModel.getAnnotator())))
             .sourceId(sourceId >= 0 ? sourceId : sourceTransaction.getOrCreate(gameAdapter().toSource(headerModel)));
 
@@ -633,9 +625,33 @@ public class DatabaseWriteTransaction extends DatabaseTransaction {
             @NotNull ImmutableGameHeader.Builder header,
             @NotNull ImmutableExtendedGameHeader.Builder extendedHeader,
             @NotNull Game game) {
+        if (game.database() == database()) {
+            // Same database, just copy the entity id's
+            header.whitePlayerId(game.whitePlayerId());
+            header.blackPlayerId(game.blackPlayerId());
+            header.tournamentId(game.tournamentId());
+            header.annotatorId(game.annotatorId());
+            header.sourceId(game.sourceId());
+            extendedHeader.whiteTeamId(game.whiteTeamId());
+            extendedHeader.blackTeamId(game.blackTeamId());
+            extendedHeader.gameTagId(game.gameTagId());
+        } else {
+            if (game.guidingText()) {
+                header.tournamentId(tournamentTransaction.getOrCreate(game.tournament(), game.tournamentExtra()));
+                header.annotatorId(annotatorTransaction.getOrCreate(game.annotator()));
+                header.sourceId(sourceTransaction.getOrCreate(game.source()));
+            } else {
+                header.whitePlayerId(playerTransaction.getOrCreate(game.white()));
+                header.blackPlayerId(playerTransaction.getOrCreate(game.black()));
+                header.tournamentId(tournamentTransaction.getOrCreate(game.tournament(), game.tournamentExtra()));
+                header.annotatorId(annotatorTransaction.getOrCreate(game.annotator()));
+                header.sourceId(sourceTransaction.getOrCreate(game.source()));
 
-        // TODO: Implement this
-        throw new MorphyNotSupportedException("not done yet");
+                extendedHeader.whiteTeamId(game.whiteTeam() == null ? -1 : teamTransaction.getOrCreate(game.whiteTeam()));
+                extendedHeader.blackTeamId(game.blackTeam() == null ? -1 : teamTransaction.getOrCreate(game.blackTeam()));
+                extendedHeader.gameTagId(game.gameTag() == null ? -1 : gameTagTransaction.getOrCreate(game.gameTag()));
+            }
+        }
     }
 
     private <T extends Entity & Comparable<T>> int validIdReference(
