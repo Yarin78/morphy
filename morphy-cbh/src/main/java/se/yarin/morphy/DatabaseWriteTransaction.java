@@ -71,32 +71,32 @@ public class DatabaseWriteTransaction extends DatabaseTransaction {
     }
 
     @Override
-    public EntityIndexTransaction<Player> playerTransaction() {
+    public EntityIndexWriteTransaction<Player> playerTransaction() {
         return playerTransaction;
     }
 
     @Override
-    public TournamentIndexTransaction tournamentTransaction() {
+    public TournamentIndexWriteTransaction tournamentTransaction() {
         return tournamentTransaction;
     }
 
     @Override
-    public EntityIndexTransaction<Annotator> annotatorTransaction() {
+    public EntityIndexWriteTransaction<Annotator> annotatorTransaction() {
         return annotatorTransaction;
     }
 
     @Override
-    public EntityIndexTransaction<Source> sourceTransaction() {
+    public EntityIndexWriteTransaction<Source> sourceTransaction() {
         return sourceTransaction;
     }
 
     @Override
-    public EntityIndexTransaction<Team> teamTransaction() {
+    public EntityIndexWriteTransaction<Team> teamTransaction() {
         return teamTransaction;
     }
 
     @Override
-    public EntityIndexTransaction<GameTag> gameTagTransaction() {
+    public EntityIndexWriteTransaction<GameTag> gameTagTransaction() {
         return gameTagTransaction;
     }
 

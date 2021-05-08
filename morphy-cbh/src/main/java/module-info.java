@@ -26,4 +26,15 @@ module se.yarin.morphy.cbh {
     exports se.yarin.cbhlib.util to se.yarin.morphy.cli, se.yarin.morphy.tools;
     exports se.yarin.util.parser to se.yarin.morphy.cli;
     exports se.yarin.util;
+
+    exports se.yarin.morphy;
+    exports se.yarin.morphy.entities;
+    exports se.yarin.morphy.games;
+    exports se.yarin.morphy.queries;
+    exports se.yarin.morphy.games.filters;
+    exports se.yarin.morphy.storage;
+    exports se.yarin.morphy.validation;
+    exports se.yarin.morphy.exceptions;
+    exports se.yarin.morphy.text;
+    exports se.yarin.morphy.entities.filters;
 }

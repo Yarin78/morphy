@@ -84,10 +84,16 @@ public class Game {
     }
 
     public @NotNull Player white() {
+        if (guidingText()) {
+            throw new IllegalStateException("Can't get player from a guiding text");
+        }
         return entityRetriever.getPlayer(whitePlayerId());
     }
 
     public @NotNull Player black() {
+        if (guidingText()) {
+            throw new IllegalStateException("Can't get player from a guiding text");
+        }
         return entityRetriever.getPlayer(blackPlayerId());
     }
 

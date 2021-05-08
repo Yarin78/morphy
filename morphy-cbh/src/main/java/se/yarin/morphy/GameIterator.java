@@ -5,7 +5,7 @@ import org.jetbrains.annotations.Nullable;
 import se.yarin.morphy.exceptions.MorphyInternalException;
 import se.yarin.morphy.games.ExtendedGameHeader;
 import se.yarin.morphy.games.GameHeader;
-import se.yarin.morphy.search.GameIteratorFilter;
+import se.yarin.morphy.games.filters.GameFilter;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -16,11 +16,11 @@ public class GameIterator implements Iterator<Game> {
     private static final int BATCH_SIZE = 1000;
 
     private final @NotNull DatabaseReadTransaction transaction;
-    private @Nullable final GameIteratorFilter filter;
+    private @Nullable final GameFilter filter;
     private @Nullable List<Game> batch = new ArrayList<>();
     private int batchPos, nextBatchStart;
 
-    public GameIterator(@NotNull DatabaseReadTransaction transaction, int startId, @Nullable GameIteratorFilter filter) {
+    public GameIterator(@NotNull DatabaseReadTransaction transaction, int startId, @Nullable GameFilter filter) {
         this.transaction = transaction;
         this.nextBatchStart = startId;
         this.filter = filter;

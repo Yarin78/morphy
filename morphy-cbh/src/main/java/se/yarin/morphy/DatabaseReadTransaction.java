@@ -3,7 +3,7 @@ package se.yarin.morphy;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import se.yarin.morphy.entities.*;
-import se.yarin.morphy.search.GameIteratorFilter;
+import se.yarin.morphy.games.filters.GameFilter;
 
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
@@ -35,32 +35,32 @@ public class DatabaseReadTransaction extends DatabaseTransaction {
     }
 
     @Override
-    public EntityIndexTransaction<Player> playerTransaction() {
+    public EntityIndexReadTransaction<Player> playerTransaction() {
         return playerTransaction;
     }
 
     @Override
-    public TournamentIndexTransaction tournamentTransaction() {
+    public TournamentIndexReadTransaction tournamentTransaction() {
         return tournamentTransaction;
     }
 
     @Override
-    public EntityIndexTransaction<Annotator> annotatorTransaction() {
+    public EntityIndexReadTransaction<Annotator> annotatorTransaction() {
         return annotatorTransaction;
     }
 
     @Override
-    public EntityIndexTransaction<Source> sourceTransaction() {
+    public EntityIndexReadTransaction<Source> sourceTransaction() {
         return sourceTransaction;
     }
 
     @Override
-    public EntityIndexTransaction<Team> teamTransaction() {
+    public EntityIndexReadTransaction<Team> teamTransaction() {
         return teamTransaction;
     }
 
     @Override
-    public EntityIndexTransaction<GameTag> gameTagTransaction() {
+    public EntityIndexReadTransaction<GameTag> gameTagTransaction() {
         return gameTagTransaction;
     }
 
@@ -70,6 +70,15 @@ public class DatabaseReadTransaction extends DatabaseTransaction {
      */
     public @NotNull Iterable<Game> iterable() {
         return iterable(1);
+    }
+
+    /**
+     * Returns an iterable of all games matching the given filter in the index, sorted by id.
+     * @param filter a search filter; null will return all games
+     * @return an iterable of all games
+     */
+    public @NotNull Iterable<Game> iterable(@Nullable GameFilter filter) {
+        return iterable(1, filter);
     }
 
     /**
@@ -87,10 +96,9 @@ public class DatabaseReadTransaction extends DatabaseTransaction {
      * @param filter a search filter; null will return all games
      * @return an iterable of all games
      */
-    public @NotNull Iterable<Game> iterable(int startId, @Nullable GameIteratorFilter filter) {
+    public @NotNull Iterable<Game> iterable(int startId, @Nullable GameFilter filter) {
         return () -> new GameIterator(this, startId, filter);
     }
-
 
     /**
      * Returns a stream of all games in the index, sorted by id.
@@ -98,6 +106,15 @@ public class DatabaseReadTransaction extends DatabaseTransaction {
      */
     public @NotNull Stream<Game> stream() {
         return StreamSupport.stream(iterable().spliterator(), false);
+    }
+
+    /**
+     * Returns a stream of all games matching the given filter in the index, sorted by id.
+     * @param filter a search filter; null will return all games
+     * @return a stream of all games
+     */
+    public @NotNull Stream<Game> stream(@Nullable GameFilter filter) {
+        return StreamSupport.stream(iterable(1, filter).spliterator(), false);
     }
 
     /**
@@ -115,7 +132,7 @@ public class DatabaseReadTransaction extends DatabaseTransaction {
      * @param filter a search filter; null will return all games
      * @return a stream of all games
      */
-    public @NotNull Stream<Game> stream(int startId, @Nullable GameIteratorFilter filter) {
+    public @NotNull Stream<Game> stream(int startId, @Nullable GameFilter filter) {
         return StreamSupport.stream(iterable(startId, filter).spliterator(), false);
     }
 }

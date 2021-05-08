@@ -9,7 +9,7 @@ import se.yarin.morphy.entities.*;
 import se.yarin.morphy.exceptions.MorphyException;
 import se.yarin.morphy.exceptions.MorphyInvalidDataException;
 import se.yarin.morphy.games.*;
-import se.yarin.morphy.search.GameIteratorFilter;
+import se.yarin.morphy.games.filters.GameFilter;
 import se.yarin.morphy.text.TextModel;
 import se.yarin.morphy.util.CBUtil;
 
@@ -381,7 +381,7 @@ public class Database implements EntityRetriever {
      * Consider using the GameSearcher instead for more performant game searches.
      * @return a list of all games in the database matching the filter, ordered by id
      */
-    public @NotNull List<Game> getGames(@Nullable GameIteratorFilter filter) {
+    public @NotNull List<Game> getGames(@Nullable GameFilter filter) {
         try (var txn = new DatabaseReadTransaction(this)) {
             return txn.stream(1, filter).collect(Collectors.toList());
         }
