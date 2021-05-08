@@ -5,6 +5,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import se.yarin.chess.GameModel;
+import se.yarin.chess.GameMovesModel;
 import se.yarin.morphy.entities.Player;
 import se.yarin.morphy.entities.Tournament;
 import se.yarin.morphy.exceptions.MorphyInvalidDataException;
@@ -433,6 +434,24 @@ public class DatabaseTest {
                 gamesValidator.readAllGames();
             }
         }
+    }
+
+    @Test
+    public void upgradeOldDatabaseAndWrite() throws IOException {
+        // This tests that we can write to MoveRepository and AnnotationRepository
+        // despite their headers being in the old format (they should not be upgraded)
+        File file = ResourceLoader.materializeDatabaseStream(getClass(), "database/old", "linares");
+
+        Database db = Database.open(file, DatabaseMode.READ_WRITE);
+        assertEquals(10, db.moveRepository().getStorage().getHeader().headerSize());
+        assertEquals(10, db.annotationRepository().getStorage().getHeader().headerSize());
+
+        GameModel simpleGame = TestGames.getSimpleGame("foo", "bar");
+        int id = db.addGame(simpleGame);
+
+        Game game = db.getGame(id);
+        String movesText = game.getModel().moves().root().toSAN();
+        assertEquals("1.e4 c5", movesText);
     }
 
     // TODO: Some tests when opening a database where the filenames have different casing

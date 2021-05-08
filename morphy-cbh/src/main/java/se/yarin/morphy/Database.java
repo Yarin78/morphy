@@ -232,6 +232,7 @@ public class Database implements EntityRetriever {
             // TODO: Make simple validation that all essential files exist and have size > 0
             // before attempting anything, and that cbj file contains correct number of headers
             // Add context?
+            // TODO: Add Database.status
             ExtendedGameHeaderStorage.upgrade(file);
             PlayerIndex.upgrade(CBUtil.fileWithExtension(file, ".cbp"));
             TournamentIndex.upgrade(CBUtil.fileWithExtension(file, ".cbt"));
@@ -240,7 +241,10 @@ public class Database implements EntityRetriever {
             TeamIndex.upgrade(CBUtil.fileWithExtension(file, ".cbe"));
             GameTagIndex.upgrade(CBUtil.fileWithExtension(file, ".cbl"));
             TournamentExtraStorage.upgrade(CBUtil.fileWithExtension(file, ".cbtt"));
-            // TODO: MoveRepository and AnnotationRepository upgrades
+
+            // MoveRepository and AnnotationRepository should not be upgraded despite
+            // their header being shorter than they would be in a new database (10 bytes instead of 26 bytes);
+            // this is in accordance with how ChessBase works.
         }
 
         DatabaseContext context = new DatabaseContext();
