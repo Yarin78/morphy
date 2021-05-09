@@ -5,4 +5,5 @@ module se.yarin.morphy.cli {
     requires org.apache.logging.log4j;
     requires org.apache.logging.log4j.core;
     opens se.yarin.morphy.cli.commands to info.picocli;
+    opens se.yarin.morphy.cli.old.commands to info.picocli;
 }

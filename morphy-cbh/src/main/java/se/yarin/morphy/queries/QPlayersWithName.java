@@ -10,6 +10,14 @@ import java.util.stream.Stream;
 public class QPlayersWithName extends ItemQuery<Player> {
     private final @NotNull PlayerNameFilter filter;
 
+    public QPlayersWithName(@NotNull String name, boolean caseSensitive, boolean exactMatch) {
+        this(new PlayerNameFilter(name, caseSensitive, exactMatch));
+    }
+
+    public QPlayersWithName(@NotNull String lastName, @NotNull String firstName, boolean caseSensitive, boolean exactMatch) {
+        this(new PlayerNameFilter(lastName, firstName, caseSensitive, exactMatch));
+    }
+
     public QPlayersWithName(@NotNull PlayerNameFilter filter) {
         this.filter = filter;
     }

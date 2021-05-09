@@ -1,6 +1,6 @@
 package se.yarin.morphy.cli.columns;
 
-import se.yarin.cbhlib.Game;
+import se.yarin.morphy.Game;
 
 public class NumMovesColumn implements GameColumn {
     @Override
@@ -11,8 +11,8 @@ public class NumMovesColumn implements GameColumn {
     @Override
     public String getValue(Game game) {
         String numMoves = "";
-        if (!game.isGuidingText()) {
-            numMoves = game.getNoMoves() > 0 ? Integer.toString(game.getNoMoves()) : "";
+        if (!game.guidingText()) {
+            numMoves = game.noMoves() > 0 ? Integer.toString(game.noMoves()) : "";
         }
         return String.format("%3s", numMoves);
     }

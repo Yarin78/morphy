@@ -124,6 +124,18 @@ public class ExtendedGameHeaderStorage implements ItemStorageSerializer<Extended
         }
     }
 
+    public ByteBuffer getRaw(int gameId) {
+        try {
+            if (storage instanceof FileItemStorage) {
+                return ((FileItemStorage<ExtendedGameHeaderStorage.ExtProlog, ExtendedGameHeader>) storage).getItemRaw(gameId);
+            } else {
+                throw new IllegalStateException("Storage is not a serialized storage");
+            }
+        } catch (MorphyIOException e) {
+            throw new IllegalArgumentException(e);
+        }
+    }
+
     /**
      * Attempts to repair/upgrade an extended game header storage by
      *   - create a new storage (if missing entirely)

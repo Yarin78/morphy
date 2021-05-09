@@ -1,7 +1,7 @@
 package se.yarin.morphy.cli.columns;
 
-import se.yarin.cbhlib.Database;
-import se.yarin.cbhlib.entities.TournamentEntity;
+import se.yarin.morphy.Database;
+import se.yarin.morphy.entities.Tournament;
 
 public class TournamentNumGamesColumn implements TournamentColumn {
     @Override
@@ -10,8 +10,8 @@ public class TournamentNumGamesColumn implements TournamentColumn {
     }
 
     @Override
-    public String getTournamentValue(Database db, TournamentEntity tournament) {
-        return String.format("%4d ", tournament.getCount());
+    public String getTournamentValue(Database db, Tournament tournament) {
+        return String.format("%4d ", tournament.count());
     }
 
     @Override

@@ -1,6 +1,6 @@
 package se.yarin.morphy.cli.columns;
 
-import se.yarin.cbhlib.Game;
+import se.yarin.morphy.Game;
 
 public class EcoColumn implements GameColumn {
     @Override
@@ -11,10 +11,10 @@ public class EcoColumn implements GameColumn {
     @Override
     public String getValue(Game game) {
         String eco;
-        if (game.isGuidingText()) {
+        if (game.guidingText()) {
             eco = "";
         } else {
-            eco = game.getEco().toString().substring(0, 3);
+            eco = game.eco().toString().substring(0, 3);
             if (eco.equals("???")) {
                 eco = "";
             }

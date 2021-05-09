@@ -10,6 +10,10 @@ import java.util.stream.Stream;
 public class QGameTagsWithTitle extends ItemQuery<GameTag> {
     private final @NotNull GameTagTitleFilter filter;
 
+    public QGameTagsWithTitle(@NotNull String englishTitle, boolean caseSensitive, boolean exactMatch) {
+        this(new GameTagTitleFilter(englishTitle, caseSensitive, exactMatch));
+    }
+
     public QGameTagsWithTitle(@NotNull GameTagTitleFilter filter) {
         this.filter = filter;
     }

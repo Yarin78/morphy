@@ -1,6 +1,6 @@
 package se.yarin.morphy.cli.columns;
 
-import se.yarin.cbhlib.Game;
+import se.yarin.morphy.Game;
 
 public class VCSColumn implements GameColumn {
     @Override
@@ -10,7 +10,7 @@ public class VCSColumn implements GameColumn {
 
     @Override
     public String getValue(Game game) {
-        int v = game.getVariationsMagnitude(), c = game.getCommentariesMagnitude(), s = game.getSymbolsMagnitude();
+        int v = game.variationsMagnitude(), c = game.commentariesMagnitude(), s = game.symbolsMagnitude();
         String vMag = " vV", cMag = " cC", sMag = " sS";
         return String.format("%c%c%c", vMag.charAt(Math.max(0, v)), cMag.charAt(Math.max(0, c)), sMag.charAt(Math.max(0, s)));
     }

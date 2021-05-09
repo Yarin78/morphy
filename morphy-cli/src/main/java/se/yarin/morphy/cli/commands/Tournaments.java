@@ -3,12 +3,13 @@ package se.yarin.morphy.cli.commands;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import picocli.CommandLine;
-import se.yarin.cbhlib.Database;
-import se.yarin.cbhlib.entities.Nation;
-import se.yarin.cbhlib.entities.TournamentSearcher;
-import se.yarin.cbhlib.entities.TournamentTimeControl;
-import se.yarin.cbhlib.entities.TournamentType;
-import se.yarin.cbhlib.games.search.DateRangeFilter;
+import se.yarin.morphy.Database;
+import se.yarin.morphy.DatabaseMode;
+import se.yarin.morphy.DatabaseReadTransaction;
+import se.yarin.morphy.Game;
+import se.yarin.morphy.entities.Tournament;
+import se.yarin.morphy.entities.filters.RawTournamentFilter;
+import se.yarin.morphy.queries.*;
 import se.yarin.util.parser.Parser;
 import se.yarin.util.parser.Scanner;
 import se.yarin.morphy.cli.columns.RawTournamentColumn;
@@ -17,6 +18,7 @@ import se.yarin.morphy.cli.tournaments.StdoutTournamentsSummary;
 import se.yarin.morphy.cli.tournaments.TournamentConsumer;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Callable;
@@ -83,24 +85,34 @@ public class Tournaments extends BaseCommand implements Callable<Integer> {
 
         getDatabaseStream().forEach(file -> {
             log.info("Opening " + file);
-            try (Database db = Database.open(file)) {
+            try (Database db = Database.open(file, DatabaseMode.READ_ONLY)) {
                 tournamentConsumer.setCurrentDatabase(db);
-                TournamentSearcher tournamentSearcher = null;
+                ItemQuery<Tournament> tournamentQuery = null;
                 try {
-                    tournamentSearcher = createTournamentSearcher(db);
+                    tournamentQuery = createTournamentQuery();
                 } catch (IllegalArgumentException e) {
                     System.err.println(e.getMessage());
                     System.exit(1);
                 }
-                assert tournamentSearcher != null;
+                assert tournamentQuery != null;
 
-                TournamentSearcher.SearchResult result = tournamentSearcher.search(limit, countAll, sorted, tournamentConsumer);
+                try (var txn = new DatabaseReadTransaction(db)) {
+                    QueryExecutor<Tournament> executor = new QueryExecutor<>(txn);
+                    // TODO: support sorted
+                    QueryResult<Tournament> result = executor.execute(tournamentQuery, limit, countAll, tournamentConsumer);
 
-                tournamentConsumer.searchDone(result);
+                    tournamentConsumer.searchDone(result);
+                }
             } catch (IOException e) {
                 System.err.println("IO error when processing " + file);
+                if (verboseLevel() > 0) {
+                    e.printStackTrace();
+                }
             } catch (RuntimeException e) {
                 System.err.println("Unexpected error when processing " + file + ": " + e.getMessage());
+                if (verboseLevel() > 0) {
+                    e.printStackTrace();
+                }
             }
         });
 
@@ -108,51 +120,44 @@ public class Tournaments extends BaseCommand implements Callable<Integer> {
         return 0;
     }
 
-    public TournamentSearcher createTournamentSearcher(Database db) {
-        TournamentSearcher searcher = new TournamentSearcher(db.getTournamentBase());
+    public ItemQuery<Tournament> createTournamentQuery() {
+        ArrayList<ItemQuery<Tournament>> tournamentQueries = new ArrayList<>();
+        tournamentQueries.add(new QTournamentsAll()); // Ensure we have at least one query
 
         if (name != null) {
-            searcher.setSearchString(name, true, false);
+            tournamentQueries.add(new QTournamentsSearch(name, true, false));
         }
         if (dateRange != null) {
-            searcher.setFromDate(DateRangeFilter.parseFromDate(dateRange));
-            searcher.setToDate(DateRangeFilter.parseToDate(dateRange));
+            tournamentQueries.add(new QTournamentsWithStartDate(dateRange));
         }
         if (type != null) {
-            TournamentType tournamentType = TournamentType.fromName(type);
-            searcher.setTypes(Set.of(tournamentType));
+            tournamentQueries.add(new QTournamentsWithType(type));
         }
         if (timeControl != null) {
-            TournamentTimeControl tournamentTimeControl = TournamentTimeControl.fromName(timeControl);
-            searcher.setTimeControls(Set.of(tournamentTimeControl));
+            tournamentQueries.add(new QTournamentsWithTimeControl(timeControl));
         }
         if (place != null) {
-            searcher.setPlaces(Set.of(place));
+            tournamentQueries.add(new QTournamentsWithPlace(place));
         }
         if (nation != null) {
-            searcher.setNations(Set.of(Nation.fromName(nation)));
+            tournamentQueries.add(new QTournamentsWithNation(nation));
         }
         if (teams) {
-            searcher.setTeamsOnly(true);
+            tournamentQueries.add(new QTournamentsIsTeam());
         }
         if (rounds != null) {
-            Pattern pattern = Pattern.compile("^([0-9]+)?-([0-9]+)?$");
-            Matcher matcher = pattern.matcher(rounds);
-            if (!matcher.matches()) {
-                throw new IllegalArgumentException("Invalid round range specified: " + rounds);
-            }
-            searcher.setMinRounds(matcher.group(1) == null ? 0 : Integer.parseInt(matcher.group(1)));
-            searcher.setMaxRounds(matcher.group(2) == null ? 9999 : Integer.parseInt(matcher.group(2)));
+            tournamentQueries.add(new QTournamentsWithRounds(rounds));
         }
-        searcher.setMinCategory(minCategory);
+        if (minCategory > 0) {
+            tournamentQueries.add(new QTournamentsWithCategory(minCategory, 100));
+        }
         if (rawFilter != null) {
             for (String expression : rawFilter) {
-                Scanner scanner = new Scanner(expression);
-                searcher.addExpression(new Parser(scanner.scanTokens()).parse());
+                tournamentQueries.add(new QTournamentsWithRaw(new RawTournamentFilter(expression)));
             }
         }
 
-        return searcher;
+        return new QAnd<>(tournamentQueries);
     }
 
     public TournamentConsumer createTournamentConsumer() {

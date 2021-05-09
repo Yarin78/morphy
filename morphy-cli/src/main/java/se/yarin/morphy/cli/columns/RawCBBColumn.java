@@ -1,7 +1,7 @@
 package se.yarin.morphy.cli.columns;
 
-import se.yarin.cbhlib.Game;
 import se.yarin.cbhlib.util.CBUtil;
+import se.yarin.morphy.Game;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -30,7 +30,7 @@ public class RawCBBColumn implements GameColumn {
     public String getValue(Game game) {
         try {
             FileChannel cbbChannel = null; // TODO
-            cbbChannel.position(game.getId() * 52);
+            cbbChannel.position(game.id() * 52);
             ByteBuffer buf = ByteBuffer.allocate(52);
             cbbChannel.read(buf);
             String s = "";

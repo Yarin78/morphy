@@ -1,7 +1,7 @@
 package se.yarin.morphy.cli.games;
 
-import se.yarin.cbhlib.Game;
-import se.yarin.cbhlib.exceptions.ChessBaseException;
+import se.yarin.morphy.Game;
+import se.yarin.morphy.exceptions.MorphyException;
 
 public class StatsGameConsumer extends GameConsumerBase {
     private int numFailedModels = 0;
@@ -20,10 +20,10 @@ public class StatsGameConsumer extends GameConsumerBase {
 
     @Override
     public void accept(Game game) {
-        if (!game.isGuidingText()) {
+        if (!game.guidingText()) {
             try {
                 game.getModel();
-            } catch (ChessBaseException e) {
+            } catch (MorphyException e) {
                 numFailedModels += 1;
             }
         }

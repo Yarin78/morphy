@@ -16,7 +16,7 @@ public class DatabaseBuilder extends GameConsumerBase {
     private static final Logger log = LogManager.getLogger();
 
     // If true, moves and annotations are added without parsing
-    private static final boolean QUICK_ADD = false;
+    private static final boolean QUICK_ADD = true;
 
     private final Database database;
     private final File file;

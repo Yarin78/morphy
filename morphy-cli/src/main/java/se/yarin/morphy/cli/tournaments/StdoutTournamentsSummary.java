@@ -2,11 +2,11 @@ package se.yarin.morphy.cli.tournaments;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import se.yarin.cbhlib.Database;
-import se.yarin.cbhlib.entities.TournamentEntity;
-import se.yarin.cbhlib.entities.TournamentSearcher;
+import se.yarin.morphy.Database;
 import se.yarin.morphy.cli.columns.GameColumn;
 import se.yarin.morphy.cli.columns.TournamentColumn;
+import se.yarin.morphy.entities.Tournament;
+import se.yarin.morphy.queries.QueryResult;
 
 import java.util.*;
 
@@ -112,7 +112,7 @@ public class StdoutTournamentsSummary implements TournamentConsumer {
     }
 
     @Override
-    public void accept(TournamentEntity tournament) {
+    public void accept(Tournament tournament) {
         StringBuilder sb = new StringBuilder();
         TournamentColumn lastColumn = null;
         for (TournamentColumn column : columns) {
@@ -151,9 +151,9 @@ public class StdoutTournamentsSummary implements TournamentConsumer {
     }
 
     @Override
-    public void searchDone(TournamentSearcher.SearchResult result) {
-        totalFoundTournaments += result.getTotalTournaments();
-        totalConsumedTournaments += result.getConsumedTournaments();
-        totalSearchTime += result.getElapsedTime();
+    public void searchDone(QueryResult<Tournament> result) {
+        totalFoundTournaments += result.total();
+        totalConsumedTournaments += result.consumed();
+        totalSearchTime += result.elapsedTime();
     }
 }

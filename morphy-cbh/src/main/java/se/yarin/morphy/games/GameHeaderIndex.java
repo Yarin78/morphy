@@ -118,6 +118,18 @@ public class GameHeaderIndex implements ItemStorageSerializer<GameHeaderIndex.Pr
         }
     }
 
+    public ByteBuffer getRaw(int gameId) {
+        try {
+            if (storage instanceof FileItemStorage) {
+                return ((FileItemStorage<GameHeaderIndex.Prolog, GameHeader>) storage).getItemRaw(gameId);
+            } else {
+                throw new IllegalStateException("Storage is not a serialized storage");
+            }
+        } catch (MorphyIOException e) {
+            throw new IllegalArgumentException(e);
+        }
+    }
+
     /**
      * Updates an existing game header
      * @param gameHeaderId the id of the game header to update

@@ -10,6 +10,10 @@ import java.util.stream.Stream;
 public class QTournamentsWithTimeControl extends ItemQuery<Tournament> {
     private final @NotNull TournamentTimeControlFilter filter;
 
+    public QTournamentsWithTimeControl(@NotNull String timeControls) {
+        this(new TournamentTimeControlFilter(timeControls));
+    }
+
     public QTournamentsWithTimeControl(@NotNull TournamentTimeControlFilter filter) {
         this.filter = filter;
     }

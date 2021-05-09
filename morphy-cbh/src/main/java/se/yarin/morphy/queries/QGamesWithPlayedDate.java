@@ -1,6 +1,8 @@
 package se.yarin.morphy.queries;
 
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+import se.yarin.chess.Date;
 import se.yarin.morphy.DatabaseReadTransaction;
 import se.yarin.morphy.Game;
 import se.yarin.morphy.games.filters.DateRangeFilter;
@@ -10,6 +12,14 @@ import java.util.stream.Stream;
 
 public class QGamesWithPlayedDate extends ItemQuery<Game> {
     private final @NotNull DateRangeFilter filter;
+
+    public QGamesWithPlayedDate(@NotNull String dateRange) {
+        this(new DateRangeFilter(dateRange));
+    }
+
+    public QGamesWithPlayedDate(@Nullable Date fromDate, @Nullable Date toDate) {
+        this(new DateRangeFilter(fromDate, toDate));
+    }
 
     public QGamesWithPlayedDate(@NotNull DateRangeFilter filter) {
         this.filter = filter;

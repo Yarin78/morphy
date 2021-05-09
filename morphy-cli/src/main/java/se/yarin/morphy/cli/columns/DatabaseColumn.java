@@ -1,8 +1,8 @@
 package se.yarin.morphy.cli.columns;
 
-import se.yarin.cbhlib.Database;
-import se.yarin.cbhlib.Game;
-import se.yarin.cbhlib.entities.TournamentEntity;
+import se.yarin.morphy.Database;
+import se.yarin.morphy.Game;
+import se.yarin.morphy.entities.Tournament;
 
 public class DatabaseColumn implements GameColumn, TournamentColumn {
     @Override
@@ -31,13 +31,13 @@ public class DatabaseColumn implements GameColumn, TournamentColumn {
     }
 
     @Override
-    public String getTournamentValue(Database db, TournamentEntity tournament) {
-        return db.getHeaderBase().getStorageName();
+    public String getTournamentValue(Database db, Tournament tournament) {
+        return db.name();
     }
 
     @Override
     public String getValue(Game game) {
-        return game.getDatabase().getHeaderBase().getStorageName();
+        return game.database().name();
     }
 
     @Override

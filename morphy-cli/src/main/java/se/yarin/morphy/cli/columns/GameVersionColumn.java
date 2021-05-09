@@ -1,6 +1,6 @@
 package se.yarin.morphy.cli.columns;
 
-import se.yarin.cbhlib.Game;
+import se.yarin.morphy.Game;
 
 public class GameVersionColumn implements GameColumn {
 
@@ -11,7 +11,7 @@ public class GameVersionColumn implements GameColumn {
 
     @Override
     public String getValue(Game game) {
-        return String.format("%4d", game.getGameVersion());
+        return String.format("%4d", game.gameVersion());
     }
 
     @Override

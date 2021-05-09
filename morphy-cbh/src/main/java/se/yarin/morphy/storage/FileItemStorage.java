@@ -92,6 +92,20 @@ public class FileItemStorage<THeader, TItem> implements ItemStorage<THeader, TIt
         return this.fileSize <= serializer.serializedHeaderSize();
     }
 
+    public @NotNull ByteBuffer getItemRaw(int index) {
+        ByteBuffer buf = ByteBuffer.allocate(serializer.itemSize(this.header));
+        try {
+            long offset = serializer.itemOffset(this.header, index);
+            if (offset >= 0 && offset < this.fileSize) {
+                channel.read(offset, buf);
+                buf.rewind();
+            }
+        } catch (IOException e) {
+            throw new MorphyIOException(e);
+        }
+        return buf;
+    }
+
     @Override
     public @NotNull TItem getItem(int index) {
         ByteBuffer buf = ByteBuffer.allocate(serializer.itemSize(this.header));

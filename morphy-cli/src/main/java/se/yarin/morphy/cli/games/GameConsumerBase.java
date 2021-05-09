@@ -1,6 +1,7 @@
 package se.yarin.morphy.cli.games;
 
-import se.yarin.cbhlib.games.search.GameSearcher;
+import se.yarin.morphy.Game;
+import se.yarin.morphy.queries.QueryResult;
 
 public abstract class GameConsumerBase implements GameConsumer {
     protected int totalFoundGames = 0;
@@ -12,9 +13,9 @@ public abstract class GameConsumerBase implements GameConsumer {
     }
 
     @Override
-    public void searchDone(GameSearcher.SearchResult result) {
-        totalFoundGames += result.getTotalGames();
-        totalConsumedGames += result.getConsumedGames();
-        totalSearchTime += result.getElapsedTime();
+    public void searchDone(QueryResult<Game> result) {
+        totalFoundGames += result.total();
+        totalConsumedGames += result.consumed();
+        totalSearchTime += result.elapsedTime();
     }
 }

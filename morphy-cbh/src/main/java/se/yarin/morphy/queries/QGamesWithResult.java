@@ -12,6 +12,10 @@ import java.util.stream.Stream;
 public class QGamesWithResult extends ItemQuery<Game> {
     private final @NotNull ResultsFilter filter;
 
+    public QGamesWithResult(@NotNull String result) {
+        this(new ResultsFilter(result));
+    }
+
     public QGamesWithResult(@NotNull ResultsFilter filter) {
         this.filter = filter;
     }

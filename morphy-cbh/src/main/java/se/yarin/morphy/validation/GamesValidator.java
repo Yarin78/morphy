@@ -5,6 +5,7 @@ import org.slf4j.LoggerFactory;
 
 import se.yarin.chess.GameMovesModel;
 import se.yarin.morphy.Database;
+import se.yarin.morphy.DatabaseReadTransaction;
 import se.yarin.morphy.Game;
 import se.yarin.morphy.exceptions.MorphyException;
 import se.yarin.morphy.exceptions.MorphyIOException;
@@ -12,11 +13,9 @@ import se.yarin.morphy.exceptions.MorphyInvalidDataException;
 import se.yarin.morphy.exceptions.MorphyMoveDecodingException;
 import se.yarin.morphy.games.ExtendedGameHeader;
 import se.yarin.morphy.games.GameHeader;
-import se.yarin.morphy.games.GameSearcher;
 import se.yarin.morphy.games.moves.MoveSerializer;
 
 import java.nio.ByteBuffer;
-
 
 public class GamesValidator {
     private static final Logger log = LoggerFactory.getLogger(GamesValidator.class);
@@ -28,10 +27,10 @@ public class GamesValidator {
     }
 
     public void readAllGames() throws MorphyException {
-        GameSearcher gameSearcher = new GameSearcher(db);
-
-        for (Game game : gameSearcher.getAll()) {
-            game.getModel();
+        try (var txn = new DatabaseReadTransaction(db)) {
+            for (Game game : txn.iterable()) {
+                game.getModel();
+            }
         }
     }
 
@@ -86,105 +85,106 @@ public class GamesValidator {
 
         MoveSerializer movesSerializer = new MoveSerializer(true);
 
-        GameSearcher gameSearcher = new GameSearcher(db);
-        for (Game game : gameSearcher.getAll()) {
-            GameHeader header = game.header();
-            ExtendedGameHeader extendedHeader = game.extendedHeader();
+        try (var txn = new DatabaseReadTransaction(db)) {
+            for (Game game : txn.iterable()) {
+                GameHeader header = game.header();
+                ExtendedGameHeader extendedHeader = game.extendedHeader();
 
-            if (extendedHeader.movesOffset() != 0 && extendedHeader.movesOffset() != header.movesOffset() && !moveOffsetDiffers) {
-                log.warn(String.format("Game %d: Move offset differs between header files (%d != %d) [ignoring similar errors]",
-                        header.id(), header.movesOffset(), extendedHeader.movesOffset()));
-                moveOffsetDiffers = true; // If this happens in one game, it usually happens in many games
-                numWarnings += 1;
-            }
-
-            if (extendedHeader.annotationOffset() != 0 && extendedHeader.annotationOffset() != header.annotationOffset() && !annotationOffsetDiffers) {
-                log.warn(String.format("Game %d: Annotation offset differs between header files (%d != %d) [ignoring similar errors]",
-                        header.id(), header.annotationOffset(), extendedHeader.annotationOffset()));
-                annotationOffsetDiffers = true; // If this happens in one game, it usually happens in many games
-                numWarnings += 1;
-            }
-
-            if (header.annotationOffset() > 0) {
-                int annotationSize = db.annotationRepository().getAnnotationsBlobSize(header.annotationOffset());
-                int annotationEnd = header.annotationOffset() + annotationSize;
-                if (log.isDebugEnabled()) {
-                    log.debug(String.format("Game %d: Annotation [%d, %d)", header.id(), header.annotationOffset(), annotationEnd));
-                }
-                if (header.annotationOffset() < lastAnnotationOfs) {
-                    if (numOverlappingAnnotations == 0) {
-                        log.warn(String.format("Game %d has annotation data at offset %d but previous game annotation data ended at %d",
-                                game.id(), header.annotationOffset(), lastAnnotationOfs));
-                        numWarnings += 1;
-                    }
-                    numOverlappingAnnotations += 1;
-                } else if (header.annotationOffset() > lastAnnotationOfs) {
-                    numAnnotationGaps += 1;
-                    annotationFreeSpace += header.annotationOffset() - lastAnnotationOfs;
-                }
-                lastAnnotationOfs = annotationEnd;
-            }
-
-            int movesSize = db.moveRepository().getMovesBlobSize(header.movesOffset());
-            int movesEnd = header.movesOffset() + movesSize;
-            if (log.isDebugEnabled()) {
-                log.debug(String.format("Game %d: Moves [%d, %d)", header.id(), header.movesOffset(), movesEnd));
-            }
-            if (header.movesOffset() < lastMovesOfs) {
-                if (numOverlappingMoves == 0) {
-                    log.warn(String.format("Game %d has move data at offset %d but previous game move data ended at %d",
-                            game.id(), header.movesOffset(), lastMovesOfs));
+                if (extendedHeader.movesOffset() != 0 && extendedHeader.movesOffset() != header.movesOffset() && !moveOffsetDiffers) {
+                    log.warn(String.format("Game %d: Move offset differs between header files (%d != %d) [ignoring similar errors]",
+                            header.id(), header.movesOffset(), extendedHeader.movesOffset()));
+                    moveOffsetDiffers = true; // If this happens in one game, it usually happens in many games
                     numWarnings += 1;
                 }
-                numOverlappingMoves += 1;
-            } else if (header.movesOffset() > lastMovesOfs) {
-                numMoveGaps += 1;
-                moveFreeSpace += header.movesOffset() - lastMovesOfs;
-            }
-            lastMovesOfs = movesEnd;
 
-            try {
-                if (header.chess960StartPosition() >= 0) {
-                    numChess960 += 1;
+                if (extendedHeader.annotationOffset() != 0 && extendedHeader.annotationOffset() != header.annotationOffset() && !annotationOffsetDiffers) {
+                    log.warn(String.format("Game %d: Annotation offset differs between header files (%d != %d) [ignoring similar errors]",
+                            header.id(), header.annotationOffset(), extendedHeader.annotationOffset()));
+                    annotationOffsetDiffers = true; // If this happens in one game, it usually happens in many games
+                    numWarnings += 1;
                 }
+
                 if (header.annotationOffset() > 0) {
-                    numAnnotated += 1;
-                }
-                if (header.deleted()) {
-                    numDeleted += 1;
-                }
-                if (header.guidingText()) {
-                    numText += 1;
-                }
-                if (!header.guidingText()) {
-                    // Deserialize the game header (and lookup player, team, source, commentator)
-                    game.getGameHeaderModel();
-
-                    if (loadMoves) {
-                        // Deserialize explicitly to be able to catch the exceptions
-                        ByteBuffer movesBlob = this.db.moveRepository().getMovesBlob(game.getMovesOffset());
-                        GameMovesModel moves = movesSerializer.deserializeMoves(movesBlob, true, game.id());
-                        this.db.annotationRepository().getAnnotations(moves, game.getAnnotationOffset());
+                    int annotationSize = db.annotationRepository().getAnnotationsBlobSize(header.annotationOffset());
+                    int annotationEnd = header.annotationOffset() + annotationSize;
+                    if (log.isDebugEnabled()) {
+                        log.debug(String.format("Game %d: Annotation [%d, %d)", header.id(), header.annotationOffset(), annotationEnd));
                     }
-                    numGames += 1;
+                    if (header.annotationOffset() < lastAnnotationOfs) {
+                        if (numOverlappingAnnotations == 0) {
+                            log.warn(String.format("Game %d has annotation data at offset %d but previous game annotation data ended at %d",
+                                    game.id(), header.annotationOffset(), lastAnnotationOfs));
+                            numWarnings += 1;
+                        }
+                        numOverlappingAnnotations += 1;
+                    } else if (header.annotationOffset() > lastAnnotationOfs) {
+                        numAnnotationGaps += 1;
+                        annotationFreeSpace += header.annotationOffset() - lastAnnotationOfs;
+                    }
+                    lastAnnotationOfs = annotationEnd;
                 }
-            } catch (MorphyMoveDecodingException e) {
-                if (numMoveDecodingErrors < 5) {
-                    log.error("Move decoding error in game " + game.id() + ": " + e.getMessage());
+
+                int movesSize = db.moveRepository().getMovesBlobSize(header.movesOffset());
+                int movesEnd = header.movesOffset() + movesSize;
+                if (log.isDebugEnabled()) {
+                    log.debug(String.format("Game %d: Moves [%d, %d)", header.id(), header.movesOffset(), movesEnd));
                 }
-                numMoveDecodingErrors += 1;
-                numErrors += 1;
-            } catch (MorphyInvalidDataException e) {
-                if (numInvalidEntityReferences < 5) {
-                    log.error("Invalid data in game " + game.id() + ": " + e.getMessage());
+                if (header.movesOffset() < lastMovesOfs) {
+                    if (numOverlappingMoves == 0) {
+                        log.warn(String.format("Game %d has move data at offset %d but previous game move data ended at %d",
+                                game.id(), header.movesOffset(), lastMovesOfs));
+                        numWarnings += 1;
+                    }
+                    numOverlappingMoves += 1;
+                } else if (header.movesOffset() > lastMovesOfs) {
+                    numMoveGaps += 1;
+                    moveFreeSpace += header.movesOffset() - lastMovesOfs;
                 }
-                numInvalidEntityReferences += 1;
-                numErrors += 1;
-            } catch (MorphyIOException | AssertionError e) {
-                log.error("Critical error in game " + game.id() + ": " + e.getMessage());
-                numErrors += 1;
-            } finally {
-                progressCallback.run();
+                lastMovesOfs = movesEnd;
+
+                try {
+                    if (header.chess960StartPosition() >= 0) {
+                        numChess960 += 1;
+                    }
+                    if (header.annotationOffset() > 0) {
+                        numAnnotated += 1;
+                    }
+                    if (header.deleted()) {
+                        numDeleted += 1;
+                    }
+                    if (header.guidingText()) {
+                        numText += 1;
+                    }
+                    if (!header.guidingText()) {
+                        // Deserialize the game header (and lookup player, team, source, commentator)
+                        game.getGameHeaderModel();
+
+                        if (loadMoves) {
+                            // Deserialize explicitly to be able to catch the exceptions
+                            ByteBuffer movesBlob = this.db.moveRepository().getMovesBlob(game.getMovesOffset());
+                            GameMovesModel moves = movesSerializer.deserializeMoves(movesBlob, true, game.id());
+                            this.db.annotationRepository().getAnnotations(moves, game.getAnnotationOffset());
+                        }
+                        numGames += 1;
+                    }
+                } catch (MorphyMoveDecodingException e) {
+                    if (numMoveDecodingErrors < 5) {
+                        log.error("Move decoding error in game " + game.id() + ": " + e.getMessage());
+                    }
+                    numMoveDecodingErrors += 1;
+                    numErrors += 1;
+                } catch (MorphyInvalidDataException e) {
+                    if (numInvalidEntityReferences < 5) {
+                        log.error("Invalid data in game " + game.id() + ": " + e.getMessage());
+                    }
+                    numInvalidEntityReferences += 1;
+                    numErrors += 1;
+                } catch (MorphyIOException | AssertionError e) {
+                    log.error("Critical error in game " + game.id() + ": " + e.getMessage());
+                    numErrors += 1;
+                } finally {
+                    progressCallback.run();
+                }
             }
         }
 

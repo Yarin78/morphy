@@ -32,7 +32,7 @@ import java.util.stream.Stream;
  * the different indexes, such as {@link GameHeaderIndex}, {@link PlayerIndex} etc
  * But beware that invoking write operations on these may cause the database to end up in an inconsistent state.
  */
-public class Database implements EntityRetriever {
+public class Database implements EntityRetriever, AutoCloseable {
     private static final Logger log = LoggerFactory.getLogger(Database.class);
 
     // Not a complete list, but the files supported
@@ -44,6 +44,7 @@ public class Database implements EntityRetriever {
             Database.MANDATORY_EXTENSIONS.stream(), Database.ADDITIONAL_EXTENSIONS.stream()),
             Database.SEARCH_BOOSTER_EXTENSIONS.stream()) .collect(Collectors.toList());
 
+    @NotNull private final String databaseName;  // Inferred from file name
 
     @NotNull private final GameHeaderIndex gameHeaderIndex;
     @NotNull private final ExtendedGameHeaderStorage extendedGameHeaderStorage;
@@ -59,6 +60,10 @@ public class Database implements EntityRetriever {
 
     @NotNull private final GameAdapter gameAdapter;
     @NotNull private final DatabaseContext context;
+
+    @NotNull public String name() {
+        return databaseName;
+    }
 
     @NotNull public GameHeaderIndex gameHeaderIndex() {
         return gameHeaderIndex;
@@ -122,6 +127,8 @@ public class Database implements EntityRetriever {
     public Database(@Nullable DatabaseConfig config) {
         this.context = new DatabaseContext(config);
 
+        this.databaseName = "Scratch";
+
         this.gameHeaderIndex = new GameHeaderIndex(this.context);
         this.extendedGameHeaderStorage = new ExtendedGameHeaderStorage(this.context);
         this.moveRepository = new MoveRepository(this.context);
@@ -138,6 +145,7 @@ public class Database implements EntityRetriever {
     }
 
     private Database(
+            @NotNull String name,
             @NotNull DatabaseContext context,
             @NotNull GameHeaderIndex gameHeaderIndex,
             @NotNull ExtendedGameHeaderStorage extendedGameHeaderStorage,
@@ -158,6 +166,7 @@ public class Database implements EntityRetriever {
             throw new IllegalArgumentException("All indexes in a Database must share the same context");
         }
 
+        this.databaseName = name;
         this.context = context;
         this.gameHeaderIndex = gameHeaderIndex;
         this.extendedGameHeaderStorage = extendedGameHeaderStorage;
@@ -203,7 +212,7 @@ public class Database implements EntityRetriever {
         TeamIndex teamIndex = TeamIndex.create(CBUtil.fileWithExtension(file, ".cbe"), context);
         GameTagIndex gameTagIndex = GameTagIndex.create(CBUtil.fileWithExtension(file, ".cbl"), context);
 
-        return new Database(context, gameHeaderIndex, extendedGameHeaderStorage, moveRepository, annotationRepository,
+        return new Database(file.getName(), context, gameHeaderIndex, extendedGameHeaderStorage, moveRepository, annotationRepository,
                 playerIndex, tournamentIndex, tournamentExtraStorage, annotatorIndex, sourceIndex, teamIndex, gameTagIndex);
     }
 
@@ -286,7 +295,9 @@ public class Database implements EntityRetriever {
                     headerCount, extHeaderCount));
         }
 
-        return new Database(context, gameHeaderIndex, extendedGameHeaderStorage, moveRepository, annotationRepository,
+        String name = mode == DatabaseMode.IN_MEMORY ? file.getName() + " [mem]" : file.getName();
+
+        return new Database(name, context, gameHeaderIndex, extendedGameHeaderStorage, moveRepository, annotationRepository,
                 playerIndex, tournamentIndex, tournamentExtraStorage, annotatorIndex, sourceIndex, teamIndex, gameTagIndex);
     }
 
@@ -298,7 +309,7 @@ public class Database implements EntityRetriever {
      */
     private static void ensureNoDatabaseExists(@NotNull File file) throws IOException {
         String baseNameLower = CBUtil.baseName(file).toLowerCase(Locale.ROOT);
-        File[] files = file.getParentFile().listFiles((dir, name) -> name.toLowerCase(Locale.ROOT).startsWith(baseNameLower));
+        File[] files = file.getAbsoluteFile().getParentFile().listFiles((dir, name) -> name.toLowerCase(Locale.ROOT).startsWith(baseNameLower));
         if (files.length > 0) {
             throw new IOException(String.format("Can't create a database %s because file %s exists",
                     file.getPath(), files[0].getPath()));

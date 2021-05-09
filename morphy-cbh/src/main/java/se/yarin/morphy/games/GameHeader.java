@@ -51,6 +51,22 @@ public abstract class GameHeader {
     public abstract int annotatorId();
     public abstract int sourceId();
 
+    public int winningPlayerId() {
+        return switch (result()) {
+            case WHITE_WINS, WHITE_WINS_ON_FORFEIT -> whitePlayerId();
+            case BLACK_WINS, BLACK_WINS_ON_FORFEIT -> blackPlayerId();
+            default -> -1;
+        };
+    }
+
+    public int losingPlayerId() {
+        return switch (result()) {
+            case WHITE_WINS, WHITE_WINS_ON_FORFEIT -> blackPlayerId();
+            case BLACK_WINS, BLACK_WINS_ON_FORFEIT -> whitePlayerId();
+            default -> -1;
+        };
+    }
+
     @Value.Default
     public @NotNull Date playedDate() {
         return Date.unset();

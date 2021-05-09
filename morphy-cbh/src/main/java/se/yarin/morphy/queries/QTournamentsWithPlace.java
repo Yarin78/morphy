@@ -10,6 +10,10 @@ import java.util.stream.Stream;
 public class QTournamentsWithPlace extends ItemQuery<Tournament> {
     private final @NotNull TournamentPlaceFilter filter;
 
+    public QTournamentsWithPlace(@NotNull String place) {
+        this(new TournamentPlaceFilter(place, true, false));
+    }
+
     public QTournamentsWithPlace(@NotNull TournamentPlaceFilter filter) {
         this.filter = filter;
     }

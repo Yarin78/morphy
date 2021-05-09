@@ -1,6 +1,7 @@
 package se.yarin.morphy.games.filters;
 
 import org.jetbrains.annotations.NotNull;
+import se.yarin.chess.GameResult;
 import se.yarin.morphy.entities.Player;
 import se.yarin.morphy.games.GameHeader;
 import se.yarin.util.ByteBufferUtil;
@@ -15,6 +16,7 @@ public class PlayerFilter extends GameStorageFilter {
 
     private final @NotNull HashSet<Integer> playerIds;
     private final @NotNull PlayerColor color;
+    private final @NotNull PlayerResult result;
 
     public enum PlayerColor {
         ANY,
@@ -22,13 +24,20 @@ public class PlayerFilter extends GameStorageFilter {
         BLACK
     }
 
-    public PlayerFilter(@NotNull Player player, @NotNull PlayerColor color) {
-        this(Collections.singletonList(player), color);
+    public enum PlayerResult {
+        ANY,
+        WIN,
+        LOSS
     }
 
-    public PlayerFilter(@NotNull Collection<Player> players, @NotNull PlayerColor color) {
+    public PlayerFilter(@NotNull Player player, @NotNull PlayerColor color, @NotNull PlayerResult result) {
+        this(Collections.singletonList(player), color, result);
+    }
+
+    public PlayerFilter(@NotNull Collection<Player> players, @NotNull PlayerColor color, @NotNull PlayerResult result) {
         this.playerIds = players.stream().map(Player::id).collect(Collectors.toCollection(HashSet::new));
         this.color = color;
+        this.result = result;
     }
 
     @Override
@@ -38,7 +47,14 @@ public class PlayerFilter extends GameStorageFilter {
         }
         boolean isWhite = playerIds.contains(gameHeader.whitePlayerId());
         boolean isBlack = playerIds.contains(gameHeader.blackPlayerId());
-        return (isWhite && this.color != PlayerColor.BLACK) || (isBlack && this.color != PlayerColor.WHITE);
+        // TODO: Test this logic
+        boolean colorMatches = (isWhite && this.color != PlayerColor.BLACK) || (isBlack && this.color != PlayerColor.WHITE);
+
+        boolean resultMatches = result == PlayerResult.ANY ||
+                (result == PlayerResult.WIN && playerIds.contains(gameHeader.winningPlayerId())) ||
+                (result == PlayerResult.LOSS && (playerIds.contains(gameHeader.losingPlayerId()) || gameHeader.result() == GameResult.BOTH_LOST));
+
+        return colorMatches && resultMatches;
     }
 
     @Override
@@ -52,6 +68,7 @@ public class PlayerFilter extends GameStorageFilter {
 
         boolean isWhite = playerIds.contains(whitePlayerId);
         boolean isBlack = playerIds.contains(blackPlayerId);
+        // TODO: Add support for results
         return (isWhite && this.color != PlayerColor.BLACK) || (isBlack && this.color != PlayerColor.WHITE);
     }
 }

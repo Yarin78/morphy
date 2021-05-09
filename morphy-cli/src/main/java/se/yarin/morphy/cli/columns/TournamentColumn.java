@@ -1,7 +1,7 @@
 package se.yarin.morphy.cli.columns;
 
-import se.yarin.cbhlib.Database;
-import se.yarin.cbhlib.entities.TournamentEntity;
+import se.yarin.morphy.Database;
+import se.yarin.morphy.entities.Tournament;
 
 import java.util.Arrays;
 import java.util.stream.Collectors;
@@ -23,7 +23,7 @@ public interface TournamentColumn {
 
     default boolean trimValueToWidth() { return true; }
 
-    String getTournamentValue(Database db, TournamentEntity tournament);
+    String getTournamentValue(Database db, Tournament tournament);
 
     String getTournamentId();
 

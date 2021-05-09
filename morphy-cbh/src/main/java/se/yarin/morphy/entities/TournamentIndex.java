@@ -28,7 +28,7 @@ import static java.nio.file.StandardOpenOption.*;
 public class TournamentIndex extends EntityIndex<Tournament> {
     private static final Logger log = LoggerFactory.getLogger(TournamentIndex.class);
 
-    private static final int SERIALIZED_TOURNAMENT_SIZE = 90;
+    public static final int SERIALIZED_TOURNAMENT_SIZE = 90;
 
     public TournamentIndex() {
         this(null);

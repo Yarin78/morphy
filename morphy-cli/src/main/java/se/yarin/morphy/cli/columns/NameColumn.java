@@ -1,7 +1,7 @@
 package se.yarin.morphy.cli.columns;
 
-import se.yarin.cbhlib.Game;
-import se.yarin.cbhlib.entities.PlayerEntity;
+import se.yarin.morphy.Game;
+import se.yarin.morphy.entities.Player;
 
 public class NameColumn implements GameColumn {
 
@@ -23,10 +23,10 @@ public class NameColumn implements GameColumn {
 
     @Override
     public String getValue(Game game) {
-        if (game.isGuidingText()) {
+        if (game.guidingText()) {
             return isWhite ? game.getTextTitle() : "";
         }
-        PlayerEntity player = isWhite ? game.getWhite() : game.getBlack();
+        Player player = isWhite ? game.white() : game.black();
         String name = player.getFullNameShort();
         return isWhite ? name : ("- " + name);
     }

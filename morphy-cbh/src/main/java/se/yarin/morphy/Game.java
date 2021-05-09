@@ -214,7 +214,7 @@ public class Game {
         return extendedHeader.whiteRatingType();
     }
 
-    public @NotNull RatingType getBlackRatingType() {
+    public @NotNull RatingType blackRatingType() {
         return extendedHeader.blackRatingType();
     }
 

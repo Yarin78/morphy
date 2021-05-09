@@ -1,6 +1,6 @@
 package se.yarin.morphy.cli.columns;
 
-import se.yarin.cbhlib.Game;
+import se.yarin.morphy.Game;
 
 public class GameIdColumn implements GameColumn {
 
@@ -16,7 +16,7 @@ public class GameIdColumn implements GameColumn {
 
     @Override
     public String getValue(Game game) {
-        return String.format("%8d", game.getId());
+        return String.format("%8d", game.id());
     }
 
     @Override

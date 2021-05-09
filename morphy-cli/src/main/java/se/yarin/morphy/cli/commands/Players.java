@@ -3,10 +3,11 @@ package se.yarin.morphy.cli.commands;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import picocli.CommandLine;
-import se.yarin.cbhlib.Database;
-import se.yarin.cbhlib.entities.PlayerBase;
-import se.yarin.cbhlib.entities.PlayerEntity;
 import se.yarin.cbhlib.util.CBUtil;
+import se.yarin.morphy.Database;
+import se.yarin.morphy.DatabaseMode;
+import se.yarin.morphy.DatabaseReadTransaction;
+import se.yarin.morphy.entities.Player;
 
 import java.io.IOException;
 import java.util.concurrent.Callable;
@@ -28,24 +29,28 @@ public class Players extends BaseCommand implements Callable<Integer> {
 
         getDatabaseStream().forEach(file -> {
             log.info("Opening " + file);
-            try (Database db = Database.open(file)) {
-
-                PlayerBase players = db.getPlayerBase();
-                int count = 0;
-                for (PlayerEntity player : players.iterable()) {
-                    if (count >= maxPlayers) break;
-                    String line;
-                    if (hex) {
-                        line = String.format("%7d:  %-30s %-30s %6d", player.getId(), CBUtil.toHexString(player.getRaw()).substring(0, 30), player.getFullName(), player.getCount());
-                    } else {
-                        line = String.format("%7d:  %-30s %6d", player.getId(), player.getFullName(), player.getCount());
+            try (Database db = Database.open(file, DatabaseMode.READ_ONLY)) {
+                try (var txn = new DatabaseReadTransaction(db)) {
+                    int count = 0;
+                    for (Player player : txn.playerTransaction().iterable()) {
+                        if (count >= maxPlayers) break;
+                        String line;
+                        if (hex) {
+                            byte[] raw = db.playerIndex().getRaw(player.id());
+                            line = String.format("%7d:  %-30s %-30s %6d", player.id(), CBUtil.toHexString(raw).substring(0, 30), player.getFullName(), player.count());
+                        } else {
+                            line = String.format("%7d:  %-30s %6d", player.id(), player.getFullName(), player.count());
+                        }
+                        System.out.println(line);
                     }
-                    System.out.println(line);
+                    System.out.println();
+                    System.out.println("Total: " + db.playerIndex().count());
                 }
-                System.out.println();
-                System.out.println("Total: " + players.getCount());
             } catch (IOException e) {
                 System.err.println("IO error when processing " + file);
+                if (verboseLevel() > 0) {
+                    e.printStackTrace();
+                }
             }
         });
 

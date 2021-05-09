@@ -1,6 +1,6 @@
 package se.yarin.morphy.cli.columns;
 
-import se.yarin.cbhlib.Game;
+import se.yarin.morphy.Game;
 
 public class AnnotatorColumn implements GameColumn {
     @Override
@@ -15,7 +15,7 @@ public class AnnotatorColumn implements GameColumn {
 
     @Override
     public String getValue(Game game) {
-        return game.getAnnotator().getName();
+        return game.annotator().name();
     }
 
     @Override

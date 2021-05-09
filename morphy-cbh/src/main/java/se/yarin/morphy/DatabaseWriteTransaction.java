@@ -54,6 +54,7 @@ public class DatabaseWriteTransaction extends DatabaseTransaction {
         }
     }
 
+    // TODO: Create hasUncommitedChanges
     private int currentGameCount;
     private int version; // The version of the database the transaction starts from
 

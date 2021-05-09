@@ -16,7 +16,7 @@ import java.util.EnumSet;
 public final class MoveSerializer {
     private static final Logger log = LoggerFactory.getLogger(MoveSerializer.class);
 
-    private final boolean logDetailedErrors;
+    private boolean logDetailedErrors;
 
     // The CBG format supports many different chess variants, which are encoded differently.
     // This library only supports regular chess and Chess 960 at the moment.
@@ -40,6 +40,10 @@ public final class MoveSerializer {
 
     public MoveSerializer(boolean logDetailedErrors) {
         this.logDetailedErrors = logDetailedErrors;
+    }
+
+    public void setLogDetailedErrors(boolean value) {
+        this.logDetailedErrors = value;
     }
 
     public ByteBuffer serializeMoves(@NotNull GameMovesModel model) {

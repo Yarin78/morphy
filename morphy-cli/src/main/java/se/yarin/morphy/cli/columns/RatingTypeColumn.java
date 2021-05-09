@@ -1,7 +1,7 @@
 package se.yarin.morphy.cli.columns;
 
-import se.yarin.cbhlib.Game;
-import se.yarin.cbhlib.games.RatingType;
+import se.yarin.morphy.Game;
+import se.yarin.morphy.games.RatingType;
 
 public class RatingTypeColumn implements GameColumn {
 
@@ -18,7 +18,7 @@ public class RatingTypeColumn implements GameColumn {
 
     @Override
     public String getValue(Game game) {
-        RatingType ratingType = isWhite ? game.getWhiteRatingType() : game.getBlackRatingType();
+        RatingType ratingType = isWhite ? game.whiteRatingType() : game.blackRatingType();
         return ratingType.toString();
     }
 

@@ -1,8 +1,9 @@
 package se.yarin.morphy.cli.columns;
 
-import se.yarin.cbhlib.Game;
 import se.yarin.cbhlib.util.CBUtil;
+import se.yarin.morphy.Game;
 
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 
 public class RawExtendedHeaderColumn implements GameColumn {
@@ -27,13 +28,12 @@ public class RawExtendedHeaderColumn implements GameColumn {
 
     @Override
     public String getValue(Game game) {
-        byte[] raw = game.getDatabase().getExtendedHeaderBase().getRaw(game.getId());
-        if (raw.length < start+length) {
-            // In case the length of the cbj record is shorter than expected
-            raw = Arrays.copyOf(raw, start+length);
+        ByteBuffer buf = game.database().extendedGameHeaderStorage().getRaw(game.id());
+        if (start >= buf.limit()) {
+            return "";
         }
-        byte[] dest = Arrays.copyOfRange(raw, start, start+length);
-        return CBUtil.toHexString(dest);
+        buf = buf.slice(start, Math.min(length, buf.limit() - start));
+        return CBUtil.toHexString(buf);
     }
 
     @Override

@@ -3,9 +3,10 @@ package se.yarin.morphy.cli.commands;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import picocli.CommandLine;
-import se.yarin.cbhlib.Database;
-import se.yarin.cbhlib.exceptions.ChessBaseException;
-import se.yarin.cbhlib.validation.Validator;
+import se.yarin.morphy.Database;
+import se.yarin.morphy.DatabaseMode;
+import se.yarin.morphy.exceptions.MorphyException;
+import se.yarin.morphy.validation.Validator;
 
 import java.io.IOException;
 import java.util.EnumSet;
@@ -80,12 +81,12 @@ public class Check extends BaseCommand implements Callable<Integer> {
         getDatabaseStream().forEach(file -> {
             log.info("Opening " + file);
 
-            try (Database db = Database.open(file)) {
+            try (Database db = Database.open(file, DatabaseMode.READ_ONLY)) {
                 Validator validator = new Validator();
-                db.getMovesBase().getMovesSerializer().setLogDetailedErrors(true);
-                validator.validate(db, checks, true, showProgressBar);
+                db.moveRepository().getMoveSerializer().setLogDetailedErrors(true);
+                validator.validate(db, checks, true, false, showProgressBar);
                 log.info("Database OK: " + file);
-            } catch (ChessBaseException e) {
+            } catch (MorphyException e) {
                 // At least one error that the ChessBase integrity checker would consider an error found
                 // It could be just a single game that has some bad moves though
                 log.error("Database ERROR: " + file);

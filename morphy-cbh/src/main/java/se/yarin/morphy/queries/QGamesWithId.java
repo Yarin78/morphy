@@ -7,16 +7,17 @@ import se.yarin.morphy.Game;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class QGamesWithId extends ItemQuery<Game> {
-    private final @NotNull Set<Game> games;
     private final @NotNull Set<Integer> gameIds;
 
-    public QGamesWithId(@NotNull Collection<Game> games) {
-        this.games = new HashSet<>(games);
-        this.gameIds = games.stream().map(Game::id).collect(Collectors.toCollection(HashSet::new));
+    public QGamesWithId(int gameId) {
+        this.gameIds = Set.of(gameId);
+    }
+
+    public QGamesWithId(@NotNull Collection<Integer> gameIds) {
+        this.gameIds = new HashSet<>(gameIds);
     }
 
     @Override
@@ -26,11 +27,11 @@ public class QGamesWithId extends ItemQuery<Game> {
 
     @Override
     public int rowEstimate(@NotNull DatabaseReadTransaction txn) {
-        return games.size();
+        return gameIds.size();
     }
 
     @Override
     public @NotNull Stream<Game> stream(@NotNull DatabaseReadTransaction txn) {
-        return games.stream();
+        return gameIds.stream().map(txn::getGame);
     }
 }

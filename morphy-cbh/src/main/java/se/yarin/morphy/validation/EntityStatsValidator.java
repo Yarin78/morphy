@@ -4,13 +4,12 @@ import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.morphy.Database;
+import se.yarin.morphy.DatabaseReadTransaction;
 import se.yarin.morphy.Game;
 import se.yarin.morphy.entities.Entity;
 import se.yarin.morphy.entities.EntityIndex;
 import se.yarin.morphy.entities.EntityIndexReadTransaction;
-import se.yarin.morphy.entities.EntityIndexWriteTransaction;
 import se.yarin.morphy.exceptions.MorphyEntityIndexException;
-import se.yarin.morphy.games.GameSearcher;
 
 import java.util.EnumSet;
 import java.util.Map;
@@ -33,22 +32,23 @@ public class EntityStatsValidator {
     }
 
     public void calculateEntityStats(Runnable progressCallback) {
-        GameSearcher searcher = new GameSearcher(database);
-        for (Game game : searcher.getAll()) {
-            int gameId = game.id();
+        try (var txn = new DatabaseReadTransaction(database)) {
+            for (Game game : txn.iterable()) {
+                int gameId = game.id();
 
-            if (!game.guidingText()) {
-                updateEntityStats(stats.players, game.whitePlayerId(), gameId);
-                updateEntityStats(stats.players, game.blackPlayerId(), gameId);
-                updateEntityStats(stats.teams, game.whiteTeamId(), gameId);
-                updateEntityStats(stats.teams, game.blackTeamId(), gameId);
+                if (!game.guidingText()) {
+                    updateEntityStats(stats.players, game.whitePlayerId(), gameId);
+                    updateEntityStats(stats.players, game.blackPlayerId(), gameId);
+                    updateEntityStats(stats.teams, game.whiteTeamId(), gameId);
+                    updateEntityStats(stats.teams, game.blackTeamId(), gameId);
+                }
+                updateEntityStats(stats.tournaments, game.tournamentId(), gameId);
+                updateEntityStats(stats.annotators, game.annotatorId(), gameId);
+                updateEntityStats(stats.sources, game.sourceId(), gameId);
+                updateEntityStats(stats.gameTags, game.gameTagId(), gameId);
+
+                progressCallback.run();
             }
-            updateEntityStats(stats.tournaments, game.tournamentId(), gameId);
-            updateEntityStats(stats.annotators, game.annotatorId(), gameId);
-            updateEntityStats(stats.sources, game.sourceId(), gameId);
-            updateEntityStats(stats.gameTags, game.gameTagId(), gameId);
-
-            progressCallback.run();
         }
     }
 

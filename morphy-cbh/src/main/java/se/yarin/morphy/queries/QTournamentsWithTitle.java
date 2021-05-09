@@ -10,6 +10,10 @@ import java.util.stream.Stream;
 public class QTournamentsWithTitle extends ItemQuery<Tournament> {
     private final @NotNull TournamentTitleFilter filter;
 
+    public QTournamentsWithTitle(@NotNull String title, boolean caseSensitive, boolean exactMatch) {
+        this(new TournamentTitleFilter(title, caseSensitive, exactMatch));
+    }
+
     public QTournamentsWithTitle(@NotNull TournamentTitleFilter filter) {
         this.filter = filter;
     }

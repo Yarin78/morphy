@@ -4,22 +4,24 @@ import me.tongfei.progressbar.ProgressBar;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import picocli.CommandLine;
-import se.yarin.cbhlib.Database;
-import se.yarin.cbhlib.entities.MultiPlayerSearcher;
-import se.yarin.cbhlib.entities.PlayerSearcher;
-import se.yarin.cbhlib.entities.SinglePlayerSearcher;
-import se.yarin.cbhlib.entities.TournamentSearcher;
-import se.yarin.cbhlib.games.search.*;
+import se.yarin.morphy.Database;
+import se.yarin.morphy.DatabaseMode;
+import se.yarin.morphy.DatabaseReadTransaction;
+import se.yarin.morphy.Game;
 import se.yarin.morphy.cli.games.DatabaseBuilder;
 import se.yarin.morphy.cli.games.GameConsumer;
 import se.yarin.morphy.cli.games.StatsGameConsumer;
 import se.yarin.morphy.cli.games.StdoutGamesSummary;
 import se.yarin.morphy.cli.columns.*;
+import se.yarin.morphy.entities.Player;
+import se.yarin.morphy.entities.Tournament;
+import se.yarin.morphy.games.filters.*;
+import se.yarin.morphy.queries.*;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.channels.FileChannel;
 import java.nio.file.FileAlreadyExistsException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -125,34 +127,44 @@ public class Games extends BaseCommand implements Callable<Integer> {
 
         getDatabaseStream().forEach(file -> {
             log.info("Opening " + file);
-            try (Database db = Database.open(file)) {
+            try (Database db = Database.open(file, DatabaseMode.READ_ONLY)) {
                 // Speeds up performance quite a lot, and we should be fairly certain that the moves in the CBH databases are valid
-                db.getMovesBase().setValidateDecodedMoves(false);
+                db.moveRepository().setValidateDecodedMoves(false);
 
-                GameSearcher gameSearcher = null;
+                ItemQuery<Game> gameQuery = null;
                 try {
-                    gameSearcher = createGameSearcher(db);
+                    gameQuery = createGameQuery();
                 } catch (IllegalArgumentException e) {
                     System.err.println(e.getMessage());
                     System.exit(1);
                 }
-                assert gameSearcher != null;
+                assert gameQuery != null;
 
-                GameSearcher.SearchResult result;
+                try (var txn = new DatabaseReadTransaction(db)) {
+                    QueryResult<Game> result;
 
-                if (!(gameConsumer instanceof StdoutGamesSummary)) {
-                    try (ProgressBar pb = new ProgressBar("Games", gameSearcher.getTotal())) {
-                        result = gameSearcher.search(limit, countAll, gameConsumer, pb::stepTo);
+                    if (!(gameConsumer instanceof StdoutGamesSummary)) {
+                        try (ProgressBar pb = new ProgressBar("Games", db.count())) {
+                            QueryExecutor<Game> executor = new QueryExecutor<>(txn, game -> pb.stepTo(game.id()));
+                            result = executor.execute(gameQuery, limit, countAll, gameConsumer);
+                        }
+                    } else {
+                        QueryExecutor<Game> executor = new QueryExecutor<>(txn);
+                        result = executor.execute(gameQuery, limit, countAll, gameConsumer);
                     }
-                } else {
-                    result = gameSearcher.search(limit, countAll, gameConsumer, null);
-                }
 
-                gameConsumer.searchDone(result);
+                    gameConsumer.searchDone(result);
+                }
             } catch (IOException e) {
                 System.err.println("IO error when processing " + file);
+                if (verboseLevel() > 0) {
+                    e.printStackTrace();
+                }
             } catch (RuntimeException e) {
                 System.err.println("Unexpected error when processing " + file + ": " + e.getMessage());
+                if (verboseLevel() > 0) {
+                    e.printStackTrace();
+                }
             }
         });
 
@@ -160,39 +172,50 @@ public class Games extends BaseCommand implements Callable<Integer> {
         return 0;
     }
 
-    public GameSearcher createGameSearcher(Database db) {
-        GameSearcher gameSearcher = new GameSearcher(db);
+    public ItemQuery<Game> createGameQuery() {
+        ArrayList<ItemQuery<Game>> gameQueries = new ArrayList<>();
+        gameQueries.add(new QGamesAll()); // Ensure we have at least one query
 
         if (ids != null) {
-            gameSearcher.addFilter(new GameIdFilter(db, Arrays.stream(ids).boxed().collect(Collectors.toList())));
+            gameQueries.add(new QGamesWithId(Arrays.stream(ids).boxed().collect(Collectors.toList())));
         }
 
         if (setupPosition) {
-            gameSearcher.addFilter(new SetupPositionFilter(db, true));
+            gameQueries.add(new QGamesIsSetupPosition());
         }
 
         if (startPosition) {
-            gameSearcher.addFilter(new SetupPositionFilter(db, false));
+            gameQueries.add(new QGamesIsStartPosition());
         }
 
         if (game) {
-            gameSearcher.addFilter(new GameTypeFilter(db, false));
+            gameQueries.add(new QGamesIsGame());
         }
 
         if (guidingText) {
-            gameSearcher.addFilter(new GameTypeFilter(db, true));
+            gameQueries.add(new QGamesIsText());
         }
 
-        PlayerSearcher primaryPlayerSearcher = null;
+        ItemQuery<Player> primaryPlayerSearcher = null;
         if (players != null) {
             for (String player : players) {
-                PlayerSearcher playerSearcher;
+                ItemQuery<Player> playerSearcher;
                 if (!player.contains("|")) {
-                    playerSearcher = new SinglePlayerSearcher(db.getPlayerBase(), player, true, false);
+                    playerSearcher = new QPlayersWithName(player, true, false);
                 } else {
-                    playerSearcher = new MultiPlayerSearcher(db.getPlayerBase(), player);
+                    playerSearcher = new QOr<>(Arrays
+                            .stream(player.split("\\|"))
+                            .map(name -> new QPlayersWithName(name, true, false))
+                            .collect(Collectors.toList()));
+
                 }
-                gameSearcher.addFilter(new PlayerFilter(db, playerSearcher, PlayerFilter.PlayerColor.ANY));
+                PlayerFilter.PlayerResult playerResult = PlayerFilter.PlayerResult.ANY;
+                if ("win".equals(result)) {
+                    playerResult = PlayerFilter.PlayerResult.WIN;
+                } else if ("loss".equals(result)) {
+                    playerResult = PlayerFilter.PlayerResult.LOSS;
+                }
+                gameQueries.add(new QGamesByPlayers(playerSearcher, PlayerFilter.PlayerColor.ANY, playerResult));
                 if (primaryPlayerSearcher == null) {
                     primaryPlayerSearcher = playerSearcher;
                 }
@@ -201,77 +224,69 @@ public class Games extends BaseCommand implements Callable<Integer> {
 
         if (result != null) {
             if (result.equals("win") || result.equals("loss")) {
-                if (primaryPlayerSearcher == null) {
+                if (players == null) {
                     throw new IllegalArgumentException("A player search is needed when filtering on 'wins' or 'loss' results");
                 }
-                gameSearcher.addFilter(new PlayerResultsFilter(db, result, primaryPlayerSearcher));
+                // Already taken care of above
             } else {
-                gameSearcher.addFilter(new ResultsFilter(db, result));
+                gameQueries.add(new QGamesWithResult(result));
             }
         }
 
         if (dateRange != null) {
-            gameSearcher.addFilter(new DateRangeFilter(db, dateRange));
+            gameQueries.add(new QGamesWithPlayedDate(dateRange));
         }
 
         if (ratingRangeBoth != null) {
-            gameSearcher.addFilter(new RatingRangeFilter(db, ratingRangeBoth, RatingRangeFilter.RatingColor.BOTH));
+            gameQueries.add(new QGamesWithRating(ratingRangeBoth, RatingRangeFilter.RatingColor.BOTH));
         }
 
         if (ratingRangeAny != null) {
-            gameSearcher.addFilter(new RatingRangeFilter(db, ratingRangeAny, RatingRangeFilter.RatingColor.ANY));
+            gameQueries.add(new QGamesWithRating(ratingRangeAny, RatingRangeFilter.RatingColor.ANY));
         }
 
         if (team != null) {
-            gameSearcher.addFilter(new TeamFilter(db, team));
+            gameQueries.add(new QGamesByTeams(new QTeamsWithTitle(team, true, false)));
         }
 
         if (gameTag != null) {
-            gameSearcher.addFilter(new GameTagFilter(db, gameTag));
+            gameQueries.add(new QGamesByGameTag(new QGameTagsWithTitle(gameTag, true, false)));
         }
 
-        TournamentSearcher tournamentSearcher = null;
+        ArrayList<ItemQuery<Tournament>> tournamentQueries = new ArrayList<>();
         if (tournament != null) {
-            tournamentSearcher = new TournamentSearcher(db.getTournamentBase(), tournament, true, false);
-            gameSearcher.addFilter(new TournamentFilter(db, tournamentSearcher));
+            // TODO: Extract year and use QTournamentsWithYearTitle
+            tournamentQueries.add(new QTournamentsWithTitle(tournament, true, false));
         }
 
         if (tournamentTimeControl != null) {
-            TournamentTimeControlFilter ttFilter = new TournamentTimeControlFilter(db, tournamentTimeControl);
-            gameSearcher.addFilter(ttFilter);
-            if (tournamentSearcher != null) {
-                tournamentSearcher.setTimeControls(ttFilter.getTimeControls());
-            }
+            tournamentQueries.add(new QTournamentsWithTimeControl(tournamentTimeControl));
         }
 
         if (tournamentType != null) {
-            TournamentTypeFilter ttFilter = new TournamentTypeFilter(db, tournamentType);
-            gameSearcher.addFilter(ttFilter);
-            if (tournamentSearcher != null) {
-                tournamentSearcher.setTypes(ttFilter.getTypes());
-            }
+            tournamentQueries.add(new QTournamentsWithType(tournamentType));
         }
 
         if (tournamentPlace != null) {
-            TournamentPlaceFilter tpFilter = new TournamentPlaceFilter(db, tournamentPlace);
-            gameSearcher.addFilter(tpFilter);
-            if (tournamentSearcher != null) {
-                tournamentSearcher.setPlaces(tpFilter.getPlaces());
-            }
+            tournamentQueries.add(new QTournamentsWithPlace(tournamentPlace));
+        }
+
+        if (tournamentQueries.size() > 0) {
+            gameQueries.add(new QGamesByTournaments(new QAnd<>(tournamentQueries)));
         }
 
         if (rawCbhFilter != null) {
             for (String filter : rawCbhFilter) {
-                gameSearcher.addFilter(new RawHeaderFilter(db, filter));
+                gameQueries.add(new QGamesWithRaw(new RawGameHeaderFilter(filter), null));
             }
         }
 
         if (rawCbjFilter != null) {
             for (String filter : rawCbjFilter) {
-                gameSearcher.addFilter(new RawExtendedHeaderFilter(db, filter));
+                gameQueries.add(new QGamesWithRaw(null, new RawExtendedHeaderFilter(filter)));
             }
         }
-        return gameSearcher;
+        return new QAnd<>(gameQueries);
     }
 
     public GameConsumer createGameConsumer() throws IOException {

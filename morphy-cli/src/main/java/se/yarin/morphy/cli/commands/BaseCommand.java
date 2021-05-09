@@ -37,6 +37,10 @@ public abstract class BaseCommand {
         Locale.setDefault(Locale.US);
     }
 
+    public int verboseLevel() {
+        return verbose == null ? 0 : verbose.length;
+    }
+
     protected Stream<File> getDatabaseStream() throws IOException {
         if (file.isDirectory()) {
             return Files.walk(file.toPath(), recursive ? 30 : 1)

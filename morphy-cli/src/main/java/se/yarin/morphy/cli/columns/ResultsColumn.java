@@ -1,6 +1,6 @@
 package se.yarin.morphy.cli.columns;
 
-import se.yarin.cbhlib.Game;
+import se.yarin.morphy.Game;
 import se.yarin.chess.GameResult;
 
 public class ResultsColumn implements GameColumn {
@@ -12,14 +12,14 @@ public class ResultsColumn implements GameColumn {
     @Override
     public String getValue(Game game) {
         String result;
-        if (game.isGuidingText()) {
+        if (game.guidingText()) {
             result = "Txt";
         } else {
-            result = game.getResult().toString();
-            if (game.getResult() == GameResult.DRAW) {
+            result = game.result().toString();
+            if (game.result() == GameResult.DRAW) {
                 result = "½-½";
-            } else if (game.getResult() == GameResult.NOT_FINISHED) {
-                result = game.getLineEvaluation().toASCIIString();
+            } else if (game.result() == GameResult.NOT_FINISHED) {
+                result = game.lineEvaluation().toASCIIString();
             }
         }
         return result;

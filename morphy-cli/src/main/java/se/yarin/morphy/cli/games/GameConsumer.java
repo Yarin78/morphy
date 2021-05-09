@@ -1,14 +1,14 @@
 package se.yarin.morphy.cli.games;
 
-import se.yarin.cbhlib.Game;
-import se.yarin.cbhlib.games.search.GameSearcher;
+import se.yarin.morphy.Game;
+import se.yarin.morphy.queries.QueryResult;
 
 import java.util.function.Consumer;
 
 public interface GameConsumer extends Consumer<Game> {
     void init();
 
-    void searchDone(GameSearcher.SearchResult searchResult);
+    void searchDone(QueryResult<Game> searchResult);
 
     void finish();
 }

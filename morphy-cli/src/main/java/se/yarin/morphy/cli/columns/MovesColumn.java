@@ -1,7 +1,7 @@
 package se.yarin.morphy.cli.columns;
 
-import se.yarin.cbhlib.Game;
-import se.yarin.cbhlib.exceptions.ChessBaseException;
+import se.yarin.morphy.Game;
+import se.yarin.morphy.exceptions.MorphyException;
 import se.yarin.chess.GameModel;
 
 public class MovesColumn implements GameColumn {
@@ -15,7 +15,7 @@ public class MovesColumn implements GameColumn {
         try {
             GameModel model = game.getModel();
             return model.moves().toString();
-        } catch (ChessBaseException e) {
+        } catch (MorphyException e) {
             return "<critical error>";
         }
     }

@@ -20,6 +20,9 @@ public class QAnd<T> extends ItemQuery<T> {
     }
 
     public QAnd(@NotNull List<ItemQuery<T>> subQueries) {
+        if (subQueries.size() == 0) {
+            throw new IllegalArgumentException("At least one query must be passed to QAnd");
+        }
         this.andQueries = new ArrayList<>();
         for (ItemQuery<T> subQuery : subQueries) {
             if (subQuery instanceof QAnd) {

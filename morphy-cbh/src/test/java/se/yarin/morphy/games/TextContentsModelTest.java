@@ -4,6 +4,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import se.yarin.chess.Date;
 import se.yarin.morphy.Database;
+import se.yarin.morphy.DatabaseReadTransaction;
 import se.yarin.morphy.Game;
 import se.yarin.morphy.ResourceLoader;
 import se.yarin.morphy.entities.Tournament;
@@ -115,16 +116,17 @@ public class TextContentsModelTest {
 
     @Test
     public void testReserialize() throws MorphyException {
-        GameSearcher gameSearcher = new GameSearcher(textDatabase);
-        for (Game game : gameSearcher.getAll()) {
-            if (!game.guidingText()) {
-                continue;
+        try (var txn = new DatabaseReadTransaction(textDatabase)) {
+            for (Game game : txn.iterable()) {
+                if (!game.guidingText()) {
+                    continue;
+                }
+                TextModel textModel = game.getTextModel();
+                byte[] expected = new byte[game.getMovesBlob().limit()];
+                game.getMovesBlob().get(expected);
+                byte[] actual = textModel.contents().serialize().array();
+                assertArrayEquals(expected, actual);
             }
-            TextModel textModel = game.getTextModel();
-            byte[] expected = new byte[game.getMovesBlob().limit()];
-            game.getMovesBlob().get(expected);
-            byte[] actual = textModel.contents().serialize().array();
-            assertArrayEquals(expected, actual);
         }
     }
 }

@@ -2,7 +2,7 @@ package se.yarin.morphy.cli.games;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import se.yarin.cbhlib.Game;
+import se.yarin.morphy.Game;
 import se.yarin.morphy.cli.columns.GameColumn;
 
 import java.util.*;

@@ -1,7 +1,7 @@
 package se.yarin.morphy.cli.columns;
 
-import se.yarin.cbhlib.Game;
 import se.yarin.cbhlib.util.CBUtil;
+import se.yarin.morphy.Game;
 
 public class RawAnnotationsColumn implements GameColumn {
     @Override
@@ -12,7 +12,7 @@ public class RawAnnotationsColumn implements GameColumn {
     @Override
     public String getValue(Game game) {
         long annotationOffset = game.getAnnotationOffset();
-        byte[] movesData = game.getDatabase().getAnnotationBase().getStorage().readBlob(annotationOffset).array();
+        byte[] movesData = game.database().annotationRepository().getAnnotationsBlob(annotationOffset).array();
         return CBUtil.toHexString(movesData);
     }
 

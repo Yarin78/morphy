@@ -56,10 +56,12 @@ public class TournamentExtraStorage implements ItemStorageSerializer<TournamentE
 
         if (options.contains(WRITE)) {
             if (storage.getHeader().version() < TournamentExtraHeader.DEFAULT_HEADER_VERSION) {
-                throw new MorphyNotSupportedException("Old extra tournament storage version; upgrade needed but not yet supported.");
+                throw new MorphyNotSupportedException(String.format("Old extra tournament storage version; upgrade needed but not yet supported (%d < %d)",
+                        storage.getHeader().version(), TournamentExtraHeader.DEFAULT_HEADER_VERSION));
             }
             if (storage.getHeader().version() > TournamentExtraHeader.DEFAULT_HEADER_VERSION) {
-                throw new MorphyNotSupportedException("Newer unsupported extra tournament storage format; writing not possible.");
+                throw new MorphyNotSupportedException(String.format("Newer unsupported extra tournament storage format; writing not possible (%d > %d)",
+                        storage.getHeader().version(), TournamentExtraHeader.DEFAULT_HEADER_VERSION));
             }
             if (storage.getHeader().recordSize() != TournamentExtraHeader.DEFAULT_RECORD_SIZE) {
                 // This shouldn't happen because of the version checks above, so this is mostly a sanity check

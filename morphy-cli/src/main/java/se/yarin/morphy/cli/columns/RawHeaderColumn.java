@@ -1,10 +1,9 @@
 package se.yarin.morphy.cli.columns;
 
-import se.yarin.cbhlib.Database;
-import se.yarin.cbhlib.Game;
-import se.yarin.cbhlib.entities.TournamentEntity;
 import se.yarin.cbhlib.util.CBUtil;
+import se.yarin.morphy.Game;
 
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 
 public class RawHeaderColumn implements GameColumn {
@@ -29,9 +28,12 @@ public class RawHeaderColumn implements GameColumn {
 
     @Override
     public String getValue(Game game) {
-        byte[] raw = game.getDatabase().getHeaderBase().getRaw(game.getId());
-        byte[] dest = Arrays.copyOfRange(raw, start, Math.min(raw.length, start+length));
-        return CBUtil.toHexString(dest);
+        ByteBuffer buf = game.database().gameHeaderIndex().getRaw(game.id());
+        if (start >= buf.limit()) {
+            return "";
+        }
+        buf = buf.slice(start, Math.min(length, buf.limit() - start));
+        return CBUtil.toHexString(buf);
     }
 
     @Override

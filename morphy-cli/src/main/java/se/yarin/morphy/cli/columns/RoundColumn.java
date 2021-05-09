@@ -1,6 +1,6 @@
 package se.yarin.morphy.cli.columns;
 
-import se.yarin.cbhlib.Game;
+import se.yarin.morphy.Game;
 
 public class RoundColumn implements GameColumn {
     @Override
@@ -15,13 +15,13 @@ public class RoundColumn implements GameColumn {
 
     @Override
     public String getValue(Game game) {
-        if (game.getRound() == 0) {
+        if (game.round() == 0) {
             return "";
         }
-        if (game.getSubRound() == 0) {
-            return String.format("%4d", game.getRound());
+        if (game.subRound() == 0) {
+            return String.format("%4d", game.round());
         }
-        return String.format("%2d.%d", game.getRound(), game.getSubRound());
+        return String.format("%2d.%d", game.round(), game.subRound());
     }
 
     @Override
