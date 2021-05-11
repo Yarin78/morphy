@@ -26,6 +26,9 @@ public abstract class BaseCommand {
     @CommandLine.Option(names = "-v", description = "Output info logging; use twice for debug logging")
     private boolean[] verbose;
 
+    @CommandLine.Option(names = "--iostats", description = "Show instrumentation statistics")
+    private boolean iostats = false;
+
     protected void setupGlobalOptions() {
         if (verbose != null) {
             String level = verbose.length == 1 ? "info" : "debug";
@@ -40,6 +43,8 @@ public abstract class BaseCommand {
     public int verboseLevel() {
         return verbose == null ? 0 : verbose.length;
     }
+
+    public boolean showInstrumentation() { return iostats; }
 
     protected Stream<File> getDatabaseStream() throws IOException {
         if (file.isDirectory()) {

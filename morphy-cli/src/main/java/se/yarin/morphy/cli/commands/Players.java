@@ -46,6 +46,10 @@ public class Players extends BaseCommand implements Callable<Integer> {
                     System.out.println();
                     System.out.println("Total: " + db.playerIndex().count());
                 }
+
+                if (showInstrumentation()) {
+                    db.context().instrumentation().show();
+                }
             } catch (IOException e) {
                 System.err.println("IO error when processing " + file);
                 if (verboseLevel() > 0) {

@@ -3,6 +3,10 @@ package se.yarin.morphy.games.moves;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import se.yarin.cbhlib.Database;
+import se.yarin.cbhlib.moves.MovesSerializer;
+import se.yarin.morphy.DatabaseContext;
+import se.yarin.morphy.Instrumentation;
 import se.yarin.morphy.exceptions.MorphyMoveDecodingException;
 import se.yarin.util.ByteBufferBitReader;
 import se.yarin.util.ByteBufferBitWriter;
@@ -16,7 +20,10 @@ import java.util.EnumSet;
 public final class MoveSerializer {
     private static final Logger log = LoggerFactory.getLogger(MoveSerializer.class);
 
-    private boolean logDetailedErrors;
+    private @NotNull final DatabaseContext context;
+    private @NotNull final Instrumentation.SerializationStats serializationStats;
+
+    private boolean logDetailedErrors = false;
 
     // The CBG format supports many different chess variants, which are encoded differently.
     // This library only supports regular chess and Chess 960 at the moment.
@@ -35,11 +42,12 @@ public final class MoveSerializer {
     private static final int FLAG11_ENCRYPTION_KEY = 24;
 
     public MoveSerializer() {
-        this(false);
+        this(new DatabaseContext());
     }
 
-    public MoveSerializer(boolean logDetailedErrors) {
-        this.logDetailedErrors = logDetailedErrors;
+    public MoveSerializer(@NotNull DatabaseContext context) {
+        this.context = context;
+        this.serializationStats = context.instrumentation().serializationStats("Moves");
     }
 
     public void setLogDetailedErrors(boolean value) {
@@ -57,6 +65,8 @@ public final class MoveSerializer {
     }
 
     public ByteBuffer serializeMoves(@NotNull GameMovesModel model, int encodingMode) {
+        this.serializationStats.addSerialization(1);
+
         validateEncodingMode(encodingMode);
 
         ByteBuffer buf = ByteBuffer.allocate(16384);
@@ -119,6 +129,8 @@ public final class MoveSerializer {
      * with the {@link MorphyMoveDecodingException#getModel()} containing the moves parsed so far.
      */
     public GameMovesModel deserializeMoves(ByteBuffer buf, boolean checkLegalMoves, int gameId) throws MorphyMoveDecodingException {
+        this.serializationStats.addDeserialization(1);
+
         GameMovesModel model;
         int flags, moveSize;
         try {
@@ -177,7 +189,7 @@ public final class MoveSerializer {
         } catch (BufferUnderflowException e) {
             String message = "Move data ended abruptly";
             if (logDetailedErrors) {
-                message += ". Moves parsed so far: " + model.toString();
+                message += ". Moves parsed so far: " + model;
             }
             throw new MorphyMoveDecodingException(message, e, model);
         }

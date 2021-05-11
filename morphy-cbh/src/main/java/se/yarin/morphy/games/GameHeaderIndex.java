@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 import se.yarin.chess.*;
 import se.yarin.morphy.DatabaseContext;
 import se.yarin.morphy.DatabaseMode;
+import se.yarin.morphy.Instrumentation;
 import se.yarin.morphy.exceptions.MorphyIOException;
 import se.yarin.morphy.exceptions.MorphyInternalException;
 import se.yarin.morphy.exceptions.MorphyInvalidDataException;
@@ -33,6 +34,7 @@ public class GameHeaderIndex implements ItemStorageSerializer<GameHeaderIndex.Pr
 
     private final @NotNull ItemStorage<GameHeaderIndex.Prolog, GameHeader> storage;
     private final @NotNull DatabaseContext context;
+    private final @NotNull Instrumentation.SerializationStats serializationStats;
 
     public GameHeaderIndex() {
         this(null);
@@ -41,20 +43,23 @@ public class GameHeaderIndex implements ItemStorageSerializer<GameHeaderIndex.Pr
     public GameHeaderIndex(@Nullable DatabaseContext context) {
         this.storage = new InMemoryItemStorage<>(Prolog.empty(), null, true);
         this.context = context == null ? new DatabaseContext() : context;
+        this.serializationStats = this.context.instrumentation().serializationStats("GameHeader");
     }
 
     private GameHeaderIndex(
             @NotNull File file,
             @NotNull Set<OpenOption> options,
             @Nullable DatabaseContext context) throws IOException {
-        this.context = context == null ? new DatabaseContext() : context;
         if (!CBUtil.extension(file).equals(".cbh")) {
             throw new IllegalArgumentException("The file extension of a GameHeader index must be .cbh");
         }
 
+        this.context = context == null ? new DatabaseContext() : context;
+        this.serializationStats = this.context.instrumentation().serializationStats("GameHeader");
+
         boolean strict = options.contains(WRITE) || !options.contains(IGNORE_NON_CRITICAL_ERRORS);
 
-        this.storage = new FileItemStorage<>(file, this, Prolog.empty(), options);
+        this.storage = new FileItemStorage<>(file, this.context, this, Prolog.empty(), options);
         if (strict) {
             if (storage.getHeader().serializedItemSize() != Prolog.DEFAULT_SERIALIZED_ITEM_SIZE) {
                 throw new MorphyNotSupportedException("Game header item size mismatches; writes not possible.");
@@ -375,6 +380,7 @@ public class GameHeaderIndex implements ItemStorageSerializer<GameHeaderIndex.Pr
 
     @Override
     public @NotNull GameHeader deserializeItem(int gameHeaderId, @NotNull ByteBuffer buf) {
+        serializationStats.addDeserialization(1);
         int oldPosition = buf.position();
 
         ImmutableGameHeader.Builder builder = ImmutableGameHeader.builder();
@@ -520,6 +526,8 @@ public class GameHeaderIndex implements ItemStorageSerializer<GameHeaderIndex.Pr
 
     @Override
     public void serializeItem(@NotNull GameHeader gameHeader, @NotNull ByteBuffer buf) {
+        serializationStats.addSerialization(1);
+
         int type = 1;
         if (gameHeader.guidingText()) type += 2;
         if (gameHeader.deleted()) type += 128;

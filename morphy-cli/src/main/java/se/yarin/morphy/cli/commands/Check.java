@@ -11,7 +11,6 @@ import se.yarin.morphy.validation.Validator;
 import java.io.IOException;
 import java.util.EnumSet;
 import java.util.HashMap;
-import java.util.Map;
 import java.util.concurrent.Callable;
 
 @CommandLine.Command(name = "check", mixinStandardHelpOptions = true)
@@ -83,9 +82,13 @@ public class Check extends BaseCommand implements Callable<Integer> {
 
             try (Database db = Database.open(file, DatabaseMode.READ_ONLY)) {
                 Validator validator = new Validator();
-                db.moveRepository().getMoveSerializer().setLogDetailedErrors(true);
+                db.moveRepository().moveSerializer().setLogDetailedErrors(true);
                 validator.validate(db, checks, true, false, showProgressBar);
                 log.info("Database OK: " + file);
+
+                if (showInstrumentation()) {
+                    db.context().instrumentation().show();
+                }
             } catch (MorphyException e) {
                 // At least one error that the ChessBase integrity checker would consider an error found
                 // It could be just a single game that has some bad moves though

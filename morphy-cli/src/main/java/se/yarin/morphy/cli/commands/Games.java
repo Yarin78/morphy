@@ -155,6 +155,10 @@ public class Games extends BaseCommand implements Callable<Integer> {
 
                     gameConsumer.searchDone(result);
                 }
+
+                if (showInstrumentation()) {
+                    db.context().instrumentation().show();
+                }
             } catch (IOException e) {
                 System.err.println("IO error when processing " + file);
                 if (verboseLevel() > 0) {

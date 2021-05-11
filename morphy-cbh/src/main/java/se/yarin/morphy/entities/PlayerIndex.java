@@ -36,9 +36,9 @@ public class PlayerIndex extends EntityIndex<Player> {
         this(new InMemoryItemStorage<>(EntityIndexHeader.empty(SERIALIZED_PLAYER_SIZE)), context);
     }
 
-    protected PlayerIndex(@NotNull File file, @NotNull Set<OpenOption> openOptions, @Nullable DatabaseContext context) throws IOException {
+    protected PlayerIndex(@NotNull File file, @NotNull Set<OpenOption> openOptions, @NotNull DatabaseContext context) throws IOException {
         this(new FileItemStorage<>(
-                file, new EntityIndexSerializer(SERIALIZED_PLAYER_SIZE), EntityIndexHeader.empty(SERIALIZED_PLAYER_SIZE), openOptions), context);
+                file, context, new EntityIndexSerializer(SERIALIZED_PLAYER_SIZE), EntityIndexHeader.empty(SERIALIZED_PLAYER_SIZE), openOptions), context);
     }
 
     protected PlayerIndex(@NotNull ItemStorage<EntityIndexHeader, EntityNode> storage, @Nullable DatabaseContext context) {
@@ -47,7 +47,7 @@ public class PlayerIndex extends EntityIndex<Player> {
 
     public static @NotNull PlayerIndex create(@NotNull File file, @Nullable DatabaseContext context)
             throws IOException, MorphyInvalidDataException {
-        return new PlayerIndex(file, Set.of(READ, WRITE, CREATE_NEW), context);
+        return new PlayerIndex(file, Set.of(READ, WRITE, CREATE_NEW), context == null ? new DatabaseContext() : context);
     }
 
     public static @NotNull PlayerIndex open(@NotNull File file) throws IOException {
@@ -72,7 +72,7 @@ public class PlayerIndex extends EntityIndex<Player> {
             return target;
         }
 
-        return new PlayerIndex(file, mode.openOptions(), context);
+        return new PlayerIndex(file, mode.openOptions(), context == null ? new DatabaseContext() : context);
     }
 
     /**
@@ -125,6 +125,7 @@ public class PlayerIndex extends EntityIndex<Player> {
 
     @Override
     protected @NotNull Player deserialize(int entityId, int count, int firstGameId, byte[] serializedData) {
+        serializationStats().addDeserialization(1);
         ByteBuffer buf = ByteBuffer.wrap(serializedData);
         return ImmutablePlayer.builder()
                 .id(entityId)
@@ -137,6 +138,7 @@ public class PlayerIndex extends EntityIndex<Player> {
 
     @Override
     protected void serialize(@NotNull Player player, @NotNull ByteBuffer buf) {
+        serializationStats().addSerialization(1);
         ByteBufferUtil.putFixedSizeByteString(buf, player.lastName(), 30);
         ByteBufferUtil.putFixedSizeByteString(buf, player.firstName(), 20);
     }

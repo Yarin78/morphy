@@ -3,6 +3,8 @@ package se.yarin.morphy.games.annotations;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import se.yarin.morphy.DatabaseContext;
+import se.yarin.morphy.Instrumentation;
 import se.yarin.morphy.exceptions.MorphyAnnotationExecption;
 import se.yarin.util.ByteBufferUtil;
 import se.yarin.chess.GameMovesModel;
@@ -16,7 +18,17 @@ public final class AnnotationsSerializer {
 
     private static final Logger log = LoggerFactory.getLogger(AnnotationsSerializer.class);
 
-    private AnnotationsSerializer() { }
+    private final @NotNull DatabaseContext context;
+    private final @NotNull Instrumentation.SerializationStats serializationStats;
+
+    public AnnotationsSerializer() {
+        this(new DatabaseContext());
+    }
+
+    public AnnotationsSerializer(@NotNull DatabaseContext context) {
+        this.context = context;
+        this.serializationStats = context.instrumentation().serializationStats("MoveAnnotations");
+    }
 
     private static Map<Integer, AnnotationSerializer> annotationSerializers = new HashMap<>();
     private static Map<Class, AnnotationSerializer> annotationSerializersByClass = new HashMap<>();
@@ -60,7 +72,9 @@ public final class AnnotationsSerializer {
      * @param model the game model
      * @return a buffer containing the serialized annotations
      */
-    public static @NotNull ByteBuffer serializeAnnotations(int gameId, @NotNull GameMovesModel model) {
+    public @NotNull ByteBuffer serializeAnnotations(int gameId, @NotNull GameMovesModel model) {
+        serializationStats.addSerialization(1);
+
         // TODO: Double size on demand
         ByteBuffer buf = ByteBuffer.allocate(16384*2);
         ByteBufferUtil.put24BitB(buf, gameId);
@@ -99,7 +113,9 @@ public final class AnnotationsSerializer {
         return buf;
     }
 
-    public static void deserializeAnnotations(@NotNull ByteBuffer buf, @NotNull GameMovesModel model) {
+    public void deserializeAnnotations(@NotNull ByteBuffer buf, @NotNull GameMovesModel model) {
+        serializationStats.addDeserialization(1);
+
         if (!buf.hasRemaining()) {
             return;
         }

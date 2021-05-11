@@ -3,6 +3,7 @@ package se.yarin.morphy.storage;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import se.yarin.morphy.DatabaseContext;
 import se.yarin.morphy.ResourceLoader;
 import se.yarin.morphy.util.CBUtil;
 
@@ -21,10 +22,12 @@ public class FileBlobStorageTest {
     @Rule
     public TemporaryFolder folder = new TemporaryFolder();
 
+    private final DatabaseContext context = new DatabaseContext();
+
     private BlobStorage createStorage() throws IOException {
         File file = folder.newFile();
         file.delete();
-        FileBlobStorage storage = new FileBlobStorage(file, new StringBlobSizeRetriever(), Set.of(READ, WRITE, CREATE_NEW));
+        FileBlobStorage storage = new FileBlobStorage(file, context, new StringBlobSizeRetriever(), Set.of(READ, WRITE, CREATE_NEW));
         // The default chunk size is much bigger; this will ensure the insert operations actually moves stuff
         storage.getChannel().setChunkSize(CHUNK_SIZE);
         return storage;
@@ -161,7 +164,7 @@ public class FileBlobStorageTest {
         File shortheader = ResourceLoader.materializeStream("shortheader",
                 FileBlobStorage.class.getResourceAsStream("shortheader.blobstorage.bin"),
                 ".bin");
-        FileBlobStorage storage = new FileBlobStorage(shortheader, new StringBlobSizeRetriever(), Set.of(READ));
+        FileBlobStorage storage = new FileBlobStorage(shortheader, context, new StringBlobSizeRetriever(), Set.of(READ));
         assertEquals(10, storage.getHeader().headerSize());
         assertEquals(29, storage.getHeader().size());
 
@@ -174,7 +177,7 @@ public class FileBlobStorageTest {
         File file = ResourceLoader.materializeStream("shortheader",
                 FileBlobStorage.class.getResourceAsStream("shortheader.blobstorage.bin"),
                 ".bin");
-        FileBlobStorage storage = new FileBlobStorage(file, new StringBlobSizeRetriever(), Set.of(READ, WRITE));
+        FileBlobStorage storage = new FileBlobStorage(file, context, new StringBlobSizeRetriever(), Set.of(READ, WRITE));
         assertEquals(10, storage.getHeader().headerSize());
 
         long offset = storage.appendBlob(createBlob("third"));

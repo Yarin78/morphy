@@ -1,6 +1,7 @@
 package se.yarin.morphy.entities;
 
 import org.jetbrains.annotations.NotNull;
+import se.yarin.morphy.DatabaseContext;
 import se.yarin.util.ByteBufferUtil;
 import se.yarin.morphy.exceptions.MorphyInvalidDataException;
 import se.yarin.morphy.storage.FileItemStorage;
@@ -39,7 +40,7 @@ public class FooBarEntityIndex extends EntityIndex<FooBarEntity> {
     public static @NotNull FooBarEntityIndex open(@NotNull File file, @NotNull Set<OpenOption> options)
             throws IOException, MorphyInvalidDataException {
         return new FooBarEntityIndex(new FileItemStorage<>(
-                file, new EntityIndexSerializer(SERIALIZED_FOOBAR_SIZE), EntityIndexHeader.empty(SERIALIZED_FOOBAR_SIZE), options));
+                file, new DatabaseContext(), new EntityIndexSerializer(SERIALIZED_FOOBAR_SIZE), EntityIndexHeader.empty(SERIALIZED_FOOBAR_SIZE), options));
     }
 
     public static @NotNull FooBarEntityIndex openInMemory(@NotNull File file)

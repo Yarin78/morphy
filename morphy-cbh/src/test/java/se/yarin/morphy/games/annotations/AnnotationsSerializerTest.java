@@ -20,6 +20,8 @@ import static org.junit.Assert.assertTrue;
 import static se.yarin.chess.Chess.*;
 
 public class AnnotationsSerializerTest {
+    private AnnotationsSerializer annotationsSerializer = new AnnotationsSerializer();
+
     @Test
     public void serializeSimpleAnnotations() throws IOException, MorphyInvalidDataException {
         GameMovesModel model = new GameMovesModel();
@@ -29,13 +31,13 @@ public class AnnotationsSerializerTest {
         List<GameMovesModel.Node> nodes = model.getAllNodes();
 
         ByteBuffer buf = ResourceLoader.loadResource(getClass(), "simpleannotations.annotations.bin");
-        AnnotationsSerializer.deserializeAnnotations(buf, model);
+        annotationsSerializer.deserializeAnnotations(buf, model);
         assertEquals(0, nodes.get(0).getAnnotations().size());
         assertEquals("m!", nodes.get(1).getAnnotations().format("m", true));
         assertEquals("m?", nodes.get(2).getAnnotations().format("m", true));
         assertEquals("m { Capture }", nodes.get(7).getAnnotations().format("m", true));
 
-        ByteBuffer after = AnnotationsSerializer.serializeAnnotations(3, model);
+        ByteBuffer after = annotationsSerializer.serializeAnnotations(3, model);
         buf.position(0);
         after.position(0);
         assertTrue(buf.equals(after));
@@ -45,11 +47,11 @@ public class AnnotationsSerializerTest {
     public void serializeSimpleAnnotationsWithGame() throws IOException, MorphyInvalidDataException {
         ByteBuffer annoBuf = ResourceLoader.loadResource(getClass(), "simpleannotations.annotations.bin");
         ByteBuffer movesBuf = ResourceLoader.loadResource(getClass(), "simpleannotations.moves.bin");
-        GameMovesModel model = new MoveSerializer(true).deserializeMoves(movesBuf);
-        AnnotationsSerializer.deserializeAnnotations(annoBuf, model);
+        GameMovesModel model = new MoveSerializer().deserializeMoves(movesBuf);
+        annotationsSerializer.deserializeAnnotations(annoBuf, model);
         assertEquals("1.e4! c5? 2.Nf3 zugzwang d6 only move 3.d4 unclear cxd4 w/ initiative 4.Nxd4 { Capture } Nf6 5.Nc3 { Fianchetto } g6 6.Be3 +- Better is... Bg7 7.f3 O-O 8.Qd2 Nc6 9.O-O-O d5", model.toString());
 
-        ByteBuffer after = AnnotationsSerializer.serializeAnnotations(3, model);
+        ByteBuffer after = annotationsSerializer.serializeAnnotations(3, model);
         annoBuf.position(0);
         after.position(0);
         assertTrue(annoBuf.equals(after));
@@ -59,11 +61,11 @@ public class AnnotationsSerializerTest {
     public void serializeCommentsInVariations() throws IOException, MorphyInvalidDataException {
         ByteBuffer annoBuf = ResourceLoader.loadResource(getClass(), "commentsinvariations.annotations.bin");
         ByteBuffer movesBuf = ResourceLoader.loadResource(getClass(), "commentsinvariations.moves.bin");
-        GameMovesModel model = new MoveSerializer(true).deserializeMoves(movesBuf);
-        AnnotationsSerializer.deserializeAnnotations(annoBuf, model);
+        GameMovesModel model = new MoveSerializer().deserializeMoves(movesBuf);
+        annotationsSerializer.deserializeAnnotations(annoBuf, model);
         assertEquals("{ Pre-game comment } 1.e4 { After first move comment } e5 2.Nf3 Nc6 3.Bb5 ({ Pre-variant comment } 3.Bc4 d6 4.O-O Nf6 { bla bla } 5.Ng5!) 3...a6 4.Ba4 Nf6 5.O-O Be7 (5...Nxe4!? { may lead to open spanish }) 6.Re1 O-O { This is a really long comment that should cause multiple line overflows to be necessary. This is only to test the robustness of the move generator in opencbm. But it should handle it very easily. Otherwise I'm not much of a programmer! } 7.d3 { Game is over }", model.toString());
 
-        ByteBuffer after = AnnotationsSerializer.serializeAnnotations(9, model);
+        ByteBuffer after = annotationsSerializer.serializeAnnotations(9, model);
         annoBuf.position(0);
         after.position(0);
         assertTrue(annoBuf.equals(after));
@@ -78,7 +80,7 @@ public class AnnotationsSerializerTest {
         List<GameMovesModel.Node> nodes = model.getAllNodes();
 
         ByteBuffer buf = ResourceLoader.loadResource(getClass(), "graphicalannotations.annotations.bin");
-        AnnotationsSerializer.deserializeAnnotations(buf, model);
+        annotationsSerializer.deserializeAnnotations(buf, model);
 
         GraphicalSquaresAnnotation sqAnno = nodes.get(2).getAnnotations().getByClass(ImmutableGraphicalSquaresAnnotation.class);
         Collection<GraphicalSquaresAnnotation.Square> sq = sqAnno.squares();
@@ -98,7 +100,7 @@ public class AnnotationsSerializerTest {
         assertTrue(a.contains(ImmutableArrow.of(GraphicalAnnotationColor.GREEN, G1, F3)));
         assertTrue(a.contains(ImmutableArrow.of(GraphicalAnnotationColor.YELLOW, D2, D3)));
 
-        ByteBuffer after = AnnotationsSerializer.serializeAnnotations(13, model);
+        ByteBuffer after = annotationsSerializer.serializeAnnotations(13, model);
         buf.position(0);
         after.position(0);
         assertTrue(buf.equals(after));
@@ -129,8 +131,8 @@ public class AnnotationsSerializerTest {
             gameGenerator.addRandomAnnotations(inputMoves, noMoves / 2);
             assertFalse(annotationsEqual(inputMoves.root(), compareMoves.root()));
 
-            ByteBuffer buf = AnnotationsSerializer.serializeAnnotations(1, inputMoves);
-            AnnotationsSerializer.deserializeAnnotations(buf, compareMoves);
+            ByteBuffer buf = annotationsSerializer.serializeAnnotations(1, inputMoves);
+            annotationsSerializer.deserializeAnnotations(buf, compareMoves);
             assertTrue(annotationsEqual(inputMoves.root(), compareMoves.root()));
         }
     }

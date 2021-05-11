@@ -17,7 +17,6 @@ import java.nio.file.OpenOption;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import static java.nio.file.StandardOpenOption.*;
 
@@ -32,9 +31,9 @@ public class GameTagIndex extends EntityIndex<GameTag> {
         this(new InMemoryItemStorage<>(EntityIndexHeader.empty(SERIALIZED_GAME_TAG_SIZE)), context);
     }
 
-    protected GameTagIndex(@NotNull File file, @NotNull Set<OpenOption> openOptions, @Nullable DatabaseContext context) throws IOException {
+    protected GameTagIndex(@NotNull File file, @NotNull Set<OpenOption> openOptions, @NotNull DatabaseContext context) throws IOException {
         this(new FileItemStorage<>(
-                file, new EntityIndexSerializer(SERIALIZED_GAME_TAG_SIZE), EntityIndexHeader.empty(SERIALIZED_GAME_TAG_SIZE), openOptions), context);
+                file, context, new EntityIndexSerializer(SERIALIZED_GAME_TAG_SIZE), EntityIndexHeader.empty(SERIALIZED_GAME_TAG_SIZE), openOptions), context);
     }
 
     protected GameTagIndex(@NotNull ItemStorage<EntityIndexHeader, EntityNode> storage, @Nullable DatabaseContext context) {
@@ -43,7 +42,7 @@ public class GameTagIndex extends EntityIndex<GameTag> {
 
     public static GameTagIndex create(@NotNull File file, @Nullable DatabaseContext context)
             throws IOException, MorphyInvalidDataException {
-        return new GameTagIndex(file, Set.of(READ, WRITE, CREATE_NEW), context);
+        return new GameTagIndex(file, Set.of(READ, WRITE, CREATE_NEW), context == null ? new DatabaseContext() : context);
     }
 
     public static GameTagIndex open(@NotNull File file, @Nullable DatabaseContext context)
@@ -59,7 +58,7 @@ public class GameTagIndex extends EntityIndex<GameTag> {
             source.copyEntities(target);
             return target;
         }
-        return new GameTagIndex(file, mode.openOptions(), context);
+        return new GameTagIndex(file, mode.openOptions(), context == null ? new DatabaseContext() : context);
     }
 
     /**
@@ -71,16 +70,14 @@ public class GameTagIndex extends EntityIndex<GameTag> {
         GameTag startKey = GameTag.of(title);
         GameTag endKey = GameTag.of(title + "zzz");
 
-        EntityIndexReadTransaction<GameTag> txn = beginReadTransaction();
-        try {
+        try (EntityIndexReadTransaction<GameTag> txn = beginReadTransaction()) {
             return txn.streamOrderedAscending(startKey, endKey).collect(Collectors.toList());
-        } finally {
-            txn.close();
         }
     }
 
     @Override
     protected @NotNull GameTag deserialize(int entityId, int count, int firstGameId, byte[] serializedData) {
+        serializationStats().addDeserialization(1);
         ByteBuffer buf = ByteBuffer.wrap(serializedData);
         return ImmutableGameTag.builder()
                 .id(entityId)
@@ -99,6 +96,7 @@ public class GameTagIndex extends EntityIndex<GameTag> {
 
     @Override
     protected void serialize(@NotNull GameTag gameTag, @NotNull ByteBuffer buf) {
+        serializationStats().addSerialization(1);
         ByteBufferUtil.putFixedSizeByteString(buf, gameTag.englishTitle(), 200);
         ByteBufferUtil.putFixedSizeByteString(buf, gameTag.germanTitle(), 200);
         ByteBufferUtil.putFixedSizeByteString(buf, gameTag.frenchTitle(), 200);

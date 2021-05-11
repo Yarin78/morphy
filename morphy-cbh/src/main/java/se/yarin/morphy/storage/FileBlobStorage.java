@@ -4,6 +4,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import se.yarin.morphy.DatabaseContext;
 import se.yarin.morphy.exceptions.MorphyException;
 import se.yarin.morphy.exceptions.MorphyIOException;
 import se.yarin.morphy.exceptions.MorphyInvalidDataException;
@@ -29,7 +30,7 @@ public class FileBlobStorage implements BlobStorage {
     private final BlobChannel channel;
     private final boolean strict;
 
-    public FileBlobStorage(@NotNull File file, @NotNull BlobSizeRetriever blobSizeRetriever, @NotNull Set<OpenOption> options)
+    public FileBlobStorage(@NotNull File file, @NotNull DatabaseContext context, @NotNull BlobSizeRetriever blobSizeRetriever, @NotNull Set<OpenOption> options)
             throws IOException, MorphyInvalidDataException {
         if (options.contains(WRITE) && options.contains(MorphyOpenOption.IGNORE_NON_CRITICAL_ERRORS)) {
             throw new IllegalArgumentException("A storage open in WRITE mode can't also ignore errors");
@@ -37,7 +38,7 @@ public class FileBlobStorage implements BlobStorage {
 
         this.file = file;
         this.blobSizeRetriever = blobSizeRetriever;
-        this.channel = BlobChannel.open(file.toPath(), MorphyOpenOption.valid(options));
+        this.channel = BlobChannel.open(file.toPath(), context, MorphyOpenOption.valid(options));
         this.strict = !options.contains(MorphyOpenOption.IGNORE_NON_CRITICAL_ERRORS);
 
         if (this.channel.size() == 0) {

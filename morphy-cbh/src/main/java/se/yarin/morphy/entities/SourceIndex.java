@@ -30,9 +30,9 @@ public class SourceIndex extends EntityIndex<Source> {
         this(new InMemoryItemStorage<>(EntityIndexHeader.empty(SERIALIZED_SOURCE_SIZE)), context);
     }
 
-    protected SourceIndex(@NotNull File file, @NotNull Set<OpenOption> openOptions, @Nullable DatabaseContext context) throws IOException {
+    protected SourceIndex(@NotNull File file, @NotNull Set<OpenOption> openOptions, @NotNull DatabaseContext context) throws IOException {
         this(new FileItemStorage<>(
-                file, new EntityIndexSerializer(SERIALIZED_SOURCE_SIZE), EntityIndexHeader.empty(SERIALIZED_SOURCE_SIZE), openOptions), context);
+                file, context, new EntityIndexSerializer(SERIALIZED_SOURCE_SIZE), EntityIndexHeader.empty(SERIALIZED_SOURCE_SIZE), openOptions), context);
     }
 
     protected SourceIndex(@NotNull ItemStorage<EntityIndexHeader, EntityNode> storage, @Nullable DatabaseContext context) {
@@ -41,7 +41,7 @@ public class SourceIndex extends EntityIndex<Source> {
 
     public static @NotNull SourceIndex create(@NotNull File file, @Nullable DatabaseContext context)
             throws IOException, MorphyInvalidDataException {
-        return new SourceIndex(file, Set.of(READ, WRITE, CREATE_NEW), context);
+        return new SourceIndex(file, Set.of(READ, WRITE, CREATE_NEW), context == null ? new DatabaseContext() : context);
     }
 
     public static @NotNull SourceIndex open(@NotNull File file, @Nullable DatabaseContext context)
@@ -57,11 +57,12 @@ public class SourceIndex extends EntityIndex<Source> {
             source.copyEntities(target);
             return target;
         }
-        return new SourceIndex(file, mode.openOptions(), context);
+        return new SourceIndex(file, mode.openOptions(), context == null ? new DatabaseContext() : context);
     }
 
     @Override
     protected @NotNull Source deserialize(int entityId, int count, int firstGameId, byte[] serializedData) {
+        serializationStats().addDeserialization(1);
         ByteBuffer buf = ByteBuffer.wrap(serializedData);
         return ImmutableSource.builder()
                 .id(entityId)
@@ -78,6 +79,7 @@ public class SourceIndex extends EntityIndex<Source> {
 
     @Override
     protected void serialize(@NotNull Source source, @NotNull ByteBuffer buf) {
+        serializationStats().addSerialization(1);
         ByteBufferUtil.putFixedSizeByteString(buf, source.title(), 25);
         ByteBufferUtil.putFixedSizeByteString(buf, source.publisher(), 16);
         ByteBufferUtil.putIntL(buf, CBUtil.encodeDate(source.publication()));

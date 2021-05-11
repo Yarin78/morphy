@@ -36,7 +36,7 @@ public class MoveRepository implements BlobSizeRetriever {
 
     public @NotNull BlobStorage getStorage() { return storage; }
 
-    public @NotNull MoveSerializer getMoveSerializer() { return moveSerializer; }
+    public @NotNull MoveSerializer moveSerializer() { return moveSerializer; }
 
     public @NotNull DatabaseContext context() {
         return context;
@@ -60,20 +60,20 @@ public class MoveRepository implements BlobSizeRetriever {
      */
     public MoveRepository(@Nullable DatabaseContext context) {
         this.storage = new InMemoryBlobStorage(this);
-        this.moveSerializer = new MoveSerializer();
         this.context = context == null ? new DatabaseContext() : context;
+        this.moveSerializer = new MoveSerializer(this.context);
     }
 
     private MoveRepository(@NotNull BlobStorage storage, @Nullable DatabaseContext context) {
         this.storage = storage;
-        this.moveSerializer = new MoveSerializer();
         this.context = context == null ? new DatabaseContext() : context;
+        this.moveSerializer = new MoveSerializer(this.context);
     }
 
     private MoveRepository(@NotNull File file, @NotNull Set<OpenOption> openOptions, @Nullable DatabaseContext context) throws IOException {
-        this.storage = new FileBlobStorage(file, this, openOptions);
-        this.moveSerializer = new MoveSerializer();
         this.context = context == null ? new DatabaseContext() : context;
+        this.storage = new FileBlobStorage(file, this.context, this, openOptions);
+        this.moveSerializer = new MoveSerializer(this.context);
     }
 
     public static MoveRepository create(@NotNull File file, @Nullable DatabaseContext context) throws IOException {

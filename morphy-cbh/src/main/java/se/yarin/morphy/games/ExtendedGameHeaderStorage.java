@@ -7,6 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.morphy.DatabaseContext;
 import se.yarin.morphy.DatabaseMode;
+import se.yarin.morphy.Instrumentation;
 import se.yarin.morphy.exceptions.MorphyException;
 import se.yarin.morphy.exceptions.MorphyIOException;
 import se.yarin.morphy.exceptions.MorphyInvalidDataException;
@@ -35,6 +36,7 @@ public class ExtendedGameHeaderStorage implements ItemStorageSerializer<Extended
 
     private final @NotNull ItemStorage<ExtendedGameHeaderStorage.ExtProlog, ExtendedGameHeader> storage;
     private final @NotNull DatabaseContext context;
+    private final @NotNull Instrumentation.SerializationStats serializationStats;
 
     public ExtendedGameHeaderStorage() {
         this(null);
@@ -47,14 +49,16 @@ public class ExtendedGameHeaderStorage implements ItemStorageSerializer<Extended
     private ExtendedGameHeaderStorage(@NotNull ItemStorage<ExtProlog, ExtendedGameHeader> storage, @Nullable DatabaseContext context) {
         this.storage = storage;
         this.context = context == null ? new DatabaseContext() : context;
+        this.serializationStats = this.context.instrumentation().serializationStats("GameHeaderExt");
     }
 
     private ExtendedGameHeaderStorage(@NotNull File file, @NotNull Set<OpenOption> options, @Nullable DatabaseContext context) throws IOException {
         if (!CBUtil.extension(file).equals(".cbj")) {
             throw new IllegalArgumentException("The file extension of an extended GameHeader storage must be .cbj");
         }
-        this.storage = new FileItemStorage<>(file, this, ExtProlog.empty(), options);
         this.context = context == null ? new DatabaseContext() : context;
+        this.serializationStats = this.context.instrumentation().serializationStats("GameHeaderExt");
+        this.storage = new FileItemStorage<>(file, this.context, this, ExtProlog.empty(), options);
 
         if (options.contains(WRITE)) {
             if (storage.getHeader().version() < ExtProlog.DEFAULT_VERSION) {
@@ -346,6 +350,8 @@ public class ExtendedGameHeaderStorage implements ItemStorageSerializer<Extended
 
     @Override
     public @NotNull ExtendedGameHeader deserializeItem(int id, @NotNull ByteBuffer buf) {
+        serializationStats.addDeserialization(1);
+
         int bufSize = buf.limit() - buf.position();
 
         ImmutableExtendedGameHeader.Builder builder = ImmutableExtendedGameHeader.builder();
@@ -419,6 +425,8 @@ public class ExtendedGameHeaderStorage implements ItemStorageSerializer<Extended
     @Override
     public void serializeItem(@NotNull ExtendedGameHeader item, @NotNull ByteBuffer buf) {
         assert this.storage.getHeader().serializedItemSize() >= ExtProlog.DEFAULT_SERIALIZED_ITEM_SIZE;
+
+        serializationStats.addDeserialization(1);
 
         ByteBufferUtil.putIntB(buf, item.whiteTeamId());
         ByteBufferUtil.putIntB(buf, item.blackTeamId());

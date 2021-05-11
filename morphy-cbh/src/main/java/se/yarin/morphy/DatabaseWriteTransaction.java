@@ -8,9 +8,7 @@ import se.yarin.chess.GameHeaderModel;
 import se.yarin.chess.GameModel;
 import se.yarin.morphy.entities.*;
 import se.yarin.morphy.exceptions.MorphyInvalidDataException;
-import se.yarin.morphy.exceptions.MorphyNotSupportedException;
 import se.yarin.morphy.games.*;
-import se.yarin.morphy.games.annotations.AnnotationsSerializer;
 import se.yarin.morphy.text.TextHeaderModel;
 import se.yarin.morphy.text.TextModel;
 
@@ -286,8 +284,8 @@ public class DatabaseWriteTransaction extends DatabaseTransaction {
                 gameId,
                 header,
                 extendedHeader,
-                database().moveRepository().getMoveSerializer().serializeMoves(model.moves()),
-                model.moves().countAnnotations() > 0 ? AnnotationsSerializer.serializeAnnotations(gameId, model.moves()) : null);
+                database().moveRepository().moveSerializer().serializeMoves(model.moves()),
+                model.moves().countAnnotations() > 0 ? database().annotationRepository().annotationSerializer().serializeAnnotations(gameId, model.moves()) : null);
     }
 
     /**

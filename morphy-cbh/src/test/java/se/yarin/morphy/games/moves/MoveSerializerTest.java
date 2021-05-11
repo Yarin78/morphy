@@ -22,7 +22,7 @@ public class MoveSerializerTest {
 
     @Before
     public void setup() {
-        movesSerializer = new MoveSerializer(true);
+        movesSerializer = new MoveSerializer();
         CompactMoveEncoder.INTEGRITY_CHECKS_ENABLED = true;
     }
 

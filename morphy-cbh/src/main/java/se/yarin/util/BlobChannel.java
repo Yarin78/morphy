@@ -1,5 +1,8 @@
 package se.yarin.util;
 
+import se.yarin.morphy.DatabaseContext;
+import se.yarin.morphy.Instrumentation;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.file.OpenOption;
@@ -7,12 +10,14 @@ import java.nio.file.Path;
 import java.util.Set;
 
 public interface BlobChannel {
+    // Used by old code
     static BlobChannel open(Path path, OpenOption... openOptions) throws IOException {
         return PagedBlobChannel.open(path, openOptions);
     }
 
-    static BlobChannel open(Path path, Set<? extends OpenOption> openOptions) throws IOException {
-        return PagedBlobChannel.open(path, openOptions);
+    // Used by new code
+    static BlobChannel open(Path path, DatabaseContext context, Set<? extends OpenOption> openOptions) throws IOException {
+        return PagedBlobChannel.open(path, context.instrumentation(), openOptions);
     }
 
     void setChunkSize(int chunkSize);

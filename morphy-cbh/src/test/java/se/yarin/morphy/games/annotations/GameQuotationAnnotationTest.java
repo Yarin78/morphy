@@ -30,7 +30,7 @@ public class GameQuotationAnnotationTest {
         GameMovesModel moves = new GameMovesModel();
         GameMovesModel.Node node = moves.root().addMove(E2, E4).addMove(E7, E5).addMove(G1, F3).addMove(B8, C6);
 
-        AnnotationsSerializer.deserializeAnnotations(buf, moves);
+        new AnnotationsSerializer().deserializeAnnotations(buf, moves);
 
         GameQuotationAnnotation q = node.getAnnotation(GameQuotationAnnotation.class);
         assertNotNull(q);

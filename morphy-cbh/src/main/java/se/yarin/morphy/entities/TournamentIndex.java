@@ -38,9 +38,9 @@ public class TournamentIndex extends EntityIndex<Tournament> {
         this(new InMemoryItemStorage<>(EntityIndexHeader.empty(SERIALIZED_TOURNAMENT_SIZE), null), context);
     }
 
-    protected TournamentIndex(@NotNull File file, @NotNull Set<OpenOption> openOptions, @Nullable DatabaseContext context) throws IOException {
+    protected TournamentIndex(@NotNull File file, @NotNull Set<OpenOption> openOptions, @NotNull DatabaseContext context) throws IOException {
         this(new FileItemStorage<>(
-                file, new EntityIndexSerializer(SERIALIZED_TOURNAMENT_SIZE), EntityIndexHeader.empty(SERIALIZED_TOURNAMENT_SIZE), openOptions), context);
+                file, context, new EntityIndexSerializer(SERIALIZED_TOURNAMENT_SIZE), EntityIndexHeader.empty(SERIALIZED_TOURNAMENT_SIZE), openOptions), context);
     }
 
     protected TournamentIndex(
@@ -50,7 +50,7 @@ public class TournamentIndex extends EntityIndex<Tournament> {
 
     public static @NotNull TournamentIndex create(@NotNull File file, @Nullable DatabaseContext context)
             throws IOException, MorphyInvalidDataException {
-        return new TournamentIndex(file, Set.of(READ, WRITE, CREATE_NEW), context);
+        return new TournamentIndex(file, Set.of(READ, WRITE, CREATE_NEW), context == null ? new DatabaseContext() : context);
     }
 
     public static @NotNull TournamentIndex open(@NotNull File file, @Nullable DatabaseContext context)
@@ -66,24 +66,7 @@ public class TournamentIndex extends EntityIndex<Tournament> {
             source.copyEntities(target);
             return target;
         }
-        return new TournamentIndex(file, mode.openOptions(), context);
-
-        /*
-        File extraFile = CBUtil.fileWithExtension(file, ".cbtt");
-
-        Set<OpenOption> extraOptions = new HashSet<>(options);
-        if (options.contains(StandardOpenOption.WRITE)) {
-            // Always create the extra tournament file if it's missing and we're in WRITE mode
-            extraOptions.add(StandardOpenOption.CREATE);
-        }
-        TournamentExtraStorage extraStorage;
-        if (!extraFile.exists() && !extraOptions.contains(CREATE) && !extraOptions.contains(CREATE_NEW)) {
-            // If the extra storage file is missing and we can't create it, use an empty in-memory version instead
-            extraStorage = new TournamentExtraStorage();
-        } else {
-            extraStorage = TournamentExtraStorage.open(extraFile, extraOptions);
-        }
-        */
+        return new TournamentIndex(file, mode.openOptions(), context == null ? new DatabaseContext() : context);
     }
 
     @Override
@@ -113,11 +96,8 @@ public class TournamentIndex extends EntityIndex<Tournament> {
      * @return a list over matching tournaments
      */
     public @NotNull List<Tournament> prefixSearch(int year, @NotNull String name, @Nullable TournamentExtraStorage extraStorage) {
-        EntityIndexReadTransaction<Tournament> txn = beginReadTransaction(extraStorage);
-        try {
+        try (EntityIndexReadTransaction<Tournament> txn = beginReadTransaction(extraStorage)) {
             return prefixStream(txn, year, name).collect(Collectors.toList());
-        } finally {
-            txn.close();
         }
     }
 
@@ -138,11 +118,8 @@ public class TournamentIndex extends EntityIndex<Tournament> {
      * @return a list over matching tournaments, with the most recent tournament first
      */
     public @NotNull List<Tournament> rangeSearch(int fromYear, int toYear, @Nullable TournamentExtraStorage extraStorage) {
-        TournamentIndexReadTransaction txn = beginReadTransaction(extraStorage);
-        try {
+        try (TournamentIndexReadTransaction txn = beginReadTransaction(extraStorage)) {
             return rangeStream(txn, fromYear, toYear).collect(Collectors.toList());
-        } finally {
-            txn.close();
         }
     }
 
@@ -157,6 +134,7 @@ public class TournamentIndex extends EntityIndex<Tournament> {
     }
 
     protected @NotNull Tournament deserialize(int entityId, int count, int firstGameId, byte[] serializedData) {
+        serializationStats().addDeserialization(1);
         ByteBuffer buf = ByteBuffer.wrap(serializedData);
 
         ImmutableTournament.Builder builder = ImmutableTournament.builder()
@@ -206,6 +184,7 @@ public class TournamentIndex extends EntityIndex<Tournament> {
 
     @Override
     protected void serialize(@NotNull Tournament tournament, @NotNull ByteBuffer buf) {
+        serializationStats().addSerialization(1);
         int typeByte = CBUtil.encodeTournamentType(tournament.type(), tournament.timeControl());
 
         int optionByte =

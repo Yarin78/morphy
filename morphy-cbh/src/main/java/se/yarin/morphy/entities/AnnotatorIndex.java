@@ -30,9 +30,9 @@ public class AnnotatorIndex extends EntityIndex<Annotator> {
         this(new InMemoryItemStorage<>(EntityIndexHeader.empty(SERIALIZED_ANNOTATOR_SIZE)), context);
     }
 
-    protected AnnotatorIndex(@NotNull File file, @NotNull Set<OpenOption> openOptions, @Nullable DatabaseContext context) throws IOException {
+    protected AnnotatorIndex(@NotNull File file, @NotNull Set<OpenOption> openOptions, @NotNull DatabaseContext context) throws IOException {
         this(new FileItemStorage<>(
-                file, new EntityIndexSerializer(SERIALIZED_ANNOTATOR_SIZE), EntityIndexHeader.empty(SERIALIZED_ANNOTATOR_SIZE), openOptions), context);
+                file, context, new EntityIndexSerializer(SERIALIZED_ANNOTATOR_SIZE), EntityIndexHeader.empty(SERIALIZED_ANNOTATOR_SIZE), openOptions), context);
     }
 
     protected AnnotatorIndex(@NotNull ItemStorage<EntityIndexHeader, EntityNode> storage, @Nullable DatabaseContext context) {
@@ -41,7 +41,7 @@ public class AnnotatorIndex extends EntityIndex<Annotator> {
 
     public static @NotNull AnnotatorIndex create(@NotNull File file, @Nullable DatabaseContext context)
             throws IOException, MorphyInvalidDataException {
-        return new AnnotatorIndex(file, Set.of(READ, WRITE, CREATE_NEW), context);
+        return new AnnotatorIndex(file, Set.of(READ, WRITE, CREATE_NEW), context == null ? new DatabaseContext() : context);
     }
 
     public static @NotNull AnnotatorIndex open(@NotNull File file, @Nullable DatabaseContext context)
@@ -57,11 +57,12 @@ public class AnnotatorIndex extends EntityIndex<Annotator> {
             source.copyEntities(target);
             return target;
         }
-        return new AnnotatorIndex(file, mode.openOptions(), context);
+        return new AnnotatorIndex(file, mode.openOptions(), context == null ? new DatabaseContext() : context);
     }
 
     @Override
     protected @NotNull Annotator deserialize(int entityId, int count, int firstGameId, byte[] serializedData) {
+        serializationStats().addDeserialization(1);
         ByteBuffer buf = ByteBuffer.wrap(serializedData);
         return ImmutableAnnotator.builder()
                 .id(entityId)
@@ -73,6 +74,7 @@ public class AnnotatorIndex extends EntityIndex<Annotator> {
 
     @Override
     protected void serialize(@NotNull Annotator annotator, @NotNull ByteBuffer buf) {
+        serializationStats().addSerialization(1);
         ByteBufferUtil.putFixedSizeByteString(buf, annotator.name(), 45);
     }
 

@@ -83,7 +83,8 @@ public class GamesValidator {
         int numMoveDecodingErrors = 0, numInvalidEntityReferences = 0;
         boolean moveOffsetDiffers = false, annotationOffsetDiffers = false;
 
-        MoveSerializer movesSerializer = new MoveSerializer(true);
+        MoveSerializer movesSerializer = new MoveSerializer(db.context());
+        movesSerializer.setLogDetailedErrors(true);
 
         try (var txn = new DatabaseReadTransaction(db)) {
             for (Game game : txn.iterable()) {

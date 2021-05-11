@@ -30,6 +30,7 @@ import org.jetbrains.annotations.Nullable;
 public class DatabaseContext {
     private final @NotNull DatabaseConfig config;
     private final @NotNull ReadWriteUpdateLock lock;
+    private final @NotNull Instrumentation instrumentation;
 
     private final @NotNull AtomicInteger currentVersion;
 
@@ -40,11 +41,16 @@ public class DatabaseContext {
     public DatabaseContext(@Nullable DatabaseConfig config) {
         this.lock = new ReentrantReadWriteUpdateLock();
         this.currentVersion = new AtomicInteger(0);
+        this.instrumentation = new Instrumentation();
         this.config = config == null ? new DatabaseConfig() : config;
     }
 
     public @NotNull DatabaseConfig config() {
         return config;
+    }
+
+    public Instrumentation instrumentation() {
+        return instrumentation;
     }
 
     public int currentVersion() {

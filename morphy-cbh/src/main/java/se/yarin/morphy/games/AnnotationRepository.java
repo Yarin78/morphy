@@ -28,6 +28,7 @@ public class AnnotationRepository implements BlobSizeRetriever {
 
     private final @NotNull BlobStorage storage;
     private final @NotNull DatabaseContext context;
+    private final @NotNull AnnotationsSerializer annotationsSerializer;
 
     /**
      * Creates a new in-memory annotation repository that is initially empty.
@@ -40,18 +41,21 @@ public class AnnotationRepository implements BlobSizeRetriever {
      * Creates a new in-memory annotation repository that is initially empty.
      */
     public AnnotationRepository(@Nullable DatabaseContext context) {
-        this.storage = new InMemoryBlobStorage(this);
         this.context = context == null ? new DatabaseContext() : context;
+        this.annotationsSerializer = new AnnotationsSerializer(this.context);
+        this.storage = new InMemoryBlobStorage(this);
     }
 
     private AnnotationRepository(@NotNull BlobStorage storage, @Nullable DatabaseContext context) {
-        this.storage = storage;
         this.context = context == null ? new DatabaseContext() : context;
+        this.annotationsSerializer = new AnnotationsSerializer(this.context);
+        this.storage = storage;
     }
 
     private AnnotationRepository(@NotNull File file, @NotNull Set<OpenOption> openOptions, @Nullable DatabaseContext context) throws IOException {
-        this.storage = new FileBlobStorage(file, this, openOptions);
         this.context = context == null ? new DatabaseContext() : context;
+        this.annotationsSerializer = new AnnotationsSerializer(this.context);
+        this.storage = new FileBlobStorage(file, this.context, this, openOptions);
     }
 
 
@@ -59,6 +63,10 @@ public class AnnotationRepository implements BlobSizeRetriever {
 
     public @NotNull DatabaseContext context() {
         return context;
+    }
+
+    public @NotNull AnnotationsSerializer annotationSerializer() {
+        return annotationsSerializer;
     }
 
     public static AnnotationRepository create(@NotNull File file, @Nullable DatabaseContext context) throws IOException {
@@ -121,7 +129,7 @@ public class AnnotationRepository implements BlobSizeRetriever {
     public void getAnnotations(@NotNull GameMovesModel model, long ofs) {
         if (ofs > 0) {
             ByteBuffer blob = storage.getBlob(ofs);
-            AnnotationsSerializer.deserializeAnnotations(blob, model);
+            annotationsSerializer.deserializeAnnotations(blob, model);
         }
     }
 
@@ -164,7 +172,7 @@ public class AnnotationRepository implements BlobSizeRetriever {
         if (model.countAnnotations() == 0) {
             return 0;
         }
-        ByteBuffer buf = AnnotationsSerializer.serializeAnnotations(gameId, model);
+        ByteBuffer buf = annotationsSerializer.serializeAnnotations(gameId, model);
         return putAnnotationsBlob(ofs, buf);
     }
 
@@ -200,7 +208,7 @@ public class AnnotationRepository implements BlobSizeRetriever {
         if (model.countAnnotations() == 0 || targetAnnotationOffset == 0) {
             return 0;
         }
-        ByteBuffer buf = AnnotationsSerializer.serializeAnnotations(0, model);
+        ByteBuffer buf = annotationsSerializer.serializeAnnotations(0, model);
         int newAnnotationSize = getBlobSize(buf);
         if (currentAnnotationOffset == 0) {
             storage.insert(targetAnnotationOffset, newAnnotationSize);
@@ -224,5 +232,4 @@ public class AnnotationRepository implements BlobSizeRetriever {
     public void close() throws IOException {
         storage.close();
     }
-
 }

@@ -64,6 +64,7 @@ public class GameQuotationAnnotation extends Annotation implements StatisticalAn
         if (game.moves().root().position().isRegularChess()) {
             if (game.moves().isSetupPosition()) {
                 this.setupPositionData = new byte[28];
+                // TODO: DatabaseContext should be passed to MoveSerializer
                 new MoveSerializer().serializeInitialPosition(game.moves(),
                         ByteBuffer.wrap(this.setupPositionData), false);
             }
@@ -102,6 +103,7 @@ public class GameQuotationAnnotation extends Annotation implements StatisticalAn
         GameMovesModel moves;
         try {
             if (setupPositionData != null) {
+                // TODO: DatabaseContext should be passed to MoveSerializer
                 moves = new MoveSerializer().parseInitialPosition(ByteBuffer.wrap(setupPositionData), false, 0);
             } else {
                 moves = new GameMovesModel();

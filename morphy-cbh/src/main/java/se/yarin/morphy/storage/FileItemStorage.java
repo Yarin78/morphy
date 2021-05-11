@@ -2,6 +2,7 @@ package se.yarin.morphy.storage;
 
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import se.yarin.morphy.DatabaseContext;
 import se.yarin.morphy.exceptions.MorphyException;
 import se.yarin.morphy.exceptions.MorphyIOException;
 import se.yarin.morphy.exceptions.MorphyInvalidDataException;
@@ -27,18 +28,18 @@ public class FileItemStorage<THeader, TItem> implements ItemStorage<THeader, TIt
 
     public FileItemStorage(
             @NotNull File file,
+            @NotNull DatabaseContext context,
             @NotNull ItemStorageSerializer<THeader, TItem> serializer,
             @NotNull THeader emptyHeader,
             @NotNull Set<OpenOption> options)
             throws IOException, MorphyInvalidDataException {
-
         boolean laxMode = options.contains(MorphyOpenOption.IGNORE_NON_CRITICAL_ERRORS);
 
         if (options.contains(WRITE) && laxMode) {
             throw new IllegalArgumentException("A storage open in WRITE mode can't also ignore non critical errors");
         }
 
-        this.channel = BlobChannel.open(file.toPath(), MorphyOpenOption.valid(options));
+        this.channel = BlobChannel.open(file.toPath(), context, MorphyOpenOption.valid(options));
         this.serializer = serializer;
         this.fileSize = this.channel.size();
         this.laxMode = laxMode;

@@ -32,9 +32,9 @@ public class TeamIndex extends EntityIndex<Team> {
         this(new InMemoryItemStorage<>(EntityIndexHeader.empty(SERIALIZED_TEAM_SIZE)), context);
     }
 
-    protected TeamIndex(@NotNull File file, @NotNull Set<OpenOption> openOptions, @Nullable DatabaseContext context) throws IOException {
+    protected TeamIndex(@NotNull File file, @NotNull Set<OpenOption> openOptions, @NotNull DatabaseContext context) throws IOException {
         this(new FileItemStorage<>(
-                file, new EntityIndexSerializer(SERIALIZED_TEAM_SIZE), EntityIndexHeader.empty(SERIALIZED_TEAM_SIZE), openOptions), context);
+                file, context, new EntityIndexSerializer(SERIALIZED_TEAM_SIZE), EntityIndexHeader.empty(SERIALIZED_TEAM_SIZE), openOptions), context);
     }
 
     protected TeamIndex(@NotNull ItemStorage<EntityIndexHeader, EntityNode> storage, @Nullable DatabaseContext context) {
@@ -43,7 +43,7 @@ public class TeamIndex extends EntityIndex<Team> {
 
     public static @NotNull TeamIndex create(@NotNull File file, @Nullable DatabaseContext context)
             throws IOException, MorphyInvalidDataException {
-        return new TeamIndex(file, Set.of(READ, WRITE, CREATE_NEW), context);
+        return new TeamIndex(file, Set.of(READ, WRITE, CREATE_NEW), context == null ? new DatabaseContext() : context);
     }
 
     public static @NotNull TeamIndex open(@NotNull File file, @Nullable DatabaseContext context)
@@ -59,7 +59,7 @@ public class TeamIndex extends EntityIndex<Team> {
             source.copyEntities(target);
             return target;
         }
-        return new TeamIndex(file, mode.openOptions(), context);
+        return new TeamIndex(file, mode.openOptions(), context == null ? new DatabaseContext() : context);
     }
 
     /**
@@ -71,16 +71,14 @@ public class TeamIndex extends EntityIndex<Team> {
         Team startKey = Team.of(title);
         Team endKey = Team.of(title + "zzz");
 
-        EntityIndexReadTransaction<Team> txn = beginReadTransaction();
-        try {
+        try (EntityIndexReadTransaction<Team> txn = beginReadTransaction()) {
             return txn.streamOrderedAscending(startKey, endKey).collect(Collectors.toList());
-        } finally {
-            txn.close();
         }
     }
 
     @Override
     protected @NotNull Team deserialize(int entityId, int count, int firstGameId, byte[] serializedData) {
+        serializationStats().addDeserialization(1);
         ByteBuffer buf = ByteBuffer.wrap(serializedData);
         return ImmutableTeam.builder()
                 .id(entityId)
@@ -96,6 +94,7 @@ public class TeamIndex extends EntityIndex<Team> {
 
     @Override
     protected void serialize(@NotNull Team team, @NotNull ByteBuffer buf) {
+        serializationStats().addSerialization(1);
         ByteBufferUtil.putFixedSizeByteString(buf, team.title(), 45);
         ByteBufferUtil.putIntL(buf, team.teamNumber());
         ByteBufferUtil.putByte(buf, team.season() ? 1 : 0);
