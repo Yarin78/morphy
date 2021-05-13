@@ -5,6 +5,7 @@ import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.chess.GameModel;
+import se.yarin.morphy.boosters.GameEntityIndex;
 import se.yarin.morphy.entities.*;
 import se.yarin.morphy.exceptions.MorphyException;
 import se.yarin.morphy.exceptions.MorphyInvalidDataException;
@@ -15,6 +16,7 @@ import se.yarin.morphy.util.CBUtil;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.NoSuchFileException;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -57,6 +59,7 @@ public class Database implements EntityRetriever, AutoCloseable {
     @NotNull private final SourceIndex sourceIndex;
     @NotNull private final TeamIndex teamIndex;
     @NotNull private final GameTagIndex gameTagIndex;
+    @Nullable private final GameEntityIndex gameEntityIndex;
 
     @NotNull private final GameAdapter gameAdapter;
     @NotNull private final DatabaseContext context;
@@ -109,6 +112,8 @@ public class Database implements EntityRetriever, AutoCloseable {
         return gameTagIndex;
     }
 
+    @Nullable public GameEntityIndex gameEntityIndex() { return gameEntityIndex; }
+
     @NotNull public GameAdapter gameAdapter() { return gameAdapter; }
 
     @NotNull public DatabaseContext context() {
@@ -140,6 +145,7 @@ public class Database implements EntityRetriever, AutoCloseable {
         this.sourceIndex = new SourceIndex(this.context);
         this.teamIndex = new TeamIndex(this.context);
         this.gameTagIndex = new GameTagIndex(this.context);
+        this.gameEntityIndex = new GameEntityIndex(this.context);
 
         this.gameAdapter = new GameAdapter();
     }
@@ -157,7 +163,8 @@ public class Database implements EntityRetriever, AutoCloseable {
             @NotNull AnnotatorIndex annotatorIndex,
             @NotNull SourceIndex sourceIndex,
             @NotNull TeamIndex teamIndex,
-            @NotNull GameTagIndex gameTagIndex) {
+            @NotNull GameTagIndex gameTagIndex,
+            @Nullable GameEntityIndex gameEntityIndex) {
 
         Set<DatabaseContext> contexts = new HashSet<>(Arrays.asList(context, gameHeaderIndex.context(), extendedGameHeaderStorage.context(), moveRepository.context(),
                 annotationRepository.context(), playerIndex.context(), tournamentIndex.context(), tournamentExtraStorage.context(),
@@ -179,6 +186,7 @@ public class Database implements EntityRetriever, AutoCloseable {
         this.sourceIndex = sourceIndex;
         this.teamIndex = teamIndex;
         this.gameTagIndex = gameTagIndex;
+        this.gameEntityIndex = gameEntityIndex;
 
         this.gameAdapter = new GameAdapter();
     }
@@ -212,8 +220,10 @@ public class Database implements EntityRetriever, AutoCloseable {
         TeamIndex teamIndex = TeamIndex.create(CBUtil.fileWithExtension(file, ".cbe"), context);
         GameTagIndex gameTagIndex = GameTagIndex.create(CBUtil.fileWithExtension(file, ".cbl"), context);
 
+        GameEntityIndex gameEntityIndex = GameEntityIndex.create(file, context);
+
         return new Database(file.getName(), context, gameHeaderIndex, extendedGameHeaderStorage, moveRepository, annotationRepository,
-                playerIndex, tournamentIndex, tournamentExtraStorage, annotatorIndex, sourceIndex, teamIndex, gameTagIndex);
+                playerIndex, tournamentIndex, tournamentExtraStorage, annotatorIndex, sourceIndex, teamIndex, gameTagIndex, gameEntityIndex);
     }
 
     public static Database open(@NotNull File file) throws IOException {
@@ -251,6 +261,8 @@ public class Database implements EntityRetriever, AutoCloseable {
             GameTagIndex.upgrade(CBUtil.fileWithExtension(file, ".cbl"));
             TournamentExtraStorage.upgrade(CBUtil.fileWithExtension(file, ".cbtt"));
 
+            // TODO: Ensure GameEntityIndex fully exists or skip it
+
             // MoveRepository and AnnotationRepository should not be upgraded despite
             // their header being shorter than they would be in a new database (10 bytes instead of 26 bytes);
             // this is in accordance with how ChessBase works.
@@ -283,6 +295,15 @@ public class Database implements EntityRetriever, AutoCloseable {
         TeamIndex teamIndex = cbeFile.exists() ? TeamIndex.open(cbeFile, mode, context) : new TeamIndex(context);
         GameTagIndex gameTagIndex = cblFile.exists() ? GameTagIndex.open(cblFile, mode, context) : new GameTagIndex(context);
 
+        GameEntityIndex gameEntityIndex;
+
+        try {
+            gameEntityIndex = GameEntityIndex.open(file, mode, context);
+        } catch (NoSuchFileException | MorphyInvalidDataException e) {
+            log.warn("EntityIndex search booster missing or corrupt");
+            gameEntityIndex = null;
+        }
+
         // TODO: Move this to constructor, add mode to DatabaseContext
         int headerCount = gameHeaderIndex.count(), extHeaderCount = extendedGameHeaderStorage.count();
         boolean mismatch = switch (mode) {
@@ -298,7 +319,7 @@ public class Database implements EntityRetriever, AutoCloseable {
         String name = mode == DatabaseMode.IN_MEMORY ? file.getName() + " [mem]" : file.getName();
 
         return new Database(name, context, gameHeaderIndex, extendedGameHeaderStorage, moveRepository, annotationRepository,
-                playerIndex, tournamentIndex, tournamentExtraStorage, annotatorIndex, sourceIndex, teamIndex, gameTagIndex);
+                playerIndex, tournamentIndex, tournamentExtraStorage, annotatorIndex, sourceIndex, teamIndex, gameTagIndex, gameEntityIndex);
     }
 
     /**
@@ -368,6 +389,9 @@ public class Database implements EntityRetriever, AutoCloseable {
         sourceIndex.close();
         teamIndex.close();
         gameTagIndex.close();
+        if (gameEntityIndex != null) {
+            gameEntityIndex.close();
+        }
     }
 
     /**

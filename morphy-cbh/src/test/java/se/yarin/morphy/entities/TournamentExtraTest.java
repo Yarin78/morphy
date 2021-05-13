@@ -44,10 +44,10 @@ public class TournamentExtraTest {
         TournamentExtraStorage extraSerializer = new TournamentExtraStorage();
 
         ByteBuffer bufExtra = ByteBuffer.allocate(1000);
-        extraSerializer.serializeItem(newTournamentExtra, bufExtra);
+        extraSerializer.serializeItem(newTournamentExtra, bufExtra, TournamentExtraHeader.empty());
         bufExtra.flip();
 
-        TournamentExtra extra = extraSerializer.deserializeItem(0, bufExtra);
+        TournamentExtra extra = extraSerializer.deserializeItem(0, bufExtra, TournamentExtraHeader.empty());
 
         assertEquals(1.2, extra.latitude(), 1e-6);
         assertEquals(3.4, extra.longitude(), 1e-6);

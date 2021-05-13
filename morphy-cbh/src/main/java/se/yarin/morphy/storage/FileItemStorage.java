@@ -127,7 +127,7 @@ public class FileItemStorage<THeader, TItem> implements ItemStorage<THeader, TIt
             throw new MorphyIOException(e);
         }
 
-        return serializer.deserializeItem(index, buf);
+        return serializer.deserializeItem(index, buf, this.header);
     }
 
     @Override
@@ -165,10 +165,10 @@ public class FileItemStorage<THeader, TItem> implements ItemStorage<THeader, TIt
         ArrayList<TItem> result = new ArrayList<>(count);
         for (int i = 0; i < count; i++) {
             if (filter == null) {
-                result.add(serializer.deserializeItem(index + i, buf));
+                result.add(serializer.deserializeItem(index + i, buf, this.header));
             } else {
                 if (filter.matchesSerialized(buf)) {
-                    TItem item = serializer.deserializeItem(index + i, buf);
+                    TItem item = serializer.deserializeItem(index + i, buf, this.header);
                     result.add(filter.matches(item) ? item : null);
                 } else {
                     buf.position(buf.position() + serializedItemSize);
@@ -196,7 +196,7 @@ public class FileItemStorage<THeader, TItem> implements ItemStorage<THeader, TIt
                     index, offset, this.fileSize));
         }
         ByteBuffer buf = ByteBuffer.allocate(serializer.itemSize(this.header));
-        serializer.serializeItem(item, buf);
+        serializer.serializeItem(item, buf, this.header);
         buf.flip();
         try {
             channel.write(offset, buf);

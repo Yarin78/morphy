@@ -379,7 +379,7 @@ public class GameHeaderIndex implements ItemStorageSerializer<GameHeaderIndex.Pr
     }
 
     @Override
-    public @NotNull GameHeader deserializeItem(int gameHeaderId, @NotNull ByteBuffer buf) {
+    public @NotNull GameHeader deserializeItem(int gameHeaderId, @NotNull ByteBuffer buf, @NotNull Prolog header) {
         serializationStats.addDeserialization(1);
         int oldPosition = buf.position();
 
@@ -525,7 +525,7 @@ public class GameHeaderIndex implements ItemStorageSerializer<GameHeaderIndex.Pr
     }
 
     @Override
-    public void serializeItem(@NotNull GameHeader gameHeader, @NotNull ByteBuffer buf) {
+    public void serializeItem(@NotNull GameHeader gameHeader, @NotNull ByteBuffer buf, @NotNull Prolog header) {
         serializationStats.addSerialization(1);
 
         int type = 1;

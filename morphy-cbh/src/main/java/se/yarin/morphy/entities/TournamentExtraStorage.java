@@ -178,7 +178,7 @@ public class TournamentExtraStorage implements ItemStorageSerializer<TournamentE
     }
 
     @Override
-    public @NotNull TournamentExtra deserializeItem(int id, @NotNull ByteBuffer buf) {
+    public @NotNull TournamentExtra deserializeItem(int id, @NotNull ByteBuffer buf, @NotNull TournamentExtraHeader header) {
         serializationStats.addDeserialization(1);
 
         int itemSize = storage.getHeader().recordSize();
@@ -211,7 +211,7 @@ public class TournamentExtraStorage implements ItemStorageSerializer<TournamentE
     }
 
     @Override
-    public void serializeItem(@NotNull TournamentExtra tournamentExtra, @NotNull ByteBuffer buf) {
+    public void serializeItem(@NotNull TournamentExtra tournamentExtra, @NotNull ByteBuffer buf, @NotNull TournamentExtraHeader header) {
         serializationStats.addSerialization(1);
 
         ByteBufferUtil.putDoubleL(buf, tournamentExtra.latitude());

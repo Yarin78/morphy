@@ -1,4 +1,4 @@
-# Search Boosters
+ # Search Boosters
 
 _Search Boosters_ are auxilary files that speeds up the search in the database.
 They can be recreated from the other files if needed, so they're not as essential.
@@ -16,7 +16,7 @@ in the .cbg file the move data starts. This information also exists in the .cbh 
 but presumably this file is loaded in its entirety into memory.
 
 ## <a name="entity_search_booster_format">Entity Search Booster file format</a>
-
+    
 In short, the .cit/.cit2 file contains a table mapping an entity id to a position in the .cib/.cib2 file,
 where the actual game id's are stored in a linked-list type of structure. The .cit file
 is responsible for the entity types Players, Tournament, Annotators, Sources and Teams, while

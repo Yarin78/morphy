@@ -32,7 +32,7 @@ public interface ItemStorageSerializer<THeader, TItem> {
      * Deserialized an item and updates the buffer pointer to point to the next item in the buffer
      * (or the end of the buffer)
      */
-    @NotNull TItem deserializeItem(int id, @NotNull ByteBuffer buf);
+    @NotNull TItem deserializeItem(int id, @NotNull ByteBuffer buf, @NotNull THeader header);
 
     /**
      * Gets the item that result from deserializing an empty byte array
@@ -41,5 +41,5 @@ public interface ItemStorageSerializer<THeader, TItem> {
     @NotNull TItem emptyItem(int id);
 
     void serializeHeader(@NotNull THeader header, @NotNull ByteBuffer buf);
-    void serializeItem(@NotNull TItem item, @NotNull ByteBuffer buf);
+    void serializeItem(@NotNull TItem item, @NotNull ByteBuffer buf, @NotNull THeader header);
 }

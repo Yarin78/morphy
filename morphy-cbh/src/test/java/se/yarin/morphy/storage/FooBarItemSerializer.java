@@ -36,7 +36,7 @@ public class FooBarItemSerializer implements ItemStorageSerializer<FooBarItemHea
     }
 
     @Override
-    public @NotNull FooBarItem deserializeItem(int id, @NotNull ByteBuffer buf) {
+    public @NotNull FooBarItem deserializeItem(int id, @NotNull ByteBuffer buf, @NotNull FooBarItemHeader header) {
         return ImmutableFooBarItem.builder()
                 .foo(ByteBufferUtil.getFixedSizeByteString(buf, 30))
                 .bar(ByteBufferUtil.getIntB(buf))
@@ -50,7 +50,7 @@ public class FooBarItemSerializer implements ItemStorageSerializer<FooBarItemHea
     }
 
     @Override
-    public void serializeItem(@NotNull FooBarItem fooBarItem, @NotNull ByteBuffer buf) {
+    public void serializeItem(@NotNull FooBarItem fooBarItem, @NotNull ByteBuffer buf, @NotNull FooBarItemHeader header) {
         ByteBufferUtil.putFixedSizeByteString(buf, fooBarItem.foo(), 30);
         ByteBufferUtil.putIntB(buf, fooBarItem.bar());
     }

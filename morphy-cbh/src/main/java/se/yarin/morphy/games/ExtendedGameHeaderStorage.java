@@ -349,7 +349,7 @@ public class ExtendedGameHeaderStorage implements ItemStorageSerializer<Extended
     }
 
     @Override
-    public @NotNull ExtendedGameHeader deserializeItem(int id, @NotNull ByteBuffer buf) {
+    public @NotNull ExtendedGameHeader deserializeItem(int id, @NotNull ByteBuffer buf, @NotNull ExtProlog header) {
         serializationStats.addDeserialization(1);
 
         int bufSize = buf.limit() - buf.position();
@@ -423,7 +423,7 @@ public class ExtendedGameHeaderStorage implements ItemStorageSerializer<Extended
     }
 
     @Override
-    public void serializeItem(@NotNull ExtendedGameHeader item, @NotNull ByteBuffer buf) {
+    public void serializeItem(@NotNull ExtendedGameHeader item, @NotNull ByteBuffer buf, @NotNull ExtProlog header) {
         assert this.storage.getHeader().serializedItemSize() >= ExtProlog.DEFAULT_SERIALIZED_ITEM_SIZE;
 
         serializationStats.addDeserialization(1);

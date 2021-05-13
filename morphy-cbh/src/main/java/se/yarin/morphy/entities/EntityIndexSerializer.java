@@ -89,7 +89,7 @@ public class EntityIndexSerializer implements ItemStorageSerializer<EntityIndexH
     }
 
     @Override
-    public @NotNull EntityNode deserializeItem(int id, @NotNull ByteBuffer buf) {
+    public @NotNull EntityNode deserializeItem(int id, @NotNull ByteBuffer buf, @NotNull EntityIndexHeader header) {
         byte[] serializedEntity = new byte[recordSize - 8];
 
         int leftEntityId = ByteBufferUtil.getIntL(buf);
@@ -102,7 +102,7 @@ public class EntityIndexSerializer implements ItemStorageSerializer<EntityIndexH
     }
 
     @Override
-    public void serializeItem(@NotNull EntityNode node, @NotNull ByteBuffer buf) {
+    public void serializeItem(@NotNull EntityNode node, @NotNull ByteBuffer buf, @NotNull EntityIndexHeader header) {
         ByteBufferUtil.putIntL(buf, node.getLeftChildId());
         ByteBufferUtil.putIntL(buf, node.getRightChildId());
         ByteBufferUtil.putByte(buf, node.getBalance());
