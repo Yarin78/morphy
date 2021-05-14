@@ -51,6 +51,9 @@ public class Check extends BaseCommand implements Callable<Integer> {
     @CommandLine.Option(names = "--no-entity-integrity", negatable = true, description = "Check entity file integrity (true by default)")
     boolean checkEntityFileIntegrity = true;
 
+    @CommandLine.Option(names = "--no-game-entity-index", negatable = true, description = "Check game entity index (.cit/.cib) consistency (true by default)")
+    boolean checkGameEntityIndex = true;
+
     @CommandLine.Option(names = "--no-games", negatable = true, description = "Check game headers (true by default)")
     boolean checkGameHeaders = true;
 
@@ -71,6 +74,7 @@ public class Check extends BaseCommand implements Callable<Integer> {
         checkFlags.put(Validator.Checks.ENTITY_STATISTICS, checkEntityStats && checkEntities);
         checkFlags.put(Validator.Checks.ENTITY_SORT_ORDER, checkEntitySortOrder && checkEntities);
         checkFlags.put(Validator.Checks.ENTITY_DB_INTEGRITY, checkEntityFileIntegrity && checkEntities);
+        checkFlags.put(Validator.Checks.GAME_ENTITY_INDEX, checkGameEntityIndex && checkEntities);
         checkFlags.put(Validator.Checks.GAMES, checkGameHeaders);
         checkFlags.put(Validator.Checks.GAMES_LOAD, loadGames);
 
@@ -81,21 +85,29 @@ public class Check extends BaseCommand implements Callable<Integer> {
             log.info("Opening " + file);
 
             try (Database db = Database.open(file, DatabaseMode.READ_ONLY)) {
-                Validator validator = new Validator();
-                db.moveRepository().moveSerializer().setLogDetailedErrors(true);
-                validator.validate(db, checks, true, false, showProgressBar);
-                log.info("Database OK: " + file);
+                try {
+                    Validator validator = new Validator();
+                    db.moveRepository().moveSerializer().setLogDetailedErrors(true);
+                    validator.validate(db, checks, true, false, showProgressBar);
+                    log.info("Database OK: " + file);
 
-                if (showInstrumentation()) {
-                    db.context().instrumentation().show();
+                    if (showInstrumentation()) {
+                        db.context().instrumentation().show();
+                    }
+                } catch (MorphyException e) {
+                    // At least one error that the ChessBase integrity checker would consider an error found
+                    // It could be just a single game that has some bad moves though
+                    if (verboseLevel() > 0) {
+                        log.error(e.getMessage());
+                    }
+                    log.error("Database ERROR: " + file);
+
+                } catch (Exception | AssertionError e) {
+                    // Something was not caught properly
+                    log.error("Database CRITICAL ERROR: " + file, e);
                 }
-            } catch (MorphyException e) {
-                // At least one error that the ChessBase integrity checker would consider an error found
-                // It could be just a single game that has some bad moves though
-                log.error("Database ERROR: " + file);
-            } catch (Exception | AssertionError e) {
-                // Something was not caught properly
-                log.error("Database CRITICAL ERROR: " + file, e);
+            } catch (MorphyException | IOException e) {
+                log.error("Error opening the database: " + e.getMessage());
             }
         });
 

@@ -9,13 +9,13 @@ import org.immutables.value.Value;
 public interface IndexBlockHeader {
     int itemSize();
     int numBlocks();
-    int unknown();
+    int deletedBlockId();
 
     static IndexBlockHeader empty() {
         return ImmutableIndexBlockHeader.builder()
                 .itemSize(64)
                 .numBlocks(0)
-                .unknown(0)
+                .deletedBlockId(0)
                 .build();
     }
 }

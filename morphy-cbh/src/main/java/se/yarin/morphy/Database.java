@@ -518,4 +518,15 @@ public class Database implements EntityRetriever, AutoCloseable {
     public @NotNull GameTag getGameTag(int id) {
         return gameTagIndex.get(id);
     }
+
+    public EntityIndex<? extends Entity> entityIndex(@NotNull EntityType entityType) {
+        return switch (entityType) {
+            case PLAYER -> playerIndex;
+            case TOURNAMENT -> tournamentIndex;
+            case ANNOTATOR -> annotatorIndex;
+            case SOURCE -> sourceIndex;
+            case TEAM -> teamIndex;
+            case GAME_TAG -> gameTagIndex;
+        };
+    }
 }

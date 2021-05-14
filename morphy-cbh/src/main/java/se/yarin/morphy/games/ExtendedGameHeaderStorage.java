@@ -352,19 +352,22 @@ public class ExtendedGameHeaderStorage implements ItemStorageSerializer<Extended
     public @NotNull ExtendedGameHeader deserializeItem(int id, @NotNull ByteBuffer buf, @NotNull ExtProlog header) {
         serializationStats.addDeserialization(1);
 
-        int bufSize = buf.limit() - buf.position();
+        if (buf.limit() - buf.position() < header.serializedItemSize()) {
+            throw new IllegalArgumentException("Not enough data in buffer");
+        }
 
+        int itemSize = header.serializedItemSize();
         ImmutableExtendedGameHeader.Builder builder = ImmutableExtendedGameHeader.builder();
         try {
             builder.whiteTeamId(ByteBufferUtil.getIntB(buf));
             builder.blackTeamId(ByteBufferUtil.getIntB(buf));
-            if (bufSize >= 12) {
+            if (itemSize >= 12) {
                 builder.mediaOffset(ByteBufferUtil.getIntB(buf));
             }
-            if (bufSize >= 20) {
+            if (itemSize >= 20) {
                 builder.annotationOffset(ByteBufferUtil.getLongB(buf));
             }
-            if (bufSize >= 30) {
+            if (itemSize >= 30) {
                 int s1 = ByteBufferUtil.getSignedShortB(buf);
                 int s3 = ByteBufferUtil.getUnsignedShortB(buf);
                 int s2 = ByteBufferUtil.getSignedShortB(buf);
@@ -381,10 +384,10 @@ public class ExtendedGameHeaderStorage implements ItemStorageSerializer<Extended
                     builder.materialTotal(FinalMaterial.decode(s5));
                 }
             }
-            if (bufSize >= 38) {
+            if (itemSize >= 38) {
                 builder.movesOffset(ByteBufferUtil.getLongB(buf));
             }
-            if (bufSize >= 74) {
+            if (itemSize >= 74) {
                 builder.whiteRatingType(RatingType.deserialize(buf));
                 builder.blackRatingType(RatingType.deserialize(buf));
                 builder.unknown1(ByteBufferUtil.getIntB(buf)); // No idea what this is for
@@ -392,10 +395,10 @@ public class ExtendedGameHeaderStorage implements ItemStorageSerializer<Extended
                 builder.whiteRatingType(RatingType.unspecified());
                 builder.blackRatingType(RatingType.unspecified());
             }
-            if (bufSize >= 78) {
+            if (itemSize >= 78) {
                 builder.unknown2(ByteBufferUtil.getIntB(buf)); // No idea what this is for
             }
-            if (bufSize >= 120) {
+            if (itemSize >= 120) {
                 builder.gameVersion(ByteBufferUtil.getUnsignedShortB(buf));
                 long creationTimestamp = ByteBufferUtil.getLongB(buf);
                 if (creationTimestamp < 0 || creationTimestamp > 2970943488000L) {

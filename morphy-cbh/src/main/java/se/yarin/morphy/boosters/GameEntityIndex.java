@@ -14,9 +14,7 @@ import se.yarin.morphy.storage.ItemStorage;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class GameEntityIndex {
     private final @NotNull ItemStorage<IndexHeader, IndexItem> citStorage;
@@ -114,6 +112,62 @@ public class GameEntityIndex {
             currentBlock = block.nextBlockId();
         }
         return gameIds;
+    }
+
+    public @NotNull List<Integer> getDeletedBlockIds(@NotNull EntityType type) {
+        ArrayList<Integer> result = new ArrayList<>();
+        ItemStorage<IndexBlockHeader, IndexBlockItem> storage = type != EntityType.GAME_TAG ? cibStorage : cib2Storage;
+        int current = storage.getHeader().deletedBlockId();
+        while (current != 0) {
+            result.add(current);
+            IndexBlockItem block = storage.getItem(current);
+            current = block.nextBlockId();
+        }
+        return result;
+    }
+
+    /**
+     * Get the index of all blocks used by an entity type.
+     * For checking/testing purposes only
+     * @param type the entity type
+     * @param count number of entities to check (with index 0 to count - 1)
+     * @return a set of blocks used
+     * @throws IllegalStateException if the same block is used multiple times, or if head/tail doesn't match
+     */
+    public @NotNull Set<Integer> getUsedBlockIds(@NotNull EntityType type, int count) {
+        // For checking/testing purposes only
+        HashSet<Integer> usedBlocks = new HashSet<>();
+        ItemStorage<IndexBlockHeader, IndexBlockItem> blockStorage = type != EntityType.GAME_TAG ? cibStorage : cib2Storage;
+        for (int i = 0; i < count; i++) {
+            int currentBlock = getHead(i, type);
+            int tailBlock = getTail(i, type);
+            if (currentBlock < 0) {
+                // Entity is logically deleted
+                if (tailBlock != -1) {
+                    throw new IllegalStateException(String.format("%s with id %d has invalid head/tail pointers in game entity index",
+                            type.nameSingularCapitalized(), i));
+                }
+                continue;
+            }
+            int actualLastBlock = currentBlock;
+            while (currentBlock >= 0) {
+                if (!usedBlocks.add(currentBlock)) {
+                    throw new IllegalStateException(String.format("Block %d is used more than once in game entity index", currentBlock));
+                }
+                IndexBlockItem block = blockStorage.getItem(currentBlock);
+                actualLastBlock = currentBlock;
+                currentBlock = block.nextBlockId();
+            }
+            if (actualLastBlock != tailBlock) {
+                throw new IllegalStateException(String.format("%s with id %d has invalid head/tail pointers in game entity index",
+                        type.nameSingularCapitalized(), i));
+            }
+        }
+        return usedBlocks;
+    }
+
+    public int getNumBlocks(@NotNull EntityType type) {
+        return (type != EntityType.GAME_TAG ? cibStorage : cib2Storage).getHeader().numBlocks();
     }
 
     private int getHead(int entityId, @NotNull EntityType type) {

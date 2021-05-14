@@ -135,6 +135,7 @@ public abstract class DatabaseTestSetup {
                 ENTITY_SOURCES,
                 ENTITY_TEAMS,
                 ENTITY_GAME_TAGS,
+                // GAME_ENTITY_INDEX,  // TODO: restore this
                 GAMES), true, true, false);
     }
 

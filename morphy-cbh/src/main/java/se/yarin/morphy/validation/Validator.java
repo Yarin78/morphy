@@ -3,14 +3,13 @@ package se.yarin.morphy.validation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.morphy.Database;
+import se.yarin.morphy.boosters.GameEntityIndex;
 import se.yarin.morphy.entities.EntityIndex;
+import se.yarin.morphy.entities.EntityType;
 import se.yarin.morphy.exceptions.MorphyEntityIndexException;
 import se.yarin.morphy.exceptions.MorphyException;
 
-import java.util.ArrayList;
-import java.util.EnumSet;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Class responsible for performing a series of validation/integrity checks against a database
@@ -38,6 +37,9 @@ public class Validator {
         ENTITY_TEAMS,
         ENTITY_GAME_TAGS,
 
+        // Check cit/cib files
+        GAME_ENTITY_INDEX,
+
         // Check Game Headers
         GAMES,
 
@@ -46,17 +48,17 @@ public class Validator {
     }
 
     private static class EntityTypeCheck {
-        private final String entityType;
+        private final EntityType entityType;
         private final EntityIndex<?> index;
-        private final Map<Integer, EntityStats.Stats> statMap;
+        private final Map<Integer, List<Integer>> statMap;
 
-        public EntityTypeCheck(String entityType, EntityIndex<?> index, Map<Integer, EntityStats.Stats> statMap) {
+        public EntityTypeCheck(EntityType entityType, EntityIndex<?> index, Map<Integer, List<Integer>> statMap) {
             this.entityType = entityType;
             this.index = index;
             this.statMap = statMap;
         }
 
-        public String getEntityType() {
+        public EntityType getEntityType() {
             return entityType;
         }
 
@@ -64,7 +66,7 @@ public class Validator {
             return index;
         }
 
-        public Map<Integer, EntityStats.Stats> getStatMap() {
+        public Map<Integer, List<Integer>> getStatMap() {
             return statMap;
         }
     }
@@ -91,23 +93,31 @@ public class Validator {
         EntityStatsValidator entityStatsValidator = new EntityStatsValidator(db);
         EntityStats entityStats = entityStatsValidator.getStats();
 
+        if (checks.contains(Checks.GAME_ENTITY_INDEX)) {
+            if (db.gameEntityIndex() == null) {
+                log.error("Game Entity index is missing or corrupt; no further checks will be done on it.");
+                checks.remove(Checks.GAME_ENTITY_INDEX);
+                hasCritialErrors = true;
+            }
+        }
+
         if (checks.contains(Checks.ENTITY_PLAYERS)) {
-            entityTypeCheck.add(new EntityTypeCheck("players", db.playerIndex(), entityStats.players));
+            entityTypeCheck.add(new EntityTypeCheck(EntityType.PLAYER, db.playerIndex(), entityStats.players));
         }
         if (checks.contains(Checks.ENTITY_TOURNAMENTS)) {
-            entityTypeCheck.add(new EntityTypeCheck("tournaments", db.tournamentIndex(), entityStats.tournaments));
+            entityTypeCheck.add(new EntityTypeCheck(EntityType.TOURNAMENT, db.tournamentIndex(), entityStats.tournaments));
         }
         if (checks.contains(Checks.ENTITY_ANNOTATORS)) {
-            entityTypeCheck.add(new EntityTypeCheck("annotators", db.annotatorIndex(), entityStats.annotators));
+            entityTypeCheck.add(new EntityTypeCheck(EntityType.ANNOTATOR, db.annotatorIndex(), entityStats.annotators));
         }
         if (checks.contains(Checks.ENTITY_SOURCES)) {
-            entityTypeCheck.add(new EntityTypeCheck("sources", db.sourceIndex(), entityStats.sources));
+            entityTypeCheck.add(new EntityTypeCheck(EntityType.SOURCE, db.sourceIndex(), entityStats.sources));
         }
         if (checks.contains(Checks.ENTITY_TEAMS)) {
-            entityTypeCheck.add(new EntityTypeCheck("teams", db.teamIndex(), entityStats.teams));
+            entityTypeCheck.add(new EntityTypeCheck(EntityType.TEAM, db.teamIndex(), entityStats.teams));
         }
         if (checks.contains(Checks.ENTITY_GAME_TAGS)) {
-            entityTypeCheck.add(new EntityTypeCheck("game tags", db.gameTagIndex(), entityStats.gameTags));
+            entityTypeCheck.add(new EntityTypeCheck(EntityType.GAME_TAG, db.gameTagIndex(), entityStats.gameTags));
         }
 
         TrackerFactory trackerFactory = showProgressBar
@@ -129,27 +139,32 @@ public class Validator {
                 }
             }
 
-            if (checks.contains(Checks.ENTITY_STATISTICS)) {
+            if (checks.contains(Checks.ENTITY_STATISTICS) || checks.contains(Checks.GAME_ENTITY_INDEX)) {
                 try (ProgressTracker progressTracker = trackerFactory.create("Entity stats", db.gameHeaderIndex().count())) {
                     entityStatsValidator.calculateEntityStats(progressTracker::step);
                 }
             }
 
             for (EntityTypeCheck typeCheck : entityTypeCheck) {
-                String typeName = typeCheck.getEntityType();
-                String typeNameCapitalized = typeName.substring(0, 1).toUpperCase() + typeName.substring(1);
-                try (ProgressTracker progressTracker = trackerFactory.create(typeNameCapitalized, typeCheck.getIndex().count())) {
+                EntityType entityType = typeCheck.getEntityType();
+                try (ProgressTracker progressTracker = trackerFactory.create(entityType.namePluralCapitalized(), typeCheck.getIndex().count())) {
                     try {
                         // The stats validator only checks non-critical things, so don't throwOnError
                         // unless we're actually throwing on warnings! (unit tests typically)
                         entityStatsValidator.processEntities(
-                                typeName, typeCheck.getIndex(), typeCheck.getStatMap(),
+                                entityType, typeCheck.getIndex(), typeCheck.getStatMap(),
                                 progressTracker::step, checks, MAX_INVALID_ENTITIES, throwOnWarning);
                     } catch (Exception e) {
-                        log.error("Error processing entities for " + typeCheck.entityType + ": " + e.getMessage());
+                        log.error(String.format("Error processing %s entities: %s", entityType.nameSingular(), e.getMessage()));
                         hasCritialErrors = true;
                     }
                 }
+            }
+        }
+
+        if (checks.contains(Checks.GAME_ENTITY_INDEX)) {
+            if (validateGameEntityIndexBlocks(db)) {
+                hasCritialErrors = true;
             }
         }
 
@@ -172,5 +187,58 @@ public class Validator {
         if (hasCritialErrors && throwOnError) {
             throw new MorphyException("There were critical errors");
         }
+    }
+
+    private boolean validateGameEntityIndexBlocks(Database database) {
+        // Checks that all blocks in the cib file are accounted for; returns true if there is an error
+        GameEntityIndex gameEntityIndex = database.gameEntityIndex();
+        assert gameEntityIndex != null;
+
+        try {
+            Set<Integer> cibBlocks = new HashSet<>(), cib2Blocks = new HashSet<>();
+
+            for (EntityType entityType : EntityType.values()) {
+                Set<Integer> usedBlockIds = gameEntityIndex.getUsedBlockIds(entityType, database.entityIndex(entityType).capacity());
+                if (entityType != EntityType.GAME_TAG) {
+                    int expectedSize = cibBlocks.size() + usedBlockIds.size();
+                    cibBlocks.addAll(usedBlockIds);
+                    if (cibBlocks.size() != expectedSize) {
+                        throw new IllegalStateException("Same block used multiple times in game entity index");
+                    }
+                } else {
+                    cib2Blocks.addAll(usedBlockIds);
+                }
+            }
+
+            List<Integer> cibDeletedBlocks = gameEntityIndex.getDeletedBlockIds(EntityType.PLAYER);
+            int expectedSize = cibBlocks.size() + cibDeletedBlocks.size();
+            cibBlocks.addAll(cibDeletedBlocks);
+            if (cibBlocks.size() != expectedSize) {
+                throw new IllegalStateException("Block marked as deleted also in use in game entity index");
+            }
+
+            List<Integer> cib2DeletedBlocks = gameEntityIndex.getDeletedBlockIds(EntityType.GAME_TAG);
+            expectedSize = cib2Blocks.size() + cib2DeletedBlocks.size();
+            cib2Blocks.addAll(cib2DeletedBlocks);
+            if (cib2Blocks.size() != expectedSize) {
+                throw new IllegalStateException("Block marked as deleted also in use in game entity index");
+            }
+
+            int cibNumBlocks = gameEntityIndex.getNumBlocks(EntityType.PLAYER);
+            int maxCibBlockIndex = cibBlocks.size() == 0 ? -1 : Collections.max(cibBlocks);
+            if (cibNumBlocks != cibBlocks.size() || maxCibBlockIndex != cibNumBlocks - 1) {
+                throw new IllegalStateException("There are blocks unaccounted for in the game entity index");
+            }
+
+            int cib2NumBlocks = gameEntityIndex.getNumBlocks(EntityType.GAME_TAG);
+            int maxCib2BlockIndex = cib2Blocks.size() == 0 ? -1 : Collections.max(cib2Blocks);
+            if (cib2NumBlocks != cib2Blocks.size() || maxCib2BlockIndex != cib2NumBlocks - 1) {
+                throw new IllegalStateException("There are blocks unaccounted for in the game entity index");
+            }
+        } catch (IllegalStateException e) {
+            log.error(e.getMessage());
+            return true;
+        }
+        return false;
     }
 }

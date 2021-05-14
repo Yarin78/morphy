@@ -6,14 +6,14 @@ import org.slf4j.LoggerFactory;
 import se.yarin.morphy.Database;
 import se.yarin.morphy.DatabaseReadTransaction;
 import se.yarin.morphy.Game;
+import se.yarin.morphy.boosters.GameEntityIndex;
 import se.yarin.morphy.entities.Entity;
 import se.yarin.morphy.entities.EntityIndex;
 import se.yarin.morphy.entities.EntityIndexReadTransaction;
+import se.yarin.morphy.entities.EntityType;
 import se.yarin.morphy.exceptions.MorphyEntityIndexException;
 
-import java.util.EnumSet;
-import java.util.Map;
-import java.util.TreeSet;
+import java.util.*;
 
 
 public class EntityStatsValidator {
@@ -21,6 +21,8 @@ public class EntityStatsValidator {
 
     private final Database database;
     private final EntityStats stats;
+
+    private boolean loggedDuplicateNotInGameEntityIndex = false;
 
     public EntityStatsValidator(@NotNull Database database) {
         this.database = database;
@@ -52,32 +54,36 @@ public class EntityStatsValidator {
         }
     }
 
-    private void updateEntityStats(Map<Integer, EntityStats.Stats> map, int entityId, int gameId) {
+    private void updateEntityStats(Map<Integer, List<Integer>> map, int entityId, int gameId) {
         if (entityId == -1) {
             // For Teams, -1 is a valid reference meaning "no team"
             return;
         }
 
-        EntityStats.Stats stats = map.get(entityId);
+        List<Integer> stats = map.get(entityId);
         if (stats == null) {
-            map.put(entityId, new EntityStats.Stats(1, gameId));
+            ArrayList<Integer> list = new ArrayList<>();
+            list.add(gameId);
+            map.put(entityId, list);
         } else {
-            stats.setCount(stats.getCount() + 1);
+            stats.add(gameId);
         }
     }
 
     public <T extends Entity & Comparable<T>> void processEntities(
-            String entityType,
+            EntityType entityType,
             EntityIndex<T> entities,
-            Map<Integer, EntityStats.Stats> expectedStats,
+            Map<Integer, List<Integer>> expectedGameIds,
             boolean throwOnError) throws MorphyEntityIndexException {
-        processEntities(entityType, entities, expectedStats, () -> {}, EnumSet.allOf(Validator.Checks.class), 100000, throwOnError);
+        EnumSet<Validator.Checks> checks = EnumSet.allOf(Validator.Checks.class);
+        checks.remove(Validator.Checks.GAME_ENTITY_INDEX); // TODO: restore this
+        processEntities(entityType, entities, expectedGameIds, () -> {}, checks, 100000, throwOnError);
     }
 
     public <T extends Entity & Comparable<T>> void processEntities(
-            String entityType,
+            EntityType entityType,
             EntityIndex<T> entityIndex,
-            Map<Integer, EntityStats.Stats> expectedStats,
+            Map<Integer, List<Integer>> expectedGameIdsMap,
             Runnable progressCallback,
             EnumSet<Validator.Checks> checks,
             int maxInvalid,
@@ -92,68 +98,46 @@ public class EntityStatsValidator {
         EntityIndexReadTransaction<T> txn = entityIndex.beginReadTransaction();
         try {
             for (T current : txn.iterableAscending()) {
-                if (numInvalid >= maxInvalid) break;
                 existingIds.add(current.id());
 
                 entityIndex.get(current.id()); // Sanity check that we can do this lookup as well
 
                 boolean isValidEntity = true;
-                if (checks.contains(Validator.Checks.ENTITY_STATISTICS)) {
-                    EntityStats.Stats stats = expectedStats.get(current.id());
-                    if (stats == null) {
-                        String msg = String.format("Entity in %s base with id %d (%s) occurs in 0 games but stats says %d games and first game %d",
-                                entityType, current.id(), current, current.count(), current.firstGameId());
+                if (numInvalid < maxInvalid) {
+                    // Don't log to many invalid entities of the same type
+                    // We still need to iterate through them all so other structural checks that assumes we've iterated
+                    // through everything doesn't fail as a side effect
+
+                    if (checks.contains(Validator.Checks.ENTITY_STATISTICS) || checks.contains(Validator.Checks.GAME_ENTITY_INDEX)) {
+                        if (!isEntityStatsValid(expectedGameIdsMap.get(current.id()), current, entityType, throwOnError, checks)) {
+                            isValidEntity = false;
+                        }
+                    }
+
+                    if (current.count() == 0) {
+                        // This is a critical error in the ChessBase integrity checker
+                        String msg = String.format("Entity in %s base with %d (%s) has 0 count", entityType, current.id(), current.toString());
                         if (throwOnError) {
                             throw new MorphyEntityIndexException(msg);
                         }
                         log.warn(msg);
                         isValidEntity = false;
-                    } else {
-                        if (stats.getCount() != current.count()) {
-                            String msg = String.format("Entity in %s base with id %d (%s) has %d games but entity count says %d",
-                                    entityType, current.id(), current, stats.getCount(), current.count());
-                            if (throwOnError) {
-                                throw new MorphyEntityIndexException(msg);
-                            }
-                            log.warn(msg);
-                            isValidEntity = false;
-                        }
-
-                        if (stats.getFirstGameId() != current.firstGameId()) {
-                            String msg = String.format("Entity in %s base with id %d (%s) first game is %d but stats says %d",
-                                    entityType, current.id(), current.toString(), stats.getFirstGameId(), current.firstGameId());
-                            if (throwOnError) {
-                                throw new MorphyEntityIndexException(msg);
-                            }
-                            log.warn(msg);
-                            isValidEntity = false;
-                        }
                     }
-                }
 
-                if (current.count() == 0) {
-                    // This is a critical error in the ChessBase integrity checker
-                    String msg = String.format("Entity in %s base with %d (%s) has 0 count", entityType, current.id(), current.toString());
-                    if (throwOnError) {
-                        throw new MorphyEntityIndexException(msg);
-                    }
-                    log.warn(msg);
-                    isValidEntity = false;
-                }
-
-                if (checks.contains(Validator.Checks.ENTITY_SORT_ORDER)) {
-                    if (numEntities > 0) {
-                        if (current.compareTo(last) < 0) {
-                            String msg = "Wrong order in %s: was (%d) '%s' < (%d) '%s' but expected opposite".formatted(
-                                    entityType, last.id(), last, current.id(), current);
-                            if (throwOnError) {
-                                throw new MorphyEntityIndexException(msg);
+                    if (checks.contains(Validator.Checks.ENTITY_SORT_ORDER)) {
+                        if (numEntities > 0) {
+                            if (current.compareTo(last) < 0) {
+                                String msg = "Wrong order in %s: was (%d) '%s' < (%d) '%s' but expected opposite".formatted(
+                                        entityType, last.id(), last, current.id(), current);
+                                if (throwOnError) {
+                                    throw new MorphyEntityIndexException(msg);
+                                }
+                                log.warn(msg);
+                                isValidEntity = false;
                             }
-                            log.warn(msg);
-                            isValidEntity = false;
-                        }
-                        if (current.compareTo(last) == 0) {
-                            numEqual += 1;
+                            if (current.compareTo(last) == 0) {
+                                numEqual += 1;
+                            }
                         }
                     }
                 }
@@ -171,14 +155,14 @@ public class EntityStatsValidator {
 
         if (existingIds.size() != numEntities) {
             log.warn(String.format("Found %d unique %s during sorted iteration, expected to find %d %s",
-                    existingIds.size(), entityType, numEntities, entityType));
+                    existingIds.size(), entityType.namePlural(), numEntities, entityType.namePlural()));
         }
         if (checks.contains(Validator.Checks.ENTITY_STATISTICS)) {
-            if (existingIds.size() != expectedStats.size()) {
+            if (existingIds.size() != expectedGameIdsMap.size()) {
                 log.warn(String.format("Found %d unique %s during sorted iteration, but has statistics for %d %s",
-                        existingIds.size(), entityType, expectedStats.size(), entityType));
+                        existingIds.size(), entityType.namePlural(), expectedGameIdsMap.size(), entityType.namePlural()));
             }
-            if (expectedStats.containsKey(-1)) {
+            if (expectedGameIdsMap.containsKey(-1)) {
                 log.warn("Invalid reference to id -1 was found");
             }
         }
@@ -186,7 +170,7 @@ public class EntityStatsValidator {
             // It's quite often, at least in older databases, off by one; in particular
             // when there are just a few entities in the db
             log.debug(String.format("Iterated over %d %s in ascending order, but header said there were %d %s",
-                    numEntities, entityType, entityIndex.count(), entityType));
+                    numEntities, entityType.namePlural(), entityIndex.count(), entityType.namePlural()));
         }
         if (checks.contains(Validator.Checks.ENTITY_SORT_ORDER)) {
             if (numEqual > 0) {
@@ -195,12 +179,20 @@ public class EntityStatsValidator {
         }
         if (entityIndex.capacity() > numEntities) {
             log.debug(String.format("Database has additional capacity for %d %s",
-                    entityIndex.capacity() - numEntities, entityType));
+                    entityIndex.capacity() - numEntities, entityType.namePlural()));
         }
 
         for (Integer id : entityIndex.getDeletedEntityIds()) {
             if (existingIds.contains(id)) {
                 log.warn(String.format("Entity id %d was found both when iterating and among deleted nodes", id));
+            }
+            if (checks.contains(Validator.Checks.GAME_ENTITY_INDEX)) {
+                List<Integer> gameIds = database.gameEntityIndex().getGameIds(id, entityType);
+                if (gameIds.size() != 0) {
+                    // Not a critical error
+                    log.warn(String.format("Deleted %s entity id %d has %d game references in the Game Entity Index",
+                            entityType.nameSingular(), id, gameIds.size()));
+                }
             }
             existingIds.add(id);
         }
@@ -220,15 +212,76 @@ public class EntityStatsValidator {
         }
     }
 
+    private <T extends Entity & Comparable<T>> boolean isEntityStatsValid(
+            List<Integer> expectedGameIds, T current, EntityType entityType, boolean throwOnError, EnumSet<Validator.Checks> checks) {
+        if (expectedGameIds == null) {
+            String msg = String.format("Entity in %s base with id %d (%s) occurs in 0 games but stats says %d games and first game %d",
+                    entityType, current.id(), current, current.count(), current.firstGameId());
+            if (throwOnError) {
+                throw new MorphyEntityIndexException(msg);
+            }
+            log.warn(msg);
+            return false;
+        }
+
+        if (checks.contains(Validator.Checks.ENTITY_STATISTICS)) {
+            if (expectedGameIds.size() != current.count()) {
+                String msg = String.format("Entity in %s base with id %d (%s) has %d games but entity count says %d",
+                        entityType, current.id(), current, expectedGameIds.size(), current.count());
+                if (throwOnError) {
+                    throw new MorphyEntityIndexException(msg);
+                }
+                log.warn(msg);
+                return false;
+            }
+
+            if (expectedGameIds.get(0) != current.firstGameId()) {
+                String msg = String.format("Entity in %s base with id %d (%s) first game is %d but stats says %d",
+                        entityType, current.id(), current, expectedGameIds.get(0), current.firstGameId());
+                if (throwOnError) {
+                    throw new MorphyEntityIndexException(msg);
+                }
+                log.warn(msg);
+                return false;
+            }
+        }
+        if (checks.contains(Validator.Checks.GAME_ENTITY_INDEX)) {
+            GameEntityIndex gameEntityIndex = this.database.gameEntityIndex();
+            assert gameEntityIndex != null;
+            List<Integer> indexGameIds = gameEntityIndex.getGameIds(current.id(), entityType);
+            if (expectedGameIds.size() != indexGameIds.size() || !expectedGameIds.equals(indexGameIds)) {
+                if (new HashSet<>(expectedGameIds).equals(new HashSet<>(indexGameIds))) {
+                    // If an entity occurs twice in a game, the index may sometimes only mention it once
+                    // (happens in Mega Database 2021). This is less critical.
+                    String msg = String.format("%s entity with id %d (%s) was duplicated in a game which was not reflected in the GameEntityIndex (no further warnings of this type will be logged)",
+                            entityType.nameSingularCapitalized(), current.id(), current);
+                    if (!loggedDuplicateNotInGameEntityIndex) {
+                        log.warn(msg);
+                        loggedDuplicateNotInGameEntityIndex = true;
+                    }
+                } else {
+                    String msg = String.format("%s entity with id %d (%s) mismatched in GameEntityIndex",
+                            entityType.nameSingularCapitalized(), current.id(), current);
+                    if (throwOnError) {
+                        throw new MorphyEntityIndexException(msg);
+                    }
+                    log.warn(msg);
+                }
+                return false;
+            }
+        }
+        return true;
+    }
+
     public void validateEntityStatistics(boolean throwOnError) throws MorphyEntityIndexException {
         // Used in unit tests
         calculateEntityStats(() -> {});
-        processEntities("players", database.playerIndex(), stats.players, throwOnError);
-        processEntities("tournaments", database.tournamentIndex(), stats.tournaments, throwOnError);
-        processEntities("annotators", database.annotatorIndex(), stats.annotators, throwOnError);
-        processEntities("sources", database.sourceIndex(), stats.sources, throwOnError);
-        processEntities("teams", database.teamIndex(), stats.teams, throwOnError);
-        processEntities("game tags", database.gameTagIndex(), stats.gameTags, throwOnError);
+        processEntities(EntityType.PLAYER, database.playerIndex(), stats.players, throwOnError);
+        processEntities(EntityType.TOURNAMENT, database.tournamentIndex(), stats.tournaments, throwOnError);
+        processEntities(EntityType.ANNOTATOR, database.annotatorIndex(), stats.annotators, throwOnError);
+        processEntities(EntityType.SOURCE, database.sourceIndex(), stats.sources, throwOnError);
+        processEntities(EntityType.TEAM, database.teamIndex(), stats.teams, throwOnError);
+        processEntities(EntityType.GAME_TAG, database.gameTagIndex(), stats.gameTags, throwOnError);
     }
 
 }

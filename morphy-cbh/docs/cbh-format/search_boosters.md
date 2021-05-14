@@ -67,13 +67,13 @@ The .cib/.cib2 file starts with a 12 byte header. All integers are Little Endian
 | --- | --- | ---
 | 0 | 4 | The size of a record (block) in this file (64)
 | 4 | 4 | Number of blocks in this file
-| 8 | 4 | Unknown. Always 0?
+| 8 | 4 | The Id of an unused, allocated, block in the file, or 0 all allocated blocks are used 
 
 Then follows the blocks. Each block contains up to 16 integers.
 
 | Offset | Bytes | Description
 | --- | --- | ---
-| 0 | 4 | Id of the next block in the linked list (-1 if there is no next block)
+| 0 | 4 | Id of the next block in the linked list (-1 if there is no next block). If this is an unused block, this points to the next unused block, or 0 if there are no more unused blocks.
 | 4 | 4 | Unknown. Always 0?
 | 8 | 4 | Number of game references in this block
 | 12 | 4 | Id of a game
@@ -91,6 +91,13 @@ The games in these block-lists are always ordered incrementally, and each block
 is always filled up entirely before moving on to the next block. This means that
 if an entity is changed in a game, all game indexes for the old and the new entity
 may have to be shifted one step left or right, depending on if it's an insert or delete.
+
+Blocks may become unused if the only entity using the block was removed.
+Such blocks will be reused instead of allocating new blocks at the end
+of the file. References to these unused blocks are linked in a linked list.
+The first such block is stored in the header; the rest are stored in a linked
+list.
+
 
 ### Using the Entity Search Booster
 

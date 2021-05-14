@@ -10,7 +10,7 @@ import java.nio.ByteBuffer;
 
 public class IndexBlockSerializer implements ItemStorageSerializer<IndexBlockHeader, IndexBlockItem> {
 
-    private Instrumentation.SerializationStats serializationStats;
+    private final Instrumentation.SerializationStats serializationStats;
 
     public IndexBlockSerializer(@NotNull Instrumentation.SerializationStats serializationStats) {
         this.serializationStats = serializationStats;
@@ -41,7 +41,7 @@ public class IndexBlockSerializer implements ItemStorageSerializer<IndexBlockHea
         return ImmutableIndexBlockHeader.builder()
                 .itemSize(ByteBufferUtil.getIntL(buf))
                 .numBlocks(ByteBufferUtil.getIntL(buf))
-                .unknown(ByteBufferUtil.getIntL(buf))
+                .deletedBlockId(ByteBufferUtil.getIntL(buf))
                 .build();
     }
 
@@ -76,7 +76,7 @@ public class IndexBlockSerializer implements ItemStorageSerializer<IndexBlockHea
     public void serializeHeader(@NotNull IndexBlockHeader indexBlockHeader, @NotNull ByteBuffer buf) {
         ByteBufferUtil.putIntL(buf, indexBlockHeader.itemSize());
         ByteBufferUtil.putIntL(buf, indexBlockHeader.numBlocks());
-        ByteBufferUtil.putIntL(buf, indexBlockHeader.unknown());
+        ByteBufferUtil.putIntL(buf, indexBlockHeader.deletedBlockId());
     }
 
     @Override
