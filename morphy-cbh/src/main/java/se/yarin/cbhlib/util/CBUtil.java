@@ -200,4 +200,9 @@ public final class CBUtil {
         String base = file.getPath().substring(0, extensionStart);
         return new File(base + extension);
     }
+
+    public static String getExtension(@NotNull File file) {
+        int extensionStart = file.getPath().lastIndexOf(".");
+        return extensionStart < 0 ? "" : file.getPath().substring(extensionStart);
+    }
 }

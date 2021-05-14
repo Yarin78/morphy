@@ -20,50 +20,74 @@ public class GameEntityIndex {
     private final @NotNull ItemStorage<IndexHeader, IndexItem> citStorage;
     private final @NotNull ItemStorage<IndexBlockHeader, IndexBlockItem> cibStorage;
 
-    private final @NotNull ItemStorage<IndexHeader, IndexItem> cit2Storage;
-    private final @NotNull ItemStorage<IndexBlockHeader, IndexBlockItem> cib2Storage;
-
     private final @NotNull DatabaseContext context;
 
-    private static final Map<EntityType, Integer> CIT_OFFSET = Map.of(
-            EntityType.PLAYER, 0,
-            EntityType.TOURNAMENT, 2,
-            EntityType.ANNOTATOR, 8,
-            EntityType.SOURCE, 6,
-            EntityType.TEAM, 4,
-            EntityType.GAME_TAG, 0); // cit2
+    private final Map<EntityType, Integer> citOrder;
 
-    public GameEntityIndex() {
-        this(null);
+    // The order of the entity types in the .cit file
+    public static final List<EntityType> PRIMARY_TYPES = List.of(
+            EntityType.PLAYER,
+            EntityType.TOURNAMENT,
+            EntityType.TEAM,
+            EntityType.SOURCE,
+            EntityType.ANNOTATOR);
+
+    // The order of the entity types in the .cit2 file
+    public static final List<EntityType> SECONDARY_TYPES = List.of(
+            EntityType.GAME_TAG);
+
+    public DatabaseContext context() {
+        return context;
     }
 
-    public GameEntityIndex(@Nullable DatabaseContext context) {
-        this(new InMemoryItemStorage<>(IndexHeader.emptyCIT(), IndexItem.emptyCIT()),
-            new InMemoryItemStorage<>(IndexBlockHeader.empty(), IndexBlockItem.empty()),
-            new InMemoryItemStorage<>(IndexHeader.emptyCIT2(), IndexItem.emptyCIT2()),
+    public Set<EntityType> entityTypes() {
+        return citOrder.keySet();
+    }
+
+    public GameEntityIndex(@NotNull List<EntityType> entityTypes) {
+        this(entityTypes, null);
+    }
+
+    public GameEntityIndex(@NotNull List<EntityType> entityTypes, @Nullable DatabaseContext context) {
+        this(
+            entityTypes,
+            new InMemoryItemStorage<>(IndexHeader.emptyCIT(), IndexItem.emptyCIT()),
             new InMemoryItemStorage<>(IndexBlockHeader.empty(), IndexBlockItem.empty()),
             context);
     }
 
     public GameEntityIndex(
+            @NotNull List<EntityType> entityTypes,
             @NotNull ItemStorage<IndexHeader, IndexItem> citStorage,
             @NotNull ItemStorage<IndexBlockHeader, IndexBlockItem> cibStorage,
-            @NotNull ItemStorage<IndexHeader, IndexItem> cit2Storage,
-            @NotNull ItemStorage<IndexBlockHeader, IndexBlockItem> cib2Storage,
             @Nullable DatabaseContext context) {
+        this.citOrder = new HashMap<>();
+        for (int i = 0; i < entityTypes.size(); i++) {
+            this.citOrder.put(entityTypes.get(i), i);
+        }
         this.citStorage = citStorage;
         this.cibStorage = cibStorage;
-        this.cit2Storage = cit2Storage;
-        this.cib2Storage = cib2Storage;
         this.context = context == null ? new DatabaseContext() : context;
     }
 
-    public static @NotNull GameEntityIndex open(@NotNull File file, @NotNull DatabaseMode mode, @Nullable DatabaseContext context)
+    private static List<EntityType> resolveEntityTypesFromFileName(@NotNull File citFile) {
+        List<EntityType> entityTypes;
+        if (CBUtil.getExtension(citFile).equalsIgnoreCase(".cit")) {
+            entityTypes = GameEntityIndex.PRIMARY_TYPES;
+        } else if (CBUtil.getExtension(citFile).equalsIgnoreCase(".cit2")) {
+            entityTypes = GameEntityIndex.SECONDARY_TYPES;
+        } else {
+            throw new IllegalArgumentException("The cit extension must be either .cit or .cit2");
+        }
+        return entityTypes;
+    }
+
+    public static @NotNull GameEntityIndex open(@NotNull File citFile, @NotNull File cibFile, @NotNull DatabaseMode mode, @Nullable DatabaseContext context)
             throws IOException, MorphyInvalidDataException {
-        File cibFile = CBUtil.fileWithExtension(file, ".cib");
-        File cib2File = CBUtil.fileWithExtension(file, ".cib2");
-        File citFile = CBUtil.fileWithExtension(file, ".cit");
-        File cit2File = CBUtil.fileWithExtension(file, ".cit2");
+
+        List<EntityType> entityTypes = resolveEntityTypesFromFileName(citFile);
+        String suffix = CBUtil.getExtension(citFile).substring(4);
+
         /*
         if (mode == DatabaseMode.IN_MEMORY) {
             GameEntityIndex source = open(file, DatabaseMode.READ_ONLY, context);
@@ -79,19 +103,15 @@ public class GameEntityIndex {
         }
         Instrumentation instrumentation = context.instrumentation();
         FileItemStorage<IndexHeader, IndexItem> citStorage = new FileItemStorage<>(
-                citFile, context, new IndexSerializer(instrumentation.serializationStats("IndexTable")), IndexHeader.emptyCIT(), mode.openOptions());
+                citFile, context, new IndexSerializer(instrumentation.serializationStats("IndexTable" + suffix)), IndexHeader.emptyCIT(), mode.openOptions());
         FileItemStorage<IndexBlockHeader, IndexBlockItem> cibStorage = new FileItemStorage<>(
-                cibFile, context, new IndexBlockSerializer(instrumentation.serializationStats("IndexBlock")), IndexBlockHeader.empty(), mode.openOptions());
-        FileItemStorage<IndexHeader, IndexItem> cit2Storage = new FileItemStorage<>(
-                cit2File, context, new IndexSerializer(instrumentation.serializationStats("IndexTable2")), IndexHeader.emptyCIT2(), mode.openOptions());
-        FileItemStorage<IndexBlockHeader, IndexBlockItem> cib2Storage = new FileItemStorage<>(
-                cib2File, context, new IndexBlockSerializer(instrumentation.serializationStats("IndexBlock2")), IndexBlockHeader.empty(), mode.openOptions());
+                cibFile, context, new IndexBlockSerializer(instrumentation.serializationStats("IndexBlock" + suffix)), IndexBlockHeader.empty(), mode.openOptions());
 
         // TODO: Validate storage
-        return new GameEntityIndex(citStorage, cibStorage, cit2Storage, cib2Storage, context);
+        return new GameEntityIndex(entityTypes, citStorage, cibStorage, context);
     }
 
-    public static GameEntityIndex create(File file, DatabaseContext context) {
+    public static GameEntityIndex create(@NotNull File citFile, @NotNull File cibFile, DatabaseContext context) {
         // TODO
         return null;
     }
@@ -101,7 +121,7 @@ public class GameEntityIndex {
         ArrayList<Integer> gameIds = new ArrayList<>();
         int lastId = 0;
         while (currentBlock != -1) {
-            IndexBlockItem block = getBlock(currentBlock, type);
+            IndexBlockItem block = cibStorage.getItem(currentBlock);
             for (int id : block.gameIds()) {
                 if (id > lastId) {
                     // Remove duplicates
@@ -114,13 +134,12 @@ public class GameEntityIndex {
         return gameIds;
     }
 
-    public @NotNull List<Integer> getDeletedBlockIds(@NotNull EntityType type) {
+    public @NotNull List<Integer> getDeletedBlockIds() {
         ArrayList<Integer> result = new ArrayList<>();
-        ItemStorage<IndexBlockHeader, IndexBlockItem> storage = type != EntityType.GAME_TAG ? cibStorage : cib2Storage;
-        int current = storage.getHeader().deletedBlockId();
+        int current = cibStorage.getHeader().deletedBlockId();
         while (current != 0) {
             result.add(current);
-            IndexBlockItem block = storage.getItem(current);
+            IndexBlockItem block = cibStorage.getItem(current);
             current = block.nextBlockId();
         }
         return result;
@@ -137,7 +156,6 @@ public class GameEntityIndex {
     public @NotNull Set<Integer> getUsedBlockIds(@NotNull EntityType type, int count) {
         // For checking/testing purposes only
         HashSet<Integer> usedBlocks = new HashSet<>();
-        ItemStorage<IndexBlockHeader, IndexBlockItem> blockStorage = type != EntityType.GAME_TAG ? cibStorage : cib2Storage;
         for (int i = 0; i < count; i++) {
             int currentBlock = getHead(i, type);
             int tailBlock = getTail(i, type);
@@ -154,7 +172,7 @@ public class GameEntityIndex {
                 if (!usedBlocks.add(currentBlock)) {
                     throw new IllegalStateException(String.format("Block %d is used more than once in game entity index", currentBlock));
                 }
-                IndexBlockItem block = blockStorage.getItem(currentBlock);
+                IndexBlockItem block = cibStorage.getItem(currentBlock);
                 actualLastBlock = currentBlock;
                 currentBlock = block.nextBlockId();
             }
@@ -166,28 +184,29 @@ public class GameEntityIndex {
         return usedBlocks;
     }
 
-    public int getNumBlocks(@NotNull EntityType type) {
-        return (type != EntityType.GAME_TAG ? cibStorage : cib2Storage).getHeader().numBlocks();
+    public int getNumBlocks() {
+        return cibStorage.getHeader().numBlocks();
     }
 
     private int getHead(int entityId, @NotNull EntityType type) {
-        IndexItem indexItem = (type != EntityType.GAME_TAG ? citStorage : cit2Storage).getItem(entityId);
-        return indexItem.headTails()[CIT_OFFSET.get(type)];
+        Integer order = citOrder.get(type);
+        if (order == null) {
+            throw new IllegalArgumentException("Entity type " + type.nameSingularCapitalized() + " is not managed by this index");
+        }
+        return citStorage.getItem(entityId).headTails()[order * 2];
     }
 
     private int getTail(int entityId, @NotNull EntityType type) {
-        IndexItem indexItem = (type != EntityType.GAME_TAG ? citStorage : cit2Storage).getItem(entityId);
-        return indexItem.headTails()[CIT_OFFSET.get(type) + 1];
+        Integer order = citOrder.get(type);
+        if (order == null) {
+            throw new IllegalArgumentException("Entity type " + type.nameSingularCapitalized() + " is not managed by this index");
+        }
+        return citStorage.getItem(entityId).headTails()[order * 2 + 1];
     }
 
-    private @NotNull IndexBlockItem getBlock(int blockId, @NotNull EntityType type) {
-        return (type != EntityType.GAME_TAG ? cibStorage : cib2Storage).getItem(blockId);
-    }
 
     public void close() {
         citStorage.close();
         cibStorage.close();
-        cit2Storage.close();
-        cib2Storage.close();
     }
 }

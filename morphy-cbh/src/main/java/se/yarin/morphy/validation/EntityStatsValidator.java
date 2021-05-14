@@ -187,11 +187,14 @@ public class EntityStatsValidator {
                 log.warn(String.format("Entity id %d was found both when iterating and among deleted nodes", id));
             }
             if (checks.contains(Validator.Checks.GAME_ENTITY_INDEX)) {
-                List<Integer> gameIds = database.gameEntityIndex().getGameIds(id, entityType);
-                if (gameIds.size() != 0) {
-                    // Not a critical error
-                    log.warn(String.format("Deleted %s entity id %d has %d game references in the Game Entity Index",
-                            entityType.nameSingular(), id, gameIds.size()));
+                GameEntityIndex gameEntityIndex = database.gameEntityIndex(entityType);
+                if (gameEntityIndex != null) {
+                    List<Integer> gameIds = gameEntityIndex.getGameIds(id, entityType);
+                    if (gameIds.size() != 0) {
+                        // Not a critical error
+                        log.warn(String.format("Deleted %s entity id %d has %d game references in the Game Entity Index",
+                                entityType.nameSingular(), id, gameIds.size()));
+                    }
                 }
             }
             existingIds.add(id);
@@ -246,28 +249,29 @@ public class EntityStatsValidator {
             }
         }
         if (checks.contains(Validator.Checks.GAME_ENTITY_INDEX)) {
-            GameEntityIndex gameEntityIndex = this.database.gameEntityIndex();
-            assert gameEntityIndex != null;
-            List<Integer> indexGameIds = gameEntityIndex.getGameIds(current.id(), entityType);
-            if (expectedGameIds.size() != indexGameIds.size() || !expectedGameIds.equals(indexGameIds)) {
-                if (new HashSet<>(expectedGameIds).equals(new HashSet<>(indexGameIds))) {
-                    // If an entity occurs twice in a game, the index may sometimes only mention it once
-                    // (happens in Mega Database 2021). This is less critical.
-                    String msg = String.format("%s entity with id %d (%s) was duplicated in a game which was not reflected in the GameEntityIndex (no further warnings of this type will be logged)",
-                            entityType.nameSingularCapitalized(), current.id(), current);
-                    if (!loggedDuplicateNotInGameEntityIndex) {
+            GameEntityIndex gameEntityIndex = this.database.gameEntityIndex(entityType);
+            if (gameEntityIndex != null) {
+                List<Integer> indexGameIds = gameEntityIndex.getGameIds(current.id(), entityType);
+                if (expectedGameIds.size() != indexGameIds.size() || !expectedGameIds.equals(indexGameIds)) {
+                    if (new HashSet<>(expectedGameIds).equals(new HashSet<>(indexGameIds))) {
+                        // If an entity occurs twice in a game, the index may sometimes only mention it once
+                        // (happens in Mega Database 2021). This is less critical.
+                        String msg = String.format("%s entity with id %d (%s) was duplicated in a game which was not reflected in the GameEntityIndex (no further warnings of this type will be logged)",
+                                entityType.nameSingularCapitalized(), current.id(), current);
+                        if (!loggedDuplicateNotInGameEntityIndex) {
+                            log.warn(msg);
+                            loggedDuplicateNotInGameEntityIndex = true;
+                        }
+                    } else {
+                        String msg = String.format("%s entity with id %d (%s) mismatched in GameEntityIndex",
+                                entityType.nameSingularCapitalized(), current.id(), current);
+                        if (throwOnError) {
+                            throw new MorphyEntityIndexException(msg);
+                        }
                         log.warn(msg);
-                        loggedDuplicateNotInGameEntityIndex = true;
                     }
-                } else {
-                    String msg = String.format("%s entity with id %d (%s) mismatched in GameEntityIndex",
-                            entityType.nameSingularCapitalized(), current.id(), current);
-                    if (throwOnError) {
-                        throw new MorphyEntityIndexException(msg);
-                    }
-                    log.warn(msg);
+                    return false;
                 }
-                return false;
             }
         }
         return true;

@@ -1,5 +1,6 @@
 package se.yarin.morphy.validation;
 
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.morphy.Database;
@@ -84,7 +85,7 @@ public class Validator {
      */
     public void validate(Database db, EnumSet<Checks> checks, boolean throwOnError, boolean throwOnWarning, boolean showProgressBar)
             throws MorphyException {
-        boolean hasCritialErrors = false;
+        boolean hasCriticalErrors = false;
 
         // Validates the integrity of the binary search tree (proper binary tree)
         List<EntityTypeCheck> entityTypeCheck = new ArrayList<>();
@@ -92,14 +93,6 @@ public class Validator {
         // Validate entities (statistics, sort order)
         EntityStatsValidator entityStatsValidator = new EntityStatsValidator(db);
         EntityStats entityStats = entityStatsValidator.getStats();
-
-        if (checks.contains(Checks.GAME_ENTITY_INDEX)) {
-            if (db.gameEntityIndex() == null) {
-                log.error("Game Entity index is missing or corrupt; no further checks will be done on it.");
-                checks.remove(Checks.GAME_ENTITY_INDEX);
-                hasCritialErrors = true;
-            }
-        }
 
         if (checks.contains(Checks.ENTITY_PLAYERS)) {
             entityTypeCheck.add(new EntityTypeCheck(EntityType.PLAYER, db.playerIndex(), entityStats.players));
@@ -131,8 +124,8 @@ public class Validator {
                         try {
                             typeCheck.getIndex().validateStructure();
                         } catch (MorphyEntityIndexException e) {
-                            log.error("Error validating entity integrity for " + typeCheck.entityType + ": " + e.getMessage());
-                            hasCritialErrors = true;
+                            log.error("Error validating entity integrity for " + typeCheck.entityType.namePlural() + ": " + e.getMessage());
+                            hasCriticalErrors = true;
                         }
                         progressTracker.step();
                     }
@@ -156,15 +149,20 @@ public class Validator {
                                 progressTracker::step, checks, MAX_INVALID_ENTITIES, throwOnWarning);
                     } catch (Exception e) {
                         log.error(String.format("Error processing %s entities: %s", entityType.nameSingular(), e.getMessage()));
-                        hasCritialErrors = true;
+                        hasCriticalErrors = true;
                     }
                 }
             }
         }
 
         if (checks.contains(Checks.GAME_ENTITY_INDEX)) {
-            if (validateGameEntityIndexBlocks(db)) {
-                hasCritialErrors = true;
+            GameEntityIndex gameEntityIndex = db.gameEntityIndexPrimary();
+            if (gameEntityIndex != null && validateGameEntityIndexBlocks(db, gameEntityIndex)) {
+                hasCriticalErrors = true;
+            }
+            GameEntityIndex gameEntityIndexSecondary = db.gameEntityIndexSecondary();
+            if (gameEntityIndexSecondary != null && validateGameEntityIndexBlocks(db, gameEntityIndexSecondary)) {
+                hasCriticalErrors = true;
             }
         }
 
@@ -174,65 +172,46 @@ public class Validator {
                 try {
                     int numErrors = gamesValidator.processGames(checks.contains(Checks.GAMES_LOAD), throwOnWarning, progressTracker::step);
                     if (numErrors > 0) {
-                        hasCritialErrors = true;
+                        hasCriticalErrors = true;
                     }
                 } catch (Exception e) {
                     // This shouldn't really happen
                     log.error("Critical error processing games: " + e.getMessage());
-                    hasCritialErrors = true;
+                    hasCriticalErrors = true;
                 }
             }
         }
 
-        if (hasCritialErrors && throwOnError) {
+        if (hasCriticalErrors && throwOnError) {
             throw new MorphyException("There were critical errors");
         }
     }
 
-    private boolean validateGameEntityIndexBlocks(Database database) {
+    private boolean validateGameEntityIndexBlocks(@NotNull Database database, @NotNull GameEntityIndex gameEntityIndex) {
         // Checks that all blocks in the cib file are accounted for; returns true if there is an error
-        GameEntityIndex gameEntityIndex = database.gameEntityIndex();
-        assert gameEntityIndex != null;
 
         try {
-            Set<Integer> cibBlocks = new HashSet<>(), cib2Blocks = new HashSet<>();
+            Set<Integer> cibBlocks = new HashSet<>();
 
-            for (EntityType entityType : EntityType.values()) {
+            for (EntityType entityType : gameEntityIndex.entityTypes()) {
                 Set<Integer> usedBlockIds = gameEntityIndex.getUsedBlockIds(entityType, database.entityIndex(entityType).capacity());
-                if (entityType != EntityType.GAME_TAG) {
-                    int expectedSize = cibBlocks.size() + usedBlockIds.size();
-                    cibBlocks.addAll(usedBlockIds);
-                    if (cibBlocks.size() != expectedSize) {
-                        throw new IllegalStateException("Same block used multiple times in game entity index");
-                    }
-                } else {
-                    cib2Blocks.addAll(usedBlockIds);
+                int expectedSize = cibBlocks.size() + usedBlockIds.size();
+                cibBlocks.addAll(usedBlockIds);
+                if (cibBlocks.size() != expectedSize) {
+                    throw new IllegalStateException("Same block used multiple times in game entity index");
                 }
             }
 
-            List<Integer> cibDeletedBlocks = gameEntityIndex.getDeletedBlockIds(EntityType.PLAYER);
+            List<Integer> cibDeletedBlocks = gameEntityIndex.getDeletedBlockIds();
             int expectedSize = cibBlocks.size() + cibDeletedBlocks.size();
             cibBlocks.addAll(cibDeletedBlocks);
             if (cibBlocks.size() != expectedSize) {
                 throw new IllegalStateException("Block marked as deleted also in use in game entity index");
             }
 
-            List<Integer> cib2DeletedBlocks = gameEntityIndex.getDeletedBlockIds(EntityType.GAME_TAG);
-            expectedSize = cib2Blocks.size() + cib2DeletedBlocks.size();
-            cib2Blocks.addAll(cib2DeletedBlocks);
-            if (cib2Blocks.size() != expectedSize) {
-                throw new IllegalStateException("Block marked as deleted also in use in game entity index");
-            }
-
-            int cibNumBlocks = gameEntityIndex.getNumBlocks(EntityType.PLAYER);
+            int cibNumBlocks = gameEntityIndex.getNumBlocks();
             int maxCibBlockIndex = cibBlocks.size() == 0 ? -1 : Collections.max(cibBlocks);
             if (cibNumBlocks != cibBlocks.size() || maxCibBlockIndex != cibNumBlocks - 1) {
-                throw new IllegalStateException("There are blocks unaccounted for in the game entity index");
-            }
-
-            int cib2NumBlocks = gameEntityIndex.getNumBlocks(EntityType.GAME_TAG);
-            int maxCib2BlockIndex = cib2Blocks.size() == 0 ? -1 : Collections.max(cib2Blocks);
-            if (cib2NumBlocks != cib2Blocks.size() || maxCib2BlockIndex != cib2NumBlocks - 1) {
                 throw new IllegalStateException("There are blocks unaccounted for in the game entity index");
             }
         } catch (IllegalStateException e) {

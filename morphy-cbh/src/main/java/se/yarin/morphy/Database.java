@@ -59,7 +59,8 @@ public class Database implements EntityRetriever, AutoCloseable {
     @NotNull private final SourceIndex sourceIndex;
     @NotNull private final TeamIndex teamIndex;
     @NotNull private final GameTagIndex gameTagIndex;
-    @Nullable private final GameEntityIndex gameEntityIndex;
+    @Nullable private final GameEntityIndex gameEntityIndexPrimary;
+    @Nullable private final GameEntityIndex gameEntityIndexSecondary;
 
     @NotNull private final GameAdapter gameAdapter;
     @NotNull private final DatabaseContext context;
@@ -112,7 +113,13 @@ public class Database implements EntityRetriever, AutoCloseable {
         return gameTagIndex;
     }
 
-    @Nullable public GameEntityIndex gameEntityIndex() { return gameEntityIndex; }
+    @Nullable public GameEntityIndex gameEntityIndex(@NotNull EntityType type) {
+        return type != EntityType.GAME_TAG ? gameEntityIndexPrimary : gameEntityIndexSecondary;
+    }
+
+    @Nullable public GameEntityIndex gameEntityIndexPrimary() { return gameEntityIndexPrimary; }
+
+    @Nullable public GameEntityIndex gameEntityIndexSecondary() { return gameEntityIndexSecondary; }
 
     @NotNull public GameAdapter gameAdapter() { return gameAdapter; }
 
@@ -145,7 +152,8 @@ public class Database implements EntityRetriever, AutoCloseable {
         this.sourceIndex = new SourceIndex(this.context);
         this.teamIndex = new TeamIndex(this.context);
         this.gameTagIndex = new GameTagIndex(this.context);
-        this.gameEntityIndex = new GameEntityIndex(this.context);
+        this.gameEntityIndexPrimary = new GameEntityIndex(GameEntityIndex.PRIMARY_TYPES, this.context);
+        this.gameEntityIndexSecondary = new GameEntityIndex(GameEntityIndex.SECONDARY_TYPES, this.context);
 
         this.gameAdapter = new GameAdapter();
     }
@@ -164,11 +172,18 @@ public class Database implements EntityRetriever, AutoCloseable {
             @NotNull SourceIndex sourceIndex,
             @NotNull TeamIndex teamIndex,
             @NotNull GameTagIndex gameTagIndex,
-            @Nullable GameEntityIndex gameEntityIndex) {
+            @Nullable GameEntityIndex gameEntityIndexPrimary,
+            @Nullable GameEntityIndex gameEntityIndexSecondary) {
 
         Set<DatabaseContext> contexts = new HashSet<>(Arrays.asList(context, gameHeaderIndex.context(), extendedGameHeaderStorage.context(), moveRepository.context(),
                 annotationRepository.context(), playerIndex.context(), tournamentIndex.context(), tournamentExtraStorage.context(),
                 annotatorIndex.context(), sourceIndex.context(), teamIndex.context(), gameTagIndex.context()));
+        if (gameEntityIndexPrimary != null) {
+            contexts.add(gameEntityIndexPrimary.context());
+        }
+        if (gameEntityIndexSecondary != null) {
+            contexts.add(gameEntityIndexSecondary.context());
+        }
         if (contexts.size() > 1) {
             throw new IllegalArgumentException("All indexes in a Database must share the same context");
         }
@@ -186,7 +201,8 @@ public class Database implements EntityRetriever, AutoCloseable {
         this.sourceIndex = sourceIndex;
         this.teamIndex = teamIndex;
         this.gameTagIndex = gameTagIndex;
-        this.gameEntityIndex = gameEntityIndex;
+        this.gameEntityIndexPrimary = gameEntityIndexPrimary;
+        this.gameEntityIndexSecondary = gameEntityIndexSecondary;
 
         this.gameAdapter = new GameAdapter();
     }
@@ -220,10 +236,17 @@ public class Database implements EntityRetriever, AutoCloseable {
         TeamIndex teamIndex = TeamIndex.create(CBUtil.fileWithExtension(file, ".cbe"), context);
         GameTagIndex gameTagIndex = GameTagIndex.create(CBUtil.fileWithExtension(file, ".cbl"), context);
 
-        GameEntityIndex gameEntityIndex = GameEntityIndex.create(file, context);
+        GameEntityIndex gameEntityIndex = GameEntityIndex.create(
+                CBUtil.fileWithExtension(file, ".cit"),
+                CBUtil.fileWithExtension(file, ".cib"),
+                context);
+        GameEntityIndex gameEntityIndexSecondary = GameEntityIndex.create(
+                CBUtil.fileWithExtension(file, ".cit2"),
+                CBUtil.fileWithExtension(file, ".cib2"),
+                context);
 
         return new Database(file.getName(), context, gameHeaderIndex, extendedGameHeaderStorage, moveRepository, annotationRepository,
-                playerIndex, tournamentIndex, tournamentExtraStorage, annotatorIndex, sourceIndex, teamIndex, gameTagIndex, gameEntityIndex);
+                playerIndex, tournamentIndex, tournamentExtraStorage, annotatorIndex, sourceIndex, teamIndex, gameTagIndex, gameEntityIndex, gameEntityIndexSecondary);
     }
 
     public static Database open(@NotNull File file) throws IOException {
@@ -295,13 +318,24 @@ public class Database implements EntityRetriever, AutoCloseable {
         TeamIndex teamIndex = cbeFile.exists() ? TeamIndex.open(cbeFile, mode, context) : new TeamIndex(context);
         GameTagIndex gameTagIndex = cblFile.exists() ? GameTagIndex.open(cblFile, mode, context) : new GameTagIndex(context);
 
-        GameEntityIndex gameEntityIndex;
+        GameEntityIndex gameEntityIndex, gameEntityIndexSecondary;
 
         try {
-            gameEntityIndex = GameEntityIndex.open(file, mode, context);
+            File citFile = CBUtil.fileWithExtension(file, ".cit");
+            File cibFile = CBUtil.fileWithExtension(file, ".cib");
+            gameEntityIndex = GameEntityIndex.open(citFile, cibFile, mode, context);
         } catch (NoSuchFileException | MorphyInvalidDataException e) {
-            log.warn("EntityIndex search booster missing or corrupt");
+            log.warn("GameEntityIndex missing or corrupt");
             gameEntityIndex = null;
+        }
+
+        try {
+            File citFile = CBUtil.fileWithExtension(file, ".cit2");
+            File cibFile = CBUtil.fileWithExtension(file, ".cib2");
+            gameEntityIndexSecondary = GameEntityIndex.open(citFile, cibFile, mode, context);
+        } catch (NoSuchFileException | MorphyInvalidDataException e) {
+            log.warn("Secondary GameEntityIndex missing or corrupt");
+            gameEntityIndexSecondary = null;
         }
 
         // TODO: Move this to constructor, add mode to DatabaseContext
@@ -319,7 +353,8 @@ public class Database implements EntityRetriever, AutoCloseable {
         String name = mode == DatabaseMode.IN_MEMORY ? file.getName() + " [mem]" : file.getName();
 
         return new Database(name, context, gameHeaderIndex, extendedGameHeaderStorage, moveRepository, annotationRepository,
-                playerIndex, tournamentIndex, tournamentExtraStorage, annotatorIndex, sourceIndex, teamIndex, gameTagIndex, gameEntityIndex);
+                playerIndex, tournamentIndex, tournamentExtraStorage, annotatorIndex, sourceIndex, teamIndex, gameTagIndex,
+                gameEntityIndex, gameEntityIndexSecondary);
     }
 
     /**
@@ -389,8 +424,8 @@ public class Database implements EntityRetriever, AutoCloseable {
         sourceIndex.close();
         teamIndex.close();
         gameTagIndex.close();
-        if (gameEntityIndex != null) {
-            gameEntityIndex.close();
+        if (gameEntityIndexPrimary != null) {
+            gameEntityIndexPrimary.close();
         }
     }
 
