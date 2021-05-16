@@ -90,7 +90,14 @@ public class FileItemStorage<THeader, TItem> implements ItemStorage<THeader, TIt
 
     @Override
     public boolean isEmpty() {
-        return this.fileSize <= serializer.serializedHeaderSize();
+        return this.fileSize <= serializer.headerSize(header);
+    }
+
+    @Override
+    public int count() {
+        long itemBytes = this.fileSize - serializer.headerSize(header);
+        int itemSize = serializer.itemSize(header);
+        return (int) ((itemBytes + itemSize - 1) / itemSize); // round up
     }
 
     public @NotNull ByteBuffer getItemRaw(int index) {

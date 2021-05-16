@@ -7,6 +7,8 @@ import se.yarin.morphy.storage.ItemStorageSerializer;
 import se.yarin.util.ByteBufferUtil;
 
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.Collections;
 
 public class IndexBlockSerializer implements ItemStorageSerializer<IndexBlockHeader, IndexBlockItem> {
 
@@ -56,14 +58,14 @@ public class IndexBlockSerializer implements ItemStorageSerializer<IndexBlockHea
 
         int numGames = ByteBufferUtil.getIntL(buf);
 
-        int[] gameIds = new int[numGames];
+        ArrayList<Integer> gameIds = new ArrayList<>();
         for (int i = 0; i < numGames; i++) {
-            gameIds[i] = ByteBufferUtil.getIntL(buf);
+            gameIds.add(ByteBufferUtil.getIntL(buf));
         }
         buf.position(prevPos + header.itemSize());
 
         return builder
-                .gameIds(gameIds)
+                .gameIds(Collections.unmodifiableList(gameIds))
                 .build();
     }
 
@@ -87,10 +89,10 @@ public class IndexBlockSerializer implements ItemStorageSerializer<IndexBlockHea
 
         ByteBufferUtil.putIntL(buf, indexBlockItem.nextBlockId());
         ByteBufferUtil.putIntL(buf, indexBlockItem.unknown());
-        int numGames = indexBlockItem.gameIds().length;
+        int numGames = indexBlockItem.gameIds().size();
         ByteBufferUtil.putIntL(buf, numGames);
         for (int i = 0; i < numInts; i++) {
-            ByteBufferUtil.putIntL(buf, i < numGames ? indexBlockItem.gameIds()[i] : 0);
+            ByteBufferUtil.putIntL(buf, i < numGames ? indexBlockItem.gameIds().get(i) : 0);
         }
     }
 }

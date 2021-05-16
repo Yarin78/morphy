@@ -189,7 +189,7 @@ public class EntityStatsValidator {
             if (checks.contains(Validator.Checks.GAME_ENTITY_INDEX)) {
                 GameEntityIndex gameEntityIndex = database.gameEntityIndex(entityType);
                 if (gameEntityIndex != null) {
-                    List<Integer> gameIds = gameEntityIndex.getGameIds(id, entityType);
+                    List<Integer> gameIds = gameEntityIndex.getGameIds(id, entityType, false);
                     if (gameIds.size() != 0) {
                         // Not a critical error
                         log.warn(String.format("Deleted %s entity id %d has %d game references in the Game Entity Index",
@@ -251,7 +251,7 @@ public class EntityStatsValidator {
         if (checks.contains(Validator.Checks.GAME_ENTITY_INDEX)) {
             GameEntityIndex gameEntityIndex = this.database.gameEntityIndex(entityType);
             if (gameEntityIndex != null) {
-                List<Integer> indexGameIds = gameEntityIndex.getGameIds(current.id(), entityType);
+                List<Integer> indexGameIds = gameEntityIndex.getGameIds(current.id(), entityType, false);
                 if (expectedGameIds.size() != indexGameIds.size() || !expectedGameIds.equals(indexGameIds)) {
                     if (new HashSet<>(expectedGameIds).equals(new HashSet<>(indexGameIds))) {
                         // If an entity occurs twice in a game, the index may sometimes only mention it once

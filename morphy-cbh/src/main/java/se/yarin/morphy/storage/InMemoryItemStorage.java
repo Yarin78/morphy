@@ -67,6 +67,11 @@ public class InMemoryItemStorage<THeader, TItem> implements ItemStorage<THeader,
     }
 
     @Override
+    public int count() {
+        return this.items.size();
+    }
+
+    @Override
     public @NotNull TItem getItem(int index) {
         if (oneIndexed) {
             index--;

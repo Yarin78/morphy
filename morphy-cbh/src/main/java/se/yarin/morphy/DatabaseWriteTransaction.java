@@ -687,7 +687,7 @@ public class DatabaseWriteTransaction extends DatabaseTransaction {
         private final Map<Integer, List<Integer>> excludes = new HashMap<>();
         private final BiPredicate<Game, Integer> hasEntity;
 
-        private EntityDelta(BiPredicate<Game, Integer> hasEntity) {
+        private EntityDelta(@NotNull BiPredicate<Game, Integer> hasEntity) {
             this.hasEntity = hasEntity;
         }
 
@@ -720,7 +720,7 @@ public class DatabaseWriteTransaction extends DatabaseTransaction {
             includes.computeIfAbsent(entityId, k -> new ArrayList<>()).add(gameId);
         }
 
-        public void apply(EntityIndexWriteTransaction<T> entityTransaction) {
+        public void apply(@NotNull EntityIndexWriteTransaction<T> entityTransaction) {
             HashSet<Integer> entityIds = new HashSet<>();
             entityIds.addAll(includes.keySet());
             entityIds.addAll(excludes.keySet());

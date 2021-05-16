@@ -34,6 +34,12 @@ public interface ItemStorage<THeader, TItem> {
     boolean isEmpty();
 
     /**
+     * Determines the number of items in the storage based on the storage size and the size of individual items
+     * @return number of items in the storage
+     */
+    int count();
+
+    /**
      * Gets an item from the storage
      * If the index is invalid, {@link IllegalArgumentException} should be thrown, unless
      * the storage is opened in non-strict (safe) mode, in which case empty items can be returned.

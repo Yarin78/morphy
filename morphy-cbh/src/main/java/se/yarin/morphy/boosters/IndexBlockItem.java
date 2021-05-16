@@ -2,6 +2,8 @@ package se.yarin.morphy.boosters;
 
 import org.immutables.value.Value;
 
+import java.util.*;
+
 /**
  * Represents an item in the .cib/.cib2 file
  */
@@ -9,13 +11,13 @@ import org.immutables.value.Value;
 public interface IndexBlockItem {
     int nextBlockId();
     int unknown();
-    int[] gameIds();
+    List<Integer> gameIds();
 
     static IndexBlockItem empty() {
         return ImmutableIndexBlockItem.builder()
                 .nextBlockId(-1)
                 .unknown(0)
-                .gameIds(new int[0])
+                .gameIds(Collections.emptyList())
                 .build();
     }
 }
