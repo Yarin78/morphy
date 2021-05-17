@@ -27,12 +27,12 @@ public class AnnotatorIndex extends EntityIndex<Annotator> {
     }
 
     public AnnotatorIndex(@Nullable DatabaseContext context) {
-        this(new InMemoryItemStorage<>(EntityIndexHeader.empty(SERIALIZED_ANNOTATOR_SIZE)), context);
+        this(new InMemoryItemStorage<>(context, "Annotator", EntityIndexHeader.empty(SERIALIZED_ANNOTATOR_SIZE)), context);
     }
 
     protected AnnotatorIndex(@NotNull File file, @NotNull Set<OpenOption> openOptions, @NotNull DatabaseContext context) throws IOException {
         this(new FileItemStorage<>(
-                file, context, new EntityIndexSerializer(SERIALIZED_ANNOTATOR_SIZE), EntityIndexHeader.empty(SERIALIZED_ANNOTATOR_SIZE), openOptions), context);
+                file, context, "Annotator", new EntityIndexSerializer(SERIALIZED_ANNOTATOR_SIZE), EntityIndexHeader.empty(SERIALIZED_ANNOTATOR_SIZE), openOptions), context);
     }
 
     protected AnnotatorIndex(@NotNull ItemStorage<EntityIndexHeader, EntityNode> storage, @Nullable DatabaseContext context) {

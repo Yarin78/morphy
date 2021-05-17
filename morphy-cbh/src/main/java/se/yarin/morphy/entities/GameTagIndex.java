@@ -28,12 +28,12 @@ public class GameTagIndex extends EntityIndex<GameTag> {
     }
 
     public GameTagIndex(@Nullable DatabaseContext context) {
-        this(new InMemoryItemStorage<>(EntityIndexHeader.empty(SERIALIZED_GAME_TAG_SIZE)), context);
+        this(new InMemoryItemStorage<>(context, "GameTag", EntityIndexHeader.empty(SERIALIZED_GAME_TAG_SIZE)), context);
     }
 
     protected GameTagIndex(@NotNull File file, @NotNull Set<OpenOption> openOptions, @NotNull DatabaseContext context) throws IOException {
         this(new FileItemStorage<>(
-                file, context, new EntityIndexSerializer(SERIALIZED_GAME_TAG_SIZE), EntityIndexHeader.empty(SERIALIZED_GAME_TAG_SIZE), openOptions), context);
+                file, context, "GameTag", new EntityIndexSerializer(SERIALIZED_GAME_TAG_SIZE), EntityIndexHeader.empty(SERIALIZED_GAME_TAG_SIZE), openOptions), context);
     }
 
     protected GameTagIndex(@NotNull ItemStorage<EntityIndexHeader, EntityNode> storage, @Nullable DatabaseContext context) {

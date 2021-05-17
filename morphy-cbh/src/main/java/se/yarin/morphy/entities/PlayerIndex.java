@@ -33,12 +33,12 @@ public class PlayerIndex extends EntityIndex<Player> {
     }
 
     public PlayerIndex(@Nullable DatabaseContext context) {
-        this(new InMemoryItemStorage<>(EntityIndexHeader.empty(SERIALIZED_PLAYER_SIZE)), context);
+        this(new InMemoryItemStorage<>(context, "Player", EntityIndexHeader.empty(SERIALIZED_PLAYER_SIZE)), context);
     }
 
     protected PlayerIndex(@NotNull File file, @NotNull Set<OpenOption> openOptions, @NotNull DatabaseContext context) throws IOException {
         this(new FileItemStorage<>(
-                file, context, new EntityIndexSerializer(SERIALIZED_PLAYER_SIZE), EntityIndexHeader.empty(SERIALIZED_PLAYER_SIZE), openOptions), context);
+                file, context, "Player", new EntityIndexSerializer(SERIALIZED_PLAYER_SIZE), EntityIndexHeader.empty(SERIALIZED_PLAYER_SIZE), openOptions), context);
     }
 
     protected PlayerIndex(@NotNull ItemStorage<EntityIndexHeader, EntityNode> storage, @Nullable DatabaseContext context) {

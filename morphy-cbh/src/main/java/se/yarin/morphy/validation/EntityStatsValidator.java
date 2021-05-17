@@ -76,7 +76,6 @@ public class EntityStatsValidator {
             Map<Integer, List<Integer>> expectedGameIds,
             boolean throwOnError) throws MorphyEntityIndexException {
         EnumSet<Validator.Checks> checks = EnumSet.allOf(Validator.Checks.class);
-        checks.remove(Validator.Checks.GAME_ENTITY_INDEX); // TODO: restore this
         processEntities(entityType, entities, expectedGameIds, () -> {}, checks, 100000, throwOnError);
     }
 
@@ -229,8 +228,8 @@ public class EntityStatsValidator {
 
         if (checks.contains(Validator.Checks.ENTITY_STATISTICS)) {
             if (expectedGameIds.size() != current.count()) {
-                String msg = String.format("Entity in %s base with id %d (%s) has %d games but entity count says %d",
-                        entityType, current.id(), current, expectedGameIds.size(), current.count());
+                String msg = String.format("Entity in %s index with id %d (%s) has %d games but entity count says %d",
+                        entityType.nameSingular(), current.id(), current, expectedGameIds.size(), current.count());
                 if (throwOnError) {
                     throw new MorphyEntityIndexException(msg);
                 }
@@ -239,8 +238,8 @@ public class EntityStatsValidator {
             }
 
             if (expectedGameIds.get(0) != current.firstGameId()) {
-                String msg = String.format("Entity in %s base with id %d (%s) first game is %d but stats says %d",
-                        entityType, current.id(), current, expectedGameIds.get(0), current.firstGameId());
+                String msg = String.format("Entity in %s index with id %d (%s) first game is %d but stats says %d",
+                        entityType.nameSingular(), current.id(), current, expectedGameIds.get(0), current.firstGameId());
                 if (throwOnError) {
                     throw new MorphyEntityIndexException(msg);
                 }

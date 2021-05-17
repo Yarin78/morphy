@@ -12,10 +12,10 @@ import java.util.Collections;
 
 public class IndexBlockSerializer implements ItemStorageSerializer<IndexBlockHeader, IndexBlockItem> {
 
-    private final Instrumentation.SerializationStats serializationStats;
+    private final Instrumentation.ItemStats itemStats;
 
-    public IndexBlockSerializer(@NotNull Instrumentation.SerializationStats serializationStats) {
-        this.serializationStats = serializationStats;
+    public IndexBlockSerializer(@NotNull Instrumentation.ItemStats itemStats) {
+        this.itemStats = itemStats;
     }
 
     @Override
@@ -49,7 +49,7 @@ public class IndexBlockSerializer implements ItemStorageSerializer<IndexBlockHea
 
     @Override
     public @NotNull IndexBlockItem deserializeItem(int id, @NotNull ByteBuffer buf, @NotNull IndexBlockHeader header) {
-        serializationStats.addDeserialization(1);
+        itemStats.addDeserialization(1);
 
         int prevPos = buf.position();
         ImmutableIndexBlockItem.Builder builder = ImmutableIndexBlockItem.builder()
@@ -83,7 +83,7 @@ public class IndexBlockSerializer implements ItemStorageSerializer<IndexBlockHea
 
     @Override
     public void serializeItem(@NotNull IndexBlockItem indexBlockItem, @NotNull ByteBuffer buf, @NotNull IndexBlockHeader header) {
-        serializationStats.addSerialization(1);
+        itemStats.addSerialization(1);
 
         int numInts = (header.itemSize() - 12) / 4;
 

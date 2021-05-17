@@ -34,26 +34,26 @@ public class TournamentExtraStorage implements ItemStorageSerializer<TournamentE
 
     private final @NotNull ItemStorage<TournamentExtraHeader, TournamentExtra> storage;
     private final @NotNull DatabaseContext context;
-    private final @NotNull Instrumentation.SerializationStats serializationStats;
+    private final @NotNull Instrumentation.ItemStats itemStats;
 
     public TournamentExtraStorage() {
         this(null);
     }
 
     public TournamentExtraStorage(@Nullable DatabaseContext context) {
-        this(new InMemoryItemStorage<>(TournamentExtraHeader.empty(), TournamentExtra.empty()), context);
+        this(new InMemoryItemStorage<>(context, "TournamentExt", TournamentExtraHeader.empty(), TournamentExtra.empty()), context);
     }
 
     public TournamentExtraStorage(@NotNull ItemStorage<TournamentExtraHeader, TournamentExtra> storage, @Nullable DatabaseContext context) {
         this.storage = storage;
         this.context = context == null ? new DatabaseContext() : context;
-        this.serializationStats = this.context.instrumentation().serializationStats("TournamentExt");
+        this.itemStats = this.context.instrumentation().itemStats("TournamentExt");
     }
 
     protected TournamentExtraStorage(@NotNull File file, @NotNull Set<OpenOption> options, @Nullable DatabaseContext context) throws IOException {
         this.context = context == null ? new DatabaseContext() : context;
-        this.storage = new FileItemStorage<>(file, this.context, this, TournamentExtraHeader.empty(), options);
-        this.serializationStats = this.context.instrumentation().serializationStats("TournamentExt");
+        this.storage = new FileItemStorage<>(file, this.context, "TournamentExt", this, TournamentExtraHeader.empty(), options);
+        this.itemStats = this.context.instrumentation().itemStats("TournamentExt");
 
         if (options.contains(WRITE)) {
             if (storage.getHeader().version() < TournamentExtraHeader.DEFAULT_HEADER_VERSION) {
@@ -179,7 +179,7 @@ public class TournamentExtraStorage implements ItemStorageSerializer<TournamentE
 
     @Override
     public @NotNull TournamentExtra deserializeItem(int id, @NotNull ByteBuffer buf, @NotNull TournamentExtraHeader header) {
-        serializationStats.addDeserialization(1);
+        itemStats.addDeserialization(1);
 
         int itemSize = storage.getHeader().recordSize();
 
@@ -212,7 +212,7 @@ public class TournamentExtraStorage implements ItemStorageSerializer<TournamentE
 
     @Override
     public void serializeItem(@NotNull TournamentExtra tournamentExtra, @NotNull ByteBuffer buf, @NotNull TournamentExtraHeader header) {
-        serializationStats.addSerialization(1);
+        itemStats.addSerialization(1);
 
         ByteBufferUtil.putDoubleL(buf, tournamentExtra.latitude());
         ByteBufferUtil.putDoubleL(buf, tournamentExtra.longitude());

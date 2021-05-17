@@ -48,15 +48,17 @@ public class Instrumentation {
         }
     }
 
-    public class SerializationStats {
+    public class ItemStats {
         private final String name;
+        private int gets;
+        private int getRaws;
+        private int puts;
         private int deserializations;
         private int serializations;
 
-        public SerializationStats(String name) {
+        public ItemStats(String name) {
             this.name = name;
         }
-
 
         public void addDeserialization(int count) {
             deserializations += count;
@@ -66,6 +68,18 @@ public class Instrumentation {
             serializations += count;
         }
 
+        public void addGet(int count) {
+            gets += count;
+        }
+
+        public void addPut(int count) {
+            puts += count;
+        }
+
+        public void addGetRaw(int count) {
+            getRaws += count;
+        }
+
         public int deserializations() {
             return deserializations;
         }
@@ -73,10 +87,22 @@ public class Instrumentation {
         public int serializations() {
             return serializations;
         }
+
+        public int gets() {
+            return gets;
+        }
+
+        public int puts() {
+            return puts;
+        }
+
+        public int getGetRaws() {
+            return getRaws;
+        }
     }
 
-    private final Map<String, FileStats> fileStats = new TreeMap<>();
-    private final Map<String, SerializationStats> serializationStats = new TreeMap<>();
+    private final Map<String, FileStats> storageStats = new TreeMap<>();
+    private final Map<String, ItemStats> itemStats = new TreeMap<>();
 
     public synchronized FileStats fileStats(@NotNull Path path) {
         String fileName = path.toString();
@@ -88,20 +114,20 @@ public class Instrumentation {
     }
 
     public synchronized FileStats fileStats(@NotNull String name) {
-        if (fileStats.containsKey(name)) {
-            return fileStats.get(name);
+        if (storageStats.containsKey(name)) {
+            return storageStats.get(name);
         }
         FileStats fileInstrumentation = new FileStats(name);
-        fileStats.put(name, fileInstrumentation);
+        storageStats.put(name, fileInstrumentation);
         return fileInstrumentation;
     }
 
-    public synchronized SerializationStats serializationStats(@NotNull String name) {
-        if (serializationStats.containsKey(name)) {
-            return serializationStats.get(name);
+    public synchronized ItemStats itemStats(@NotNull String name) {
+        if (itemStats.containsKey(name)) {
+            return itemStats.get(name);
         }
-        SerializationStats serializationInstrumentation = new SerializationStats(name);
-        serializationStats.put(name, serializationInstrumentation);
+        ItemStats serializationInstrumentation = new ItemStats(name);
+        itemStats.put(name, serializationInstrumentation);
         return serializationInstrumentation;
     }
 
@@ -109,18 +135,18 @@ public class Instrumentation {
         System.err.println();
         System.err.println("File       phyrd   logrd    wrts     ");
         System.err.println("-------------------------------------");
-        for (String fileName : fileStats.keySet()) {
-            FileStats stats = fileStats.get(fileName);
+        for (String fileName : storageStats.keySet()) {
+            FileStats stats = storageStats.get(fileName);
             System.err.printf("%-8s %7d %7d %7d%n", fileName, stats.physicalPageReads, stats.logicalPageReads, stats.pageWrites);
         }
 
         System.err.println();
 
-        System.err.println("Item                  ser     deser     ");
-        System.err.println("-------------------------------------");
-        for (String name : serializationStats.keySet()) {
-            SerializationStats stats = serializationStats.get(name);
-            System.err.printf("%-15s %9d %9d%n", name, stats.serializations, stats.deserializations);
+        System.err.println("Item                  get       put     deser       ser     ");
+        System.err.println("---------------------------------------------------------");
+        for (String name : itemStats.keySet()) {
+            ItemStats stats = itemStats.get(name);
+            System.err.printf("%-15s %9d %9d %9d %9d%n", name, stats.gets + stats.getRaws, stats.puts, stats.deserializations, stats.serializations);
         }
     }
 

@@ -37,7 +37,7 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
     // Is typically the same as version in DatabaseContext but may differ
     // if transactions are done explicitly on an entity index instead of the whole database
     private final AtomicInteger currentVersion;
-    private final Instrumentation.SerializationStats serializationStats;
+    private final Instrumentation.ItemStats itemStats;
 
     @NotNull EntityIndexHeader storageHeader() {
         return storage.getHeader();
@@ -45,15 +45,15 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
 
     @NotNull String entityType() { return this.entityType; }
 
-    @NotNull Instrumentation.SerializationStats serializationStats() {
-        return serializationStats;
+    @NotNull Instrumentation.ItemStats serializationStats() {
+        return itemStats;
     }
 
     protected EntityIndex(@NotNull ItemStorage<EntityIndexHeader, EntityNode> storage, @NotNull String entityType, @Nullable DatabaseContext context) {
         this.storage = storage;
         this.entityType = entityType;
         this.context = context == null ? new DatabaseContext() : context;
-        this.serializationStats = this.context.instrumentation().serializationStats(entityType);
+        this.itemStats = this.context.instrumentation().itemStats(entityType);
         this.currentVersion = new AtomicInteger(0);
     }
 

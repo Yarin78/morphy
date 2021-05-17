@@ -35,12 +35,12 @@ public class TournamentIndex extends EntityIndex<Tournament> {
     }
 
     public TournamentIndex(@Nullable DatabaseContext context) {
-        this(new InMemoryItemStorage<>(EntityIndexHeader.empty(SERIALIZED_TOURNAMENT_SIZE), null), context);
+        this(new InMemoryItemStorage<>(context, "Tournament", EntityIndexHeader.empty(SERIALIZED_TOURNAMENT_SIZE), null), context);
     }
 
     protected TournamentIndex(@NotNull File file, @NotNull Set<OpenOption> openOptions, @NotNull DatabaseContext context) throws IOException {
         this(new FileItemStorage<>(
-                file, context, new EntityIndexSerializer(SERIALIZED_TOURNAMENT_SIZE), EntityIndexHeader.empty(SERIALIZED_TOURNAMENT_SIZE), openOptions), context);
+                file, context, "Tournament", new EntityIndexSerializer(SERIALIZED_TOURNAMENT_SIZE), EntityIndexHeader.empty(SERIALIZED_TOURNAMENT_SIZE), openOptions), context);
     }
 
     protected TournamentIndex(

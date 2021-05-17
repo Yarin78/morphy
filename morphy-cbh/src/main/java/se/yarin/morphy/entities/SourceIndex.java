@@ -27,12 +27,12 @@ public class SourceIndex extends EntityIndex<Source> {
     }
 
     public SourceIndex(@Nullable DatabaseContext context) {
-        this(new InMemoryItemStorage<>(EntityIndexHeader.empty(SERIALIZED_SOURCE_SIZE)), context);
+        this(new InMemoryItemStorage<>(context, "Source", EntityIndexHeader.empty(SERIALIZED_SOURCE_SIZE)), context);
     }
 
     protected SourceIndex(@NotNull File file, @NotNull Set<OpenOption> openOptions, @NotNull DatabaseContext context) throws IOException {
         this(new FileItemStorage<>(
-                file, context, new EntityIndexSerializer(SERIALIZED_SOURCE_SIZE), EntityIndexHeader.empty(SERIALIZED_SOURCE_SIZE), openOptions), context);
+                file, context, "Source", new EntityIndexSerializer(SERIALIZED_SOURCE_SIZE), EntityIndexHeader.empty(SERIALIZED_SOURCE_SIZE), openOptions), context);
     }
 
     protected SourceIndex(@NotNull ItemStorage<EntityIndexHeader, EntityNode> storage, @Nullable DatabaseContext context) {

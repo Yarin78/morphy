@@ -2,6 +2,8 @@ package se.yarin.morphy.storage;
 
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import se.yarin.morphy.DatabaseContext;
+import se.yarin.morphy.Instrumentation;
 import se.yarin.morphy.exceptions.MorphyIOException;
 
 import java.util.ArrayList;
@@ -17,6 +19,9 @@ public class InMemoryItemStorage<THeader, TItem> implements ItemStorage<THeader,
     // If an empty item is provided, we are in "non-strict" mode
     private @Nullable final TItem emptyItem;
     private final boolean oneIndexed; // true if first id is 1, false if 0
+    private final DatabaseContext context;
+    private final String storageName;
+    private final Instrumentation.ItemStats itemStats;
     private @NotNull THeader header;
 
     /**
@@ -30,11 +35,33 @@ public class InMemoryItemStorage<THeader, TItem> implements ItemStorage<THeader,
     /**
      * Creates a new empty zero-indexed in-memory storage
      * @param header a header representing an empty storage
+     */
+    public InMemoryItemStorage(@Nullable DatabaseContext context, @Nullable String storageName, @NotNull THeader header) {
+        this(context, storageName, header, null);
+    }
+
+    /**
+     * Creates a new empty zero-indexed in-memory storage
+     * @param header a header representing an empty storage
      * @param emptyItem the item to be returned when trying to read outside the index boundaries of the storage;
      *                  if null, the storage is opened in strict mode
      */
     public InMemoryItemStorage(@NotNull THeader header, @Nullable TItem emptyItem) {
-        this(header, emptyItem, false);
+        this(null, null, header, emptyItem, false);
+    }
+
+    /**
+     * Creates a new empty zero-indexed in-memory storage
+     * @param header a header representing an empty storage
+     * @param emptyItem the item to be returned when trying to read outside the index boundaries of the storage;
+     *                  if null, the storage is opened in strict mode
+     */
+    public InMemoryItemStorage(
+            @Nullable DatabaseContext context,
+            @Nullable String storageName,
+            @NotNull THeader header,
+            @Nullable TItem emptyItem) {
+        this(context, storageName, header, emptyItem, false);
     }
 
     /**
@@ -44,11 +71,19 @@ public class InMemoryItemStorage<THeader, TItem> implements ItemStorage<THeader,
      *                  if null, the storage is opened in strict mode
      * @param oneIndexed if true, the first item in the storage has index 1; otherwise it has index 0
      */
-    public InMemoryItemStorage(@NotNull THeader header, @Nullable TItem emptyItem, boolean oneIndexed) {
+    public InMemoryItemStorage(
+            @Nullable DatabaseContext context,
+            @Nullable String storageName,
+            @NotNull THeader header,
+            @Nullable TItem emptyItem,
+            boolean oneIndexed) {
         this.items = new ArrayList<>();
+        this.context = context == null ? new DatabaseContext() : context;
+        this.storageName = storageName == null ? header.getClass().getSimpleName() : storageName;
         this.header = header;
         this.emptyItem = emptyItem;
         this.oneIndexed = oneIndexed;
+        this.itemStats = this.context.instrumentation().itemStats(this.storageName);
     }
 
     @Override
@@ -84,6 +119,7 @@ public class InMemoryItemStorage<THeader, TItem> implements ItemStorage<THeader,
             }
             return emptyItem;
         }
+        itemStats.addGet(1);
         return items.get(index);
     }
 
@@ -121,6 +157,7 @@ public class InMemoryItemStorage<THeader, TItem> implements ItemStorage<THeader,
             }
             return result;
         }
+        itemStats.addGet(count);
         // Fast unfiltered version; just return a sublist
         return new ArrayList<>(items.subList(index, index + count));
     }
@@ -138,6 +175,7 @@ public class InMemoryItemStorage<THeader, TItem> implements ItemStorage<THeader,
             throw new IllegalArgumentException(String.format("Tried to put item with id %d but InMemoryStorage only has %d items",
                     index + (oneIndexed ? 1 : 0), this.items.size()));
         }
+        itemStats.addPut(1);
         if (index == items.size()) {
             items.add(item);
         } else {

@@ -512,5 +512,4 @@ public class EntityIndexWriteTransaction<T extends Entity & Comparable<T>> exten
         putNode(z.update(z.getLeftChildId(), y.getLeftChildId(), y.getBalance() > 0 ? -1 : 0));
         return y;
     }
-
 }

@@ -45,7 +45,7 @@ public class FooEntityIndex extends EntityIndex<FooEntity> {
     public static @NotNull FooEntityIndex open(@NotNull File file, @NotNull Set<OpenOption> options)
             throws IOException, MorphyInvalidDataException {
         return new FooEntityIndex(new FileItemStorage<>(
-                file, new DatabaseContext(), new EntityIndexSerializer(SERIALIZED_FOO_SIZE), EntityIndexHeader.empty(SERIALIZED_FOO_SIZE), options));
+                file, new DatabaseContext(), "Foo", new EntityIndexSerializer(SERIALIZED_FOO_SIZE), EntityIndexHeader.empty(SERIALIZED_FOO_SIZE), options));
     }
 
     public static @NotNull FooEntityIndex openInMemory(@NotNull File file)

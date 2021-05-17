@@ -1,17 +1,28 @@
 package se.yarin.morphy.boosters;
 
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
+import se.yarin.cbhlib.util.CBUtil;
 import se.yarin.morphy.Database;
 import se.yarin.morphy.ResourceLoader;
 import se.yarin.morphy.entities.EntityType;
+import se.yarin.morphy.entities.Player;
 import se.yarin.morphy.validation.Validator;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 import static org.junit.Assert.assertEquals;
 import static se.yarin.morphy.validation.Validator.Checks.*;
 
 public class GameEntityIndexTest {
+
+    @Rule
+    public TemporaryFolder folder = new TemporaryFolder();
 
     @Test
     public void validateWorldCh() {
@@ -30,6 +41,49 @@ public class GameEntityIndexTest {
     }
 
     @Test
+    public void iterateIndex() {
+        Database db = ResourceLoader.openWorldChDatabase();
+
+        GameEntityIndex index = db.gameEntityIndex(EntityType.PLAYER);
+        assert index != null;
+
+        try (var txn = db.playerIndex().beginReadTransaction()) {
+            for (Player player : txn.iterable()) {
+                List<Integer> gameIds = index.getGameIds(player.id(), EntityType.PLAYER, true);
+                List<Integer> iteratedGameIds = StreamSupport.stream(index.iterable(player.id(), EntityType.PLAYER, true).spliterator(), false).collect(Collectors.toList());
+                assertEquals(gameIds, iteratedGameIds);
+
+                List<Integer> gameIdsDedup = index.getGameIds(player.id(), EntityType.PLAYER, false);
+                List<Integer> iteratedGameIdsDedup = StreamSupport.stream(index.iterable(player.id(), EntityType.PLAYER, false).spliterator(), false).collect(Collectors.toList());
+                assertEquals(gameIdsDedup, iteratedGameIdsDedup);
+            }
+        }
+    }
+
+    @Test
+    public void iterateDedup() {
+        GameEntityIndex index = new GameEntityIndex(Arrays.asList(EntityType.PLAYER, EntityType.SOURCE));
+        TreeMap<Integer, Integer> map = new TreeMap<>() {{
+            put(3, 2);
+            put(4, 1);
+            put(8, 4);
+            put(5, 4);
+            put(11, 5);
+            put(6, 3);
+            put(2, 3);
+            put(15, 2);
+            put(9, 7);
+        }};
+        index.updateEntity(0, EntityType.PLAYER, map);
+
+        List<Integer> iteratedGameIdsAll = StreamSupport.stream(index.iterable(0, EntityType.PLAYER, true).spliterator(), false).collect(Collectors.toList());
+        assertEquals(Arrays.asList(2, 2, 2, 3, 3, 4, 5, 5, 5, 5, 6, 6, 6,   8, 8, 8, 8, 9, 9, 9, 9, 9, 9, 9, 11, 11,    11, 11, 11, 15, 15), iteratedGameIdsAll);
+
+        List<Integer> iteratedGameIdsDedup = StreamSupport.stream(index.iterable(0, EntityType.PLAYER, false).spliterator(), false).collect(Collectors.toList());
+        assertEquals(Arrays.asList(2, 3, 4, 5, 6, 8, 9, 11, 15), iteratedGameIdsDedup);
+    }
+
+    @Test
     public void updateEmptyIndex() {
         GameEntityIndex index = new GameEntityIndex(Arrays.asList(EntityType.PLAYER, EntityType.SOURCE));
         TreeMap<Integer, Integer> map = new TreeMap<>() {{
@@ -41,6 +95,39 @@ public class GameEntityIndexTest {
         assertEquals(Arrays.asList(2, 4, 4), index.getGameIds(0, EntityType.PLAYER, true));
     }
 
+    private GameEntityIndex setupFileGameEntityIndex() throws IOException {
+        File file = folder.newFile();
+        file.delete();
+        return GameEntityIndex.create(
+                CBUtil.fileWithExtension(file, ".cit"),
+                CBUtil.fileWithExtension(file, ".cib"),
+                null);
+    }
+
+    @Test
+    public void updateEmptyIndexOnDisk() throws IOException {
+        GameEntityIndex index = setupFileGameEntityIndex();
+        TreeMap<Integer, Integer> map = new TreeMap<>() {{
+            put(2, 1);
+            put(3, 0);
+            put(4, 2);
+        }};
+        index.updateEntity(0, EntityType.PLAYER, map);
+        assertEquals(Arrays.asList(2, 4, 4), index.getGameIds(0, EntityType.PLAYER, true));
+    }
+
+    @Test
+    public void updateEntityBeyondLastEntity() throws IOException {
+        GameEntityIndex index = setupFileGameEntityIndex();
+        TreeMap<Integer, Integer> map = new TreeMap<>() {{
+            put(2, 1);
+            put(3, 0);
+            put(4, 2);
+        }};
+        index.updateEntity(4, EntityType.PLAYER, map);
+        assertEquals(Arrays.asList(2, 4, 4), index.getGameIds(4, EntityType.PLAYER, true));
+    }
+
     @Test
     public void getGamesFromEmptyEntity() {
         GameEntityIndex index = new GameEntityIndex(Arrays.asList(EntityType.PLAYER, EntityType.SOURCE));
@@ -49,14 +136,16 @@ public class GameEntityIndexTest {
         assertEquals(Collections.emptyList(), index.getGameIds(1, EntityType.PLAYER, true));
     }
 
-
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void updateEmptyIndexWithEntityBeyondLast() {
         GameEntityIndex index = new GameEntityIndex(Arrays.asList(EntityType.PLAYER, EntityType.SOURCE));
         TreeMap<Integer, Integer> map = new TreeMap<>() {{
             put(2, 1);
         }};
-        index.updateEntity(1, EntityType.PLAYER, map);
+        index.updateEntity(5, EntityType.PLAYER, map);
+        assertEquals(Collections.emptyList(), index.getGameIds(2, EntityType.PLAYER, true));
+        assertEquals(Collections.emptyList(), index.getGameIds(4, EntityType.PLAYER, true));
+        assertEquals(Collections.singletonList(2), index.getGameIds(5, EntityType.PLAYER, true));
     }
 
     @Test

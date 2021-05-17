@@ -36,20 +36,20 @@ public class ExtendedGameHeaderStorage implements ItemStorageSerializer<Extended
 
     private final @NotNull ItemStorage<ExtendedGameHeaderStorage.ExtProlog, ExtendedGameHeader> storage;
     private final @NotNull DatabaseContext context;
-    private final @NotNull Instrumentation.SerializationStats serializationStats;
+    private final @NotNull Instrumentation.ItemStats itemStats;
 
     public ExtendedGameHeaderStorage() {
         this(null);
     }
 
     public ExtendedGameHeaderStorage(@Nullable DatabaseContext context) {
-        this(new InMemoryItemStorage<>(ExtProlog.empty(), null, true), context);
+        this(new InMemoryItemStorage<>(context, "GameHeaderExt", ExtProlog.empty(), null, true), context);
     }
 
     private ExtendedGameHeaderStorage(@NotNull ItemStorage<ExtProlog, ExtendedGameHeader> storage, @Nullable DatabaseContext context) {
         this.storage = storage;
         this.context = context == null ? new DatabaseContext() : context;
-        this.serializationStats = this.context.instrumentation().serializationStats("GameHeaderExt");
+        this.itemStats = this.context.instrumentation().itemStats("GameHeaderExt");
     }
 
     private ExtendedGameHeaderStorage(@NotNull File file, @NotNull Set<OpenOption> options, @Nullable DatabaseContext context) throws IOException {
@@ -57,8 +57,8 @@ public class ExtendedGameHeaderStorage implements ItemStorageSerializer<Extended
             throw new IllegalArgumentException("The file extension of an extended GameHeader storage must be .cbj");
         }
         this.context = context == null ? new DatabaseContext() : context;
-        this.serializationStats = this.context.instrumentation().serializationStats("GameHeaderExt");
-        this.storage = new FileItemStorage<>(file, this.context, this, ExtProlog.empty(), options);
+        this.itemStats = this.context.instrumentation().itemStats("GameHeaderExt");
+        this.storage = new FileItemStorage<>(file, this.context, "GameHeaderExt", this, ExtProlog.empty(), options);
 
         if (options.contains(WRITE)) {
             if (storage.getHeader().version() < ExtProlog.DEFAULT_VERSION) {
@@ -350,7 +350,7 @@ public class ExtendedGameHeaderStorage implements ItemStorageSerializer<Extended
 
     @Override
     public @NotNull ExtendedGameHeader deserializeItem(int id, @NotNull ByteBuffer buf, @NotNull ExtProlog header) {
-        serializationStats.addDeserialization(1);
+        itemStats.addDeserialization(1);
 
         if (buf.limit() - buf.position() < header.serializedItemSize()) {
             throw new IllegalArgumentException("Not enough data in buffer");
@@ -429,7 +429,7 @@ public class ExtendedGameHeaderStorage implements ItemStorageSerializer<Extended
     public void serializeItem(@NotNull ExtendedGameHeader item, @NotNull ByteBuffer buf, @NotNull ExtProlog header) {
         assert this.storage.getHeader().serializedItemSize() >= ExtProlog.DEFAULT_SERIALIZED_ITEM_SIZE;
 
-        serializationStats.addDeserialization(1);
+        itemStats.addDeserialization(1);
 
         ByteBufferUtil.putIntB(buf, item.whiteTeamId());
         ByteBufferUtil.putIntB(buf, item.blackTeamId());

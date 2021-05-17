@@ -95,7 +95,7 @@ public class InMemoryItemStorageTest {
 
     @Test
     public void getItemsFromOneIndexedStorage() {
-        InMemoryItemStorage<FooBarItemHeader, FooBarItem> storage = new InMemoryItemStorage<>(FooBarItemHeader.empty(), null, true);
+        InMemoryItemStorage<FooBarItemHeader, FooBarItem> storage = new InMemoryItemStorage<>(null, null, FooBarItemHeader.empty(), null, true);
         storage.putItem(1, ImmutableFooBarItem.of("hello", 5));
         storage.putItem(2, ImmutableFooBarItem.of("world", 3));
         storage.putItem(3, ImmutableFooBarItem.of("next", 8));
@@ -112,7 +112,7 @@ public class InMemoryItemStorageTest {
 
     @Test
     public void getItemsFromOneIndexedStorageOutsideRangeInSafeMode() {
-        InMemoryItemStorage<FooBarItemHeader, FooBarItem> storage = new InMemoryItemStorage<>(FooBarItemHeader.empty(), FooBarItem.empty(), true);
+        InMemoryItemStorage<FooBarItemHeader, FooBarItem> storage = new InMemoryItemStorage<>(null, null, FooBarItemHeader.empty(), FooBarItem.empty(), true);
         storage.putItem(1, ImmutableFooBarItem.of("hello", 5));
         storage.putItem(2, ImmutableFooBarItem.of("world", 3));
         storage.putItem(3, ImmutableFooBarItem.of("next", 8));

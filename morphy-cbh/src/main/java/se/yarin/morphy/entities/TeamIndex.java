@@ -29,12 +29,12 @@ public class TeamIndex extends EntityIndex<Team> {
     }
 
     public TeamIndex(@Nullable DatabaseContext context) {
-        this(new InMemoryItemStorage<>(EntityIndexHeader.empty(SERIALIZED_TEAM_SIZE)), context);
+        this(new InMemoryItemStorage<>(context, "Team", EntityIndexHeader.empty(SERIALIZED_TEAM_SIZE)), context);
     }
 
     protected TeamIndex(@NotNull File file, @NotNull Set<OpenOption> openOptions, @NotNull DatabaseContext context) throws IOException {
         this(new FileItemStorage<>(
-                file, context, new EntityIndexSerializer(SERIALIZED_TEAM_SIZE), EntityIndexHeader.empty(SERIALIZED_TEAM_SIZE), openOptions), context);
+                file, context, "Team", new EntityIndexSerializer(SERIALIZED_TEAM_SIZE), EntityIndexHeader.empty(SERIALIZED_TEAM_SIZE), openOptions), context);
     }
 
     protected TeamIndex(@NotNull ItemStorage<EntityIndexHeader, EntityNode> storage, @Nullable DatabaseContext context) {

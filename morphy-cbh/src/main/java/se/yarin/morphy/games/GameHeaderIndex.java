@@ -34,16 +34,16 @@ public class GameHeaderIndex implements ItemStorageSerializer<GameHeaderIndex.Pr
 
     private final @NotNull ItemStorage<GameHeaderIndex.Prolog, GameHeader> storage;
     private final @NotNull DatabaseContext context;
-    private final @NotNull Instrumentation.SerializationStats serializationStats;
+    private final @NotNull Instrumentation.ItemStats itemStats;
 
     public GameHeaderIndex() {
         this(null);
     }
 
     public GameHeaderIndex(@Nullable DatabaseContext context) {
-        this.storage = new InMemoryItemStorage<>(Prolog.empty(), null, true);
+        this.storage = new InMemoryItemStorage<>(context, "GameHeader", Prolog.empty(), null, true);
         this.context = context == null ? new DatabaseContext() : context;
-        this.serializationStats = this.context.instrumentation().serializationStats("GameHeader");
+        this.itemStats = this.context.instrumentation().itemStats("GameHeader");
     }
 
     private GameHeaderIndex(
@@ -55,11 +55,11 @@ public class GameHeaderIndex implements ItemStorageSerializer<GameHeaderIndex.Pr
         }
 
         this.context = context == null ? new DatabaseContext() : context;
-        this.serializationStats = this.context.instrumentation().serializationStats("GameHeader");
+        this.itemStats = this.context.instrumentation().itemStats("GameHeader");
 
         boolean strict = options.contains(WRITE) || !options.contains(IGNORE_NON_CRITICAL_ERRORS);
 
-        this.storage = new FileItemStorage<>(file, this.context, this, Prolog.empty(), options);
+        this.storage = new FileItemStorage<>(file, this.context, "GameHeader", this, Prolog.empty(), options);
         if (strict) {
             if (storage.getHeader().serializedItemSize() != Prolog.DEFAULT_SERIALIZED_ITEM_SIZE) {
                 throw new MorphyNotSupportedException("Game header item size mismatches; writes not possible.");
@@ -380,7 +380,7 @@ public class GameHeaderIndex implements ItemStorageSerializer<GameHeaderIndex.Pr
 
     @Override
     public @NotNull GameHeader deserializeItem(int gameHeaderId, @NotNull ByteBuffer buf, @NotNull Prolog header) {
-        serializationStats.addDeserialization(1);
+        itemStats.addDeserialization(1);
         int oldPosition = buf.position();
 
         ImmutableGameHeader.Builder builder = ImmutableGameHeader.builder();
@@ -526,7 +526,7 @@ public class GameHeaderIndex implements ItemStorageSerializer<GameHeaderIndex.Pr
 
     @Override
     public void serializeItem(@NotNull GameHeader gameHeader, @NotNull ByteBuffer buf, @NotNull Prolog header) {
-        serializationStats.addSerialization(1);
+        itemStats.addSerialization(1);
 
         int type = 1;
         if (gameHeader.guidingText()) type += 2;

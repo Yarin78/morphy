@@ -17,6 +17,8 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.OpenOption;
 import java.util.*;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 import static java.nio.file.StandardOpenOption.*;
 
@@ -55,8 +57,8 @@ public class GameEntityIndex {
     public GameEntityIndex(@NotNull List<EntityType> entityTypes, @Nullable DatabaseContext context) {
         this(
             entityTypes,
-            new InMemoryItemStorage<>(IndexHeader.emptyCIT(), IndexItem.emptyCIT()),
-            new InMemoryItemStorage<>(IndexBlockHeader.empty(), IndexBlockItem.empty()),
+            new InMemoryItemStorage<>(context, "IndexTable", IndexHeader.emptyCIT(), IndexItem.emptyCIT(entityTypes.size())),
+            new InMemoryItemStorage<>(context, "IndexBlock", IndexBlockHeader.empty(), IndexBlockItem.empty()),
             context);
     }
 
@@ -86,9 +88,9 @@ public class GameEntityIndex {
 
         Instrumentation instrumentation = this.context.instrumentation();
         this.citStorage = new FileItemStorage<>(
-                citFile, this.context, new IndexSerializer(instrumentation.serializationStats("IndexTable" + suffix)), IndexHeader.emptyCIT(), options);
+                citFile, this.context, "IndexTable", new IndexSerializer(this.citOrder.size(), instrumentation.itemStats("IndexTable" + suffix)), IndexHeader.emptyCIT(), options);
         this.cibStorage = new FileItemStorage<>(
-                cibFile, this.context, new IndexBlockSerializer(instrumentation.serializationStats("IndexBlock" + suffix)), IndexBlockHeader.empty(), options);
+                cibFile, this.context, "IndexBlock", new IndexBlockSerializer(instrumentation.itemStats("IndexBlock" + suffix)), IndexBlockHeader.empty(), options);
 
         if (options.contains(WRITE)) {
             if (citStorage.getHeader().unknown1() != 0 || citStorage.getHeader().unknown2() != 0) {
@@ -200,6 +202,89 @@ public class GameEntityIndex {
         return gameIds;
     }
 
+    public Iterable<Integer> iterable(int entityId, @NotNull EntityType type) {
+        return iterable(entityId, type, false);
+    }
+
+    public Iterable<Integer> iterable(int entityId, @NotNull EntityType type, boolean includeDuplicates) {
+        // TODO: This is currently not exposed in a transaction only, which the counterpart in EntityIndex and GameIndex are. Fix this?
+        return () -> new EntityGameIterator(entityId, type, includeDuplicates);
+    }
+
+    public @NotNull Stream<Integer> stream(int entityId, @NotNull EntityType type) {
+        return stream(entityId, type, false);
+    }
+
+    public @NotNull Stream<Integer> stream(int entityId, @NotNull EntityType type, boolean includeDuplicates) {
+        return StreamSupport.stream(iterable(entityId, type, includeDuplicates).spliterator(), false);
+    }
+
+    public class EntityGameIterator implements Iterator<Integer> {
+        private final @NotNull EntityType type;
+        private final int entityId;
+        private final boolean includeDuplicates;
+        private int nextBlockId;
+        private int nextGameId;
+        private int batchPos;
+        private final HashSet<Integer> seenBlocks = new HashSet<>(); // avoiding infinite loop in case of bad data
+        private @Nullable List<Integer> batch = new ArrayList<>();
+
+        public EntityGameIterator(int entityId, @NotNull EntityType type, boolean includeDuplicates) {
+            this.type = type;
+            this.entityId = entityId;
+            this.includeDuplicates = includeDuplicates;
+            this.nextBlockId = getHead(entityId, type);
+            findNextGame();
+        }
+
+        private void findNextGame() {
+            // After this, either batch is null (end of iteration reached),
+            // or nextGameId equals the game after the current one (if includeDuplicates is false)
+            while (batch != null) {
+                while (batchPos < batch.size() && (nextGameId == batch.get(batchPos) && !includeDuplicates)) {
+                    batchPos += 1;
+                }
+                if (batchPos == batch.size()) {
+                    getNextBatch();
+                } else {
+                    nextGameId = batch.get(batchPos++);
+                    return;
+                }
+            }
+        }
+
+        private void getNextBatch() {
+            if (nextBlockId == -1) {
+                batch = null;
+                return;
+            }
+            if (seenBlocks.contains(nextBlockId)) {
+                throw new MorphyInvalidDataException(String.format("GameEntityIndex contains an infinite loop for %s with id %d",
+                        type.nameSingular(), entityId));
+            }
+            seenBlocks.add(nextBlockId);
+            IndexBlockItem block = cibStorage.getItem(nextBlockId);
+            batch = block.gameIds();
+            batchPos = 0;
+            nextBlockId = block.nextBlockId();
+        }
+
+        @Override
+        public boolean hasNext() {
+            return batch != null;
+        }
+
+        @Override
+        public Integer next() {
+            if (!hasNext()) {
+                throw new NoSuchElementException("End of game iteration reached");
+            }
+            int gameId = nextGameId;
+            findNextGame();
+            return gameId;
+        }
+    }
+
 
     /**
      * Updates the index for an entity by specifying games where the count has been updated.
@@ -219,7 +304,11 @@ public class GameEntityIndex {
         }
 
         // Check if we can start at the tail block (saves a lot of time if we're only appending new games to the db)
-        int oldHeadBlockId = getHead(entityId, type), oldTailBlockId = getTail(entityId, type);
+        int oldHeadBlockId = -1, oldTailBlockId = -1;
+        if (entityId < getNumEntities()) {
+            oldHeadBlockId = getHead(entityId, type);
+            oldTailBlockId = getTail(entityId, type);
+        }
         int currentReadBlockId = oldHeadBlockId;
         int newHeadBlockId = -1, newTailBlockId = -1;
 
@@ -372,7 +461,6 @@ public class GameEntityIndex {
         return (cibStorage.getHeader().itemSize() - 12) / 4;
     }
 
-
     private int getHead(int entityId, @NotNull EntityType type) {
         Integer order = citOrder.get(type);
         if (order == null) {
@@ -395,7 +483,7 @@ public class GameEntityIndex {
             throw new IllegalArgumentException("Entity type " + type.nameSingularCapitalized() + " is not managed by this index");
         }
 
-        IndexItem item = citStorage.getItem(entityId);
+        IndexItem item = entityId < getNumEntities() ? citStorage.getItem(entityId) : IndexItem.emptyCIT(citOrder.size());
         int[] newHeadTails = item.headTails().clone();
         newHeadTails[order * 2] = headBlock;
         newHeadTails[order * 2 + 1] = tailBlock;
@@ -403,6 +491,11 @@ public class GameEntityIndex {
         IndexItem newItem = ImmutableIndexItem.builder()
                 .headTails(newHeadTails)
                 .build();
+
+        // We can't write beyond the end of the file, so make sure to fill up with empty index table items
+        for (int i = citStorage.count(); i < entityId; i++) {
+            citStorage.putItem(i, IndexItem.emptyCIT(citOrder.size()));
+        }
         citStorage.putItem(entityId, newItem);
     }
 

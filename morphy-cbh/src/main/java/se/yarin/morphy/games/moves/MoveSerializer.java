@@ -3,8 +3,6 @@ package se.yarin.morphy.games.moves;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import se.yarin.cbhlib.Database;
-import se.yarin.cbhlib.moves.MovesSerializer;
 import se.yarin.morphy.DatabaseContext;
 import se.yarin.morphy.Instrumentation;
 import se.yarin.morphy.exceptions.MorphyMoveDecodingException;
@@ -21,7 +19,7 @@ public final class MoveSerializer {
     private static final Logger log = LoggerFactory.getLogger(MoveSerializer.class);
 
     private @NotNull final DatabaseContext context;
-    private @NotNull final Instrumentation.SerializationStats serializationStats;
+    private @NotNull final Instrumentation.ItemStats itemStats;
 
     private boolean logDetailedErrors = false;
 
@@ -47,7 +45,7 @@ public final class MoveSerializer {
 
     public MoveSerializer(@NotNull DatabaseContext context) {
         this.context = context;
-        this.serializationStats = context.instrumentation().serializationStats("Moves");
+        this.itemStats = context.instrumentation().itemStats("Moves");
     }
 
     public void setLogDetailedErrors(boolean value) {
@@ -65,7 +63,7 @@ public final class MoveSerializer {
     }
 
     public ByteBuffer serializeMoves(@NotNull GameMovesModel model, int encodingMode) {
-        this.serializationStats.addSerialization(1);
+        this.itemStats.addSerialization(1);
 
         validateEncodingMode(encodingMode);
 
@@ -129,7 +127,7 @@ public final class MoveSerializer {
      * with the {@link MorphyMoveDecodingException#getModel()} containing the moves parsed so far.
      */
     public GameMovesModel deserializeMoves(ByteBuffer buf, boolean checkLegalMoves, int gameId) throws MorphyMoveDecodingException {
-        this.serializationStats.addDeserialization(1);
+        this.itemStats.addDeserialization(1);
 
         GameMovesModel model;
         int flags, moveSize;

@@ -9,10 +9,12 @@ import se.yarin.util.ByteBufferUtil;
 import java.nio.ByteBuffer;
 
 public class IndexSerializer implements ItemStorageSerializer<IndexHeader, IndexItem> {
-    private @NotNull Instrumentation.SerializationStats serializationStats;
+    private final int numEntityTypes;
+    private final @NotNull Instrumentation.ItemStats itemStats;
 
-    public IndexSerializer(Instrumentation.SerializationStats serializationStats) {
-        this.serializationStats = serializationStats;
+    public IndexSerializer(int numEntityTypes, @NotNull Instrumentation.ItemStats itemStats) {
+        this.numEntityTypes = numEntityTypes;
+        this.itemStats = itemStats;
     }
 
     @Override
@@ -46,11 +48,10 @@ public class IndexSerializer implements ItemStorageSerializer<IndexHeader, Index
 
     @Override
     public @NotNull IndexItem deserializeItem(int id, @NotNull ByteBuffer buf, @NotNull IndexHeader header) {
-        serializationStats.addDeserialization(1);
+        itemStats.addDeserialization(1);
 
-        int numInts = header.itemSize() / 4;
-        int[] ints = new int[numInts];
-        for (int i = 0; i < numInts; i++) {
+        int[] ints = new int[header.itemSize() / 4];
+        for (int i = 0; i < ints.length; i++) {
             ints[i] = ByteBufferUtil.getIntL(buf);
         }
         return ImmutableIndexItem.builder()
@@ -60,7 +61,7 @@ public class IndexSerializer implements ItemStorageSerializer<IndexHeader, Index
 
     @Override
     public @NotNull IndexItem emptyItem(int id) {
-        return IndexItem.emptyCIT();
+        return IndexItem.emptyCIT(numEntityTypes);
     }
 
     @Override
@@ -72,11 +73,10 @@ public class IndexSerializer implements ItemStorageSerializer<IndexHeader, Index
 
     @Override
     public void serializeItem(@NotNull IndexItem indexItem, @NotNull ByteBuffer buf, @NotNull IndexHeader header) {
-        serializationStats.addSerialization(1);
+        itemStats.addSerialization(1);
 
-        int numInts = header.itemSize() / 4;
-        assert indexItem.headTails().length == numInts;
-        for (int i = 0; i < numInts; i++) {
+        assert indexItem.headTails().length == header.itemSize() / 4;
+        for (int i = 0; i < header.itemSize() / 4; i++) {
             ByteBufferUtil.putIntL(buf, indexItem.headTails()[i]);
         }
     }

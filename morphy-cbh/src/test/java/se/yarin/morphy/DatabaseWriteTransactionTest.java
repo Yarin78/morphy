@@ -319,6 +319,19 @@ public class DatabaseWriteTransactionTest extends DatabaseTestSetup {
     }
 
     @Test
+    public void replaceGameCausingFirstGameToChangeToAnotherGameInTransaction() {
+        assertEquals(3, playerFirstGameId("Mamedyarov"));
+
+        try (var txn = new DatabaseWriteTransaction(testBase)) {
+            putTestGame(txn, 4, "Mamedyarov - Giri", 50, 0, 0, 0);
+            putTestGame(txn, 3, "Caruana - Mardell", 50, 0, 0, 0);
+            txn.commit();
+        }
+
+        assertEquals(4, playerFirstGameId("Mamedyarov"));
+    }
+
+    @Test
     public void addGameWithAnnotationsAndReplaceLastGameWithAnnotations() {
         try (var txn = new DatabaseWriteTransaction(testBase)) {
             int id = putTestGame(txn, 0, "Nepo - Caruana", 100, 1500, 16, 16).id();
@@ -1114,5 +1127,25 @@ public class DatabaseWriteTransactionTest extends DatabaseTestSetup {
         assertEquals(5, game.round());
         assertEquals("anno", game.annotator().name());
         assertEquals("src", game.source().title());
+    }
+
+    @Test
+    public void testUpdateGameWithoutChangingEntitiesDoesNotUpdateGameEntityIndex() {
+        try (var txn = new DatabaseWriteTransaction(testBase)) {
+            Instrumentation instrumentation = testBase.context().instrumentation();
+            int getsBefore = instrumentation.itemStats("IndexBlock").gets();
+            int putsBefore = instrumentation.itemStats("IndexBlock").puts();
+            assertTrue(getsBefore + putsBefore > 0);
+
+            putTestGame(txn, 2, "Giri - Nepo", "tour1", null, null, null, null,10, 0, 1, 1);
+            txn.commit();
+
+            int getsAfter = instrumentation.itemStats("IndexBlock").gets();
+            int putsAfter = instrumentation.itemStats("IndexBlock").puts();
+
+            // Ensure that the index need not be changed
+            assertEquals(getsAfter, getsBefore);
+            assertEquals(putsAfter, putsBefore);
+        }
     }
 }

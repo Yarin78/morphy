@@ -40,7 +40,7 @@ public class FooBarEntityIndex extends EntityIndex<FooBarEntity> {
     public static @NotNull FooBarEntityIndex open(@NotNull File file, @NotNull Set<OpenOption> options)
             throws IOException, MorphyInvalidDataException {
         return new FooBarEntityIndex(new FileItemStorage<>(
-                file, new DatabaseContext(), new EntityIndexSerializer(SERIALIZED_FOOBAR_SIZE), EntityIndexHeader.empty(SERIALIZED_FOOBAR_SIZE), options));
+                file, new DatabaseContext(), "FooBar", new EntityIndexSerializer(SERIALIZED_FOOBAR_SIZE), EntityIndexHeader.empty(SERIALIZED_FOOBAR_SIZE), options));
     }
 
     public static @NotNull FooBarEntityIndex openInMemory(@NotNull File file)

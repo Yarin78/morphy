@@ -6,6 +6,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.chess.GameHeaderModel;
 import se.yarin.chess.GameModel;
+import se.yarin.morphy.boosters.GameEntityIndex;
 import se.yarin.morphy.entities.*;
 import se.yarin.morphy.exceptions.MorphyInvalidDataException;
 import se.yarin.morphy.games.*;
@@ -127,12 +128,12 @@ public class DatabaseWriteTransaction extends DatabaseTransaction {
         this.teamTransaction = database.teamIndex().beginWriteTransaction();
         this.gameTagTransaction = database.gameTagIndex().beginWriteTransaction();
 
-        this.playerDelta = new EntityDelta<>((game, playerId) -> game.whitePlayerId() == playerId || game.blackPlayerId() == playerId);
-        this.tournamentDelta = new EntityDelta<>((game, tournamentId) -> game.tournamentId() == tournamentId);
-        this.annotatorDelta = new EntityDelta<>((game, annotatorId) -> game.annotatorId() == annotatorId);
-        this.sourceDelta = new EntityDelta<>((game, sourceId) -> game.sourceId() == sourceId);
-        this.teamDelta = new EntityDelta<>((game, teamId) -> game.whiteTeamId() == teamId || game.blackTeamId() == teamId);
-        this.gameTagDelta = new EntityDelta<>((game, gameTagId) -> game.gameTagId() == gameTagId);
+        this.playerDelta = new EntityDelta<>(EntityType.PLAYER, (game, playerId) -> game.whitePlayerId() == playerId || game.blackPlayerId() == playerId);
+        this.tournamentDelta = new EntityDelta<>(EntityType.TOURNAMENT, (game, tournamentId) -> game.tournamentId() == tournamentId);
+        this.annotatorDelta = new EntityDelta<>(EntityType.ANNOTATOR, (game, annotatorId) -> game.annotatorId() == annotatorId);
+        this.sourceDelta = new EntityDelta<>(EntityType.SOURCE, (game, sourceId) -> game.sourceId() == sourceId);
+        this.teamDelta = new EntityDelta<>(EntityType.TEAM, (game, teamId) -> game.whiteTeamId() == teamId || game.blackTeamId() == teamId);
+        this.gameTagDelta = new EntityDelta<>(EntityType.GAME_TAG, (game, gameTagId) -> game.gameTagId() == gameTagId);
     }
 
     // TODO: could this be made nicer?!
@@ -519,6 +520,13 @@ public class DatabaseWriteTransaction extends DatabaseTransaction {
             teamTransaction.commit();
             gameTagTransaction.commit();
 
+            playerDelta.updateGameEntityIndex();
+            tournamentDelta.updateGameEntityIndex();
+            annotatorDelta.updateGameEntityIndex();
+            sourceDelta.updateGameEntityIndex();
+            teamDelta.updateGameEntityIndex();
+            gameTagDelta.updateGameEntityIndex();
+
             database().context().bumpVersion();
 
             // Clear transaction, enabling further commits
@@ -681,85 +689,128 @@ public class DatabaseWriteTransaction extends DatabaseTransaction {
      * @param <T> the type of entity
      */
     private class EntityDelta<T extends Entity & Comparable<T>> {
-        // Mapping of entityId to game ids that it has been included in resp excluded from
-        // TODO: List<Integer> should be multi-sets (insertion order is not important) for better performance
-        private final Map<Integer, List<Integer>> includes = new HashMap<>();
-        private final Map<Integer, List<Integer>> excludes = new HashMap<>();
-        private final BiPredicate<Game, Integer> hasEntity;
+        // entityId -> gameId -> number of occurrences in the game
+        // Entities need to be in order
+        private final @NotNull Map<Integer, TreeMap<Integer, Integer>> newEntityGameCount = new TreeMap<>();
+        // entityId -> change in num occurrences
+        private final @NotNull Map<Integer, Integer> newEntityGameDelta = new HashMap<>();
+        private final @NotNull BiPredicate<Game, Integer> hasEntity;
+        private final @NotNull EntityType entityType;
 
-        private EntityDelta(@NotNull BiPredicate<Game, Integer> hasEntity) {
+        private EntityDelta(@NotNull EntityType entityType, @NotNull BiPredicate<Game, Integer> hasEntity) {
+            this.entityType = entityType;
             this.hasEntity = hasEntity;
         }
 
         private void clear() {
-            includes.clear();
-            excludes.clear();
+            newEntityGameCount.clear();
+            newEntityGameDelta.clear();
         }
 
-        private void remove(int gameId, int entityId) {
-            if (entityId < 0) {
-                return;
-            }
-            List<Integer> includeGames = includes.get(entityId);
-            if (includeGames != null && includeGames.contains(gameId)) {
-                includeGames.remove((Object) gameId);
-                return;
-            }
-            excludes.computeIfAbsent(entityId, k -> new ArrayList<>()).add(gameId);
+        private void update(int gameId, int addEntityId, int removeEntityId) {
+            update(gameId, addEntityId, -1, removeEntityId, -1);
         }
 
-        private void add(int gameId, int entityId) {
-            if (entityId < 0) {
-                return;
+        private void update(int gameId, int addEntityId1, int addEntityId2, int removeEntityId1, int removeEntityId2) {
+            boolean isSameEntities = (addEntityId1 == removeEntityId1 && addEntityId2 == removeEntityId2) ||
+                    (addEntityId2 == removeEntityId1 && addEntityId1 == removeEntityId2);
+            // If it's the same entity references in the game before and after, then there is no need to update any statistics
+            if (!isSameEntities) {
+                HashMap<Integer, Integer> deltaCount = new HashMap<>();
+                deltaCount.put(removeEntityId1, 0);
+                deltaCount.put(removeEntityId2, 0);
+                deltaCount.put(addEntityId1, deltaCount.getOrDefault(addEntityId1, 0) + 1);
+                deltaCount.put(addEntityId2, deltaCount.getOrDefault(addEntityId2, 0) + 1);
+
+                for (Map.Entry<Integer, Integer> entry : deltaCount.entrySet()) {
+                    newEntityGameCount.computeIfAbsent(entry.getKey(), integer -> new TreeMap<>()).put(gameId, entry.getValue());
+                }
+
+                newEntityGameDelta.put(addEntityId1, newEntityGameDelta.getOrDefault(addEntityId1, 0) + 1);
+                newEntityGameDelta.put(addEntityId2, newEntityGameDelta.getOrDefault(addEntityId2, 0) + 1);
+                newEntityGameDelta.put(removeEntityId1, newEntityGameDelta.getOrDefault(removeEntityId1, 0) - 1);
+                newEntityGameDelta.put(removeEntityId2, newEntityGameDelta.getOrDefault(removeEntityId2, 0) - 1);
             }
-            List<Integer> excludeGames = excludes.get(entityId);
-            if (excludeGames != null && excludeGames.contains(gameId)) {
-                excludeGames.remove((Object) gameId);
-                return;
-            }
-            includes.computeIfAbsent(entityId, k -> new ArrayList<>()).add(gameId);
         }
 
         public void apply(@NotNull EntityIndexWriteTransaction<T> entityTransaction) {
-            HashSet<Integer> entityIds = new HashSet<>();
-            entityIds.addAll(includes.keySet());
-            entityIds.addAll(excludes.keySet());
+            GameEntityIndex gameEntityIndex = database().gameEntityIndex(entityType);
 
-            for (int entityId : entityIds) {
+            for (int entityId : newEntityGameCount.keySet()) {
+                if (entityId < 0) {
+                    // In the updates we might have set the "no entity" -1, just ignore it here
+                    continue;
+                }
+
                 T entity = entityTransaction.get(entityId);
-                int newFirstGameId = entity.firstGameId();
-                boolean firstIdSearch = false;
-                int count = entity.count();
-                if (excludes.containsKey(entityId)) {
-                    count -= excludes.get(entityId).size();
-                    if (excludes.get(entityId).contains(newFirstGameId)) {
-                        firstIdSearch = true;
+
+                // Find the first game in the transaction where entityId is used
+                int firstTransactionGameId = 0;
+                for (Map.Entry<Integer, Integer> entry : newEntityGameCount.get(entityId).entrySet()) {
+                    if (entry.getValue() > 0 && entry.getKey() > 0) {
+                        firstTransactionGameId = entry.getKey();
+                        break;
                     }
                 }
-                List<Integer> includeGames = includes.get(entityId);
-                if (includeGames != null && includeGames.size() > 0) {
-                    count += includeGames.size();
-                    int includeMinGameId = Collections.min(includeGames);
-                    newFirstGameId = newFirstGameId == 0 ? includeMinGameId : Math.min(newFirstGameId, includeMinGameId);
+
+                int newFirstGameId = entity.firstGameId();
+                boolean firstIdSearch = false;
+                if (newFirstGameId == 0 || (firstTransactionGameId > 0 && firstTransactionGameId < newFirstGameId)) {
+                    // Entity didn't exist before, or we have a new first game
+                    newFirstGameId = firstTransactionGameId;
+                } else {
+                    // The old first game reference is gone, we'll have to search for the new first game
+                    // (it might not even be in this transaction)
+                    firstIdSearch = true;
                 }
-                if (count == 0) {
+
+                int newCount = entity.count() + newEntityGameDelta.get(entityId);
+
+                if (newCount == 0) {
                     entityTransaction.deleteEntity(entityId);
                 } else {
                     if (firstIdSearch) {
-                        // TODO: With the search boosters in place, they should already be updated and this turned into a simple lookup
-                        GameHeaderIndex ix = DatabaseWriteTransaction.this.database().gameHeaderIndex();
-                        newFirstGameId = 0;
-                        for (int i = 1; i <= ix.count(); i++) {
-                            if (hasEntity.test(DatabaseWriteTransaction.super.getGame(i), entityId)) {
-                                newFirstGameId = i;
-                                break;
+                        if (gameEntityIndex != null) {
+                            // This is the default case, use the entity index to find the new first game.
+                            // Some care needs to be taken since we haven't yet updated this index to reflect this commit!
+                            newFirstGameId = firstTransactionGameId;  // it may be another game in this transaction!
+                            for (int gameId : gameEntityIndex.iterable(entityId, entityType, false)) {
+                                if (newFirstGameId > 0 && newFirstGameId < gameId) break;
+                                if (hasEntity.test(DatabaseWriteTransaction.super.getGame(gameId), entityId)) {
+                                    newFirstGameId = gameId;
+                                    break;
+                                }
+                            }
+                        } else {
+                            // TODO: there are no test for this now, parametrize tests in DatabaseWriteTransactionTest that checks firstGame
+                            // With no entity index in place, we do a slow iterative scan to find the new firstGameId
+                            GameHeaderIndex ix = DatabaseWriteTransaction.this.database().gameHeaderIndex();
+                            newFirstGameId = 0;
+                            for (int i = 1; i <= ix.count(); i++) {
+                                if (hasEntity.test(DatabaseWriteTransaction.super.getGame(i), entityId)) {
+                                    newFirstGameId = i;
+                                    break;
+                                }
                             }
                         }
+
                         assert newFirstGameId > 0;
                     }
-                    if (count != entity.count() || newFirstGameId != entity.firstGameId()) {
-                        T newEntity = (T) entity.withCountAndFirstGameId(count, newFirstGameId);
+                    if (newCount != entity.count() || newFirstGameId != entity.firstGameId()) {
+                        T newEntity = (T) entity.withCountAndFirstGameId(newCount, newFirstGameId);
                         entityTransaction.putEntityByKey(newEntity);
+                    }
+                }
+            }
+        }
+
+        public void updateGameEntityIndex() {
+            GameEntityIndex gameEntityIndex = database().gameEntityIndex(entityType);
+            if (gameEntityIndex != null) {
+                for (Map.Entry<Integer, TreeMap<Integer, Integer>> entry : newEntityGameCount.entrySet()) {
+                    int entityId = entry.getKey();
+                    if (entityId >= 0) {
+                        gameEntityIndex.updateEntity(entityId, entityType, entry.getValue());
                     }
                 }
             }
@@ -775,26 +826,29 @@ public class DatabaseWriteTransaction extends DatabaseTransaction {
             @Nullable Game oldGame,
             @NotNull GameHeader newGameHeader,
             @NotNull ExtendedGameHeader newExtendedGameHeader) {
-
-        if (oldGame != null) {
-            playerDelta.remove(gameId, oldGame.header().whitePlayerId());
-            playerDelta.remove(gameId, oldGame.header().blackPlayerId());
-            tournamentDelta.remove(gameId, oldGame.header().tournamentId());
-            annotatorDelta.remove(gameId, oldGame.header().annotatorId());
-            sourceDelta.remove(gameId, oldGame.header().sourceId());
-            teamDelta.remove(gameId, oldGame.extendedHeader().whiteTeamId());
-            teamDelta.remove(gameId, oldGame.extendedHeader().blackTeamId());
-            gameTagDelta.remove(gameId, oldGame.extendedHeader().gameTagId());
-        }
-
-        playerDelta.add(gameId, newGameHeader.whitePlayerId());
-        playerDelta.add(gameId, newGameHeader.blackPlayerId());
-        tournamentDelta.add(gameId, newGameHeader.tournamentId());
-        annotatorDelta.add(gameId, newGameHeader.annotatorId());
-        sourceDelta.add(gameId, newGameHeader.sourceId());
-        teamDelta.add(gameId, newExtendedGameHeader.whiteTeamId());
-        teamDelta.add(gameId, newExtendedGameHeader.blackTeamId());
-        gameTagDelta.add(gameId, newExtendedGameHeader.gameTagId());
+        // oldGame is the game, if any, that we're replacing
+        // It may be a game that's already been updated in this transaction
+        playerDelta.update(gameId,
+                newGameHeader.whitePlayerId(),
+                newGameHeader.blackPlayerId(),
+                oldGame == null ? -1 : oldGame.header().whitePlayerId(),
+                oldGame == null ? -1 : oldGame.header().blackPlayerId());
+        tournamentDelta.update(gameId,
+                newGameHeader.tournamentId(),
+                oldGame == null ? -1 : oldGame.header().tournamentId());
+        annotatorDelta.update(gameId,
+                newGameHeader.annotatorId(),
+                oldGame == null ? -1 : oldGame.header().annotatorId());
+        sourceDelta.update(gameId,
+                newGameHeader.sourceId(),
+                oldGame == null ? -1 : oldGame.header().sourceId());
+        teamDelta.update(gameId,
+                newExtendedGameHeader.whiteTeamId(),
+                newExtendedGameHeader.blackTeamId(),
+                oldGame == null ? -1 : oldGame.extendedHeader().whiteTeamId(),
+                oldGame == null ? -1 : oldGame.extendedHeader().blackTeamId());
+        gameTagDelta.update(gameId,
+                newExtendedGameHeader.gameTagId(),
+                oldGame == null ? -1 : oldGame.extendedHeader().gameTagId());
     }
-
 }

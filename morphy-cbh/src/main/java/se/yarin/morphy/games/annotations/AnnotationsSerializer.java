@@ -19,7 +19,7 @@ public final class AnnotationsSerializer {
     private static final Logger log = LoggerFactory.getLogger(AnnotationsSerializer.class);
 
     private final @NotNull DatabaseContext context;
-    private final @NotNull Instrumentation.SerializationStats serializationStats;
+    private final @NotNull Instrumentation.ItemStats itemStats;
 
     public AnnotationsSerializer() {
         this(new DatabaseContext());
@@ -27,7 +27,7 @@ public final class AnnotationsSerializer {
 
     public AnnotationsSerializer(@NotNull DatabaseContext context) {
         this.context = context;
-        this.serializationStats = context.instrumentation().serializationStats("MoveAnnotations");
+        this.itemStats = context.instrumentation().itemStats("MoveAnnotations");
     }
 
     private static Map<Integer, AnnotationSerializer> annotationSerializers = new HashMap<>();
@@ -73,7 +73,7 @@ public final class AnnotationsSerializer {
      * @return a buffer containing the serialized annotations
      */
     public @NotNull ByteBuffer serializeAnnotations(int gameId, @NotNull GameMovesModel model) {
-        serializationStats.addSerialization(1);
+        itemStats.addSerialization(1);
 
         // TODO: Double size on demand
         ByteBuffer buf = ByteBuffer.allocate(16384*2);
@@ -114,7 +114,7 @@ public final class AnnotationsSerializer {
     }
 
     public void deserializeAnnotations(@NotNull ByteBuffer buf, @NotNull GameMovesModel model) {
-        serializationStats.addDeserialization(1);
+        itemStats.addDeserialization(1);
 
         if (!buf.hasRemaining()) {
             return;
