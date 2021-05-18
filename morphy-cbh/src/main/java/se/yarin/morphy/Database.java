@@ -61,6 +61,7 @@ public class Database implements EntityRetriever, AutoCloseable {
     @NotNull private final GameTagIndex gameTagIndex;
     @Nullable private final GameEntityIndex gameEntityIndexPrimary;
     @Nullable private final GameEntityIndex gameEntityIndexSecondary;
+    @Nullable private final MoveOffsetStorage moveOffsetStorage;
 
     @NotNull private final GameAdapter gameAdapter;
     @NotNull private final DatabaseContext context;
@@ -121,6 +122,10 @@ public class Database implements EntityRetriever, AutoCloseable {
 
     @Nullable public GameEntityIndex gameEntityIndexSecondary() { return gameEntityIndexSecondary; }
 
+    @Nullable public MoveOffsetStorage getMoveOffsetStorage() {
+        return moveOffsetStorage;
+    }
+
     @NotNull public GameAdapter gameAdapter() { return gameAdapter; }
 
     @NotNull public DatabaseContext context() {
@@ -154,6 +159,7 @@ public class Database implements EntityRetriever, AutoCloseable {
         this.gameTagIndex = new GameTagIndex(this.context);
         this.gameEntityIndexPrimary = new GameEntityIndex(GameEntityIndex.PRIMARY_TYPES, this.context);
         this.gameEntityIndexSecondary = new GameEntityIndex(GameEntityIndex.SECONDARY_TYPES, this.context);
+        this.moveOffsetStorage = null;  // Not needed if everything else is inmemory
 
         this.gameAdapter = new GameAdapter();
     }
@@ -173,7 +179,8 @@ public class Database implements EntityRetriever, AutoCloseable {
             @NotNull TeamIndex teamIndex,
             @NotNull GameTagIndex gameTagIndex,
             @Nullable GameEntityIndex gameEntityIndexPrimary,
-            @Nullable GameEntityIndex gameEntityIndexSecondary) {
+            @Nullable GameEntityIndex gameEntityIndexSecondary,
+            @Nullable MoveOffsetStorage moveOffsetStorage) {
 
         Set<DatabaseContext> contexts = new HashSet<>(Arrays.asList(context, gameHeaderIndex.context(), extendedGameHeaderStorage.context(), moveRepository.context(),
                 annotationRepository.context(), playerIndex.context(), tournamentIndex.context(), tournamentExtraStorage.context(),
@@ -183,6 +190,9 @@ public class Database implements EntityRetriever, AutoCloseable {
         }
         if (gameEntityIndexSecondary != null) {
             contexts.add(gameEntityIndexSecondary.context());
+        }
+        if (moveOffsetStorage != null) {
+            contexts.add(moveOffsetStorage.context());
         }
         if (contexts.size() > 1) {
             throw new IllegalArgumentException("All indexes in a Database must share the same context");
@@ -203,6 +213,7 @@ public class Database implements EntityRetriever, AutoCloseable {
         this.gameTagIndex = gameTagIndex;
         this.gameEntityIndexPrimary = gameEntityIndexPrimary;
         this.gameEntityIndexSecondary = gameEntityIndexSecondary;
+        this.moveOffsetStorage = moveOffsetStorage;
 
         this.gameAdapter = new GameAdapter();
     }
@@ -244,9 +255,11 @@ public class Database implements EntityRetriever, AutoCloseable {
                 CBUtil.fileWithExtension(file, ".cit2"),
                 CBUtil.fileWithExtension(file, ".cib2"),
                 context);
+        MoveOffsetStorage moveOffsetStorage = MoveOffsetStorage.create(CBUtil.fileWithExtension(file, ".cbgi"), context);
 
         return new Database(file.getName(), context, gameHeaderIndex, extendedGameHeaderStorage, moveRepository, annotationRepository,
-                playerIndex, tournamentIndex, tournamentExtraStorage, annotatorIndex, sourceIndex, teamIndex, gameTagIndex, gameEntityIndex, gameEntityIndexSecondary);
+                playerIndex, tournamentIndex, tournamentExtraStorage, annotatorIndex, sourceIndex, teamIndex, gameTagIndex,
+                gameEntityIndex, gameEntityIndexSecondary, moveOffsetStorage);
     }
 
     public static Database open(@NotNull File file) throws IOException {
@@ -319,6 +332,7 @@ public class Database implements EntityRetriever, AutoCloseable {
         GameTagIndex gameTagIndex = cblFile.exists() ? GameTagIndex.open(cblFile, mode, context) : new GameTagIndex(context);
 
         GameEntityIndex gameEntityIndex, gameEntityIndexSecondary;
+        MoveOffsetStorage moveOffsetStorage;
 
         try {
             File citFile = CBUtil.fileWithExtension(file, ".cit");
@@ -338,6 +352,14 @@ public class Database implements EntityRetriever, AutoCloseable {
             gameEntityIndexSecondary = null;
         }
 
+        try {
+            File cbgiFile = CBUtil.fileWithExtension(file, ".cbgi");
+            moveOffsetStorage = MoveOffsetStorage.open(cbgiFile, mode, context);
+        } catch (NoSuchFileException | MorphyInvalidDataException e) {
+            log.warn("MoveOffsetStorage missing or corrupt");
+            moveOffsetStorage = null;
+        }
+
         // TODO: Move this to constructor, add mode to DatabaseContext
         int headerCount = gameHeaderIndex.count(), extHeaderCount = extendedGameHeaderStorage.count();
         boolean mismatch = switch (mode) {
@@ -354,7 +376,7 @@ public class Database implements EntityRetriever, AutoCloseable {
 
         return new Database(name, context, gameHeaderIndex, extendedGameHeaderStorage, moveRepository, annotationRepository,
                 playerIndex, tournamentIndex, tournamentExtraStorage, annotatorIndex, sourceIndex, teamIndex, gameTagIndex,
-                gameEntityIndex, gameEntityIndexSecondary);
+                gameEntityIndex, gameEntityIndexSecondary, moveOffsetStorage);
     }
 
     /**

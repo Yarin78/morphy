@@ -140,7 +140,7 @@ public class DatabaseTest {
 
         Database.create(file, false);
 
-        assertEquals(15, countDatabaseFiles(file));
+        assertEquals(16, countDatabaseFiles(file));
     }
 
     @Test(expected = IOException.class)
@@ -172,13 +172,13 @@ public class DatabaseTest {
 
         Database.create(file, true);
 
-        assertEquals(15, countDatabaseFiles(file));
+        assertEquals(16, countDatabaseFiles(file));
     }
 
     @Test
     public void deleteDatabase() throws IOException {
         File file = ResourceLoader.materializeStreamPath(Database.class, "database/World-ch");
-        assertEquals(18, file.listFiles().length);
+        assertEquals(20, file.listFiles().length);
 
         Database.delete(new File(file, "World-ch.cbh"));
 
@@ -190,7 +190,7 @@ public class DatabaseTest {
         File file = ResourceLoader.materializeStreamPath(Database.class, "database/World-ch");
         File cbhFile = new File(file, "World-ch.cbh");
         cbhFile.delete();
-        assertEquals(17, file.listFiles().length);
+        assertEquals(19, file.listFiles().length);
 
         Database.delete(cbhFile);
 
