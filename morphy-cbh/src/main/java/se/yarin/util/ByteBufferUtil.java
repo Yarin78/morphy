@@ -142,6 +142,8 @@ public final class ByteBufferUtil {
         return buf[offset] & 0xff;
     }
 
+    public static void putByte(ByteBuffer buf, int offset, int value) { buf.put(offset, (byte) value); }
+
     public static void putByte(ByteBuffer buf, int value) { buf.put((byte) value); }
 
     // Methods for reading and writing Big Endian data from a ByteBuffer

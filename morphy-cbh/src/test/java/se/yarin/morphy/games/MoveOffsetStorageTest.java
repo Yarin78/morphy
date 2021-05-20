@@ -31,7 +31,7 @@ public class MoveOffsetStorageTest {
     @Test
     public void validateWorldCh() {
         Database db = ResourceLoader.openWorldChDatabase();
-        MoveOffsetStorage moveOffsetStorage = db.getMoveOffsetStorage();
+        MoveOffsetStorage moveOffsetStorage = db.moveOffsetStorage();
         assert moveOffsetStorage != null;
 
         for (int gameId = 1; gameId <= db.count(); gameId++) {

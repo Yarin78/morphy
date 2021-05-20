@@ -39,7 +39,7 @@ public class Database implements EntityRetriever, AutoCloseable {
 
     // Not a complete list, but the files supported
     public static final List<String> MANDATORY_EXTENSIONS = List.of(".cbh", ".cbg", ".cba", ".cbp", ".cbt", ".cbc", ".cbs");
-    public static final List<String> ADDITIONAL_EXTENSIONS = List.of(".cbtt", ".cbj", ".cbe", ".cbl", ".cbm");
+    public static final List<String> ADDITIONAL_EXTENSIONS = List.of(".cbtt", ".cbj", ".cbe", ".cbl", ".cbm", ".flags");
     public static final List<String> SEARCH_BOOSTER_EXTENSIONS = List.of(".cbb", ".cbgi", ".cit", ".cib", ".cit2", ".cib2");
 
     public static final List<String> ALL_EXTENSIONS = Stream.concat(Stream.concat(
@@ -59,6 +59,7 @@ public class Database implements EntityRetriever, AutoCloseable {
     @NotNull private final SourceIndex sourceIndex;
     @NotNull private final TeamIndex teamIndex;
     @NotNull private final GameTagIndex gameTagIndex;
+    @NotNull private final TopGamesStorage topGamesStorage;
     @Nullable private final GameEntityIndex gameEntityIndexPrimary;
     @Nullable private final GameEntityIndex gameEntityIndexSecondary;
     @Nullable private final MoveOffsetStorage moveOffsetStorage;
@@ -114,6 +115,10 @@ public class Database implements EntityRetriever, AutoCloseable {
         return gameTagIndex;
     }
 
+    @NotNull public TopGamesStorage topGamesStorage() {
+        return topGamesStorage;
+    }
+
     @Nullable public GameEntityIndex gameEntityIndex(@NotNull EntityType type) {
         return type != EntityType.GAME_TAG ? gameEntityIndexPrimary : gameEntityIndexSecondary;
     }
@@ -122,7 +127,7 @@ public class Database implements EntityRetriever, AutoCloseable {
 
     @Nullable public GameEntityIndex gameEntityIndexSecondary() { return gameEntityIndexSecondary; }
 
-    @Nullable public MoveOffsetStorage getMoveOffsetStorage() {
+    @Nullable public MoveOffsetStorage moveOffsetStorage() {
         return moveOffsetStorage;
     }
 
@@ -157,9 +162,10 @@ public class Database implements EntityRetriever, AutoCloseable {
         this.sourceIndex = new SourceIndex(this.context);
         this.teamIndex = new TeamIndex(this.context);
         this.gameTagIndex = new GameTagIndex(this.context);
+        this.topGamesStorage = new TopGamesStorage(this.context);
         this.gameEntityIndexPrimary = new GameEntityIndex(GameEntityIndex.PRIMARY_TYPES, this.context);
         this.gameEntityIndexSecondary = new GameEntityIndex(GameEntityIndex.SECONDARY_TYPES, this.context);
-        this.moveOffsetStorage = null;  // Not needed if everything else is inmemory
+        this.moveOffsetStorage = null;  // Not needed if everything else is in-memory
 
         this.gameAdapter = new GameAdapter();
     }
@@ -178,13 +184,14 @@ public class Database implements EntityRetriever, AutoCloseable {
             @NotNull SourceIndex sourceIndex,
             @NotNull TeamIndex teamIndex,
             @NotNull GameTagIndex gameTagIndex,
+            @NotNull TopGamesStorage topGamesStorage,
             @Nullable GameEntityIndex gameEntityIndexPrimary,
             @Nullable GameEntityIndex gameEntityIndexSecondary,
             @Nullable MoveOffsetStorage moveOffsetStorage) {
 
         Set<DatabaseContext> contexts = new HashSet<>(Arrays.asList(context, gameHeaderIndex.context(), extendedGameHeaderStorage.context(), moveRepository.context(),
                 annotationRepository.context(), playerIndex.context(), tournamentIndex.context(), tournamentExtraStorage.context(),
-                annotatorIndex.context(), sourceIndex.context(), teamIndex.context(), gameTagIndex.context()));
+                annotatorIndex.context(), sourceIndex.context(), teamIndex.context(), gameTagIndex.context(), topGamesStorage.context()));
         if (gameEntityIndexPrimary != null) {
             contexts.add(gameEntityIndexPrimary.context());
         }
@@ -211,6 +218,7 @@ public class Database implements EntityRetriever, AutoCloseable {
         this.sourceIndex = sourceIndex;
         this.teamIndex = teamIndex;
         this.gameTagIndex = gameTagIndex;
+        this.topGamesStorage = topGamesStorage;
         this.gameEntityIndexPrimary = gameEntityIndexPrimary;
         this.gameEntityIndexSecondary = gameEntityIndexSecondary;
         this.moveOffsetStorage = moveOffsetStorage;
@@ -247,6 +255,8 @@ public class Database implements EntityRetriever, AutoCloseable {
         TeamIndex teamIndex = TeamIndex.create(CBUtil.fileWithExtension(file, ".cbe"), context);
         GameTagIndex gameTagIndex = GameTagIndex.create(CBUtil.fileWithExtension(file, ".cbl"), context);
 
+        TopGamesStorage topGamesStorage = TopGamesStorage.create(CBUtil.fileWithExtension(file, ".flags"), context);
+
         GameEntityIndex gameEntityIndex = GameEntityIndex.create(
                 CBUtil.fileWithExtension(file, ".cit"),
                 CBUtil.fileWithExtension(file, ".cib"),
@@ -258,7 +268,7 @@ public class Database implements EntityRetriever, AutoCloseable {
         MoveOffsetStorage moveOffsetStorage = MoveOffsetStorage.create(CBUtil.fileWithExtension(file, ".cbgi"), context);
 
         return new Database(file.getName(), context, gameHeaderIndex, extendedGameHeaderStorage, moveRepository, annotationRepository,
-                playerIndex, tournamentIndex, tournamentExtraStorage, annotatorIndex, sourceIndex, teamIndex, gameTagIndex,
+                playerIndex, tournamentIndex, tournamentExtraStorage, annotatorIndex, sourceIndex, teamIndex, gameTagIndex, topGamesStorage,
                 gameEntityIndex, gameEntityIndexSecondary, moveOffsetStorage);
     }
 
@@ -317,10 +327,12 @@ public class Database implements EntityRetriever, AutoCloseable {
 
         // Optional files. Only in very early ChessBase databases are they missing.
         // If the database is opened in read-only mode, don't create them but instead provide empty versions
+        // TODO: These are currently not created if opening in write-mode
         File cbjFile = CBUtil.fileWithExtension(file, ".cbj");
         File cbttFile = CBUtil.fileWithExtension(file, ".cbtt");
         File cbeFile = CBUtil.fileWithExtension(file, ".cbe");
         File cblFile = CBUtil.fileWithExtension(file, ".cbl");
+        File flagsFile = CBUtil.fileWithExtension(file, ".flags");
 
         ExtendedGameHeaderStorage extendedGameHeaderStorage = cbjFile.exists()
                 ? ExtendedGameHeaderStorage.open(cbjFile, mode, context)
@@ -330,6 +342,7 @@ public class Database implements EntityRetriever, AutoCloseable {
                 : new TournamentExtraStorage(context);
         TeamIndex teamIndex = cbeFile.exists() ? TeamIndex.open(cbeFile, mode, context) : new TeamIndex(context);
         GameTagIndex gameTagIndex = cblFile.exists() ? GameTagIndex.open(cblFile, mode, context) : new GameTagIndex(context);
+        TopGamesStorage topGamesStorage = flagsFile.exists() ? TopGamesStorage.open(flagsFile, mode, context) : new TopGamesStorage(context);
 
         GameEntityIndex gameEntityIndex, gameEntityIndexSecondary;
         MoveOffsetStorage moveOffsetStorage;
@@ -376,7 +389,7 @@ public class Database implements EntityRetriever, AutoCloseable {
 
         return new Database(name, context, gameHeaderIndex, extendedGameHeaderStorage, moveRepository, annotationRepository,
                 playerIndex, tournamentIndex, tournamentExtraStorage, annotatorIndex, sourceIndex, teamIndex, gameTagIndex,
-                gameEntityIndex, gameEntityIndexSecondary, moveOffsetStorage);
+                topGamesStorage, gameEntityIndex, gameEntityIndexSecondary, moveOffsetStorage);
     }
 
     /**

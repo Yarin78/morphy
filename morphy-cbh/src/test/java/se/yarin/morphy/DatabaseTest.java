@@ -140,7 +140,7 @@ public class DatabaseTest {
 
         Database.create(file, false);
 
-        assertEquals(16, countDatabaseFiles(file));
+        assertEquals(17, countDatabaseFiles(file));
     }
 
     @Test(expected = IOException.class)
@@ -172,7 +172,7 @@ public class DatabaseTest {
 
         Database.create(file, true);
 
-        assertEquals(16, countDatabaseFiles(file));
+        assertEquals(17, countDatabaseFiles(file));
     }
 
     @Test
