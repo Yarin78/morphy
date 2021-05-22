@@ -357,37 +357,48 @@ public class CompactMoveEncoder implements MoveEncoder {
             throw new MorphyMoveDecodingException(
                     String.format("No piece coordinate for %s %s number %d", playerToMove, piece, stoneNo));
         }
-
-        if (piece == Piece.KING) {
-            int backRank = playerToMove == Player.WHITE ? 0 : 7;
-            if (ofs == 8) return new Move(position, 4, backRank, 6, backRank);
-            if (ofs == 9) return new Move(position, 4, backRank, 2, backRank);
-            return new Move(position, sqi, sqi + kingDir[ofs]);
-        }
-
-        if (piece == Piece.BISHOP || piece == Piece.ROOK || piece == Piece.QUEEN) {
-            int px = Chess.sqiToCol(sqi), py = Chess.sqiToRow(sqi);
-            int dir = ofs / 7, stride = ofs % 7 + 1;
-            switch (dir + (piece == Piece.BISHOP ? 2 : 0)) {
-                case 0: return new Move(position, sqi, Chess.coorToSqi(px, (py + stride) % 8));
-                case 1: return new Move(position, sqi, Chess.coorToSqi((px + stride) % 8, py));
-                case 2: return new Move(position, sqi, Chess.coorToSqi((px + stride) % 8, (py + stride) % 8));
-                case 3: return new Move(position, sqi, Chess.coorToSqi((px + stride) % 8, (py + 8 - stride) % 8));
+        try {
+            if (piece == Piece.KING) {
+                int backRank = playerToMove == Player.WHITE ? 0 : 7;
+                if (ofs == 8) return new Move(position, 4, backRank, 6, backRank);
+                if (ofs == 9) return new Move(position, 4, backRank, 2, backRank);
+                return new Move(position, sqi, sqi + kingDir[ofs]);
             }
-        }
 
-        if (piece == Piece.KNIGHT) {
-            return new Move(position, sqi, sqi + knightDir[ofs]);
-        }
-
-        if (piece == Piece.PAWN) {
-            int dir = playerToMove == Player.WHITE ? 1 : -1;
-            switch (ofs) {
-                case 0: return new Move(position, sqi, sqi + dir);
-                case 1: return new Move(position, sqi, sqi + dir * 2);
-                case 2: return new Move(position, sqi, sqi + dir * 9);
-                case 3: return new Move(position, sqi, sqi - dir * 7);
+            if (piece == Piece.BISHOP || piece == Piece.ROOK || piece == Piece.QUEEN) {
+                int px = Chess.sqiToCol(sqi), py = Chess.sqiToRow(sqi);
+                int dir = ofs / 7, stride = ofs % 7 + 1;
+                switch (dir + (piece == Piece.BISHOP ? 2 : 0)) {
+                    case 0:
+                        return new Move(position, sqi, Chess.coorToSqi(px, (py + stride) % 8));
+                    case 1:
+                        return new Move(position, sqi, Chess.coorToSqi((px + stride) % 8, py));
+                    case 2:
+                        return new Move(position, sqi, Chess.coorToSqi((px + stride) % 8, (py + stride) % 8));
+                    case 3:
+                        return new Move(position, sqi, Chess.coorToSqi((px + stride) % 8, (py + 8 - stride) % 8));
+                }
             }
+
+            if (piece == Piece.KNIGHT) {
+                return new Move(position, sqi, sqi + knightDir[ofs]);
+            }
+
+            if (piece == Piece.PAWN) {
+                int dir = playerToMove == Player.WHITE ? 1 : -1;
+                switch (ofs) {
+                    case 0:
+                        return new Move(position, sqi, sqi + dir);
+                    case 1:
+                        return new Move(position, sqi, sqi + dir * 2);
+                    case 2:
+                        return new Move(position, sqi, sqi + dir * 9);
+                    case 3:
+                        return new Move(position, sqi, sqi - dir * 7);
+                }
+            }
+        } catch (IllegalArgumentException e) {
+            throw new MorphyMoveDecodingException("Invalid move with opcode: " + opcode, e);
         }
 
         throw new MorphyMoveDecodingException("Invalid opcode: " + opcode);

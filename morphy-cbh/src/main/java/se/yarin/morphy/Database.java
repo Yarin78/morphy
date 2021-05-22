@@ -6,6 +6,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.chess.GameModel;
 import se.yarin.morphy.boosters.GameEntityIndex;
+import se.yarin.morphy.boosters.GameEventStorage;
 import se.yarin.morphy.entities.*;
 import se.yarin.morphy.exceptions.MorphyException;
 import se.yarin.morphy.exceptions.MorphyInvalidDataException;
@@ -63,6 +64,7 @@ public class Database implements EntityRetriever, AutoCloseable {
     @Nullable private final GameEntityIndex gameEntityIndexPrimary;
     @Nullable private final GameEntityIndex gameEntityIndexSecondary;
     @Nullable private final MoveOffsetStorage moveOffsetStorage;
+    @Nullable private final GameEventStorage gameEventStorage;
 
     @NotNull private final GameAdapter gameAdapter;
     @NotNull private final DatabaseContext context;
@@ -131,6 +133,10 @@ public class Database implements EntityRetriever, AutoCloseable {
         return moveOffsetStorage;
     }
 
+    @Nullable public GameEventStorage gameEventStorage() {
+        return gameEventStorage;
+    }
+
     @NotNull public GameAdapter gameAdapter() { return gameAdapter; }
 
     @NotNull public DatabaseContext context() {
@@ -166,6 +172,7 @@ public class Database implements EntityRetriever, AutoCloseable {
         this.gameEntityIndexPrimary = new GameEntityIndex(GameEntityIndex.PRIMARY_TYPES, this.context);
         this.gameEntityIndexSecondary = new GameEntityIndex(GameEntityIndex.SECONDARY_TYPES, this.context);
         this.moveOffsetStorage = null;  // Not needed if everything else is in-memory
+        this.gameEventStorage = new GameEventStorage(this.context);
 
         this.gameAdapter = new GameAdapter();
     }
@@ -187,7 +194,8 @@ public class Database implements EntityRetriever, AutoCloseable {
             @NotNull TopGamesStorage topGamesStorage,
             @Nullable GameEntityIndex gameEntityIndexPrimary,
             @Nullable GameEntityIndex gameEntityIndexSecondary,
-            @Nullable MoveOffsetStorage moveOffsetStorage) {
+            @Nullable MoveOffsetStorage moveOffsetStorage,
+            @Nullable GameEventStorage gameEventStorage) {
 
         Set<DatabaseContext> contexts = new HashSet<>(Arrays.asList(context, gameHeaderIndex.context(), extendedGameHeaderStorage.context(), moveRepository.context(),
                 annotationRepository.context(), playerIndex.context(), tournamentIndex.context(), tournamentExtraStorage.context(),
@@ -200,6 +208,9 @@ public class Database implements EntityRetriever, AutoCloseable {
         }
         if (moveOffsetStorage != null) {
             contexts.add(moveOffsetStorage.context());
+        }
+        if (gameEventStorage != null) {
+            contexts.add(gameEventStorage.context());
         }
         if (contexts.size() > 1) {
             throw new IllegalArgumentException("All indexes in a Database must share the same context");
@@ -222,6 +233,7 @@ public class Database implements EntityRetriever, AutoCloseable {
         this.gameEntityIndexPrimary = gameEntityIndexPrimary;
         this.gameEntityIndexSecondary = gameEntityIndexSecondary;
         this.moveOffsetStorage = moveOffsetStorage;
+        this.gameEventStorage = gameEventStorage;
 
         this.gameAdapter = new GameAdapter();
     }
@@ -266,10 +278,11 @@ public class Database implements EntityRetriever, AutoCloseable {
                 CBUtil.fileWithExtension(file, ".cib2"),
                 context);
         MoveOffsetStorage moveOffsetStorage = MoveOffsetStorage.create(CBUtil.fileWithExtension(file, ".cbgi"), context);
+        GameEventStorage gameEventStorage = GameEventStorage.create(CBUtil.fileWithExtension(file, ".cbb"), context);
 
         return new Database(file.getName(), context, gameHeaderIndex, extendedGameHeaderStorage, moveRepository, annotationRepository,
                 playerIndex, tournamentIndex, tournamentExtraStorage, annotatorIndex, sourceIndex, teamIndex, gameTagIndex, topGamesStorage,
-                gameEntityIndex, gameEntityIndexSecondary, moveOffsetStorage);
+                gameEntityIndex, gameEntityIndexSecondary, moveOffsetStorage, gameEventStorage);
     }
 
     public static Database open(@NotNull File file) throws IOException {
@@ -333,6 +346,7 @@ public class Database implements EntityRetriever, AutoCloseable {
         File cbeFile = CBUtil.fileWithExtension(file, ".cbe");
         File cblFile = CBUtil.fileWithExtension(file, ".cbl");
         File flagsFile = CBUtil.fileWithExtension(file, ".flags");
+        File gameEventsFile = CBUtil.fileWithExtension(file, ".cbb");
 
         ExtendedGameHeaderStorage extendedGameHeaderStorage = cbjFile.exists()
                 ? ExtendedGameHeaderStorage.open(cbjFile, mode, context)
@@ -343,6 +357,7 @@ public class Database implements EntityRetriever, AutoCloseable {
         TeamIndex teamIndex = cbeFile.exists() ? TeamIndex.open(cbeFile, mode, context) : new TeamIndex(context);
         GameTagIndex gameTagIndex = cblFile.exists() ? GameTagIndex.open(cblFile, mode, context) : new GameTagIndex(context);
         TopGamesStorage topGamesStorage = flagsFile.exists() ? TopGamesStorage.open(flagsFile, mode, context) : new TopGamesStorage(context);
+        GameEventStorage gameEventStorage = gameEventsFile.exists() ? GameEventStorage.open(gameEventsFile, mode, context) : new GameEventStorage(context);
 
         GameEntityIndex gameEntityIndex, gameEntityIndexSecondary;
         MoveOffsetStorage moveOffsetStorage;
@@ -389,7 +404,7 @@ public class Database implements EntityRetriever, AutoCloseable {
 
         return new Database(name, context, gameHeaderIndex, extendedGameHeaderStorage, moveRepository, annotationRepository,
                 playerIndex, tournamentIndex, tournamentExtraStorage, annotatorIndex, sourceIndex, teamIndex, gameTagIndex,
-                topGamesStorage, gameEntityIndex, gameEntityIndexSecondary, moveOffsetStorage);
+                topGamesStorage, gameEntityIndex, gameEntityIndexSecondary, moveOffsetStorage, gameEventStorage);
     }
 
     /**
@@ -448,7 +463,7 @@ public class Database implements EntityRetriever, AutoCloseable {
     }
 
     public void close() throws IOException {
-        this.gameHeaderIndex.close();
+        gameHeaderIndex.close();
         extendedGameHeaderStorage.close();
         moveRepository.close();
         annotationRepository.close();
@@ -459,8 +474,18 @@ public class Database implements EntityRetriever, AutoCloseable {
         sourceIndex.close();
         teamIndex.close();
         gameTagIndex.close();
+        topGamesStorage.close();
         if (gameEntityIndexPrimary != null) {
             gameEntityIndexPrimary.close();
+        }
+        if (gameEntityIndexSecondary != null) {
+            gameEntityIndexSecondary.close();
+        }
+        if (moveOffsetStorage != null) {
+            moveOffsetStorage.close();
+        }
+        if (gameEventStorage != null) {
+            gameEventStorage.close();
         }
     }
 

@@ -125,7 +125,6 @@ is a header. All integers are in Big Endian.
 
 After the header follows all the actual game records, one per game.
 The records describe events that has happened during the game (main variation only).
-In some cases it refers specifically to the final position.
 
 For games that are texts, all bytes are 0.
 
@@ -133,25 +132,25 @@ For games that are texts, all bytes are 0.
 | --- | --- | --- | ---
 | 0 | 3 | | Always `0` and unused in later version of ChessBase. Set in earlier databases, unclear purpose.
 | 3 | 1 | 0-2 | Number of white pawns left in final position (`7` if 7 or 8 pawns left)
-|   |   | 3 | Set if white has lost all pieces (excluding pawns; not unset if getting a new Queen)
+|   |   | 3 | Set if at some point in the game white had no pieces (only pawns)
 |   |   | 4-6 | Number of white pawns left in final position (`7` if 7 or 8 pawns left)
-|   |   | 7 | Set if black has lost all pieces (excluding pawns; not unset if getting a new Queen)
-| 4 | 1 | 0 | White Queen has been captured
-|   |   | 1 | One White Rook has been captured
-|   |   | 2 | One White Bishop has been captured
-|   |   | 3 | One White Knight has been captured
-|   |   | 4 | One Black Queen has been captured
-|   |   | 5 | One Black Rook has been captured
-|   |   | 6 | One Black Bishop has been captured
-|   |   | 7 | One Black Knight has been captured
-| 5 | 1 | 0 | White Queen has been captured (same as previous byte)
-|   |   | 1 | Two White Rooks has been captured
-|   |   | 2 | Two White Bishops has been captured
-|   |   | 3 | Two White Knights has been captured
-|   |   | 4 | One Black Queen has been captured (same as previous byte)
-|   |   | 5 | Two Black Rooks has been captured
-|   |   | 6 | Two Black Bishops has been captured
-|   |   | 7 | Two Black Knights has been captured
+|   |   | 7 | Set if at some point in the game black had no pieces (only pawns)
+| 4 | 1 | 0 | If White had no Queen at some point in the game
+|   |   | 1 | If White had at most one Rook at some point in the game
+|   |   | 2 | If White had at most one Bishop at some point in the game
+|   |   | 3 | If White had at most one Knight at some point in the game
+|   |   | 4 | If Black had no Queen at some point in the game
+|   |   | 5 | If Black had at most one Rook at some point in the game
+|   |   | 6 | If Black had at most one Bishop at some point in the game
+|   |   | 7 | If Black had at most one Knight at some point in the game
+| 5 | 1 | 0 | If White had no Queen at some point in the game (same as previous byte)
+|   |   | 1 | If White had no Rook at some point in the game
+|   |   | 2 | If White had no Bishop at some point in the game
+|   |   | 3 | If White had no Knight at some point in the game
+|   |   | 4 | If Black had no queen at some point in the game
+|   |   | 5 | If Black had no Rook at some point in the game
+|   |   | 6 | If Black had no Bishop at some point in the game
+|   |   | 7 | If Black had no Knight at some point in the game
 | 6 | 1 |   | Bit 0-7 set if a White Pawn has occupied a3, b3, ..., h3, respectively, at some point during the game
 | 7 | 1 |   | Bit 0-7 set if a White Pawn has occupied a4, b4, ..., h4, respectively, at some point during the game 
 | 8 | 1 |   | Bit 0-7 set if a White Pawn has occupied a5, b5, ..., h5, respectively, at some point during the game

@@ -315,6 +315,14 @@ public final class MoveSerializer {
         int wqrSqi = ByteBufferUtil.getUnsignedByte(buf);
         int bkrSqi = ByteBufferUtil.getUnsignedByte(buf);
         int bqrSqi = ByteBufferUtil.getUnsignedByte(buf);
+        if (bkrSqi != wkrSqi + 7) {
+            log.warn("Black King Rook not at expected position in Chess960 startup position");
+            bkrSqi = wkrSqi + 7;
+        }
+        if (bqrSqi != wqrSqi + 7) {
+            log.warn("Black Queen Rook not at expected position in Chess960 startup position");
+            bqrSqi = wqrSqi + 7;
+        }
 
         // Then follows the start position number.
         // However, this value is wrong in some database (probably due to a ChessBase bug)
@@ -364,7 +372,7 @@ public final class MoveSerializer {
         }
 
         // Can't do so much here; return the original encoded (faulty) position
-        return originalSpNo;
+        return originalSpNo >= 0 && originalSpNo < 960 ? originalSpNo : 0;
     }
 
     private boolean chess960Matches(Position sp, int wkSqi, int bkSqi, int wkrSqi, int wqrSqi, int bkrSqi, int bqrSqi) {
