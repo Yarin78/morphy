@@ -2,13 +2,12 @@ package se.yarin.morphy.entities.filters;
 
 import org.jetbrains.annotations.NotNull;
 import se.yarin.morphy.entities.Tournament;
-import se.yarin.morphy.storage.ItemStorageFilter;
 
 import java.util.Arrays;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-public class TournamentPlaceFilter implements ItemStorageFilter<Tournament> {
+public class TournamentPlaceFilter implements EntityFilter<Tournament>  {
 
     private final @NotNull Set<String> places;
     private final boolean caseSensitive;

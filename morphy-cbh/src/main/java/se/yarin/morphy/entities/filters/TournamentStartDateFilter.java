@@ -4,9 +4,10 @@ import org.jetbrains.annotations.NotNull;
 import se.yarin.chess.Date;
 import se.yarin.morphy.entities.Tournament;
 import se.yarin.morphy.games.filters.DateRangeFilter;
-import se.yarin.morphy.storage.ItemStorageFilter;
+import se.yarin.morphy.util.CBUtil;
+import se.yarin.util.ByteBufferUtil;
 
-public class TournamentStartDateFilter implements ItemStorageFilter<Tournament> {
+public class TournamentStartDateFilter implements EntityFilter<Tournament>  {
     private final Date fromDate;
     private final Date toDate;
 
@@ -19,9 +20,18 @@ public class TournamentStartDateFilter implements ItemStorageFilter<Tournament> 
         this.toDate = toDate;
     }
 
+    private boolean matches(@NotNull Date date) {
+        return (fromDate.isUnset() || fromDate.compareTo(date) <= 0) &&
+                (toDate.isUnset() || toDate.compareTo(date) >= 0);
+    }
+
     @Override
     public boolean matches(@NotNull Tournament tournament) {
-        return (fromDate.isUnset() || fromDate.compareTo(tournament.date()) <= 0) &&
-                (toDate.isUnset() || toDate.compareTo(tournament.date()) >= 0);
+        return matches(tournament.date());
+    }
+
+    @Override
+    public boolean matchesSerialized(byte[] serializedItem) {
+        return matches(CBUtil.decodeDate(ByteBufferUtil.getIntL(serializedItem, 70)));
     }
 }

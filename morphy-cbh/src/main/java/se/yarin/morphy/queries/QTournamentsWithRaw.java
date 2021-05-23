@@ -3,14 +3,14 @@ package se.yarin.morphy.queries;
 import org.jetbrains.annotations.NotNull;
 import se.yarin.morphy.DatabaseReadTransaction;
 import se.yarin.morphy.entities.Tournament;
-import se.yarin.morphy.entities.filters.RawTournamentFilter;
+import se.yarin.morphy.entities.filters.RawEntityFilter;
 
 import java.util.stream.Stream;
 
 public class QTournamentsWithRaw extends ItemQuery<Tournament> {
-    private final @NotNull RawTournamentFilter filter;
+    private final @NotNull RawEntityFilter<Tournament> filter;
 
-    public QTournamentsWithRaw(@NotNull RawTournamentFilter filter) {
+    public QTournamentsWithRaw(@NotNull RawEntityFilter<Tournament> filter) {
         this.filter = filter;
     }
 

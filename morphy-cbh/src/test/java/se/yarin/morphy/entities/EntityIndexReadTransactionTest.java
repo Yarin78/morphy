@@ -5,13 +5,12 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import se.yarin.morphy.storage.InMemoryItemStorage;
 
-import java.util.Iterator;
 import java.util.Random;
 import java.util.stream.Collectors;
 
 import static org.junit.Assert.assertEquals;
 
-public class EntityIndexTransactionTest {
+public class EntityIndexReadTransactionTest {
     @Rule
     public TemporaryFolder folder = new TemporaryFolder();
 
@@ -166,6 +165,21 @@ public class EntityIndexTransactionTest {
         EntityIndexReadTransaction<FooEntity> txn = index.beginReadTransaction();
 
         assertEquals(expected, txn.stream().count());
+    }
+
+
+    @Test
+    public void testStreamWithFilter() {
+        FooEntityIndex index = createIndex();
+        int numItems = 10000;
+        for (int i = 0; i < numItems; i++) {
+            index.add(FooEntity.of(nextRandomString(), i));
+        }
+
+        EntityIndexReadTransaction<FooEntity> txn = index.beginReadTransaction();
+        assertEquals((int) Math.ceil(numItems / 7.0), txn.streamOrderedAscending(item -> item.value() % 7 == 0).count());
+        assertEquals((int) Math.ceil(numItems / 7.0), txn.streamOrderedDescending(item -> item.value() % 7 == 0).count());
+        assertEquals((int) Math.ceil(numItems / 7.0), txn.stream(item -> item.value() % 7 == 0).count());
     }
 
 }

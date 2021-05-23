@@ -2,9 +2,11 @@ package se.yarin.morphy.entities.filters;
 
 import org.jetbrains.annotations.NotNull;
 import se.yarin.morphy.entities.Player;
-import se.yarin.morphy.storage.ItemStorageFilter;
+import se.yarin.util.ByteBufferUtil;
 
-public class PlayerNameFilter implements ItemStorageFilter<Player> {
+import java.nio.ByteBuffer;
+
+public class PlayerNameFilter implements EntityFilter<Player> {
     private final @NotNull String lastName;
     private final @NotNull String firstName;
     private final boolean caseSensitive;
@@ -35,8 +37,8 @@ public class PlayerNameFilter implements ItemStorageFilter<Player> {
     }
 
     public PlayerNameFilter(@NotNull String lastName, @NotNull String firstName, boolean caseSensitive, boolean exactMatch) {
-        this.lastName = lastName;
-        this.firstName = firstName;
+        this.lastName = caseSensitive ? lastName : lastName.toLowerCase();
+        this.firstName = caseSensitive ? firstName : firstName.toLowerCase();
         this.caseSensitive = caseSensitive;
         this.exactMatch = exactMatch;
     }
@@ -45,7 +47,7 @@ public class PlayerNameFilter implements ItemStorageFilter<Player> {
         if (exactMatch) {
             return caseSensitive ? playerName.equals(searchName) : playerName.equalsIgnoreCase(searchName);
         }
-        return caseSensitive ? playerName.startsWith(searchName) : playerName.toLowerCase().startsWith(searchName.toLowerCase());
+        return caseSensitive ? playerName.startsWith(searchName) : playerName.toLowerCase().startsWith(searchName);
     }
 
     @Override
@@ -53,5 +55,11 @@ public class PlayerNameFilter implements ItemStorageFilter<Player> {
         return matches(player.lastName(), lastName) && matches(player.firstName(), firstName);
     }
 
-    // TODO: matchesSerialized (or not, can we compare serialized strings safely?)
+    @Override
+    public boolean matchesSerialized(byte[] serializedItem) {
+        // Only partial matching done here; deserializing players is not that much slower
+        ByteBuffer buf = ByteBuffer.wrap(serializedItem);
+        String playerName = ByteBufferUtil.getFixedSizeByteString(buf, 30);
+        return matches(playerName, lastName);
+    }
 }

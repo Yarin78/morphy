@@ -1,17 +1,16 @@
 package se.yarin.morphy.entities.filters;
 
 import org.jetbrains.annotations.NotNull;
-import se.yarin.cbhlib.Database;
 import se.yarin.morphy.entities.Tournament;
 import se.yarin.morphy.entities.TournamentTimeControl;
-import se.yarin.morphy.storage.ItemStorageFilter;
+import se.yarin.morphy.util.CBUtil;
 
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-public class TournamentTimeControlFilter implements ItemStorageFilter<Tournament> {
+public class TournamentTimeControlFilter implements EntityFilter<Tournament>  {
 
     private final @NotNull Set<TournamentTimeControl> timeControls;
 
@@ -27,5 +26,10 @@ public class TournamentTimeControlFilter implements ItemStorageFilter<Tournament
     @Override
     public boolean matches(@NotNull Tournament tournament) {
         return timeControls.contains(tournament.timeControl());
+    }
+
+    @Override
+    public boolean matchesSerialized(byte[] serializedItem) {
+        return timeControls.contains(CBUtil.decodeTournamentTimeControl(serializedItem[74]));
     }
 }

@@ -141,7 +141,6 @@ public class TournamentIndex extends EntityIndex<Tournament> {
                 .id(entityId)
                 .count(count)
                 .firstGameId(firstGameId)
-                // .raw(serializedData)
                 .title(ByteBufferUtil.getFixedSizeByteString(buf, 40))
                 .place(ByteBufferUtil.getFixedSizeByteString(buf, 30))
                 .date(CBUtil.decodeDate(ByteBufferUtil.getIntL(buf)));

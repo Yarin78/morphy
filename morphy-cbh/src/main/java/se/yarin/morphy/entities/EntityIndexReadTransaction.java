@@ -1,9 +1,11 @@
 package se.yarin.morphy.entities;
 
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.morphy.DatabaseContext;
+import se.yarin.morphy.entities.filters.EntityFilter;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -60,7 +62,26 @@ public class EntityIndexReadTransaction<T extends Entity & Comparable<T>> extend
      * @return an iterable of all entities
      */
     public @NotNull Iterable<T> iterable(int startId) {
-        return () -> new EntityBatchIterator<>(this, startId);
+        return iterable(startId, null);
+    }
+
+    /**
+     * Returns an iterable of all entities in the index matching an optional filter, sorted by id.
+     * @param filter an entity filter
+     * @return an iterable of all entities
+     */
+    public @NotNull Iterable<T> iterable(@Nullable EntityFilter<T> filter) {
+        return iterable(0, filter);
+    }
+
+    /**
+     * Returns an iterable of all entities in the index matching an optional filter, sorted by id.
+     * @param startId the first id in the iterable
+     * @param filter an entity filter
+     * @return an iterable of all entities
+     */
+    public @NotNull Iterable<T> iterable(int startId, @Nullable EntityFilter<T> filter) {
+        return () -> new EntityBatchIterator<>(this, startId, filter);
     }
 
 
@@ -82,11 +103,39 @@ public class EntityIndexReadTransaction<T extends Entity & Comparable<T>> extend
     }
 
     /**
+     * Returns a stream of all entities in the index matching an optional filter, sorted by id.
+     * @param filter an entity filter
+     * @return a stream of all entities
+     */
+    public @NotNull Stream<T> stream(@Nullable EntityFilter<T> filter) {
+        return StreamSupport.stream(iterable(filter).spliterator(), false);
+    }
+
+    /**
+     * Returns a stream of all entities in the index matching an optional filter, sorted by id.
+     * @param startId the first id in the stream
+     * @param filter an entity filter
+     * @return a stream of all entities
+     */
+    public @NotNull Stream<T> stream(int startId, @Nullable EntityFilter<T> filter) {
+        return StreamSupport.stream(iterable(startId, filter).spliterator(), false);
+    }
+
+    /**
      * Gets an iterable of all entities in the index sorted by the default sorting order.
      * @return an iterable of entities
      */
     public @NotNull Iterable<T> iterableAscending() {
-        return () -> new OrderedEntityAscendingIterator<>(begin(), -1);
+        return iterableAscending((EntityFilter<T>) null);
+    }
+
+    /**
+     * Gets an iterable of all entities matching an optional filter in the index sorted by the default sorting order.
+     * @param filter an optional filter
+     * @return an iterable of entities
+     */
+    public @NotNull Iterable<T> iterableAscending(@Nullable EntityFilter<T> filter) {
+        return () -> new OrderedEntityAscendingIterator<>(begin(), -1, filter);
     }
 
     /**
@@ -96,7 +145,18 @@ public class EntityIndexReadTransaction<T extends Entity & Comparable<T>> extend
      * @return an iterable of entities
      */
     public @NotNull Iterable<T> iterableAscending(@NotNull T start) {
-        return () -> new OrderedEntityAscendingIterator<>(lowerBound(start), -1);
+        return iterableAscending(start, (EntityFilter<T>) null);
+    }
+
+    /**
+     * Gets an iterable of all entities in the index starting at the given key (inclusive),
+     * sorted by the default sorting order.
+     * @param start the starting key
+     * @param filter an optional filter
+     * @return an iterable of entities
+     */
+    public @NotNull Iterable<T> iterableAscending(@NotNull T start, @Nullable EntityFilter<T> filter) {
+        return () -> new OrderedEntityAscendingIterator<>(lowerBound(start), -1, filter);
     }
 
     /**
@@ -107,8 +167,20 @@ public class EntityIndexReadTransaction<T extends Entity & Comparable<T>> extend
      * @return an iterable of entities
      */
     public @NotNull Iterable<T> iterableAscending(@NotNull T start, @NotNull T end) {
+        return iterableAscending(start, end, null);
+    }
+
+    /**
+     * Gets an iterable of all entities matching an optional filter in the index starting at a given key (inclusive),
+     * ending at a given key (exclusive), sorted by the default sorting order.
+     * @param start the starting key
+     * @param end the end key
+     * @param filter an optional filter
+     * @return an iterable of entities
+     */
+    public @NotNull Iterable<T> iterableAscending(@NotNull T start, @NotNull T end, @Nullable EntityFilter<T> filter) {
         EntityIndexWriteTransaction<T>.NodePath endPath = lowerBound(end);
-        return () -> new OrderedEntityAscendingIterator<>(lowerBound(start), endPath.isEnd() ? -1 : endPath.getEntityId());
+        return () -> new OrderedEntityAscendingIterator<>(lowerBound(start), endPath.isEnd() ? -1 : endPath.getEntityId(), filter);
     }
 
     /**
@@ -116,7 +188,16 @@ public class EntityIndexReadTransaction<T extends Entity & Comparable<T>> extend
      * @return an iterable of entities
      */
     public @NotNull Iterable<T> iterableDescending() {
-        return () -> new OrderedEntityDescendingIterator<>(end());
+        return iterableDescending((EntityFilter<T>) null);
+    }
+
+    /**
+     * Gets an iterable of all entities in the index in reverse default sorting order.
+     * @param filter an optional filter
+     * @return an iterable of entities
+     */
+    public @NotNull Iterable<T> iterableDescending(@Nullable EntityFilter<T> filter) {
+        return () -> new OrderedEntityDescendingIterator<>(end(), filter);
     }
 
     /**
@@ -126,7 +207,18 @@ public class EntityIndexReadTransaction<T extends Entity & Comparable<T>> extend
      * @return an iterable of entities
      */
     public @NotNull Iterable<T> iterableDescending(@NotNull T start) {
-        return () -> new OrderedEntityDescendingIterator<>(upperBound(start));
+        return iterableDescending(start, null);
+    }
+
+    /**
+     * Gets an iterable of all entities matching an optional filter in the index starting at the given key (inclusive),
+     * in reverse default sorting order.
+     * @param start the starting key
+     * @param filter an optional filter
+     * @return an iterable of entities
+     */
+    public @NotNull Iterable<T> iterableDescending(@NotNull T start, @Nullable EntityFilter<T> filter) {
+        return () -> new OrderedEntityDescendingIterator<>(upperBound(start), filter);
     }
 
     /**
@@ -138,6 +230,15 @@ public class EntityIndexReadTransaction<T extends Entity & Comparable<T>> extend
     }
 
     /**
+     * Gets a stream of all entities in the index matching an optional filter, sorted by the default sorting order.
+     * @param filter an optional filter
+     * @return a stream of all entities
+     */
+    public @NotNull Stream<T> streamOrderedAscending(@Nullable EntityFilter<T> filter) {
+        return StreamSupport.stream(iterableAscending(filter).spliterator(), false);
+    }
+
+    /**
      * Gets a stream of all entities in the index starting at the given key (inclusive),
      * sorted by the default sorting order.
      * @param start the starting key
@@ -145,6 +246,17 @@ public class EntityIndexReadTransaction<T extends Entity & Comparable<T>> extend
      */
     public @NotNull Stream<T> streamOrderedAscending(@NotNull T start) {
         return StreamSupport.stream(iterableAscending(start).spliterator(), false);
+    }
+
+    /**
+     * Gets a stream of all entities matching an optional filter in the index starting at the given key (inclusive),
+     * sorted by the default sorting order.
+     * @param start the starting key
+     * @param filter an optional filter
+     * @return a stream of entities
+     */
+    public @NotNull Stream<T> streamOrderedAscending(@NotNull T start, @Nullable EntityFilter<T> filter) {
+        return StreamSupport.stream(iterableAscending(start, filter).spliterator(), false);
     }
 
     /**
@@ -159,11 +271,32 @@ public class EntityIndexReadTransaction<T extends Entity & Comparable<T>> extend
     }
 
     /**
+     * Gets a stream of all entities matching an optional filter in the index starting at a given key (inclusive),
+     * and ending at a given key (exclusive), sorted by the default sorting order.
+     * @param start the starting key
+     * @param end the end key
+     * @param filter an optional filter
+     * @return a stream of entities
+     */
+    public @NotNull Stream<T> streamOrderedAscending(@NotNull T start, @NotNull T end, @Nullable EntityFilter<T> filter) {
+        return StreamSupport.stream(iterableAscending(start, end, filter).spliterator(), false);
+    }
+
+    /**
      * Gets a stream of all entities in the index in reverse default sorting order.
      * @return a stream of all entities
      */
     public @NotNull Stream<T> streamOrderedDescending() {
         return StreamSupport.stream(iterableDescending().spliterator(), false);
+    }
+
+    /**
+     * Gets a stream of all entities matching an optional filter in the index in reverse default sorting order.
+     * @param filter an optional filter
+     * @return a stream of all entities
+     */
+    public @NotNull Stream<T> streamOrderedDescending(@Nullable EntityFilter<T> filter) {
+        return StreamSupport.stream(iterableDescending(filter).spliterator(), false);
     }
 
     /**
@@ -174,6 +307,17 @@ public class EntityIndexReadTransaction<T extends Entity & Comparable<T>> extend
      */
     public @NotNull Stream<T> streamOrderedDescending(@NotNull T start) {
         return StreamSupport.stream(iterableDescending(start).spliterator(), false);
+    }
+
+    /**
+     * Gets a stream of all entities matching an optional filter in the index starting at the given key (inclusive),
+     * in reverse default sorting order.
+     * @param start the starting key
+     * @param filter an optional filter
+     * @return a stream of entities
+     */
+    public @NotNull Stream<T> streamOrderedDescending(@NotNull T start, @Nullable EntityFilter<T> filter) {
+        return StreamSupport.stream(iterableDescending(start, filter).spliterator(), false);
     }
 
 }

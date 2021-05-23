@@ -2,9 +2,8 @@ package se.yarin.morphy.entities.filters;
 
 import org.jetbrains.annotations.NotNull;
 import se.yarin.morphy.entities.Team;
-import se.yarin.morphy.storage.ItemStorageFilter;
 
-public class TeamTitleFilter implements ItemStorageFilter<Team> {
+public class TeamTitleFilter implements EntityFilter<Team> {
     private final @NotNull String title;
     private final boolean caseSensitive;
     private final boolean exactMatch;
@@ -26,6 +25,4 @@ public class TeamTitleFilter implements ItemStorageFilter<Team> {
     public boolean matches(@NotNull Team team) {
         return matches(team.title());
     }
-
-    // TODO: matchesSerialized (or not, can we compare serialized strings safely?)
 }

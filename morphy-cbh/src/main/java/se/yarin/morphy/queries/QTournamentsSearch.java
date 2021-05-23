@@ -3,15 +3,15 @@ package se.yarin.morphy.queries;
 import org.jetbrains.annotations.NotNull;
 import se.yarin.morphy.DatabaseReadTransaction;
 import se.yarin.morphy.entities.Tournament;
+import se.yarin.morphy.entities.filters.EntityFilter;
 import se.yarin.morphy.entities.filters.TournamentTitleFilter;
 import se.yarin.morphy.entities.filters.TournamentYearTitleFilter;
-import se.yarin.morphy.storage.ItemStorageFilter;
 
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 public class QTournamentsSearch extends ItemQuery<Tournament> {
-    private final @NotNull ItemStorageFilter<Tournament> filter;
+    private final @NotNull EntityFilter<Tournament> filter;
 
     public QTournamentsSearch(@NotNull String name, boolean caseSensitive, boolean exactMatch) {
         int year = 0;

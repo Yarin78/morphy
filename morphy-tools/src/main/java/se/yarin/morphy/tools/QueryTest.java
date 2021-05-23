@@ -1,12 +1,10 @@
 package se.yarin.morphy.tools;
 
-import se.yarin.morphy.Database;
-import se.yarin.morphy.DatabaseMode;
-import se.yarin.morphy.DatabaseReadTransaction;
-import se.yarin.morphy.Game;
-import se.yarin.morphy.entities.Player;
+import se.yarin.morphy.*;
+import se.yarin.morphy.entities.*;
 import se.yarin.morphy.entities.filters.AnnotatorNameFilter;
 import se.yarin.morphy.entities.filters.PlayerNameFilter;
+import se.yarin.morphy.entities.filters.TournamentCategoryFilter;
 import se.yarin.morphy.entities.filters.TournamentTitleFilter;
 import se.yarin.morphy.games.filters.RatingRangeFilter;
 import se.yarin.morphy.queries.*;
@@ -14,6 +12,7 @@ import se.yarin.morphy.queries.*;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -28,10 +27,50 @@ public class QueryTest {
         QueryTest queryTest = new QueryTest(db);
 
         //queryTest.getCarlsenGames();
-        queryTest.getWorld();
+        //queryTest.getWorld();
+        //queryTest.iterateTournaments();
+        queryTest.iteratePlayers();
+    }
+
+    private void iteratePlayers() {
+        long start = System.currentTimeMillis();
+        EntityIndexReadTransaction<Player> txn = db.playerIndex().beginReadTransaction();
+
+        EntityBatchIterator<Player> iterator = new EntityBatchIterator<>(txn, 0, new PlayerNameFilter("carlsen", "m", false, false));
+        //Iterator<Player> iterator = txn.iterableAscending(new TournamentCategoryFilter(15, 99)).iterator();
+        //Iterator<Player> iterator = txn.iterableDescending(new TournamentCategoryFilter(15, 99)).iterator();
+
+        int cnt = 0;
+        while (iterator.hasNext()) {
+            cnt += 1;
+            iterator.next();
+        }
+        System.out.println(cnt + " players");
+        long elapsed = System.currentTimeMillis() - start;
+        System.out.println(elapsed + " ms");
+        db.context().instrumentation().show(2);
     }
 
     private final Database db;
+
+    private void iterateTournaments() {
+        long start = System.currentTimeMillis();
+        EntityIndexReadTransaction<Tournament> txn = db.tournamentIndex().beginReadTransaction();
+
+        // EntityBatchIterator<Tournament> iterator = new EntityBatchIterator<>(txn, 0, new TournamentCategoryFilter(15, 99));
+        //Iterator<Tournament> iterator = txn.iterableAscending(new TournamentCategoryFilter(15, 99)).iterator();
+        Iterator<Tournament> iterator = txn.iterableDescending(new TournamentCategoryFilter(15, 99)).iterator();
+
+        int cnt = 0;
+        while (iterator.hasNext()) {
+            cnt += 1;
+            iterator.next();
+        }
+        System.out.println(cnt + " tournaments");
+        long elapsed = System.currentTimeMillis() - start;
+        System.out.println(elapsed + " ms");
+        db.context().instrumentation().show(2);
+    }
 
     private void getCarlsenGames() {
         ItemQuery<Game> query = new QGamesByPlayers(new QPlayersWithName(new PlayerNameFilter("Carlsen", "Magnus", true, true)));

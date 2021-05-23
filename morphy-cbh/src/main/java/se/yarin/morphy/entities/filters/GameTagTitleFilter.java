@@ -2,9 +2,8 @@ package se.yarin.morphy.entities.filters;
 
 import org.jetbrains.annotations.NotNull;
 import se.yarin.morphy.entities.GameTag;
-import se.yarin.morphy.storage.ItemStorageFilter;
 
-public class GameTagTitleFilter implements ItemStorageFilter<GameTag> {
+public class GameTagTitleFilter implements EntityFilter<GameTag> {
     private final @NotNull String englishTitle;
     private final boolean caseSensitive;
     private final boolean exactMatch;

@@ -2,12 +2,11 @@ package se.yarin.morphy.entities.filters;
 
 import org.jetbrains.annotations.NotNull;
 import se.yarin.morphy.entities.Tournament;
-import se.yarin.morphy.storage.ItemStorageFilter;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class TournamentRoundsFilter implements ItemStorageFilter<Tournament> {
+public class TournamentRoundsFilter implements EntityFilter<Tournament>  {
     private final int minRounds;
     private final int maxRounds;
 
@@ -29,5 +28,11 @@ public class TournamentRoundsFilter implements ItemStorageFilter<Tournament> {
     @Override
     public boolean matches(@NotNull Tournament tournament) {
         return tournament.rounds() >= minRounds && tournament.rounds() <= maxRounds;
+    }
+
+    @Override
+    public boolean matchesSerialized(byte[] serializedItem) {
+        int round = serializedItem[80];
+        return round >= minRounds && round <= maxRounds;
     }
 }

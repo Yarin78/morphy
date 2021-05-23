@@ -132,12 +132,18 @@ public class Instrumentation {
     }
 
     public synchronized void show() {
+        show(0);
+    }
+
+    public synchronized void show(int min) {
         System.err.println();
         System.err.println("File       phyrd   logrd    wrts     ");
         System.err.println("-------------------------------------");
         for (String fileName : storageStats.keySet()) {
             FileStats stats = storageStats.get(fileName);
-            System.err.printf("%-8s %7d %7d %7d%n", fileName, stats.physicalPageReads, stats.logicalPageReads, stats.pageWrites);
+            if (stats.physicalPageReads >= min || stats.logicalPageReads >= min || stats.pageWrites >= min) {
+                System.err.printf("%-8s %7d %7d %7d%n", fileName, stats.physicalPageReads, stats.logicalPageReads, stats.pageWrites);
+            }
         }
 
         System.err.println();
@@ -146,7 +152,9 @@ public class Instrumentation {
         System.err.println("---------------------------------------------------------");
         for (String name : itemStats.keySet()) {
             ItemStats stats = itemStats.get(name);
-            System.err.printf("%-15s %9d %9d %9d %9d%n", name, stats.gets + stats.getRaws, stats.puts, stats.deserializations, stats.serializations);
+            if (stats.gets + stats.getRaws >= min || stats.puts >= min || stats.deserializations >= min || stats.serializations >= min) {
+                System.err.printf("%-15s %9d %9d %9d %9d%n", name, stats.gets + stats.getRaws, stats.puts, stats.deserializations, stats.serializations);
+            }
         }
     }
 

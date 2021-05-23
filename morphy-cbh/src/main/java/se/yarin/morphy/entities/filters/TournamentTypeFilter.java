@@ -3,7 +3,7 @@ package se.yarin.morphy.entities.filters;
 import org.jetbrains.annotations.NotNull;
 import se.yarin.morphy.entities.Tournament;
 import se.yarin.morphy.entities.TournamentType;
-import se.yarin.morphy.storage.ItemStorageFilter;
+import se.yarin.morphy.util.CBUtil;
 
 import java.util.Arrays;
 import java.util.HashSet;
@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-public class TournamentTypeFilter implements ItemStorageFilter<Tournament> {
+public class TournamentTypeFilter implements EntityFilter<Tournament>  {
 
     private final @NotNull Set<TournamentType> types;
 
@@ -27,5 +27,10 @@ public class TournamentTypeFilter implements ItemStorageFilter<Tournament> {
     @Override
     public boolean matches(@NotNull Tournament tournament) {
         return types.contains(tournament.type());
+    }
+
+    @Override
+    public boolean matchesSerialized(byte[] serializedItem) {
+        return types.contains(CBUtil.decodeTournamentType(serializedItem[74]));
     }
 }

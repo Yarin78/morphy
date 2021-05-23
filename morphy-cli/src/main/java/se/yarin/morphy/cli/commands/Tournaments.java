@@ -6,12 +6,9 @@ import picocli.CommandLine;
 import se.yarin.morphy.Database;
 import se.yarin.morphy.DatabaseMode;
 import se.yarin.morphy.DatabaseReadTransaction;
-import se.yarin.morphy.Game;
 import se.yarin.morphy.entities.Tournament;
-import se.yarin.morphy.entities.filters.RawTournamentFilter;
+import se.yarin.morphy.entities.filters.RawEntityFilter;
 import se.yarin.morphy.queries.*;
-import se.yarin.util.parser.Parser;
-import se.yarin.util.parser.Scanner;
 import se.yarin.morphy.cli.columns.RawTournamentColumn;
 import se.yarin.morphy.cli.columns.TournamentColumn;
 import se.yarin.morphy.cli.tournaments.StdoutTournamentsSummary;
@@ -20,10 +17,7 @@ import se.yarin.morphy.cli.tournaments.TournamentConsumer;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.Callable;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 @CommandLine.Command(name = "tournaments", mixinStandardHelpOptions = true)
 public class Tournaments extends BaseCommand implements Callable<Integer> {
@@ -157,7 +151,7 @@ public class Tournaments extends BaseCommand implements Callable<Integer> {
         }
         if (rawFilter != null) {
             for (String expression : rawFilter) {
-                tournamentQueries.add(new QTournamentsWithRaw(new RawTournamentFilter(expression)));
+                tournamentQueries.add(new QTournamentsWithRaw(new RawEntityFilter<>(expression)));
             }
         }
 

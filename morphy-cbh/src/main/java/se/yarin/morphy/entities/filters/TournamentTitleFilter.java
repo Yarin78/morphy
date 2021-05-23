@@ -2,27 +2,38 @@ package se.yarin.morphy.entities.filters;
 
 import org.jetbrains.annotations.NotNull;
 import se.yarin.morphy.entities.Tournament;
-import se.yarin.morphy.storage.ItemStorageFilter;
+import se.yarin.util.ByteBufferUtil;
 
-public class TournamentTitleFilter implements ItemStorageFilter<Tournament> {
+import java.nio.ByteBuffer;
+
+public class TournamentTitleFilter implements EntityFilter<Tournament>  {
     @NotNull
     private final String title;
     private final boolean caseSensitive;
     private final boolean exactMatch;
 
     public TournamentTitleFilter(@NotNull String title, boolean caseSensitive, boolean exactMatch) {
-        this.title = title;
+        this.title = caseSensitive ? title : title.toLowerCase();
         this.caseSensitive = caseSensitive;
         this.exactMatch = exactMatch;
     }
 
-    @Override
-    public boolean matches(@NotNull Tournament tournament) {
+    private boolean matches(String tournamentTitle) {
         if (exactMatch) {
-            return caseSensitive ? tournament.title().equals(title) : tournament.title().equalsIgnoreCase(title);
+            return caseSensitive ? tournamentTitle.equals(title) : tournamentTitle.equalsIgnoreCase(title);
         }
-        return caseSensitive ? tournament.title().startsWith(title) : tournament.title().toLowerCase().startsWith(title.toLowerCase());
+        return caseSensitive ? tournamentTitle.startsWith(title) : tournamentTitle.toLowerCase().startsWith(title);
     }
 
-    // TODO: matchesSerialized (or not, can we compare serialized strings safely?)
+    @Override
+    public boolean matches(@NotNull Tournament tournament) {
+        return matches(tournament.title());
+    }
+
+    @Override
+    public boolean matchesSerialized(byte[] serializedItem) {
+        ByteBuffer buf = ByteBuffer.wrap(serializedItem);
+        String tournamentTitle = ByteBufferUtil.getFixedSizeByteString(buf, 40);
+        return matches(tournamentTitle);
+    }
 }

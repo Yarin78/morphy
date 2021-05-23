@@ -1,10 +1,14 @@
 package se.yarin.morphy.entities.filters;
 
 import org.jetbrains.annotations.NotNull;
+import se.yarin.chess.Date;
 import se.yarin.morphy.entities.Tournament;
-import se.yarin.morphy.storage.ItemStorageFilter;
+import se.yarin.morphy.util.CBUtil;
+import se.yarin.util.ByteBufferUtil;
 
-public class TournamentYearTitleFilter implements ItemStorageFilter<Tournament> {
+import java.nio.ByteBuffer;
+
+public class TournamentYearTitleFilter implements EntityFilter<Tournament>  {
     private final int year;
     @NotNull private final String title;
     private final boolean caseSensitive;
@@ -17,16 +21,26 @@ public class TournamentYearTitleFilter implements ItemStorageFilter<Tournament> 
         this.exactMatch = exactMatch;
     }
 
-    @Override
-    public boolean matches(@NotNull Tournament tournament) {
-        if (tournament.date().year() != year) {
-            return false;
-        }
+    private boolean matchesTitle(@NotNull String tournamentTitle) {
         if (exactMatch) {
-            return caseSensitive ? tournament.title().equals(title) : tournament.title().equalsIgnoreCase(title);
+            return caseSensitive ? tournamentTitle.equals(title) : tournamentTitle.equalsIgnoreCase(title);
         }
-        return caseSensitive ? tournament.title().startsWith(title) : tournament.title().toLowerCase().startsWith(title.toLowerCase());
+        return caseSensitive ? tournamentTitle.startsWith(title) : tournamentTitle.toLowerCase().startsWith(title.toLowerCase());
     }
 
-    // TODO: matchesSerialized (or not, can we compare serialized strings safely?)
+    @Override
+    public boolean matches(@NotNull Tournament tournament) {
+        return tournament.date().year() == year && matchesTitle(tournament.title());
+    }
+
+    @Override
+    public boolean matchesSerialized(byte[] serializedItem) {
+        Date tournamentDate = CBUtil.decodeDate(ByteBufferUtil.getIntL(serializedItem, 70));
+        if (tournamentDate.year() != year) {
+            return false;
+        }
+        ByteBuffer buf = ByteBuffer.wrap(serializedItem);
+        String tournamentTitle = ByteBufferUtil.getFixedSizeByteString(buf, 40);
+        return matchesTitle(tournamentTitle);
+    }
 }
