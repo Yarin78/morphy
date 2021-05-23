@@ -406,33 +406,37 @@ public class DatabaseTest {
 
 
     @Test
-    public void randomlyAddAndReplaceGames() {
+    public void randomlyAddAndReplaceGames() throws IOException {
         Random random = new Random(0);
         GameGenerator gameGenerator = new GameGenerator();
 
         for (int iter = 0; iter < 10; iter++) {
-            Database db = new Database();
+            File file = folder.newFile("random" + iter + ".cbh");
+            file.delete();
 
-            int noOps = 100, maxGames = 20;
+            try (Database db = Database.create(file)) {
+                int noOps = iter * 10 + 10, maxGames = 20;
 
-            for (int i = 0; i < noOps; i++) {
-                int gameId = random.nextInt(maxGames) + 1;
-                GameModel game = gameGenerator.getRandomGame();
+                for (int i = 0; i < noOps; i++) {
+                    int gameId = random.nextInt(maxGames) + 1;
+                    GameModel game = gameGenerator.getRandomGame();
 
-                if (gameId <= db.gameHeaderIndex().count()) {
-                    db.replaceGame(gameId, game);
-                } else {
-                    db.addGame(game);
+                    if (gameId <= db.gameHeaderIndex().count()) {
+                        db.replaceGame(gameId, game);
+                    } else {
+                        db.addGame(game);
+                    }
+
+                    EntityStatsValidator validator = new EntityStatsValidator(db);
+                    GamesValidator gamesValidator = new GamesValidator(db);
+
+                    validator.validateEntityStatistics(true);
+                    // TODO: Validate "unused bytes" in moves/annotations headers
+                    gamesValidator.validateMovesAndAnnotationOffsets();
+                    gamesValidator.readAllGames();
                 }
-
-                EntityStatsValidator validator = new EntityStatsValidator(db);
-                GamesValidator gamesValidator = new GamesValidator(db);
-
-                validator.validateEntityStatistics(true);
-                // TODO: Validate "unused bytes" in moves/annotations headers
-                gamesValidator.validateMovesAndAnnotationOffsets();
-                gamesValidator.readAllGames();
             }
+            file.delete();
         }
     }
 

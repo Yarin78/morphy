@@ -5,12 +5,12 @@ import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.chess.*;
+import se.yarin.morphy.boosters.GameEventStorage;
+import se.yarin.morphy.boosters.GameEvents;
 import se.yarin.morphy.entities.*;
 import se.yarin.morphy.entities.Player;
 import se.yarin.morphy.exceptions.MorphyException;
-import se.yarin.morphy.games.ExtendedGameHeader;
-import se.yarin.morphy.games.GameHeader;
-import se.yarin.morphy.games.RatingType;
+import se.yarin.morphy.games.*;
 import se.yarin.morphy.text.TextContentsModel;
 import se.yarin.morphy.text.TextModel;
 
@@ -293,5 +293,14 @@ public class Game {
     public int getAnnotationsBlobSize() {
         long offset = getAnnotationOffset();
         return offset == 0 ? 0 : database.annotationRepository().getAnnotationsBlobSize(offset);
+    }
+
+    public @Nullable GameEvents gameEvents() {
+        GameEventStorage gameEventStorage = database().gameEventStorage();
+        return gameEventStorage != null ? gameEventStorage.get(id()) : null;
+    }
+
+    public TopGamesStorage.TopGameStatus topGameStatus() {
+        return database.topGamesStorage().getGameStatus(id());
     }
 }

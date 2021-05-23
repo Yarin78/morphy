@@ -13,6 +13,7 @@ import se.yarin.morphy.exceptions.MorphyInvalidDataException;
 import se.yarin.morphy.exceptions.MorphyMoveDecodingException;
 import se.yarin.morphy.games.ExtendedGameHeader;
 import se.yarin.morphy.games.GameHeader;
+import se.yarin.morphy.games.MoveOffsetStorage;
 import se.yarin.morphy.games.moves.MoveSerializer;
 
 import java.nio.ByteBuffer;
@@ -36,6 +37,8 @@ public class GamesValidator {
 
     public void validateMovesAndAnnotationOffsets() throws MorphyException {
         long lastMovesOfs = 0, lastAnnotationOfs = 0;
+        MoveOffsetStorage moveOffsetStorage = db.moveOffsetStorage();
+
         for (GameHeader gameHeader : db.gameHeaderIndex().getAll()) { // TODO: iterable
             if (gameHeader.movesOffset() <= lastMovesOfs) {
                 throw new MorphyException(String.format("Game %d has moves at offset %d while the previous game had moves at offset %d",
@@ -49,6 +52,11 @@ public class GamesValidator {
                             gameHeader.id(), gameHeader.annotationOffset(), lastAnnotationOfs));
                 }
                 lastAnnotationOfs = gameHeader.annotationOffset();
+            }
+
+            if (!gameHeader.guidingText() && moveOffsetStorage != null && moveOffsetStorage.getOffset(gameHeader.id()) != gameHeader.movesOffset()) {
+                throw new MorphyException(String.format("Game %d has move offset %d but booster has move offset %d",
+                        gameHeader.id(), gameHeader.movesOffset(), moveOffsetStorage.getOffset(gameHeader.id())));
             }
         }
 

@@ -7,6 +7,7 @@ import org.slf4j.LoggerFactory;
 import se.yarin.chess.GameHeaderModel;
 import se.yarin.chess.GameModel;
 import se.yarin.morphy.boosters.GameEntityIndex;
+import se.yarin.morphy.boosters.GameEvents;
 import se.yarin.morphy.entities.*;
 import se.yarin.morphy.exceptions.MorphyInvalidDataException;
 import se.yarin.morphy.games.*;
@@ -36,6 +37,8 @@ public class DatabaseWriteTransaction extends DatabaseTransaction {
         public ImmutableExtendedGameHeader.@NotNull Builder extendedGameHeader;
         public @NotNull ByteBuffer moveBlob;
         public @Nullable ByteBuffer annotationBlob;
+        public @Nullable TopGamesStorage.TopGameStatus topGameStatus;
+        public @Nullable GameEvents events;
 /*
         public @NotNull Game game() {
             return new Game(database, gameHeader.build(), extendedGameHeader.build());
@@ -45,11 +48,15 @@ public class DatabaseWriteTransaction extends DatabaseTransaction {
                 @NotNull ImmutableGameHeader.Builder gameHeader,
                 @NotNull ImmutableExtendedGameHeader.Builder extendedGameHeader,
                 @NotNull ByteBuffer moveBlob,
-                @Nullable ByteBuffer annotationBlob) {
+                @Nullable ByteBuffer annotationBlob,
+                @Nullable TopGamesStorage.TopGameStatus topGameStatus,
+                @Nullable GameEvents events) {
             this.gameHeader = gameHeader;
             this.extendedGameHeader = extendedGameHeader;
             this.moveBlob = moveBlob;
             this.annotationBlob = annotationBlob;
+            this.topGameStatus = topGameStatus;
+            this.events = events;
         }
     }
 
@@ -106,6 +113,10 @@ public class DatabaseWriteTransaction extends DatabaseTransaction {
     private final EntityDelta<Source> sourceDelta;
     private final EntityDelta<Team> teamDelta;
     private final EntityDelta<GameTag> gameTagDelta;
+
+    private boolean createGameEvents() {
+        return database().gameEventStorage() != null;
+    }
 
     /**
      * Creates a new database write transaction.
@@ -242,12 +253,19 @@ public class DatabaseWriteTransaction extends DatabaseTransaction {
         // But all entity references may need to be updated, if we're copying the game from another database
         buildEntities(header, extendedHeader, game);
 
+        GameEvents gameEvents = game.gameEvents();
+        if ((gameEvents == null || gameEvents.isEmpty()) && createGameEvents()) {
+            gameEvents = game.guidingText() ? new GameEvents() : new GameEvents(game.getModel().moves());
+        }
+
         return putGame(
                 gameId,
                 header,
                 extendedHeader,
                 game.getMovesBlob(),
-                game.getAnnotationOffset() == 0 ? null : game.getAnnotationsBlob());
+                game.getAnnotationOffset() == 0 ? null : game.getAnnotationsBlob(),
+                game.topGameStatus(),
+                gameEvents);
     }
 
     /**
@@ -286,7 +304,9 @@ public class DatabaseWriteTransaction extends DatabaseTransaction {
                 header,
                 extendedHeader,
                 database().moveRepository().moveSerializer().serializeMoves(model.moves()),
-                model.moves().countAnnotations() > 0 ? database().annotationRepository().annotationSerializer().serializeAnnotations(gameId, model.moves()) : null);
+                model.moves().countAnnotations() > 0 ? database().annotationRepository().annotationSerializer().serializeAnnotations(gameId, model.moves()) : null,
+                TopGamesStorage.TopGameStatus.UNKNOWN,
+                createGameEvents() ? new GameEvents(model.moves()) : null);
     }
 
     /**
@@ -307,7 +327,9 @@ public class DatabaseWriteTransaction extends DatabaseTransaction {
                 header,
                 extendedHeader,
                 model.contents().serialize(),
-                null);
+                null,
+                TopGamesStorage.TopGameStatus.UNKNOWN,
+                createGameEvents() ? new GameEvents() : null);
     }
 
     /**
@@ -321,7 +343,9 @@ public class DatabaseWriteTransaction extends DatabaseTransaction {
             @NotNull ImmutableGameHeader.Builder gameHeaderBuilder,
             @NotNull ImmutableExtendedGameHeader.Builder extendedGameHeaderBuilder,
             @NotNull ByteBuffer movesBlob,
-            @Nullable ByteBuffer annotationsBlob) {
+            @Nullable ByteBuffer annotationsBlob,
+            @Nullable TopGamesStorage.TopGameStatus topGameStatus,
+            @Nullable GameEvents events) {
         Game previousGame = null;
         if (gameId == 0) {
             // Adding a new game
@@ -337,7 +361,7 @@ public class DatabaseWriteTransaction extends DatabaseTransaction {
         }
 
         gameHeaderBuilder.id(gameId);
-        updatedGames.put(gameId, new GameData(gameHeaderBuilder, extendedGameHeaderBuilder, movesBlob, annotationsBlob));
+        updatedGames.put(gameId, new GameData(gameHeaderBuilder, extendedGameHeaderBuilder, movesBlob, annotationsBlob, topGameStatus, events));
         ImmutableGameHeader header = gameHeaderBuilder.build();
         ImmutableExtendedGameHeader extendedHeader = extendedGameHeaderBuilder.build();
         updateEntityStats(gameId, previousGame, header, extendedHeader);
@@ -387,6 +411,8 @@ public class DatabaseWriteTransaction extends DatabaseTransaction {
         ensureTransactionIsOpen();
 
         acquireLock(DatabaseContext.DatabaseLock.WRITE);
+
+        MoveOffsetStorage moveOffsetStorage = database().moveOffsetStorage();
         try {
             validateCommit();
 
@@ -465,20 +491,27 @@ public class DatabaseWriteTransaction extends DatabaseTransaction {
                                         .movesOffset(newMovesOffset)
                                         .annotationOffset(newAnnotationOffset)
                                         .build());
+                        if (moveOffsetStorage != null) {
+                            moveOffsetStorage.putOffset(i, newMovesOffset);
+                        }
                     }
+
                 }
             }
 
             // TODO: Merge this for-loop with the previous one, should be possible
             int gameCount = database().gameHeaderIndex().count();
+            HashMap<Integer, Integer> updatedMoveOffsets = new HashMap<>();
+            HashMap<Integer, TopGamesStorage.TopGameStatus> updatedTopGameStatuses = new HashMap<>();
             for (int gameId : updatedGames.keySet()) {
                 GameData updatedGameData = updatedGames.get(gameId);
+                ImmutableGameHeader gameHeader;
                 if (gameId > gameCount) {
                     long movesOffset = database().moveRepository().putMovesBlob(0, updatedGameData.moveBlob);
                     long annotationsOffset = updatedGameData.annotationBlob != null ?
                             database().annotationRepository().putAnnotationsBlob(0, updatedGameData.annotationBlob) : 0;
 
-                    ImmutableGameHeader gameHeader = updatedGameData.gameHeader
+                    gameHeader = updatedGameData.gameHeader
                             .movesOffset((int) movesOffset)
                             .annotationOffset((int) annotationsOffset)
                             .build();
@@ -493,7 +526,7 @@ public class DatabaseWriteTransaction extends DatabaseTransaction {
                     database().extendedGameHeaderStorage().put(gameId, extendedGameHeader);
                     gameCount += 1;
                 } else {
-                    ImmutableGameHeader gameHeader = updatedGameData.gameHeader.build();
+                    gameHeader = updatedGameData.gameHeader.build();
                     ImmutableExtendedGameHeader extendedGameHeader = updatedGameData.extendedGameHeader.build();
 
                     database().gameHeaderIndex().put(gameId, gameHeader);
@@ -504,7 +537,17 @@ public class DatabaseWriteTransaction extends DatabaseTransaction {
                         database().annotationRepository().putAnnotationsBlob(extendedGameHeader.annotationOffset(), updatedGameData.annotationBlob);
                     }
                 }
+
+                if (database().gameEventStorage() != null) {
+                    database().gameEventStorage().put(gameId, updatedGameData.events == null ? new GameEvents() : updatedGameData.events);
+                }
+                updatedTopGameStatuses.put(gameId, updatedGameData.topGameStatus);
+                updatedMoveOffsets.put(gameId, gameHeader.movesOffset());
             }
+            if (moveOffsetStorage != null) {
+                moveOffsetStorage.putOffsets(updatedMoveOffsets);
+            }
+            database().topGamesStorage().putGameStatuses(updatedTopGameStatuses);
 
             playerDelta.apply(playerTransaction);
             tournamentDelta.apply(tournamentTransaction);

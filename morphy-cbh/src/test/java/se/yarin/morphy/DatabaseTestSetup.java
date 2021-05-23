@@ -12,6 +12,7 @@ import se.yarin.morphy.entities.Team;
 import se.yarin.morphy.entities.Tournament;
 import se.yarin.morphy.games.ImmutableExtendedGameHeader;
 import se.yarin.morphy.games.ImmutableGameHeader;
+import se.yarin.morphy.games.TopGamesStorage;
 import se.yarin.morphy.validation.Validator;
 import se.yarin.util.ByteBufferUtil;
 
@@ -211,6 +212,8 @@ public abstract class DatabaseTestSetup {
                 header,
                 extendedHeader,
                 generateMovesBlob(movesSize, movesSeed),
-                annotationsSize == 0 ? null : generateAnnotationsBlob(annotationsSize, annotationsSeed));
+                annotationsSize == 0 ? null : generateAnnotationsBlob(annotationsSize, annotationsSeed),
+                TopGamesStorage.TopGameStatus.UNKNOWN,
+                null);
     }
 }

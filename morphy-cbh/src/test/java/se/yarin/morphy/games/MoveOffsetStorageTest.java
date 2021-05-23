@@ -10,7 +10,7 @@ import se.yarin.morphy.ResourceLoader;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.List;
+import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
 
@@ -72,17 +72,17 @@ public class MoveOffsetStorageTest {
     @Test
     public void addManyOffsets() throws IOException {
         MoveOffsetStorage storage = MoveOffsetStorage.create(moveOffsetStorageFile, null);
-        storage.putOffsets(List.of(
-                GameOffset.of(1, 100),
-                GameOffset.of(2, 120),
-                GameOffset.of(3, 150),
-                GameOffset.of(4, 190),
-                GameOffset.of(5, 230)
+        storage.putOffsets(Map.of(
+                1, 100,
+                2, 120,
+                3, 150,
+                4, 190,
+                5, 230
         ));
-        storage.putOffsets(List.of(
-                GameOffset.of(6, 240),
-                GameOffset.of(7, 290),
-                GameOffset.of(8, 340)
+        storage.putOffsets(Map.of(
+                6, 240,
+                7, 290,
+                8, 340
         ));
 
         assertEquals(8, storage.count());
@@ -93,10 +93,10 @@ public class MoveOffsetStorageTest {
         storage = MoveOffsetStorage.open(moveOffsetStorageFile, null);
         assertEquals(8, storage.count());
         assertEquals(150, storage.getOffset(3));
-        storage.putOffsets(List.of(
-                GameOffset.of(9, 350),
-                GameOffset.of(10, 390),
-                GameOffset.of(11, 400)
+        storage.putOffsets(Map.of(
+                9, 350,
+                10, 390,
+                11, 400
         ));
         assertEquals(11, storage.count());
         assertEquals(350, storage.getOffset(9));
@@ -110,22 +110,21 @@ public class MoveOffsetStorageTest {
     @Test
     public void updateOldOffsets() throws IOException {
         MoveOffsetStorage storage = MoveOffsetStorage.create(moveOffsetStorageFile, null);
-        storage.putOffsets(List.of(
-                GameOffset.of(1, 100),
-                GameOffset.of(2, 120),
-                GameOffset.of(3, 150),
-                GameOffset.of(4, 190),
-                GameOffset.of(5, 230)
-        ));
+        storage.putOffsets(Map.of(
+                1, 100,
+                2, 120,
+                3, 150,
+                4, 190,
+                5, 230)
+        );
         storage.close();
 
         storage = MoveOffsetStorage.open(moveOffsetStorageFile, null);
-        storage.putOffsets(List.of(
-                GameOffset.of(2, 122),
-                GameOffset.of(4, 193),
-                GameOffset.of(7, 300),
-                GameOffset.of(6, 250)
-        ));
+        storage.putOffsets(Map.of(
+                2, 122,
+                4, 193,
+                7, 300,
+                6, 250));
         assertEquals(100, storage.getOffset(1));
         assertEquals(122, storage.getOffset(2));
         assertEquals(150, storage.getOffset(3));
@@ -145,12 +144,12 @@ public class MoveOffsetStorageTest {
     @Test
     public void putBeyondLastGame() throws IOException {
         MoveOffsetStorage storage = MoveOffsetStorage.create(moveOffsetStorageFile, null);
-        storage.putOffsets(List.of(
-                GameOffset.of(1, 100),
-                GameOffset.of(2, 120)));
-        storage.putOffsets(List.of(
-                GameOffset.of(6, 150),
-                GameOffset.of(7, 190)));
+        storage.putOffsets(Map.of(
+                1, 100,
+                2, 120));
+        storage.putOffsets(Map.of(
+                6, 150,
+                7, 190));
 
         assertEquals(7, storage.count());
         assertEquals(120, storage.getOffset(2));

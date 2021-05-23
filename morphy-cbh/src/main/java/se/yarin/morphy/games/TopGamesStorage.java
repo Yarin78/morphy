@@ -220,11 +220,15 @@ public class TopGamesStorage {
     }
 
 
-    public void putGameStatus(int gameId, TopGameStatus status) {
+    public void putGameStatus(int gameId, @NotNull TopGameStatus status) {
         putGameStatuses(Map.of(gameId, status));
     }
 
-    public void putGameStatuses(Map<Integer, TopGameStatus> statusMap) {
+    public void putGameStatuses(@NotNull Map<Integer, TopGameStatus> statusMap) {
+        if (statusMap.size() == 0) {
+            return;
+        }
+
         highestGameId = Math.max(highestGameId, Collections.max(statusMap.keySet()));
 
         extendBuffer();

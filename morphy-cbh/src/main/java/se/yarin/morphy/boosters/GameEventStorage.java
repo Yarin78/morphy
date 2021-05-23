@@ -111,6 +111,11 @@ public class GameEventStorage implements ItemStorageSerializer<GameEventStorage.
     }
 
     public void put(int gameId, @NotNull GameEvents gameEvents) {
+        // If we're putting beyond the last game in storage, fill out with empty GameEvent items
+        // This could be done more efficiently
+        for (int i = count() + 1; i < gameId; i++) {
+            storage.putItem(i, new GameEvents());
+        }
         storage.putItem(gameId, gameEvents);
         if (gameId > count()) {
             storage.putHeader(Prolog.withCount(gameId));

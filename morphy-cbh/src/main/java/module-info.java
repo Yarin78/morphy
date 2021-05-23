@@ -33,6 +33,7 @@ module se.yarin.morphy.cbh {
     exports se.yarin.morphy.games.moves;
     exports se.yarin.morphy.games.filters;
     exports se.yarin.morphy.queries;
+    exports se.yarin.morphy.boosters;
     exports se.yarin.morphy.storage;
     exports se.yarin.morphy.validation;
     exports se.yarin.morphy.exceptions;

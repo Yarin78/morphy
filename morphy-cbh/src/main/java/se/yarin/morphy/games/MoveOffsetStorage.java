@@ -18,10 +18,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.file.OpenOption;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Set;
-import java.util.TreeSet;
+import java.util.*;
 
 import static java.nio.file.StandardOpenOption.*;
 import static se.yarin.morphy.storage.MorphyOpenOption.IGNORE_NON_CRITICAL_ERRORS;
@@ -148,10 +145,10 @@ public class MoveOffsetStorage {
     }
 
     public void putOffset(int gameId, int offset) {
-        putOffsets(List.of(ImmutableGameOffset.builder().gameId(gameId).moveOffset(offset).build()));
+        putOffsets(Map.of(gameId, offset));
     }
 
-    public void putOffsets(@NotNull List<GameOffset> newOffsets) {
+    public void putOffsets(@NotNull Map<Integer, Integer> newOffsets) {
         if (newOffsets.size() == 0) {
             return;
         }
@@ -159,12 +156,7 @@ public class MoveOffsetStorage {
         if (moveOffsets == null) {
             init();
         }
-        for (GameOffset newOffset : newOffsets) {
-            if (newOffset.gameId() > numGames) {
-                numGames = newOffset.gameId();
-            }
-        }
-
+        numGames = Math.max(numGames, Collections.max(newOffsets.keySet()));
 
         if (numGames >= moveOffsets.length) {
             int newSize = (numGames / CHUNK_SIZE + 1) * CHUNK_SIZE;
@@ -174,9 +166,11 @@ public class MoveOffsetStorage {
         Set<Integer> dirtyChunks = new TreeSet<>();
 
         // Update everything in memory and flush dirty chunks
-        for (GameOffset gameOffset : newOffsets) {
-            moveOffsets[gameOffset.gameId()] = gameOffset.moveOffset();
-            dirtyChunks.add(gameOffset.gameId() / CHUNK_SIZE);
+        for (Map.Entry<Integer, Integer> entry : newOffsets.entrySet()) {
+            int gameId = entry.getKey();
+            int offset = entry.getValue();
+            moveOffsets[gameId] = offset;
+            dirtyChunks.add(gameId / CHUNK_SIZE);
         }
         moveOffsets[0] = numGames;  // Ensures header is updated when writing
         dirtyChunks.add(0);

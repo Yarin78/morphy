@@ -2,9 +2,11 @@ package se.yarin.morphy;
 
 import org.junit.Test;
 import se.yarin.chess.*;
+import se.yarin.morphy.boosters.GameEvents;
 import se.yarin.morphy.entities.*;
 import se.yarin.morphy.entities.Player;
 import se.yarin.morphy.exceptions.MorphyInvalidDataException;
+import se.yarin.morphy.games.TopGamesStorage;
 import se.yarin.morphy.text.ImmutableTextHeaderModel;
 import se.yarin.morphy.text.ImmutableTextModel;
 import se.yarin.morphy.text.TextContentsModel;
@@ -543,7 +545,12 @@ public class DatabaseWriteTransactionTest extends DatabaseTestSetup {
             txn.addGame(new GameModel(hm, moves));
             txn.commit();
         }
+
+        db.topGamesStorage().putGameStatus(1, TopGamesStorage.TopGameStatus.IS_TOP_GAME);
         Game srcGame = db.getGame(1);
+        GameEvents srcEvents = srcGame.gameEvents();
+        assertEquals(16, srcEvents.getBytes()[7]);
+
         try (var txn = new DatabaseWriteTransaction(testBase)) {
             txn.addGame(srcGame);
             txn.commit();
@@ -561,6 +568,8 @@ public class DatabaseWriteTransactionTest extends DatabaseTestSetup {
         assertEquals(7, game16.round());
         assertEquals(GameResult.WHITE_WINS, game16.result());
         assertEquals("1.e4 e5", game16.getModel().moves().root().toSAN());
+        assertEquals(TopGamesStorage.TopGameStatus.IS_TOP_GAME, game16.topGameStatus());
+        assertEquals(srcEvents, game16.gameEvents());
     }
 
     @Test(expected = MorphyInvalidDataException.class)
