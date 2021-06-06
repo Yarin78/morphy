@@ -26,7 +26,7 @@ import static java.nio.file.StandardOpenOption.*;
 public class PlayerIndex extends EntityIndex<Player> {
     private static final Logger log = LoggerFactory.getLogger(PlayerIndex.class);
 
-    private static final int SERIALIZED_PLAYER_SIZE = 58;
+    public static final int SERIALIZED_PLAYER_SIZE = 58;
 
     public PlayerIndex() {
         this(null);

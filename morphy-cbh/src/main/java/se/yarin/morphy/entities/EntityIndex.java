@@ -10,6 +10,7 @@ import se.yarin.morphy.Instrumentation;
 import se.yarin.morphy.exceptions.MorphyEntityIndexException;
 import se.yarin.morphy.exceptions.MorphyIOException;
 import se.yarin.morphy.exceptions.MorphyNotSupportedException;
+import se.yarin.morphy.storage.FileItemStorage;
 import se.yarin.morphy.storage.ItemStorage;
 import se.yarin.morphy.util.CBUtil;
 
@@ -39,7 +40,7 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
     private final AtomicInteger currentVersion;
     private final Instrumentation.ItemStats itemStats;
 
-    @NotNull EntityIndexHeader storageHeader() {
+    public @NotNull EntityIndexHeader storageHeader() {
         return storage.getHeader();
     }
 
@@ -386,6 +387,14 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
             return txn.getDeletedEntityIds();
         } finally {
             txn.close();
+        }
+    }
+
+    public long numDiskPages() {
+        if (storage instanceof FileItemStorage) {
+            return ((FileItemStorage<EntityIndexHeader, EntityNode>) storage).numPages();
+        } else {
+            return 0;
         }
     }
 

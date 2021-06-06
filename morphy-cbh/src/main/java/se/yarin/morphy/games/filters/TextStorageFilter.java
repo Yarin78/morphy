@@ -6,7 +6,7 @@ import se.yarin.morphy.storage.ItemStorageFilter;
 
 import java.nio.ByteBuffer;
 
-public class TextStorageFilter implements ItemStorageFilter<GameHeader> {
+public class TextStorageFilter implements ItemStorageFilter<GameHeader>, GameFilter {
     @Override
     public boolean matches(@NotNull GameHeader gameHeader) {
         return gameHeader.guidingText();
@@ -14,6 +14,11 @@ public class TextStorageFilter implements ItemStorageFilter<GameHeader> {
 
     @Override
     public boolean matchesSerialized(@NotNull ByteBuffer buf) {
-        return !GameStorageFilter.isGame(buf);
+        return !IsGameFilter.isGame(buf);
+    }
+
+    @Override
+    public String toString() {
+        return "isText";
     }
 }

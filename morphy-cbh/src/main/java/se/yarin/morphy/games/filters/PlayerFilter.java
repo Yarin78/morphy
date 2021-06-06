@@ -12,7 +12,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.stream.Collectors;
 
-public class PlayerFilter extends GameStorageFilter {
+public class PlayerFilter extends IsGameFilter {
 
     private final @NotNull HashSet<Integer> playerIds;
     private final @NotNull PlayerColor color;
@@ -70,5 +70,15 @@ public class PlayerFilter extends GameStorageFilter {
         boolean isBlack = playerIds.contains(blackPlayerId);
         // TODO: Add support for results
         return (isWhite && this.color != PlayerColor.BLACK) || (isBlack && this.color != PlayerColor.WHITE);
+    }
+
+    @Override
+    public String toString() {
+        // TODO: color and result
+        if (playerIds.size() == 1) {
+            return "playerId=" + playerIds.stream().findFirst().get();
+        } else {
+            return "playerId in ( " + playerIds.stream().map(Object::toString).collect(Collectors.joining(", ")) + ")";
+        }
     }
 }

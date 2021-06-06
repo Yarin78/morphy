@@ -9,7 +9,7 @@ public class SourceTitleFilter implements EntityFilter<Source>  {
     private final boolean exactMatch;
 
     public SourceTitleFilter(@NotNull String title, boolean caseSensitive, boolean exactMatch) {
-        this.title = title;
+        this.title = caseSensitive ? title : title.toLowerCase();
         this.caseSensitive = caseSensitive;
         this.exactMatch = exactMatch;
     }
@@ -18,11 +18,22 @@ public class SourceTitleFilter implements EntityFilter<Source>  {
         if (exactMatch) {
             return caseSensitive ? sourceTitle.equals(title) : sourceTitle.equalsIgnoreCase(title);
         }
-        return caseSensitive ? sourceTitle.startsWith(title) : sourceTitle.toLowerCase().startsWith(title.toLowerCase());
+        return caseSensitive ? sourceTitle.startsWith(title) : sourceTitle.toLowerCase().startsWith(title);
     }
 
     @Override
     public boolean matches(@NotNull Source source) {
         return matches(source.title());
+    }
+
+    @Override
+    public String toString() {
+        String titleStr = caseSensitive ? "title" : "lower(title)";
+
+        if (exactMatch) {
+            return "%s='%s'".formatted(titleStr, title);
+        } else {
+            return "%s like '%s%%'".formatted(titleStr, title);
+        }
     }
 }

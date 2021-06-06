@@ -114,6 +114,14 @@ public class ExtendedGameHeaderStorage implements ItemStorageSerializer<Extended
         return storage.getHeader().version();
     }
 
+    public long numDiskPages() {
+        if (storage instanceof FileItemStorage) {
+            return ((FileItemStorage<ExtendedGameHeaderStorage.ExtProlog, ExtendedGameHeader>) storage).numPages();
+        } else {
+            return 0;
+        }
+    }
+
     /**
      * Gets an extended game header from the base
      * @param gameId the id of the game

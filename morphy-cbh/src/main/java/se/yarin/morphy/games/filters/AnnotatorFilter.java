@@ -31,7 +31,7 @@ public class AnnotatorFilter implements ItemStorageFilter<GameHeader> {
     public boolean matchesSerialized(@NotNull ByteBuffer buf) {
         int annotatorId;
 
-        if (GameStorageFilter.isGame(buf)) {
+        if (IsGameFilter.isGame(buf)) {
             // Regular game
             annotatorId = ByteBufferUtil.getUnsigned24BitB(buf, 18);
         } else {
@@ -39,5 +39,14 @@ public class AnnotatorFilter implements ItemStorageFilter<GameHeader> {
             annotatorId = ByteBufferUtil.getUnsigned24BitB(buf, 13);
         }
         return annotatorIds.contains(annotatorId);
+    }
+
+    @Override
+    public String toString() {
+        if (annotatorIds.size() == 1) {
+            return "annotatorId=" + annotatorIds.stream().findFirst().get();
+        } else {
+            return "annotatorId in ( " + annotatorIds.stream().map(Object::toString).collect(Collectors.joining(", ")) + ")";
+        }
     }
 }

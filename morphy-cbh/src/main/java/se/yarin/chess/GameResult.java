@@ -12,16 +12,15 @@ public enum GameResult {
 
     @Override
     public String toString() {
-        switch (this) {
-            case BLACK_WINS:   return "0-1";
-            case DRAW:         return "1/2-1/2";
-            case WHITE_WINS:   return "1-0";
-            case NOT_FINISHED: return "*";
-            case WHITE_WINS_ON_FORFEIT:   return "+:-";
-            case DRAW_ON_FORFEIT:   return "=:=";
-            case BLACK_WINS_ON_FORFEIT:   return "-:+";
-            case BOTH_LOST:   return "0-0";
-        }
-        return "";
+        return switch (this) {
+            case BLACK_WINS -> "0-1";
+            case DRAW -> "1/2-1/2";
+            case WHITE_WINS -> "1-0";
+            case NOT_FINISHED -> "*";
+            case WHITE_WINS_ON_FORFEIT -> "+:-";
+            case DRAW_ON_FORFEIT -> "=:=";
+            case BLACK_WINS_ON_FORFEIT -> "-:+";
+            case BOTH_LOST -> "0-0";
+        };
     }
 }

@@ -9,7 +9,7 @@ public class TeamTitleFilter implements EntityFilter<Team> {
     private final boolean exactMatch;
 
     public TeamTitleFilter(@NotNull String title, boolean caseSensitive, boolean exactMatch) {
-        this.title = title;
+        this.title = caseSensitive ? title : title.toLowerCase();
         this.caseSensitive = caseSensitive;
         this.exactMatch = exactMatch;
     }
@@ -18,11 +18,22 @@ public class TeamTitleFilter implements EntityFilter<Team> {
         if (exactMatch) {
             return caseSensitive ? teamTitle.equals(title) : teamTitle.equalsIgnoreCase(title);
         }
-        return caseSensitive ? teamTitle.startsWith(title) : teamTitle.toLowerCase().startsWith(title.toLowerCase());
+        return caseSensitive ? teamTitle.startsWith(title) : teamTitle.toLowerCase().startsWith(title);
     }
 
     @Override
     public boolean matches(@NotNull Team team) {
         return matches(team.title());
+    }
+
+    @Override
+    public String toString() {
+        String titleStr = caseSensitive ? "title" : "lower(title)";
+
+        if (exactMatch) {
+            return "%s='%s'".formatted(titleStr, title);
+        } else {
+            return "%s like '%s%%'".formatted(titleStr, title);
+        }
     }
 }

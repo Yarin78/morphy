@@ -193,6 +193,7 @@ public class GameHeaderBase implements GameHeaderSerializer {
                 batch = null;
             } else {
                 if (storage instanceof PersistentGameHeaderStorage) {
+                    // TODO: Lazy deserialization would be nice; if only 100 consecutive games are needed, deserializing 900 extra is wasteful
                     batch = ((PersistentGameHeaderStorage) storage).getRange(nextBatchStart, endId, filter);
                 } else {
                     batch = storage.getRange(nextBatchStart, endId);

@@ -36,4 +36,15 @@ public class TournamentTitleFilter implements EntityFilter<Tournament>  {
         String tournamentTitle = ByteBufferUtil.getFixedSizeByteString(buf, 40);
         return matches(tournamentTitle);
     }
+
+    @Override
+    public String toString() {
+        String titleStr = caseSensitive ? "title" : "lower(title)";
+
+        if (exactMatch) {
+            return "%s='%s'".formatted(titleStr, title);
+        } else {
+            return "%s like '%s%%'".formatted(titleStr, title);
+        }
+    }
 }

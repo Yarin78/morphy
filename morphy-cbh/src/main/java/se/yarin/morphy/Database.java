@@ -12,6 +12,7 @@ import se.yarin.morphy.exceptions.MorphyException;
 import se.yarin.morphy.exceptions.MorphyInvalidDataException;
 import se.yarin.morphy.games.*;
 import se.yarin.morphy.games.filters.GameFilter;
+import se.yarin.morphy.queries.QueryPlanner;
 import se.yarin.morphy.text.TextModel;
 import se.yarin.morphy.util.CBUtil;
 
@@ -68,6 +69,7 @@ public class Database implements EntityRetriever, AutoCloseable {
 
     @NotNull private final GameAdapter gameAdapter;
     @NotNull private final DatabaseContext context;
+    @NotNull private final QueryPlanner queryPlanner;
 
     @NotNull public String name() {
         return databaseName;
@@ -143,6 +145,8 @@ public class Database implements EntityRetriever, AutoCloseable {
         return context;
     }
 
+    @NotNull public QueryPlanner queryPlanner() { return queryPlanner; }
+
     /**
      * Creates a new in-memory ChessBase database.
      *
@@ -175,6 +179,7 @@ public class Database implements EntityRetriever, AutoCloseable {
         this.gameEventStorage = new GameEventStorage(this.context);
 
         this.gameAdapter = new GameAdapter();
+        this.queryPlanner = new QueryPlanner(this);
     }
 
     private Database(
@@ -236,6 +241,7 @@ public class Database implements EntityRetriever, AutoCloseable {
         this.gameEventStorage = gameEventStorage;
 
         this.gameAdapter = new GameAdapter();
+        this.queryPlanner = new QueryPlanner(this);
     }
 
     public static Database create(@NotNull File file) throws IOException {

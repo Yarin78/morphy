@@ -9,6 +9,8 @@ import se.yarin.chess.*;
 import se.yarin.morphy.DatabaseContext;
 import se.yarin.morphy.DatabaseMode;
 import se.yarin.morphy.Instrumentation;
+import se.yarin.morphy.entities.EntityIndexHeader;
+import se.yarin.morphy.entities.EntityNode;
 import se.yarin.morphy.exceptions.MorphyIOException;
 import se.yarin.morphy.exceptions.MorphyInternalException;
 import se.yarin.morphy.exceptions.MorphyInvalidDataException;
@@ -222,6 +224,14 @@ public class GameHeaderIndex implements ItemStorageSerializer<GameHeaderIndex.Pr
             throw new IllegalArgumentException(String.format("endId can't be less than startId (%d < %d)", endId, startId));
         }
         return storage.getItems(startId, endId - startId, filter);
+    }
+
+    public long numDiskPages() {
+        if (storage instanceof FileItemStorage) {
+            return ((FileItemStorage<GameHeaderIndex.Prolog, GameHeader>) storage).numPages();
+        } else {
+            return 0;
+        }
     }
 
     /**

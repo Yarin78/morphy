@@ -102,6 +102,10 @@ public class TournamentExtraStorage implements ItemStorageSerializer<TournamentE
         return header;
     }
 
+    public @NotNull TournamentExtraHeader storageHeader() {
+        return storage.getHeader();
+    }
+
     int getStorageVersion() {
         return storage.getHeader().version();
     }
@@ -114,6 +118,14 @@ public class TournamentExtraStorage implements ItemStorageSerializer<TournamentE
     @Override
     public int headerSize(@NotNull TournamentExtraHeader header) {
         return 32;
+    }
+
+    public long numDiskPages() {
+        if (storage instanceof FileItemStorage) {
+            return ((FileItemStorage<TournamentExtraHeader, TournamentExtra>) storage).numPages();
+        } else {
+            return 0;
+        }
     }
 
     public int numEntries() {

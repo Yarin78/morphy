@@ -8,7 +8,7 @@ import se.yarin.morphy.storage.ItemStorageFilter;
 public interface GameFilter {
     default @Nullable ItemStorageFilter<GameHeader> gameHeaderFilter() { return null; }
     default @Nullable ItemStorageFilter<ExtendedGameHeader> extendedGameHeaderFilter() { return null; }
-
+    
     static GameFilter of(
             @Nullable ItemStorageFilter<GameHeader> gameHeaderFilter,
             @Nullable ItemStorageFilter<ExtendedGameHeader> extendedGameHeaderFilter) {

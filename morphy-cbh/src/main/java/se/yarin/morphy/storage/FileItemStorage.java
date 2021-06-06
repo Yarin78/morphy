@@ -9,6 +9,7 @@ import se.yarin.morphy.exceptions.MorphyIOException;
 import se.yarin.morphy.exceptions.MorphyInvalidDataException;
 import se.yarin.morphy.exceptions.MorphyNotSupportedException;
 import se.yarin.util.BlobChannel;
+import se.yarin.util.PagedBlobChannel;
 
 import java.io.File;
 import java.io.IOException;
@@ -102,6 +103,10 @@ public class FileItemStorage<THeader, TItem> implements ItemStorage<THeader, TIt
         long itemBytes = this.fileSize - serializer.headerSize(header);
         int itemSize = serializer.itemSize(header);
         return (int) ((itemBytes + itemSize - 1) / itemSize); // round up
+    }
+
+    public long numPages() {
+        return fileSize / PagedBlobChannel.PAGE_SIZE + 1;
     }
 
     public @NotNull ByteBuffer getItemRaw(int index) {

@@ -62,4 +62,18 @@ public class PlayerNameFilter implements EntityFilter<Player> {
         String playerName = ByteBufferUtil.getFixedSizeByteString(buf, 30);
         return matches(playerName, lastName);
     }
+
+    @Override
+    public String toString() {
+        String lastNameStr = caseSensitive ? "lastName" : "lower(lastName)";
+        String firstNameStr = caseSensitive ? "firstName" : "lower(firstName)";
+
+        if (exactMatch) {
+            return "%s='%s' and %s='%s'".formatted(lastNameStr, lastName, firstNameStr, firstName);
+        } else if (firstName.length() == 0) {
+            return "%s like '%s%%'".formatted(lastNameStr, lastName);
+        } else {
+            return "%s like '%s%%' and %s like '%s%%'".formatted(lastNameStr, lastName, firstNameStr, firstName);
+        }
+    }
 }

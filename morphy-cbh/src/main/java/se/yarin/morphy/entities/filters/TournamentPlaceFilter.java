@@ -15,7 +15,7 @@ public class TournamentPlaceFilter implements EntityFilter<Tournament>  {
 
     public TournamentPlaceFilter(@NotNull String place, boolean caseSensitive, boolean exactMatch) {
         String[] places = place.split("\\|");
-        if (caseSensitive) {
+        if (!caseSensitive) {
             this.places = Arrays.stream(places).map(String::toLowerCase).collect(Collectors.toSet());
         } else {
             this.places = Arrays.stream(places).collect(Collectors.toSet());
@@ -35,5 +35,23 @@ public class TournamentPlaceFilter implements EntityFilter<Tournament>  {
     @Override
     public boolean matches(@NotNull Tournament tournament) {
         return matches(tournament.place());
+    }
+
+    @Override
+    public String toString() {
+        String placeStr = caseSensitive ? "place" : "lower(place)";
+
+        if (exactMatch) {
+            if (places.size() == 1) {
+                return placeStr + "='" + places.stream().findFirst().get() + "'";
+            }
+            return placeStr + " in (" + places.stream()
+                    .map(place -> String.format("'%s'", place))
+                    .collect(Collectors.joining(", ")) + ")";
+        } else {
+            return "(" + places.stream()
+                    .map(place -> String.format("%s like '%s%%'", placeStr, place))
+                    .collect(Collectors.joining(" or ")) + ")";
+        }
     }
 }

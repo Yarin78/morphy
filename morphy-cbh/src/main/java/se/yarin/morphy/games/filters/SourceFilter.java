@@ -33,7 +33,7 @@ public class SourceFilter implements ItemStorageFilter<GameHeader> {
     public boolean matchesSerialized(@NotNull ByteBuffer buf) {
         int sourceId;
 
-        if (GameStorageFilter.isGame(buf)) {
+        if (IsGameFilter.isGame(buf)) {
             // Regular game
             sourceId = ByteBufferUtil.getUnsigned24BitB(buf, 21);
         } else {
@@ -41,5 +41,14 @@ public class SourceFilter implements ItemStorageFilter<GameHeader> {
             sourceId = ByteBufferUtil.getUnsigned24BitB(buf, 10);
         }
         return sourceIds.contains(sourceId);
+    }
+
+    @Override
+    public String toString() {
+        if (sourceIds.size() == 1) {
+            return "sourceId=" + sourceIds.stream().findFirst().get();
+        } else {
+            return "sourceId in ( " + sourceIds.stream().map(Object::toString).collect(Collectors.joining(", ")) + ")";
+        }
     }
 }

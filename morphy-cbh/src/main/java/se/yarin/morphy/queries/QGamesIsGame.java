@@ -4,12 +4,12 @@ import org.jetbrains.annotations.NotNull;
 import se.yarin.morphy.DatabaseReadTransaction;
 import se.yarin.morphy.Game;
 import se.yarin.morphy.games.filters.GameFilter;
-import se.yarin.morphy.games.filters.GameStorageFilter;
+import se.yarin.morphy.games.filters.IsGameFilter;
 
 import java.util.stream.Stream;
 
 public class QGamesIsGame extends ItemQuery<Game> {
-    private final GameStorageFilter filter = new GameStorageFilter();
+    private final IsGameFilter filter = new IsGameFilter();
 
     @Override
     public boolean matches(@NotNull DatabaseReadTransaction txn, @NotNull Game game) {

@@ -32,4 +32,15 @@ public class TournamentTimeControlFilter implements EntityFilter<Tournament>  {
     public boolean matchesSerialized(byte[] serializedItem) {
         return timeControls.contains(CBUtil.decodeTournamentTimeControl(serializedItem[74]));
     }
+
+    @Override
+    public String toString() {
+        if (timeControls.size() == 1) {
+            return "timeControl = '" + timeControls.stream().findFirst().get().getName() + "'";
+        } else {
+            return "timeControl in (" + timeControls.stream()
+                    .map(timeControl -> String.format("'%s'", timeControl.getName()))
+                    .collect(Collectors.joining(", ")) + ")";
+        }
+    }
 }

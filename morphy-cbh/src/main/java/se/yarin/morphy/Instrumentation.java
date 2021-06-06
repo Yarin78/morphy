@@ -46,6 +46,12 @@ public class Instrumentation {
         public int pageWrites() {
             return pageWrites;
         }
+
+        public void clear() {
+            physicalPageReads = 0;
+            logicalPageReads = 0;
+            pageWrites = 0;
+        }
     }
 
     public class ItemStats {
@@ -99,6 +105,14 @@ public class Instrumentation {
         public int getGetRaws() {
             return getRaws;
         }
+
+        public void clear() {
+            gets = 0;
+            getRaws = 0;
+            puts = 0;
+            deserializations = 0;
+            serializations = 0;
+        }
     }
 
     private final Map<String, FileStats> storageStats = new TreeMap<>();
@@ -129,6 +143,15 @@ public class Instrumentation {
         ItemStats serializationInstrumentation = new ItemStats(name);
         itemStats.put(name, serializationInstrumentation);
         return serializationInstrumentation;
+    }
+
+    public synchronized void reset() {
+        for (FileStats fileStats : storageStats.values()) {
+            fileStats.clear();
+        }
+        for (ItemStats itemStats : itemStats.values()) {
+            itemStats.clear();
+        }
     }
 
     public synchronized void show() {

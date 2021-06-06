@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.Set;
 
 public class PagedBlobChannel implements BlobChannel {
-    private static final int PAGE_SIZE = 16384;
+    public static final int PAGE_SIZE = 16384;
     private static final int DEFAULT_INSERT_CHUNK_SIZE = 1024*1024;
     private final @NotNull FileChannel channel;
     private final @NotNull Instrumentation.FileStats fileStats;

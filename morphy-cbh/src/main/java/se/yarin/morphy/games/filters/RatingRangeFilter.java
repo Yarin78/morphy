@@ -8,7 +8,7 @@ import java.nio.ByteBuffer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class RatingRangeFilter extends GameStorageFilter {
+public class RatingRangeFilter extends IsGameFilter {
     private static final Pattern ratingRangePattern = Pattern.compile("^([0-9]+)?-([0-9]+)?$");
 
     private final int minRating;
@@ -82,5 +82,17 @@ public class RatingRangeFilter extends GameStorageFilter {
         int whiteRating = ByteBufferUtil.getUnsignedShortB(buf, 31);
         int blackRating = ByteBufferUtil.getUnsignedShortB(buf, 33);
         return matches(whiteRating, blackRating);
+    }
+
+    @Override
+    public String toString() {
+        // TODO: color
+        if (minRating == 0) {
+            return "rating < " + maxRating;
+        } else if (maxRating == 9999) {
+            return "rating > " + minRating;
+        } else {
+            return "rating > " + minRating + " and rating < " + maxRating;
+        }
     }
 }

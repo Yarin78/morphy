@@ -33,4 +33,15 @@ public class TournamentTypeFilter implements EntityFilter<Tournament>  {
     public boolean matchesSerialized(byte[] serializedItem) {
         return types.contains(CBUtil.decodeTournamentType(serializedItem[74]));
     }
+
+    @Override
+    public String toString() {
+        if (types.size() == 1) {
+            return "type = '" + types.stream().findFirst().get().getName() + "'";
+        } else {
+            return "type in (" + types.stream()
+                    .map(type -> String.format("'%s'", type.getName()))
+                    .collect(Collectors.joining(", ")) + ")";
+        }
+    }
 }

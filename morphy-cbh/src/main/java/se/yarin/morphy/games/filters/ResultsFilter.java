@@ -8,7 +8,7 @@ import se.yarin.util.ByteBufferUtil;
 
 import java.nio.ByteBuffer;
 
-public class ResultsFilter extends GameStorageFilter {
+public class ResultsFilter extends IsGameFilter {
     private @NotNull GameResult result;
 
     public ResultsFilter(@NotNull String results) {
@@ -47,5 +47,10 @@ public class ResultsFilter extends GameStorageFilter {
     public boolean matchesSerialized(@NotNull ByteBuffer buf) {
         return super.matchesSerialized(buf) &&
                 result.equals(CBUtil.decodeGameResult(ByteBufferUtil.getUnsignedByte(buf, 27)));
+    }
+
+    @Override
+    public String toString() {
+        return "result = '" + result + "'";
     }
 }

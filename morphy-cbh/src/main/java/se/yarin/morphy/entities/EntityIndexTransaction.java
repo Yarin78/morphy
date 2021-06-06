@@ -6,6 +6,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.morphy.DatabaseContext;
 import se.yarin.morphy.TransactionBase;
+import se.yarin.morphy.entities.filters.EntityFilter;
 import se.yarin.morphy.exceptions.MorphyInternalException;
 
 public abstract class EntityIndexTransaction<T extends Entity & Comparable<T>> extends TransactionBase {
@@ -34,6 +35,23 @@ public abstract class EntityIndexTransaction<T extends Entity & Comparable<T>> e
     public @NotNull T get(int id) {
         ensureTransactionIsOpen();
         return deserializeEntity(getNode(id));
+    }
+
+    /**
+     * Gets an entity by id if it matches a filter
+     * @param id the id of the entity
+     * @param filter an optional entity filter
+     * @return the entity, or null if the entity doesn't match the filter
+     * @throws IllegalArgumentException if there is no entity with the given id
+     */
+    public @Nullable T get(int id, @Nullable EntityFilter<T> filter) {
+        ensureTransactionIsOpen();
+        EntityNode node = getNode(id);
+
+        if (filter != null && !filter.matchesSerialized(node.getSerializedEntity())) {
+            return null;
+        }
+        return deserializeEntity(node);
     }
 
     /**

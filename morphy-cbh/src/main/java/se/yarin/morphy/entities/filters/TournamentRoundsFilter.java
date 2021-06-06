@@ -35,4 +35,15 @@ public class TournamentRoundsFilter implements EntityFilter<Tournament>  {
         int round = serializedItem[80];
         return round >= minRounds && round <= maxRounds;
     }
+
+    @Override
+    public String toString() {
+        if (minRounds == 0) {
+            return "rounds <= " + maxRounds;
+        } else if (maxRounds == 9999) {
+            return "rounds >= " + minRounds;
+        } else {
+            return "rounds >= " + minRounds + " and rounds <= " + maxRounds;
+        }
+    }
 }

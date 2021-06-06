@@ -7,11 +7,12 @@ import se.yarin.util.parser.Parser;
 import se.yarin.util.parser.Scanner;
 
 public class RawEntityFilter<T> implements EntityFilter<T> {
-    @NotNull
-    private final Expr expr;
+    @NotNull private final Expr expr;
+    @NotNull private final String filterExpression;
 
     public RawEntityFilter(@NotNull String filterExpression) {
         Scanner scanner = new Scanner(filterExpression);
+        this.filterExpression = filterExpression;
         this.expr = new Parser(scanner.scanTokens()).parse();
     }
 
@@ -26,5 +27,10 @@ public class RawEntityFilter<T> implements EntityFilter<T> {
     public boolean matchesSerialized(byte[] buf) {
         Interpreter interpreter = new Interpreter(buf);
         return (boolean) interpreter.evaluate(expr);
+    }
+
+    @Override
+    public String toString() {
+        return "raw(" + filterExpression + ")";
     }
 }

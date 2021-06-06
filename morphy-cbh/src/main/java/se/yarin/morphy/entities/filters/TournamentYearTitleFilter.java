@@ -16,7 +16,7 @@ public class TournamentYearTitleFilter implements EntityFilter<Tournament>  {
 
     public TournamentYearTitleFilter(int year, @NotNull String title, boolean caseSensitive, boolean exactMatch) {
         this.year = year;
-        this.title = title;
+        this.title = caseSensitive ? title : title.toLowerCase();
         this.caseSensitive = caseSensitive;
         this.exactMatch = exactMatch;
     }
@@ -25,7 +25,7 @@ public class TournamentYearTitleFilter implements EntityFilter<Tournament>  {
         if (exactMatch) {
             return caseSensitive ? tournamentTitle.equals(title) : tournamentTitle.equalsIgnoreCase(title);
         }
-        return caseSensitive ? tournamentTitle.startsWith(title) : tournamentTitle.toLowerCase().startsWith(title.toLowerCase());
+        return caseSensitive ? tournamentTitle.startsWith(title) : tournamentTitle.toLowerCase().startsWith(title);
     }
 
     @Override
@@ -42,5 +42,16 @@ public class TournamentYearTitleFilter implements EntityFilter<Tournament>  {
         ByteBuffer buf = ByteBuffer.wrap(serializedItem);
         String tournamentTitle = ByteBufferUtil.getFixedSizeByteString(buf, 40);
         return matchesTitle(tournamentTitle);
+    }
+
+    @Override
+    public String toString() {
+        String titleStr = caseSensitive ? "title" : "lower(title)";
+
+        if (exactMatch) {
+            return "year=%d and %s='%s'".formatted(year, titleStr, title);
+        } else {
+            return "year=%d %s like '%s%%'".formatted(year, titleStr, title);
+        }
     }
 }

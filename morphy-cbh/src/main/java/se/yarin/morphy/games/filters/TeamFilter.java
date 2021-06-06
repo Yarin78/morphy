@@ -1,6 +1,7 @@
 package se.yarin.morphy.games.filters;
 
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import se.yarin.morphy.entities.Team;
 import se.yarin.morphy.games.ExtendedGameHeader;
 import se.yarin.morphy.storage.ItemStorageFilter;
@@ -12,7 +13,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.stream.Collectors;
 
-public class TeamFilter implements ItemStorageFilter<ExtendedGameHeader> {
+public class TeamFilter implements ItemStorageFilter<ExtendedGameHeader>, GameFilter {
     private final @NotNull HashSet<Integer> teamIds;
     private final @NotNull PlayerColor color;
 
@@ -46,5 +47,17 @@ public class TeamFilter implements ItemStorageFilter<ExtendedGameHeader> {
         boolean isWhite = teamIds.contains(whiteTeamId);
         boolean isBlack = teamIds.contains(blackTeamId);
         return (isWhite && this.color != PlayerColor.BLACK) || (isBlack && this.color != PlayerColor.WHITE);
+    }
+
+    public @Nullable ItemStorageFilter<ExtendedGameHeader> extendedGameHeaderFilter() { return this; }
+
+    @Override
+    public String toString() {
+        // TODO: color
+        if (teamIds.size() == 1) {
+            return "teamId=" + teamIds.stream().findFirst().get();
+        } else {
+            return "teamId in ( " + teamIds.stream().map(Object::toString).collect(Collectors.joining(", ")) + ")";
+        }
     }
 }

@@ -32,7 +32,7 @@ public class TournamentFilter implements ItemStorageFilter<GameHeader> {
     public boolean matchesSerialized(@NotNull ByteBuffer buf) {
         int tournamentId;
 
-        if (GameStorageFilter.isGame(buf)) {
+        if (IsGameFilter.isGame(buf)) {
             // Regular game
             tournamentId = ByteBufferUtil.getUnsigned24BitB(buf, 15);
         } else {
@@ -40,5 +40,14 @@ public class TournamentFilter implements ItemStorageFilter<GameHeader> {
             tournamentId = ByteBufferUtil.getUnsigned24BitB(buf, 7);
         }
         return tournamentIds.contains(tournamentId);
+    }
+
+    @Override
+    public String toString() {
+        if (tournamentIds.size() == 1) {
+            return "tournamentId=" + tournamentIds.stream().findFirst().get();
+        } else {
+            return "tournamentId in ( " + tournamentIds.stream().map(Object::toString).collect(Collectors.joining(", ")) + ")";
+        }
     }
 }

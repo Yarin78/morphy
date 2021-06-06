@@ -1,6 +1,7 @@
 package se.yarin.morphy.games.filters;
 
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import se.yarin.morphy.games.ExtendedGameHeader;
 import se.yarin.morphy.games.ExtendedGameHeaderStorage;
 import se.yarin.morphy.storage.ItemStorageFilter;
@@ -11,11 +12,13 @@ import se.yarin.util.parser.Scanner;
 
 import java.nio.ByteBuffer;
 
-public class RawExtendedHeaderFilter implements ItemStorageFilter<ExtendedGameHeader> {
+public class RawExtendedHeaderFilter implements ItemStorageFilter<ExtendedGameHeader>, GameFilter {
     @NotNull private final Expr expr;
+    @NotNull private final String filterExpression;
 
     public RawExtendedHeaderFilter(@NotNull String filterExpression) {
         Scanner scanner = new Scanner(filterExpression);
+        this.filterExpression = filterExpression;
         this.expr = new Parser(scanner.scanTokens()).parse();
     }
 
@@ -35,5 +38,12 @@ public class RawExtendedHeaderFilter implements ItemStorageFilter<ExtendedGameHe
         buf.reset();
         Interpreter interpreter = new Interpreter(bytes);
         return (boolean) interpreter.evaluate(expr);
+    }
+
+    public @Nullable ItemStorageFilter<ExtendedGameHeader> extendedGameHeaderFilter() { return this; }
+
+    @Override
+    public String toString() {
+        return "cbj_raw(" + filterExpression + ")";
     }
 }

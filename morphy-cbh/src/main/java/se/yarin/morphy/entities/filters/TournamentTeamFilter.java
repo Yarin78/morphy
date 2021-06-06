@@ -13,4 +13,9 @@ public class TournamentTeamFilter implements EntityFilter<Tournament>  {
     public boolean matchesSerialized(byte[] serializedItem) {
         return (serializedItem[75] & 1) == 1;
     }
+
+    @Override
+    public String toString() {
+        return "isTeam";
+    }
 }

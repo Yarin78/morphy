@@ -2,6 +2,7 @@ package se.yarin.morphy.entities.filters;
 
 import org.jetbrains.annotations.NotNull;
 import se.yarin.morphy.entities.Tournament;
+import se.yarin.morphy.queries.QueryPlanner;
 
 public class TournamentCategoryFilter implements EntityFilter<Tournament> {
     private final int minCategory;
@@ -21,5 +22,19 @@ public class TournamentCategoryFilter implements EntityFilter<Tournament> {
     public boolean matchesSerialized(byte[] serializedItem) {
         int category = serializedItem[78];
         return category >= minCategory && category <= maxCategory;
+    }
+
+    @Override
+    public double expectedMatch(@NotNull QueryPlanner planner) {
+        return planner.tournamentCategoryDistribution().ratioBetween(minCategory, maxCategory);
+    }
+
+    @Override
+    public String toString() {
+        if (minCategory == 0) {
+            return "category <= " + maxCategory;
+        } else {
+            return "category >= " + minCategory + " and category <= " + maxCategory;
+        }
     }
 }

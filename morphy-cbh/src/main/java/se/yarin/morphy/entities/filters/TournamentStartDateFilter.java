@@ -4,6 +4,7 @@ import org.jetbrains.annotations.NotNull;
 import se.yarin.chess.Date;
 import se.yarin.morphy.entities.Tournament;
 import se.yarin.morphy.games.filters.DateRangeFilter;
+import se.yarin.morphy.queries.QueryPlanner;
 import se.yarin.morphy.util.CBUtil;
 import se.yarin.util.ByteBufferUtil;
 
@@ -33,5 +34,25 @@ public class TournamentStartDateFilter implements EntityFilter<Tournament>  {
     @Override
     public boolean matchesSerialized(byte[] serializedItem) {
         return matches(CBUtil.decodeDate(ByteBufferUtil.getIntL(serializedItem, 70)));
+    }
+
+    @Override
+    public String toString() {
+        String fromDateStr = fromDate.isUnset() ? null :  ("fromDate >= '" + fromDate + "'");
+        String toDateStr = toDate.isUnset() ? null :  ("toDate <= '" + toDate + "'");
+        if (fromDateStr == null && toDateStr == null) {
+            return "true";
+        } else if (fromDateStr != null && toDateStr != null) {
+            return fromDateStr + " and " + toDateStr;
+        } else if (fromDateStr != null) {
+            return fromDateStr;
+        } else {
+            return toDateStr;
+        }
+    }
+
+    @Override
+    public double expectedMatch(@NotNull QueryPlanner planner) {
+        return planner.tournamentYearDistribution().ratioBetween(fromDate.year(), toDate.isUnset() ? 3000 : toDate.year());
     }
 }
