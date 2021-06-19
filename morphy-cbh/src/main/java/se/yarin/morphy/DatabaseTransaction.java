@@ -7,20 +7,25 @@ import se.yarin.morphy.entities.*;
 import se.yarin.morphy.games.ExtendedGameHeader;
 import se.yarin.morphy.games.ExtendedGameHeaderStorage;
 import se.yarin.morphy.games.GameHeader;
+import se.yarin.morphy.metrics.Metrics;
+import se.yarin.morphy.metrics.MetricsRepository;
 
 public abstract class DatabaseTransaction extends TransactionBase implements EntityRetriever {
     private static final Logger log = LoggerFactory.getLogger(DatabaseTransaction.class);
 
     private final @NotNull GameAdapter gameAdapter = new GameAdapter();
     private final @NotNull Database database;
+    private final @NotNull MetricsRepository metrics;
 
-    public Database database() {
+    public @NotNull Database database() {
         return database;
     }
 
-    public GameAdapter gameAdapter() {
+    public @NotNull GameAdapter gameAdapter() {
         return gameAdapter;
     }
+
+    public @NotNull MetricsRepository metrics() { return metrics; }
 
     public abstract int version();
 
@@ -35,6 +40,7 @@ public abstract class DatabaseTransaction extends TransactionBase implements Ent
         super(lock, database.context());
 
         this.database = database;
+        this.metrics = database.context().instrumentation().pushContext("txn");
     }
 
     public @NotNull Game getGame(int gameId) {
@@ -87,5 +93,7 @@ public abstract class DatabaseTransaction extends TransactionBase implements Ent
         gameTagTransaction().close();
 
         super.close();
+
+        database.context().instrumentation().popContext();
     }
 }

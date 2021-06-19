@@ -1,8 +1,9 @@
 package se.yarin.morphy.boosters;
 
 import org.jetbrains.annotations.NotNull;
-import se.yarin.morphy.Instrumentation;
 import se.yarin.morphy.exceptions.MorphyInvalidDataException;
+import se.yarin.morphy.metrics.ItemMetrics;
+import se.yarin.morphy.metrics.MetricsRef;
 import se.yarin.morphy.storage.ItemStorageSerializer;
 import se.yarin.util.ByteBufferUtil;
 
@@ -10,11 +11,11 @@ import java.nio.ByteBuffer;
 
 public class IndexSerializer implements ItemStorageSerializer<IndexHeader, IndexItem> {
     private final int numEntityTypes;
-    private final @NotNull Instrumentation.ItemStats itemStats;
+    private final @NotNull MetricsRef<ItemMetrics> itemMetricsRef;
 
-    public IndexSerializer(int numEntityTypes, @NotNull Instrumentation.ItemStats itemStats) {
+    public IndexSerializer(int numEntityTypes, @NotNull MetricsRef<ItemMetrics> itemMetricsRef) {
         this.numEntityTypes = numEntityTypes;
-        this.itemStats = itemStats;
+        this.itemMetricsRef = itemMetricsRef;
     }
 
     @Override
@@ -48,7 +49,7 @@ public class IndexSerializer implements ItemStorageSerializer<IndexHeader, Index
 
     @Override
     public @NotNull IndexItem deserializeItem(int id, @NotNull ByteBuffer buf, @NotNull IndexHeader header) {
-        itemStats.addDeserialization(1);
+        itemMetricsRef.update(metrics -> metrics.addDeserialization(1));
 
         int[] ints = new int[header.itemSize() / 4];
         for (int i = 0; i < ints.length; i++) {
@@ -73,7 +74,7 @@ public class IndexSerializer implements ItemStorageSerializer<IndexHeader, Index
 
     @Override
     public void serializeItem(@NotNull IndexItem indexItem, @NotNull ByteBuffer buf, @NotNull IndexHeader header) {
-        itemStats.addSerialization(1);
+        itemMetricsRef.update(metrics -> metrics.addSerialization(1));
 
         assert indexItem.headTails().length == header.itemSize() / 4;
         for (int i = 0; i < header.itemSize() / 4; i++) {

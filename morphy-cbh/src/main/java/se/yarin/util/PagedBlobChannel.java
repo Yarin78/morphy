@@ -2,6 +2,8 @@ package se.yarin.util;
 
 import org.jetbrains.annotations.NotNull;
 import se.yarin.morphy.Instrumentation;
+import se.yarin.morphy.metrics.FileMetrics;
+import se.yarin.morphy.metrics.MetricsRef;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -16,14 +18,14 @@ public class PagedBlobChannel implements BlobChannel {
     public static final int PAGE_SIZE = 16384;
     private static final int DEFAULT_INSERT_CHUNK_SIZE = 1024*1024;
     private final @NotNull FileChannel channel;
-    private final @NotNull Instrumentation.FileStats fileStats;
+    private final @NotNull MetricsRef<FileMetrics> fileMetricsRef;
     private long size; // Should match channel.size()
     private int chunkSize;
     private final SimpleLRUCache<Integer, ByteBuffer> pageCache;
 
-    public PagedBlobChannel(@NotNull FileChannel channel, @NotNull Instrumentation.FileStats fileStats) throws IOException {
+    public PagedBlobChannel(@NotNull FileChannel channel, @NotNull MetricsRef<FileMetrics> fileMetricsRef) throws IOException {
         this.channel = channel;
-        this.fileStats = fileStats;
+        this.fileMetricsRef = fileMetricsRef;
         this.size = this.channel.size();
         this.chunkSize = DEFAULT_INSERT_CHUNK_SIZE;
         this.pageCache = new SimpleLRUCache<>(8);
@@ -31,11 +33,11 @@ public class PagedBlobChannel implements BlobChannel {
 
     // Used by old code
     public static PagedBlobChannel open(Path path, OpenOption... openOptions) throws IOException {
-        return new PagedBlobChannel(FileChannel.open(path, openOptions), new Instrumentation().fileStats(path));
+        return new PagedBlobChannel(FileChannel.open(path, openOptions), FileMetrics.register(new Instrumentation(), path));
     }
 
     public static PagedBlobChannel open(Path path, Instrumentation instrumentation, Set<? extends OpenOption> openOptions) throws IOException {
-        return new PagedBlobChannel(FileChannel.open(path, openOptions), instrumentation.fileStats(path));
+        return new PagedBlobChannel(FileChannel.open(path, openOptions), FileMetrics.register(instrumentation, path));
     }
 
     public void setChunkSize(int chunkSize) {
@@ -47,7 +49,7 @@ public class PagedBlobChannel implements BlobChannel {
     }
 
     private ByteBuffer readPageUncached(int page) throws IOException {
-        fileStats.addPhysicalReads(1);
+        fileMetricsRef.update(metrics -> metrics.addPhysicalReads(1));
         ByteBuffer buf = ByteBuffer.allocate(PAGE_SIZE);
         channel.position((long) page * PAGE_SIZE);
         channel.read(buf);
@@ -60,7 +62,7 @@ public class PagedBlobChannel implements BlobChannel {
         for (int page = firstPage; page <= lastPage; page++) {
             ByteBuffer cached = pageCache.get(page);
             if (cached != null) {
-                fileStats.addLogicalReads(1);
+                fileMetricsRef.update(metrics -> metrics.addLogicalReads(1));
                 pages.add(cached);
             } else {
                 ByteBuffer data = readPageUncached(page);
@@ -121,7 +123,7 @@ public class PagedBlobChannel implements BlobChannel {
         for (int page = startPage; page <= lastPage; page++) {
             pageCache.evict(page);
         }
-        fileStats.addWrites(lastPage - startPage + 1);
+        fileMetricsRef.update(metrics -> metrics.addWrites(lastPage - startPage + 1));
         return written;
     }
 
@@ -146,11 +148,11 @@ public class PagedBlobChannel implements BlobChannel {
             channel.position(pos);
             buf.limit(length);
             channel.read(buf);
-            fileStats.addPhysicalReads(numPages);
+            fileMetricsRef.update(metrics -> metrics.addPhysicalReads(numPages));
             buf.flip();
             channel.position(pos + noBytes);
             channel.write(buf);
-            fileStats.addWrites(numPages);
+            fileMetricsRef.update(metrics -> metrics.addWrites(numPages));
             buf.clear();
         }
         size += noBytes;

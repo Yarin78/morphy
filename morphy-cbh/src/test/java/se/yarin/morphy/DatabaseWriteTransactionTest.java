@@ -7,6 +7,8 @@ import se.yarin.morphy.entities.*;
 import se.yarin.morphy.entities.Player;
 import se.yarin.morphy.exceptions.MorphyInvalidDataException;
 import se.yarin.morphy.games.TopGamesStorage;
+import se.yarin.morphy.metrics.ItemMetrics;
+import se.yarin.morphy.metrics.MetricsRepository;
 import se.yarin.morphy.text.ImmutableTextHeaderModel;
 import se.yarin.morphy.text.ImmutableTextModel;
 import se.yarin.morphy.text.TextContentsModel;
@@ -1139,22 +1141,43 @@ public class DatabaseWriteTransactionTest extends DatabaseTestSetup {
     }
 
     @Test
+    public void testUpdateGameUpdatesGameEntityIndex() {
+        try (var txn = new DatabaseWriteTransaction(testBase)) {
+            MetricsRepository repository = testBase.context().instrumentation().getCurrent();
+            int getsBefore = repository.<ItemMetrics>getMetrics("items", "IndexBlock").gets();
+            int putsBefore = repository.<ItemMetrics>getMetrics("items", "IndexBlock").puts();
+            assertEquals(0, getsBefore);
+            assertEquals(0, putsBefore);
+
+            putTestGame(txn, 2, "Carlsen - Nepo", "tour1", null, null, null, null,10, 0, 1, 1);
+            txn.commit();
+
+            int getsAfter = repository.<ItemMetrics>getMetrics("items", "IndexBlock").gets();
+            int putsAfter = repository.<ItemMetrics>getMetrics("items", "IndexBlock").puts();
+
+            assertNotEquals(0, getsAfter);
+            assertNotEquals(0, putsAfter);
+        }
+    }
+
+    @Test
     public void testUpdateGameWithoutChangingEntitiesDoesNotUpdateGameEntityIndex() {
         try (var txn = new DatabaseWriteTransaction(testBase)) {
-            Instrumentation instrumentation = testBase.context().instrumentation();
-            int getsBefore = instrumentation.itemStats("IndexBlock").gets();
-            int putsBefore = instrumentation.itemStats("IndexBlock").puts();
-            assertTrue(getsBefore + putsBefore > 0);
+            MetricsRepository repository = testBase.context().instrumentation().getCurrent();
+            int getsBefore = repository.<ItemMetrics>getMetrics("items", "IndexBlock").gets();
+            int putsBefore = repository.<ItemMetrics>getMetrics("items", "IndexBlock").puts();
+            assertEquals(0, getsBefore);
+            assertEquals(0, putsBefore);
 
             putTestGame(txn, 2, "Giri - Nepo", "tour1", null, null, null, null,10, 0, 1, 1);
             txn.commit();
 
-            int getsAfter = instrumentation.itemStats("IndexBlock").gets();
-            int putsAfter = instrumentation.itemStats("IndexBlock").puts();
+            int getsAfter = repository.<ItemMetrics>getMetrics("items", "IndexBlock").gets();
+            int putsAfter = repository.<ItemMetrics>getMetrics("items", "IndexBlock").puts();
 
             // Ensure that the index need not be changed
-            assertEquals(getsAfter, getsBefore);
-            assertEquals(putsAfter, putsBefore);
+            assertEquals(0, getsAfter);
+            assertEquals(0, putsAfter);
         }
     }
 }

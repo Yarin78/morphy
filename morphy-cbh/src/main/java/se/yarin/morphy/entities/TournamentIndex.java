@@ -134,7 +134,7 @@ public class TournamentIndex extends EntityIndex<Tournament> {
     }
 
     protected @NotNull Tournament deserialize(int entityId, int count, int firstGameId, byte[] serializedData) {
-        serializationStats().addDeserialization(1);
+        itemMetricsRef().update(metrics -> metrics.addDeserialization(1));
         ByteBuffer buf = ByteBuffer.wrap(serializedData);
 
         ImmutableTournament.Builder builder = ImmutableTournament.builder()
@@ -183,7 +183,7 @@ public class TournamentIndex extends EntityIndex<Tournament> {
 
     @Override
     protected void serialize(@NotNull Tournament tournament, @NotNull ByteBuffer buf) {
-        serializationStats().addSerialization(1);
+        itemMetricsRef().update(metrics -> metrics.addSerialization(1));
         int typeByte = CBUtil.encodeTournamentType(tournament.type(), tournament.timeControl());
 
         int optionByte =

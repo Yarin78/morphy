@@ -62,7 +62,7 @@ public class SourceIndex extends EntityIndex<Source> {
 
     @Override
     protected @NotNull Source deserialize(int entityId, int count, int firstGameId, byte[] serializedData) {
-        serializationStats().addDeserialization(1);
+        itemMetricsRef().update(metrics -> metrics.addDeserialization(1));
         ByteBuffer buf = ByteBuffer.wrap(serializedData);
         return ImmutableSource.builder()
                 .id(entityId)
@@ -79,7 +79,7 @@ public class SourceIndex extends EntityIndex<Source> {
 
     @Override
     protected void serialize(@NotNull Source source, @NotNull ByteBuffer buf) {
-        serializationStats().addSerialization(1);
+        itemMetricsRef().update(metrics -> metrics.addSerialization(1));
         ByteBufferUtil.putFixedSizeByteString(buf, source.title(), 25);
         ByteBufferUtil.putFixedSizeByteString(buf, source.publisher(), 16);
         ByteBufferUtil.putIntL(buf, CBUtil.encodeDate(source.publication()));

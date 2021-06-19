@@ -1,184 +1,68 @@
 package se.yarin.morphy;
 
 import org.jetbrains.annotations.NotNull;
+import se.yarin.morphy.metrics.Metrics;
+import se.yarin.morphy.metrics.MetricsKey;
+import se.yarin.morphy.metrics.MetricsRef;
+import se.yarin.morphy.metrics.MetricsRepository;
 
-import java.nio.file.Path;
-import java.util.Map;
-import java.util.TreeMap;
+import java.util.HashMap;
+import java.util.function.Supplier;
 
-public class Instrumentation {
+public class Instrumentation extends MetricsRepository {
+    private final ThreadLocal<MetricsRepository> nestedMetricsRepositories = ThreadLocal.withInitial(() -> this);
 
-    public class FileStats {
+    private final HashMap<MetricsKey, Supplier<? extends Metrics>> registeredMetrics = new HashMap<>();
 
-        private final String name;
-        private int physicalPageReads;
-        private int logicalPageReads;
-        private int pageWrites;
-
-        public FileStats(String name) {
-            this.name = name;
-        }
-
-        public void addPhysicalReads(int count) {
-            physicalPageReads += count;
-        }
-
-        public void addLogicalReads(int count) {
-            logicalPageReads += count;
-        }
-
-        public void addWrites(int count) {
-            pageWrites += count;
-        }
-
-        public String name() {
-            return name;
-        }
-
-        public int physicalPageReads() {
-            return physicalPageReads;
-        }
-
-        public int logicalPageReads() {
-            return logicalPageReads;
-        }
-
-        public int pageWrites() {
-            return pageWrites;
-        }
-
-        public void clear() {
-            physicalPageReads = 0;
-            logicalPageReads = 0;
-            pageWrites = 0;
-        }
+    public Instrumentation() {
+        super("Global");
     }
 
-    public class ItemStats {
-        private final String name;
-        private int gets;
-        private int getRaws;
-        private int puts;
-        private int deserializations;
-        private int serializations;
-
-        public ItemStats(String name) {
-            this.name = name;
-        }
-
-        public void addDeserialization(int count) {
-            deserializations += count;
-        }
-
-        public void addSerialization(int count) {
-            serializations += count;
-        }
-
-        public void addGet(int count) {
-            gets += count;
-        }
-
-        public void addPut(int count) {
-            puts += count;
-        }
-
-        public void addGetRaw(int count) {
-            getRaws += count;
-        }
-
-        public int deserializations() {
-            return deserializations;
-        }
-
-        public int serializations() {
-            return serializations;
-        }
-
-        public int gets() {
-            return gets;
-        }
-
-        public int puts() {
-            return puts;
-        }
-
-        public int getGetRaws() {
-            return getRaws;
-        }
-
-        public void clear() {
-            gets = 0;
-            getRaws = 0;
-            puts = 0;
-            deserializations = 0;
-            serializations = 0;
-        }
+    public synchronized <T extends Metrics> MetricsRef<T> register(@NotNull String group, @NotNull String name, @NotNull Supplier<T> metricsFactory) {
+        return register(group, name, metricsFactory, false);
     }
 
-    private final Map<String, FileStats> storageStats = new TreeMap<>();
-    private final Map<String, ItemStats> itemStats = new TreeMap<>();
-
-    public synchronized FileStats fileStats(@NotNull Path path) {
-        String fileName = path.toString();
-        int extensionStart = fileName.lastIndexOf(".");
-        if (extensionStart < 0) {
-            throw new IllegalArgumentException("The file must have an extension");
-        }
-        return fileStats(fileName.substring(extensionStart + 1));
+    public synchronized <T extends Metrics> MetricsRef<T> register(@NotNull String group, @NotNull String name, @NotNull Supplier<T> metricsFactory, boolean allowReregister) {
+        return register(new MetricsKey(group, name), metricsFactory, allowReregister);
     }
 
-    public synchronized FileStats fileStats(@NotNull String name) {
-        if (storageStats.containsKey(name)) {
-            return storageStats.get(name);
-        }
-        FileStats fileInstrumentation = new FileStats(name);
-        storageStats.put(name, fileInstrumentation);
-        return fileInstrumentation;
-    }
-
-    public synchronized ItemStats itemStats(@NotNull String name) {
-        if (itemStats.containsKey(name)) {
-            return itemStats.get(name);
-        }
-        ItemStats serializationInstrumentation = new ItemStats(name);
-        itemStats.put(name, serializationInstrumentation);
-        return serializationInstrumentation;
-    }
-
-    public synchronized void reset() {
-        for (FileStats fileStats : storageStats.values()) {
-            fileStats.clear();
-        }
-        for (ItemStats itemStats : itemStats.values()) {
-            itemStats.clear();
-        }
-    }
-
-    public synchronized void show() {
-        show(0);
-    }
-
-    public synchronized void show(int min) {
-        System.err.println();
-        System.err.println("File       phyrd   logrd    wrts     ");
-        System.err.println("-------------------------------------");
-        for (String fileName : storageStats.keySet()) {
-            FileStats stats = storageStats.get(fileName);
-            if (stats.physicalPageReads >= min || stats.logicalPageReads >= min || stats.pageWrites >= min) {
-                System.err.printf("%-8s %7d %7d %7d%n", fileName, stats.physicalPageReads, stats.logicalPageReads, stats.pageWrites);
+    public synchronized <T extends Metrics> MetricsRef<T> register(@NotNull MetricsKey metricsKey, @NotNull Supplier<T> metricsFactory, boolean allowReregister) {
+        if (registeredMetrics.containsKey(metricsKey)) {
+            if (allowReregister) {
+                return new MetricsRef<>(this, metricsKey);
             }
+            throw new IllegalArgumentException("Metrics with key " + metricsKey + " has already been registered");
         }
+        registeredMetrics.put(metricsKey, metricsFactory);
+        addMetric(metricsKey, metricsFactory.get());
 
-        System.err.println();
-
-        System.err.println("Item                  get       put     deser       ser     ");
-        System.err.println("---------------------------------------------------------");
-        for (String name : itemStats.keySet()) {
-            ItemStats stats = itemStats.get(name);
-            if (stats.gets + stats.getRaws >= min || stats.puts >= min || stats.deserializations >= min || stats.serializations >= min) {
-                System.err.printf("%-15s %9d %9d %9d %9d%n", name, stats.gets + stats.getRaws, stats.puts, stats.deserializations, stats.serializations);
-            }
-        }
+        return new MetricsRef<>(this, metricsKey);
     }
 
+    public synchronized @NotNull MetricsRepository pushContext(@NotNull String contextName) {
+        return pushContext(contextName, false);
+    }
+
+    public synchronized @NotNull MetricsRepository pushContext(@NotNull String contextName, boolean mergeOnPop) {
+        MetricsRepository nestedMetrics = new MetricsRepository(contextName, getCurrent(), registeredMetrics, mergeOnPop);
+        nestedMetricsRepositories.set(nestedMetrics);
+        return nestedMetrics;
+    }
+
+    public synchronized @NotNull MetricsRepository popContext() {
+        MetricsRepository nestedMetrics = getCurrent();
+        MetricsRepository parent = nestedMetrics.parent();
+        if (parent == null) {
+            throw new IllegalStateException("Not in a nested metrics context");
+        }
+        if (nestedMetrics.mergeOnPop()) {
+            parent.merge(nestedMetrics);
+        }
+        nestedMetricsRepositories.set(parent);
+        return nestedMetrics;
+    }
+
+    public @NotNull MetricsRepository getCurrent() {
+        return nestedMetricsRepositories.get();
+    }
 }

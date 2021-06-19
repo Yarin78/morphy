@@ -12,13 +12,13 @@ import java.util.Set;
 
 import static java.nio.file.StandardOpenOption.*;
 import static org.junit.Assert.*;
-import static se.yarin.morphy.storage.MorphyOpenOption.*;
+import static se.yarin.morphy.storage.MorphyOpenOption.IGNORE_NON_CRITICAL_ERRORS;
 
 public class FileItemStorageTest {
     @Rule
     public TemporaryFolder folder = new TemporaryFolder();
 
-    private final DatabaseContext context = new DatabaseContext();
+    private DatabaseContext context = new DatabaseContext();
 
     private File storageFile() throws IOException {
         File file = folder.newFile();
@@ -28,7 +28,7 @@ public class FileItemStorageTest {
 
     private File initStorage() throws IOException {
         File file = storageFile();
-        FileItemStorage<FooBarItemHeader, FooBarItem> storage = new FileItemStorage<>(file, context, "FooBar", new FooBarItemSerializer(), FooBarItemHeader.empty(), Set.of(READ, WRITE, CREATE_NEW));
+        FileItemStorage<FooBarItemHeader, FooBarItem> storage = new FileItemStorage<>(file, new DatabaseContext(), "FooBar", new FooBarItemSerializer(), FooBarItemHeader.empty(), Set.of(READ, WRITE, CREATE_NEW));
 
         assertTrue(storage.isEmpty());
         storage.putItem(0, ImmutableFooBarItem.of("hello", 5));
@@ -41,7 +41,7 @@ public class FileItemStorageTest {
     @Test
     public void updateHeader() throws IOException {
         File file = storageFile();
-        FileItemStorage<FooBarItemHeader, FooBarItem> storage = new FileItemStorage<>(file, context, "FooBar", new FooBarItemSerializer(), FooBarItemHeader.empty(), Set.of(READ, WRITE, CREATE_NEW));
+        FileItemStorage<FooBarItemHeader, FooBarItem> storage = new FileItemStorage<>(file, new DatabaseContext(), "FooBar", new FooBarItemSerializer(), FooBarItemHeader.empty(), Set.of(READ, WRITE, CREATE_NEW));
 
         assertEquals(FooBarItemHeader.empty(), storage.getHeader());
         storage.putHeader(ImmutableFooBarItemHeader.of(9, 13));
@@ -65,7 +65,7 @@ public class FileItemStorageTest {
     @Test
     public void putItem() throws IOException {
         File file = storageFile();
-        FileItemStorage<FooBarItemHeader, FooBarItem> storage = new FileItemStorage<>(file, context, "FooBar", new FooBarItemSerializer(), FooBarItemHeader.empty(), Set.of(READ, WRITE, CREATE_NEW));
+        FileItemStorage<FooBarItemHeader, FooBarItem> storage = new FileItemStorage<>(file, new DatabaseContext(), "FooBar", new FooBarItemSerializer(), FooBarItemHeader.empty(), Set.of(READ, WRITE, CREATE_NEW));
 
         assertTrue(storage.isEmpty());
         storage.putItem(0, ImmutableFooBarItem.of("foobar", 73));

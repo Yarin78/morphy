@@ -7,11 +7,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.morphy.DatabaseContext;
 import se.yarin.morphy.DatabaseMode;
-import se.yarin.morphy.Instrumentation;
 import se.yarin.morphy.exceptions.MorphyException;
 import se.yarin.morphy.exceptions.MorphyIOException;
 import se.yarin.morphy.exceptions.MorphyInvalidDataException;
 import se.yarin.morphy.exceptions.MorphyNotSupportedException;
+import se.yarin.morphy.metrics.ItemMetrics;
+import se.yarin.morphy.metrics.MetricsRef;
 import se.yarin.morphy.storage.*;
 import se.yarin.morphy.util.CBUtil;
 import se.yarin.util.ByteBufferUtil;
@@ -36,7 +37,7 @@ public class ExtendedGameHeaderStorage implements ItemStorageSerializer<Extended
 
     private final @NotNull ItemStorage<ExtendedGameHeaderStorage.ExtProlog, ExtendedGameHeader> storage;
     private final @NotNull DatabaseContext context;
-    private final @NotNull Instrumentation.ItemStats itemStats;
+    private final @NotNull MetricsRef<ItemMetrics> itemMetricsRef;
 
     public ExtendedGameHeaderStorage() {
         this(null);
@@ -49,7 +50,7 @@ public class ExtendedGameHeaderStorage implements ItemStorageSerializer<Extended
     private ExtendedGameHeaderStorage(@NotNull ItemStorage<ExtProlog, ExtendedGameHeader> storage, @Nullable DatabaseContext context) {
         this.storage = storage;
         this.context = context == null ? new DatabaseContext() : context;
-        this.itemStats = this.context.instrumentation().itemStats("GameHeaderExt");
+        this.itemMetricsRef = ItemMetrics.register(this.context.instrumentation(), "GameHeaderExt");
     }
 
     private ExtendedGameHeaderStorage(@NotNull File file, @NotNull Set<OpenOption> options, @Nullable DatabaseContext context) throws IOException {
@@ -57,7 +58,7 @@ public class ExtendedGameHeaderStorage implements ItemStorageSerializer<Extended
             throw new IllegalArgumentException("The file extension of an extended GameHeader storage must be .cbj");
         }
         this.context = context == null ? new DatabaseContext() : context;
-        this.itemStats = this.context.instrumentation().itemStats("GameHeaderExt");
+        this.itemMetricsRef = ItemMetrics.register(this.context.instrumentation(), "GameHeaderExt");
         this.storage = new FileItemStorage<>(file, this.context, "GameHeaderExt", this, ExtProlog.empty(), options);
 
         if (options.contains(WRITE)) {
@@ -358,7 +359,7 @@ public class ExtendedGameHeaderStorage implements ItemStorageSerializer<Extended
 
     @Override
     public @NotNull ExtendedGameHeader deserializeItem(int id, @NotNull ByteBuffer buf, @NotNull ExtProlog header) {
-        itemStats.addDeserialization(1);
+        itemMetricsRef.update(metrics -> metrics.addDeserialization(1));
 
         if (buf.limit() - buf.position() < header.serializedItemSize()) {
             throw new IllegalArgumentException("Not enough data in buffer");
@@ -437,7 +438,7 @@ public class ExtendedGameHeaderStorage implements ItemStorageSerializer<Extended
     public void serializeItem(@NotNull ExtendedGameHeader item, @NotNull ByteBuffer buf, @NotNull ExtProlog header) {
         assert this.storage.getHeader().serializedItemSize() >= ExtProlog.DEFAULT_SERIALIZED_ITEM_SIZE;
 
-        itemStats.addDeserialization(1);
+        itemMetricsRef.update(metrics -> metrics.addSerialization(1));
 
         ByteBufferUtil.putIntB(buf, item.whiteTeamId());
         ByteBufferUtil.putIntB(buf, item.blackTeamId());

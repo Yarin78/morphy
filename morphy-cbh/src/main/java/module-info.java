@@ -38,6 +38,7 @@ module se.yarin.morphy.cbh {
     exports se.yarin.morphy.storage;
     exports se.yarin.morphy.validation;
     exports se.yarin.morphy.exceptions;
+    exports se.yarin.morphy.metrics;
     exports se.yarin.morphy.text;
     exports se.yarin.morphy.entities.filters;
 }

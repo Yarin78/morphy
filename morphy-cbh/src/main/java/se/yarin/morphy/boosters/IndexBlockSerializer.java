@@ -1,8 +1,9 @@
 package se.yarin.morphy.boosters;
 
 import org.jetbrains.annotations.NotNull;
-import se.yarin.morphy.Instrumentation;
 import se.yarin.morphy.exceptions.MorphyInvalidDataException;
+import se.yarin.morphy.metrics.ItemMetrics;
+import se.yarin.morphy.metrics.MetricsRef;
 import se.yarin.morphy.storage.ItemStorageSerializer;
 import se.yarin.util.ByteBufferUtil;
 
@@ -12,10 +13,10 @@ import java.util.Collections;
 
 public class IndexBlockSerializer implements ItemStorageSerializer<IndexBlockHeader, IndexBlockItem> {
 
-    private final Instrumentation.ItemStats itemStats;
+    private final MetricsRef<ItemMetrics> itemMetricsRef;
 
-    public IndexBlockSerializer(@NotNull Instrumentation.ItemStats itemStats) {
-        this.itemStats = itemStats;
+    public IndexBlockSerializer(@NotNull MetricsRef<ItemMetrics> itemMetricsRef) {
+        this.itemMetricsRef = itemMetricsRef;
     }
 
     @Override
@@ -49,7 +50,7 @@ public class IndexBlockSerializer implements ItemStorageSerializer<IndexBlockHea
 
     @Override
     public @NotNull IndexBlockItem deserializeItem(int id, @NotNull ByteBuffer buf, @NotNull IndexBlockHeader header) {
-        itemStats.addDeserialization(1);
+        itemMetricsRef.update(metrics -> metrics.addDeserialization(1));
 
         int prevPos = buf.position();
         ImmutableIndexBlockItem.Builder builder = ImmutableIndexBlockItem.builder()
@@ -83,7 +84,7 @@ public class IndexBlockSerializer implements ItemStorageSerializer<IndexBlockHea
 
     @Override
     public void serializeItem(@NotNull IndexBlockItem indexBlockItem, @NotNull ByteBuffer buf, @NotNull IndexBlockHeader header) {
-        itemStats.addSerialization(1);
+        itemMetricsRef.update(metrics -> metrics.addSerialization(1));
 
         int numInts = (header.itemSize() - 12) / 4;
 

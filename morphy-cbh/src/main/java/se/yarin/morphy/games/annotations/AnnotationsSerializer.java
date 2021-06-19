@@ -4,8 +4,9 @@ import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.morphy.DatabaseContext;
-import se.yarin.morphy.Instrumentation;
 import se.yarin.morphy.exceptions.MorphyAnnotationExecption;
+import se.yarin.morphy.metrics.ItemMetrics;
+import se.yarin.morphy.metrics.MetricsRef;
 import se.yarin.util.ByteBufferUtil;
 import se.yarin.chess.GameMovesModel;
 import se.yarin.chess.annotations.Annotation;
@@ -19,7 +20,7 @@ public final class AnnotationsSerializer {
     private static final Logger log = LoggerFactory.getLogger(AnnotationsSerializer.class);
 
     private final @NotNull DatabaseContext context;
-    private final @NotNull Instrumentation.ItemStats itemStats;
+    private final @NotNull MetricsRef<ItemMetrics> itemMetricsRef;
 
     public AnnotationsSerializer() {
         this(new DatabaseContext());
@@ -27,7 +28,7 @@ public final class AnnotationsSerializer {
 
     public AnnotationsSerializer(@NotNull DatabaseContext context) {
         this.context = context;
-        this.itemStats = context.instrumentation().itemStats("MoveAnnotations");
+        this.itemMetricsRef = ItemMetrics.register(context.instrumentation(), "MoveAnnotations");
     }
 
     private static Map<Integer, AnnotationSerializer> annotationSerializers = new HashMap<>();
@@ -73,7 +74,7 @@ public final class AnnotationsSerializer {
      * @return a buffer containing the serialized annotations
      */
     public @NotNull ByteBuffer serializeAnnotations(int gameId, @NotNull GameMovesModel model) {
-        itemStats.addSerialization(1);
+        itemMetricsRef.update(metrics -> metrics.addSerialization(1));
 
         // TODO: Double size on demand
         ByteBuffer buf = ByteBuffer.allocate(16384*2);
@@ -114,7 +115,7 @@ public final class AnnotationsSerializer {
     }
 
     public void deserializeAnnotations(@NotNull ByteBuffer buf, @NotNull GameMovesModel model) {
-        itemStats.addDeserialization(1);
+        itemMetricsRef.update(metrics -> metrics.addDeserialization(1));
 
         if (!buf.hasRemaining()) {
             return;

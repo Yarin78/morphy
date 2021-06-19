@@ -4,8 +4,9 @@ import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.morphy.DatabaseContext;
-import se.yarin.morphy.Instrumentation;
 import se.yarin.morphy.exceptions.MorphyMoveDecodingException;
+import se.yarin.morphy.metrics.ItemMetrics;
+import se.yarin.morphy.metrics.MetricsRef;
 import se.yarin.util.ByteBufferBitReader;
 import se.yarin.util.ByteBufferBitWriter;
 import se.yarin.util.ByteBufferUtil;
@@ -19,7 +20,7 @@ public final class MoveSerializer {
     private static final Logger log = LoggerFactory.getLogger(MoveSerializer.class);
 
     private @NotNull final DatabaseContext context;
-    private @NotNull final Instrumentation.ItemStats itemStats;
+    private @NotNull final MetricsRef<ItemMetrics> itemMetricsRef;
 
     private boolean logDetailedErrors = false;
 
@@ -45,7 +46,7 @@ public final class MoveSerializer {
 
     public MoveSerializer(@NotNull DatabaseContext context) {
         this.context = context;
-        this.itemStats = context.instrumentation().itemStats("Moves");
+        this.itemMetricsRef = ItemMetrics.register(this.context.instrumentation(), "Moves");
     }
 
     public void setLogDetailedErrors(boolean value) {
@@ -63,7 +64,7 @@ public final class MoveSerializer {
     }
 
     public ByteBuffer serializeMoves(@NotNull GameMovesModel model, int encodingMode) {
-        this.itemStats.addSerialization(1);
+        this.itemMetricsRef.update(metrics -> metrics.addSerialization(1));
 
         validateEncodingMode(encodingMode);
 
@@ -127,7 +128,7 @@ public final class MoveSerializer {
      * with the {@link MorphyMoveDecodingException#getModel()} containing the moves parsed so far.
      */
     public GameMovesModel deserializeMoves(ByteBuffer buf, boolean checkLegalMoves, int gameId) throws MorphyMoveDecodingException {
-        this.itemStats.addDeserialization(1);
+        this.itemMetricsRef.update(metrics -> metrics.addDeserialization(1));
 
         GameMovesModel model;
         int flags, moveSize;

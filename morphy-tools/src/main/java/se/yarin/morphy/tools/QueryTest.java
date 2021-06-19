@@ -11,6 +11,7 @@ import se.yarin.morphy.entities.Player;
 import se.yarin.morphy.entities.Tournament;
 import se.yarin.morphy.entities.filters.*;
 import se.yarin.morphy.games.filters.IsGameFilter;
+import se.yarin.morphy.metrics.ItemMetrics;
 import se.yarin.morphy.queries.QueryContext;
 import se.yarin.morphy.queries.operations.*;
 
@@ -42,7 +43,6 @@ public class QueryTest {
     private final Random random = new Random(0);
 
     private void readBatchedGames(int numBatches, int gamesPerBatch) {
-        db.context().instrumentation().reset();
         long start = System.currentTimeMillis();
         try (var txn = new DatabaseReadTransaction(db)) {
             int dummy = 0;
@@ -58,7 +58,6 @@ public class QueryTest {
     }
 
     private void readSeqBatchGames(int numBatches, int gamesPerBatch) {
-        db.context().instrumentation().reset();
         long start = System.currentTimeMillis();
         try (var txn = new DatabaseReadTransaction(db)) {
             int dummy = 0;
@@ -76,7 +75,6 @@ public class QueryTest {
     }
 
     private void readRandomGames(int numGames) {
-        db.context().instrumentation().reset();
         long start = System.currentTimeMillis();
         try (var txn = new DatabaseReadTransaction(db)) {
             int dummy = 0;
@@ -104,7 +102,6 @@ public class QueryTest {
         // Should be Lasker, Steinitz, Chigorin, Gunsberg, Zukertort
 
         long start = System.currentTimeMillis();
-        int before = db.context().instrumentation().itemStats("GameHeader").gets();
         int startYear = 1800, endYear = 1950;
 
         CombinedFilter<Tournament> tournamentFilter = new CombinedFilter<>(List.of(
@@ -127,16 +124,16 @@ public class QueryTest {
             System.out.println(allGames.stream().limit(200).count());
 
             System.out.println(allGames.debugString(true));
+
+            txn.metrics().show();
         }
 
-        int after = db.context().instrumentation().itemStats("GameHeader").gets();
         long stop = System.currentTimeMillis();
-        System.out.println((after - before) + " games deserialized, " + (stop - start) + " ms");
+        System.out.println((stop - start) + " ms");
     }
 
     private void getCarlHighCategoryGames3() {
         long start = System.currentTimeMillis();
-        int before = db.context().instrumentation().itemStats("GameHeader").gets();
 
         // 2184
         // 8503841 games iterated, 78528 ms
@@ -159,10 +156,11 @@ public class QueryTest {
             System.out.println(numGames);
 
             System.out.println(games2.debugString(true));
+
+            txn.metrics().show();
         }
-        int after = db.context().instrumentation().itemStats("GameHeader").gets();
         long stop = System.currentTimeMillis();
-        System.out.println((after - before) + " games iterated, " + (stop - start) + " ms");
+        System.out.println((stop - start) + " ms");
     }
 
     private void getCarlHighCategoryGames2() {
@@ -171,7 +169,6 @@ public class QueryTest {
         String namePrefix = "Car";
 
         long start = System.currentTimeMillis();
-        int before = db.context().instrumentation().itemStats("GameHeader").gets();
         try (var txn = new DatabaseReadTransaction(db)) {
             QueryContext context = new QueryContext(txn, true);
             GamePlayerFilter games = new GamePlayerFilter(context,
@@ -192,10 +189,12 @@ public class QueryTest {
             System.out.println(numGames);
 
             System.out.println(games.debugString(true));
+
+            txn.metrics().show();
         }
-        int after = db.context().instrumentation().itemStats("GameHeader").gets();
+
         long stop = System.currentTimeMillis();
-        System.out.println((after - before) + " games iterated, " + (stop - start) + " ms");
+        System.out.println((stop - start) + " ms");
 
 
 
@@ -206,7 +205,6 @@ public class QueryTest {
         String namePrefix = "Car";
 
         long start = System.currentTimeMillis();
-        int before = db.context().instrumentation().itemStats("GameHeader").gets();
 
         try (var txn = new DatabaseReadTransaction(db)) {
             QueryContext context = new QueryContext(txn, true);
@@ -229,10 +227,11 @@ public class QueryTest {
             System.out.println(numGames);
 
             System.out.println(games.debugString(true));
+
+            txn.metrics().show();
         }
 
-        int after = db.context().instrumentation().itemStats("GameHeader").gets();
         long stop = System.currentTimeMillis();
-        System.out.println((after - before) + " games iterated, " + (stop - start) + " ms");
+        System.out.println((stop - start) + " ms");
     }
 }

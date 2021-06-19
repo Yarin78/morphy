@@ -62,7 +62,7 @@ public class AnnotatorIndex extends EntityIndex<Annotator> {
 
     @Override
     protected @NotNull Annotator deserialize(int entityId, int count, int firstGameId, byte[] serializedData) {
-        serializationStats().addDeserialization(1);
+        itemMetricsRef().update(metrics -> metrics.addDeserialization(1));
         ByteBuffer buf = ByteBuffer.wrap(serializedData);
         return ImmutableAnnotator.builder()
                 .id(entityId)
@@ -74,7 +74,7 @@ public class AnnotatorIndex extends EntityIndex<Annotator> {
 
     @Override
     protected void serialize(@NotNull Annotator annotator, @NotNull ByteBuffer buf) {
-        serializationStats().addSerialization(1);
+        itemMetricsRef().update(metrics -> metrics.addSerialization(1));
         ByteBufferUtil.putFixedSizeByteString(buf, annotator.name(), 45);
     }
 

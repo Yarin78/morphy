@@ -6,7 +6,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.morphy.DatabaseContext;
 import se.yarin.morphy.DatabaseMode;
-import se.yarin.morphy.Instrumentation;
+import se.yarin.morphy.metrics.ItemMetrics;
+import se.yarin.morphy.metrics.MetricsRef;
 import se.yarin.morphy.util.CBUtil;
 import se.yarin.util.ByteBufferUtil;
 import se.yarin.chess.Date;
@@ -34,7 +35,7 @@ public class TournamentExtraStorage implements ItemStorageSerializer<TournamentE
 
     private final @NotNull ItemStorage<TournamentExtraHeader, TournamentExtra> storage;
     private final @NotNull DatabaseContext context;
-    private final @NotNull Instrumentation.ItemStats itemStats;
+    private final @NotNull MetricsRef<ItemMetrics> itemMetricsRef;
 
     public TournamentExtraStorage() {
         this(null);
@@ -47,13 +48,13 @@ public class TournamentExtraStorage implements ItemStorageSerializer<TournamentE
     public TournamentExtraStorage(@NotNull ItemStorage<TournamentExtraHeader, TournamentExtra> storage, @Nullable DatabaseContext context) {
         this.storage = storage;
         this.context = context == null ? new DatabaseContext() : context;
-        this.itemStats = this.context.instrumentation().itemStats("TournamentExt");
+        this.itemMetricsRef = ItemMetrics.register(this.context.instrumentation(), "TournamentExt");
     }
 
     protected TournamentExtraStorage(@NotNull File file, @NotNull Set<OpenOption> options, @Nullable DatabaseContext context) throws IOException {
         this.context = context == null ? new DatabaseContext() : context;
         this.storage = new FileItemStorage<>(file, this.context, "TournamentExt", this, TournamentExtraHeader.empty(), options);
-        this.itemStats = this.context.instrumentation().itemStats("TournamentExt");
+        this.itemMetricsRef = ItemMetrics.register(this.context.instrumentation(), "TournamentExt");
 
         if (options.contains(WRITE)) {
             if (storage.getHeader().version() < TournamentExtraHeader.DEFAULT_HEADER_VERSION) {
@@ -191,7 +192,7 @@ public class TournamentExtraStorage implements ItemStorageSerializer<TournamentE
 
     @Override
     public @NotNull TournamentExtra deserializeItem(int id, @NotNull ByteBuffer buf, @NotNull TournamentExtraHeader header) {
-        itemStats.addDeserialization(1);
+        itemMetricsRef.update(metrics -> metrics.addDeserialization(1));
 
         int itemSize = storage.getHeader().recordSize();
 
@@ -224,7 +225,7 @@ public class TournamentExtraStorage implements ItemStorageSerializer<TournamentE
 
     @Override
     public void serializeItem(@NotNull TournamentExtra tournamentExtra, @NotNull ByteBuffer buf, @NotNull TournamentExtraHeader header) {
-        itemStats.addSerialization(1);
+        itemMetricsRef.update(metrics -> metrics.addSerialization(1));
 
         ByteBufferUtil.putDoubleL(buf, tournamentExtra.latitude());
         ByteBufferUtil.putDoubleL(buf, tournamentExtra.longitude());

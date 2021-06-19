@@ -6,10 +6,11 @@ import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.morphy.DatabaseContext;
-import se.yarin.morphy.Instrumentation;
 import se.yarin.morphy.exceptions.MorphyEntityIndexException;
 import se.yarin.morphy.exceptions.MorphyIOException;
 import se.yarin.morphy.exceptions.MorphyNotSupportedException;
+import se.yarin.morphy.metrics.ItemMetrics;
+import se.yarin.morphy.metrics.MetricsRef;
 import se.yarin.morphy.storage.FileItemStorage;
 import se.yarin.morphy.storage.ItemStorage;
 import se.yarin.morphy.util.CBUtil;
@@ -38,7 +39,7 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
     // Is typically the same as version in DatabaseContext but may differ
     // if transactions are done explicitly on an entity index instead of the whole database
     private final AtomicInteger currentVersion;
-    private final Instrumentation.ItemStats itemStats;
+    private final MetricsRef<ItemMetrics> itemMetricsRef;
 
     public @NotNull EntityIndexHeader storageHeader() {
         return storage.getHeader();
@@ -46,15 +47,15 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
 
     @NotNull String entityType() { return this.entityType; }
 
-    @NotNull Instrumentation.ItemStats serializationStats() {
-        return itemStats;
+    @NotNull MetricsRef<ItemMetrics> itemMetricsRef() {
+        return itemMetricsRef;
     }
 
     protected EntityIndex(@NotNull ItemStorage<EntityIndexHeader, EntityNode> storage, @NotNull String entityType, @Nullable DatabaseContext context) {
         this.storage = storage;
         this.entityType = entityType;
         this.context = context == null ? new DatabaseContext() : context;
-        this.itemStats = this.context.instrumentation().itemStats(entityType);
+        this.itemMetricsRef = ItemMetrics.register(this.context.instrumentation(), entityType);
         this.currentVersion = new AtomicInteger(0);
     }
 

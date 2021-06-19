@@ -9,6 +9,7 @@ import se.yarin.morphy.Instrumentation;
 import se.yarin.morphy.entities.*;
 import se.yarin.morphy.exceptions.MorphyInvalidDataException;
 import se.yarin.morphy.exceptions.MorphyNotSupportedException;
+import se.yarin.morphy.metrics.ItemMetrics;
 import se.yarin.morphy.storage.FileItemStorage;
 import se.yarin.morphy.storage.InMemoryItemStorage;
 import se.yarin.morphy.storage.ItemStorage;
@@ -88,9 +89,9 @@ public class GameEntityIndex {
 
         Instrumentation instrumentation = this.context.instrumentation();
         this.citStorage = new FileItemStorage<>(
-                citFile, this.context, "IndexTable", new IndexSerializer(this.citOrder.size(), instrumentation.itemStats("IndexTable" + suffix)), IndexHeader.emptyCIT(), options);
+                citFile, this.context, "IndexTable", new IndexSerializer(this.citOrder.size(), ItemMetrics.register(instrumentation, "IndexTable" + suffix)), IndexHeader.emptyCIT(), options);
         this.cibStorage = new FileItemStorage<>(
-                cibFile, this.context, "IndexBlock", new IndexBlockSerializer(instrumentation.itemStats("IndexBlock" + suffix)), IndexBlockHeader.empty(), options);
+                cibFile, this.context, "IndexBlock", new IndexBlockSerializer(ItemMetrics.register(instrumentation, "IndexBlock" + suffix)), IndexBlockHeader.empty(), options);
 
         if (options.contains(WRITE)) {
             if (citStorage.getHeader().unknown1() != 0 || citStorage.getHeader().unknown2() != 0) {

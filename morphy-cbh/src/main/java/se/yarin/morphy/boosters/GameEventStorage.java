@@ -7,9 +7,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.morphy.DatabaseContext;
 import se.yarin.morphy.DatabaseMode;
-import se.yarin.morphy.Instrumentation;
 import se.yarin.morphy.exceptions.MorphyInvalidDataException;
 import se.yarin.morphy.exceptions.MorphyNotSupportedException;
+import se.yarin.morphy.metrics.ItemMetrics;
+import se.yarin.morphy.metrics.MetricsRef;
 import se.yarin.morphy.storage.FileItemStorage;
 import se.yarin.morphy.storage.InMemoryItemStorage;
 import se.yarin.morphy.storage.ItemStorage;
@@ -30,7 +31,7 @@ public class GameEventStorage implements ItemStorageSerializer<GameEventStorage.
 
     private final @NotNull ItemStorage<Prolog, GameEvents> storage;
     private final @NotNull DatabaseContext context;
-    private final @NotNull Instrumentation.ItemStats itemStats;
+    private final @NotNull MetricsRef<ItemMetrics> itemMetricsRef;
 
     public GameEventStorage() {
         this(null);
@@ -43,7 +44,7 @@ public class GameEventStorage implements ItemStorageSerializer<GameEventStorage.
     private GameEventStorage(@NotNull ItemStorage<GameEventStorage.Prolog, GameEvents> storage, @Nullable DatabaseContext context) {
         this.storage = storage;
         this.context = context == null ? new DatabaseContext() : context;
-        this.itemStats = this.context.instrumentation().itemStats("GameEvents");
+        this.itemMetricsRef = ItemMetrics.register(this.context.instrumentation(), "GameEvents");
     }
 
     private GameEventStorage(@NotNull File file, @NotNull Set<OpenOption> options, @Nullable DatabaseContext context) throws IOException {
@@ -51,7 +52,7 @@ public class GameEventStorage implements ItemStorageSerializer<GameEventStorage.
             throw new IllegalArgumentException("The file extension of a GameEvent storage must be .cbb");
         }
         this.context = context == null ? new DatabaseContext() : context;
-        this.itemStats = this.context.instrumentation().itemStats("GameEvents");
+        this.itemMetricsRef = ItemMetrics.register(this.context.instrumentation(), "GameEvents");
         this.storage = new FileItemStorage<>(file, this.context, "GameEvents", this, Prolog.empty(), options);
 
         if (options.contains(WRITE)) {
@@ -200,6 +201,7 @@ public class GameEventStorage implements ItemStorageSerializer<GameEventStorage.
 
     @Override
     public @NotNull GameEvents deserializeItem(int id, @NotNull ByteBuffer buf, @NotNull GameEventStorage.Prolog prolog) {
+        itemMetricsRef.update(metrics -> metrics.addDeserialization(1));
         GameEvents gameEvents = new GameEvents(buf.slice(buf.position(), 52));
         buf.position(buf.position() + prolog.serializedItemSize());
         return gameEvents;
@@ -222,6 +224,7 @@ public class GameEventStorage implements ItemStorageSerializer<GameEventStorage.
 
     @Override
     public void serializeItem(@NotNull GameEvents gameEvents, @NotNull ByteBuffer buf, @NotNull GameEventStorage.Prolog prolog) {
+        itemMetricsRef.update(metrics -> metrics.addSerialization(1));
         byte[] bytes = gameEvents.getBytes();
         buf.put(bytes);
         for (int i = bytes.length; i < prolog.serializedItemSize(); i++) {

@@ -8,13 +8,12 @@ import org.slf4j.LoggerFactory;
 import se.yarin.chess.*;
 import se.yarin.morphy.DatabaseContext;
 import se.yarin.morphy.DatabaseMode;
-import se.yarin.morphy.Instrumentation;
-import se.yarin.morphy.entities.EntityIndexHeader;
-import se.yarin.morphy.entities.EntityNode;
 import se.yarin.morphy.exceptions.MorphyIOException;
 import se.yarin.morphy.exceptions.MorphyInternalException;
 import se.yarin.morphy.exceptions.MorphyInvalidDataException;
 import se.yarin.morphy.exceptions.MorphyNotSupportedException;
+import se.yarin.morphy.metrics.ItemMetrics;
+import se.yarin.morphy.metrics.MetricsRef;
 import se.yarin.morphy.storage.*;
 import se.yarin.morphy.util.CBUtil;
 import se.yarin.util.ByteBufferUtil;
@@ -36,7 +35,7 @@ public class GameHeaderIndex implements ItemStorageSerializer<GameHeaderIndex.Pr
 
     private final @NotNull ItemStorage<GameHeaderIndex.Prolog, GameHeader> storage;
     private final @NotNull DatabaseContext context;
-    private final @NotNull Instrumentation.ItemStats itemStats;
+    private final @NotNull MetricsRef<ItemMetrics> itemMetricsRef;
 
     public GameHeaderIndex() {
         this(null);
@@ -45,7 +44,7 @@ public class GameHeaderIndex implements ItemStorageSerializer<GameHeaderIndex.Pr
     public GameHeaderIndex(@Nullable DatabaseContext context) {
         this.storage = new InMemoryItemStorage<>(context, "GameHeader", Prolog.empty(), null, true);
         this.context = context == null ? new DatabaseContext() : context;
-        this.itemStats = this.context.instrumentation().itemStats("GameHeader");
+        this.itemMetricsRef = ItemMetrics.register(this.context.instrumentation(), "GameHeader");
     }
 
     private GameHeaderIndex(
@@ -57,7 +56,7 @@ public class GameHeaderIndex implements ItemStorageSerializer<GameHeaderIndex.Pr
         }
 
         this.context = context == null ? new DatabaseContext() : context;
-        this.itemStats = this.context.instrumentation().itemStats("GameHeader");
+        this.itemMetricsRef = ItemMetrics.register(this.context.instrumentation(), "GameHeader");
 
         boolean strict = options.contains(WRITE) || !options.contains(IGNORE_NON_CRITICAL_ERRORS);
 
@@ -390,7 +389,7 @@ public class GameHeaderIndex implements ItemStorageSerializer<GameHeaderIndex.Pr
 
     @Override
     public @NotNull GameHeader deserializeItem(int gameHeaderId, @NotNull ByteBuffer buf, @NotNull Prolog header) {
-        itemStats.addDeserialization(1);
+        itemMetricsRef.update(metrics -> metrics.addDeserialization(1));
         int oldPosition = buf.position();
 
         ImmutableGameHeader.Builder builder = ImmutableGameHeader.builder();
@@ -536,7 +535,7 @@ public class GameHeaderIndex implements ItemStorageSerializer<GameHeaderIndex.Pr
 
     @Override
     public void serializeItem(@NotNull GameHeader gameHeader, @NotNull ByteBuffer buf, @NotNull Prolog header) {
-        itemStats.addSerialization(1);
+        itemMetricsRef.update(metrics -> metrics.addSerialization(1));
 
         int type = 1;
         if (gameHeader.guidingText()) type += 2;

@@ -3,11 +3,12 @@ package se.yarin.morphy.storage;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import se.yarin.morphy.DatabaseContext;
-import se.yarin.morphy.Instrumentation;
 import se.yarin.morphy.exceptions.MorphyException;
 import se.yarin.morphy.exceptions.MorphyIOException;
 import se.yarin.morphy.exceptions.MorphyInvalidDataException;
 import se.yarin.morphy.exceptions.MorphyNotSupportedException;
+import se.yarin.morphy.metrics.ItemMetrics;
+import se.yarin.morphy.metrics.MetricsRef;
 import se.yarin.util.BlobChannel;
 import se.yarin.util.PagedBlobChannel;
 
@@ -22,7 +23,7 @@ import java.util.Set;
 import static java.nio.file.StandardOpenOption.*;
 
 public class FileItemStorage<THeader, TItem> implements ItemStorage<THeader, TItem> {
-    private final Instrumentation.ItemStats itemStats;
+    private final MetricsRef<ItemMetrics> itemMetricsRef;
     private long fileSize;
     private THeader header;
     private final BlobChannel channel;
@@ -47,7 +48,7 @@ public class FileItemStorage<THeader, TItem> implements ItemStorage<THeader, TIt
         this.serializer = serializer;
         this.fileSize = this.channel.size();
         this.laxMode = laxMode;
-        this.itemStats = context.instrumentation().itemStats(storageName);
+        this.itemMetricsRef = ItemMetrics.register(context.instrumentation(), storageName);
 
         if (this.fileSize == 0) {
             if (options.contains(CREATE) || options.contains(CREATE_NEW)) {
@@ -120,14 +121,14 @@ public class FileItemStorage<THeader, TItem> implements ItemStorage<THeader, TIt
         } catch (IOException e) {
             throw new MorphyIOException(e);
         }
-        itemStats.addGetRaw(1);
+        itemMetricsRef.update(metrics -> metrics.addGetRaw(1));
         return buf;
     }
 
     @Override
     public @NotNull TItem getItem(int index) {
         ByteBuffer buf = ByteBuffer.allocate(serializer.itemSize(this.header));
-        itemStats.addGet(1);
+        itemMetricsRef.update(metrics -> metrics.addGet(1));
 
         try {
             long offset = serializer.itemOffset(this.header, index);
@@ -180,7 +181,7 @@ public class FileItemStorage<THeader, TItem> implements ItemStorage<THeader, TIt
             throw new MorphyIOException(e);
         }
 
-        itemStats.addGet(count);
+        itemMetricsRef.update(metrics -> metrics.addGet(1));
         ArrayList<TItem> result = new ArrayList<>(count);
         for (int i = 0; i < count; i++) {
             if (filter == null) {
@@ -214,7 +215,7 @@ public class FileItemStorage<THeader, TItem> implements ItemStorage<THeader, TIt
             throw new MorphyIOException(String.format("Tried to put item with id %d at offset %d but file size was %d",
                     index, offset, this.fileSize));
         }
-        itemStats.addPut(1);
+        itemMetricsRef.update(metrics -> metrics.addPut(1));
         ByteBuffer buf = ByteBuffer.allocate(serializer.itemSize(this.header));
         serializer.serializeItem(item, buf, this.header);
         buf.flip();

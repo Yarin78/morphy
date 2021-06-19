@@ -77,7 +77,7 @@ public class GameTagIndex extends EntityIndex<GameTag> {
 
     @Override
     protected @NotNull GameTag deserialize(int entityId, int count, int firstGameId, byte[] serializedData) {
-        serializationStats().addDeserialization(1);
+        itemMetricsRef().update(metrics -> metrics.addDeserialization(1));
         ByteBuffer buf = ByteBuffer.wrap(serializedData);
         return ImmutableGameTag.builder()
                 .id(entityId)
@@ -96,7 +96,7 @@ public class GameTagIndex extends EntityIndex<GameTag> {
 
     @Override
     protected void serialize(@NotNull GameTag gameTag, @NotNull ByteBuffer buf) {
-        serializationStats().addSerialization(1);
+        itemMetricsRef().update(metrics -> metrics.addSerialization(1));
         ByteBufferUtil.putFixedSizeByteString(buf, gameTag.englishTitle(), 200);
         ByteBufferUtil.putFixedSizeByteString(buf, gameTag.germanTitle(), 200);
         ByteBufferUtil.putFixedSizeByteString(buf, gameTag.frenchTitle(), 200);

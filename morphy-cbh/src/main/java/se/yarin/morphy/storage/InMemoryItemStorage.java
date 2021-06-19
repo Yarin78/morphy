@@ -3,8 +3,9 @@ package se.yarin.morphy.storage;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import se.yarin.morphy.DatabaseContext;
-import se.yarin.morphy.Instrumentation;
 import se.yarin.morphy.exceptions.MorphyIOException;
+import se.yarin.morphy.metrics.ItemMetrics;
+import se.yarin.morphy.metrics.MetricsRef;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -21,7 +22,7 @@ public class InMemoryItemStorage<THeader, TItem> implements ItemStorage<THeader,
     private final boolean oneIndexed; // true if first id is 1, false if 0
     private final DatabaseContext context;
     private final String storageName;
-    private final Instrumentation.ItemStats itemStats;
+    private final MetricsRef<ItemMetrics> itemMetricsRef;
     private @NotNull THeader header;
 
     /**
@@ -83,7 +84,7 @@ public class InMemoryItemStorage<THeader, TItem> implements ItemStorage<THeader,
         this.header = header;
         this.emptyItem = emptyItem;
         this.oneIndexed = oneIndexed;
-        this.itemStats = this.context.instrumentation().itemStats(this.storageName);
+        this.itemMetricsRef = ItemMetrics.register(this.context.instrumentation(), this.storageName);
     }
 
     @Override
@@ -119,7 +120,7 @@ public class InMemoryItemStorage<THeader, TItem> implements ItemStorage<THeader,
             }
             return emptyItem;
         }
-        itemStats.addGet(1);
+        itemMetricsRef.update(metrics -> metrics.addGet(1));
         return items.get(index);
     }
 
@@ -157,7 +158,7 @@ public class InMemoryItemStorage<THeader, TItem> implements ItemStorage<THeader,
             }
             return result;
         }
-        itemStats.addGet(count);
+        itemMetricsRef.update(metrics -> metrics.addGet(1));
         // Fast unfiltered version; just return a sublist
         return new ArrayList<>(items.subList(index, index + count));
     }
@@ -175,7 +176,7 @@ public class InMemoryItemStorage<THeader, TItem> implements ItemStorage<THeader,
             throw new IllegalArgumentException(String.format("Tried to put item with id %d but InMemoryStorage only has %d items",
                     index + (oneIndexed ? 1 : 0), this.items.size()));
         }
-        itemStats.addPut(1);
+        itemMetricsRef.update(metrics -> metrics.addPut(1));
         if (index == items.size()) {
             items.add(item);
         } else {

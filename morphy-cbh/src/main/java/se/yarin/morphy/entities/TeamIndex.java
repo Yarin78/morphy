@@ -78,7 +78,7 @@ public class TeamIndex extends EntityIndex<Team> {
 
     @Override
     protected @NotNull Team deserialize(int entityId, int count, int firstGameId, byte[] serializedData) {
-        serializationStats().addDeserialization(1);
+        itemMetricsRef().update(metrics -> metrics.addDeserialization(1));
         ByteBuffer buf = ByteBuffer.wrap(serializedData);
         return ImmutableTeam.builder()
                 .id(entityId)
@@ -94,7 +94,7 @@ public class TeamIndex extends EntityIndex<Team> {
 
     @Override
     protected void serialize(@NotNull Team team, @NotNull ByteBuffer buf) {
-        serializationStats().addSerialization(1);
+        itemMetricsRef().update(metrics -> metrics.addSerialization(1));
         ByteBufferUtil.putFixedSizeByteString(buf, team.title(), 45);
         ByteBufferUtil.putIntL(buf, team.teamNumber());
         ByteBufferUtil.putByte(buf, team.season() ? 1 : 0);

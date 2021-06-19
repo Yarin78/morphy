@@ -81,11 +81,8 @@ public class PlayerIndex extends EntityIndex<Player> {
      * @return a stream over matching players
      */
     public @NotNull List<Player> prefixSearch(@NotNull String name) {
-        EntityIndexReadTransaction<Player> txn = beginReadTransaction();
-        try {
+        try (EntityIndexReadTransaction<Player> txn = beginReadTransaction()) {
             return prefixStream(txn, name).collect(Collectors.toList());
-        } finally {
-            txn.close();
         }
     }
 
@@ -97,11 +94,8 @@ public class PlayerIndex extends EntityIndex<Player> {
      * @return a list of matching players
      */
     public @NotNull List<Player> prefixSearch(@NotNull String lastName, String firstName) {
-        EntityIndexReadTransaction<Player> txn = beginReadTransaction();
-        try {
+        try (EntityIndexReadTransaction<Player> txn = beginReadTransaction()) {
             return prefixStream(txn, lastName, firstName).collect(Collectors.toList());
-        } finally {
-            txn.close();
         }
     }
 
@@ -125,7 +119,7 @@ public class PlayerIndex extends EntityIndex<Player> {
 
     @Override
     protected @NotNull Player deserialize(int entityId, int count, int firstGameId, byte[] serializedData) {
-        serializationStats().addDeserialization(1);
+        itemMetricsRef().update(metrics -> metrics.addDeserialization(1));
         ByteBuffer buf = ByteBuffer.wrap(serializedData);
         return ImmutablePlayer.builder()
                 .id(entityId)
@@ -138,7 +132,7 @@ public class PlayerIndex extends EntityIndex<Player> {
 
     @Override
     protected void serialize(@NotNull Player player, @NotNull ByteBuffer buf) {
-        serializationStats().addSerialization(1);
+        itemMetricsRef().update(metrics -> metrics.addSerialization(1));
         ByteBufferUtil.putFixedSizeByteString(buf, player.lastName(), 30);
         ByteBufferUtil.putFixedSizeByteString(buf, player.firstName(), 20);
     }
