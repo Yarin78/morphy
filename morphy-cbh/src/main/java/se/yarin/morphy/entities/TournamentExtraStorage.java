@@ -6,8 +6,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.morphy.DatabaseContext;
 import se.yarin.morphy.DatabaseMode;
-import se.yarin.morphy.metrics.ItemMetrics;
-import se.yarin.morphy.metrics.MetricsRef;
+import se.yarin.morphy.metrics.*;
 import se.yarin.morphy.util.CBUtil;
 import se.yarin.util.ByteBufferUtil;
 import se.yarin.chess.Date;
@@ -29,9 +28,11 @@ import static java.nio.file.StandardOpenOption.*;
  * May contain fewer entries than the .cbt file as entries are only written if they contain any real data,
  * or if needed to fill up the space up until such an entry.
  */
-public class TournamentExtraStorage implements ItemStorageSerializer<TournamentExtraHeader, TournamentExtra> {
+public class TournamentExtraStorage implements ItemStorageSerializer<TournamentExtraHeader, TournamentExtra>, MetricsProvider {
 
     private static final Logger log = LoggerFactory.getLogger(TournamentExtraStorage.class);
+
+    private static final String STORAGE_NAME = "TournamentExt";
 
     private final @NotNull ItemStorage<TournamentExtraHeader, TournamentExtra> storage;
     private final @NotNull DatabaseContext context;
@@ -42,19 +43,19 @@ public class TournamentExtraStorage implements ItemStorageSerializer<TournamentE
     }
 
     public TournamentExtraStorage(@Nullable DatabaseContext context) {
-        this(new InMemoryItemStorage<>(context, "TournamentExt", TournamentExtraHeader.empty(), TournamentExtra.empty()), context);
+        this(new InMemoryItemStorage<>(context, STORAGE_NAME, TournamentExtraHeader.empty(), TournamentExtra.empty()), context);
     }
 
     public TournamentExtraStorage(@NotNull ItemStorage<TournamentExtraHeader, TournamentExtra> storage, @Nullable DatabaseContext context) {
         this.storage = storage;
         this.context = context == null ? new DatabaseContext() : context;
-        this.itemMetricsRef = ItemMetrics.register(this.context.instrumentation(), "TournamentExt");
+        this.itemMetricsRef = ItemMetrics.register(this.context.instrumentation(), STORAGE_NAME);
     }
 
     protected TournamentExtraStorage(@NotNull File file, @NotNull Set<OpenOption> options, @Nullable DatabaseContext context) throws IOException {
         this.context = context == null ? new DatabaseContext() : context;
-        this.storage = new FileItemStorage<>(file, this.context, "TournamentExt", this, TournamentExtraHeader.empty(), options);
-        this.itemMetricsRef = ItemMetrics.register(this.context.instrumentation(), "TournamentExt");
+        this.storage = new FileItemStorage<>(file, this.context, STORAGE_NAME, this, TournamentExtraHeader.empty(), options);
+        this.itemMetricsRef = ItemMetrics.register(this.context.instrumentation(), STORAGE_NAME);
 
         if (options.contains(WRITE)) {
             if (storage.getHeader().version() < TournamentExtraHeader.DEFAULT_HEADER_VERSION) {
@@ -322,5 +323,15 @@ public class TournamentExtraStorage implements ItemStorageSerializer<TournamentE
     @Override
     public @NotNull TournamentExtra emptyItem(int id) {
         return ImmutableTournamentExtra.empty();
+    }
+
+    @Override
+    public @NotNull List<MetricsKey> getMetricsKeys() {
+        ArrayList<MetricsKey> metricsKeys = new ArrayList<>();
+        metricsKeys.add(this.itemMetricsRef.metricsKey());
+        if (storage instanceof MetricsProvider) {
+            metricsKeys.addAll(((MetricsProvider) storage).getMetricsKeys());
+        };
+        return metricsKeys;
     }
 }

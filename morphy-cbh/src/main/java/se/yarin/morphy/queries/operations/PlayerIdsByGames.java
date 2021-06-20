@@ -3,6 +3,7 @@ package se.yarin.morphy.queries.operations;
 import org.jetbrains.annotations.NotNull;
 import se.yarin.morphy.Game;
 import se.yarin.morphy.entities.EntityType;
+import se.yarin.morphy.metrics.MetricsProvider;
 import se.yarin.morphy.queries.QueryContext;
 
 import java.util.List;
@@ -43,5 +44,10 @@ public class PlayerIdsByGames extends QueryOperator<Integer> {
     @Override
     public String toString() {
         return "PlayerIdsByGames()";
+    }
+
+    @Override
+    protected List<MetricsProvider> metricProviders() {
+        return List.of();
     }
 }

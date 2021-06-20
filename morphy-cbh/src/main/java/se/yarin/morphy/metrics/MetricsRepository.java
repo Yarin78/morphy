@@ -5,6 +5,7 @@ import org.jetbrains.annotations.Nullable;
 import se.yarin.morphy.Instrumentation;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -74,9 +75,23 @@ public class MetricsRepository implements AutoCloseable {
     public @NotNull <T extends Metrics> T getMetrics(@NotNull MetricsKey metricsKey) {
         Metrics metrics = this.metrics.get(metricsKey);
         if (metrics == null) {
-            throw new IllegalArgumentException("No such metrics");
+            throw new IllegalArgumentException("No such metrics: " + metricsKey);
         }
         return (T) metrics; // TODO: test when using wrong type
+    }
+
+    public <T extends Metrics> Map<MetricsKey, T> getMetricsByType(@NotNull Class<T> clazz) {
+        HashMap<MetricsKey, T> result = new HashMap<>();
+        for (Map.Entry<MetricsKey, Metrics> entry : metrics.entrySet()) {
+            if (entry.getValue().getClass() == clazz) {
+                result.put(entry.getKey(), (T) entry.getValue());
+            }
+        }
+        return result;
+    }
+
+    public boolean exists(@NotNull MetricsKey metricsKey) {
+        return this.metrics.containsKey(metricsKey);
     }
 
     public void merge(@NotNull MetricsRepository subMetrics) {

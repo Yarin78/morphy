@@ -7,10 +7,8 @@ import org.slf4j.LoggerFactory;
 import se.yarin.morphy.Database;
 import se.yarin.morphy.DatabaseReadTransaction;
 import se.yarin.morphy.Game;
-import se.yarin.morphy.entities.Entity;
-import se.yarin.morphy.entities.EntityIndexReadTransaction;
-import se.yarin.morphy.entities.Player;
-import se.yarin.morphy.entities.Tournament;
+import se.yarin.morphy.boosters.GameEntityIndex;
+import se.yarin.morphy.entities.*;
 import se.yarin.morphy.entities.filters.EntityFilter;
 import se.yarin.morphy.games.filters.GameFilter;
 
@@ -121,6 +119,11 @@ public class QueryPlanner {
         return 1.0;
     }
 
+    public double annotatorFilterEstimate(EntityFilter<Annotator> annotatorFilter) {
+        // TODO
+        return 1.0;
+    }
+
     /**
      * Gets the expected number of players between the two given keys satisfying a filter
      * @param rangeStart start of range
@@ -135,5 +138,42 @@ public class QueryPlanner {
 
     public long tournamentRangeEstimate(@NotNull Tournament rangeStart, @NotNull Tournament rangeEnd, @Nullable EntityFilter<Tournament> tournamentFilter) {
         return 0;
+    }
+
+    public long estimateUniquePages(long numPages, long drawnPages) {
+        // https://stats.stackexchange.com/questions/296005/the-expected-number-of-unique-elements-drawn-with-replacement
+        return Math.round(numPages*(1-Math.exp(-1.0*drawnPages/numPages)));
+    }
+
+    public long estimateTournamentPageReads(long count) {
+        long totalTournamentPages = database.entityIndex(EntityType.TOURNAMENT).numDiskPages();
+
+        return estimateUniquePages(totalTournamentPages, count);
+    }
+
+    public long estimatePlayerPageReads(long count) {
+        long totalPlayerPages = database.entityIndex(EntityType.PLAYER).numDiskPages();
+
+        return estimateUniquePages(totalPlayerPages, count);
+    }
+
+    public long estimateGamePageReads(long count) {
+        long totalGameHeaderPages = database.gameHeaderIndex().numDiskPages();
+        long totalExtendedGameHeaderPages = database.extendedGameHeaderStorage().numDiskPages();
+
+        long expectedGameHeaderPages = estimateUniquePages(totalGameHeaderPages, count);
+        long expectedExtendedGameHeaderPages = estimateUniquePages(totalExtendedGameHeaderPages, count);
+
+        return expectedGameHeaderPages + expectedExtendedGameHeaderPages;
+    }
+
+    public long estimateGameEntityIndexPageReads(@NotNull EntityType entityType, long count) {
+        GameEntityIndex gameEntityIndex = database.gameEntityIndex(entityType);
+        assert gameEntityIndex != null;
+        long citPages = gameEntityIndex.numTableDiskPages();
+        long cibPages = gameEntityIndex.numBlocksDiskPages();
+
+        // We assume here that on average, all games associated with an entity is in the same block in the cib file
+        return estimateUniquePages(citPages, count) + estimateUniquePages(cibPages, count);
     }
 }

@@ -3,7 +3,12 @@ package se.yarin.morphy.queries.operations;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import se.yarin.morphy.Game;
+import se.yarin.morphy.entities.EntityType;
 import se.yarin.morphy.games.filters.GameFilter;
+import se.yarin.morphy.metrics.FileMetrics;
+import se.yarin.morphy.metrics.ItemMetrics;
+import se.yarin.morphy.metrics.MetricsProvider;
+import se.yarin.morphy.metrics.MetricsRepository;
 import se.yarin.morphy.queries.QueryContext;
 
 import java.util.List;
@@ -49,7 +54,7 @@ public class GameLookup extends QueryOperator<Game> {
         return ImmutableOperatorCost.builder()
                 .rows(estimateRows)
                 .numDeserializations(estimateRows) // Non-matching rows will mostly be caught non-deserialized
-                .pageReads(sourceCost.rows()) // Game ids may be scattered across different pages
+                .pageReads(context().queryPlanner().estimateGamePageReads(sourceCost.rows()))
                 .build();
     }
 
@@ -59,5 +64,10 @@ public class GameLookup extends QueryOperator<Game> {
             return "GameLookup(filter: " + gameFilter + ")";
         }
         return "GameLookup()";
+    }
+
+    @Override
+    protected List<MetricsProvider> metricProviders() {
+        return List.of(database().gameHeaderIndex(), database().extendedGameHeaderStorage());
     }
 }

@@ -9,8 +9,7 @@ import se.yarin.morphy.DatabaseContext;
 import se.yarin.morphy.exceptions.MorphyEntityIndexException;
 import se.yarin.morphy.exceptions.MorphyIOException;
 import se.yarin.morphy.exceptions.MorphyNotSupportedException;
-import se.yarin.morphy.metrics.ItemMetrics;
-import se.yarin.morphy.metrics.MetricsRef;
+import se.yarin.morphy.metrics.*;
 import se.yarin.morphy.storage.FileItemStorage;
 import se.yarin.morphy.storage.ItemStorage;
 import se.yarin.morphy.util.CBUtil;
@@ -28,11 +27,11 @@ import java.util.stream.Collectors;
 import static java.nio.file.StandardOpenOption.READ;
 import static java.nio.file.StandardOpenOption.WRITE;
 
-public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
+public abstract class EntityIndex<T extends Entity & Comparable<T>> implements MetricsProvider {
     private static final Logger log = LoggerFactory.getLogger(EntityIndex.class);
 
     protected final @NotNull ItemStorage<EntityIndexHeader, EntityNode> storage;
-    private final @NotNull String entityType;
+    private final @NotNull String entityType; // TODO: Use EntityType
     private final @NotNull DatabaseContext context;
 
     // Number of successfully committed transactions to the EntityIndex
@@ -505,4 +504,13 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>>  {
         upgradedFile.renameTo(file);
     }
 
+    @Override
+    public @NotNull List<MetricsKey> getMetricsKeys() {
+        ArrayList<MetricsKey> metricsKeys = new ArrayList<>();
+        metricsKeys.add(this.itemMetricsRef.metricsKey());
+        if (storage instanceof MetricsProvider) {
+            metricsKeys.addAll(((MetricsProvider) storage).getMetricsKeys());
+        };
+        return metricsKeys;
+    }
 }

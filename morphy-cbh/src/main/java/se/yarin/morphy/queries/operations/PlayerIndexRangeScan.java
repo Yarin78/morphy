@@ -6,6 +6,7 @@ import se.yarin.morphy.entities.EntityIndexReadTransaction;
 import se.yarin.morphy.entities.EntityType;
 import se.yarin.morphy.entities.Player;
 import se.yarin.morphy.entities.filters.EntityFilter;
+import se.yarin.morphy.metrics.MetricsProvider;
 import se.yarin.morphy.queries.QueryContext;
 import se.yarin.util.PagedBlobChannel;
 
@@ -39,11 +40,9 @@ public class PlayerIndexRangeScan extends QueryOperator<Player> {
         long scanCount = context().queryPlanner().playerRangeEstimate(rangeStart, rangeEnd, null);
         long matchCount = context().queryPlanner().playerRangeEstimate(rangeStart, rangeEnd, playerFilter);
 
-        int entitySize = context().entityIndex(EntityType.PLAYER).storageHeader().entitySize();
-
         return ImmutableOperatorCost.builder()
                 .rows(matchCount)
-                .pageReads(1 + entitySize * scanCount / PagedBlobChannel.PAGE_SIZE)
+                .pageReads(context().queryPlanner().estimatePlayerPageReads(scanCount))
                 .numDeserializations(matchCount)
                 .build();
     }
@@ -51,5 +50,10 @@ public class PlayerIndexRangeScan extends QueryOperator<Player> {
     @Override
     public String toString() {
         return "PlayerIndexRangeScan(start: '" + rangeStart + "', end: '" + rangeEnd + "', filter: " + playerFilter + ")";
+    }
+
+    @Override
+    protected List<MetricsProvider> metricProviders() {
+        return List.of(database().playerIndex());
     }
 }

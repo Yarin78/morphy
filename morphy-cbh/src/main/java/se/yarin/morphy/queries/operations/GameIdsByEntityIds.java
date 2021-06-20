@@ -3,6 +3,10 @@ package se.yarin.morphy.queries.operations;
 import org.jetbrains.annotations.NotNull;
 import se.yarin.morphy.boosters.GameEntityIndex;
 import se.yarin.morphy.entities.EntityType;
+import se.yarin.morphy.metrics.FileMetrics;
+import se.yarin.morphy.metrics.ItemMetrics;
+import se.yarin.morphy.metrics.MetricsProvider;
+import se.yarin.morphy.metrics.MetricsRepository;
 import se.yarin.morphy.queries.QueryContext;
 
 import java.util.List;
@@ -42,15 +46,22 @@ public class GameIdsByEntityIds extends QueryOperator<Integer> {
         int entityCount = context().entityIndex(entityType).count();
         int gameCount = context().database().count();
 
+        long expectedMatchingGames = sourceCost.rows() * gameCount / entityCount;
+
         return ImmutableOperatorCost.builder()
-                .rows(OperatorCost.capRowEstimate(sourceCost.rows() * gameCount / entityCount))
-                .numDeserializations(0)
-                .pageReads(0)
+                .rows(OperatorCost.capRowEstimate(expectedMatchingGames))
+                .numDeserializations(expectedMatchingGames / 13 + sourceCost.rows())
+                .pageReads(context().queryPlanner().estimateGameEntityIndexPageReads(entityType, sourceCost.rows()))
                 .build();
     }
 
     @Override
     public String toString() {
         return "GameIdsBy" + entityType.nameSingularCapitalized() + "Ids()";
+    }
+
+    @Override
+    protected List<MetricsProvider> metricProviders() {
+        return List.of(gameEntityIndex);
     }
 }

@@ -5,6 +5,7 @@ import se.yarin.morphy.Game;
 import se.yarin.morphy.entities.EntityIndexReadTransaction;
 import se.yarin.morphy.entities.Tournament;
 import se.yarin.morphy.entities.filters.EntityFilter;
+import se.yarin.morphy.metrics.MetricsProvider;
 import se.yarin.morphy.queries.QueryContext;
 
 import java.util.List;
@@ -44,7 +45,8 @@ public class GameTournamentFilter extends QueryOperator<Game> {
 
         return ImmutableOperatorCost.builder()
                 .rows(OperatorCost.capRowEstimate(sourceCost.rows() * ratio))
-                .pageReads(sourceCost.rows())
+                //.pageReads(context().queryPlanner().estimateTournamentPageReads(sourceCost.rows()))
+                .pageReads(sourceCost.rows()) // The reads will be scattered
                 .numDeserializations(OperatorCost.capRowEstimate(sourceCost.rows() * ratio))
                 .build();
     }
@@ -52,5 +54,10 @@ public class GameTournamentFilter extends QueryOperator<Game> {
     @Override
     public String toString() {
         return "GameTournamentFilter(filter: " + tournamentFilter + ")";
+    }
+
+    @Override
+    protected List<MetricsProvider> metricProviders() {
+        return List.of(database().tournamentIndex(), database().tournamentExtraStorage());
     }
 }

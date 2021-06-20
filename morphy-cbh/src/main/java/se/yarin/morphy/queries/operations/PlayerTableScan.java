@@ -5,6 +5,7 @@ import org.jetbrains.annotations.Nullable;
 import se.yarin.morphy.entities.EntityIndexReadTransaction;
 import se.yarin.morphy.entities.Player;
 import se.yarin.morphy.entities.filters.EntityFilter;
+import se.yarin.morphy.metrics.MetricsProvider;
 import se.yarin.morphy.queries.QueryContext;
 
 import java.util.List;
@@ -13,11 +14,17 @@ import java.util.stream.Stream;
 public class PlayerTableScan extends QueryOperator<Player> {
     private final @NotNull EntityIndexReadTransaction<Player> txn;
     private final @Nullable EntityFilter<Player> playerFilter;
+    private final int firstPlayerId;
 
     public PlayerTableScan(@NotNull QueryContext queryContext, @Nullable EntityFilter<Player> playerFilter) {
+        this(queryContext, playerFilter, 0);
+    }
+
+    public PlayerTableScan(@NotNull QueryContext queryContext, @Nullable EntityFilter<Player> playerFilter, int firstId) {
         super(queryContext);
         this.txn = transaction().playerTransaction();
         this.playerFilter = playerFilter;
+        this.firstPlayerId = firstId;
     }
 
     @Override
@@ -27,16 +34,18 @@ public class PlayerTableScan extends QueryOperator<Player> {
 
     @Override
     public Stream<Player> operatorStream() {
-        return txn.stream(this.playerFilter);
+        return txn.stream(firstPlayerId, this.playerFilter);
     }
 
     @Override
     public OperatorCost estimateCost() {
-        int numPlayers = context().database().playerIndex().count();
-        double ratio = context().queryPlanner().playerFilterEstimate(playerFilter);
-        long estimateRows = OperatorCost.capRowEstimate((int) Math.round(numPlayers * ratio));
+        int totalPlayers = context().database().playerIndex().count();
+        int numScannedPlayers = Math.max(0, totalPlayers - firstPlayerId);
+        double scanRatio = 1.0 * numScannedPlayers / totalPlayers;
+        double matchingRatio = context().queryPlanner().playerFilterEstimate(playerFilter);
+        long estimateRows = OperatorCost.capRowEstimate((int) Math.round(numScannedPlayers * matchingRatio));
 
-        long pageReads = context().database().playerIndex().numDiskPages();
+        long pageReads = Math.round(context().database().playerIndex().numDiskPages() * scanRatio);
 
         return ImmutableOperatorCost.builder()
                 .rows(estimateRows)
@@ -51,5 +60,10 @@ public class PlayerTableScan extends QueryOperator<Player> {
             return "PlayerTableScan(filter: " + playerFilter + ")";
         }
         return "PlayerTableScan()";
+    }
+
+    @Override
+    protected List<MetricsProvider> metricProviders() {
+        return List.of(database().playerIndex());
     }
 }

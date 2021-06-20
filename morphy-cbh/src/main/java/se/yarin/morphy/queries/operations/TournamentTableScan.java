@@ -5,6 +5,7 @@ import org.jetbrains.annotations.Nullable;
 import se.yarin.morphy.entities.EntityIndexReadTransaction;
 import se.yarin.morphy.entities.Tournament;
 import se.yarin.morphy.entities.filters.EntityFilter;
+import se.yarin.morphy.metrics.MetricsProvider;
 import se.yarin.morphy.queries.QueryContext;
 
 import java.util.List;
@@ -36,8 +37,7 @@ public class TournamentTableScan extends QueryOperator<Tournament> {
         double ratio = tournamentFilter == null ? 1.0 : tournamentFilter.expectedMatch(context().queryPlanner());
         long estimateRows = OperatorCost.capRowEstimate((int) Math.round(numTournaments * ratio));
 
-        long pageReads = context().database().tournamentIndex().numDiskPages() +
-                context().database().tournamentExtraStorage().numDiskPages();
+        long pageReads = context().database().tournamentIndex().numDiskPages();
 
         return ImmutableOperatorCost.builder()
                 .rows(estimateRows)
@@ -52,5 +52,10 @@ public class TournamentTableScan extends QueryOperator<Tournament> {
             return "TournamentTableScan(filter: " + tournamentFilter + ")";
         }
         return "TournamentTableScan()";
+    }
+
+    @Override
+    protected List<MetricsProvider> metricProviders() {
+        return List.of(database().tournamentIndex(), database().tournamentExtraStorage());
     }
 }

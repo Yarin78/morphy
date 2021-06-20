@@ -6,6 +6,7 @@ import se.yarin.morphy.entities.EntityIndexReadTransaction;
 import se.yarin.morphy.entities.EntityType;
 import se.yarin.morphy.entities.Tournament;
 import se.yarin.morphy.entities.filters.EntityFilter;
+import se.yarin.morphy.metrics.MetricsProvider;
 import se.yarin.morphy.queries.QueryContext;
 import se.yarin.util.PagedBlobChannel;
 
@@ -39,12 +40,9 @@ public class TournamentIndexRangeScan extends QueryOperator<Tournament> {
         long scanCount = context().queryPlanner().tournamentRangeEstimate(rangeStart, rangeEnd, null);
         long matchCount = context().queryPlanner().tournamentRangeEstimate(rangeStart, rangeEnd, tournamentFilter);
 
-        int entitySize = context().entityIndex(EntityType.TOURNAMENT).storageHeader().entitySize();
-        int extraSize = context().database().tournamentExtraStorage().storageHeader().recordSize();
-
         return ImmutableOperatorCost.builder()
                 .rows(matchCount)
-                .pageReads(2 + entitySize * scanCount / PagedBlobChannel.PAGE_SIZE + extraSize * scanCount / PagedBlobChannel.PAGE_SIZE)
+                .pageReads(context().queryPlanner().estimateTournamentPageReads(scanCount))
                 .numDeserializations(matchCount)
                 .build();
     }
@@ -52,5 +50,10 @@ public class TournamentIndexRangeScan extends QueryOperator<Tournament> {
     @Override
     public String toString() {
         return "TournamentIndexRangeScan(start: '" + rangeStart + "', end: '" + rangeEnd + "', filter: " + tournamentFilter + ")";
+    }
+
+    @Override
+    protected List<MetricsProvider> metricProviders() {
+        return List.of(database().tournamentIndex(), database().tournamentExtraStorage());
     }
 }

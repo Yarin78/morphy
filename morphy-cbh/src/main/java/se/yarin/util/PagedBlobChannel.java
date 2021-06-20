@@ -3,6 +3,8 @@ package se.yarin.util;
 import org.jetbrains.annotations.NotNull;
 import se.yarin.morphy.Instrumentation;
 import se.yarin.morphy.metrics.FileMetrics;
+import se.yarin.morphy.metrics.MetricsKey;
+import se.yarin.morphy.metrics.MetricsProvider;
 import se.yarin.morphy.metrics.MetricsRef;
 
 import java.io.IOException;
@@ -14,7 +16,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
-public class PagedBlobChannel implements BlobChannel {
+public class PagedBlobChannel implements BlobChannel, MetricsProvider {
     public static final int PAGE_SIZE = 16384;
     private static final int DEFAULT_INSERT_CHUNK_SIZE = 1024*1024;
     private final @NotNull FileChannel channel;
@@ -162,5 +164,10 @@ public class PagedBlobChannel implements BlobChannel {
     public void close() throws IOException {
         channel.close();
         pageCache.clear();
+    }
+
+    @Override
+    public @NotNull List<MetricsKey> getMetricsKeys() {
+        return List.of(fileMetricsRef.metricsKey());
     }
 }

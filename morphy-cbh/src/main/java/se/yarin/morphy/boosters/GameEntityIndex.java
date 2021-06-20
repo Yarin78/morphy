@@ -9,7 +9,7 @@ import se.yarin.morphy.Instrumentation;
 import se.yarin.morphy.entities.*;
 import se.yarin.morphy.exceptions.MorphyInvalidDataException;
 import se.yarin.morphy.exceptions.MorphyNotSupportedException;
-import se.yarin.morphy.metrics.ItemMetrics;
+import se.yarin.morphy.metrics.*;
 import se.yarin.morphy.storage.FileItemStorage;
 import se.yarin.morphy.storage.InMemoryItemStorage;
 import se.yarin.morphy.storage.ItemStorage;
@@ -23,7 +23,7 @@ import java.util.stream.StreamSupport;
 
 import static java.nio.file.StandardOpenOption.*;
 
-public class GameEntityIndex {
+public class GameEntityIndex implements MetricsProvider {
     private final @NotNull ItemStorage<IndexHeader, IndexItem> citStorage;
     private final @NotNull ItemStorage<IndexBlockHeader, IndexBlockItem> cibStorage;
 
@@ -42,6 +42,8 @@ public class GameEntityIndex {
     // The order of the entity types in the .cit2 file
     public static final List<EntityType> SECONDARY_TYPES = List.of(
             EntityType.GAME_TAG);
+
+    private final @Nullable MetricsRef<ItemMetrics> tableMetricsRef, blockMetricsRef;
 
     public DatabaseContext context() {
         return context;
@@ -75,6 +77,8 @@ public class GameEntityIndex {
         this.citStorage = citStorage;
         this.cibStorage = cibStorage;
         this.context = context == null ? new DatabaseContext() : context;
+        tableMetricsRef = null;
+        blockMetricsRef = null;
     }
 
     protected GameEntityIndex(
@@ -88,10 +92,15 @@ public class GameEntityIndex {
         String suffix = CBUtil.getExtension(citFile).substring(4);
 
         Instrumentation instrumentation = this.context.instrumentation();
+        MetricsRef<ItemMetrics> tableMetricsRef = ItemMetrics.register(instrumentation, "IndexTable" + suffix);
+        MetricsRef<ItemMetrics> blockMetricsRef = ItemMetrics.register(instrumentation, "IndexBlock" + suffix);
         this.citStorage = new FileItemStorage<>(
-                citFile, this.context, "IndexTable", new IndexSerializer(this.citOrder.size(), ItemMetrics.register(instrumentation, "IndexTable" + suffix)), IndexHeader.emptyCIT(), options);
+                citFile, this.context, "IndexTable" + suffix, new IndexSerializer(this.citOrder.size(), tableMetricsRef), IndexHeader.emptyCIT(), options);
         this.cibStorage = new FileItemStorage<>(
-                cibFile, this.context, "IndexBlock", new IndexBlockSerializer(ItemMetrics.register(instrumentation, "IndexBlock" + suffix)), IndexBlockHeader.empty(), options);
+                cibFile, this.context, "IndexBlock" + suffix, new IndexBlockSerializer(blockMetricsRef), IndexBlockHeader.empty(), options);
+
+        this.tableMetricsRef = tableMetricsRef;
+        this.blockMetricsRef = blockMetricsRef;
 
         if (options.contains(WRITE)) {
             if (citStorage.getHeader().unknown1() != 0 || citStorage.getHeader().unknown2() != 0) {
@@ -218,6 +227,24 @@ public class GameEntityIndex {
 
     public @NotNull Stream<Integer> stream(int entityId, @NotNull EntityType type, boolean includeDuplicates) {
         return StreamSupport.stream(iterable(entityId, type, includeDuplicates).spliterator(), false);
+    }
+
+    @Override
+    public @NotNull List<MetricsKey> getMetricsKeys() {
+        ArrayList<MetricsKey> metricsKeys = new ArrayList<>();
+        if (tableMetricsRef != null) {
+            metricsKeys.add(tableMetricsRef.metricsKey());
+        }
+        if (blockMetricsRef != null) {
+            metricsKeys.add(blockMetricsRef.metricsKey());
+        }
+        if (citStorage instanceof MetricsProvider) {
+            metricsKeys.addAll(((MetricsProvider) citStorage).getMetricsKeys());
+        }
+        if (cibStorage instanceof MetricsProvider) {
+            metricsKeys.addAll(((MetricsProvider) cibStorage).getMetricsKeys());
+        }
+        return metricsKeys;
     }
 
     public class EntityGameIterator implements Iterator<Integer> {
@@ -460,6 +487,22 @@ public class GameEntityIndex {
 
     public int gamesPerBlock() {
         return (cibStorage.getHeader().itemSize() - 12) / 4;
+    }
+
+    public long numBlocksDiskPages() {
+        if (cibStorage instanceof FileItemStorage) {
+            return ((FileItemStorage<IndexBlockHeader, IndexBlockItem>) cibStorage).numPages();
+        } else {
+            return 0;
+        }
+    }
+
+    public long numTableDiskPages() {
+        if (citStorage instanceof FileItemStorage) {
+            return ((FileItemStorage<IndexHeader, IndexItem>) citStorage).numPages();
+        } else {
+            return 0;
+        }
     }
 
     private int getHead(int entityId, @NotNull EntityType type) {

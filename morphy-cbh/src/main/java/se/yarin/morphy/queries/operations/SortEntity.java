@@ -2,6 +2,7 @@ package se.yarin.morphy.queries.operations;
 
 import org.jetbrains.annotations.NotNull;
 import se.yarin.morphy.entities.Entity;
+import se.yarin.morphy.metrics.MetricsProvider;
 import se.yarin.morphy.queries.QueryContext;
 
 import java.util.Comparator;
@@ -38,5 +39,10 @@ public class SortEntity<T extends Entity & Comparable<T>> extends QueryOperator<
     @Override
     public String toString() {
         return "Sort()";
+    }
+
+    @Override
+    protected List<MetricsProvider> metricProviders() {
+        return List.of();
     }
 }

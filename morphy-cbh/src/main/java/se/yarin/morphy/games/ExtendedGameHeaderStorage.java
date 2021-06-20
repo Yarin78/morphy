@@ -11,8 +11,7 @@ import se.yarin.morphy.exceptions.MorphyException;
 import se.yarin.morphy.exceptions.MorphyIOException;
 import se.yarin.morphy.exceptions.MorphyInvalidDataException;
 import se.yarin.morphy.exceptions.MorphyNotSupportedException;
-import se.yarin.morphy.metrics.ItemMetrics;
-import se.yarin.morphy.metrics.MetricsRef;
+import se.yarin.morphy.metrics.*;
 import se.yarin.morphy.storage.*;
 import se.yarin.morphy.util.CBUtil;
 import se.yarin.util.ByteBufferUtil;
@@ -22,6 +21,7 @@ import java.io.IOException;
 import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 import java.nio.file.OpenOption;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
@@ -32,8 +32,10 @@ import static java.nio.file.StandardOpenOption.*;
  * This file may be missing in very old databases.
  * There are also multiple versions possible, with different sized records.
  */
-public class ExtendedGameHeaderStorage implements ItemStorageSerializer<ExtendedGameHeaderStorage.ExtProlog, ExtendedGameHeader> {
+public class ExtendedGameHeaderStorage implements ItemStorageSerializer<ExtendedGameHeaderStorage.ExtProlog, ExtendedGameHeader>, MetricsProvider {
     private static final Logger log = LoggerFactory.getLogger(ExtendedGameHeaderStorage.class);
+
+    private static final String STORAGE_NAME = "GameHeaderExt";
 
     private final @NotNull ItemStorage<ExtendedGameHeaderStorage.ExtProlog, ExtendedGameHeader> storage;
     private final @NotNull DatabaseContext context;
@@ -44,13 +46,13 @@ public class ExtendedGameHeaderStorage implements ItemStorageSerializer<Extended
     }
 
     public ExtendedGameHeaderStorage(@Nullable DatabaseContext context) {
-        this(new InMemoryItemStorage<>(context, "GameHeaderExt", ExtProlog.empty(), null, true), context);
+        this(new InMemoryItemStorage<>(context, STORAGE_NAME, ExtProlog.empty(), null, true), context);
     }
 
     private ExtendedGameHeaderStorage(@NotNull ItemStorage<ExtProlog, ExtendedGameHeader> storage, @Nullable DatabaseContext context) {
         this.storage = storage;
         this.context = context == null ? new DatabaseContext() : context;
-        this.itemMetricsRef = ItemMetrics.register(this.context.instrumentation(), "GameHeaderExt");
+        this.itemMetricsRef = ItemMetrics.register(this.context.instrumentation(), STORAGE_NAME);
     }
 
     private ExtendedGameHeaderStorage(@NotNull File file, @NotNull Set<OpenOption> options, @Nullable DatabaseContext context) throws IOException {
@@ -58,8 +60,8 @@ public class ExtendedGameHeaderStorage implements ItemStorageSerializer<Extended
             throw new IllegalArgumentException("The file extension of an extended GameHeader storage must be .cbj");
         }
         this.context = context == null ? new DatabaseContext() : context;
-        this.itemMetricsRef = ItemMetrics.register(this.context.instrumentation(), "GameHeaderExt");
-        this.storage = new FileItemStorage<>(file, this.context, "GameHeaderExt", this, ExtProlog.empty(), options);
+        this.itemMetricsRef = ItemMetrics.register(this.context.instrumentation(), STORAGE_NAME);
+        this.storage = new FileItemStorage<>(file, this.context, STORAGE_NAME, this, ExtProlog.empty(), options);
 
         if (options.contains(WRITE)) {
             if (storage.getHeader().version() < ExtProlog.DEFAULT_VERSION) {
@@ -289,6 +291,16 @@ public class ExtendedGameHeaderStorage implements ItemStorageSerializer<Extended
             target.storage.putItem(i, storage.getItem(i));
         }
         target.storage.putHeader(storage.getHeader());
+    }
+
+    @Override
+    public @NotNull List<MetricsKey> getMetricsKeys() {
+        ArrayList<MetricsKey> metricsKeys = new ArrayList<>();
+        metricsKeys.add(this.itemMetricsRef.metricsKey());
+        if (storage instanceof MetricsProvider) {
+            metricsKeys.addAll(((MetricsProvider) storage).getMetricsKeys());
+        };
+        return metricsKeys;
     }
 
     @Value.Immutable

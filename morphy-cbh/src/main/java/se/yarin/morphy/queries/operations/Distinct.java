@@ -1,6 +1,8 @@
 package se.yarin.morphy.queries.operations;
 
 import org.jetbrains.annotations.NotNull;
+import se.yarin.morphy.metrics.MetricsProvider;
+import se.yarin.morphy.metrics.MetricsRepository;
 import se.yarin.morphy.queries.QueryContext;
 
 import java.util.List;
@@ -37,5 +39,10 @@ public class Distinct<T> extends QueryOperator<T> {
     @Override
     public String toString() {
         return "Distinct()";
+    }
+
+    @Override
+    protected List<MetricsProvider> metricProviders() {
+        return List.of();
     }
 }

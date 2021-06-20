@@ -8,6 +8,8 @@ import se.yarin.morphy.exceptions.MorphyIOException;
 import se.yarin.morphy.exceptions.MorphyInvalidDataException;
 import se.yarin.morphy.exceptions.MorphyNotSupportedException;
 import se.yarin.morphy.metrics.ItemMetrics;
+import se.yarin.morphy.metrics.MetricsKey;
+import se.yarin.morphy.metrics.MetricsProvider;
 import se.yarin.morphy.metrics.MetricsRef;
 import se.yarin.util.BlobChannel;
 import se.yarin.util.PagedBlobChannel;
@@ -22,7 +24,7 @@ import java.util.Set;
 
 import static java.nio.file.StandardOpenOption.*;
 
-public class FileItemStorage<THeader, TItem> implements ItemStorage<THeader, TItem> {
+public class FileItemStorage<THeader, TItem> implements ItemStorage<THeader, TItem>, MetricsProvider {
     private final MetricsRef<ItemMetrics> itemMetricsRef;
     private long fileSize;
     private THeader header;
@@ -234,5 +236,15 @@ public class FileItemStorage<THeader, TItem> implements ItemStorage<THeader, TIt
         } catch (IOException e) {
             throw new MorphyIOException("Failed to close storage", e);
         }
+    }
+
+    @Override
+    public @NotNull List<MetricsKey> getMetricsKeys() {
+        ArrayList<MetricsKey> metrics = new ArrayList<>();
+        metrics.add(itemMetricsRef.metricsKey());
+        if (channel instanceof MetricsProvider) {
+            metrics.addAll(((MetricsProvider) channel).getMetricsKeys());
+        }
+        return metrics;
     }
 }

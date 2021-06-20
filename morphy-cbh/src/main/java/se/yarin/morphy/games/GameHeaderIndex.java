@@ -12,8 +12,7 @@ import se.yarin.morphy.exceptions.MorphyIOException;
 import se.yarin.morphy.exceptions.MorphyInternalException;
 import se.yarin.morphy.exceptions.MorphyInvalidDataException;
 import se.yarin.morphy.exceptions.MorphyNotSupportedException;
-import se.yarin.morphy.metrics.ItemMetrics;
-import se.yarin.morphy.metrics.MetricsRef;
+import se.yarin.morphy.metrics.*;
 import se.yarin.morphy.storage.*;
 import se.yarin.morphy.util.CBUtil;
 import se.yarin.util.ByteBufferUtil;
@@ -22,6 +21,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.file.OpenOption;
+import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
@@ -29,7 +29,7 @@ import java.util.Set;
 import static java.nio.file.StandardOpenOption.*;
 import static se.yarin.morphy.storage.MorphyOpenOption.IGNORE_NON_CRITICAL_ERRORS;
 
-public class GameHeaderIndex implements ItemStorageSerializer<GameHeaderIndex.Prolog, GameHeader> {
+public class GameHeaderIndex implements ItemStorageSerializer<GameHeaderIndex.Prolog, GameHeader>, MetricsProvider {
 
     private static final Logger log = LoggerFactory.getLogger(GameHeaderIndex.class);
 
@@ -231,6 +231,16 @@ public class GameHeaderIndex implements ItemStorageSerializer<GameHeaderIndex.Pr
         } else {
             return 0;
         }
+    }
+
+    @Override
+    public @NotNull List<MetricsKey> getMetricsKeys() {
+        ArrayList<MetricsKey> metricsKeys = new ArrayList<>();
+        metricsKeys.add(this.itemMetricsRef.metricsKey());
+        if (storage instanceof MetricsProvider) {
+            metricsKeys.addAll(((MetricsProvider) storage).getMetricsKeys());
+        };
+        return metricsKeys;
     }
 
     /**
