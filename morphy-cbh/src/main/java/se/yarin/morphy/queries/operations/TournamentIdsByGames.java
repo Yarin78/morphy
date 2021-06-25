@@ -28,17 +28,17 @@ public class TournamentIdsByGames extends QueryOperator<Integer> {
     }
 
     @Override
-    public OperatorCost estimateCost() {
-        OperatorCost sourceCost = source.estimateCost();
+    public void estimateOperatorCost(@NotNull ImmutableOperatorCost.Builder operatorCost) {
+        OperatorCost sourceCost = source.getOperatorCost();
 
         int entityCount = context().entityIndex(EntityType.TOURNAMENT).count();
         int gameCount = context().database().count();
 
-        return ImmutableOperatorCost.builder()
-                .rows(OperatorCost.capRowEstimate(entityCount * sourceCost.rows() / gameCount))
-                .numDeserializations(0)
-                .pageReads(0)
-                .build();
+        operatorCost
+            .estimateRows(OperatorCost.capRowEstimate(entityCount * sourceCost.estimateRows() / gameCount))
+            .estimateDeserializations(0)
+            .estimatePageReads(0)
+            .build();
     }
 
     @Override

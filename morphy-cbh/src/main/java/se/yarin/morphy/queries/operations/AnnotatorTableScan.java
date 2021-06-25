@@ -32,17 +32,16 @@ public class AnnotatorTableScan extends QueryOperator<Annotator> {
     }
 
     @Override
-    public OperatorCost estimateCost() {
+    public void estimateOperatorCost(@NotNull ImmutableOperatorCost.Builder operatorCost) {
         int numPlayers = context().database().annotatorIndex().count();
         double ratio = context().queryPlanner().annotatorFilterEstimate(annotatorFilter);
         long estimateRows = OperatorCost.capRowEstimate((int) Math.round(numPlayers * ratio));
 
         long pageReads = context().database().annotatorIndex().numDiskPages();
 
-        return ImmutableOperatorCost.builder()
-                .rows(estimateRows)
-                .numDeserializations(estimateRows) // Non-matching rows will mostly be caught non-deserialized
-                .pageReads(pageReads)
+        operatorCost.estimateRows(estimateRows)
+                .estimateDeserializations(estimateRows) // Non-matching rows will mostly be caught non-deserialized
+                .estimatePageReads(pageReads)
                 .build();
     }
 

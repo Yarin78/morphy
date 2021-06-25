@@ -26,12 +26,11 @@ public class SortId extends QueryOperator<Integer> {
     }
 
     @Override
-    public OperatorCost estimateCost() {
-        return ImmutableOperatorCost.builder()
-                .rows(source.estimateCost().rows())
-                .numDeserializations(0)
-                .pageReads(0)
-                .build();
+    public void estimateOperatorCost(@NotNull ImmutableOperatorCost.Builder operatorCost) {
+        operatorCost
+            .estimateRows(source.getOperatorCost().estimateRows())
+            .estimateDeserializations(0)
+            .estimatePageReads(0);
     }
 
     @Override

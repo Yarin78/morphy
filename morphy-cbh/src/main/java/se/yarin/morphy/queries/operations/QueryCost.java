@@ -4,21 +4,43 @@ import org.immutables.value.Value;
 
 @Value.Immutable
 public interface QueryCost {
-    long rows();
-    long pageReads();
-    long numDeserializations();
+    long actualRows();
+    long actualPhysicalPageReads();
+    long actualLogicalPageReads();
+    long actualDeserializations();
+    long actualWallClockTime();
 
-    double cpuCost();
-    double ioCost();
+    long estimatedRows();
+    long estimatedPageReads();
+    long estimatedDeserializations();
+    double estimatedCpuCost();
+    double estimatedIOCost();
 
-    long wallClockTime();
 
     default String format() {
-        String s = String.format("cpuCost = %f, ioCost = %f (rows = %d, deser = %d, pageReads = %d)",
-                cpuCost(), ioCost(), rows(), numDeserializations(), pageReads());
-        if (wallClockTime() > 0) {
-            s += String.format(" [%d ms]", wallClockTime());
+        String actual = "";
+        if (actualRows() > 0) {
+            // We have actual data
+            actual = String.format("""
+                    Execution time:             %8d ms
+                                        
+                    Actual rows:                %8d
+                    Actual physical reads:      %8d
+                    Actual logical reads:       %8d
+                    Actual deserializations:    %8d
+                    
+                    """, actualWallClockTime(), actualRows(), actualPhysicalPageReads(), actualLogicalPageReads(), actualDeserializations());
         }
-        return s;
+        String estimate = String.format("""
+                        Estimate rows:              %8d
+                        Estimate page reads:        %8d
+                        Estimate deserializations:  %8d
+                                            
+                        Estimate CPU cost:          %8d
+                        Estimate IO cost:           %8d
+                        """,
+                estimatedRows(), estimatedPageReads(), estimatedDeserializations(), (long) estimatedCpuCost(), (long) estimatedIOCost());
+
+        return actual + estimate;
     }
 }

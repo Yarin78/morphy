@@ -32,18 +32,17 @@ public class TournamentTableScan extends QueryOperator<Tournament> {
     }
 
     @Override
-    public OperatorCost estimateCost() {
+    public void estimateOperatorCost(@NotNull ImmutableOperatorCost.Builder operatorCost) {
         int numTournaments = context().database().tournamentIndex().count();
         double ratio = tournamentFilter == null ? 1.0 : tournamentFilter.expectedMatch(context().queryPlanner());
         long estimateRows = OperatorCost.capRowEstimate((int) Math.round(numTournaments * ratio));
 
         long pageReads = context().database().tournamentIndex().numDiskPages();
 
-        return ImmutableOperatorCost.builder()
-                .rows(estimateRows)
-                .numDeserializations(estimateRows) // Non-matching rows will mostly be caught non-deserialized
-                .pageReads(pageReads)
-                .build();
+        operatorCost
+            .estimateRows(estimateRows)
+            .estimateDeserializations(estimateRows) // Non-matching rows will mostly be caught non-deserialized
+            .estimatePageReads(pageReads);
     }
 
     @Override

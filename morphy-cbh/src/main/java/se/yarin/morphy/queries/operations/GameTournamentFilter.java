@@ -38,17 +38,16 @@ public class GameTournamentFilter extends QueryOperator<Game> {
     }
 
     @Override
-    public OperatorCost estimateCost() {
-        OperatorCost sourceCost = source.estimateCost();
+    public void estimateOperatorCost(@NotNull ImmutableOperatorCost.Builder operatorCost) {
+        OperatorCost sourceCost = source.getOperatorCost();
 
         double ratio = tournamentFilter.expectedMatch(context().queryPlanner());
 
-        return ImmutableOperatorCost.builder()
-                .rows(OperatorCost.capRowEstimate(sourceCost.rows() * ratio))
-                //.pageReads(context().queryPlanner().estimateTournamentPageReads(sourceCost.rows()))
-                .pageReads(sourceCost.rows()) // The reads will be scattered
-                .numDeserializations(OperatorCost.capRowEstimate(sourceCost.rows() * ratio))
-                .build();
+        operatorCost
+            .estimateRows(OperatorCost.capRowEstimate(sourceCost.estimateRows() * ratio))
+            //.estimatePageReads(context().queryPlanner().estimateTournamentPageReads(sourceCost.estimateRows()))
+            .estimatePageReads(sourceCost.estimateRows()) // The reads will be scattered
+            .estimateDeserializations(OperatorCost.capRowEstimate(sourceCost.estimateRows() * ratio));
     }
 
     @Override

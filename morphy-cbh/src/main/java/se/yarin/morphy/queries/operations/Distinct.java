@@ -2,7 +2,6 @@ package se.yarin.morphy.queries.operations;
 
 import org.jetbrains.annotations.NotNull;
 import se.yarin.morphy.metrics.MetricsProvider;
-import se.yarin.morphy.metrics.MetricsRepository;
 import se.yarin.morphy.queries.QueryContext;
 
 import java.util.List;
@@ -27,13 +26,13 @@ public class Distinct<T> extends QueryOperator<T> {
     }
 
     @Override
-    public OperatorCost estimateCost() {
-        OperatorCost sourceCost = source.estimateCost();
-        return ImmutableOperatorCost.builder()
-                .rows(sourceCost.rows())
-                .numDeserializations(0)
-                .pageReads(0)
-                .build();
+    public void estimateOperatorCost(@NotNull ImmutableOperatorCost.Builder operatorCost) {
+        OperatorCost sourceCost = source.getOperatorCost();
+        operatorCost
+            .estimateRows(sourceCost.estimateRows())
+            .estimateDeserializations(0)
+            .estimatePageReads(0)
+            .build();
     }
 
     @Override

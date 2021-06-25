@@ -10,6 +10,7 @@ import se.yarin.morphy.queries.QueryContext;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -20,11 +21,12 @@ public abstract class QueryOperator<T> {
     private static final double DESERIALIZATION_COST = 0.0006;
 
     private final @NotNull QueryContext queryContext;
+    private @Nullable OperatorCost actualOperatorCost; // Only actual fields set
     private final AtomicInteger actualRowCount = new AtomicInteger(0);
-    private final AtomicInteger actualPageReads = new AtomicInteger(0);
-    private final AtomicInteger actualDeser = new AtomicInteger(0);
 
-    private @Nullable QueryCost actualQueryCost;
+    // These fields are set on the outermost query operator after the query has been executed
+    private @Nullable MetricsRepository queryMetrics;
+    private long actualWallClockTime;
 
     public QueryOperator(@NotNull QueryContext queryContext) {
         this.queryContext = queryContext;
@@ -42,7 +44,7 @@ public abstract class QueryOperator<T> {
         return queryContext.transaction();
     }
 
-    public Stream<T> stream() {
+    public final Stream<T> stream() {
         Stream<T> stream = operatorStream();
         if (queryContext.traceCost()) {
             stream = stream.peek(t -> actualRowCount.incrementAndGet());
@@ -50,113 +52,150 @@ public abstract class QueryOperator<T> {
         return stream;
     }
 
-    public List<T> executeProfiled() {
+    public final List<T> executeProfiled() {
         Instrumentation instrumentation = context().databaseContext().instrumentation();
         var queryMetrics = instrumentation.pushContext("query", true);
         try {
             long start = System.currentTimeMillis();
             List<T> queryResult = stream().collect(Collectors.toList());
-            long elapsed = System.currentTimeMillis() - start;
-
-            long numRows = updateActual(queryMetrics);
-
-            long numDeser = 0, numPageReads = 0;
-            for (@NotNull ItemMetrics itemMetrics : queryMetrics.getMetricsByType(ItemMetrics.class).values()) {
-                numDeser += itemMetrics.deserializations();
-            }
-            for (@NotNull FileMetrics fileMetrics : queryMetrics.getMetricsByType(FileMetrics.class).values()) {
-                numPageReads += fileMetrics.physicalPageReads();
-            }
-
-            this.actualQueryCost = ImmutableQueryCost.builder()
-                .rows(numRows)
-                .numDeserializations(numDeser)
-                .pageReads(numPageReads)
-                .ioCost(numPageReads)
-                .cpuCost(numDeser * 10 + numRows) // TODO deser cost should be variable per item type
-                .wallClockTime(elapsed)
-                .build();
+            this.actualWallClockTime = System.currentTimeMillis() - start;
+            Set<MetricsKey> duplicateKeys = streamMetricsKeys()
+                    .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()))
+                    .entrySet().stream()
+                    .filter(m -> m.getValue() > 1)
+                    .map(Map.Entry::getKey)
+                    .collect(Collectors.toSet());
+            setOperatorActualMetrics(queryMetrics, duplicateKeys);
+            this.queryMetrics = queryMetrics;
             return queryResult;
         } finally {
             instrumentation.popContext();
         }
     }
 
-    protected long updateActual(@NotNull MetricsRepository metricsRepository) {
-        long totalRowsProcessed = actualRows();
+    protected Stream<MetricsKey> streamMetricsKeys() {
+        Stream<MetricsKey> metricsKeys = metricProviders().stream()
+                .flatMap(metricsProvider -> metricsProvider.getMetricsKeys().stream().distinct());
+
         for (QueryOperator<?> source : sources()) {
-            totalRowsProcessed += source.updateActual(metricsRepository);
+            metricsKeys = Stream.concat(metricsKeys, source.streamMetricsKeys());
+        }
+        return metricsKeys;
+    }
+
+    protected void setOperatorActualMetrics(@NotNull MetricsRepository metricsRepository, Set<MetricsKey> duplicateKeys) {
+        for (QueryOperator<?> source : sources()) {
+            source.setOperatorActualMetrics(metricsRepository, duplicateKeys);
         }
 
-        // TODO: The same metric provider shouldn't be used on multiple query operators
+        int deserializations = 0, physicalReads = 0, logicalReads = 0;
+        boolean duplicate = false;
         for (MetricsProvider metricProvider : metricProviders()) {
-            metricProvider.getMetricsKeys().stream().distinct().forEach(key -> {
-                //if (metricsRepository.exists(key)) {
-                    Metrics metric = metricsRepository.getMetrics(key);
-                    if (metric instanceof ItemMetrics) {
-                        actualDeser.addAndGet(((ItemMetrics) metric).deserializations());
-                    }
-                    if (metric instanceof FileMetrics) {
-                        //actualPageReads.addAndGet(((FileMetrics) metric).logicalPageReads() + ((FileMetrics) metric).physicalPageReads());
-                        actualPageReads.addAndGet(((FileMetrics) metric).physicalPageReads());
-                    }
-                //}
-            });
+            List<MetricsKey> metricKeys = metricProvider.getMetricsKeys().stream().distinct().collect(Collectors.toList());
+            for (MetricsKey key : metricKeys) {
+                Metrics metric = metricsRepository.getMetrics(key);
+                if (metric instanceof ItemMetrics) {
+                    deserializations += (((ItemMetrics) metric).deserializations());
+                }
+                if (metric instanceof FileMetrics) {
+                    physicalReads += ((FileMetrics) metric).physicalPageReads();
+                    logicalReads += ((FileMetrics) metric).logicalPageReads();
+                }
+                if (duplicateKeys.contains(key)) {
+                    duplicate = true;
+                }
+            }
         }
 
-        return totalRowsProcessed;
+        actualOperatorCost = ImmutableOperatorCost.builder()
+                .actualDeserializations(deserializations)
+                .actualPhysicalPageReads(physicalReads)
+                .actualLogicalPageReads(logicalReads)
+                .actualRows(actualRowCount.get())
+                .actualIsDuplicate(duplicate)
+                .build();
     }
 
     protected abstract List<MetricsProvider> metricProviders();
 
     protected abstract Stream<T> operatorStream();
 
-    public abstract OperatorCost estimateCost();
+    protected abstract void estimateOperatorCost(@NotNull ImmutableOperatorCost.Builder operatorCost);
 
-    public QueryCost estimateQueryCost() {
-        long rows = 0, pageReads = 0, deser = 0;
-        double ioCost = 0.0, cpuCost = 0.0;
+    /**
+     * Gets the cost of the single query operator.
+     * If the query hasn't yet been executed, only the estimate will be set.
+     * After execution, if profiling was enabled, actual cost will be included
+     * @return the cost of this query operator
+     */
+    public final OperatorCost getOperatorCost() {
+        ImmutableOperatorCost.Builder cost = ImmutableOperatorCost.builder();
+        if (this.actualOperatorCost != null) {
+            cost.from(this.actualOperatorCost);
+        }
+        estimateOperatorCost(cost);
+        return cost.build();
+    }
+
+    /**
+     * Gets a summary of the query cost for the entire query.
+     * If it hasn't yet been executed, only the estimate will be set.
+     * After execution, if profiling was enabled, actual cost will be included.
+     * @return the cost of this query
+     */
+    public final QueryCost getQueryCost() {
+        long totalEstimateRows = 0, totalEstimatePageReads = 0, totalEstimateDeserializations = 0;
+        double totalEstimateIOCost = 0.0, totalEstimateCPUCost = 0.0;
+        long totalActualRows = 0;
+
+        // Process operators in BFS order
         Queue<QueryOperator<?>> operators = new LinkedList<>();
         operators.add(this);
         while (!operators.isEmpty()) {
             QueryOperator<?> op = operators.poll();
             operators.addAll(op.sources());
 
-            OperatorCost opCost = op.estimateCost();
-            rows += opCost.rows();
-            pageReads += opCost.pageReads();
-            deser += opCost.numDeserializations();
+            // Estimate
+            OperatorCost opCost = op.getOperatorCost();
+            totalEstimateRows += opCost.estimateRows();
+            totalEstimatePageReads += opCost.estimatePageReads();
+            totalEstimateDeserializations += opCost.estimateDeserializations();
 
             if (op.getClass().getName().contains("TableScan")) {
-                ioCost += opCost.pageReads() * BURST_IO_PAGES_COST;
+                totalEstimateIOCost += opCost.estimatePageReads() * BURST_IO_PAGES_COST;
             } else {
-                ioCost += opCost.pageReads() * SCATTERED_IO_PAGE_COST;
+                totalEstimateIOCost += opCost.estimatePageReads() * SCATTERED_IO_PAGE_COST;
             }
-            cpuCost += opCost.numDeserializations() * DESERIALIZATION_COST;
+            totalEstimateCPUCost += opCost.estimateDeserializations() * DESERIALIZATION_COST;
+
+            // Actual
+            totalActualRows += op.actualRowCount.get();
+        }
+
+        long totalActualDeserializations = 0, totalActualPhysicalReads = 0, totalActualLogicalReads = 0;
+        for (@NotNull ItemMetrics itemMetrics : queryMetrics.getMetricsByType(ItemMetrics.class).values()) {
+            totalActualDeserializations += itemMetrics.deserializations();
+        }
+        for (@NotNull FileMetrics fileMetrics : queryMetrics.getMetricsByType(FileMetrics.class).values()) {
+            totalActualPhysicalReads += fileMetrics.physicalPageReads();
+            totalActualLogicalReads += fileMetrics.logicalPageReads();
         }
 
         return ImmutableQueryCost.builder()
-                .pageReads(pageReads)
-                .numDeserializations(deser)
-                .rows(rows)
-                .ioCost(ioCost)
-                .cpuCost(cpuCost)
-                .wallClockTime((long) (ioCost + cpuCost))
+                .estimatedPageReads(totalEstimatePageReads)
+                .estimatedDeserializations(totalEstimateDeserializations)
+                .estimatedRows(totalEstimateRows)
+                .estimatedIOCost(totalEstimateIOCost)
+                .estimatedCpuCost(totalEstimateCPUCost)
+                .actualRows(totalActualRows)
+                .actualDeserializations(totalActualDeserializations)
+                .actualLogicalPageReads(totalActualLogicalReads)
+                .actualPhysicalPageReads(totalActualPhysicalReads)
+                .actualWallClockTime(actualWallClockTime)
                 .build();
     }
 
-    public @NotNull QueryCost actualQueryCost() {
-        if (actualQueryCost == null) {
-            throw new IllegalStateException("To get actual query cost, the uery must be executed with profiling enabled.");
-        }
-        return actualQueryCost;
-    }
-
     public abstract List<QueryOperator<?>> sources();
-
-    public int actualRows() {
-        return actualRowCount.get();
-    }
 
     public String debugString(boolean includeCost) {
         StringBuilder sb = new StringBuilder();
@@ -168,9 +207,11 @@ public abstract class QueryOperator<T> {
         sb.append("  ".repeat(indent));
         sb.append(this);
         if (includeCost) {
-            OperatorCost estimate = estimateCost();
-            sb.append(String.format(" {estimateRows=%d, estimateDeser=%d, estimatePageReads=%d, actualRows=%d, actualDeser=%d, actualPageReads=%d}",
-                    estimate.rows(), estimate.numDeserializations(), estimate.pageReads(), actualRows(), actualDeser.get(), actualPageReads.get()));
+            OperatorCost cost = getOperatorCost();
+            sb.append(String.format(" {estimate: {rows=%d, deser=%d, pageReads=%d}, actual%s: {rows=%d, deser=%d, physicalPageReads=%d, logicalPageReads=%d}}",
+                    cost.estimateRows(), cost.estimateDeserializations(), cost.estimatePageReads(),
+                    cost.actualIsDuplicate() ? " (*)" : "",
+                    cost.actualRows(), cost.actualDeserializations(), cost.actualPhysicalPageReads(), cost.actualLogicalPageReads()));
         }
         sb.append("\n");
         for (QueryOperator<?> source : sources()) {

@@ -3,10 +3,7 @@ package se.yarin.morphy.queries.operations;
 import org.jetbrains.annotations.NotNull;
 import se.yarin.morphy.boosters.GameEntityIndex;
 import se.yarin.morphy.entities.EntityType;
-import se.yarin.morphy.metrics.FileMetrics;
-import se.yarin.morphy.metrics.ItemMetrics;
 import se.yarin.morphy.metrics.MetricsProvider;
-import se.yarin.morphy.metrics.MetricsRepository;
 import se.yarin.morphy.queries.QueryContext;
 
 import java.util.List;
@@ -40,19 +37,18 @@ public class GameIdsByEntityIds extends QueryOperator<Integer> {
     }
 
     @Override
-    public OperatorCost estimateCost() {
-        OperatorCost sourceCost = source.estimateCost();
+    public void estimateOperatorCost(@NotNull ImmutableOperatorCost.Builder operatorCost) {
+        OperatorCost sourceCost = source.getOperatorCost();
 
         int entityCount = context().entityIndex(entityType).count();
         int gameCount = context().database().count();
 
-        long expectedMatchingGames = sourceCost.rows() * gameCount / entityCount;
+        long expectedMatchingGames = sourceCost.estimateRows() * gameCount / entityCount;
 
-        return ImmutableOperatorCost.builder()
-                .rows(OperatorCost.capRowEstimate(expectedMatchingGames))
-                .numDeserializations(expectedMatchingGames / 13 + sourceCost.rows())
-                .pageReads(context().queryPlanner().estimateGameEntityIndexPageReads(entityType, sourceCost.rows()))
-                .build();
+        operatorCost
+            .estimateRows(OperatorCost.capRowEstimate(expectedMatchingGames))
+            .estimateDeserializations(expectedMatchingGames / 13 + sourceCost.estimateRows())
+            .estimatePageReads(context().queryPlanner().estimateGameEntityIndexPageReads(entityType, sourceCost.estimateRows()));
     }
 
     @Override

@@ -3,12 +3,8 @@ package se.yarin.morphy.queries.operations;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import se.yarin.morphy.Game;
-import se.yarin.morphy.entities.EntityType;
 import se.yarin.morphy.games.filters.GameFilter;
-import se.yarin.morphy.metrics.FileMetrics;
-import se.yarin.morphy.metrics.ItemMetrics;
 import se.yarin.morphy.metrics.MetricsProvider;
-import se.yarin.morphy.metrics.MetricsRepository;
 import se.yarin.morphy.queries.QueryContext;
 
 import java.util.List;
@@ -45,17 +41,16 @@ public class GameLookup extends QueryOperator<Game> {
     }
 
     @Override
-    public OperatorCost estimateCost() {
-        OperatorCost sourceCost = source.estimateCost();
+    public void estimateOperatorCost(@NotNull ImmutableOperatorCost.Builder operatorCost) {
+        OperatorCost sourceCost = source.getOperatorCost();
 
         double ratio = context().queryPlanner().gameFilterEstimate(gameFilter);
-        long estimateRows = OperatorCost.capRowEstimate((int) Math.round(sourceCost.rows() * ratio));
+        long estimateRows = OperatorCost.capRowEstimate((int) Math.round(sourceCost.estimateRows() * ratio));
 
-        return ImmutableOperatorCost.builder()
-                .rows(estimateRows)
-                .numDeserializations(estimateRows) // Non-matching rows will mostly be caught non-deserialized
-                .pageReads(context().queryPlanner().estimateGamePageReads(sourceCost.rows()))
-                .build();
+        operatorCost
+            .estimateRows(estimateRows)
+            .estimateDeserializations(estimateRows) // Non-matching rows will mostly be caught non-deserialized
+            .estimatePageReads(context().queryPlanner().estimateGamePageReads(sourceCost.estimateRows()));
     }
 
     @Override

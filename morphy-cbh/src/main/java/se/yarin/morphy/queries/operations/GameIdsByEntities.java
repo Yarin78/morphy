@@ -38,19 +38,19 @@ public class GameIdsByEntities<T extends Entity & Comparable<T>> extends QueryOp
     }
 
     @Override
-    public OperatorCost estimateCost() {
-        OperatorCost sourceCost = source.estimateCost();
+    public void estimateOperatorCost(@NotNull ImmutableOperatorCost.Builder operatorCost) {
+        OperatorCost sourceCost = source.getOperatorCost();
 
         int entityCount = context().entityIndex(entityType).count();
         int gameCount = context().database().count();
 
-        long expectedMatchingGames = sourceCost.rows() * gameCount / entityCount;
+        long expectedMatchingGames = sourceCost.estimateRows() * gameCount / entityCount;
 
-        return ImmutableOperatorCost.builder()
-                .rows(OperatorCost.capRowEstimate(expectedMatchingGames))
-                .numDeserializations(expectedMatchingGames / 13 + sourceCost.rows())
-                .pageReads(context().queryPlanner().estimateGameEntityIndexPageReads(entityType, sourceCost.rows()))
-                .build();
+        operatorCost
+            .estimateRows(OperatorCost.capRowEstimate(expectedMatchingGames))
+            .estimateDeserializations(expectedMatchingGames / 13 + sourceCost.estimateRows())
+            .estimatePageReads(context().queryPlanner().estimateGameEntityIndexPageReads(entityType, sourceCost.estimateRows()))
+            .build();
     }
 
     @Override

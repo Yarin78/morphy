@@ -38,7 +38,7 @@ public class PlayerTableScan extends QueryOperator<Player> {
     }
 
     @Override
-    public OperatorCost estimateCost() {
+    public void estimateOperatorCost(@NotNull ImmutableOperatorCost.Builder operatorCost) {
         int totalPlayers = context().database().playerIndex().count();
         int numScannedPlayers = Math.max(0, totalPlayers - firstPlayerId);
         double scanRatio = 1.0 * numScannedPlayers / totalPlayers;
@@ -47,11 +47,11 @@ public class PlayerTableScan extends QueryOperator<Player> {
 
         long pageReads = Math.round(context().database().playerIndex().numDiskPages() * scanRatio);
 
-        return ImmutableOperatorCost.builder()
-                .rows(estimateRows)
-                .numDeserializations(estimateRows) // Non-matching rows will mostly be caught non-deserialized
-                .pageReads(pageReads)
-                .build();
+        operatorCost
+            .estimateRows(estimateRows)
+            .estimateDeserializations(estimateRows) // Non-matching rows will mostly be caught non-deserialized
+            .estimatePageReads(pageReads)
+            .build();
     }
 
     @Override

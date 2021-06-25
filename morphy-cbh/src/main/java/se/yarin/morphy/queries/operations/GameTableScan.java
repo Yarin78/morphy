@@ -4,10 +4,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import se.yarin.morphy.Game;
 import se.yarin.morphy.games.filters.GameFilter;
-import se.yarin.morphy.metrics.FileMetrics;
-import se.yarin.morphy.metrics.ItemMetrics;
 import se.yarin.morphy.metrics.MetricsProvider;
-import se.yarin.morphy.metrics.MetricsRepository;
 import se.yarin.morphy.queries.QueryContext;
 
 import java.util.List;
@@ -38,7 +35,7 @@ public class GameTableScan extends QueryOperator<Game> {
     }
 
     @Override
-    public OperatorCost estimateCost() {
+    public void estimateOperatorCost(@NotNull ImmutableOperatorCost.Builder operatorCost) {
         int totalGames = context().database().count();
         int numScannedGames = Math.max(0, totalGames - (firstGameId - 1));
         double scanRatio = 1.0 * numScannedGames / totalGames;
@@ -48,11 +45,10 @@ public class GameTableScan extends QueryOperator<Game> {
         long pageReads = Math.round((context().database().gameHeaderIndex().numDiskPages() +
                 context().database().extendedGameHeaderStorage().numDiskPages()) * scanRatio);
 
-        return ImmutableOperatorCost.builder()
-                .rows(estimateRows)
-                .numDeserializations(estimateRows * 2) // Non-matching rows will mostly be caught non-deserialized
-                .pageReads(pageReads)
-                .build();
+        operatorCost
+            .estimateRows(estimateRows)
+            .estimateDeserializations(estimateRows * 2) // Non-matching rows will mostly be caught non-deserialized
+            .estimatePageReads(pageReads);
     }
 
     @Override

@@ -3,12 +3,10 @@ package se.yarin.morphy.queries.operations;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import se.yarin.morphy.entities.EntityIndexReadTransaction;
-import se.yarin.morphy.entities.EntityType;
 import se.yarin.morphy.entities.Player;
 import se.yarin.morphy.entities.filters.EntityFilter;
 import se.yarin.morphy.metrics.MetricsProvider;
 import se.yarin.morphy.queries.QueryContext;
-import se.yarin.util.PagedBlobChannel;
 
 import java.util.List;
 import java.util.stream.Stream;
@@ -36,15 +34,14 @@ public class PlayerIndexRangeScan extends QueryOperator<Player> {
     }
 
     @Override
-    public OperatorCost estimateCost() {
+    public void estimateOperatorCost(@NotNull ImmutableOperatorCost.Builder operatorCost) {
         long scanCount = context().queryPlanner().playerRangeEstimate(rangeStart, rangeEnd, null);
         long matchCount = context().queryPlanner().playerRangeEstimate(rangeStart, rangeEnd, playerFilter);
 
-        return ImmutableOperatorCost.builder()
-                .rows(matchCount)
-                .pageReads(context().queryPlanner().estimatePlayerPageReads(scanCount))
-                .numDeserializations(matchCount)
-                .build();
+        operatorCost
+            .estimateRows(matchCount)
+            .estimatePageReads(context().queryPlanner().estimatePlayerPageReads(scanCount))
+            .estimateDeserializations(matchCount);
     }
 
     @Override

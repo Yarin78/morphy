@@ -5,10 +5,7 @@ import se.yarin.morphy.Game;
 import se.yarin.morphy.entities.EntityIndexReadTransaction;
 import se.yarin.morphy.entities.Player;
 import se.yarin.morphy.entities.filters.EntityFilter;
-import se.yarin.morphy.metrics.FileMetrics;
-import se.yarin.morphy.metrics.ItemMetrics;
 import se.yarin.morphy.metrics.MetricsProvider;
-import se.yarin.morphy.metrics.MetricsRepository;
 import se.yarin.morphy.queries.QueryContext;
 
 import java.util.List;
@@ -44,18 +41,18 @@ public class GamePlayerFilter extends QueryOperator<Game> {
     }
 
     @Override
-    public OperatorCost estimateCost() {
-        OperatorCost sourceCost = source.estimateCost();
+    public void estimateOperatorCost(@NotNull ImmutableOperatorCost.Builder operatorCost) {
+        OperatorCost sourceCost = source.getOperatorCost();
 
         double ratio = context().queryPlanner().playerFilterEstimate(playerFilter);
         double anyRatio = 1 - (1-ratio) * (1-ratio); // ratio than any of the two players matches the filter
 
-        return ImmutableOperatorCost.builder()
-                .rows(OperatorCost.capRowEstimate(sourceCost.rows() * anyRatio))
-                //.pageReads(context().queryPlanner().estimatePlayerPageReads(sourceCost.rows()))
-                .pageReads(sourceCost.rows()) // The reads will be scattered; TODO: But if very many read, the disk cache will work nice anyhow
-                .numDeserializations(2 * OperatorCost.capRowEstimate(sourceCost.rows() * anyRatio))
-                .build();
+        operatorCost
+            .estimateRows(OperatorCost.capRowEstimate(sourceCost.estimateRows() * anyRatio))
+            //.estimatePageReads(context().queryPlanner().estimatePlayerPageReads(sourceCost.estimateRows()))
+            .estimatePageReads(sourceCost.estimateRows()) // The reads will be scattered; TODO: But if very many read, the disk cache will work nice anyhow
+            .estimateDeserializations(2 * OperatorCost.capRowEstimate(sourceCost.estimateRows() * anyRatio))
+            .build();
     }
 
     @Override
