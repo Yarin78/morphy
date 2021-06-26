@@ -32,8 +32,8 @@ public class GamePlayerFilter extends QueryOperator<Game> {
 
         return this.source.stream().filter(game ->
         {
-            Player whitePlayer = playerTransaction.get(game.whitePlayerId(), playerFilter);
-            Player blackPlayer = playerTransaction.get(game.blackPlayerId(), playerFilter);
+            Player whitePlayer = game.whitePlayerId() >= 0 ? playerTransaction.get(game.whitePlayerId(), playerFilter) : null;
+            Player blackPlayer = game.blackPlayerId() >= 0 ? playerTransaction.get(game.blackPlayerId(), playerFilter) : null;
 
             return (whitePlayer != null && playerFilter.matches(whitePlayer)) ||
                     (blackPlayer != null && playerFilter.matches(blackPlayer));

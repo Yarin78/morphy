@@ -1,6 +1,7 @@
 package se.yarin.morphy.entities.filters;
 
 import org.jetbrains.annotations.NotNull;
+import se.yarin.morphy.entities.EntityType;
 import se.yarin.morphy.entities.Tournament;
 import se.yarin.morphy.queries.QueryPlanner;
 
@@ -36,5 +37,10 @@ public class TournamentCategoryFilter implements EntityFilter<Tournament> {
         } else {
             return "category >= " + minCategory + " and category <= " + maxCategory;
         }
+    }
+
+    @Override
+    public EntityType entityType() {
+        return EntityType.TOURNAMENT;
     }
 }

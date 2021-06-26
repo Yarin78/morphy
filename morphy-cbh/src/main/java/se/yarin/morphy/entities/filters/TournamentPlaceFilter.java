@@ -1,6 +1,7 @@
 package se.yarin.morphy.entities.filters;
 
 import org.jetbrains.annotations.NotNull;
+import se.yarin.morphy.entities.EntityType;
 import se.yarin.morphy.entities.Tournament;
 
 import java.util.Arrays;
@@ -53,5 +54,10 @@ public class TournamentPlaceFilter implements EntityFilter<Tournament>  {
                     .map(place -> String.format("%s like '%s%%'", placeStr, place))
                     .collect(Collectors.joining(" or ")) + ")";
         }
+    }
+
+    @Override
+    public EntityType entityType() {
+        return EntityType.TOURNAMENT;
     }
 }

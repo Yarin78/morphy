@@ -1,6 +1,7 @@
 package se.yarin.morphy.entities.filters;
 
 import org.jetbrains.annotations.NotNull;
+import se.yarin.morphy.entities.EntityType;
 import se.yarin.morphy.entities.Tournament;
 
 public class TournamentTeamFilter implements EntityFilter<Tournament>  {
@@ -17,5 +18,10 @@ public class TournamentTeamFilter implements EntityFilter<Tournament>  {
     @Override
     public String toString() {
         return "isTeam";
+    }
+
+    @Override
+    public EntityType entityType() {
+        return EntityType.TOURNAMENT;
     }
 }

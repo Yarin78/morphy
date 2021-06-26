@@ -15,7 +15,7 @@ public interface QueryCost {
     long estimatedDeserializations();
     double estimatedCpuCost();
     double estimatedIOCost();
-
+    double estimatedTotalCost();
 
     default String format() {
         String actual = "";
@@ -38,8 +38,10 @@ public interface QueryCost {
                                             
                         Estimate CPU cost:          %8d
                         Estimate IO cost:           %8d
+                        Estimate Total cost:        %8d
                         """,
-                estimatedRows(), estimatedPageReads(), estimatedDeserializations(), (long) estimatedCpuCost(), (long) estimatedIOCost());
+                estimatedRows(), estimatedPageReads(), estimatedDeserializations(),
+                (long) estimatedCpuCost(), (long) estimatedIOCost(), (long) estimatedTotalCost());
 
         return actual + estimate;
     }

@@ -1,6 +1,7 @@
 package se.yarin.morphy.entities.filters;
 
 import org.jetbrains.annotations.NotNull;
+import se.yarin.morphy.entities.EntityType;
 import se.yarin.morphy.entities.Tournament;
 import se.yarin.morphy.entities.TournamentTimeControl;
 import se.yarin.morphy.util.CBUtil;
@@ -42,5 +43,10 @@ public class TournamentTimeControlFilter implements EntityFilter<Tournament>  {
                     .map(timeControl -> String.format("'%s'", timeControl.getName()))
                     .collect(Collectors.joining(", ")) + ")";
         }
+    }
+
+    @Override
+    public EntityType entityType() {
+        return EntityType.TOURNAMENT;
     }
 }

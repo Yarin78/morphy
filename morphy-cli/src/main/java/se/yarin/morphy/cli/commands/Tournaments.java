@@ -6,7 +6,9 @@ import picocli.CommandLine;
 import se.yarin.morphy.Database;
 import se.yarin.morphy.DatabaseMode;
 import se.yarin.morphy.DatabaseReadTransaction;
+import se.yarin.morphy.entities.EntityType;
 import se.yarin.morphy.entities.Tournament;
+import se.yarin.morphy.entities.filters.EntityFilter;
 import se.yarin.morphy.entities.filters.RawEntityFilter;
 import se.yarin.morphy.queries.*;
 import se.yarin.morphy.cli.columns.RawTournamentColumn;
@@ -151,7 +153,7 @@ public class Tournaments extends BaseCommand implements Callable<Integer> {
         }
         if (rawFilter != null) {
             for (String expression : rawFilter) {
-                tournamentQueries.add(new QTournamentsWithRaw(new RawEntityFilter<>(expression)));
+                tournamentQueries.add(new QTournamentsWithRaw(new RawEntityFilter<>(expression, EntityType.TOURNAMENT)));
             }
         }
 

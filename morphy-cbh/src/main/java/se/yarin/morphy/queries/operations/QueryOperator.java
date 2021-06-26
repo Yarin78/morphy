@@ -173,12 +173,14 @@ public abstract class QueryOperator<T> {
         }
 
         long totalActualDeserializations = 0, totalActualPhysicalReads = 0, totalActualLogicalReads = 0;
-        for (@NotNull ItemMetrics itemMetrics : queryMetrics.getMetricsByType(ItemMetrics.class).values()) {
-            totalActualDeserializations += itemMetrics.deserializations();
-        }
-        for (@NotNull FileMetrics fileMetrics : queryMetrics.getMetricsByType(FileMetrics.class).values()) {
-            totalActualPhysicalReads += fileMetrics.physicalPageReads();
-            totalActualLogicalReads += fileMetrics.logicalPageReads();
+        if (queryMetrics != null) {
+            for (@NotNull ItemMetrics itemMetrics : queryMetrics.getMetricsByType(ItemMetrics.class).values()) {
+                totalActualDeserializations += itemMetrics.deserializations();
+            }
+            for (@NotNull FileMetrics fileMetrics : queryMetrics.getMetricsByType(FileMetrics.class).values()) {
+                totalActualPhysicalReads += fileMetrics.physicalPageReads();
+                totalActualLogicalReads += fileMetrics.logicalPageReads();
+            }
         }
 
         return ImmutableQueryCost.builder()
@@ -187,6 +189,7 @@ public abstract class QueryOperator<T> {
                 .estimatedRows(totalEstimateRows)
                 .estimatedIOCost(totalEstimateIOCost)
                 .estimatedCpuCost(totalEstimateCPUCost)
+                .estimatedTotalCost(totalEstimateIOCost + totalEstimateCPUCost)
                 .actualRows(totalActualRows)
                 .actualDeserializations(totalActualDeserializations)
                 .actualLogicalPageReads(totalActualLogicalReads)

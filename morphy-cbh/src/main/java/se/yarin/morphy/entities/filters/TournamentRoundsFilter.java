@@ -1,6 +1,7 @@
 package se.yarin.morphy.entities.filters;
 
 import org.jetbrains.annotations.NotNull;
+import se.yarin.morphy.entities.EntityType;
 import se.yarin.morphy.entities.Tournament;
 
 import java.util.regex.Matcher;
@@ -45,5 +46,10 @@ public class TournamentRoundsFilter implements EntityFilter<Tournament>  {
         } else {
             return "rounds >= " + minRounds + " and rounds <= " + maxRounds;
         }
+    }
+
+    @Override
+    public EntityType entityType() {
+        return EntityType.TOURNAMENT;
     }
 }

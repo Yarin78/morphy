@@ -2,6 +2,7 @@ package se.yarin.morphy.entities.filters;
 
 import org.jetbrains.annotations.NotNull;
 import se.yarin.chess.Date;
+import se.yarin.morphy.entities.EntityType;
 import se.yarin.morphy.entities.Tournament;
 import se.yarin.morphy.util.CBUtil;
 import se.yarin.util.ByteBufferUtil;
@@ -53,5 +54,10 @@ public class TournamentYearTitleFilter implements EntityFilter<Tournament>  {
         } else {
             return "year=%d %s like '%s%%'".formatted(year, titleStr, title);
         }
+    }
+
+    @Override
+    public EntityType entityType() {
+        return EntityType.TOURNAMENT;
     }
 }

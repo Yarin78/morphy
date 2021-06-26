@@ -1,6 +1,7 @@
 package se.yarin.morphy.entities.filters;
 
 import org.jetbrains.annotations.NotNull;
+import se.yarin.morphy.entities.EntityType;
 import se.yarin.morphy.entities.Team;
 
 public class TeamTitleFilter implements EntityFilter<Team> {
@@ -35,5 +36,10 @@ public class TeamTitleFilter implements EntityFilter<Team> {
         } else {
             return "%s like '%s%%'".formatted(titleStr, title);
         }
+    }
+
+    @Override
+    public EntityType entityType() {
+        return EntityType.TEAM;
     }
 }

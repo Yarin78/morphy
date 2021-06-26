@@ -1,6 +1,7 @@
 package se.yarin.morphy.entities.filters;
 
 import org.jetbrains.annotations.NotNull;
+import se.yarin.morphy.entities.EntityType;
 import se.yarin.morphy.entities.Player;
 import se.yarin.util.ByteBufferUtil;
 
@@ -11,6 +12,22 @@ public class PlayerNameFilter implements EntityFilter<Player> {
     private final @NotNull String firstName;
     private final boolean caseSensitive;
     private final boolean exactMatch;
+
+    public @NotNull String lastName() {
+        return lastName;
+    }
+
+    public @NotNull String firstName() {
+        return firstName;
+    }
+
+    public boolean isCaseSensitive() {
+        return caseSensitive;
+    }
+
+    public boolean isExactMatch() {
+        return exactMatch;
+    }
 
     private static String resolveFirstName(String name) {
         if (name.contains(",")) {
@@ -75,5 +92,10 @@ public class PlayerNameFilter implements EntityFilter<Player> {
         } else {
             return "%s like '%s%%' and %s like '%s%%'".formatted(lastNameStr, lastName, firstNameStr, firstName);
         }
+    }
+
+    @Override
+    public EntityType entityType() {
+        return EntityType.PLAYER;
     }
 }

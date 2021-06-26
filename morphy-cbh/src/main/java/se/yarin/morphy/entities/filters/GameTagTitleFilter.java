@@ -1,6 +1,7 @@
 package se.yarin.morphy.entities.filters;
 
 import org.jetbrains.annotations.NotNull;
+import se.yarin.morphy.entities.EntityType;
 import se.yarin.morphy.entities.GameTag;
 
 public class GameTagTitleFilter implements EntityFilter<GameTag> {
@@ -35,5 +36,10 @@ public class GameTagTitleFilter implements EntityFilter<GameTag> {
         } else {
             return "%s like '%s%%'".formatted(titleStr, englishTitle);
         }
+    }
+
+    @Override
+    public EntityType entityType() {
+        return EntityType.GAME_TAG;
     }
 }

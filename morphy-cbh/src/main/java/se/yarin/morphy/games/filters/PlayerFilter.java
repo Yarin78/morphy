@@ -7,9 +7,7 @@ import se.yarin.morphy.games.GameHeader;
 import se.yarin.util.ByteBufferUtil;
 
 import java.nio.ByteBuffer;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashSet;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class PlayerFilter extends IsGameFilter {
@@ -38,6 +36,10 @@ public class PlayerFilter extends IsGameFilter {
         this.playerIds = players.stream().map(Player::id).collect(Collectors.toCollection(HashSet::new));
         this.color = color;
         this.result = result;
+    }
+
+    public List<Integer> playerIds() {
+        return new ArrayList<>(playerIds);
     }
 
     @Override

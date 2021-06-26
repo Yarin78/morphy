@@ -2,6 +2,7 @@ package se.yarin.morphy.entities.filters;
 
 import org.jetbrains.annotations.NotNull;
 import se.yarin.morphy.entities.Annotator;
+import se.yarin.morphy.entities.EntityType;
 
 public class AnnotatorNameFilter implements EntityFilter<Annotator> {
     private final @NotNull String name;
@@ -35,5 +36,10 @@ public class AnnotatorNameFilter implements EntityFilter<Annotator> {
         } else {
             return "%s like '%s%%'".formatted(nameStr, name);
         }
+    }
+
+    @Override
+    public EntityType entityType() {
+        return EntityType.ANNOTATOR;
     }
 }

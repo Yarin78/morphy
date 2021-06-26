@@ -11,12 +11,19 @@ import se.yarin.morphy.entities.Player;
 import se.yarin.morphy.entities.Tournament;
 import se.yarin.morphy.entities.filters.*;
 import se.yarin.morphy.games.filters.IsGameFilter;
+import se.yarin.morphy.games.filters.PlayerFilter;
+import se.yarin.morphy.games.filters.TournamentFilter;
+import se.yarin.morphy.queries.EntityQuery;
+import se.yarin.morphy.queries.GameQuery;
 import se.yarin.morphy.queries.QueryContext;
+import se.yarin.morphy.queries.QueryPlanner;
 import se.yarin.morphy.queries.operations.*;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Comparator;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class QueryTest {
     private final Database db;
@@ -30,8 +37,49 @@ public class QueryTest {
         db.queryPlanner().updateStatistics();
 
         QueryTest queryTest = new QueryTest(db);
-        queryTest.compareCarHighCategoryGames();
+        queryTest.queryCarHighCategoryGames();
+        //queryTest.compareCarHighCategoryGames();
         //queryTest.sameMetricQuery();
+        //queryTest.carlsenLosesAsWhiteQuery();
+    }
+
+    public void queryCarHighCategoryGames() {
+        EntityFilter<Tournament> tf1 = new TournamentStartDateFilter(new Date(2000, 1, 1), new Date(3000, 1, 1));
+        EntityFilter<Tournament> tf2 = new TournamentCategoryFilter(20, 99);
+
+        EntityFilter<Player> playerFilter = new PlayerNameFilter("Car", "", true, false);
+
+        GameQuery gameQuery = new GameQuery(db, null, List.of(tf1, tf2, playerFilter));
+
+        try (var txn = new DatabaseReadTransaction(db)) {
+            QueryContext context = new QueryContext(txn, true);
+
+            List<QueryOperator<Game>> candidateQueries = db.queryPlanner().getCandidateQueries(context, gameQuery);
+            candidateQueries.sort(Comparator.comparingLong(o -> (long) o.getQueryCost().estimatedTotalCost()));
+            for (QueryOperator<Game> candidateQuery : candidateQueries.stream().limit(3).collect(Collectors.toList())) {
+                /*
+                System.out.println(candidateQuery.debugString(false));
+                System.out.println(candidateQuery.getQueryCost().format());
+                System.out.println();
+
+                 */
+                detailedQueryExecution(candidateQuery);
+
+            }
+        }
+    }
+
+    public void carlsenLosesAsWhiteQuery() {
+        try (var txn = new DatabaseReadTransaction(db)) {
+            String playerName = "Carlsen, Magnus";
+            Player carlsen = db.playerIndex().get(Player.ofFullName(playerName));
+            QueryContext context = new QueryContext(txn, true);
+            PlayerIndexRangeScan players = new PlayerIndexRangeScan(context, null, Player.ofFullName(playerName), Player.ofFullName(playerName + "zzz"));
+            GameIdsByEntities<Player> gameIds = new GameIdsByEntities<>(context, players, EntityType.PLAYER);
+            GameLookup games = new GameLookup(context, gameIds, new PlayerFilter(carlsen, PlayerFilter.PlayerColor.WHITE, PlayerFilter.PlayerResult.LOSS));
+
+            detailedQueryExecution(games);
+        }
     }
 
     private void sameMetricQuery() {

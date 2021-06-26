@@ -1,6 +1,7 @@
 package se.yarin.morphy.entities.filters;
 
 import org.jetbrains.annotations.NotNull;
+import se.yarin.morphy.entities.EntityType;
 import se.yarin.morphy.entities.Source;
 
 public class SourceTitleFilter implements EntityFilter<Source>  {
@@ -35,5 +36,10 @@ public class SourceTitleFilter implements EntityFilter<Source>  {
         } else {
             return "%s like '%s%%'".formatted(titleStr, title);
         }
+    }
+
+    @Override
+    public EntityType entityType() {
+        return EntityType.SOURCE;
     }
 }

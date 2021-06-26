@@ -17,6 +17,16 @@ public class CombinedGameFilter implements GameFilter {
     private final @Nullable ItemStorageFilter<GameHeader> combinedGameHeaderFilter;
     private final @Nullable ItemStorageFilter<ExtendedGameHeader> combinedExtendedGameHeaderFilter;
 
+    public static @Nullable GameFilter combine(@NotNull List<GameFilter> filters) {
+        if (filters.size() == 0) {
+            return null;
+        }
+        if (filters.size() == 1) {
+            return filters.get(0);
+        }
+        return new CombinedGameFilter(filters);
+    }
+
     public CombinedGameFilter(@NotNull List<GameFilter> filters) {
         this.gameFilters = List.copyOf(filters); // For toString only
 

@@ -2,6 +2,7 @@ package se.yarin.morphy.entities.filters;
 
 import org.jetbrains.annotations.NotNull;
 import se.yarin.chess.Date;
+import se.yarin.morphy.entities.EntityType;
 import se.yarin.morphy.entities.Tournament;
 import se.yarin.morphy.games.filters.DateRangeFilter;
 import se.yarin.morphy.queries.QueryPlanner;
@@ -54,5 +55,10 @@ public class TournamentStartDateFilter implements EntityFilter<Tournament>  {
     @Override
     public double expectedMatch(@NotNull QueryPlanner planner) {
         return planner.tournamentYearDistribution().ratioBetween(fromDate.year(), toDate.isUnset() ? 3000 : toDate.year());
+    }
+
+    @Override
+    public EntityType entityType() {
+        return EntityType.TOURNAMENT;
     }
 }

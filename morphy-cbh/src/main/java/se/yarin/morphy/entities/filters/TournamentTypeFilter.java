@@ -1,6 +1,7 @@
 package se.yarin.morphy.entities.filters;
 
 import org.jetbrains.annotations.NotNull;
+import se.yarin.morphy.entities.EntityType;
 import se.yarin.morphy.entities.Tournament;
 import se.yarin.morphy.entities.TournamentType;
 import se.yarin.morphy.util.CBUtil;
@@ -43,5 +44,10 @@ public class TournamentTypeFilter implements EntityFilter<Tournament>  {
                     .map(type -> String.format("'%s'", type.getName()))
                     .collect(Collectors.joining(", ")) + ")";
         }
+    }
+
+    @Override
+    public EntityType entityType() {
+        return EntityType.TOURNAMENT;
     }
 }

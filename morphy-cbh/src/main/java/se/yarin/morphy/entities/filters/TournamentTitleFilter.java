@@ -1,6 +1,7 @@
 package se.yarin.morphy.entities.filters;
 
 import org.jetbrains.annotations.NotNull;
+import se.yarin.morphy.entities.EntityType;
 import se.yarin.morphy.entities.Tournament;
 import se.yarin.util.ByteBufferUtil;
 
@@ -46,5 +47,10 @@ public class TournamentTitleFilter implements EntityFilter<Tournament>  {
         } else {
             return "%s like '%s%%'".formatted(titleStr, title);
         }
+    }
+
+    @Override
+    public EntityType entityType() {
+        return EntityType.TOURNAMENT;
     }
 }

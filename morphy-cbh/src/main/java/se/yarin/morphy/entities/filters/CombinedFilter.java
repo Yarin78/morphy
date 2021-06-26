@@ -1,6 +1,7 @@
 package se.yarin.morphy.entities.filters;
 
 import org.jetbrains.annotations.NotNull;
+import se.yarin.morphy.entities.EntityType;
 import se.yarin.morphy.queries.QueryPlanner;
 
 import java.util.List;
@@ -8,9 +9,19 @@ import java.util.stream.Collectors;
 
 public class CombinedFilter<T> implements EntityFilter<T> {
     private final @NotNull List<EntityFilter<T>> filters;
+    private final @NotNull EntityType entityType;
 
     public CombinedFilter(@NotNull List<EntityFilter<T>> filters) {
+        if (filters.size() == 0) {
+            throw new IllegalArgumentException("Must contain at least one filter");
+        }
+
         this.filters = List.copyOf(filters);
+        this.entityType = filters.get(0).entityType();
+
+        if (!filters.stream().allMatch(filter -> filter.entityType().equals(this.entityType))) {
+            throw new IllegalArgumentException("Can't combine entity filters of different types");
+        }
     }
 
     @Override
@@ -33,5 +44,10 @@ public class CombinedFilter<T> implements EntityFilter<T> {
         // Since filters are likely not independent, don't combine the ratios (by multiplication),
         // but instead pick the single best filter as an estimate expected match
         return filters.stream().mapToDouble(filter -> filter.expectedMatch(planner)).min().orElse(1.0);
+    }
+
+    @Override
+    public EntityType entityType() {
+        return this.entityType;
     }
 }
