@@ -1,31 +1,17 @@
 package se.yarin.morphy.queries;
 
-import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.NotNull;
+import se.yarin.morphy.IdObject;
 import se.yarin.morphy.queries.operations.QueryOperator;
 
-class EntitySourceQuery<T> {
-    // Exactly one of these two operators are set
-    private final @Nullable QueryOperator<T> entityOperator;
-    private final @Nullable QueryOperator<Integer> entityIdOperator;
+class EntitySourceQuery<T extends IdObject> {
+    private final @NotNull QueryOperator<T> entityOperator;
 
-    public @Nullable QueryOperator<T> entityOperator() {
+    public @NotNull QueryOperator<T> entityOperator() {
         return entityOperator;
     }
 
-    public @Nullable QueryOperator<Integer> entityIdOperator() {
-        return entityIdOperator;
-    }
-
-    private EntitySourceQuery(@Nullable QueryOperator<T> entityOperator, @Nullable QueryOperator<Integer> entityIdOperator) {
+    public EntitySourceQuery(@NotNull QueryOperator<T> entityOperator) {
         this.entityOperator = entityOperator;
-        this.entityIdOperator = entityIdOperator;
-    }
-
-    public static <T> EntitySourceQuery<T> fromEntityQuery(@Nullable QueryOperator<T> entityOperator) {
-        return new EntitySourceQuery<>(entityOperator, null);
-    }
-
-    public static <T> EntitySourceQuery<T> fromIdQuery(@Nullable QueryOperator<Integer> entityIdOperator) {
-        return new EntitySourceQuery<>(null, entityIdOperator);
     }
 }

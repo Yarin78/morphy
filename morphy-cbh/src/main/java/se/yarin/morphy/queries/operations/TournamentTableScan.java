@@ -16,7 +16,7 @@ public class TournamentTableScan extends QueryOperator<Tournament> {
     private final @Nullable EntityFilter<Tournament> tournamentFilter;
 
     public TournamentTableScan(@NotNull QueryContext queryContext, @Nullable EntityFilter<Tournament> tournamentFilter) {
-        super(queryContext);
+        super(queryContext, true);
         this.txn = transaction().tournamentTransaction();
         this.tournamentFilter = tournamentFilter;
     }
@@ -27,8 +27,8 @@ public class TournamentTableScan extends QueryOperator<Tournament> {
     }
 
     @Override
-    public Stream<Tournament> operatorStream() {
-        return txn.stream(this.tournamentFilter);
+    public Stream<QueryData<Tournament>> operatorStream() {
+        return txn.stream(this.tournamentFilter).map(QueryData::new);
     }
 
     @Override

@@ -16,7 +16,7 @@ public class AnnotatorTableScan extends QueryOperator<Annotator> {
     private final @Nullable EntityFilter<Annotator> annotatorFilter;
 
     public AnnotatorTableScan(@NotNull QueryContext queryContext, @Nullable EntityFilter<Annotator> annotatorFilter) {
-        super(queryContext);
+        super(queryContext, true);
         this.txn = transaction().annotatorTransaction();
         this.annotatorFilter = annotatorFilter;
     }
@@ -27,8 +27,8 @@ public class AnnotatorTableScan extends QueryOperator<Annotator> {
     }
 
     @Override
-    public Stream<Annotator> operatorStream() {
-        return txn.stream(this.annotatorFilter);
+    public Stream<QueryData<Annotator>> operatorStream() {
+        return txn.stream(this.annotatorFilter).map(QueryData::new);
     }
 
     @Override

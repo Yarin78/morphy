@@ -2,6 +2,7 @@ package se.yarin.morphy.entities;
 
 import org.immutables.value.Value;
 import se.yarin.chess.Date;
+import se.yarin.morphy.IdObject;
 
 import java.util.List;
 

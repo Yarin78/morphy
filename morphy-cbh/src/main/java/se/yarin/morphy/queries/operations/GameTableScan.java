@@ -19,7 +19,7 @@ public class GameTableScan extends QueryOperator<Game> {
     }
 
     public GameTableScan(@NotNull QueryContext queryContext, @Nullable GameFilter gameFilter, int firstGameId) {
-        super(queryContext);
+        super(queryContext, true);
         this.gameFilter = gameFilter;
         this.firstGameId = firstGameId;
     }
@@ -30,8 +30,8 @@ public class GameTableScan extends QueryOperator<Game> {
     }
 
     @Override
-    public Stream<Game> operatorStream() {
-        return transaction().stream(firstGameId, gameFilter);
+    public Stream<QueryData<Game>> operatorStream() {
+        return transaction().stream(firstGameId, gameFilter).map(QueryData::new);
     }
 
     @Override

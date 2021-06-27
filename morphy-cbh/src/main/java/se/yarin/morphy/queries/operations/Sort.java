@@ -1,17 +1,19 @@
 package se.yarin.morphy.queries.operations;
 
 import org.jetbrains.annotations.NotNull;
+import se.yarin.morphy.IdObject;
 import se.yarin.morphy.metrics.MetricsProvider;
 import se.yarin.morphy.queries.QueryContext;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Stream;
 
-public class SortId extends QueryOperator<Integer> {
-    private final @NotNull QueryOperator<Integer> source;
+public class Sort<T extends IdObject> extends QueryOperator<T> {
+    private final @NotNull QueryOperator<T> source;
 
-    public SortId(@NotNull QueryContext queryContext, @NotNull QueryOperator<Integer> source) {
-        super(queryContext);
+    public Sort(@NotNull QueryContext queryContext, @NotNull QueryOperator<T> source) {
+        super(queryContext, source.hasFullData());
         this.source = source;
     }
 
@@ -21,16 +23,16 @@ public class SortId extends QueryOperator<Integer> {
     }
 
     @Override
-    public Stream<Integer> operatorStream() {
-        return source.stream().sorted();
+    public Stream<QueryData<T>> operatorStream() {
+        return source.stream().sorted(Comparator.comparingInt(QueryData::id));
     }
 
     @Override
     public void estimateOperatorCost(@NotNull ImmutableOperatorCost.Builder operatorCost) {
         operatorCost
-            .estimateRows(source.getOperatorCost().estimateRows())
-            .estimateDeserializations(0)
-            .estimatePageReads(0);
+                .estimateRows(source.getOperatorCost().estimateRows())
+                .estimateDeserializations(0)
+                .estimatePageReads(0);
     }
 
     @Override

@@ -17,7 +17,7 @@ public class PlayerIndexRangeScan extends QueryOperator<Player> {
     private final @NotNull Player rangeStart, rangeEnd;
 
     public PlayerIndexRangeScan(@NotNull QueryContext queryContext, @Nullable EntityFilter<Player> playerFilter, @NotNull Player rangeStart, @NotNull Player rangeEnd) {
-        super(queryContext);
+        super(queryContext, true);
         this.txn = queryContext.transaction().playerTransaction();
         this.playerFilter = playerFilter;
         this.rangeStart = rangeStart;
@@ -29,8 +29,8 @@ public class PlayerIndexRangeScan extends QueryOperator<Player> {
         return List.of();
     }
 
-    public Stream<Player> operatorStream() {
-        return txn.streamOrderedAscending(rangeStart, rangeEnd, playerFilter);
+    public Stream<QueryData<Player>> operatorStream() {
+        return txn.streamOrderedAscending(rangeStart, rangeEnd, playerFilter).map(QueryData::new);
     }
 
     @Override

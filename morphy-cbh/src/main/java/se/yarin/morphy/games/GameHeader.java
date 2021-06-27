@@ -6,6 +6,7 @@ import se.yarin.chess.Date;
 import se.yarin.chess.Eco;
 import se.yarin.chess.GameResult;
 import se.yarin.chess.NAG;
+import se.yarin.morphy.IdObject;
 
 import java.util.EnumSet;
 
@@ -13,7 +14,7 @@ import java.util.EnumSet;
  * A game header record in the CBH file.
  */
 @Value.Immutable
-public abstract class GameHeader {
+public abstract class GameHeader implements IdObject {
     @Value.Default
     public int id() {
         // This field isn't actually stored in the CBH file, but makes sense to keep it around.

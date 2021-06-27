@@ -4,6 +4,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import se.yarin.morphy.Database;
 import se.yarin.morphy.DatabaseReadTransaction;
+import se.yarin.morphy.IdObject;
 import se.yarin.morphy.Instrumentation;
 import se.yarin.morphy.metrics.*;
 import se.yarin.morphy.queries.QueryContext;
@@ -14,13 +15,14 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public abstract class QueryOperator<T> {
+public abstract class QueryOperator<T extends IdObject> {
     private static final double SCATTERED_IO_COST_MULTIPLIER = 4;
     private static final double SCATTERED_IO_PAGE_COST = 0.08;
     private static final double BURST_IO_PAGES_COST = 0.02;
     private static final double DESERIALIZATION_COST = 0.0006;
 
     private final @NotNull QueryContext queryContext;
+    private final boolean hasFullData;  // If true, data() will be set in the stream, otherwise not
     private @Nullable OperatorCost actualOperatorCost; // Only actual fields set
     private final AtomicInteger actualRowCount = new AtomicInteger(0);
 
@@ -28,8 +30,9 @@ public abstract class QueryOperator<T> {
     private @Nullable MetricsRepository queryMetrics;
     private long actualWallClockTime;
 
-    public QueryOperator(@NotNull QueryContext queryContext) {
+    public QueryOperator(@NotNull QueryContext queryContext, boolean hasFullData) {
         this.queryContext = queryContext;
+        this.hasFullData = hasFullData;
     }
 
     public @NotNull QueryContext context() {
@@ -40,24 +43,28 @@ public abstract class QueryOperator<T> {
         return queryContext.database();
     }
 
+    public boolean hasFullData() {
+        return hasFullData;
+    }
+
     public DatabaseReadTransaction transaction() {
         return queryContext.transaction();
     }
 
-    public final Stream<T> stream() {
-        Stream<T> stream = operatorStream();
+    public final Stream<QueryData<T>> stream() {
+        Stream<QueryData<T>> stream = operatorStream();
         if (queryContext.traceCost()) {
             stream = stream.peek(t -> actualRowCount.incrementAndGet());
         }
         return stream;
     }
 
-    public final List<T> executeProfiled() {
+    public final List<QueryData<T>> executeProfiled() {
         Instrumentation instrumentation = context().databaseContext().instrumentation();
         var queryMetrics = instrumentation.pushContext("query", true);
         try {
             long start = System.currentTimeMillis();
-            List<T> queryResult = stream().collect(Collectors.toList());
+            List<QueryData<T>> queryResult = stream().collect(Collectors.toList());
             this.actualWallClockTime = System.currentTimeMillis() - start;
             Set<MetricsKey> duplicateKeys = streamMetricsKeys()
                     .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()))
@@ -118,7 +125,7 @@ public abstract class QueryOperator<T> {
 
     protected abstract List<MetricsProvider> metricProviders();
 
-    protected abstract Stream<T> operatorStream();
+    protected abstract Stream<QueryData<T>> operatorStream();
 
     protected abstract void estimateOperatorCost(@NotNull ImmutableOperatorCost.Builder operatorCost);
 

@@ -16,7 +16,10 @@ public class GamePlayerFilter extends QueryOperator<Game> {
     private final @NotNull EntityFilter<Player> playerFilter;
 
     public GamePlayerFilter(@NotNull QueryContext queryContext, @NotNull QueryOperator<Game> source, @NotNull EntityFilter<Player> playerFilter) {
-        super(queryContext);
+        super(queryContext, true);
+        if (!source.hasFullData()) {
+            throw new IllegalArgumentException("The source of GamePlayerFilter must return full data");
+        }
         this.source = source;
         this.playerFilter = playerFilter;
     }
@@ -27,13 +30,13 @@ public class GamePlayerFilter extends QueryOperator<Game> {
     }
 
     @Override
-    public Stream<Game> operatorStream() {
+    public Stream<QueryData<Game>> operatorStream() {
         final EntityIndexReadTransaction<Player> playerTransaction = transaction().playerTransaction();
 
         return this.source.stream().filter(game ->
         {
-            Player whitePlayer = game.whitePlayerId() >= 0 ? playerTransaction.get(game.whitePlayerId(), playerFilter) : null;
-            Player blackPlayer = game.blackPlayerId() >= 0 ? playerTransaction.get(game.blackPlayerId(), playerFilter) : null;
+            Player whitePlayer = game.data().whitePlayerId() >= 0 ? playerTransaction.get(game.data().whitePlayerId(), playerFilter) : null;
+            Player blackPlayer = game.data().blackPlayerId() >= 0 ? playerTransaction.get(game.data().blackPlayerId(), playerFilter) : null;
 
             return (whitePlayer != null && playerFilter.matches(whitePlayer)) ||
                     (blackPlayer != null && playerFilter.matches(blackPlayer));

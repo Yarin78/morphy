@@ -21,7 +21,7 @@ public class PlayerTableScan extends QueryOperator<Player> {
     }
 
     public PlayerTableScan(@NotNull QueryContext queryContext, @Nullable EntityFilter<Player> playerFilter, int firstId) {
-        super(queryContext);
+        super(queryContext, true);
         this.txn = transaction().playerTransaction();
         this.playerFilter = playerFilter;
         this.firstPlayerId = firstId;
@@ -33,8 +33,8 @@ public class PlayerTableScan extends QueryOperator<Player> {
     }
 
     @Override
-    public Stream<Player> operatorStream() {
-        return txn.stream(firstPlayerId, this.playerFilter);
+    public Stream<QueryData<Player>> operatorStream() {
+        return txn.stream(firstPlayerId, this.playerFilter).map(QueryData::new);
     }
 
     @Override

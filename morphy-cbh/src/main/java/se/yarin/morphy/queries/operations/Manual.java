@@ -1,18 +1,20 @@
 package se.yarin.morphy.queries.operations;
 
 import org.jetbrains.annotations.NotNull;
+import se.yarin.morphy.IdObject;
 import se.yarin.morphy.metrics.MetricsProvider;
 import se.yarin.morphy.queries.QueryContext;
 
 import java.util.List;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public class IntManual extends QueryOperator<Integer> {
-    private @NotNull List<Integer> integers;
+public class Manual<T extends IdObject> extends QueryOperator<T> {
+    private final @NotNull List<QueryData<T>> data;
 
-    public IntManual(@NotNull QueryContext queryContext, @NotNull List<Integer> integers) {
-        super(queryContext);
-        this.integers = List.copyOf(integers);
+    public Manual(@NotNull QueryContext queryContext, @NotNull List<Integer> ids) {
+        super(queryContext, false);
+        this.data = ids.stream().map(QueryData<T>::new).collect(Collectors.toList());
     }
 
     @Override
@@ -21,14 +23,14 @@ public class IntManual extends QueryOperator<Integer> {
     }
 
     @Override
-    protected Stream<Integer> operatorStream() {
-        return integers.stream();
+    protected Stream<QueryData<T>> operatorStream() {
+        return data.stream();
     }
 
     @Override
     protected void estimateOperatorCost(ImmutableOperatorCost.@NotNull Builder operatorCost) {
         operatorCost
-            .estimateRows(integers.size())
+            .estimateRows(data.size())
             .estimatePageReads(0)
             .estimateDeserializations(0);
     }

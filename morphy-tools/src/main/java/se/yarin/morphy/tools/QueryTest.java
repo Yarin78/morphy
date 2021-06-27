@@ -12,11 +12,8 @@ import se.yarin.morphy.entities.Tournament;
 import se.yarin.morphy.entities.filters.*;
 import se.yarin.morphy.games.filters.IsGameFilter;
 import se.yarin.morphy.games.filters.PlayerFilter;
-import se.yarin.morphy.games.filters.TournamentFilter;
-import se.yarin.morphy.queries.EntityQuery;
 import se.yarin.morphy.queries.GameQuery;
 import se.yarin.morphy.queries.QueryContext;
-import se.yarin.morphy.queries.QueryPlanner;
 import se.yarin.morphy.queries.operations.*;
 
 import java.io.File;
@@ -115,10 +112,10 @@ public class QueryTest {
             GameIdsByEntities<Tournament> gameIds = new GameIdsByEntities<>(context, new TournamentIndexRangeScan(context,
                     tournamentFilter, startKey, endKey), EntityType.TOURNAMENT);
             GameLookup worldChGames = new GameLookup(context, gameIds, new IsGameFilter());
-            QueryOperator<Integer> playerIds = new Distinct<>(context, new SortId(context, new PlayerIdsByGames(context, worldChGames)));
+            QueryOperator<Player> playerIds = new Distinct<>(context, new Sort<>(context, new PlayerIdsByGames(context, worldChGames)));
 
             //playerIds.stream().forEach(id -> System.out.println(txn.playerTransaction().get(id).lastName()));
-            QueryOperator<Integer> allGameIds = new Distinct<>(context, new SortId(context, new GameIdsByEntityIds(context, playerIds, EntityType.PLAYER)));
+            QueryOperator<Game> allGameIds = new Distinct<>(context, new Sort<>(context, new GameIdsByEntities<Player>(context, playerIds, EntityType.PLAYER)));
             GameLookup allGames = new GameLookup(context, allGameIds, new IsGameFilter());
 
             System.out.println(allGames.stream().limit(200).count());
@@ -211,9 +208,9 @@ public class QueryTest {
                 new PlayerNameFilter(namePrefix, "", true, false),
                 Player.ofFullName(namePrefix), Player.ofFullName(namePrefix + "zzz"));
 
-        QueryOperator<Integer> gameIds = new GameIdsByEntities<>(context, playerIndexRangeScan, EntityType.PLAYER);
+        QueryOperator<Game> gameIds = new GameIdsByEntities<>(context, playerIndexRangeScan, EntityType.PLAYER);
 
-        gameIds = new Distinct<>(context, new SortId(context, gameIds));
+        gameIds = new Distinct<>(context, new Sort<>(context, gameIds));
         QueryOperator<Game> games = new GameLookup(context, gameIds, null);
 
         CombinedFilter<Tournament> tournamentFilter = new CombinedFilter<>(List.of(

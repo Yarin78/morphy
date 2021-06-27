@@ -20,7 +20,7 @@ import java.util.Calendar;
 /**
  * Class that represents a game that is bound to a {@link Database}.
  */
-public class Game {
+public class Game implements IdObject {
     private static final Logger log = LoggerFactory.getLogger(Game.class);
 
     private final @NotNull Database database;

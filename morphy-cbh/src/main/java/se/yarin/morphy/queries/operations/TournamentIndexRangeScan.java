@@ -17,7 +17,7 @@ public class TournamentIndexRangeScan extends QueryOperator<Tournament> {
     private final @NotNull Tournament rangeStart, rangeEnd;
 
     public TournamentIndexRangeScan(@NotNull QueryContext queryContext, @Nullable EntityFilter<Tournament> tournamentFilter, @NotNull Tournament rangeStart, @NotNull Tournament rangeEnd) {
-        super(queryContext);
+        super(queryContext, true);
         this.txn = queryContext.transaction().tournamentTransaction();
         this.tournamentFilter = tournamentFilter;
         this.rangeStart = rangeStart;
@@ -29,8 +29,8 @@ public class TournamentIndexRangeScan extends QueryOperator<Tournament> {
         return List.of();
     }
 
-    public Stream<Tournament> operatorStream() {
-        return txn.streamOrderedAscending(rangeStart, rangeEnd, tournamentFilter);
+    public Stream<QueryData<Tournament>> operatorStream() {
+        return txn.streamOrderedAscending(rangeStart, rangeEnd, tournamentFilter).map(QueryData::new);
     }
 
     @Override

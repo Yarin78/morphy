@@ -189,17 +189,17 @@ public class QueryPlanner {
             if (playerNameFilter.isCaseSensitive()) {
                 String lastName = playerNameFilter.lastName();
                 PlayerIndexRangeScan playerIndexRangeScan = new PlayerIndexRangeScan(context, playerNameFilter, Player.of(lastName, ""), Player.of(lastName + "zzz", ""));
-                return EntitySourceQuery.fromEntityQuery(playerIndexRangeScan);
+                return new EntitySourceQuery<>(playerIndexRangeScan);
             }
         }
-        return EntitySourceQuery.fromEntityQuery(new PlayerTableScan(context, filter));
+        return new EntitySourceQuery<>(new PlayerTableScan(context, filter));
     }
 
     EntitySourceQuery<Tournament> getTournamentQuery(QueryContext context, EntityFilter<Tournament> filter) {
-        return EntitySourceQuery.fromEntityQuery(new TournamentTableScan(context, filter));
+        return new EntitySourceQuery<>(new TournamentTableScan(context, filter));
     }
 
-    public List<GameSourceQuery> getGameQuerySources(@NotNull QueryContext context, @NotNull GameQuery gameQuery) {
+    List<GameSourceQuery> getGameQuerySources(@NotNull QueryContext context, @NotNull GameQuery gameQuery) {
         List<GameSourceQuery> sources = new ArrayList<>();
 
         sources.add(GameSourceQuery.fromGameQuery(new GameTableScan(context, CombinedGameFilter.combine(gameQuery.gameFilters())), true));
@@ -210,38 +210,27 @@ public class QueryPlanner {
 
         for (EntityFilter<Player> filter : gameQuery.playerFilters()) {
             EntitySourceQuery<Player> entityQuery = getPlayerQuery(context, filter);
-            QueryOperator<Integer> idOp;
-            if (entityQuery.entityOperator() != null) {
-                idOp = new GameIdsByEntities<>(context, entityQuery.entityOperator(), EntityType.PLAYER);
-            } else {
-                idOp = new GameIdsByEntityIds(context, entityQuery.entityIdOperator(), EntityType.PLAYER);
-            }
-            idOp = new Distinct<>(context, new SortId(context, idOp));
-            sources.add(GameSourceQuery.fromIdQuery(idOp, true));
+            QueryOperator<Game> gameOp = new Distinct<>(context, new Sort<>(context, new GameIdsByEntities<>(context, entityQuery.entityOperator(), EntityType.PLAYER)));
+            sources.add(GameSourceQuery.fromGameQuery(gameOp, true));
         }
 
         // TODO: try combined as well
         for (EntityFilter<Tournament> filter : gameQuery.tournamentFilters()) {
             EntitySourceQuery<Tournament> entityQuery = getTournamentQuery(context, filter);
-            QueryOperator<Integer> idOp;
-            if (entityQuery.entityOperator() != null) {
-                idOp = new GameIdsByEntities<>(context, entityQuery.entityOperator(), EntityType.TOURNAMENT);
-            } else {
-                idOp = new GameIdsByEntityIds(context, entityQuery.entityIdOperator(), EntityType.TOURNAMENT);
-            }
-            idOp = new Distinct<>(context, new SortId(context, idOp));
-            sources.add(GameSourceQuery.fromIdQuery(idOp, true));
+            QueryOperator<Game> gameOp = new Distinct<>(context, new Sort<>(context,
+                    new GameIdsByEntities<>(context, entityQuery.entityOperator(), EntityType.TOURNAMENT)));
+            sources.add(GameSourceQuery.fromGameQuery(gameOp, true));
         }
 
         for (GameFilter gameFilter : gameQuery.gameFilters()) {
             if (gameFilter instanceof PlayerFilter) {
                 PlayerFilter playerFilter = (PlayerFilter) gameFilter;
-                QueryOperator<Integer> idOp = new GameIdsByEntityIds(context, new IntManual(context, playerFilter.playerIds()), EntityType.PLAYER);
+                QueryOperator<Game> gameOp = new GameIdsByEntities<Player>(context, new Manual<>(context, playerFilter.playerIds()), EntityType.PLAYER);
                 if (playerFilter.playerIds().size() > 1) {
                     // If there's only one player id, we are already guaranteed that it will be no duplicates and in order
-                    idOp = new Distinct<>(context, new SortId(context, idOp));
+                    gameOp = new Distinct<>(context, new Sort<>(context, gameOp));
                 }
-                sources.add(GameSourceQuery.fromIdQuery(idOp, true));
+                sources.add(GameSourceQuery.fromGameQuery(gameOp, true));
             }
         }
 
@@ -336,9 +325,10 @@ public class QueryPlanner {
             }
 
             QueryOperator<Game> gameOperator = current.gameOperator();
-            if (gameOperator == null) {
-                gameOperator = new GameLookup(context, current.gameIdOperator(), CombinedGameFilter.combine(gameQuery.gameFilters()));
+            if (!gameOperator.hasFullData()) {
+                gameOperator = new GameLookup(context, current.gameOperator(), CombinedGameFilter.combine(gameQuery.gameFilters()));
             }
+            assert gameOperator.hasFullData();
 
             for (List<? extends EntityFilter<?>> entityFilterPermutation : entityFilterPermutations(gameQuery.entityFilters())) {
                 QueryOperator<Game> currentGameOperator = gameOperator;
@@ -401,10 +391,10 @@ public class QueryPlanner {
 
  */
     }
-
+/*
     private List<? extends QueryOperator<Integer>> joinSourceQueries(
             @NotNull QueryContext context,
-            @NotNull List<List<GameIdsByEntityIds>> sourceQueries) {
+            @NotNull List<List<GameIdsByEntities>> sourceQueries) {
         assert sourceQueries.size() > 0;
         if (sourceQueries.size() == 1) {
             return sourceQueries.get(0);
@@ -412,8 +402,8 @@ public class QueryPlanner {
         ArrayList<QueryOperator<Integer>> possibleJoins = new ArrayList<>();
         // Try all subset splits
         for (int i = 0; i < (1 << sourceQueries.size()); i++) {
-            ArrayList<List<GameIdsByEntityIds>> left = new ArrayList<>();
-            ArrayList<List<GameIdsByEntityIds>> right = new ArrayList<>();
+            ArrayList<List<GameIdsByEntities>> left = new ArrayList<>();
+            ArrayList<List<GameIdsByEntities>> right = new ArrayList<>();
             for (int j = 0; j < sourceQueries.size(); j++) {
                 if (((1<<i) & j) > 0) {
                     left.add(sourceQueries.get(j));
@@ -442,4 +432,6 @@ public class QueryPlanner {
     public <T> List<QueryOperator<Integer>> getEntityIdCandidateQueries(@NotNull QueryContext context, @NotNull EntityQuery<T> entityQuery) {
         return List.of();
     }
+
+ */
 }

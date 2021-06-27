@@ -3,17 +3,18 @@ package se.yarin.morphy.queries.operations;
 import org.jetbrains.annotations.NotNull;
 import se.yarin.morphy.Game;
 import se.yarin.morphy.entities.EntityType;
+import se.yarin.morphy.entities.Player;
 import se.yarin.morphy.metrics.MetricsProvider;
 import se.yarin.morphy.queries.QueryContext;
 
 import java.util.List;
 import java.util.stream.Stream;
 
-public class PlayerIdsByGames extends QueryOperator<Integer> {
+public class PlayerIdsByGames extends QueryOperator<Player> {
     private final @NotNull QueryOperator<Game> source;
 
     public PlayerIdsByGames(@NotNull QueryContext queryContext, @NotNull QueryOperator<Game> source) {
-        super(queryContext);
+        super(queryContext, false);
         this.source = source;
     }
 
@@ -23,8 +24,9 @@ public class PlayerIdsByGames extends QueryOperator<Integer> {
     }
 
     @Override
-    public Stream<Integer> operatorStream() {
-        return source.stream().flatMap(game -> Stream.of(game.whitePlayerId(), game.blackPlayerId()));
+    public Stream<QueryData<Player>> operatorStream() {
+        // TODO: If not a game, map to no players
+        return source.stream().flatMap(row -> Stream.of(new QueryData<>(row.data().whitePlayerId()), new QueryData<>(row.data().blackPlayerId())));
     }
 
     @Override

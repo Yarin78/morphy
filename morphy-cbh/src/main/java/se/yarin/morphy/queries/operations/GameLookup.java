@@ -12,10 +12,10 @@ import java.util.stream.Stream;
 
 public class GameLookup extends QueryOperator<Game> {
     private final @Nullable GameFilter gameFilter;
-    private final @NotNull QueryOperator<Integer> source;
+    private final @NotNull QueryOperator<Game> source;
 
-    public GameLookup(@NotNull QueryContext queryContext, @NotNull QueryOperator<Integer> source, @Nullable GameFilter gameFilter) {
-        super(queryContext);
+    public GameLookup(@NotNull QueryContext queryContext, @NotNull QueryOperator<Game> source, @Nullable GameFilter gameFilter) {
+        super(queryContext, true);
         this.source = source;
         this.gameFilter = gameFilter;
     }
@@ -25,16 +25,16 @@ public class GameLookup extends QueryOperator<Game> {
         return List.of(source);
     }
 
-    public Stream<Game> operatorStream() {
+    public Stream<QueryData<Game>> operatorStream() {
         // TODO: filter should be passed to getGame for serialized matching
-        Stream<Game> stream = this.source.stream().map(transaction()::getGame);
+        Stream<QueryData<Game>> stream = this.source.stream().map(data -> new QueryData<>(transaction().getGame(data.id())));
 
         if (gameFilter != null) {
             if (gameFilter.gameHeaderFilter() != null) {
-                stream = stream.filter(game -> gameFilter.gameHeaderFilter().matches(game.header()));
+                stream = stream.filter(game -> gameFilter.gameHeaderFilter().matches(game.data().header()));
             }
             if (gameFilter.extendedGameHeaderFilter() != null) {
-                stream = stream.filter(game -> gameFilter.extendedGameHeaderFilter().matches(game.extendedHeader()));
+                stream = stream.filter(game -> gameFilter.extendedGameHeaderFilter().matches(game.data().extendedHeader()));
             }
         }
         return stream;

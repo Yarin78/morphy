@@ -16,7 +16,10 @@ public class GameTournamentFilter extends QueryOperator<Game> {
     private final @NotNull EntityFilter<Tournament> tournamentFilter;
 
     public GameTournamentFilter(@NotNull QueryContext queryContext, @NotNull QueryOperator<Game> source, @NotNull EntityFilter<Tournament> tournamentFilter) {
-        super(queryContext);
+        super(queryContext, true);
+        if (!source.hasFullData()) {
+            throw new IllegalArgumentException("The source of GamePlayerFilter must return full data");
+        }
         this.source = source;
         this.tournamentFilter = tournamentFilter;
     }
@@ -27,12 +30,12 @@ public class GameTournamentFilter extends QueryOperator<Game> {
     }
 
     @Override
-    protected Stream<Game> operatorStream() {
+    protected Stream<QueryData<Game>> operatorStream() {
         final EntityIndexReadTransaction<Tournament> tournamentTransaction = transaction().tournamentTransaction();
 
         return this.source.stream().filter(game ->
         {
-            Tournament tournament = tournamentTransaction.get(game.tournamentId(), tournamentFilter);
+            Tournament tournament = tournamentTransaction.get(game.data().tournamentId(), tournamentFilter);
             return tournament != null && tournamentFilter.matches(tournament);
         });
     }

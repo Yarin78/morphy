@@ -1,8 +1,10 @@
 package se.yarin.morphy.entities;
 
+import org.jetbrains.annotations.NotNull;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import se.yarin.morphy.entities.filters.EntityFilter;
 import se.yarin.morphy.storage.InMemoryItemStorage;
 
 import java.util.Random;
@@ -176,10 +178,21 @@ public class EntityIndexReadTransactionTest {
             index.add(FooEntity.of(nextRandomString(), i));
         }
 
+        EntityFilter<FooEntity> fooFilter = new EntityFilter<>() {
+            @Override
+            public boolean matches(@NotNull FooEntity item) {
+                return item.value() % 7 == 0;
+            }
+
+            @Override
+            public EntityType entityType() {
+                return null;
+            }
+        };
         EntityIndexReadTransaction<FooEntity> txn = index.beginReadTransaction();
-        assertEquals((int) Math.ceil(numItems / 7.0), txn.streamOrderedAscending(item -> item.value() % 7 == 0).count());
-        assertEquals((int) Math.ceil(numItems / 7.0), txn.streamOrderedDescending(item -> item.value() % 7 == 0).count());
-        assertEquals((int) Math.ceil(numItems / 7.0), txn.stream(item -> item.value() % 7 == 0).count());
+        assertEquals((int) Math.ceil(numItems / 7.0), txn.streamOrderedAscending(fooFilter).count());
+        assertEquals((int) Math.ceil(numItems / 7.0), txn.streamOrderedDescending(fooFilter).count());
+        assertEquals((int) Math.ceil(numItems / 7.0), txn.stream(fooFilter).count());
     }
 
 }

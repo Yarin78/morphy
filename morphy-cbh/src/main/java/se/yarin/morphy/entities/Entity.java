@@ -1,8 +1,9 @@
 package se.yarin.morphy.entities;
 
 import org.immutables.value.Value;
+import se.yarin.morphy.IdObject;
 
-public abstract class Entity {
+public abstract class Entity implements IdObject {
     @Value.Default
     public int id() {
         return -1;
