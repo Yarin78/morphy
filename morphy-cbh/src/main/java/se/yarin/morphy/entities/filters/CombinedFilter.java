@@ -1,7 +1,10 @@
 package se.yarin.morphy.entities.filters;
 
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import se.yarin.morphy.entities.EntityType;
+import se.yarin.morphy.games.filters.CombinedGameFilter;
+import se.yarin.morphy.games.filters.GameFilter;
 import se.yarin.morphy.queries.QueryPlanner;
 
 import java.util.List;
@@ -10,6 +13,16 @@ import java.util.stream.Collectors;
 public class CombinedFilter<T> implements EntityFilter<T> {
     private final @NotNull List<EntityFilter<T>> filters;
     private final @NotNull EntityType entityType;
+
+    public static <T> @Nullable EntityFilter<T> combine(@NotNull List<EntityFilter<T>> filters) {
+        if (filters.size() == 0) {
+            return null;
+        }
+        if (filters.size() == 1) {
+            return filters.get(0);
+        }
+        return new CombinedFilter<>(filters);
+    }
 
     public CombinedFilter(@NotNull List<EntityFilter<T>> filters) {
         if (filters.size() == 0) {

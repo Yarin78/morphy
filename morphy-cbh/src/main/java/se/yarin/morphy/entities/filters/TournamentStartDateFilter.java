@@ -10,8 +10,16 @@ import se.yarin.morphy.util.CBUtil;
 import se.yarin.util.ByteBufferUtil;
 
 public class TournamentStartDateFilter implements EntityFilter<Tournament>  {
-    private final Date fromDate;
-    private final Date toDate;
+    private final @NotNull Date fromDate;
+    private final @NotNull Date toDate;
+
+    public @NotNull Date fromDate() {
+        return fromDate;
+    }
+
+    public @NotNull Date toDate() {
+        return toDate;
+    }
 
     public TournamentStartDateFilter(@NotNull String dateRange) {
         this(DateRangeFilter.parseFromDate(dateRange), DateRangeFilter.parseToDate(dateRange));

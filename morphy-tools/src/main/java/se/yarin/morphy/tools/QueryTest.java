@@ -12,8 +12,7 @@ import se.yarin.morphy.entities.Tournament;
 import se.yarin.morphy.entities.filters.*;
 import se.yarin.morphy.games.filters.IsGameFilter;
 import se.yarin.morphy.games.filters.PlayerFilter;
-import se.yarin.morphy.queries.GameQuery;
-import se.yarin.morphy.queries.QueryContext;
+import se.yarin.morphy.queries.*;
 import se.yarin.morphy.queries.operations.*;
 
 import java.io.File;
@@ -46,12 +45,17 @@ public class QueryTest {
 
         EntityFilter<Player> playerFilter = new PlayerNameFilter("Car", "", true, false);
 
-        GameQuery gameQuery = new GameQuery(db, null, List.of(tf1, tf2, playerFilter));
+        GameQuery gameQuery = new GameQuery(db, null,
+                List.of(new GamePlayerJoin(new PlayerQuery(db, List.of(playerFilter)), GamePlayerJoinCondition.ANY)),
+                List.of(new GameTournamentJoin(new TournamentQuery(db, List.of(tf1, tf2)))));
 
         try (var txn = new DatabaseReadTransaction(db)) {
             QueryContext context = new QueryContext(txn, true);
 
-            List<QueryOperator<Game>> candidateQueries = db.queryPlanner().getCandidateQueries(context, gameQuery);
+            List<QueryOperator<Game>> candidateQueries = db.queryPlanner().getGameQueryPlans(context, gameQuery, true);
+            System.out.println(candidateQueries.size() + " query plans");
+            System.out.println();
+
             candidateQueries.sort(Comparator.comparingLong(o -> (long) o.getQueryCost().estimatedTotalCost()));
             for (QueryOperator<Game> candidateQuery : candidateQueries.stream().limit(3).collect(Collectors.toList())) {
                 /*

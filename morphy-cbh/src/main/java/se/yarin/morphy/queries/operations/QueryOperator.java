@@ -218,7 +218,8 @@ public abstract class QueryOperator<T extends IdObject> {
         sb.append(this);
         if (includeCost) {
             OperatorCost cost = getOperatorCost();
-            sb.append(String.format(" {estimate: {rows=%d, deser=%d, pageReads=%d}, actual%s: {rows=%d, deser=%d, physicalPageReads=%d, logicalPageReads=%d}}",
+            sb.append(String.format(" {data: %b, estimate: {rows=%d, deser=%d, pageReads=%d}, actual%s: {rows=%d, deser=%d, physicalPageReads=%d, logicalPageReads=%d}}",
+                    hasFullData,
                     cost.estimateRows(), cost.estimateDeserializations(), cost.estimatePageReads(),
                     cost.actualIsDuplicate() ? " (*)" : "",
                     cost.actualRows(), cost.actualDeserializations(), cost.actualPhysicalPageReads(), cost.actualLogicalPageReads()));
