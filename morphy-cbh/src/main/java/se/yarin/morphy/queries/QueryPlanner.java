@@ -4,7 +4,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import se.yarin.chess.Date;
+import se.yarin.cbhlib.games.search.GameIdFilter;
 import se.yarin.morphy.Database;
 import se.yarin.morphy.DatabaseReadTransaction;
 import se.yarin.morphy.Game;
@@ -13,8 +13,8 @@ import se.yarin.morphy.boosters.GameEntityIndex;
 import se.yarin.morphy.entities.*;
 import se.yarin.morphy.entities.filters.CombinedFilter;
 import se.yarin.morphy.entities.filters.EntityFilter;
+import se.yarin.morphy.entities.filters.ManualFilter;
 import se.yarin.morphy.entities.filters.PlayerNameFilter;
-import se.yarin.morphy.entities.filters.TournamentStartDateFilter;
 import se.yarin.morphy.exceptions.MorphyNotSupportedException;
 import se.yarin.morphy.games.filters.CombinedGameFilter;
 import se.yarin.morphy.games.filters.GameFilter;
@@ -126,8 +126,22 @@ public class QueryPlanner {
 
     public double playerFilterEstimate(@Nullable EntityFilter<Player> playerFilter) {
         // TODO
+        if (playerFilter instanceof ManualFilter) {
+            int count = ((ManualFilter<?>) playerFilter).ids().size();
+            return 1.0 * count / database.playerIndex().count();
+        }
         return 1.0;
     }
+
+    public double tournamentFilterEstimate(@Nullable EntityFilter<Tournament> tournamentFilter) {
+        // TODO
+        if (tournamentFilter instanceof ManualFilter) {
+            int count = ((ManualFilter<?>) tournamentFilter).ids().size();
+            return 1.0 * count / database.tournamentIndex().count();
+        }
+        return 1.0;
+    }
+
 
     public double annotatorFilterEstimate(EntityFilter<Annotator> annotatorFilter) {
         // TODO
@@ -213,15 +227,12 @@ public class QueryPlanner {
 
         for (GamePlayerJoin playerJoin : gameQuery.playerJoins()) {
             QueryOperator<Player> playerQueryPlan = selectBestQueryPlan(getPlayerQueryPlans(context, playerJoin.query(), false));
-
-            // TODO: Take PlayerJoinCondition into account
             QueryOperator<Game> gameOp = new Distinct<>(context, new Sort<>(context, new GameIdsByEntities<>(context, playerQueryPlan, EntityType.PLAYER)));
             sources.add(GameSourceQuery.fromGameQuery(gameOp, playerJoin.query().gameQuery() == null));
         }
 
         for (GameTournamentJoin tournamentJoin : gameQuery.tournamentJoins()) {
             QueryOperator<Tournament> tournamentQueryPlan = selectBestQueryPlan(getTournamentQueryPlans(context, tournamentJoin.query(), false));
-
             QueryOperator<Game> gameOp = new Distinct<>(context, new Sort<>(context, new GameIdsByEntities<>(context, tournamentQueryPlan, EntityType.TOURNAMENT)));
             sources.add(GameSourceQuery.fromGameQuery(gameOp, tournamentJoin.query().gameQuery() == null));
         }
@@ -264,9 +275,9 @@ public class QueryPlanner {
         return combinations;
     }
 
-    List<List<EntityFilter<?>>> entityFilterPermutations(@NotNull List<EntityFilter<?>> orgEntityFilters) {
-        ArrayList<EntityFilter<?>> entityFilters = new ArrayList<>(orgEntityFilters);
-        ArrayList<List<EntityFilter<?>>> permutations = new ArrayList<>();
+    <T> List<List<T>> generatePermutations(@NotNull List<T> orgEntityFilters) {
+        ArrayList<T> entityFilters = new ArrayList<>(orgEntityFilters);
+        ArrayList<List<T>> permutations = new ArrayList<>();
 
         // https://www.baeldung.com/java-array-permutations
         int n = entityFilters.size();
@@ -281,7 +292,7 @@ public class QueryPlanner {
         while (i < n) {
             if (indexes[i] < i) {
                 int j = i % 2 == 0 ?  0: indexes[i];
-                EntityFilter<?> tmp = entityFilters.get(j);
+                T tmp = entityFilters.get(j);
                 entityFilters.set(j, entityFilters.get(i));
                 entityFilters.set(i, tmp);
                 permutations.add(List.copyOf(entityFilters));
@@ -298,10 +309,6 @@ public class QueryPlanner {
     }
 
     public List<QueryOperator<Tournament>> getTournamentQueryPlans(@NotNull QueryContext context, @NotNull TournamentQuery tournamentQuery, boolean fullData) {
-        if (tournamentQuery.gameQuery() != null) {
-            throw new MorphyNotSupportedException("Complex entity queries not yet supported");
-        }
-
         ArrayList<QueryOperator<Tournament>> queryPlans = new ArrayList<>();
 
         // Either complete scan and filter
@@ -323,18 +330,38 @@ public class QueryPlanner {
             }
 
              */
+            if (filter instanceof ManualFilter) {
+                ManualFilter<Tournament> manualFilter = (ManualFilter<Tournament>) filter;
+                QueryOperator<Tournament> tournaments = new Manual<>(context, new ArrayList<>(manualFilter.ids()));
+                if (fullData) {
+                    tournaments = new TournamentLookup(context, tournaments, combinedFilter);
+                }
+                queryPlans.add(tournaments);
+            }
         }
 
-        // Note: Currently both plans will always return full tournament data, so need to do a bookmark lookup
-        // This may change when adding support for gameQuery
-        return queryPlans;
+        if (tournamentQuery.gameQuery() == null) {
+            return queryPlans;
+        }
+
+        // If the tournaments query depends on a game query, things get more complicated
+        // This is an additional subquery that must be joined
+        // Either merge join in combinations with all other possible query plans
+        // or do a "bookmark lookup" with the entire filter
+        QueryOperator<Game> gameQueryPlan = selectBestQueryPlan(getGameQueryPlans(context, tournamentQuery.gameQuery(), true));
+        QueryOperator<Tournament> complexTournamentQuery = new Distinct<>(context, new Sort<>(context, new TournamentIdsByGames(context, gameQueryPlan)));
+
+        List<QueryOperator<Tournament>> complexQueryPlans = new ArrayList<>();
+        for (QueryOperator<Tournament> queryPlan : queryPlans) {
+            complexQueryPlans.add(new MergeJoin<>(context, queryPlan, complexTournamentQuery));
+        }
+
+        complexQueryPlans.add(new TournamentLookup(context, complexTournamentQuery, combinedFilter));
+
+        return complexQueryPlans;
     }
 
     public List<QueryOperator<Player>> getPlayerQueryPlans(@NotNull QueryContext context, @NotNull PlayerQuery playerQuery, boolean fullData) {
-        if (playerQuery.gameQuery() != null) {
-            throw new MorphyNotSupportedException("Complex entity queries not yet supported");
-        }
-
         ArrayList<QueryOperator<Player>> queryPlans = new ArrayList<>();
 
         // Either complete scan and filter
@@ -351,11 +378,36 @@ public class QueryPlanner {
                     queryPlans.add(new PlayerIndexRangeScan(context, combinedFilter, Player.of(lastName, ""), Player.of(lastName + "zzz", "")));
                 }
             }
+            if (filter instanceof ManualFilter) {
+                ManualFilter<Player> manualFilter = (ManualFilter<Player>) filter;
+                QueryOperator<Player> players = new Manual<>(context, new ArrayList<>(manualFilter.ids()));
+                if (fullData) {
+                    players = new PlayerLookup(context, players, combinedFilter);
+                }
+                queryPlans.add(players);
+            }
         }
 
-        // Note: Currently both plans will always return full player data, so need to do a bookmark lookup
-        // This may change when adding support for gameQuery
-        return queryPlans;
+        if (playerQuery.gameQuery() == null) {
+            return queryPlans;
+        }
+
+        // If the player query depends on a game query, things get more complicated
+        // This is an additional subquery that must be joined
+        // Either merge join in combinations with all other possible query plans
+        // or do a "bookmark lookup" with the entire filter
+        QueryOperator<Game> gameQueryPlan = selectBestQueryPlan(getGameQueryPlans(context, playerQuery.gameQuery(), true));
+        // TODO: join condition
+        QueryOperator<Player> complexPlayerQuery = new Distinct<>(context, new Sort<>(context, new PlayerIdsByGames(context, gameQueryPlan)));
+
+        List<QueryOperator<Player>> complexQueryPlans = new ArrayList<>();
+        for (QueryOperator<Player> queryPlan : queryPlans) {
+            complexQueryPlans.add(new MergeJoin<>(context, queryPlan, complexPlayerQuery));
+        }
+
+        complexQueryPlans.add(new PlayerLookup(context, complexPlayerQuery, combinedFilter));
+
+        return complexQueryPlans;
     }
 
     public List<QueryOperator<Game>> getGameQueryPlans(@NotNull QueryContext context, @NotNull GameQuery gameQuery, boolean fullData) {
@@ -379,13 +431,12 @@ public class QueryPlanner {
 
         List<GameSourceQuery> sources = getGameQuerySources(context, gameQuery);
 
-        List<EntityFilter<?>> gameEntityFilters = gameQuery.entityFilters();
+        List<GameEntityJoin<?>> gameEntityJoins = gameQuery.entityJoins(true);
 
         for (List<GameSourceQuery> sourceCombination : sourceCombinations(sources)) {
             // Join the sources starting with the one returning least amount of expected rows
             List<GameSourceQuery> sorted = sourceCombination.stream().sorted(Comparator.comparingLong(GameSourceQuery::estimateRows)).collect(Collectors.toList());
 
-            List<EntityFilter<?>> coveredFilters = new ArrayList<>(); // TODO set this
             GameSourceQuery current = sorted.get(0);
             for (int i = 1; i < sorted.size(); i++) {
                 current = GameSourceQuery.join(current, sorted.get(i));
@@ -393,21 +444,14 @@ public class QueryPlanner {
 
             QueryOperator<Game> gameOperator = current.gameOperator();
             // Ensure that full data exists in case we need to do additional entity filtering, or full data is required
-            // TODO: Should check count of filters after covered filters have been applied
-            if (!gameOperator.hasFullData() && (gameEntityFilters.size() > 0 || fullData)) {
+            if (!gameOperator.hasFullData() && (gameEntityJoins.size() > 0 || fullData)) {
                 gameOperator = new GameLookup(context, current.gameOperator(), CombinedGameFilter.combine(gameQuery.gameFilters()));
             }
 
-            for (List<? extends EntityFilter<?>> entityFilterPermutation : entityFilterPermutations(gameEntityFilters)) {
+            for (List<GameEntityJoin<?>> entityJoinPermutation : generatePermutations(gameEntityJoins)) {
                 QueryOperator<Game> currentGameOperator = gameOperator;
-                for (EntityFilter<?> filter : entityFilterPermutation) {
-                    if (filter.entityType() == EntityType.PLAYER) {
-                        currentGameOperator = new GamePlayerFilter(context, currentGameOperator, (EntityFilter<Player>) filter);
-                    } else if (filter.entityType() == EntityType.TOURNAMENT) {
-                        currentGameOperator = new GameTournamentFilter(context, currentGameOperator, (EntityFilter<Tournament>) filter);
-                    } else {
-                        throw new MorphyNotSupportedException();
-                    }
+                for (GameEntityJoin<?> entityJoin : entityJoinPermutation) {
+                    currentGameOperator = entityJoin.applyGameFilter(context, currentGameOperator);
                 }
                 candidateQueryPlans.add(currentGameOperator);
             }

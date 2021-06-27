@@ -6,6 +6,7 @@ import se.yarin.morphy.entities.EntityIndexReadTransaction;
 import se.yarin.morphy.entities.Player;
 import se.yarin.morphy.entities.filters.EntityFilter;
 import se.yarin.morphy.metrics.MetricsProvider;
+import se.yarin.morphy.queries.GamePlayerJoinCondition;
 import se.yarin.morphy.queries.QueryContext;
 
 import java.util.List;
@@ -14,14 +15,19 @@ import java.util.stream.Stream;
 public class GamePlayerFilter extends QueryOperator<Game> {
     private final @NotNull QueryOperator<Game> source;
     private final @NotNull EntityFilter<Player> playerFilter;
+    private final @NotNull GamePlayerJoinCondition joinCondition;
 
-    public GamePlayerFilter(@NotNull QueryContext queryContext, @NotNull QueryOperator<Game> source, @NotNull EntityFilter<Player> playerFilter) {
+    public GamePlayerFilter(@NotNull QueryContext queryContext,
+                            @NotNull QueryOperator<Game> source,
+                            @NotNull EntityFilter<Player> playerFilter,
+                            @NotNull GamePlayerJoinCondition joinCondition) {
         super(queryContext, true);
         if (!source.hasFullData()) {
             throw new IllegalArgumentException("The source of GamePlayerFilter must return full data");
         }
         this.source = source;
         this.playerFilter = playerFilter;
+        this.joinCondition = joinCondition;
     }
 
     @Override
@@ -35,11 +41,62 @@ public class GamePlayerFilter extends QueryOperator<Game> {
 
         return this.source.stream().filter(game ->
         {
-            Player whitePlayer = game.data().whitePlayerId() >= 0 ? playerTransaction.get(game.data().whitePlayerId(), playerFilter) : null;
-            Player blackPlayer = game.data().blackPlayerId() >= 0 ? playerTransaction.get(game.data().blackPlayerId(), playerFilter) : null;
+            int whiteId = game.data().whitePlayerId();
+            int blackId = game.data().blackPlayerId();
 
-            return (whitePlayer != null && playerFilter.matches(whitePlayer)) ||
-                    (blackPlayer != null && playerFilter.matches(blackPlayer));
+            if (whiteId < 0 || blackId < 0) {
+                // Happens if game is a text
+                return false;
+            }
+
+            Player whitePlayer = playerTransaction.get(whiteId, playerFilter);
+            Player blackPlayer = playerTransaction.get(blackId, playerFilter);
+
+            boolean whiteMatch = whitePlayer != null && playerFilter.matches(whitePlayer);
+            boolean blackMatch = blackPlayer != null && playerFilter.matches(blackPlayer);
+
+            switch (joinCondition) {
+                case ANY -> {
+                    return whiteMatch || blackMatch;
+                }
+                case BOTH -> {
+                    return whiteMatch && blackMatch;
+                }
+                case WHITE -> {
+                    return whiteMatch;
+                }
+                case BLACK -> {
+                    return blackMatch;
+                }
+                case WINNER -> {
+                    switch (game.data().result()) {
+                        case WHITE_WINS, WHITE_WINS_ON_FORFEIT -> {
+                            return whiteMatch;
+                        }
+                        case BLACK_WINS, BLACK_WINS_ON_FORFEIT -> {
+                            return blackMatch;
+                        }
+                        case DRAW, BOTH_LOST, NOT_FINISHED, DRAW_ON_FORFEIT -> {
+                            return false;
+                        }
+                    }
+                }
+                case LOSER -> {
+                    switch (game.data().result()) {
+                        case WHITE_WINS, WHITE_WINS_ON_FORFEIT -> {
+                            return blackMatch;
+                        }
+                        case BLACK_WINS, BLACK_WINS_ON_FORFEIT -> {
+                            return whiteMatch;
+                        }
+                        case DRAW, NOT_FINISHED, DRAW_ON_FORFEIT -> {
+                            return false;
+                        }
+                        case BOTH_LOST -> { return whiteMatch || blackMatch; }
+                    }
+                }
+            }
+            return false;
         });
     }
 

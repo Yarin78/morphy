@@ -4,7 +4,9 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import se.yarin.morphy.IdObject;
 
-public class QueryData<T extends IdObject> {
+import java.util.function.BiFunction;
+
+public class QueryData<T extends IdObject> implements IdObject {
     private int id;
     private @Nullable T data;
     private double weight;
@@ -40,5 +42,12 @@ public class QueryData<T extends IdObject> {
         this.id = id;
         this.data = data;
         this.weight = weight;
+    }
+
+    public static <K extends IdObject> BiFunction<QueryData<K>, QueryData<K>, QueryData<K>> merger() {
+        return (q1, q2) -> {
+            assert q1.id() == q2.id();
+            return new QueryData<>(q1.id, q1.data == null ? q2.data : q1.data, q1.weight + q2.weight);
+        };
     }
 }

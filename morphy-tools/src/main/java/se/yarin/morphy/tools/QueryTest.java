@@ -1,15 +1,13 @@
 package se.yarin.morphy.tools;
 
 import se.yarin.chess.Date;
-import se.yarin.morphy.Database;
-import se.yarin.morphy.DatabaseMode;
-import se.yarin.morphy.DatabaseReadTransaction;
-import se.yarin.morphy.Game;
+import se.yarin.morphy.*;
 import se.yarin.morphy.entities.EntityType;
 import se.yarin.morphy.entities.ImmutableTournament;
 import se.yarin.morphy.entities.Player;
 import se.yarin.morphy.entities.Tournament;
 import se.yarin.morphy.entities.filters.*;
+import se.yarin.morphy.games.filters.DateRangeFilter;
 import se.yarin.morphy.games.filters.IsGameFilter;
 import se.yarin.morphy.games.filters.PlayerFilter;
 import se.yarin.morphy.queries.*;
@@ -33,10 +31,24 @@ public class QueryTest {
         db.queryPlanner().updateStatistics();
 
         QueryTest queryTest = new QueryTest(db);
-        queryTest.queryCarHighCategoryGames();
+        //queryTest.queryCarHighCategoryGames();
         //queryTest.compareCarHighCategoryGames();
         //queryTest.sameMetricQuery();
         //queryTest.carlsenLosesAsWhiteQuery();
+        queryTest.playersFrom18thCentury();
+    }
+
+    public <T extends IdObject> List<QueryOperator<T>> topQueryPlans(List<QueryOperator<T>> queryPlans, int limit) {
+        return topQueryPlans(queryPlans, limit, 100000);
+    }
+
+    public <T extends IdObject> List<QueryOperator<T>> topQueryPlans(List<QueryOperator<T>> queryPlans, int limit, int maxCost) {
+        return queryPlans
+                .stream()
+                .sorted(Comparator.comparingLong(o -> (long) o.getQueryCost().estimatedTotalCost()))
+                .filter(o -> (long) o.getQueryCost().estimatedTotalCost() < maxCost)
+                .limit(limit)
+                .collect(Collectors.toList());
     }
 
     public void queryCarHighCategoryGames() {
@@ -52,20 +64,37 @@ public class QueryTest {
         try (var txn = new DatabaseReadTransaction(db)) {
             QueryContext context = new QueryContext(txn, true);
 
-            List<QueryOperator<Game>> candidateQueries = db.queryPlanner().getGameQueryPlans(context, gameQuery, true);
-            System.out.println(candidateQueries.size() + " query plans");
+            List<QueryOperator<Game>> queryPlans = db.queryPlanner().getGameQueryPlans(context, gameQuery, true);
+            System.out.println(queryPlans.size() + " query plans");
             System.out.println();
 
-            candidateQueries.sort(Comparator.comparingLong(o -> (long) o.getQueryCost().estimatedTotalCost()));
-            for (QueryOperator<Game> candidateQuery : candidateQueries.stream().limit(3).collect(Collectors.toList())) {
+            for (QueryOperator<Game> queryPlan : topQueryPlans(queryPlans, 3)) {
                 /*
-                System.out.println(candidateQuery.debugString(false));
-                System.out.println(candidateQuery.getQueryCost().format());
+                System.out.println(queryPlan.debugString(false));
+                System.out.println(queryPlan.getQueryCost().format());
                 System.out.println();
 
                  */
-                detailedQueryExecution(candidateQuery);
 
+                detailedQueryExecution(queryPlan);
+
+            }
+        }
+    }
+
+    public void playersFrom18thCentury() {
+        try (var txn = new DatabaseReadTransaction(db)) {
+            GameQuery games = new GameQuery(db, List.of(new DateRangeFilter(Date.unset(), new Date(1900, 1, 1))));
+            PlayerQuery players = new PlayerQuery(db, null, games, GamePlayerJoinCondition.ANY);
+
+            QueryContext context = new QueryContext(txn, true);
+
+            List<QueryOperator<Player>> queryPlans = db.queryPlanner().getPlayerQueryPlans(context, players, true);
+            System.out.println(queryPlans.size() + " query plans");
+            System.out.println();
+
+            for (QueryOperator<Player> queryPlan : topQueryPlans(queryPlans, 3)) {
+                detailedQueryExecution(queryPlan);
             }
         }
     }
@@ -74,12 +103,39 @@ public class QueryTest {
         try (var txn = new DatabaseReadTransaction(db)) {
             String playerName = "Carlsen, Magnus";
             Player carlsen = db.playerIndex().get(Player.ofFullName(playerName));
+            /*
             QueryContext context = new QueryContext(txn, true);
             PlayerIndexRangeScan players = new PlayerIndexRangeScan(context, null, Player.ofFullName(playerName), Player.ofFullName(playerName + "zzz"));
             GameIdsByEntities<Player> gameIds = new GameIdsByEntities<>(context, players, EntityType.PLAYER);
             GameLookup games = new GameLookup(context, gameIds, new PlayerFilter(carlsen, PlayerFilter.PlayerColor.WHITE, PlayerFilter.PlayerResult.LOSS));
 
             detailedQueryExecution(games);
+             */
+
+            GameQuery gameQuery = new GameQuery(db,
+                    List.of(new DateRangeFilter(new Date(2000, 1, 1), Date.unset())),
+                    List.of(new GamePlayerJoin(PlayerQuery.manual(db, List.of(carlsen)), GamePlayerJoinCondition.WHITE)),
+                    null);
+            QueryContext context = new QueryContext(txn, true);
+
+            List<QueryOperator<Game>> queryPlans = context.queryPlanner().getGameQueryPlans(context, gameQuery, true);
+            for (QueryOperator<Game> queryPlan : topQueryPlans(queryPlans, 3)) {
+                /*
+                System.out.println(queryPlan.getQueryCost().estimatedTotalCost());
+                System.out.println(queryPlan.debugString(true));
+
+                 */
+                detailedQueryExecution(queryPlan);
+                /*
+                long numHits = queryPlan.executeProfiled() .stream().count();
+                System.out.println("MATCHES " + numHits);
+
+                System.out.println(queryPlan.debugString(true));
+
+                System.out.println();
+                 */
+            }
+
         }
     }
 
@@ -174,7 +230,7 @@ public class QueryTest {
         PlayerNameFilter playerFilter = new PlayerNameFilter(namePrefix, "", true, false);
 
         GameTableScan games = new GameTableScan(context, new IsGameFilter());
-        GamePlayerFilter games1 = new GamePlayerFilter(context, games, playerFilter);
+        GamePlayerFilter games1 = new GamePlayerFilter(context, games, playerFilter, GamePlayerJoinCondition.ANY);
         GameTournamentFilter games2 = new GameTournamentFilter(context, games1, tournamentFilter);
 
         return games2;
@@ -198,7 +254,7 @@ public class QueryTest {
                                         new TournamentCategoryFilter(20, 99)
                             ))), EntityType.TOURNAMENT),
                     new IsGameFilter()),
-                new PlayerNameFilter(namePrefix, "", true, false));
+                new PlayerNameFilter(namePrefix, "", true, false), GamePlayerJoinCondition.ANY);
 
         return games;
     }

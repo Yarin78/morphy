@@ -4,6 +4,7 @@ import org.jetbrains.annotations.NotNull;
 import se.yarin.morphy.IdObject;
 import se.yarin.morphy.metrics.MetricsProvider;
 import se.yarin.morphy.queries.QueryContext;
+import se.yarin.morphy.util.StreamUtil;
 
 import java.util.List;
 import java.util.Set;
@@ -26,10 +27,7 @@ public class HashJoin<T extends IdObject> extends QueryOperator<T> {
 
     @Override
     protected Stream<QueryData<T>> operatorStream() {
-        // Build
-        Set<Integer> hashSet = right.stream().map(QueryData::id).collect(Collectors.toSet());
-        // Probe
-        return left.stream().filter(idObject -> hashSet.contains(idObject.id()));
+        return StreamUtil.hashJoin(left.stream(), right.stream(), QueryData.merger());
     }
 
     @Override

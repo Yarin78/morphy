@@ -4,10 +4,9 @@ import org.jetbrains.annotations.NotNull;
 import se.yarin.morphy.IdObject;
 import se.yarin.morphy.metrics.MetricsProvider;
 import se.yarin.morphy.queries.QueryContext;
+import se.yarin.morphy.util.StreamUtil;
 
 import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class MergeJoin<T extends IdObject> extends QueryOperator<T> {
@@ -29,10 +28,7 @@ public class MergeJoin<T extends IdObject> extends QueryOperator<T> {
 
     @Override
     protected Stream<QueryData<T>> operatorStream() {
-        // TODO: Make this a Merge join
-        // TODO: Make sure that if any of the streams contains the full data, the output should have the full data
-        Set<Integer> hashSet = right.stream().map(QueryData::id).collect(Collectors.toSet());
-        return left.stream().filter(idObject -> hashSet.contains(idObject.id()));
+        return StreamUtil.mergeJoin(left.stream(), right.stream(), QueryData.merger());
     }
 
     @Override

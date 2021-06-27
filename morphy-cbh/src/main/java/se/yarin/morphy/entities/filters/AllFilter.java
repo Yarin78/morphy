@@ -20,4 +20,9 @@ public class AllFilter<T> implements EntityFilter<T> {
     public EntityType entityType() {
         return this.entityType;
     }
+
+    @Override
+    public String toString() {
+        return "All";
+    }
 }

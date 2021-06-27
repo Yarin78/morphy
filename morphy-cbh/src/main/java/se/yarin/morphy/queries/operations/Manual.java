@@ -39,4 +39,10 @@ public class Manual<T extends IdObject> extends QueryOperator<T> {
     public List<QueryOperator<?>> sources() {
         return List.of();
     }
+
+    @Override
+    public String toString() {
+        String commaList = data.stream().map(data -> Integer.toString(data.id())).collect(Collectors.joining(", "));
+        return "Manual(ids: [" + commaList + "])";
+    }
 }

@@ -51,9 +51,19 @@ public class GameQuery {
         return tournamentJoins;
     }
 
-    public List<EntityFilter<?>> entityFilters() {
-        ArrayList<EntityFilter<?>> filters = new ArrayList<>();
-
+    public List<GameEntityJoin<?>> entityJoins(boolean filtersOnly) {
+        ArrayList<GameEntityJoin<?>> joins = new ArrayList<>();
+        for (GamePlayerJoin playerJoin : playerJoins) {
+            if (playerJoin.query().filters().size() > 0 || !filtersOnly) {
+                joins.add(playerJoin);
+            }
+        }
+        for (GameTournamentJoin tournamentJoin : tournamentJoins) {
+            if (tournamentJoin.query().filters().size() > 0 || !filtersOnly) {
+                joins.add(tournamentJoin);
+            }
+        }
+/*
         for (GamePlayerJoin playerJoin : playerJoins) {
             EntityFilter<Player> playerFilter = CombinedFilter.combine(playerJoin.query().filters());
             if (playerFilter != null) {
@@ -69,5 +79,8 @@ public class GameQuery {
         }
 
         return filters;
+         */
+
+        return joins;
     }
 }
