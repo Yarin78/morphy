@@ -1,0 +1,118 @@
+package se.yarin.morphy.queries;
+
+import org.jetbrains.annotations.NotNull;
+import se.yarin.morphy.IdObject;
+import se.yarin.morphy.entities.Player;
+import se.yarin.morphy.entities.Tournament;
+import se.yarin.morphy.queries.operations.QueryData;
+
+import java.util.Comparator;
+import java.util.List;
+
+public class QuerySortOrder<T extends IdObject> implements Comparator<QueryData<T>> {
+
+    public enum Direction {
+        ASCENDING,
+        DESCENDING
+    }
+
+    private final List<QuerySortField<T>> sortFields;
+    private final List<Direction> sortDirections;
+
+    public static <T extends IdObject> QuerySortOrder<T> none() {
+        return new QuerySortOrder<>();
+    }
+
+    public static <T extends IdObject> QuerySortOrder<T> byId() {
+        return new QuerySortOrder<>(QuerySortField.id(), Direction.ASCENDING);
+    }
+
+    public static <T extends IdObject> QuerySortOrder<T> byWeight() {
+        return new QuerySortOrder<>(QuerySortField.weight(), Direction.DESCENDING);
+    }
+
+    public static QuerySortOrder<Player> byPlayerDefaultIndex() {
+        return new QuerySortOrder<Player>();
+    }
+
+    public static QuerySortOrder<Tournament> byTournamentDefaultIndex() {
+        return new QuerySortOrder<>(
+                List.of(
+                        QuerySortField.tournamentYear(),
+                        QuerySortField.tournamentTitle(),
+                        QuerySortField.tournamentPlace(),
+                        QuerySortField.tournamentStartDate()),
+                List.of(
+                        Direction.DESCENDING,
+                        Direction.ASCENDING,
+                        Direction.ASCENDING,
+                        Direction.DESCENDING));
+    }
+
+
+    private QuerySortOrder() {
+        this.sortFields = List.of();
+        this.sortDirections = List.of();
+    }
+
+    public QuerySortOrder(@NotNull QuerySortField<T> key, @NotNull Direction direction) {
+        this.sortFields = List.of(key);
+        this.sortDirections = List.of(direction);
+    }
+
+    public QuerySortOrder(@NotNull QuerySortField<T> primaryKey, @NotNull Direction primaryDirection, @NotNull QuerySortField<T> secondaryKey, @NotNull Direction secondaryDirection) {
+        this.sortFields = List.of(primaryKey, secondaryKey);
+        this.sortDirections = List.of(primaryDirection, secondaryDirection);
+    }
+
+    public QuerySortOrder(@NotNull List<QuerySortField<T>> keys, @NotNull List<Direction> directions) {
+        this.sortFields = List.copyOf(keys);
+        this.sortDirections = List.copyOf(directions);
+    }
+
+    @Override
+    public int compare(@NotNull QueryData<T> o1, @NotNull QueryData<T> o2) {
+        for (int i = 0; i < sortFields.size(); i++) {
+            int comp = sortFields.get(i).compare(o1, o2);
+            if (comp != 0) {
+                return sortDirections.get(i) == Direction.ASCENDING ? comp : -comp;
+            }
+        }
+        return 0;
+    }
+
+    /**
+     * Determines if this sort order is identical or stronger than the other sort order
+     */
+    public boolean isSameOrStronger(@NotNull QuerySortOrder<T> other) {
+        // TODO: Test this
+        if (this.sortFields.size() < other.sortFields.size()) {
+            return false;
+        }
+        for (int i = 0; i < other.sortFields.size(); i++) {
+            if (!this.sortFields.get(i).equals(other.sortFields.get(i))) {
+                return false;
+            }
+            if (!this.sortDirections.get(i).equals(other.sortDirections.get(i))) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public boolean requiresData() {
+        return sortFields.stream().anyMatch(QuerySortField::requiresData);
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < sortFields.size(); i++) {
+            if (i > 0) sb.append(", ");
+            sb.append(sortFields.get(i).toString())
+                    .append(" ")
+                    .append(sortDirections.get(i) == Direction.ASCENDING ? "asc" : "desc");
+        }
+        return sb.toString();
+    }
+}

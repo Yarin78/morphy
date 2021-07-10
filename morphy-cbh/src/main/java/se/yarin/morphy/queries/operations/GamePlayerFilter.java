@@ -8,6 +8,7 @@ import se.yarin.morphy.entities.filters.EntityFilter;
 import se.yarin.morphy.metrics.MetricsProvider;
 import se.yarin.morphy.queries.GamePlayerJoinCondition;
 import se.yarin.morphy.queries.QueryContext;
+import se.yarin.morphy.queries.QuerySortOrder;
 
 import java.util.List;
 import java.util.stream.Stream;
@@ -33,6 +34,14 @@ public class GamePlayerFilter extends QueryOperator<Game> {
     @Override
     public List<QueryOperator<?>> sources() {
         return List.of(source);
+    }
+
+    public @NotNull QuerySortOrder<Game> sortOrder() {
+        return source.sortOrder();
+    }
+
+    public boolean mayContainDuplicates() {
+        return source.mayContainDuplicates();
     }
 
     @Override

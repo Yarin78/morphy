@@ -2,6 +2,7 @@ package se.yarin.util;
 
 import org.junit.Test;
 import se.yarin.morphy.IdObject;
+import se.yarin.morphy.queries.operations.MergeJoin;
 import se.yarin.morphy.util.StreamUtil;
 
 import java.util.ArrayList;
@@ -61,6 +62,13 @@ public class StreamUtilTest {
             assertEquals(hashJoinResult, mergeJoinResult);
             // System.out.println(hashJoinResult.size() + " " + mergeJoinResult.size());
         }
+    }
 
+    @Test(expected = AssertionError.class)
+    public void testMergeJoinOutOfOrder() {
+        List<MyObj> left = List.of(new MyObj(5), new MyObj(3));
+        List<MyObj> right = List.of(new MyObj(4), new MyObj(6));
+
+        StreamUtil.mergeJoin(left.stream(), right.stream(), (leftEl, rightEl) -> leftEl).collect(Collectors.toList());
     }
 }

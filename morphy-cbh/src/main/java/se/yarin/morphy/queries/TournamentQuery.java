@@ -14,6 +14,9 @@ public class TournamentQuery {
 
     private final @Nullable GameQuery gameQuery;
 
+    private final @Nullable QuerySortOrder<Tournament> sortOrder;
+    private final int limit;  // 0 = all
+
     public @NotNull Database database() {
         return database;
     }
@@ -26,13 +29,31 @@ public class TournamentQuery {
         return gameQuery;
     }
 
+    public @Nullable QuerySortOrder<Tournament> sortOrder() {
+        return sortOrder;
+    }
+
+    public int limit() {
+        return limit;
+    }
+
     public TournamentQuery(@NotNull Database database, @NotNull List<EntityFilter<Tournament>> filters) {
         this(database, filters, null);
     }
 
     public TournamentQuery(@NotNull Database database, @NotNull List<EntityFilter<Tournament>> filters, @Nullable GameQuery gameQuery) {
+        this(database, filters, gameQuery, null, 0);
+    }
+
+    public TournamentQuery(@NotNull Database database,
+                           @NotNull List<EntityFilter<Tournament>> filters,
+                           @Nullable GameQuery gameQuery,
+                           @Nullable QuerySortOrder<Tournament> sortOrder,
+                           int limit) {
         this.database = database;
         this.filters = filters;
         this.gameQuery = gameQuery;
+        this.sortOrder = sortOrder;
+        this.limit = limit;
     }
 }

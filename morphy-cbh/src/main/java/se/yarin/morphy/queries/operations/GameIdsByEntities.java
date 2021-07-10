@@ -7,6 +7,7 @@ import se.yarin.morphy.boosters.GameEntityIndex;
 import se.yarin.morphy.entities.EntityType;
 import se.yarin.morphy.metrics.MetricsProvider;
 import se.yarin.morphy.queries.QueryContext;
+import se.yarin.morphy.queries.QuerySortOrder;
 
 import java.util.List;
 import java.util.stream.Stream;
@@ -15,9 +16,12 @@ public class GameIdsByEntities<T extends IdObject> extends QueryOperator<Game> {
     private final @NotNull QueryOperator<T> source;
     private final @NotNull GameEntityIndex gameEntityIndex;
     private final @NotNull EntityType entityType;
+    private final boolean singleSource;
 
     public GameIdsByEntities(@NotNull QueryContext queryContext, @NotNull QueryOperator<T> source, @NotNull EntityType entityType) {
         super(queryContext, false);
+        singleSource = (source instanceof Manual<?>) && (((Manual<T>) source).singleItem());
+
         GameEntityIndex gameEntityIndex = queryContext.transaction().database().gameEntityIndex(entityType);
         if (gameEntityIndex == null) {
             throw new IllegalArgumentException("No game entity index exists for " + entityType.namePlural());
@@ -31,6 +35,14 @@ public class GameIdsByEntities<T extends IdObject> extends QueryOperator<Game> {
     @Override
     public List<QueryOperator<?>> sources() {
         return List.of(source);
+    }
+
+    public @NotNull QuerySortOrder<Game> sortOrder() {
+        return singleSource ? QuerySortOrder.byId() : QuerySortOrder.none();
+    }
+
+    public boolean mayContainDuplicates() {
+        return !singleSource;
     }
 
     @Override

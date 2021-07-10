@@ -4,27 +4,20 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import se.yarin.cbhlib.games.search.GameIdFilter;
+import se.yarin.chess.Date;
 import se.yarin.morphy.Database;
 import se.yarin.morphy.DatabaseReadTransaction;
 import se.yarin.morphy.Game;
 import se.yarin.morphy.IdObject;
 import se.yarin.morphy.boosters.GameEntityIndex;
 import se.yarin.morphy.entities.*;
-import se.yarin.morphy.entities.filters.CombinedFilter;
-import se.yarin.morphy.entities.filters.EntityFilter;
-import se.yarin.morphy.entities.filters.ManualFilter;
-import se.yarin.morphy.entities.filters.PlayerNameFilter;
-import se.yarin.morphy.exceptions.MorphyNotSupportedException;
+import se.yarin.morphy.entities.filters.*;
 import se.yarin.morphy.games.filters.CombinedGameFilter;
 import se.yarin.morphy.games.filters.GameFilter;
 import se.yarin.morphy.games.filters.PlayerFilter;
 import se.yarin.morphy.queries.operations.*;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -240,11 +233,9 @@ public class QueryPlanner {
         for (GameFilter gameFilter : gameQuery.gameFilters()) {
             if (gameFilter instanceof PlayerFilter) {
                 PlayerFilter playerFilter = (PlayerFilter) gameFilter;
-                QueryOperator<Game> gameOp = new GameIdsByEntities<Player>(context, new Manual<>(context, playerFilter.playerIds()), EntityType.PLAYER);
-                if (playerFilter.playerIds().size() > 1) {
-                    // If there's only one player id, we are already guaranteed that it will be no duplicates and in order
-                    gameOp = new Distinct<>(context, new Sort<>(context, gameOp));
-                }
+                QueryOperator<Game> gameOp = new GameIdsByEntities<Player>(context, new Manual<>(context, Set.copyOf(playerFilter.playerIds())), EntityType.PLAYER);
+
+                gameOp = new Distinct<>(context, new Sort<>(context, gameOp));
                 sources.add(GameSourceQuery.fromGameQuery(gameOp, true));
             }
         }
@@ -318,27 +309,29 @@ public class QueryPlanner {
         // Or find an index
         for (EntityFilter<Tournament> filter : tournamentQuery.filters()) {
             // TODO: This should be done nicer
-            /*
             // TODO: Statistics not implemented for this filter yet, so skipping it
             if (filter instanceof TournamentStartDateFilter) {
                 // Index is in reverse year order
                 TournamentStartDateFilter tdFilter = (TournamentStartDateFilter) filter;
                 int startYear = tdFilter.fromDate().isUnset() ? 0 : tdFilter.fromDate().year() - 1; // exclusive
                 int endYear = tdFilter.toDate().isUnset() ? 9999 : tdFilter.toDate().year();
-                queryPlans.add(new TournamentIndexRangeScan(context, combinedFilter,
-                        Tournament.of("", new Date(endYear)), Tournament.of("", new Date(startYear))));
+                QueryOperator<Tournament> tournamentOp = new TournamentIndexRangeScan(context, combinedFilter,
+                        Tournament.of("", new Date(endYear)), Tournament.of("", new Date(startYear)));
+                tournamentOp = new Distinct<>(context, new Sort<>(context, tournamentOp));
+                queryPlans.add(tournamentOp);
             }
 
-             */
             if (filter instanceof ManualFilter) {
                 ManualFilter<Tournament> manualFilter = (ManualFilter<Tournament>) filter;
-                QueryOperator<Tournament> tournaments = new Manual<>(context, new ArrayList<>(manualFilter.ids()));
+                QueryOperator<Tournament> tournaments = new Manual<>(context, Set.copyOf(manualFilter.ids()));
                 if (fullData) {
                     tournaments = new TournamentLookup(context, tournaments, combinedFilter);
                 }
                 queryPlans.add(tournaments);
             }
         }
+
+        // TODO: sorting
 
         if (tournamentQuery.gameQuery() == null) {
             return queryPlans;
@@ -375,18 +368,22 @@ public class QueryPlanner {
                 PlayerNameFilter playerNameFilter = (PlayerNameFilter) filter;
                 if (playerNameFilter.isCaseSensitive()) {
                     String lastName = playerNameFilter.lastName();
-                    queryPlans.add(new PlayerIndexRangeScan(context, combinedFilter, Player.of(lastName, ""), Player.of(lastName + "zzz", "")));
+                    QueryOperator<Player> playerOp = new PlayerIndexRangeScan(context, combinedFilter, Player.of(lastName, ""), Player.of(lastName + "zzz", ""));
+                    playerOp = new Distinct<>(context, new Sort<>(context, playerOp));
+                    queryPlans.add(playerOp);
                 }
             }
             if (filter instanceof ManualFilter) {
                 ManualFilter<Player> manualFilter = (ManualFilter<Player>) filter;
-                QueryOperator<Player> players = new Manual<>(context, new ArrayList<>(manualFilter.ids()));
+                QueryOperator<Player> players = new Manual<>(context, Set.copyOf(manualFilter.ids()));
                 if (fullData) {
                     players = new PlayerLookup(context, players, combinedFilter);
                 }
                 queryPlans.add(players);
             }
         }
+
+        // TODO: sorting
 
         if (playerQuery.gameQuery() == null) {
             return queryPlans;
@@ -433,6 +430,15 @@ public class QueryPlanner {
 
         List<GameEntityJoin<?>> gameEntityJoins = gameQuery.entityJoins(true);
 
+        boolean fullDataRequired = gameEntityJoins.size() > 0 || fullData;
+        QuerySortOrder<Game> sortOrder = gameQuery.sortOrder();
+        if (sortOrder != null) {
+            if (sortOrder.requiresData()) {
+                fullDataRequired = true;
+            }
+        }
+
+
         for (List<GameSourceQuery> sourceCombination : sourceCombinations(sources)) {
             // Join the sources starting with the one returning least amount of expected rows
             List<GameSourceQuery> sorted = sourceCombination.stream().sorted(Comparator.comparingLong(GameSourceQuery::estimateRows)).collect(Collectors.toList());
@@ -443,8 +449,8 @@ public class QueryPlanner {
             }
 
             QueryOperator<Game> gameOperator = current.gameOperator();
-            // Ensure that full data exists in case we need to do additional entity filtering, or full data is required
-            if (!gameOperator.hasFullData() && (gameEntityJoins.size() > 0 || fullData)) {
+            // Ensure that full data exists in case we need to do additional entity filtering/sorting, or full data is required
+            if (!gameOperator.hasFullData() && fullDataRequired) {
                 gameOperator = new GameLookup(context, current.gameOperator(), CombinedGameFilter.combine(gameQuery.gameFilters()));
             }
 
@@ -453,12 +459,16 @@ public class QueryPlanner {
                 for (GameEntityJoin<?> entityJoin : entityJoinPermutation) {
                     currentGameOperator = entityJoin.applyGameFilter(context, currentGameOperator);
                 }
+
+                if (sortOrder != null) {
+                    currentGameOperator = new Sort<>(context, currentGameOperator, sortOrder);
+                }
+
                 candidateQueryPlans.add(currentGameOperator);
             }
         }
 
         return candidateQueryPlans;
-
     }
 
 }

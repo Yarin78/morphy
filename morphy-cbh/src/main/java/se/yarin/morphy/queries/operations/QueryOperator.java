@@ -8,6 +8,7 @@ import se.yarin.morphy.IdObject;
 import se.yarin.morphy.Instrumentation;
 import se.yarin.morphy.metrics.*;
 import se.yarin.morphy.queries.QueryContext;
+import se.yarin.morphy.queries.QuerySortOrder;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -206,6 +207,13 @@ public abstract class QueryOperator<T extends IdObject> {
     }
 
     public abstract List<QueryOperator<?>> sources();
+
+    /**
+     * The sort order that the data from this operator will be in
+     */
+    public abstract @NotNull QuerySortOrder<T> sortOrder();
+
+    public abstract boolean mayContainDuplicates();
 
     public String debugString(boolean includeCost) {
         StringBuilder sb = new StringBuilder();

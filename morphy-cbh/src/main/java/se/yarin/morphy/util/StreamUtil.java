@@ -40,9 +40,13 @@ public class StreamUtil {
             private void prepareNext() {
                 while (nextLeft != null && nextRight != null && nextLeft.id() != nextRight.id()) {
                     if (nextLeft.id() < nextRight.id()) {
+                        int oldId = nextLeft.id();
                         nextLeft = leftIterator.hasNext() ? leftIterator.next() : null;
+                        assert nextLeft == null || nextLeft.id() > oldId;
                     } else {
+                        int oldId = nextRight.id();
                         nextRight = rightIterator.hasNext() ? rightIterator.next() : null;
+                        assert nextRight == null || nextRight.id() > oldId;
                     }
                 }
             }
@@ -80,6 +84,8 @@ public class StreamUtil {
 
     /**
      * Merges two streams of identical IdObjects.
+     * A hashtable is created from the right stream; the left stream is filtered
+     * on the contents of the hashtable.
      */
     public static <T extends IdObject> Stream<T> hashJoin(
             @NotNull Stream<T> leftStream,

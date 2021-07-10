@@ -6,6 +6,7 @@ import se.yarin.morphy.Game;
 import se.yarin.morphy.games.filters.GameFilter;
 import se.yarin.morphy.metrics.MetricsProvider;
 import se.yarin.morphy.queries.QueryContext;
+import se.yarin.morphy.queries.QuerySortOrder;
 
 import java.util.List;
 import java.util.stream.Stream;
@@ -27,6 +28,14 @@ public class GameTableScan extends QueryOperator<Game> {
     @Override
     public List<QueryOperator<?>> sources() {
         return List.of();
+    }
+
+    public @NotNull QuerySortOrder<Game> sortOrder() {
+        return QuerySortOrder.byId();
+    }
+
+    public boolean mayContainDuplicates() {
+        return false;
     }
 
     @Override

@@ -6,6 +6,7 @@ import se.yarin.morphy.entities.EntityType;
 import se.yarin.morphy.entities.Tournament;
 import se.yarin.morphy.metrics.MetricsProvider;
 import se.yarin.morphy.queries.QueryContext;
+import se.yarin.morphy.queries.QuerySortOrder;
 
 import java.util.List;
 import java.util.stream.Stream;
@@ -21,6 +22,14 @@ public class TournamentIdsByGames extends QueryOperator<Tournament> {
     @Override
     public List<QueryOperator<?>> sources() {
         return List.of(source);
+    }
+
+    public @NotNull QuerySortOrder<Tournament> sortOrder() {
+        return QuerySortOrder.none();
+    }
+
+    public boolean mayContainDuplicates() {
+        return true;
     }
 
     @Override

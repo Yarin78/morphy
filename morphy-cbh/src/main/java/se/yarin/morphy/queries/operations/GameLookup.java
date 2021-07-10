@@ -6,6 +6,7 @@ import se.yarin.morphy.Game;
 import se.yarin.morphy.games.filters.GameFilter;
 import se.yarin.morphy.metrics.MetricsProvider;
 import se.yarin.morphy.queries.QueryContext;
+import se.yarin.morphy.queries.QuerySortOrder;
 
 import java.util.List;
 import java.util.stream.Stream;
@@ -23,6 +24,14 @@ public class GameLookup extends QueryOperator<Game> {
     @Override
     public List<QueryOperator<?>> sources() {
         return List.of(source);
+    }
+
+    public @NotNull QuerySortOrder<Game> sortOrder() {
+        return source.sortOrder();
+    }
+
+    public boolean mayContainDuplicates() {
+        return source.mayContainDuplicates();
     }
 
     public Stream<QueryData<Game>> operatorStream() {

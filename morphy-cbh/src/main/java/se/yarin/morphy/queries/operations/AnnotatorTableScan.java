@@ -4,9 +4,11 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import se.yarin.morphy.entities.Annotator;
 import se.yarin.morphy.entities.EntityIndexReadTransaction;
+import se.yarin.morphy.entities.Tournament;
 import se.yarin.morphy.entities.filters.EntityFilter;
 import se.yarin.morphy.metrics.MetricsProvider;
 import se.yarin.morphy.queries.QueryContext;
+import se.yarin.morphy.queries.QuerySortOrder;
 
 import java.util.List;
 import java.util.stream.Stream;
@@ -24,6 +26,14 @@ public class AnnotatorTableScan extends QueryOperator<Annotator> {
     @Override
     public List<QueryOperator<?>> sources() {
         return List.of();
+    }
+
+    public @NotNull QuerySortOrder<Annotator> sortOrder() {
+        return QuerySortOrder.byId();
+    }
+
+    public boolean mayContainDuplicates() {
+        return false;
     }
 
     @Override

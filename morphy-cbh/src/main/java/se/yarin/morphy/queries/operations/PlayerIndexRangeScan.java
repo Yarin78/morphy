@@ -4,9 +4,11 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import se.yarin.morphy.entities.EntityIndexReadTransaction;
 import se.yarin.morphy.entities.Player;
+import se.yarin.morphy.entities.Tournament;
 import se.yarin.morphy.entities.filters.EntityFilter;
 import se.yarin.morphy.metrics.MetricsProvider;
 import se.yarin.morphy.queries.QueryContext;
+import se.yarin.morphy.queries.QuerySortOrder;
 
 import java.util.List;
 import java.util.stream.Stream;
@@ -27,6 +29,14 @@ public class PlayerIndexRangeScan extends QueryOperator<Player> {
     @Override
     public List<QueryOperator<?>> sources() {
         return List.of();
+    }
+
+    public @NotNull QuerySortOrder<Player> sortOrder() {
+        return QuerySortOrder.byPlayerDefaultIndex();
+    }
+
+    public boolean mayContainDuplicates() {
+        return false;
     }
 
     public Stream<QueryData<Player>> operatorStream() {
