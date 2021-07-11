@@ -2,7 +2,6 @@ package se.yarin.morphy.games;
 
 import org.immutables.value.Value;
 import org.jetbrains.annotations.NotNull;
-import se.yarin.morphy.IdObject;
 
 import java.util.Calendar;
 import java.util.TimeZone;
