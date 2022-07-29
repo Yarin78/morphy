@@ -8,10 +8,7 @@ import se.yarin.morphy.Database;
 import se.yarin.morphy.DatabaseMode;
 import se.yarin.morphy.DatabaseReadTransaction;
 import se.yarin.morphy.Game;
-import se.yarin.morphy.cli.games.DatabaseBuilder;
-import se.yarin.morphy.cli.games.GameConsumer;
-import se.yarin.morphy.cli.games.StatsGameConsumer;
-import se.yarin.morphy.cli.games.StdoutGamesSummary;
+import se.yarin.morphy.cli.games.*;
 import se.yarin.morphy.cli.columns.*;
 import se.yarin.morphy.entities.Player;
 import se.yarin.morphy.entities.Tournament;
@@ -351,6 +348,16 @@ public class Games extends BaseCommand implements Callable<Integer> {
                 Database.delete(file);
             }
             gameConsumer = new DatabaseBuilder(file);
+        } else if (output.endsWith(".pgn")) {
+            File file = new File(output);
+            if (!overwrite && file.exists()) {
+                throw new FileAlreadyExistsException(output);
+            }
+            if (file.exists()) {
+                // TODO: A pgn database may have additional index files that should be deleted as well
+                file.delete();
+            }
+            gameConsumer = new PgnDatabaseBuilder(file);
         } else {
             throw new IllegalArgumentException("Unknown output format: " + output);
         }

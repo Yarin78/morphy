@@ -5,6 +5,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.morphy.DatabaseContext;
 import se.yarin.morphy.exceptions.MorphyAnnotationExecption;
+import se.yarin.morphy.exceptions.MorphyFatalAnnotationDecodingException;
 import se.yarin.morphy.metrics.ItemMetrics;
 import se.yarin.morphy.metrics.MetricsRef;
 import se.yarin.util.ByteBufferUtil;
@@ -135,9 +136,18 @@ public final class AnnotationsSerializer {
         int expectedEnd = buf.position() - 14 + size;
         for (int i = 0; i < noAnnotations; i++) {
             int posNo = ByteBufferUtil.getSigned24BitB(buf) + 1;
-            Annotation annotation = deserializeAnnotation(buf);
+            Annotation annotation;
+            try {
+                annotation = deserializeAnnotation(buf);
+            } catch (MorphyFatalAnnotationDecodingException e) {
+                log.warn("Invalid annotation data at position " + buf.position() + ", no more annotations in this game parsed");
+                break;
+            }
+            if (log.isDebugEnabled()) {
+                log.debug("Parsed annotation " + annotation + " for move position " + posNo);
+            }
             if (posNo < 0 || posNo >= allNodes.size()) {
-                log.warn("Invalid position for an annotation in game " + gameId + ": " + (posNo - 1));
+                log.warn("Invalid move position for an annotation in game " + gameId + ": " + (posNo - 1));
             } else {
                 allNodes.get(posNo).getAnnotations().add(annotation);
             }
@@ -188,11 +198,15 @@ public final class AnnotationsSerializer {
      * @param buf the byte buffer
      * @return an annotation
      */
-    public static Annotation deserializeAnnotation(@NotNull ByteBuffer buf) {
+    public static Annotation deserializeAnnotation(@NotNull ByteBuffer buf) throws MorphyFatalAnnotationDecodingException {
         int startPos = buf.position();
         int annotationType = ByteBufferUtil.getUnsignedByte(buf);
         int annotationSize = ByteBufferUtil.getSignedShortB(buf) - 6;
         int nextPosition = Math.min(buf.limit(), buf.position() + annotationSize);
+
+        if (annotationSize < 0) {
+            throw new MorphyFatalAnnotationDecodingException("Invalid annotation size: " + (annotationSize + 6));
+        }
 
         try {
             AnnotationSerializer serializer = annotationSerializers.get(annotationType);

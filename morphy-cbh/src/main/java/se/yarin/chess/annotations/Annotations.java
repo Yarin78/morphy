@@ -38,7 +38,7 @@ public class Annotations extends ArrayList<Annotation> {
      */
     public <T extends Annotation> T getByClass(Class<T> clazz) {
         for (Annotation annotation : this) {
-            if (annotation.getClass() == clazz) {
+            if (annotation.getClass() == clazz || clazz.isInstance(annotation)) {
                 return (T) annotation;
             }
         }

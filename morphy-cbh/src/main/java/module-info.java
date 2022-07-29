@@ -41,4 +41,5 @@ module se.yarin.morphy.cbh {
     exports se.yarin.morphy.metrics;
     exports se.yarin.morphy.text;
     exports se.yarin.morphy.entities.filters;
+    exports se.yarin.morphy.games.annotations;
 }
