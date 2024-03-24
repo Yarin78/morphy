@@ -3,7 +3,7 @@ package se.yarin.morphy.cli.commands;
 import picocli.CommandLine;
 import se.yarin.morphy.cli.old.commands.OldChessBaseCommand;
 
-@CommandLine.Command(name = "cb", description = "Performs an operation on a ChessBase file",
+@CommandLine.Command(name = "morphy", description = "Performs an operation on a ChessBase file",
         mixinStandardHelpOptions = true,
         subcommands = { Games.class, Players.class, Tournaments.class, Check.class, OldChessBaseCommand.class})
 class ChessBaseCommand implements Runnable {

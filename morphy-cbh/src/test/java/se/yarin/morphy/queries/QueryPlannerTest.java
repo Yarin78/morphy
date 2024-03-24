@@ -34,8 +34,8 @@ public class QueryPlannerTest {
             QueryContext queryContext = new QueryContext(txn, false);
             List<QueryOperator<Game>> plans = db.queryPlanner().getGameQueryPlans(queryContext, gameQuery, true);
 
-            // GameTableScan
             assertEquals(1, plans.size());
+            assertEquals("GameTableScan(filter: fromDate >= '1950.??.??')", plans.get(0).toString());
         }
     }
 

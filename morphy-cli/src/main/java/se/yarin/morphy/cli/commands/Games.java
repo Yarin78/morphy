@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Callable;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 @CommandLine.Command(name = "games", mixinStandardHelpOptions = true)
@@ -117,6 +118,8 @@ public class Games extends BaseCommand implements Callable<Integer> {
 
     @Override
     public Integer call() throws IOException {
+        var numDatabaseErrors = new AtomicInteger(0);
+
         setupGlobalOptions();
 
         GameConsumer gameConsumer = createGameConsumer();
@@ -158,11 +161,13 @@ public class Games extends BaseCommand implements Callable<Integer> {
                 }
             } catch (IOException e) {
                 System.err.println("IO error when processing " + file);
+                numDatabaseErrors.incrementAndGet();
                 if (verboseLevel() > 0) {
                     e.printStackTrace();
                 }
             } catch (RuntimeException e) {
                 System.err.println("Unexpected error when processing " + file + ": " + e.getMessage());
+                numDatabaseErrors.incrementAndGet();
                 if (verboseLevel() > 0) {
                     e.printStackTrace();
                 }
@@ -170,6 +175,9 @@ public class Games extends BaseCommand implements Callable<Integer> {
         });
 
         gameConsumer.finish();
+        if (numDatabaseErrors.get() > 0) {
+            return 1;
+        }
         return 0;
     }
 
@@ -272,7 +280,7 @@ public class Games extends BaseCommand implements Callable<Integer> {
             tournamentQueries.add(new QTournamentsWithPlace(tournamentPlace));
         }
 
-        if (tournamentQueries.size() > 0) {
+        if (!tournamentQueries.isEmpty()) {
             gameQueries.add(new QGamesByTournaments(new QAnd<>(tournamentQueries)));
         }
 
