@@ -8,13 +8,13 @@ import se.yarin.morphy.DatabaseMode;
 import se.yarin.morphy.DatabaseReadTransaction;
 import se.yarin.morphy.entities.EntityType;
 import se.yarin.morphy.entities.Tournament;
-import se.yarin.morphy.entities.filters.EntityFilter;
 import se.yarin.morphy.entities.filters.RawEntityFilter;
-import se.yarin.morphy.queries.*;
+import se.yarin.morphy.qqueries.*;
 import se.yarin.morphy.cli.columns.RawTournamentColumn;
 import se.yarin.morphy.cli.columns.TournamentColumn;
 import se.yarin.morphy.cli.tournaments.StdoutTournamentsSummary;
 import se.yarin.morphy.cli.tournaments.TournamentConsumer;
+import se.yarin.morphy.qqueries.QueryResult;
 
 import java.io.IOException;
 import java.util.ArrayList;

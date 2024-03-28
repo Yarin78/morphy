@@ -13,7 +13,7 @@ import se.yarin.morphy.cli.columns.*;
 import se.yarin.morphy.entities.Player;
 import se.yarin.morphy.entities.Tournament;
 import se.yarin.morphy.games.filters.*;
-import se.yarin.morphy.queries.*;
+import se.yarin.morphy.qqueries.*;
 
 import java.io.File;
 import java.io.IOException;

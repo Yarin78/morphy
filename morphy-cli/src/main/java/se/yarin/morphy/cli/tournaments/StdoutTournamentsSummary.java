@@ -6,7 +6,7 @@ import se.yarin.morphy.Database;
 import se.yarin.morphy.cli.columns.GameColumn;
 import se.yarin.morphy.cli.columns.TournamentColumn;
 import se.yarin.morphy.entities.Tournament;
-import se.yarin.morphy.queries.QueryResult;
+import se.yarin.morphy.qqueries.QueryResult;
 
 import java.util.*;
 

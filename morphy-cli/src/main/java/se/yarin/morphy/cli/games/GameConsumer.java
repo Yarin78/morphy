@@ -1,7 +1,7 @@
 package se.yarin.morphy.cli.games;
 
 import se.yarin.morphy.Game;
-import se.yarin.morphy.queries.QueryResult;
+import se.yarin.morphy.qqueries.QueryResult;
 
 import java.util.function.Consumer;
 
