@@ -10,7 +10,7 @@ import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.stream.Collectors;
 
-public class AnnotatorFilter implements ItemStorageFilter<GameHeader> {
+public class AnnotatorFilter implements ItemStorageFilter<GameHeader>, GameFilter {
 
     private final @NotNull HashSet<Integer> annotatorIds;
 

@@ -41,6 +41,11 @@ GameQuery with a Player filter and a reverse sorting on the PlayedDate
 GameQuery with a Tournament subquery,
 where the Tournament subquery has a title filter.
 
+"Get all games played in a tournament where year >= 2000 and category >= 20, and one of the player names start with Car"
+GameQuery with a Tournament subquery and a Player subquery,
+where the Tournament subquery has a Year and Category filter,
+and the Player subquery has a Name filter.
+
 "Get all blitz tournaments played in 2020 of category 15 or higher, sorted by title"
 TournamentQuery with a TournamentYearTitle filter, a Category filter and sorting on the Title
 
@@ -168,7 +173,7 @@ Any type of scan is a "source operator" as it depends on no other operators.
     Filters a stream of games based on a substream of other entities
     Input: A stream of entities
     Input: A join condition
-    Output: A stream of games, only matching those  the games where the player or tournament id matches.
+    Output: A stream of games, only matching those the games where the player or tournament id matches.
 * HashJoin, MergeJoin:
     Combines two streams of entities into one, joined on the id.
     Input: Two streams of entities. Must not contain duplicates. Must be sorted by id MergeJoin.

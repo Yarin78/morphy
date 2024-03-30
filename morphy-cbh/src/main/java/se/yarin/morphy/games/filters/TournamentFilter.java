@@ -12,7 +12,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.stream.Collectors;
 
-public class TournamentFilter implements ItemStorageFilter<GameHeader> {
+public class TournamentFilter implements ItemStorageFilter<GameHeader>, GameFilter {
     private final @NotNull HashSet<Integer> tournamentIds;
 
     public TournamentFilter(@NotNull Tournament tournament) {
