@@ -9,6 +9,7 @@ import se.yarin.morphy.metrics.MetricsProvider;
 import se.yarin.morphy.queries.QueryContext;
 import se.yarin.morphy.queries.QuerySortOrder;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
 
@@ -16,17 +17,20 @@ public class TournamentTableScan extends QueryOperator<Tournament> {
     private final @NotNull EntityIndexReadTransaction<Tournament> txn;
     private final @Nullable EntityFilter<Tournament> tournamentFilter;
 
-    private final int firstTournamentId;
+    private final @Nullable Integer startId;
+    private final @Nullable Integer endId;
+
 
     public TournamentTableScan(@NotNull QueryContext queryContext, @Nullable EntityFilter<Tournament> tournamentFilter) {
-        this(queryContext, tournamentFilter, 0);
+        this(queryContext, tournamentFilter, null, null);
     }
 
-    public TournamentTableScan(@NotNull QueryContext queryContext, @Nullable EntityFilter<Tournament> tournamentFilter, int firstTournamentId) {
+    public TournamentTableScan(@NotNull QueryContext queryContext, @Nullable EntityFilter<Tournament> tournamentFilter, @Nullable Integer startId, @Nullable Integer endId) {
         super(queryContext, true);
         this.txn = transaction().tournamentTransaction();
         this.tournamentFilter = tournamentFilter;
-        this.firstTournamentId = firstTournamentId;
+        this.startId = startId;
+        this.endId = endId;
     }
 
     @Override
@@ -63,10 +67,18 @@ public class TournamentTableScan extends QueryOperator<Tournament> {
 
     @Override
     public String toString() {
-        if (tournamentFilter != null) {
-            return "TournamentTableScan(firstId: " + firstTournamentId + ", filter: " + tournamentFilter + ")";
+        ArrayList<String> params = new ArrayList<>();
+        if (startId != null) {
+            params.add("startId: " + startId);
         }
-        return "TournamentTableScan(firstId: " + firstTournamentId + ")";
+        if (endId != null) {
+            params.add("endId: " + endId);
+        }
+        if (tournamentFilter != null) {
+            params.add("filter: " + tournamentFilter);
+        }
+
+        return "TournamentTableScan(" + String.join(", ", params) + ")";
     }
 
     @Override

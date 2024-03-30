@@ -14,15 +14,17 @@ public class EntityBatchIterator<T extends Entity & Comparable<T>> implements It
 
     private final @NotNull EntityIndexReadTransaction<T> transaction;
     private @Nullable List<EntityNode> batch = new ArrayList<>();
-    private @Nullable EntityFilter<T> filter;
+    private final @Nullable EntityFilter<T> filter;
+    private final int endId;
     private @Nullable T nextItem;
     private int batchPos, nextBatchStart;
 
-    public EntityBatchIterator(@NotNull EntityIndexReadTransaction<T> transaction, int startId, @Nullable EntityFilter<T> filter) {
+    public EntityBatchIterator(@NotNull EntityIndexReadTransaction<T> transaction, @Nullable Integer startId, @Nullable Integer endId, @Nullable EntityFilter<T> filter) {
         // The batch reader only works in read transactions because it's optimized to read from
         // the storage directly, not supporting changes within a transaction
         this.transaction = transaction;
-        this.nextBatchStart = startId;
+        this.nextBatchStart = startId == null ? 0 : startId;
+        this.endId = endId == null ? Integer.MAX_VALUE : endId;
         this.filter = filter;
         setupNextItem();
     }
@@ -30,7 +32,7 @@ public class EntityBatchIterator<T extends Entity & Comparable<T>> implements It
     private void getNextBatch() {
         transaction.ensureTransactionIsOpen();
 
-        int endId = Math.min(transaction.index().capacity(), nextBatchStart + BATCH_SIZE);
+        int endId = Math.min(this.endId, Math.min(transaction.index().capacity(), nextBatchStart + BATCH_SIZE));
         if (nextBatchStart >= endId) {
             batch = null;
         } else {

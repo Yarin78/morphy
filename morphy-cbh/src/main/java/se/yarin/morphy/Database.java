@@ -523,7 +523,7 @@ public class Database implements EntityRetriever, AutoCloseable {
      */
     public @NotNull List<Game> getGames(@Nullable GameFilter filter) {
         try (var txn = new DatabaseReadTransaction(this)) {
-            return txn.stream(1, filter).collect(Collectors.toList());
+            return txn.stream(filter).collect(Collectors.toList());
         }
     }
 

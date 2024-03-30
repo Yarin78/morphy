@@ -143,7 +143,7 @@ public class IOCPUPerformanceTest {
             int dummy = 0;
             for (int i = 0; i < numBatches; i++) {
                 int firstGame = random.nextInt(db.count() - gamesPerBatch) + 1;
-                dummy += txn.stream(firstGame).limit(gamesPerBatch).mapToInt(Game::whitePlayerId).sum();
+                dummy += txn.stream(firstGame, null).limit(gamesPerBatch).mapToInt(Game::whitePlayerId).sum();
             }
         }
         long elapsed = System.currentTimeMillis() - start;

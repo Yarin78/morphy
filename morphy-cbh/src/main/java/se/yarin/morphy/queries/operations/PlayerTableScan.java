@@ -9,6 +9,7 @@ import se.yarin.morphy.metrics.MetricsProvider;
 import se.yarin.morphy.queries.QueryContext;
 import se.yarin.morphy.queries.QuerySortOrder;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
 
@@ -19,17 +20,19 @@ import java.util.stream.Stream;
 public class PlayerTableScan extends QueryOperator<Player> {
     private final @NotNull EntityIndexReadTransaction<Player> txn;
     private final @Nullable EntityFilter<Player> playerFilter;
-    private final int firstPlayerId;
+    private final @Nullable Integer startId;
+    private final @Nullable Integer endId;
 
     public PlayerTableScan(@NotNull QueryContext queryContext, @Nullable EntityFilter<Player> playerFilter) {
-        this(queryContext, playerFilter, 0);
+        this(queryContext, playerFilter, null, null);
     }
 
-    public PlayerTableScan(@NotNull QueryContext queryContext, @Nullable EntityFilter<Player> playerFilter, int firstId) {
+    public PlayerTableScan(@NotNull QueryContext queryContext, @Nullable EntityFilter<Player> playerFilter, @Nullable Integer startId, @Nullable Integer endId) {
         super(queryContext, true);
         this.txn = transaction().playerTransaction();
         this.playerFilter = playerFilter;
-        this.firstPlayerId = firstId;
+        this.startId = startId;
+        this.endId = endId;
     }
 
     @Override
@@ -47,13 +50,15 @@ public class PlayerTableScan extends QueryOperator<Player> {
 
     @Override
     public Stream<QueryData<Player>> operatorStream() {
-        return txn.stream(firstPlayerId, this.playerFilter).map(QueryData::new);
+        return txn.stream(this.startId, this.endId, this.playerFilter).map(QueryData::new);
     }
 
     @Override
     public void estimateOperatorCost(@NotNull ImmutableOperatorCost.Builder operatorCost) {
         int totalPlayers = context().database().playerIndex().count();
-        int numScannedPlayers = Math.max(0, totalPlayers - firstPlayerId);
+        int startId = this.startId == null ? 0 : this.startId;
+        int endId = this.endId == null ? totalPlayers : this.endId;
+        int numScannedPlayers = Math.max(0, endId - startId);
         double scanRatio = 1.0 * numScannedPlayers / totalPlayers;
         double matchingRatio = context().queryPlanner().playerFilterEstimate(playerFilter);
         long estimateRows = OperatorCost.capRowEstimate((int) Math.round(numScannedPlayers * matchingRatio));
@@ -69,10 +74,18 @@ public class PlayerTableScan extends QueryOperator<Player> {
 
     @Override
     public String toString() {
-        if (playerFilter != null) {
-            return "PlayerTableScan(firstId: " + firstPlayerId + ", filter: " + playerFilter + ")";
+        ArrayList<String> params = new ArrayList<>();
+        if (startId != null) {
+            params.add("startId: " + startId);
         }
-        return "PlayerTableScan(firstId: " + firstPlayerId + ")";
+        if (endId != null) {
+            params.add("endId: " + endId);
+        }
+        if (playerFilter != null) {
+            params.add("filter: " + playerFilter);
+        }
+
+        return "PlayerTableScan(" + String.join(", ", params) + ")";
     }
 
     @Override

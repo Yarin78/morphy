@@ -174,6 +174,24 @@ public class EntityIndexReadTransactionTest {
         assertEquals("dtbqwalv", txn.stream().map(FooEntity::key).collect(Collectors.joining()));
     }
 
+    @Test
+    public void testStreamIdRange() {
+        FooEntityIndex index = createIndex();
+        String[] values = {"d", "t", "b", "e", "q", "w", "a", "l", "c", "v"};
+        for (String value : values) {
+            index.add(FooEntity.of(value));
+        }
+
+        index.delete(3);
+
+        EntityIndexReadTransaction<FooEntity> txn = index.beginReadTransaction();
+        assertEquals("bqwalcv", txn.stream(2, null).map(FooEntity::key).collect(Collectors.joining()));
+        assertEquals("bq", txn.stream(2, 5).map(FooEntity::key).collect(Collectors.joining()));
+        assertEquals("dtbqwa", txn.stream(null, 7).map(FooEntity::key).collect(Collectors.joining()));
+        assertEquals("", txn.stream(4, 4).map(FooEntity::key).collect(Collectors.joining()));
+        assertEquals("", txn.stream(100, 2).map(FooEntity::key).collect(Collectors.joining()));
+    }
+
     @Test(expected = IllegalStateException.class)
     public void failCreateReadTransactionAfterWriteTransactionInSameThread() {
         FooEntityIndex index = createIndex();

@@ -53,7 +53,7 @@ public class EntityIndexReadTransaction<T extends Entity & Comparable<T>> extend
      * @return an iterable of all entities
      */
     public @NotNull Iterable<T> iterable() {
-        return iterable(0);
+        return iterable(null, null, null);
     }
 
     /**
@@ -61,8 +61,8 @@ public class EntityIndexReadTransaction<T extends Entity & Comparable<T>> extend
      * @param startId the first id in the iterable
      * @return an iterable of all entities
      */
-    public @NotNull Iterable<T> iterable(int startId) {
-        return iterable(startId, null);
+    public @NotNull Iterable<T> iterable(@Nullable Integer startId, @Nullable Integer endId) {
+        return iterable(startId, endId, null);
     }
 
     /**
@@ -71,7 +71,7 @@ public class EntityIndexReadTransaction<T extends Entity & Comparable<T>> extend
      * @return an iterable of all entities
      */
     public @NotNull Iterable<T> iterable(@Nullable EntityFilter<T> filter) {
-        return iterable(0, filter);
+        return iterable(null, null, filter);
     }
 
     /**
@@ -80,8 +80,8 @@ public class EntityIndexReadTransaction<T extends Entity & Comparable<T>> extend
      * @param filter an entity filter
      * @return an iterable of all entities
      */
-    public @NotNull Iterable<T> iterable(int startId, @Nullable EntityFilter<T> filter) {
-        return () -> new EntityBatchIterator<>(this, startId, filter);
+    public @NotNull Iterable<T> iterable(@Nullable Integer startId, @Nullable Integer endId, @Nullable EntityFilter<T> filter) {
+        return () -> new EntityBatchIterator<>(this, startId, endId, filter);
     }
 
 
@@ -95,11 +95,12 @@ public class EntityIndexReadTransaction<T extends Entity & Comparable<T>> extend
 
     /**
      * Returns a stream of all entities in the index, sorted by id.
-     * @param startId the first id in the stream
-     * @return a stream of all entities
+     * @param startId the first id in the stream (inclusive)
+     * @param endId the last id in the stream (exclusive)
+     * @return a stream of all entities between startId and endId
      */
-    public @NotNull Stream<T> stream(int startId) {
-        return StreamSupport.stream(iterable(startId).spliterator(), false);
+    public @NotNull Stream<T> stream(@Nullable Integer startId, @Nullable Integer endId) {
+        return StreamSupport.stream(iterable(startId, endId).spliterator(), false);
     }
 
     /**
@@ -113,12 +114,13 @@ public class EntityIndexReadTransaction<T extends Entity & Comparable<T>> extend
 
     /**
      * Returns a stream of all entities in the index matching an optional filter, sorted by id.
-     * @param startId the first id in the stream
+     * @param startId the first id in the stream (inclusive)
+     * @param endId the last id in the stream (exclusive)
      * @param filter an entity filter
-     * @return a stream of all entities
+     * @return a stream of all entities between startId and endId that matches the filter
      */
-    public @NotNull Stream<T> stream(int startId, @Nullable EntityFilter<T> filter) {
-        return StreamSupport.stream(iterable(startId, filter).spliterator(), false);
+    public @NotNull Stream<T> stream(@Nullable Integer startId, @Nullable Integer endId, @Nullable EntityFilter<T> filter) {
+        return StreamSupport.stream(iterable(startId, endId, filter).spliterator(), false);
     }
 
     /**

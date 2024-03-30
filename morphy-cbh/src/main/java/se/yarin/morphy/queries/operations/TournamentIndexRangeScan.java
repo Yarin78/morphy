@@ -9,20 +9,23 @@ import se.yarin.morphy.metrics.MetricsProvider;
 import se.yarin.morphy.queries.QueryContext;
 import se.yarin.morphy.queries.QuerySortOrder;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
 
 public class TournamentIndexRangeScan extends QueryOperator<Tournament> {
     private final EntityIndexReadTransaction<Tournament> txn;
     private final @Nullable EntityFilter<Tournament> tournamentFilter;
-    private final @NotNull Tournament rangeStart, rangeEnd;
+    private final @Nullable Tournament rangeStart, rangeEnd;
+    private final boolean reverse;
 
-    public TournamentIndexRangeScan(@NotNull QueryContext queryContext, @Nullable EntityFilter<Tournament> tournamentFilter, @NotNull Tournament rangeStart, @NotNull Tournament rangeEnd) {
+    public TournamentIndexRangeScan(@NotNull QueryContext queryContext, @Nullable EntityFilter<Tournament> tournamentFilter, @Nullable Tournament rangeStart, @Nullable Tournament rangeEnd, boolean reverse) {
         super(queryContext, true);
         this.txn = queryContext.transaction().tournamentTransaction();
         this.tournamentFilter = tournamentFilter;
         this.rangeStart = rangeStart;
         this.rangeEnd = rangeEnd;
+        this.reverse = reverse; // If true, rangeStart should be greater than rangeEnd
     }
 
     @Override
@@ -39,13 +42,17 @@ public class TournamentIndexRangeScan extends QueryOperator<Tournament> {
     }
 
     public Stream<QueryData<Tournament>> operatorStream() {
-        return txn.streamOrderedAscending(rangeStart, rangeEnd, tournamentFilter).map(QueryData::new);
+        if (!reverse) {
+            return txn.streamOrderedAscending(rangeStart, rangeEnd, tournamentFilter).map(QueryData::new);
+        } else {
+            return txn.streamOrderedDescending(rangeStart, rangeEnd, tournamentFilter).map(QueryData::new);
+        }
     }
 
     @Override
     public void estimateOperatorCost(@NotNull ImmutableOperatorCost.Builder operatorCost) {
-        long scanCount = context().queryPlanner().tournamentRangeEstimate(rangeStart, rangeEnd, null);
-        long matchCount = context().queryPlanner().tournamentRangeEstimate(rangeStart, rangeEnd, tournamentFilter);
+        long scanCount = context().queryPlanner().tournamentRangeEstimate(!reverse ? rangeStart : rangeEnd, !reverse ? rangeEnd : rangeStart, null);
+        long matchCount = context().queryPlanner().tournamentRangeEstimate(!reverse ? rangeStart : rangeEnd, !reverse ? rangeEnd : rangeStart, tournamentFilter);
 
         operatorCost
             .estimateRows(matchCount)
@@ -56,7 +63,17 @@ public class TournamentIndexRangeScan extends QueryOperator<Tournament> {
 
     @Override
     public String toString() {
-        return "TournamentIndexRangeScan(start: '" + rangeStart + "', end: '" + rangeEnd + "', filter: " + tournamentFilter + ")";
+        ArrayList<String> params = new ArrayList<>();
+        if (rangeStart != null) {
+            params.add("start: '" + rangeStart + "'");
+        }
+        if (rangeEnd != null) {
+            params.add("end: '" + rangeEnd + "'");
+        }
+        if (tournamentFilter != null) {
+            params.add("filter: " + tournamentFilter);
+        }
+        return "TournamentIndexRangeScan(" + String.join(", ", params) + ")";
     }
 
     @Override

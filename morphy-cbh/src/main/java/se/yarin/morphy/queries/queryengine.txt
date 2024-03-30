@@ -126,16 +126,15 @@ Any type of scan is a "source operator" as it depends on no other operators.
 * GameTableScan, PlayerTableScan, TournamentTableScan:
     Scans all entities in the table in ID order and returns those matching an optional predicate
     Input: Start ID (optional)
-    TODO: Input: End ID (optional)
+    Input: End ID (optional)
     Input: A predicate (optional)
     Output: A list of entities with full data in ID order
 * PlayerIndexRangeScan, TournamentIndexRangeScan:
     Scans all entities in the index in the default order (see above) and returns those matching an optional predicate
-    TODO: Make these optional
     Input: Start (optional)
     Input: End (optional)
     Input: A predicate (optional)
-    TODO: Input: Reverse
+    Input: If the scan should happen in reverse order
     Output: A list of entities with full data in the default order (or reversed) matching the optional predicate
 * GameIdsByEntities:
     Reverse index lookup of which games an input stream of entities belong in.

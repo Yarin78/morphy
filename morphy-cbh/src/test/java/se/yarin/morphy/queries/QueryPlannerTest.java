@@ -36,7 +36,7 @@ public class QueryPlannerTest {
             List<QueryOperator<Game>> plans = db.queryPlanner().getGameQueryPlans(queryContext, gameQuery, true);
 
             assertEquals(1, plans.size());
-            assertEquals("GameTableScan(firstGameId: 1, filter: fromDate >= '1950.??.??')", plans.get(0).toString());
+            assertEquals("GameTableScan(filter: fromDate >= '1950.??.??')", plans.get(0).toString());
         }
     }
 

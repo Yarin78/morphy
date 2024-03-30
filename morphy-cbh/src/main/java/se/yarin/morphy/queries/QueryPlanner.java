@@ -148,12 +148,12 @@ public class QueryPlanner {
      * @param playerFilter an optional additional filter
      * @return number of expected players within range that matches the filter
      */
-    public long playerRangeEstimate(@NotNull Player rangeStart, @NotNull Player rangeEnd, @Nullable EntityFilter<Player> playerFilter) {
-        double ratio = playerLastNameDistribution.ratioBetween(rangeStart.lastName(), rangeEnd.lastName());
+    public long playerRangeEstimate(@Nullable Player rangeStart, @Nullable Player rangeEnd, @Nullable EntityFilter<Player> playerFilter) {
+        double ratio = playerLastNameDistribution.ratioBetween(rangeStart == null ? "" : rangeStart.lastName(), rangeEnd == null ? "zzz" : rangeEnd.lastName());
         return Math.max(1, Math.round(database.playerIndex().count() * ratio));
     }
 
-    public long tournamentRangeEstimate(@NotNull Tournament rangeStart, @NotNull Tournament rangeEnd, @Nullable EntityFilter<Tournament> tournamentFilter) {
+    public long tournamentRangeEstimate(@Nullable Tournament rangeStart, @Nullable Tournament rangeEnd, @Nullable EntityFilter<Tournament> tournamentFilter) {
         return 0;
     }
 
@@ -250,7 +250,7 @@ public class QueryPlanner {
 
         sources.add(PlayerSourceQuery.fromPlayerQueryOperator(new PlayerTableScan(context, combinedFilter), true));
         // TODO: First and last player might be deduced from the filter
-        sources.add(PlayerSourceQuery.fromPlayerQueryOperator(new PlayerIndexRangeScan(context, combinedFilter, Player.of("", ""), Player.of("zzz", "")), true));
+        sources.add(PlayerSourceQuery.fromPlayerQueryOperator(new PlayerIndexRangeScan(context, combinedFilter, null, null, false), true));
 
         GameQuery gameQuery = playerQuery.gameQuery();
         if (gameQuery != null) {
@@ -336,7 +336,7 @@ public class QueryPlanner {
                 int startYear = tdFilter.fromDate().isUnset() ? 0 : tdFilter.fromDate().year() - 1; // exclusive
                 int endYear = tdFilter.toDate().isUnset() ? 9999 : tdFilter.toDate().year();
                 QueryOperator<Tournament> tournamentOp = new TournamentIndexRangeScan(context, combinedFilter,
-                        Tournament.of("", new Date(endYear)), Tournament.of("", new Date(startYear)));
+                        Tournament.of("", new Date(endYear)), Tournament.of("", new Date(startYear)), false);
                 tournamentOp = new Distinct<>(context, new Sort<>(context, tournamentOp));
                 queryPlans.add(tournamentOp);
             }
@@ -390,7 +390,7 @@ public class QueryPlanner {
                 PlayerNameFilter playerNameFilter = (PlayerNameFilter) filter;
                 if (playerNameFilter.isCaseSensitive()) {
                     String lastName = playerNameFilter.lastName();
-                    QueryOperator<Player> playerOp = new PlayerIndexRangeScan(context, combinedFilter, Player.of(lastName, ""), Player.of(lastName + "zzz", ""));
+                    QueryOperator<Player> playerOp = new PlayerIndexRangeScan(context, combinedFilter, Player.of(lastName, ""), Player.of(lastName + "zzz", ""), false);
                     playerOp = new Distinct<>(context, new Sort<>(context, playerOp));
                     queryPlans.add(playerOp);
                 }

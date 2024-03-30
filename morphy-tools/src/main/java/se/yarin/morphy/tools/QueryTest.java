@@ -142,7 +142,7 @@ public class QueryTest {
     private void sameMetricQuery() {
         try (var txn = new DatabaseReadTransaction(db)) {
             QueryContext context = new QueryContext(txn, true);
-            GameTableScan games = new GameTableScan(context, null, 8000000);
+            GameTableScan games = new GameTableScan(context, null, 8000000, null);
             TournamentStartDateFilter t1 = new TournamentStartDateFilter(new Date(1950, 1, 1), new Date(2020, 1, 1));
             TournamentTitleFilter t2 = new TournamentTitleFilter("Tata", true, false);
 
@@ -170,7 +170,7 @@ public class QueryTest {
             Tournament startKey = ImmutableTournament.of("", new Date(endYear, 1, 1));
             Tournament endKey = ImmutableTournament.of("", new Date(startYear, 1, 1));
             GameIdsByEntities<Tournament> gameIds = new GameIdsByEntities<>(context, new TournamentIndexRangeScan(context,
-                    tournamentFilter, startKey, endKey), EntityType.TOURNAMENT);
+                    tournamentFilter, startKey, endKey, false), EntityType.TOURNAMENT);
             GameLookup worldChGames = new GameLookup(context, gameIds, new IsGameFilter());
             QueryOperator<Player> playerIds = new Distinct<>(context, new Sort<>(context, new PlayerIdsByGames(context, worldChGames)));
 
@@ -266,7 +266,7 @@ public class QueryTest {
         QueryOperator<Player> playerIndexRangeScan = new PlayerIndexRangeScan(
                 context,
                 new PlayerNameFilter(namePrefix, "", true, false),
-                Player.ofFullName(namePrefix), Player.ofFullName(namePrefix + "zzz"));
+                Player.ofFullName(namePrefix), Player.ofFullName(namePrefix + "zzz"), false);
 
         QueryOperator<Game> gameIds = new GameIdsByEntities<>(context, playerIndexRangeScan, EntityType.PLAYER);
 

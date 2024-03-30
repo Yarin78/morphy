@@ -69,7 +69,7 @@ public class DatabaseReadTransaction extends DatabaseTransaction {
      * @return an iterable of all games
      */
     public @NotNull Iterable<Game> iterable() {
-        return iterable(1);
+        return iterable(null, null, null);
     }
 
     /**
@@ -78,26 +78,28 @@ public class DatabaseReadTransaction extends DatabaseTransaction {
      * @return an iterable of all games
      */
     public @NotNull Iterable<Game> iterable(@Nullable GameFilter filter) {
-        return iterable(1, filter);
+        return iterable(null, null, filter);
     }
 
     /**
      * Returns an iterable of all games in the index, sorted by id.
-     * @param startId the first id in the iterable
+     * @param startId the first id in the iterable (inclusive)
+     * @param endId the last id in the iterable (exclusive)
      * @return an iterable of all games
      */
-    public @NotNull Iterable<Game> iterable(int startId) {
-        return iterable(startId, null);
+    public @NotNull Iterable<Game> iterable(@Nullable Integer startId, @Nullable Integer endId) {
+        return iterable(startId, endId, null);
     }
 
     /**
-     * Returns an iterable of all games matching the given filter in the index, sorted by id.
-     * @param startId the first id in the iterable
+     * Returns an iterable of all games between startId and endId matching the given filter in the index, sorted by id.
+     * @param startId the first id in the iterable (inclusive)
+     * @param endId the last id in the iterable (exclusive)
      * @param filter a search filter; null will return all games
      * @return an iterable of all games
      */
-    public @NotNull Iterable<Game> iterable(int startId, @Nullable GameFilter filter) {
-        return () -> new GameIterator(this, startId, filter);
+    public @NotNull Iterable<Game> iterable(@Nullable Integer startId, @Nullable Integer endId, @Nullable GameFilter filter) {
+        return () -> new GameIterator(this, startId, endId, filter);
     }
 
     /**
@@ -114,25 +116,27 @@ public class DatabaseReadTransaction extends DatabaseTransaction {
      * @return a stream of all games
      */
     public @NotNull Stream<Game> stream(@Nullable GameFilter filter) {
-        return StreamSupport.stream(iterable(1, filter).spliterator(), false);
+        return StreamSupport.stream(iterable(filter).spliterator(), false);
     }
 
     /**
      * Returns a stream of all games in the index, sorted by id.
-     * @param startId the first id in the stream
+     * @param startId the first id in the stream (inclusive)
+     * @param endId the last id in the stream (exclusive)
      * @return a stream of all games
      */
-    public @NotNull Stream<Game> stream(int startId) {
-        return StreamSupport.stream(iterable(startId).spliterator(), false);
+    public @NotNull Stream<Game> stream(@Nullable Integer startId, @Nullable Integer endId) {
+        return StreamSupport.stream(iterable(startId, endId).spliterator(), false);
     }
 
     /**
      * Returns a stream of all games matching the given filter in the index, sorted by id.
-     * @param startId the first id in the stream
+     * @param startId the first id in the stream (inclusive)
+     * @param endId the last id in the stream (exclusive)
      * @param filter a search filter; null will return all games
      * @return a stream of all games
      */
-    public @NotNull Stream<Game> stream(int startId, @Nullable GameFilter filter) {
-        return StreamSupport.stream(iterable(startId, filter).spliterator(), false);
+    public @NotNull Stream<Game> stream(@Nullable Integer startId, @Nullable Integer endId, @Nullable GameFilter filter) {
+        return StreamSupport.stream(iterable(startId, endId, filter).spliterator(), false);
     }
 }

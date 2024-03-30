@@ -8,21 +8,24 @@ import se.yarin.morphy.metrics.MetricsProvider;
 import se.yarin.morphy.queries.QueryContext;
 import se.yarin.morphy.queries.QuerySortOrder;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
 
 public class GameTableScan extends QueryOperator<Game> {
     private final @Nullable GameFilter gameFilter;
-    private final int firstGameId;
+    private final @Nullable Integer startId;
+    private final @Nullable Integer endId;
 
     public GameTableScan(@NotNull QueryContext queryContext, @Nullable GameFilter gameFilter) {
-        this(queryContext, gameFilter, 1);
+        this(queryContext, gameFilter, null, null);
     }
 
-    public GameTableScan(@NotNull QueryContext queryContext, @Nullable GameFilter gameFilter, int firstGameId) {
+    public GameTableScan(@NotNull QueryContext queryContext, @Nullable GameFilter gameFilter, @Nullable Integer startId, @Nullable Integer endId) {
         super(queryContext, true);
         this.gameFilter = gameFilter;
-        this.firstGameId = firstGameId;
+        this.startId = startId;
+        this.endId = endId;
     }
 
     @Override
@@ -40,13 +43,15 @@ public class GameTableScan extends QueryOperator<Game> {
 
     @Override
     public Stream<QueryData<Game>> operatorStream() {
-        return transaction().stream(firstGameId, gameFilter).map(QueryData::new);
+        return transaction().stream(startId, endId, gameFilter).map(QueryData::new);
     }
 
     @Override
     public void estimateOperatorCost(@NotNull ImmutableOperatorCost.Builder operatorCost) {
         int totalGames = context().database().count();
-        int numScannedGames = Math.max(0, totalGames - (firstGameId - 1));
+        int startId = this.startId == null ? 1 : this.startId;
+        int endId = this.endId == null ? totalGames + 1 : this.endId;
+        int numScannedGames = Math.max(0, endId - startId);
         double scanRatio = 1.0 * numScannedGames / totalGames;
         double matchingRatio = context().queryPlanner().gameFilterEstimate(gameFilter);
         long estimateRows = OperatorCost.capRowEstimate((int) Math.round(numScannedGames * matchingRatio));
@@ -62,10 +67,17 @@ public class GameTableScan extends QueryOperator<Game> {
 
     @Override
     public String toString() {
-        if (gameFilter != null) {
-            return "GameTableScan(firstGameId: " + firstGameId + ", filter: " + gameFilter + ")";
+        ArrayList<String> params = new ArrayList<>();
+        if (startId != null) {
+            params.add("startId: " + startId);
         }
-        return "GameTableScan(firstGameId: " + firstGameId + ")";
+        if (endId != null) {
+            params.add("endId: " + endId);
+        }
+        if (gameFilter != null) {
+            params.add("filter: " + gameFilter);
+        }
+        return "GameTableScan(" + String.join(", ", params) + ")";
     }
 
     @Override

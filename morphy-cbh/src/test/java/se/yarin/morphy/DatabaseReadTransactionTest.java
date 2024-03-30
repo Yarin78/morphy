@@ -50,7 +50,7 @@ public class DatabaseReadTransactionTest {
         int startId = 20;
 
         try (DatabaseReadTransaction txn = new DatabaseReadTransaction(database)) {
-            Iterable<Game> games = txn.iterable(startId);
+            Iterable<Game> games = txn.iterable(startId, null);
             int expectedId = startId;
             Game lastGame = null;
             for (Game game : games) {

@@ -16,13 +16,15 @@ public class GameIterator implements Iterator<Game> {
     private static final int BATCH_SIZE = 1000;
 
     private final @NotNull DatabaseReadTransaction transaction;
-    private @Nullable final GameFilter filter;
+    private final @Nullable GameFilter filter;
+    private final int endId;
     private @Nullable List<Game> batch = new ArrayList<>();
     private int batchPos, nextBatchStart;
 
-    public GameIterator(@NotNull DatabaseReadTransaction transaction, int startId, @Nullable GameFilter filter) {
+    public GameIterator(@NotNull DatabaseReadTransaction transaction, @Nullable Integer startId, @Nullable Integer endId, @Nullable GameFilter filter) {
         this.transaction = transaction;
-        this.nextBatchStart = startId;
+        this.nextBatchStart = startId == null ? 1 : startId;
+        this.endId = endId == null ? Integer.MAX_VALUE : endId;
         this.filter = filter;
         getNextBatch();
     }
@@ -33,7 +35,8 @@ public class GameIterator implements Iterator<Game> {
         // Since we have an optional filter, we may have to try multiple times to get a new batch
         // because the next batch might be empty
         while (batch != null && batchPos >= batch.size()) {
-            int endIdExclusive = Math.min(transaction.database().count() + 1, nextBatchStart + BATCH_SIZE);
+            int endIdExclusive = Math.min(this.endId, Math.min(transaction.database().count() + 1, nextBatchStart + BATCH_SIZE));
+
             if (nextBatchStart >= endIdExclusive) {
                 batch = null;
             } else {
