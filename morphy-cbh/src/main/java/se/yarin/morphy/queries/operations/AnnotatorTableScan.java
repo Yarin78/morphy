@@ -17,10 +17,17 @@ public class AnnotatorTableScan extends QueryOperator<Annotator> {
     private final @NotNull EntityIndexReadTransaction<Annotator> txn;
     private final @Nullable EntityFilter<Annotator> annotatorFilter;
 
+    private final int firstAnnotatorId;
+
     public AnnotatorTableScan(@NotNull QueryContext queryContext, @Nullable EntityFilter<Annotator> annotatorFilter) {
+        this(queryContext, annotatorFilter, 0);
+    }
+
+    public AnnotatorTableScan(@NotNull QueryContext queryContext, @Nullable EntityFilter<Annotator> annotatorFilter, int firstAnnotatorId) {
         super(queryContext, true);
         this.txn = transaction().annotatorTransaction();
         this.annotatorFilter = annotatorFilter;
+        this.firstAnnotatorId = firstAnnotatorId;
     }
 
     @Override

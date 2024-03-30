@@ -10,6 +10,7 @@ import se.yarin.morphy.queries.QueryContext;
 import se.yarin.morphy.queries.QuerySortOrder;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Stream;
 
 public class PlayerLookup extends QueryOperator<Player> {
@@ -19,6 +20,7 @@ public class PlayerLookup extends QueryOperator<Player> {
 
     public PlayerLookup(@NotNull QueryContext queryContext, @NotNull QueryOperator<Player> source, @Nullable EntityFilter<Player> playerFilter) {
         super(queryContext, true);
+        assert !source.hasFullData();
         this.txn = transaction().playerTransaction();
         this.source = source;
         this.playerFilter = playerFilter;
@@ -39,6 +41,10 @@ public class PlayerLookup extends QueryOperator<Player> {
 
     public Stream<QueryData<Player>> operatorStream() {
         return this.source.stream()
+//                TODO: Something like this is nicer, but this loses the weight
+//                .map(player -> txn.get(player.id(), playerFilter))
+//                .filter(Objects::nonNull)
+//                .map(QueryData::new);
                 .flatMap(data -> {
                     Player player = txn.get(data.id(), playerFilter);
                     if (player == null) {

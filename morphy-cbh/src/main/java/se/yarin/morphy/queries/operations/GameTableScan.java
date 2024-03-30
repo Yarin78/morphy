@@ -63,9 +63,9 @@ public class GameTableScan extends QueryOperator<Game> {
     @Override
     public String toString() {
         if (gameFilter != null) {
-            return "GameTableScan(filter: " + gameFilter + ")";
+            return "GameTableScan(firstGameId: " + firstGameId + ", filter: " + gameFilter + ")";
         }
-        return "GameTableScan()";
+        return "GameTableScan(firstGameId: " + firstGameId + ")";
     }
 
     @Override

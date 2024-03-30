@@ -12,6 +12,10 @@ import se.yarin.morphy.queries.QuerySortOrder;
 import java.util.List;
 import java.util.stream.Stream;
 
+/**
+ * Scans the Player entity base in ID order from a given player ID.
+ * Optionally filters out players on a filter predicate.
+ */
 public class PlayerTableScan extends QueryOperator<Player> {
     private final @NotNull EntityIndexReadTransaction<Player> txn;
     private final @Nullable EntityFilter<Player> playerFilter;
@@ -66,9 +70,9 @@ public class PlayerTableScan extends QueryOperator<Player> {
     @Override
     public String toString() {
         if (playerFilter != null) {
-            return "PlayerTableScan(filter: " + playerFilter + ")";
+            return "PlayerTableScan(firstId: " + firstPlayerId + ", filter: " + playerFilter + ")";
         }
-        return "PlayerTableScan()";
+        return "PlayerTableScan(firstId: " + firstPlayerId + ")";
     }
 
     @Override

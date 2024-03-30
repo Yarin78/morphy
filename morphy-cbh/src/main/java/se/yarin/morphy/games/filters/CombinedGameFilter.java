@@ -18,7 +18,7 @@ public class CombinedGameFilter implements GameFilter {
     private final @Nullable ItemStorageFilter<ExtendedGameHeader> combinedExtendedGameHeaderFilter;
 
     public static @Nullable GameFilter combine(@NotNull List<GameFilter> filters) {
-        if (filters.size() == 0) {
+        if (filters.isEmpty()) {
             return null;
         }
         if (filters.size() == 1) {
@@ -42,7 +42,7 @@ public class CombinedGameFilter implements GameFilter {
             }
         }
 
-        if (gameHeaderFilters.size() > 0) {
+        if (!gameHeaderFilters.isEmpty()) {
             combinedGameHeaderFilter = new ItemStorageFilter<>() {
                 @Override
                 public boolean matches(@NotNull GameHeader gameHeader) {
@@ -58,7 +58,7 @@ public class CombinedGameFilter implements GameFilter {
             combinedGameHeaderFilter = null;
         }
 
-        if (extendedGameHeaderFilters.size() > 0) {
+        if (!extendedGameHeaderFilters.isEmpty()) {
             combinedExtendedGameHeaderFilter = new ItemStorageFilter<>() {
                 @Override
                 public boolean matches(@NotNull ExtendedGameHeader extendedGameHeader) {

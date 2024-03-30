@@ -74,12 +74,12 @@ public class GameQuery {
     public List<GameEntityJoin<?>> entityJoins(boolean filtersOnly) {
         ArrayList<GameEntityJoin<?>> joins = new ArrayList<>();
         for (GamePlayerJoin playerJoin : playerJoins) {
-            if (playerJoin.query().filters().size() > 0 || !filtersOnly) {
+            if (!playerJoin.query().filters().isEmpty() || !filtersOnly) {
                 joins.add(playerJoin);
             }
         }
         for (GameTournamentJoin tournamentJoin : tournamentJoins) {
-            if (tournamentJoin.query().filters().size() > 0 || !filtersOnly) {
+            if (!tournamentJoin.query().filters().isEmpty() || !filtersOnly) {
                 joins.add(tournamentJoin);
             }
         }

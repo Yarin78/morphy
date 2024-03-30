@@ -4,6 +4,7 @@ import org.jetbrains.annotations.NotNull;
 import se.yarin.morphy.IdObject;
 import se.yarin.morphy.entities.EntityType;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -15,6 +16,11 @@ public class ManualFilter<T extends IdObject> implements EntityFilter<T> {
 
     public ManualFilter(@NotNull List<T> items, @NotNull EntityType entityType) {
         this.ids = items.stream().map(IdObject::id).collect(Collectors.toUnmodifiableSet());
+        this.entityType = entityType;
+    }
+
+    public ManualFilter(@NotNull int[] ids, @NotNull EntityType entityType) {
+        this.ids = Arrays.stream(ids).boxed().collect(Collectors.toUnmodifiableSet());
         this.entityType = entityType;
     }
 

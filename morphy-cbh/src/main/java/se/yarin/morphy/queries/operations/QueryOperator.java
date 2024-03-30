@@ -44,13 +44,32 @@ public abstract class QueryOperator<T extends IdObject> {
         return queryContext.database();
     }
 
+    public DatabaseReadTransaction transaction() {
+        return queryContext.transaction();
+    }
+
+    /**
+     * Gets the underlying operators that this one directly depends on
+     */
+    public abstract List<QueryOperator<?>> sources();
+
+    /**
+     * Gets if the output of this operator will return the full data of the entity or only the id
+     * @return true if the full data will be returned, otherwise false
+     */
     public boolean hasFullData() {
         return hasFullData;
     }
 
-    public DatabaseReadTransaction transaction() {
-        return queryContext.transaction();
-    }
+    /**
+     * The sort order that the data from this operator will be in
+     */
+    public abstract @NotNull QuerySortOrder<T> sortOrder();
+
+    /**
+     * If the data returned from this operator may contain duplicates
+     */
+    public abstract boolean mayContainDuplicates();
 
     public final Stream<QueryData<T>> stream() {
         Stream<QueryData<T>> stream = operatorStream();
@@ -206,14 +225,23 @@ public abstract class QueryOperator<T extends IdObject> {
                 .build();
     }
 
-    public abstract List<QueryOperator<?>> sources();
 
-    /**
-     * The sort order that the data from this operator will be in
-     */
-    public abstract @NotNull QuerySortOrder<T> sortOrder();
+    public QueryOperator<T> sortedAndDistinct(@NotNull QuerySortOrder<T> sortOrder) {
+        // Wraps the query operator in a sort and/or distinct if needed
+        QueryOperator<T> sortedOperator;
+        if (this.sortOrder().isSameOrStronger(sortOrder)) {
+            sortedOperator = this;
+        } else {
+            sortedOperator = new Sort<>(this.queryContext, this, sortOrder);
+        }
+        if (!sortedOperator.mayContainDuplicates()) {
+            return sortedOperator;
+        } else {
+            return new Distinct<>(this.queryContext, sortedOperator);
+        }
+    }
 
-    public abstract boolean mayContainDuplicates();
+
 
     public String debugString(boolean includeCost) {
         StringBuilder sb = new StringBuilder();

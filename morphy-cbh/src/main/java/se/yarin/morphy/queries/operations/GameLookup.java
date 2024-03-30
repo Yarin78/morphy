@@ -17,6 +17,7 @@ public class GameLookup extends QueryOperator<Game> {
 
     public GameLookup(@NotNull QueryContext queryContext, @NotNull QueryOperator<Game> source, @Nullable GameFilter gameFilter) {
         super(queryContext, true);
+        assert !source.hasFullData();
         this.source = source;
         this.gameFilter = gameFilter;
     }
@@ -35,7 +36,7 @@ public class GameLookup extends QueryOperator<Game> {
     }
 
     public Stream<QueryData<Game>> operatorStream() {
-        // TODO: filter should be passed to getGame for serialized matching
+        // TODO: filter should be passed to getGame for serialized matching (speedup, avoids deserialization for misses)
         Stream<QueryData<Game>> stream = this.source.stream().map(data -> new QueryData<>(transaction().getGame(data.id())));
 
         if (gameFilter != null) {

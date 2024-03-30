@@ -8,9 +8,9 @@ import java.util.Objects;
 import java.util.function.BiFunction;
 
 public class QueryData<T extends IdObject> implements IdObject {
-    private int id;
-    private @Nullable T data;
-    private double weight;
+    private final int id;
+    private final @Nullable T data;
+    private final double weight;
 
     public int id() {
         return id;
@@ -36,7 +36,7 @@ public class QueryData<T extends IdObject> implements IdObject {
         if (data != null && data.id() != id) {
             throw new IllegalArgumentException("The id must much that of the data");
         }
-        if (this.id < 0) {
+        if (id < 0) {
             // Implies we're streaming non-entities which indicates an error elsewhere
             throw new IllegalArgumentException("Id must be non-negative");
         }

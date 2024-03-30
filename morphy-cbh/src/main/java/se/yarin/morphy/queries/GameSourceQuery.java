@@ -7,12 +7,12 @@ import se.yarin.morphy.entities.filters.EntityFilter;
 import se.yarin.morphy.queries.operations.MergeJoin;
 import se.yarin.morphy.queries.operations.QueryOperator;
 
-class GameSourceQuery {
+class GameSourceQuery implements SourceQuery<Game> {
     private final @Nullable QueryOperator<Game> gameOperator;
 
     private final @Nullable EntityFilter<?> entityFilter;  // Set if the source matches this filter perfectly
 
-    private boolean optional;
+    private final boolean optional;
     private long estimateRows = -1;
 
     public boolean isOptional() {
@@ -27,12 +27,12 @@ class GameSourceQuery {
                             @Nullable EntityFilter<?> entityFilter,
                             boolean optional) {
         this.gameOperator = gameOperator;
-        this.entityFilter = entityFilter;
+        this.entityFilter = entityFilter; // TODO: Never set?
         this.optional = optional;
     }
 
 
-    public static GameSourceQuery fromGameQuery(@NotNull QueryOperator<Game> gameQueryOperator, boolean optional) {
+    public static GameSourceQuery fromGameQueryOperator(@NotNull QueryOperator<Game> gameQueryOperator, boolean optional) {
         return new GameSourceQuery(gameQueryOperator, null, optional);
     }
 

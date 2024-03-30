@@ -16,10 +16,17 @@ public class TournamentTableScan extends QueryOperator<Tournament> {
     private final @NotNull EntityIndexReadTransaction<Tournament> txn;
     private final @Nullable EntityFilter<Tournament> tournamentFilter;
 
+    private final int firstTournamentId;
+
     public TournamentTableScan(@NotNull QueryContext queryContext, @Nullable EntityFilter<Tournament> tournamentFilter) {
+        this(queryContext, tournamentFilter, 0);
+    }
+
+    public TournamentTableScan(@NotNull QueryContext queryContext, @Nullable EntityFilter<Tournament> tournamentFilter, int firstTournamentId) {
         super(queryContext, true);
         this.txn = transaction().tournamentTransaction();
         this.tournamentFilter = tournamentFilter;
+        this.firstTournamentId = firstTournamentId;
     }
 
     @Override
@@ -57,9 +64,9 @@ public class TournamentTableScan extends QueryOperator<Tournament> {
     @Override
     public String toString() {
         if (tournamentFilter != null) {
-            return "TournamentTableScan(filter: " + tournamentFilter + ")";
+            return "TournamentTableScan(firstId: " + firstTournamentId + ", filter: " + tournamentFilter + ")";
         }
-        return "TournamentTableScan()";
+        return "TournamentTableScan(firstId: " + firstTournamentId + ")";
     }
 
     @Override

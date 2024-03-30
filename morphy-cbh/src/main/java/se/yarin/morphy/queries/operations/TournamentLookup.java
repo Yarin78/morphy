@@ -19,6 +19,7 @@ public class TournamentLookup extends QueryOperator<Tournament> {
 
     public TournamentLookup(@NotNull QueryContext queryContext, @NotNull QueryOperator<Tournament> source, @Nullable EntityFilter<Tournament> tournamentFilter) {
         super(queryContext, true);
+        assert !source.hasFullData();
         this.txn = transaction().tournamentTransaction();
         this.source = source;
         this.tournamentFilter = tournamentFilter;

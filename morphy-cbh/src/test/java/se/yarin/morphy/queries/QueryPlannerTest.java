@@ -4,6 +4,7 @@ import org.junit.Before;
 import org.junit.Test;
 import se.yarin.chess.Date;
 import se.yarin.morphy.*;
+import se.yarin.morphy.entities.EntityType;
 import se.yarin.morphy.entities.Player;
 import se.yarin.morphy.entities.Tournament;
 import se.yarin.morphy.entities.filters.*;
@@ -35,7 +36,161 @@ public class QueryPlannerTest {
             List<QueryOperator<Game>> plans = db.queryPlanner().getGameQueryPlans(queryContext, gameQuery, true);
 
             assertEquals(1, plans.size());
-            assertEquals("GameTableScan(filter: fromDate >= '1950.??.??')", plans.get(0).toString());
+            assertEquals("GameTableScan(firstGameId: 1, filter: fromDate >= '1950.??.??')", plans.get(0).toString());
+        }
+    }
+
+    @Test
+    public void gamesBySinglePlayer() {
+        GameQuery gameQuery = new GameQuery(db, List.of(new PlayerFilter(
+                db.getPlayer(10), PlayerFilter.PlayerColor.ANY, PlayerFilter.PlayerResult.ANY)),
+                null, null, QuerySortOrder.byId(), 0);
+        try (var txn = new DatabaseReadTransaction(db)) {
+            QueryContext queryContext = new QueryContext(txn, false);
+            List<QueryOperator<Game>> plans = db.queryPlanner().getGameQueryPlans(queryContext, gameQuery, true);
+
+            assertTrue(plans.size() >= 2);
+            assertTrue(operatorExists(plans, List.of(GameTableScan.class)));
+            assertTrue(operatorExists(plans, List.of(GameIdsByEntities.class)));
+
+            verifyQueryPlans(plans, true);
+        }
+    }
+
+    @Test
+    public void gamesByPlayerNamePrefixAndTournamentDateRange() {
+        PlayerQuery playerQuery = new PlayerQuery(db, List.of(new PlayerNameFilter("K", "", true, false)));
+        TournamentQuery tournamentQuery = new TournamentQuery(db, List.of(
+                new TournamentStartDateFilter(new Date(1900, 1, 1), new Date(2000, 1, 1))));
+
+        GameQuery gameQuery = new GameQuery(db, null,
+                List.of(new GamePlayerJoin(playerQuery, GamePlayerJoinCondition.ANY)),
+                List.of(new GameTournamentJoin(tournamentQuery)),
+                QuerySortOrder.byId(), 0);
+
+        try (var txn = new DatabaseReadTransaction(db)) {
+            QueryContext queryContext = new QueryContext(txn, false);
+            List<QueryOperator<Game>> plans = db.queryPlanner().getGameQueryPlans(queryContext, gameQuery, true);
+
+            assertTrue(plans.size() >= 10);
+            assertTrue(operatorExists(plans, List.of(GameTableScan.class)));
+            assertTrue(operatorExists(plans, List.of(GameIdsByEntities.class)));
+
+            verifyQueryPlans(plans, true);
+        }
+    }
+
+    @Test
+    public void playersById() {
+        PlayerQuery playerQuery = new PlayerQuery(db, List.of(
+                new ManualFilter<>(new int[] { 10 }, EntityType.PLAYER)
+        ));
+
+        try (var txn = new DatabaseReadTransaction(db)) {
+            QueryContext queryContext = new QueryContext(txn, false);
+            List<QueryOperator<Player>> plans = db.queryPlanner().getPlayerQueryPlans(queryContext, playerQuery, true);
+
+            assertTrue(plans.size() >= 2);
+            assertTrue(operatorExists(plans, List.of(PlayerTableScan.class)));
+            assertTrue(operatorExists(plans, List.of(PlayerLookup.class)));
+
+            verifyQueryPlans(plans, false);
+        }
+
+        try (var txn = new DatabaseReadTransaction(db)) {
+            QueryContext queryContext = new QueryContext(txn, false);
+            List<QueryOperator<Player>> plans = db.queryPlanner().getPlayerQueryPlans(queryContext, playerQuery, false);
+
+            assertTrue(plans.size() >= 2);
+            assertTrue(operatorExists(plans, List.of(PlayerTableScan.class)));
+            assertFalse(operatorExists(plans, List.of(PlayerLookup.class)));
+
+            verifyQueryPlans(plans, false);
+        }
+    }
+
+    @Test
+    public void playersByName() {
+        PlayerQuery playerQuery = new PlayerQuery(db, List.of(
+                new PlayerNameFilter("K", true, false)
+        ));
+
+        try (var txn = new DatabaseReadTransaction(db)) {
+            QueryContext queryContext = new QueryContext(txn, false);
+            List<QueryOperator<Player>> plans = db.queryPlanner().getPlayerQueryPlans(queryContext, playerQuery, true);
+
+            assertTrue(plans.size() >= 2);
+            assertTrue(operatorExists(plans, List.of(PlayerTableScan.class)));
+            assertTrue(operatorExists(plans, List.of(PlayerIndexRangeScan.class)));
+
+            verifyQueryPlans(plans, false);
+        }
+    }
+
+    @Test
+    public void playersByGames() {
+        GameQuery games = new GameQuery(db, List.of(new DateRangeFilter(new Date(1900), new Date(2000))));
+        PlayerQuery playerQuery = new PlayerQuery(db, List.of(
+                new PlayerNameFilter("K", true, false)
+        ), games, GamePlayerJoinCondition.ANY);
+
+        try (var txn = new DatabaseReadTransaction(db)) {
+            QueryContext queryContext = new QueryContext(txn, false);
+            List<QueryOperator<Player>> plans = db.queryPlanner().getPlayerQueryPlans(queryContext, playerQuery, true);
+
+            assertTrue(plans.size() >= 3);
+            assertTrue(operatorExists(plans, List.of(PlayerTableScan.class)));
+
+            verifyQueryPlans(plans, false);
+        }
+    }
+
+    @Test
+    public void playersSortedByName() {
+        PlayerQuery playerQuery = new PlayerQuery(db, List.of(), QuerySortOrder.byPlayerDefaultIndex(), 4);
+
+        try (var txn = new DatabaseReadTransaction(db)) {
+            QueryContext queryContext = new QueryContext(txn, false);
+            List<QueryOperator<Player>> plans = db.queryPlanner().getPlayerQueryPlans(queryContext, playerQuery, true);
+            verifyQueryPlans(plans, true);
+        }
+    }
+
+    @Test
+    public void tournamentsByYearAndPlace() {
+        TournamentQuery tournamentQuery = new TournamentQuery(db, List.of(
+                new TournamentStartDateFilter(new Date(1950), Date.unset()),
+                new TournamentPlaceFilter("London", true, true)
+        ));
+
+        try (var txn = new DatabaseReadTransaction(db)) {
+            QueryContext queryContext = new QueryContext(txn, false);
+            List<QueryOperator<Tournament>> plans = db.queryPlanner().getTournamentQueryPlans(queryContext, tournamentQuery, true);
+
+            assertTrue(plans.size() >= 2);
+            assertTrue(operatorExists(plans, List.of(TournamentTableScan.class)));
+            assertTrue(operatorExists(plans, List.of(TournamentIndexRangeScan.class)));
+
+            verifyQueryPlans(plans, false);
+        }
+    }
+
+    @Test
+    public void tournamentsByGames() {
+        GameQuery games = new GameQuery(db, List.of(new DateRangeFilter(new Date(1900), new Date(2000))));
+        TournamentQuery tournamentQuery = new TournamentQuery(db, List.of(
+                new TournamentStartDateFilter(new Date(1950), Date.unset())
+        ), games);
+
+        try (var txn = new DatabaseReadTransaction(db)) {
+            QueryContext queryContext = new QueryContext(txn, false);
+            List<QueryOperator<Tournament>> plans = db.queryPlanner().getTournamentQueryPlans(queryContext, tournamentQuery, true);
+
+            assertTrue(plans.size() >= 2);
+            assertTrue(operatorExists(plans, List.of(TournamentTableScan.class)));
+            assertTrue(operatorExists(plans, List.of(TournamentIndexRangeScan.class)));
+
+            verifyQueryPlans(plans, false);
         }
     }
 
@@ -45,17 +200,17 @@ public class QueryPlannerTest {
         Map<Integer, QueryData<T>> expectedMap = null;
         for (QueryOperator<T> plan : plans) {
             List<QueryData<T>> planList = plan.stream().collect(Collectors.toList());
-            for (QueryData<T> queryData : planList) {
-                System.out.println(queryData.id() + " " + queryData.weight());
-            }
-            System.out.println("---");
+//            for (QueryData<T> queryData : planList) {
+//                System.out.println(queryData.id() + " " + queryData.weight());
+//            }
+//            System.out.println("---");
             if (expected == null) {
                 expected = planList;
                 expectedMap = new HashMap<>();
                 for (QueryData<T> data : planList) {
                     expectedMap.put(data.id(), data);
                 }
-                assertTrue(expected.size() > 0);
+                assertTrue(!expected.isEmpty());
             } else {
                 assertEquals(expected.size(), planList.size());
                 if (sorted) {
@@ -75,127 +230,14 @@ public class QueryPlannerTest {
         }
     }
 
-    @Test
-    public void gameByEntity() {
-        GameQuery gameQuery = new GameQuery(db, List.of(new PlayerFilter(
-                db.getPlayer(10), PlayerFilter.PlayerColor.ANY, PlayerFilter.PlayerResult.ANY)),
-                null, null, QuerySortOrder.byId(), 0);
-        try (var txn = new DatabaseReadTransaction(db)) {
-            QueryContext queryContext = new QueryContext(txn, false);
-            List<QueryOperator<Game>> plans = db.queryPlanner().getGameQueryPlans(queryContext, gameQuery, true);
-
-            assertTrue(plans.size() >= 2);
-            verifyOperators(plans, List.of(GameTableScan.class));
-            verifyOperators(plans, List.of(GameIdsByEntities.class));
-
-            verifyQueryPlans(plans, true);
-        }
-    }
-
-    @Test
-    public void gameByPlayerNameAndTournament() {
-        PlayerQuery playerQuery = new PlayerQuery(db, List.of(new PlayerNameFilter("K", "", true, false)));
-        TournamentQuery tournamentQuery = new TournamentQuery(db, List.of(
-                new TournamentStartDateFilter(new Date(1900, 1, 1), new Date(2000, 1, 1))));
-
-        GameQuery gameQuery = new GameQuery(db, null,
-                List.of(new GamePlayerJoin(playerQuery, GamePlayerJoinCondition.ANY)),
-                List.of(new GameTournamentJoin(tournamentQuery)),
-                QuerySortOrder.byId(), 0);
-
-        try (var txn = new DatabaseReadTransaction(db)) {
-            QueryContext queryContext = new QueryContext(txn, false);
-            List<QueryOperator<Game>> plans = db.queryPlanner().getGameQueryPlans(queryContext, gameQuery, true);
-
-            assertTrue(plans.size() >= 10);
-            verifyOperators(plans, List.of(GameTableScan.class));
-            verifyOperators(plans, List.of(GameIdsByEntities.class));
-
-            verifyQueryPlans(plans, true);
-        }
-    }
-
-    @Test
-    public void playersByName() {
-        PlayerQuery playerQuery = new PlayerQuery(db, List.of(
-                new PlayerNameFilter("K", true, false)
-        ));
-
-        try (var txn = new DatabaseReadTransaction(db)) {
-            QueryContext queryContext = new QueryContext(txn, false);
-            List<QueryOperator<Player>> plans = db.queryPlanner().getPlayerQueryPlans(queryContext, playerQuery, true);
-
-            assertTrue(plans.size() >= 2);
-            verifyOperators(plans, List.of(PlayerTableScan.class));
-            verifyOperators(plans, List.of(PlayerIndexRangeScan.class));
-
-            verifyQueryPlans(plans, false);
-        }
-    }
-
-    @Test
-    public void playersByGames() {
-        GameQuery games = new GameQuery(db, List.of(new DateRangeFilter(new Date(1900), new Date(2000))));
-        PlayerQuery playerQuery = new PlayerQuery(db, List.of(
-                new PlayerNameFilter("K", true, false)
-        ), games, GamePlayerJoinCondition.ANY);
-
-        try (var txn = new DatabaseReadTransaction(db)) {
-            QueryContext queryContext = new QueryContext(txn, false);
-            List<QueryOperator<Player>> plans = db.queryPlanner().getPlayerQueryPlans(queryContext, playerQuery, true);
-
-            assertTrue(plans.size() >= 3);
-            verifyOperators(plans, List.of(PlayerTableScan.class));
-
-            verifyQueryPlans(plans, false);
-        }
-    }
-
-    @Test
-    public void tournamentsByYearAndPlace() {
-        TournamentQuery tournamentQuery = new TournamentQuery(db, List.of(
-                new TournamentStartDateFilter(new Date(1950), Date.unset()),
-                new TournamentPlaceFilter("London", true, true)
-        ));
-
-        try (var txn = new DatabaseReadTransaction(db)) {
-            QueryContext queryContext = new QueryContext(txn, false);
-            List<QueryOperator<Tournament>> plans = db.queryPlanner().getTournamentQueryPlans(queryContext, tournamentQuery, true);
-
-            assertTrue(plans.size() >= 2);
-            verifyOperators(plans, List.of(TournamentTableScan.class));
-            verifyOperators(plans, List.of(TournamentIndexRangeScan.class));
-
-            verifyQueryPlans(plans, false);
-        }
-    }
-
-    @Test
-    public void tournamentsByGames() {
-        GameQuery games = new GameQuery(db, List.of(new DateRangeFilter(new Date(1900), new Date(2000))));
-        TournamentQuery tournamentQuery = new TournamentQuery(db, List.of(
-                new TournamentStartDateFilter(new Date(1950), Date.unset())
-        ), games);
-
-        try (var txn = new DatabaseReadTransaction(db)) {
-            QueryContext queryContext = new QueryContext(txn, false);
-            List<QueryOperator<Tournament>> plans = db.queryPlanner().getTournamentQueryPlans(queryContext, tournamentQuery, true);
-
-            assertTrue(plans.size() >= 2);
-            verifyOperators(plans, List.of(TournamentTableScan.class));
-            verifyOperators(plans, List.of(TournamentIndexRangeScan.class));
-
-            verifyQueryPlans(plans, false);
-        }
-    }
-
-    private <T extends IdObject> void verifyOperators(List<QueryOperator<T>> plans, List<Class<?>> expectedClasses) {
-        boolean found = false;
+    private <T extends IdObject> boolean operatorExists(List<QueryOperator<T>> plans, List<Class<?>> expectedClasses) {
         for (QueryOperator<T> plan : plans) {
             List<Class<?>> opClasses = getOperatorSourceClasses(plan).collect(Collectors.toList());
-            found |= opClasses.containsAll(expectedClasses);
+            if (opClasses.containsAll(expectedClasses)) {
+                return true;
+            }
         }
-        assertTrue(found);
+        return false;
     }
 
     private Stream<Class<?>> getOperatorSourceClasses(QueryOperator<?> op) {

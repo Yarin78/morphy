@@ -32,10 +32,21 @@ public class QuerySortOrder<T extends IdObject> implements Comparator<QueryData<
     }
 
     public static QuerySortOrder<Player> byPlayerDefaultIndex() {
-        return new QuerySortOrder<Player>();
+        return byPlayerDefaultIndex(false);
+    }
+
+    public static QuerySortOrder<Player> byPlayerDefaultIndex(boolean reverse) {
+        return new QuerySortOrder<>(
+                List.of(QuerySortField.playerName()),
+                List.of(!reverse ? Direction.ASCENDING : Direction.DESCENDING)
+        );
     }
 
     public static QuerySortOrder<Tournament> byTournamentDefaultIndex() {
+        return byTournamentDefaultIndex(false);
+    }
+
+    public static QuerySortOrder<Tournament> byTournamentDefaultIndex(boolean reverse) {
         return new QuerySortOrder<>(
                 List.of(
                         QuerySortField.tournamentYear(),
@@ -43,10 +54,10 @@ public class QuerySortOrder<T extends IdObject> implements Comparator<QueryData<
                         QuerySortField.tournamentPlace(),
                         QuerySortField.tournamentStartDate()),
                 List.of(
-                        Direction.DESCENDING,
-                        Direction.ASCENDING,
-                        Direction.ASCENDING,
-                        Direction.DESCENDING));
+                        !reverse ? Direction.DESCENDING : Direction.ASCENDING,
+                        !reverse ? Direction.ASCENDING : Direction.DESCENDING,
+                        !reverse ? Direction.ASCENDING : Direction.DESCENDING,
+                        !reverse ? Direction.DESCENDING : Direction.ASCENDING));
     }
 
 
@@ -85,7 +96,6 @@ public class QuerySortOrder<T extends IdObject> implements Comparator<QueryData<
      * Determines if this sort order is identical or stronger than the other sort order
      */
     public boolean isSameOrStronger(@NotNull QuerySortOrder<T> other) {
-        // TODO: Test this
         if (this.sortFields.size() < other.sortFields.size()) {
             return false;
         }

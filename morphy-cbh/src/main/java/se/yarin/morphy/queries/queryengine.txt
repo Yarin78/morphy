@@ -1,0 +1,183 @@
+About Queries
+=============
+The root of any query is a GameQuery, PlayerQuery, TournamentQuery etc.
+Games will be referred to as "primary entities" while Players, Tournament etc will be referred to as "secondary entities"
+(the interface Entity actually only refers to secondary entities so this is a slight misnomer)
+
+The result of a queries is always a unique list of entities of the query type, with an optional weight
+(typically the number of times the entity occurred before grouping). The result may be sorted.
+
+A query can either have filters (WHERE) and/or joins (JOIN). Queries can be ordered or unordered.
+Queries will never return duplicates.
+
+Because of how the database is constructed, the only joins are between the primary entity (Game)
+and secondary entities (Player, Tournament etc). There are no joins between different type of secondary entities.
+
+All entity types have an integer id column, starting from 1 in games, and from 0 for secondary entities.
+Queries and subqueries may either request to return only the id (and weight), or the full data for the entity.
+
+A filter on an entity means that the filtering can be done if the full data of that entity is available.
+The full data for games contain the id of the player, tournament etc. A game query can therefore
+filter on specific player id's, but not on a player name - then a join is required.
+The full data for players, tournaments etc however does not contain any reference back to the games,
+meaning that the only filters for these entities are on the metadata about the entity itself.
+
+Joins consists of a subquery and a join condition. Only inner joins are supported; however, there might
+be multiple join conditions in case of game-to-player (or game-to-team) since there are two players in a game.
+
+
+Example queries
+---------------
+"Get all games played after 2023-01-01"
+GameQuery with a DateRange filter
+
+"Get all games played in tournament 37 where at least one player has rating > 2700"
+GameQuery with a Tournament filter (because we know the id) and a rating filter (the rating of the players are in the game record)
+
+"Get all games played by player 7 sorted by date descending"
+GameQuery with a Player filter and a reverse sorting on the PlayedDate
+
+"Get all games played in the tournament with title 'FIDE World Cup 2023'"
+GameQuery with a Tournament subquery,
+where the Tournament subquery has a title filter.
+
+"Get all blitz tournaments played in 2020 of category 15 or higher, sorted by title"
+TournamentQuery with a TournamentYearTitle filter, a Category filter and sorting on the Title
+
+"Get all players that have played classical games lasting at least 100 moves"
+PlayerQuery with a Game subquery,
+where the Game subquery has a MoveCount filter and a Tournament subquery,
+where the Tournament subquery has a Type filter
+
+
+Tables and indexes
+==================
+The word "table" is here used to refer to the file(s) on disk storing the content of the data.
+
+Games are sorted by id in the main table.
+Secondary entities are sorted by id in their respective tables, but are also B-tree indexed in the same file,
+allowing quick lookup by the _default sorting key_. These vary depending on entity:
+
+- Players are sorted by Last name, First name
+- Tournaments are sorted by year, title, place, month, date
+- Annotators are sorted by name
+- GameTags are sorted by title
+- Sources are sorted by title
+- Teams are sorted by title, team number, season, year, nation
+
+(all string comparisons are case sensitive)
+
+Each secondary entity also have a _(reverse) game (entity) index_ containing which games a particular entity occurs in. It maps
+the id of an entity to the list of games (in game id order) it occurs in. For some entities, such as Player and Team,
+an entity can map to the same game twice and will be represented twice in the index.
+
+Query plans
+===========
+A query only specifies the _what_, not the _how_. There are typically multiple ways to evaluate a query.
+For instance, to fetch all games played by a player starting with "Kar", you can either:
+
+1) Loop through all games in the database amd for each game fetch both players by id, and then check if any of the player names start with "Kar"
+_or_
+2) Loop through all players starting with "Kar" in the Player Index B-tree. For each player, lookup in the reverse game player index
+which games that player have played, and return those. The output will have to be sorted and de-duplicated.
+
+Method 1 will scan the entire database of all games, potentially very many, and also lookup all players in the player table. The _cost_ of this operation
+can be fairly high, but is easy to calculate ahead of time.
+
+Method 2 scans a portion of the player database (depending on how many players out of all that starts with "Kar"), and will only have to lookup
+the games in the game database that we actually need (it will also have to lookup in the reverse index). The cost of this is likely much lower,
+in particular as the prefix "Kar" becomes longer and the amount of players is narrowed down.
+
+Method 1 has the advantage that we will immediately have the full data of the games, and they will be sorted in id order.
+Method 2 can be sped up if only the game ID is needed to be returned since no lookup in the game database at all is then necessary.
+
+It's the job of the Query Planner to generate different query plans for a query, estimate their costs and select the cheapest one.
+
+Query operators
+===============
+A query plan is represented by Query operators, which are physical manifestations of the logical query. They represent a _tree of operations_.
+An operator typically either scans a table, scans an index, performs a filter on a suboperator, aggregates data from a suboperator
+or merges the data from multiple suboperators.
+
+When executed, the output of a query operator is a stream of QueryData. This contains the id of the entity, optional the full entity data, and a weight (used for aggregation).
+
+There are several properties of an operator that's useful to know when constructing the tree:
+
+* Is the _full entity data_ returned, or only the id of an entity?
+* Is the output _sorted_? If so, in what order?
+* May the output contain duplicates?
+
+In general, operators lazily processes the underlying data. This enables only as much data as is needed to be fetched.
+For instance, it's common that the outermost operator only returns a limited number of entities.
+
+The outermost query operator will never return duplicated data. It may however only return the id of the entity,
+and not the full entity data, if that's enough for the user.
+
+
+All query operators
+-----------------------
+A "scan" refers to reading a table in the order the data is stored on the disk.
+An "index range scan" refers to reading a secondary entity index in the default entity order.
+An "game entity index scan" refers to getting the
+A "lookup" refers to get the full entity data given an id
+
+Any type of scan is a "source operator" as it depends on no other operators.
+
+* GameTableScan, PlayerTableScan, TournamentTableScan:
+    Scans all entities in the table in ID order and returns those matching an optional predicate
+    Input: Start ID (optional)
+    TODO: Input: End ID (optional)
+    Input: A predicate (optional)
+    Output: A list of entities with full data in ID order
+* PlayerIndexRangeScan, TournamentIndexRangeScan:
+    Scans all entities in the index in the default order (see above) and returns those matching an optional predicate
+    TODO: Make these optional
+    Input: Start (optional)
+    Input: End (optional)
+    Input: A predicate (optional)
+    TODO: Input: Reverse
+    Output: A list of entities with full data in the default order (or reversed) matching the optional predicate
+* GameIdsByEntities:
+    Reverse index lookup of which games an input stream of entities belong in.
+    Input: A stream of entities (only id required)
+    Output: A stream of game id's. If the input contains a single entity, it will be sorted and not include duplicates.
+            Otherwise, the output is not sorted and may contain duplicates.
+* TournamentIdsByGames, PlayerIdsByGames:
+    Maps a stream of games to the entity of the given type they contain references to.
+    Input: A stream of games (with full data)
+    Output: A stream of entity id's; unsorted and may contain duplicates.
+* Manual:
+    A custom source operator, enabling the user to pass in a specific entity as input to some other operator.
+    Input: A list of id's
+    Output: A stream of the same ID's, sorted
+* GameLookup, PlayerLookup, TournamentLookup:
+    Looks up the full data of entities given an id, omitting entities that do not match an optional predicate
+    Input: A stream of entities (typically only containing the id)
+    Input: A predicate (optional)
+    Output: A stream of entities with the same ID as the input, in the same order, but with full data.
+            Entities not matching the predicate are omitted.
+* Sort:
+    Sorts the input stream of entities. This is a blocking operation.
+    Input: A stream of entities
+    Input: A sorting order
+    Output: A stream of the same entities as the input, but sorted
+* Distinct:
+    Removes duplicates from the input stream of entities.
+    Input: A stream of entities
+    Output: A stream of the same entities as the input in the same order, but only the first instance of any duplicate is kept.
+* GamePlayerFilter, GameTournamentFilter
+    Filters a stream of games based on a substream of other entities
+    Input: A stream of entities
+    Input: A join condition
+    Output: A stream of games, only matching those  the games where the player or tournament id matches.
+* HashJoin, MergeJoin:
+    Combines two streams of entities into one, joined on the id.
+    Input: Two streams of entities. Must not contain duplicates. Must be sorted by id MergeJoin.
+    Output: A stream of entities that occurs in both streams. Full data is returned if any of the inputs have full data.
+            Weights are multiplied.
+
+Cost of a query operator
+========================
+TODO
+
+* Is the operator _blocking_? I.e. does _all_ data in the suboperators need to be processed before and data can be yielded from the current operator?
