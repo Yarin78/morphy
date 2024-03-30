@@ -111,7 +111,7 @@ public class PlayerTest {
     public void testGetAscendingRangeOfPlayers() throws IOException {
         PlayerIndex playerIndex = PlayerIndex.open(playerIndexFile);
         EntityIndexReadTransaction<Player> txn = playerIndex.beginReadTransaction();
-        List<Player> list = txn.streamOrderedAscending(Player.of("M", ""))
+        List<Player> list = txn.streamOrderedAscending(Player.of("M", ""), null)
                 .limit(3)
                 .collect(Collectors.toList());
         assertEquals(3, list.size());
@@ -137,7 +137,7 @@ public class PlayerTest {
     public void testGetDescendingRangeOfPlayers() throws IOException {
         PlayerIndex playerIndex = PlayerIndex.open(playerIndexFile);
         EntityIndexReadTransaction<Player> txn = playerIndex.beginReadTransaction();
-        List<Player> list = txn.streamOrderedDescending(Player.of("Sp", ""))
+        List<Player> list = txn.streamOrderedDescending(Player.of("Sp", ""), null)
                 .limit(3)
                 .collect(Collectors.toList());
         assertEquals(3, list.size());

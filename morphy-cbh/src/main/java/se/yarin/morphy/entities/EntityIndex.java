@@ -168,7 +168,7 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>> implements M
      */
     public @NotNull List<T> getAll(@NotNull T entityKey) {
         try (var txn = beginReadTransaction()) {
-            return txn.streamOrderedAscending(entityKey)
+            return txn.streamOrderedAscending(entityKey, null)
                     .takeWhile(e -> e.compareTo(entityKey) == 0)
                     .collect(Collectors.toList());
         }
@@ -228,7 +228,7 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>> implements M
      */
     public @Nullable T getNext(T entity) {
         try (var txn = beginReadTransaction()) {
-            for (T e : txn.iterableAscending(entity)) {
+            for (T e : txn.iterableAscending(entity, null)) {
                 if (!e.equals(entity)) {
                     return e;
                 }
@@ -245,7 +245,7 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>> implements M
      */
     public @Nullable T getPrevious(@NotNull T entity) {
         try (var txn = beginReadTransaction()) {
-            for (T e : txn.iterableDescending(entity)) {
+            for (T e : txn.iterableDescending(entity, null)) {
                 if (!e.equals(entity)) {
                     return e;
                 }

@@ -45,12 +45,12 @@ public class EntityIndexReadTransactionTest {
                 .collect(Collectors.joining());
         assertEquals("abcdelqtvw", result);
 
-        result = txn.streamOrderedAscending(FooEntity.of("f"))
+        result = txn.streamOrderedAscending(FooEntity.of("f"), null)
                 .map(FooEntity::key)
                 .collect(Collectors.joining());
         assertEquals("lqtvw", result);
 
-        result = txn.streamOrderedAscending(FooEntity.of("q"))
+        result = txn.streamOrderedAscending(FooEntity.of("q"), null)
                 .map(FooEntity::key)
                 .collect(Collectors.joining());
         assertEquals("qtvw", result);
@@ -62,7 +62,7 @@ public class EntityIndexReadTransactionTest {
         EntityIndexReadTransaction<FooEntity> txn = index.beginReadTransaction();
 
         assertEquals(0, txn.streamOrderedAscending().count());
-        assertEquals(0, txn.streamOrderedAscending(FooEntity.of("a")).count());
+        assertEquals(0, txn.streamOrderedAscending(FooEntity.of("a"), null).count());
     }
 
     @Test
@@ -75,13 +75,27 @@ public class EntityIndexReadTransactionTest {
         assertEquals("e", txn.streamOrderedAscending().map(FooEntity::key).collect(Collectors.joining()));
 
         // Start before first
-        assertEquals("e", txn.streamOrderedAscending(FooEntity.of("b")).map(FooEntity::key).collect(Collectors.joining()));
+        assertEquals("e", txn.streamOrderedAscending(FooEntity.of("b"), null).map(FooEntity::key).collect(Collectors.joining()));
 
         // Start same as first
-        assertEquals("e", txn.streamOrderedAscending(FooEntity.of("e")).map(FooEntity::key).collect(Collectors.joining()));
+        assertEquals("e", txn.streamOrderedAscending(FooEntity.of("e"), null).map(FooEntity::key).collect(Collectors.joining()));
 
         // Start after as first
-        assertEquals("", txn.streamOrderedAscending(FooEntity.of("g")).map(FooEntity::key).collect(Collectors.joining()));
+        assertEquals("", txn.streamOrderedAscending(FooEntity.of("g"), null).map(FooEntity::key).collect(Collectors.joining()));
+    }
+
+    @Test
+    public void testAscendingStreamInEmptyRange() {
+        FooEntityIndex index = createIndex();
+        String[] values = {"d", "t", "b", "e", "q", "w", "a", "l", "c", "v"};
+        for (String value : values) {
+            index.add(FooEntity.of(value));
+        }
+
+        EntityIndexReadTransaction<FooEntity> txn = index.beginReadTransaction();
+        assertEquals("", txn.streamOrderedAscending(FooEntity.of("e"), FooEntity.of("e")).map(FooEntity::key).collect(Collectors.joining()));
+        assertEquals("", txn.streamOrderedAscending(FooEntity.of("n"), FooEntity.of("d")).map(FooEntity::key).collect(Collectors.joining()));
+        assertEquals("", txn.streamOrderedAscending(FooEntity.of("n"), FooEntity.of("f")).map(FooEntity::key).collect(Collectors.joining()));
     }
 
     @Test
@@ -95,9 +109,27 @@ public class EntityIndexReadTransactionTest {
 
         assertEquals("wvtqledcba", txn.streamOrderedDescending().map(FooEntity::key).collect(Collectors.joining()));
 
-        assertEquals("edcba", txn.streamOrderedDescending(FooEntity.of("f")).map(FooEntity::key).collect(Collectors.joining()));
+        assertEquals("edcba", txn.streamOrderedDescending(FooEntity.of("f"), null).map(FooEntity::key).collect(Collectors.joining()));
 
-        assertEquals("qledcba", txn.streamOrderedDescending(FooEntity.of("q")).map(FooEntity::key).collect(Collectors.joining()));
+        assertEquals("qledcba", txn.streamOrderedDescending(FooEntity.of("q"), null).map(FooEntity::key).collect(Collectors.joining()));
+
+        assertEquals("wvtql", txn.streamOrderedDescending((FooEntity) null, FooEntity.of("f")).map(FooEntity::key).collect(Collectors.joining()));
+
+        assertEquals("qled", txn.streamOrderedDescending(FooEntity.of("q"), FooEntity.of("c")).map(FooEntity::key).collect(Collectors.joining()));
+    }
+
+    @Test
+    public void testDescendingStreamInEmptyRange() {
+        FooEntityIndex index = createIndex();
+        String[] values = {"d", "t", "b", "e", "q", "w", "a", "l", "c", "v"};
+        for (String value : values) {
+            index.add(FooEntity.of(value));
+        }
+
+        EntityIndexReadTransaction<FooEntity> txn = index.beginReadTransaction();
+        assertEquals("", txn.streamOrderedDescending(FooEntity.of("e"), FooEntity.of("e")).map(FooEntity::key).collect(Collectors.joining()));
+        assertEquals("", txn.streamOrderedDescending(FooEntity.of("d"), FooEntity.of("n")).map(FooEntity::key).collect(Collectors.joining()));
+        assertEquals("", txn.streamOrderedDescending(FooEntity.of("d"), FooEntity.of("q")).map(FooEntity::key).collect(Collectors.joining()));
     }
 
     @Test
