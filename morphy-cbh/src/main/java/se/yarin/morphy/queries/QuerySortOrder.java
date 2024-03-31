@@ -92,6 +92,10 @@ public class QuerySortOrder<T extends IdObject> implements Comparator<QueryData<
         return 0;
     }
 
+    public boolean isNone() {
+        return sortFields.isEmpty();
+    }
+
     /**
      * Determines if this sort order is identical or stronger than the other sort order
      */

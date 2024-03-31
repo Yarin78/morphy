@@ -14,7 +14,7 @@ public class TournamentQuery {
 
     private final @Nullable GameQuery gameQuery;
 
-    private final @Nullable QuerySortOrder<Tournament> sortOrder;
+    private final @NotNull QuerySortOrder<Tournament> sortOrder;
     private final int limit;  // 0 = all
 
     public @NotNull Database database() {
@@ -29,7 +29,7 @@ public class TournamentQuery {
         return gameQuery;
     }
 
-    public @Nullable QuerySortOrder<Tournament> sortOrder() {
+    public @NotNull QuerySortOrder<Tournament> sortOrder() {
         return sortOrder;
     }
 
@@ -53,7 +53,7 @@ public class TournamentQuery {
         this.database = database;
         this.filters = filters;
         this.gameQuery = gameQuery;
-        this.sortOrder = sortOrder;
+        this.sortOrder = sortOrder == null ? QuerySortOrder.none() : sortOrder;
         this.limit = limit;
     }
 }

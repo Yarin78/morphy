@@ -43,7 +43,7 @@ public class GameQuery {
         this.playerJoins = playerJoins == null ? List.of() : List.copyOf(playerJoins);
         this.tournamentJoins = tournamentJoins == null ? List.of() : List.copyOf(tournamentJoins);
 
-        this.sortOrder = sortOrder;
+        this.sortOrder = sortOrder == null ? QuerySortOrder.none() : sortOrder;
         this.limit = limit;
     }
 
@@ -63,7 +63,7 @@ public class GameQuery {
         return tournamentJoins;
     }
 
-    public @Nullable QuerySortOrder<Game> sortOrder() {
+    public @NotNull QuerySortOrder<Game> sortOrder() {
         return sortOrder;
     }
 

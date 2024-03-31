@@ -16,6 +16,10 @@ public class GamePlayerJoin extends GameEntityJoin<Player> {
         return playerQuery;
     }
 
+    public boolean isSimpleJoin() {
+        return playerQuery.gameQuery() == null;
+    }
+
     public @NotNull GamePlayerJoinCondition joinCondition() {
         return joinCondition;
     }

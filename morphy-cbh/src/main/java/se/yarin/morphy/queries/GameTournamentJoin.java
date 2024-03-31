@@ -15,6 +15,10 @@ public class GameTournamentJoin extends GameEntityJoin<Tournament> {
         return tournamentQuery;
     }
 
+    public boolean isSimpleJoin() {
+        return tournamentQuery.gameQuery() == null;
+    }
+
     public GameTournamentJoin(@NotNull TournamentQuery tournamentQuery) {
         this.tournamentQuery = tournamentQuery;
     }

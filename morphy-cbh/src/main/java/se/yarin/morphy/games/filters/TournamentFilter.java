@@ -7,9 +7,7 @@ import se.yarin.morphy.storage.ItemStorageFilter;
 import se.yarin.util.ByteBufferUtil;
 
 import java.nio.ByteBuffer;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashSet;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class TournamentFilter implements ItemStorageFilter<GameHeader>, GameFilter {
@@ -21,6 +19,10 @@ public class TournamentFilter implements ItemStorageFilter<GameHeader>, GameFilt
 
     public TournamentFilter(@NotNull Collection<Tournament> tournaments) {
         this.tournamentIds = tournaments.stream().map(Tournament::id).collect(Collectors.toCollection(HashSet::new));
+    }
+
+    public List<Integer> tournamentIds() {
+        return new ArrayList<>(tournamentIds);
     }
 
     @Override

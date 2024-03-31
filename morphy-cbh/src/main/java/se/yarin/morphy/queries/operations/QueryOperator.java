@@ -226,22 +226,26 @@ public abstract class QueryOperator<T extends IdObject> {
     }
 
 
-    public QueryOperator<T> sortedAndDistinct(@NotNull QuerySortOrder<T> sortOrder) {
+    public QueryOperator<T> sortedAndDistinct(@NotNull QuerySortOrder<T> sortOrder, int limit) {
         // Wraps the query operator in a sort and/or distinct if needed
-        QueryOperator<T> sortedOperator;
+        QueryOperator<T> sortedOperator, distinctOperator, limitOperator;
         if (this.sortOrder().isSameOrStronger(sortOrder)) {
             sortedOperator = this;
         } else {
             sortedOperator = new Sort<>(this.queryContext, this, sortOrder);
         }
         if (!sortedOperator.mayContainDuplicates()) {
-            return sortedOperator;
+            distinctOperator = sortedOperator;
         } else {
-            return new Distinct<>(this.queryContext, sortedOperator);
+            distinctOperator = new Distinct<>(this.queryContext, sortedOperator);
         }
+        if (limit > 0) {
+            limitOperator = new Limit<>(this.queryContext, distinctOperator, limit);
+        } else {
+            limitOperator = distinctOperator;
+        }
+        return limitOperator;
     }
-
-
 
     public String debugString(boolean includeCost) {
         StringBuilder sb = new StringBuilder();
