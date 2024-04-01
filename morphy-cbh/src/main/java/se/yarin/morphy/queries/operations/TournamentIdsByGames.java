@@ -16,8 +16,8 @@ public class TournamentIdsByGames extends QueryOperator<Tournament> {
 
     public TournamentIdsByGames(@NotNull QueryContext queryContext, @NotNull QueryOperator<Game> source) {
         super(queryContext, false);
-        assert source.hasFullData();
         this.source = source;
+        assert source.hasFullData();
     }
 
     @Override

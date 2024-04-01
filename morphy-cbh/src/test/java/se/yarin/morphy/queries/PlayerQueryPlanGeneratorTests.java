@@ -2,7 +2,6 @@ package se.yarin.morphy.queries;
 
 import org.junit.Before;
 import org.junit.Test;
-import se.yarin.chess.Date;
 import se.yarin.morphy.Database;
 import se.yarin.morphy.DatabaseReadTransaction;
 import se.yarin.morphy.Game;
@@ -26,6 +25,7 @@ import static org.junit.Assert.assertEquals;
 public class PlayerQueryPlanGeneratorTests {
     private Database db;
     private QueryPlanner spyPlanner;
+    private QueryOperator<Game> mockOperator;
 
     @Before
     public void setupTestDb() {
@@ -34,6 +34,13 @@ public class PlayerQueryPlanGeneratorTests {
         QueryPlanner planner = new QueryPlanner(db);
         this.spyPlanner = spy(planner);
         this.db.setQueryPlanner(this.spyPlanner);
+
+        this.mockOperator = mock(QueryOperator.class);
+        when(mockOperator.debugString(anyBoolean())).thenReturn("mock");
+        when(mockOperator.getOperatorCost()).thenReturn(ImmutableOperatorCost.builder().build());
+        when(mockOperator.hasFullData()).thenReturn(true);
+
+        doReturn(List.of(mockOperator)).when(spyPlanner).getGameQueryPlans(any(), any(), anyBoolean());
     }
 
     @Test
@@ -53,12 +60,6 @@ public class PlayerQueryPlanGeneratorTests {
     @Test
     public void playerByGameQuery() {
         PlayerQuery playerQuery = new PlayerQuery(db, List.of(), new GameQuery(db, List.of()), GamePlayerJoinCondition.ANY, QuerySortOrder.byPlayerDefaultIndex(), 0);
-
-        QueryOperator<Game> mockOperator = mock(QueryOperator.class);
-        when(mockOperator.debugString(anyBoolean())).thenReturn("mock");
-        when(mockOperator.getOperatorCost()).thenReturn(ImmutableOperatorCost.builder().build());
-
-        doReturn(List.of(mockOperator)).when(spyPlanner).getGameQueryPlans(any(), any(), anyBoolean());
 
         try (var txn = new DatabaseReadTransaction(db)) {
             QueryContext qc = new QueryContext(txn, false);
@@ -144,13 +145,8 @@ public class PlayerQueryPlanGeneratorTests {
         PlayerNameFilter kaspFilter = new PlayerNameFilter("Kasp", "", true, false);
         PlayerQuery playerQuery = new PlayerQuery(db, List.of(kaspFilter), new GameQuery(db, List.of()), GamePlayerJoinCondition.ANY, QuerySortOrder.byPlayerDefaultIndex(true), 0);
 
-        QueryOperator<Game> mockOperator = mock(QueryOperator.class);
-        when(mockOperator.debugString(anyBoolean())).thenReturn("mock");
-        when(mockOperator.getOperatorCost()).thenReturn(ImmutableOperatorCost.builder().build());
-
         // Ensure the PlayerIndexRangeScan is by default sorted after the PlayerIdsByGames operator
         doReturn(10000L).when(spyPlanner).playerRangeEstimate(any(), any(), any());
-        doReturn(List.of(mockOperator)).when(spyPlanner).getGameQueryPlans(any(), any(), anyBoolean());
 
         try (var txn = new DatabaseReadTransaction(db)) {
             QueryContext qc = new QueryContext(txn, false);

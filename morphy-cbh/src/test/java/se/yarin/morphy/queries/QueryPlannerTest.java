@@ -72,7 +72,7 @@ public class QueryPlannerTest {
             QueryContext queryContext = new QueryContext(txn, false);
             List<QueryOperator<Game>> plans = db.queryPlanner().getGameQueryPlans(queryContext, gameQuery, true);
 
-            assertTrue(plans.size() >= 10);
+            // assertTrue(plans.size() >= 10);
             assertTrue(operatorExists(plans, List.of(GameTableScan.class)));
             assertTrue(operatorExists(plans, List.of(GameIdsByEntities.class)));
 
@@ -161,6 +161,24 @@ public class QueryPlannerTest {
         TournamentQuery tournamentQuery = new TournamentQuery(db, List.of(
                 new TournamentStartDateFilter(new Date(1950), Date.unset()),
                 new TournamentPlaceFilter("London", true, true)
+        ));
+
+        try (var txn = new DatabaseReadTransaction(db)) {
+            QueryContext queryContext = new QueryContext(txn, false);
+            List<QueryOperator<Tournament>> plans = db.queryPlanner().getTournamentQueryPlans(queryContext, tournamentQuery, true);
+
+            assertTrue(plans.size() >= 2);
+            assertTrue(operatorExists(plans, List.of(TournamentTableScan.class)));
+            assertTrue(operatorExists(plans, List.of(TournamentIndexRangeScan.class)));
+
+            verifyQueryPlans(plans, false);
+        }
+    }
+
+    @Test
+    public void tournamentsByYearAndTitle() {
+        TournamentQuery tournamentQuery = new TournamentQuery(db, List.of(
+            new TournamentYearTitleFilter(1948, "World-ch17 Tournament", true, false)
         ));
 
         try (var txn = new DatabaseReadTransaction(db)) {

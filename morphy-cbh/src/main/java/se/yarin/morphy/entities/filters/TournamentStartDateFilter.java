@@ -1,6 +1,7 @@
 package se.yarin.morphy.entities.filters;
 
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import se.yarin.chess.Date;
 import se.yarin.morphy.entities.EntityType;
 import se.yarin.morphy.entities.Tournament;
@@ -9,7 +10,7 @@ import se.yarin.morphy.queries.QueryPlanner;
 import se.yarin.morphy.util.CBUtil;
 import se.yarin.util.ByteBufferUtil;
 
-public class TournamentStartDateFilter implements EntityFilter<Tournament>  {
+public class TournamentStartDateFilter implements EntityIndexFilter<Tournament>  {
     private final @NotNull Date fromDate;
     private final @NotNull Date toDate;
 
@@ -68,5 +69,17 @@ public class TournamentStartDateFilter implements EntityFilter<Tournament>  {
     @Override
     public EntityType entityType() {
         return EntityType.TOURNAMENT;
+    }
+
+    @Override
+    public @Nullable Tournament start() {
+        // The default sorting order is year descending, title ascending, so tournaments will be iterated
+        // in reverse year order. Hence the reverse of from/to dates.
+        return toDate.isUnset() ? null : Tournament.of("", new Date(toDate.year(), 1, 1));
+    }
+
+    @Override
+    public @Nullable Tournament end() {
+        return fromDate.isUnset() ? null : Tournament.of("", new Date(fromDate.year(), 1, 1));
     }
 }

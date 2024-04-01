@@ -34,7 +34,7 @@ public class TournamentIndexRangeScan extends QueryOperator<Tournament> {
     }
 
     public @NotNull QuerySortOrder<Tournament> sortOrder() {
-        return QuerySortOrder.byTournamentDefaultIndex();
+        return QuerySortOrder.byTournamentDefaultIndex(reverse);
     }
 
     public boolean mayContainDuplicates() {

@@ -1,13 +1,14 @@
 package se.yarin.morphy.entities.filters;
 
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import se.yarin.morphy.entities.EntityType;
 import se.yarin.morphy.entities.Player;
 import se.yarin.util.ByteBufferUtil;
 
 import java.nio.ByteBuffer;
 
-public class PlayerNameFilter implements EntityFilter<Player> {
+public class PlayerNameFilter implements EntityIndexFilter<Player> {
     private final @NotNull String lastName;
     private final @NotNull String firstName;
     private final boolean caseSensitive;
@@ -97,5 +98,15 @@ public class PlayerNameFilter implements EntityFilter<Player> {
     @Override
     public EntityType entityType() {
         return EntityType.PLAYER;
+    }
+
+    @Override
+    public @Nullable Player start() {
+        return caseSensitive ? Player.of(lastName(), "") : null;
+    }
+
+    @Override
+    public @Nullable Player end() {
+        return caseSensitive ? Player.of(lastName() + "zzz", "") : null;
     }
 }

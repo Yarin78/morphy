@@ -9,7 +9,7 @@ import se.yarin.util.ByteBufferUtil;
 
 import java.nio.ByteBuffer;
 
-public class TournamentYearTitleFilter implements EntityFilter<Tournament>  {
+public class TournamentYearTitleFilter implements EntityIndexFilter<Tournament>  {
     private final int year;
     @NotNull private final String title;
     private final boolean caseSensitive;
@@ -59,5 +59,15 @@ public class TournamentYearTitleFilter implements EntityFilter<Tournament>  {
     @Override
     public EntityType entityType() {
         return EntityType.TOURNAMENT;
+    }
+
+    @Override
+    public Tournament start() {
+        return Tournament.of(caseSensitive ? title : "", new Date(year));
+    }
+
+    @Override
+    public Tournament end() {
+        return Tournament.of((caseSensitive ? title : "") + "zzz", new Date(year));
     }
 }

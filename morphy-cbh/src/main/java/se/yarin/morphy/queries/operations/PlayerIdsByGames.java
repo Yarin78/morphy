@@ -22,6 +22,7 @@ public class PlayerIdsByGames extends QueryOperator<Player> {
         super(queryContext, false);
         this.source = source;
         this.joinCondition = joinCondition;
+        assert source.hasFullData();
     }
 
     @Override
