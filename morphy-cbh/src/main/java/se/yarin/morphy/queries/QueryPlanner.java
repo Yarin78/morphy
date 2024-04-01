@@ -29,8 +29,7 @@ public class QueryPlanner {
     private final int NUM_SAMPLE_BATCHES = 2500;
     private final int NUM_SAMPLE_ITEMS = 20;
 
-    private final PlayerQueryPlanner playerQueryPlanner;
-    private final TournamentQueryPlanner tournamentQueryPlanner;
+    private final @NotNull EntityQueryPlanner entityQueryPlanner;
 
     private final @NotNull Database database;
     private @NotNull StringDistribution playerLastNameDistribution;
@@ -48,8 +47,7 @@ public class QueryPlanner {
 
     public QueryPlanner(@NotNull Database database) {
         this.database = database;
-        this.playerQueryPlanner = new PlayerQueryPlanner(this);
-        this.tournamentQueryPlanner = new TournamentQueryPlanner(this);
+        this.entityQueryPlanner = new EntityQueryPlanner(this);
 
         this.playerLastNameDistribution = new StringDistribution(); // TODO: default name distribution
         this.tournamentYearDistribution = new IntBucketDistribution();
@@ -241,21 +239,16 @@ public class QueryPlanner {
         return bestPlan;
     }
 
+
     List<GameSourceQuery> getGameQuerySources(@NotNull QueryContext context, @NotNull GameQuery gameQuery) {
         List<GameSourceQuery> sources = new ArrayList<>();
 
         sources.add(GameSourceQuery.fromGameQueryOperator(new GameTableScan(context, CombinedGameFilter.combine(gameQuery.gameFilters())), true, gameQuery.gameFilters()));
 
-        for (GamePlayerJoin playerJoin : gameQuery.playerJoins()) {
-            QueryOperator<Player> playerQueryPlan = selectBestQueryPlan(playerQueryPlanner.getPlayerQueryPlans(context, playerJoin.query(), false));
-            QueryOperator<Game> gameOp = new Distinct<>(context, new Sort<>(context, new GameIdsByEntities<>(context, playerQueryPlan, EntityType.PLAYER)));
-            sources.add(GameSourceQuery.fromGameQueryOperator(gameOp, playerJoin.isSimpleJoin(), List.of()));
-        }
-
-        for (GameTournamentJoin tournamentJoin : gameQuery.tournamentJoins()) {
-            QueryOperator<Tournament> tournamentQueryPlan = selectBestQueryPlan(tournamentQueryPlanner.getTournamentQueryPlans(context, tournamentJoin.query(), false));
-            QueryOperator<Game> gameOp = new Distinct<>(context, new Sort<>(context, new GameIdsByEntities<>(context, tournamentQueryPlan, EntityType.TOURNAMENT)));
-            sources.add(GameSourceQuery.fromGameQueryOperator(gameOp, tournamentJoin.isSimpleJoin(), List.of()));
+        for (GameEntityJoin<?> entityJoin : gameQuery.entityJoins()) {
+            QueryOperator<?> entityQueryPlan = selectBestQueryPlan(entityQueryPlanner.getQueryPlans(context, entityJoin.entityQuery(), false));
+            QueryOperator<Game> gameOp = new Distinct<>(context, new Sort<>(context, new GameIdsByEntities<>(context, entityQueryPlan, entityJoin.getEntityType())));
+            sources.add(GameSourceQuery.fromGameQueryOperator(gameOp, entityJoin.isSimpleJoin(), List.of()));
         }
 
         for (GameFilter gameFilter : gameQuery.gameFilters()) {
@@ -372,18 +365,13 @@ public class QueryPlanner {
         return candidateQueryPlans;
     }
 
-    public List<QueryOperator<Player>> getPlayerQueryPlans(QueryContext context, PlayerQuery playerQuery, boolean fullData) {
-        return this.playerQueryPlanner.getPlayerQueryPlans(context, playerQuery, fullData);
-    }
-
-    public List<QueryOperator<Tournament>> getTournamentQueryPlans(QueryContext context, TournamentQuery tournamentQuery, boolean fullData) {
-        return this.tournamentQueryPlanner.getTournamentQueryPlans(context, tournamentQuery, fullData);
+    public <T extends Entity & Comparable<T>> List<QueryOperator<T>> getEntityQueryPlans(QueryContext context, EntityQuery<T> entityQuery, boolean fullData) {
+        return this.entityQueryPlanner.getQueryPlans(context, entityQuery, fullData);
     }
 
     public void updatePlanners(QueryPlanner queryPlanner) {
         // TODO: This is ugly, needed for mocking. Perhaps change so planners are passed around instead of QueryContext?
-        this.playerQueryPlanner.setQueryPlanner(queryPlanner);
-        this.tournamentQueryPlanner.setQueryPlanner(queryPlanner);
+        this.entityQueryPlanner.setQueryPlanner(queryPlanner);
     }
 }
 

@@ -44,7 +44,7 @@ public class QueryPlannerTest {
     public void gamesBySinglePlayer() {
         GameQuery gameQuery = new GameQuery(db, List.of(new PlayerFilter(
                 db.getPlayer(10), PlayerFilter.PlayerColor.ANY, PlayerFilter.PlayerResult.ANY)),
-                null, null, QuerySortOrder.byId(), 0);
+                null, QuerySortOrder.byId(), 0);
         try (var txn = new DatabaseReadTransaction(db)) {
             QueryContext queryContext = new QueryContext(txn, false);
             List<QueryOperator<Game>> plans = db.queryPlanner().getGameQueryPlans(queryContext, gameQuery, true);
@@ -59,13 +59,14 @@ public class QueryPlannerTest {
 
     @Test
     public void gamesByPlayerNamePrefixAndTournamentDateRange() {
-        PlayerQuery playerQuery = new PlayerQuery(db, List.of(new PlayerNameFilter("K", "", true, false)));
-        TournamentQuery tournamentQuery = new TournamentQuery(db, List.of(
+        EntityQuery<Player> playerQuery = new EntityQuery<Player>(db, EntityType.PLAYER, List.of(new PlayerNameFilter("K", "", true, false)));
+        EntityQuery<Tournament> tournamentQuery = new EntityQuery<Tournament>(db, EntityType.TOURNAMENT, List.of(
                 new TournamentStartDateFilter(new Date(1900, 1, 1), new Date(2000, 1, 1))));
 
         GameQuery gameQuery = new GameQuery(db, null,
-                List.of(new GamePlayerJoin(playerQuery, GamePlayerJoinCondition.ANY)),
-                List.of(new GameTournamentJoin(tournamentQuery)),
+                List.of(
+                        new GameEntityJoin<>(playerQuery, GameQueryJoinCondition.ANY),
+                        new GameEntityJoin<>(tournamentQuery, null)),
                 QuerySortOrder.byId(), 0);
 
         try (var txn = new DatabaseReadTransaction(db)) {
@@ -82,13 +83,13 @@ public class QueryPlannerTest {
 
     @Test
     public void playersById() {
-        PlayerQuery playerQuery = new PlayerQuery(db, List.of(
+        EntityQuery<Player> playerQuery = new EntityQuery<Player>(db, EntityType.PLAYER, List.of(
                 new ManualFilter<>(new int[] { 10 }, EntityType.PLAYER)
         ));
 
         try (var txn = new DatabaseReadTransaction(db)) {
             QueryContext queryContext = new QueryContext(txn, false);
-            List<QueryOperator<Player>> plans = db.queryPlanner().getPlayerQueryPlans(queryContext, playerQuery, true);
+            List<QueryOperator<Player>> plans = db.queryPlanner().getEntityQueryPlans(queryContext, playerQuery, true);
 
             assertTrue(plans.size() >= 2);
             assertTrue(operatorExists(plans, List.of(EntityTableScan.class)));
@@ -99,7 +100,7 @@ public class QueryPlannerTest {
 
         try (var txn = new DatabaseReadTransaction(db)) {
             QueryContext queryContext = new QueryContext(txn, false);
-            List<QueryOperator<Player>> plans = db.queryPlanner().getPlayerQueryPlans(queryContext, playerQuery, false);
+            List<QueryOperator<Player>> plans = db.queryPlanner().getEntityQueryPlans(queryContext, playerQuery, false);
 
             assertTrue(plans.size() >= 2);
             assertTrue(operatorExists(plans, List.of(EntityTableScan.class)));
@@ -111,13 +112,13 @@ public class QueryPlannerTest {
 
     @Test
     public void playersByName() {
-        PlayerQuery playerQuery = new PlayerQuery(db, List.of(
+        EntityQuery<Player> playerQuery = new EntityQuery<Player>(db, EntityType.PLAYER, List.of(
                 new PlayerNameFilter("K", true, false)
         ));
 
         try (var txn = new DatabaseReadTransaction(db)) {
             QueryContext queryContext = new QueryContext(txn, false);
-            List<QueryOperator<Player>> plans = db.queryPlanner().getPlayerQueryPlans(queryContext, playerQuery, true);
+            List<QueryOperator<Player>> plans = db.queryPlanner().getEntityQueryPlans(queryContext, playerQuery, true);
 
             assertTrue(plans.size() >= 2);
             assertTrue(operatorExists(plans, List.of(EntityTableScan.class)));
@@ -130,13 +131,13 @@ public class QueryPlannerTest {
     @Test
     public void playersByGames() {
         GameQuery games = new GameQuery(db, List.of(new DateRangeFilter(new Date(1900), new Date(2000))));
-        PlayerQuery playerQuery = new PlayerQuery(db, List.of(
+        EntityQuery<Player> playerQuery = new EntityQuery<Player>(db, EntityType.PLAYER, List.of(
                 new PlayerNameFilter("K", true, false)
-        ), games, GamePlayerJoinCondition.ANY);
+        ), games, GameQueryJoinCondition.ANY);
 
         try (var txn = new DatabaseReadTransaction(db)) {
             QueryContext queryContext = new QueryContext(txn, false);
-            List<QueryOperator<Player>> plans = db.queryPlanner().getPlayerQueryPlans(queryContext, playerQuery, true);
+            List<QueryOperator<Player>> plans = db.queryPlanner().getEntityQueryPlans(queryContext, playerQuery, true);
 
             assertTrue(plans.size() >= 3);
             assertTrue(operatorExists(plans, List.of(EntityTableScan.class)));
@@ -147,25 +148,25 @@ public class QueryPlannerTest {
 
     @Test
     public void playersSortedByName() {
-        PlayerQuery playerQuery = new PlayerQuery(db, List.of(), QuerySortOrder.byPlayerDefaultIndex(), 4);
+        EntityQuery<Player> playerQuery = new EntityQuery<>(db, EntityType.PLAYER, List.of(), QuerySortOrder.byPlayerDefaultIndex(), 4);
 
         try (var txn = new DatabaseReadTransaction(db)) {
             QueryContext queryContext = new QueryContext(txn, false);
-            List<QueryOperator<Player>> plans = db.queryPlanner().getPlayerQueryPlans(queryContext, playerQuery, true);
+            List<QueryOperator<Player>> plans = db.queryPlanner().getEntityQueryPlans(queryContext, playerQuery, true);
             verifyQueryPlans(plans, true);
         }
     }
 
     @Test
     public void tournamentsByYearAndPlace() {
-        TournamentQuery tournamentQuery = new TournamentQuery(db, List.of(
+        EntityQuery<Tournament> tournamentQuery = new EntityQuery<Tournament>(db, EntityType.TOURNAMENT, List.of(
                 new TournamentStartDateFilter(new Date(1950), Date.unset()),
                 new TournamentPlaceFilter("London", true, true)
         ));
 
         try (var txn = new DatabaseReadTransaction(db)) {
             QueryContext queryContext = new QueryContext(txn, false);
-            List<QueryOperator<Tournament>> plans = db.queryPlanner().getTournamentQueryPlans(queryContext, tournamentQuery, true);
+            List<QueryOperator<Tournament>> plans = db.queryPlanner().getEntityQueryPlans(queryContext, tournamentQuery, true);
 
             assertTrue(plans.size() >= 2);
             assertTrue(operatorExists(plans, List.of(EntityTableScan.class)));
@@ -177,13 +178,13 @@ public class QueryPlannerTest {
 
     @Test
     public void tournamentsByYearAndTitle() {
-        TournamentQuery tournamentQuery = new TournamentQuery(db, List.of(
+        EntityQuery<Tournament> tournamentQuery = new EntityQuery<Tournament>(db, EntityType.TOURNAMENT, List.of(
             new TournamentYearTitleFilter(1948, "World-ch17 Tournament", true, false)
         ));
 
         try (var txn = new DatabaseReadTransaction(db)) {
             QueryContext queryContext = new QueryContext(txn, false);
-            List<QueryOperator<Tournament>> plans = db.queryPlanner().getTournamentQueryPlans(queryContext, tournamentQuery, true);
+            List<QueryOperator<Tournament>> plans = db.queryPlanner().getEntityQueryPlans(queryContext, tournamentQuery, true);
 
             assertTrue(plans.size() >= 2);
             assertTrue(operatorExists(plans, List.of(EntityTableScan.class)));
@@ -196,13 +197,13 @@ public class QueryPlannerTest {
     @Test
     public void tournamentsByGames() {
         GameQuery games = new GameQuery(db, List.of(new DateRangeFilter(new Date(1900), new Date(2000))));
-        TournamentQuery tournamentQuery = new TournamentQuery(db, List.of(
+        EntityQuery<Tournament> tournamentQuery = new EntityQuery<Tournament>(db, EntityType.TOURNAMENT, List.of(
                 new TournamentStartDateFilter(new Date(1950), Date.unset())
-        ), games);
+        ), games, null);
 
         try (var txn = new DatabaseReadTransaction(db)) {
             QueryContext queryContext = new QueryContext(txn, false);
-            List<QueryOperator<Tournament>> plans = db.queryPlanner().getTournamentQueryPlans(queryContext, tournamentQuery, true);
+            List<QueryOperator<Tournament>> plans = db.queryPlanner().getEntityQueryPlans(queryContext, tournamentQuery, true);
 
             assertTrue(plans.size() >= 2);
             assertTrue(operatorExists(plans, List.of(EntityTableScan.class)));

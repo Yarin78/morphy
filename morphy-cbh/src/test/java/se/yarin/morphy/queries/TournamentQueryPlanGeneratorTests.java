@@ -45,11 +45,11 @@ public class TournamentQueryPlanGeneratorTests {
     @Test
     public void tournamentById() {
         ManualFilter<Tournament> tournamentFilter = new ManualFilter<>(new int[]{7}, EntityType.TOURNAMENT);
-        TournamentQuery tq = new TournamentQuery(db, List.of(tournamentFilter));
+        EntityQuery<Tournament> tq = new EntityQuery<Tournament>(db, EntityType.TOURNAMENT, List.of(tournamentFilter));
 
         try (var txn = new DatabaseReadTransaction(db)) {
             QueryContext qc = new QueryContext(txn, false);
-            List<QueryOperator<Tournament>> plans = db.queryPlanner().getTournamentQueryPlans(qc, tq, true);
+            List<QueryOperator<Tournament>> plans = db.queryPlanner().getEntityQueryPlans(qc, tq, true);
 
             this.assertPlanExists(plans, new EntityTableScan<>(qc, EntityType.TOURNAMENT, tournamentFilter, 7, 8));
             this.assertPlanExists(plans, new EntityLookup<Tournament>(qc, EntityType.TOURNAMENT, new Manual<>(qc, Set.of(7)), null));
@@ -60,13 +60,13 @@ public class TournamentQueryPlanGeneratorTests {
     public void tournamentsByYearAndPlace() {
         TournamentStartDateFilter f1 = new TournamentStartDateFilter(new Date(1950), Date.unset());
         TournamentPlaceFilter f2 = new TournamentPlaceFilter("London", true, true);
-        TournamentQuery tournamentQuery = new TournamentQuery(db, List.of(f1, f2));
+        EntityQuery<Tournament> tournamentQuery = new EntityQuery<Tournament>(db, EntityType.TOURNAMENT, List.of(f1, f2));
 
         EntityFilter<Tournament> combinedFilter = CombinedFilter.combine(List.of(f1, f2));
 
         try (var txn = new DatabaseReadTransaction(db)) {
             QueryContext qc = new QueryContext(txn, false);
-            List<QueryOperator<Tournament>> plans = db.queryPlanner().getTournamentQueryPlans(qc, tournamentQuery, true);
+            List<QueryOperator<Tournament>> plans = db.queryPlanner().getEntityQueryPlans(qc, tournamentQuery, true);
 
             this.assertPlanExists(plans, new EntityTableScan<>(qc, EntityType.TOURNAMENT, combinedFilter));
             this.assertPlanExists(plans, new EntityIndexRangeScan<>(qc, EntityType.TOURNAMENT, combinedFilter,
@@ -78,13 +78,13 @@ public class TournamentQueryPlanGeneratorTests {
     public void tournamentsByGames() {
         GameQuery games = new GameQuery(db, List.of(new DateRangeFilter(new Date(1900), new Date(2000))));
         TournamentStartDateFilter filter = new TournamentStartDateFilter(new Date(1950), Date.unset());
-        TournamentQuery tournamentQuery = new TournamentQuery(db, List.of(filter), games);
+        EntityQuery<Tournament> tournamentQuery = new EntityQuery<Tournament>(db, EntityType.TOURNAMENT, List.of(filter), games, null);
 
         try (var txn = new DatabaseReadTransaction(db)) {
             QueryContext qc = new QueryContext(txn, false);
-            List<QueryOperator<Tournament>> plans = db.queryPlanner().getTournamentQueryPlans(qc, tournamentQuery, true);
+            List<QueryOperator<Tournament>> plans = db.queryPlanner().getEntityQueryPlans(qc, tournamentQuery, true);
 
-            QueryOperator<Tournament> tournamentsByGamesSub = new Distinct<>(qc, new Sort<>(qc, new TournamentIdsByGames(qc, mockOperator)));
+            QueryOperator<Tournament> tournamentsByGamesSub = new Distinct<>(qc, new Sort<>(qc, new EntityIdsByGames<Tournament>(qc, EntityType.TOURNAMENT, mockOperator, null)));
             this.assertPlanExists(plans, new EntityLookup<>(qc, EntityType.TOURNAMENT, tournamentsByGamesSub, filter));
             this.assertPlanExists(plans, new MergeJoin<>(qc, tournamentsByGamesSub, new EntityTableScan<>(qc, EntityType.TOURNAMENT, filter)));
             this.assertPlanExists(plans, new HashJoin<>(qc, new EntityIndexRangeScan<>(
@@ -95,16 +95,16 @@ public class TournamentQueryPlanGeneratorTests {
     @Test
     public void multipleSources() {
         TournamentYearTitleFilter yearFilter = new TournamentYearTitleFilter(2024, "Foo", true, false);
-        TournamentQuery tournamentQuery = new TournamentQuery(db, List.of(yearFilter), new GameQuery(db, List.of()), QuerySortOrder.byTournamentDefaultIndex(true), 0);
+        EntityQuery<Tournament> tournamentQuery = new EntityQuery<Tournament>(db, EntityType.TOURNAMENT, List.of(yearFilter), new GameQuery(db, List.of()), null, QuerySortOrder.byTournamentDefaultIndex(true), 0);
 
         // Ensure the TournamentIndexRangeScan is by default sorted after the TournamentIdsByGames operator
         doReturn(10000L).when(spyPlanner).entityRangeEstimate(any(), any(), any());
 
         try (var txn = new DatabaseReadTransaction(db)) {
             QueryContext qc = new QueryContext(txn, false);
-            List<QueryOperator<Tournament>> plans = db.queryPlanner().getTournamentQueryPlans(qc, tournamentQuery, true);
+            List<QueryOperator<Tournament>> plans = db.queryPlanner().getEntityQueryPlans(qc, tournamentQuery, true);
 
-            QueryOperator<Tournament> tournamentByGamesSub = new Distinct<>(qc, new Sort<>(qc, new TournamentIdsByGames(qc, mockOperator), QuerySortOrder.byId()));
+            QueryOperator<Tournament> tournamentByGamesSub = new Distinct<>(qc, new Sort<>(qc, new EntityIdsByGames<Tournament>(qc, EntityType.TOURNAMENT, mockOperator, null), QuerySortOrder.byId()));
             this.assertPlanExists(plans,
                     new Sort<>(qc,
                             new EntityLookup<>(qc, EntityType.TOURNAMENT, tournamentByGamesSub, yearFilter),

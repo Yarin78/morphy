@@ -1,12 +1,13 @@
 package se.yarin.morphy.queries.operations;
 
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import se.yarin.chess.GameResult;
 import se.yarin.morphy.Game;
 import se.yarin.morphy.entities.Entity;
 import se.yarin.morphy.entities.EntityType;
 import se.yarin.morphy.metrics.MetricsProvider;
-import se.yarin.morphy.queries.GamePlayerJoinCondition;
+import se.yarin.morphy.queries.GameQueryJoinCondition;
 import se.yarin.morphy.queries.QueryContext;
 import se.yarin.morphy.queries.QuerySortOrder;
 
@@ -15,10 +16,10 @@ import java.util.stream.Stream;
 
 public class EntityIdsByGames<T extends Entity & Comparable<T>> extends QueryOperator<T> {
     private final @NotNull QueryOperator<Game> source;
-    private final @NotNull GamePlayerJoinCondition joinCondition;
+    private final @Nullable GameQueryJoinCondition joinCondition;
     private final @NotNull EntityType entityType;
 
-    public EntityIdsByGames(@NotNull QueryContext queryContext, @NotNull EntityType entityType, @NotNull QueryOperator<Game> source, @NotNull GamePlayerJoinCondition joinCondition) {
+    public EntityIdsByGames(@NotNull QueryContext queryContext, @NotNull EntityType entityType, @NotNull QueryOperator<Game> source, @Nullable GameQueryJoinCondition joinCondition) {
         super(queryContext, false);
         this.entityType = entityType;
         this.source = source;
@@ -44,6 +45,10 @@ public class EntityIdsByGames<T extends Entity & Comparable<T>> extends QueryOpe
         return source.stream().flatMap(row -> {
             if (row.data().guidingText()) {
                 return Stream.of();
+            }
+            // TODO: Fix this
+            if (joinCondition == null) {
+                return Stream.of(new QueryData<>(row.data().tournamentId()));
             }
             return switch (joinCondition) {
                 case WHITE -> Stream.of(new QueryData<>(row.data().whitePlayerId()));

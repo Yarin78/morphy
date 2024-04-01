@@ -8,41 +8,35 @@ import se.yarin.morphy.games.filters.GameFilter;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class GameQuery {
     private final @NotNull Database database;
     private final @NotNull List<GameFilter> gameFilters;
-
-    private final @NotNull List<GamePlayerJoin> playerJoins;
-    private final @NotNull List<GameTournamentJoin> tournamentJoins;
+    private final @NotNull List<GameEntityJoin<?>> entityJoins;
 
     private final @Nullable QuerySortOrder<Game> sortOrder;
     private final int limit;  // 0 = all
 
     public GameQuery(@NotNull Database database,
                      @Nullable List<GameFilter> gameFilters) {
-        this(database, gameFilters, null, null);
+        this(database, gameFilters, null);
     }
 
     public GameQuery(@NotNull Database database,
                      @Nullable List<GameFilter> gameFilters,
-                     @Nullable List<GamePlayerJoin> playerJoins,
-                     @Nullable List<GameTournamentJoin> tournamentJoins) {
-        this(database, gameFilters, playerJoins, tournamentJoins, null, 0);
+                     @Nullable List<GameEntityJoin<?>> entityJoins) {
+        this(database, gameFilters, entityJoins, null, 0);
     }
 
     public GameQuery(@NotNull Database database,
                      @Nullable List<GameFilter> gameFilters,
-                     @Nullable List<GamePlayerJoin> playerJoins,
-                     @Nullable List<GameTournamentJoin> tournamentJoins,
+                     @Nullable List<GameEntityJoin<?>> entityJoins,
                      @Nullable QuerySortOrder<Game> sortOrder,
                      int limit) {
         this.database = database;
         this.gameFilters = gameFilters == null ? List.of() : List.copyOf(gameFilters);
-
-        this.playerJoins = playerJoins == null ? List.of() : List.copyOf(playerJoins);
-        this.tournamentJoins = tournamentJoins == null ? List.of() : List.copyOf(tournamentJoins);
-
+        this.entityJoins = entityJoins == null ? List.of() : List.copyOf(entityJoins);
         this.sortOrder = sortOrder == null ? QuerySortOrder.none() : sortOrder;
         this.limit = limit;
     }
@@ -55,12 +49,8 @@ public class GameQuery {
         return gameFilters;
     }
 
-    public @NotNull List<GamePlayerJoin> playerJoins() {
-        return playerJoins;
-    }
-
-    public @NotNull List<GameTournamentJoin> tournamentJoins() {
-        return tournamentJoins;
+    public @NotNull List<GameEntityJoin<?>> entityJoins() {
+        return entityJoins;
     }
 
     public @NotNull QuerySortOrder<Game> sortOrder() {
@@ -72,18 +62,8 @@ public class GameQuery {
     }
 
     public List<GameEntityJoin<?>> entityJoins(boolean filtersOnly) {
-        ArrayList<GameEntityJoin<?>> joins = new ArrayList<>();
-        for (GamePlayerJoin playerJoin : playerJoins) {
-            if (!playerJoin.query().filters().isEmpty() || !filtersOnly) {
-                joins.add(playerJoin);
-            }
-        }
-        for (GameTournamentJoin tournamentJoin : tournamentJoins) {
-            if (!tournamentJoin.query().filters().isEmpty() || !filtersOnly) {
-                joins.add(tournamentJoin);
-            }
-        }
-
-        return joins;
+        return entityJoins.stream()
+                .filter(entityJoin -> !entityJoin.entityQuery().filters().isEmpty() || !filtersOnly)
+                .collect(Collectors.toCollection(ArrayList::new));
     }
 }

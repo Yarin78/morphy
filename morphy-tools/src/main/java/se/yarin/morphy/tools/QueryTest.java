@@ -2,15 +2,13 @@ package se.yarin.morphy.tools;
 
 import se.yarin.chess.Date;
 import se.yarin.morphy.*;
-import se.yarin.morphy.entities.EntityType;
-import se.yarin.morphy.entities.ImmutableTournament;
-import se.yarin.morphy.entities.Player;
-import se.yarin.morphy.entities.Tournament;
+import se.yarin.morphy.entities.*;
 import se.yarin.morphy.entities.filters.*;
 import se.yarin.morphy.games.filters.DateRangeFilter;
 import se.yarin.morphy.games.filters.IsGameFilter;
-import se.yarin.morphy.games.filters.PlayerFilter;
 import se.yarin.morphy.queries.*;
+import se.yarin.morphy.queries.joins.GamePlayerFilterJoin;
+import se.yarin.morphy.queries.joins.GameTournamentFilterJoin;
 import se.yarin.morphy.queries.operations.*;
 
 import java.io.File;
@@ -58,8 +56,10 @@ public class QueryTest {
         EntityFilter<Player> playerFilter = new PlayerNameFilter("Car", "", true, false);
 
         GameQuery gameQuery = new GameQuery(db, null,
-                List.of(new GamePlayerJoin(new PlayerQuery(db, List.of(playerFilter)), GamePlayerJoinCondition.ANY)),
-                List.of(new GameTournamentJoin(new TournamentQuery(db, List.of(tf1, tf2)))));
+                List.of(
+                        new GameEntityJoin<>(new EntityQuery<>(db, EntityType.PLAYER, List.of(playerFilter)), GameQueryJoinCondition.ANY),
+                        new GameEntityJoin<>(new EntityQuery<>(db, EntityType.TOURNAMENT, List.of(tf1, tf2)), null)
+                ));
 
         try (var txn = new DatabaseReadTransaction(db)) {
             QueryContext context = new QueryContext(txn, true);
@@ -85,11 +85,11 @@ public class QueryTest {
     public void playersFrom18thCentury() {
         try (var txn = new DatabaseReadTransaction(db)) {
             GameQuery games = new GameQuery(db, List.of(new DateRangeFilter(Date.unset(), new Date(1900, 1, 1))));
-            PlayerQuery players = new PlayerQuery(db, null, games, GamePlayerJoinCondition.ANY);
+            EntityQuery<Player> players = new EntityQuery<Player>(db, EntityType.PLAYER, null, games, GameQueryJoinCondition.ANY);
 
             QueryContext context = new QueryContext(txn, true);
 
-            List<QueryOperator<Player>> queryPlans = db.queryPlanner().getPlayerQueryPlans(context, players, true);
+            List<QueryOperator<Player>> queryPlans = db.queryPlanner().getEntityQueryPlans(context, players, true);
             System.out.println(queryPlans.size() + " query plans");
             System.out.println();
 
@@ -114,8 +114,7 @@ public class QueryTest {
 
             GameQuery gameQuery = new GameQuery(db,
                     List.of(new DateRangeFilter(new Date(2000, 1, 1), Date.unset())),
-                    List.of(new GamePlayerJoin(PlayerQuery.manual(db, List.of(carlsen)), GamePlayerJoinCondition.WHITE)),
-                    null);
+                    List.of(new GameEntityJoin<>(EntityQuery.manual(db, EntityType.PLAYER, List.of(carlsen)), GameQueryJoinCondition.WHITE)));
             QueryContext context = new QueryContext(txn, true);
 
             List<QueryOperator<Game>> queryPlans = context.queryPlanner().getGameQueryPlans(context, gameQuery, true);
@@ -146,8 +145,8 @@ public class QueryTest {
             TournamentStartDateFilter t1 = new TournamentStartDateFilter(new Date(1950, 1, 1), new Date(2020, 1, 1));
             TournamentTitleFilter t2 = new TournamentTitleFilter("Tata", true, false);
 
-            GameTournamentFilter games1 = new GameTournamentFilter(context, games, t1);
-            GameTournamentFilter games2 = new GameTournamentFilter(context, games1, t2);
+            GameEntityFilter<Tournament> games1 = new GameEntityFilter<Tournament>(context, games, EntityType.TOURNAMENT, t1, new GameTournamentFilterJoin(t1));
+            GameEntityFilter<Tournament> games2 = new GameEntityFilter<Tournament>(context, games1, EntityType.TOURNAMENT, t2, new GameTournamentFilterJoin(t2));
 
             detailedQueryExecution(games2);
         }
@@ -172,7 +171,7 @@ public class QueryTest {
             GameIdsByEntities<Tournament> gameIds = new GameIdsByEntities<>(context, new EntityIndexRangeScan<>(context, EntityType.TOURNAMENT,
                     tournamentFilter, startKey, endKey, false), EntityType.TOURNAMENT);
             GameLookup worldChGames = new GameLookup(context, gameIds, new IsGameFilter());
-            QueryOperator<Player> playerIds = new Distinct<>(context, new Sort<>(context, new PlayerIdsByGames(context, worldChGames, GamePlayerJoinCondition.ANY)));
+            QueryOperator<Player> playerIds = new Distinct<>(context, new Sort<>(context, new EntityIdsByGames<Player>(context, EntityType.PLAYER, worldChGames, GameQueryJoinCondition.ANY)));
 
             //playerIds.stream().forEach(id -> System.out.println(txn.playerTransaction().get(id).lastName()));
             QueryOperator<Game> allGameIds = new Distinct<>(context, new Sort<>(context, new GameIdsByEntities<Player>(context, playerIds, EntityType.PLAYER)));
@@ -230,8 +229,8 @@ public class QueryTest {
         PlayerNameFilter playerFilter = new PlayerNameFilter(namePrefix, "", true, false);
 
         GameTableScan games = new GameTableScan(context, new IsGameFilter());
-        GamePlayerFilter games1 = new GamePlayerFilter(context, games, playerFilter, GamePlayerJoinCondition.ANY);
-        GameTournamentFilter games2 = new GameTournamentFilter(context, games1, tournamentFilter);
+        GameEntityFilter<Player> games1 = new GameEntityFilter<Player>(context, games, EntityType.PLAYER, playerFilter, new GamePlayerFilterJoin(GameQueryJoinCondition.ANY, playerFilter));
+        GameEntityFilter<Tournament> games2 = new GameEntityFilter<>(context, games1, EntityType.TOURNAMENT, tournamentFilter, new GameTournamentFilterJoin(tournamentFilter));
 
         return games2;
     }
@@ -242,7 +241,8 @@ public class QueryTest {
         String namePrefix = "Car";
 
         QueryContext context = new QueryContext(txn, true);
-        GamePlayerFilter games = new GamePlayerFilter(context,
+        PlayerNameFilter playerNameFilter = new PlayerNameFilter(namePrefix, "", true, false);
+        GameEntityFilter<Player> games = new GameEntityFilter<Player>(context,
                 new GameLookup(context,
                     new GameIdsByEntities<>(context,
                             new EntityTableScan<>(
@@ -255,7 +255,8 @@ public class QueryTest {
                                         new TournamentCategoryFilter(20, 99)
                             ))), EntityType.TOURNAMENT),
                     new IsGameFilter()),
-                new PlayerNameFilter(namePrefix, "", true, false), GamePlayerJoinCondition.ANY);
+                EntityType.PLAYER,
+                playerNameFilter, new GamePlayerFilterJoin(GameQueryJoinCondition.ANY, playerNameFilter));
 
         return games;
     }
@@ -278,7 +279,7 @@ public class QueryTest {
         CombinedFilter<Tournament> tournamentFilter = new CombinedFilter<>(List.of(
                 new TournamentStartDateFilter(new Date(2000, 1, 1), new Date(3000, 1, 1)),
                 new TournamentCategoryFilter(20, 99)));
-        games = new GameTournamentFilter(context, games, tournamentFilter);
+        games = new GameEntityFilter<>(context, games, EntityType.TOURNAMENT, tournamentFilter, new GameTournamentFilterJoin(tournamentFilter));
 
         return games;
     }

@@ -1,6 +1,6 @@
 package se.yarin.morphy.queries;
 
-public enum GamePlayerJoinCondition {
+public enum GameQueryJoinCondition {
     ANY,
     BOTH,
     WHITE,

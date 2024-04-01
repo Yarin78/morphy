@@ -43,4 +43,5 @@ module se.yarin.morphy.cbh {
     exports se.yarin.morphy.text;
     exports se.yarin.morphy.entities.filters;
     exports se.yarin.morphy.games.annotations;
+    exports se.yarin.morphy.queries.joins;
 }
