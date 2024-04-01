@@ -1,11 +1,13 @@
 package se.yarin.morphy.queries.operations;
 
 import org.jetbrains.annotations.NotNull;
+import se.yarin.chess.GameResult;
 import se.yarin.morphy.Game;
 import se.yarin.morphy.entities.EntityType;
 import se.yarin.morphy.entities.Player;
 import se.yarin.morphy.entities.Tournament;
 import se.yarin.morphy.metrics.MetricsProvider;
+import se.yarin.morphy.queries.GamePlayerJoinCondition;
 import se.yarin.morphy.queries.QueryContext;
 import se.yarin.morphy.queries.QuerySortOrder;
 
@@ -14,10 +16,12 @@ import java.util.stream.Stream;
 
 public class PlayerIdsByGames extends QueryOperator<Player> {
     private final @NotNull QueryOperator<Game> source;
+    private final @NotNull GamePlayerJoinCondition joinCondition;
 
-    public PlayerIdsByGames(@NotNull QueryContext queryContext, @NotNull QueryOperator<Game> source) {
+    public PlayerIdsByGames(@NotNull QueryContext queryContext, @NotNull QueryOperator<Game> source, @NotNull GamePlayerJoinCondition joinCondition) {
         super(queryContext, false);
         this.source = source;
+        this.joinCondition = joinCondition;
     }
 
     @Override
@@ -35,8 +39,33 @@ public class PlayerIdsByGames extends QueryOperator<Player> {
 
     @Override
     public Stream<QueryData<Player>> operatorStream() {
-        // TODO: If not a game, map to no players
-        return source.stream().flatMap(row -> Stream.of(new QueryData<>(row.data().whitePlayerId()), new QueryData<>(row.data().blackPlayerId())));
+        return source.stream().flatMap(row -> {
+            if (row.data().guidingText()) {
+                return Stream.of();
+            }
+            return switch (joinCondition) {
+                case WHITE -> Stream.of(new QueryData<>(row.data().whitePlayerId()));
+                case BLACK -> Stream.of(new QueryData<>(row.data().blackPlayerId()));
+                case ANY, BOTH ->
+                        Stream.of(new QueryData<>(row.data().whitePlayerId()), new QueryData<>(row.data().blackPlayerId()));
+                case WINNER -> {
+                    if (row.data().result() == GameResult.WHITE_WINS) {
+                        yield Stream.of(new QueryData<>(row.data().whitePlayerId()));
+                    } else if (row.data().result() == GameResult.BLACK_WINS) {
+                        yield Stream.of(new QueryData<>(row.data().blackPlayerId()));
+                    }
+                    yield Stream.of();
+                }
+                case LOSER -> {
+                    if (row.data().result() == GameResult.WHITE_WINS) {
+                        yield Stream.of(new QueryData<>(row.data().blackPlayerId()));
+                    } else if (row.data().result() == GameResult.BLACK_WINS) {
+                        yield Stream.of(new QueryData<>(row.data().whitePlayerId()));
+                    }
+                    yield Stream.of();
+                }
+            };
+        });
     }
 
     @Override

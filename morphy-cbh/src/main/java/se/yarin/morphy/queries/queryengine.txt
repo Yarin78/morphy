@@ -255,11 +255,13 @@ Only one of the first two will be needed. If there is a game join, it's a mandat
 are optional and can be filtered out later.
 
 When merging the multiple source, we may have to use other joins than MergeJoin since the sorting order might be different.
-If a specific sorting order is requested, and one of the sources come in this order, we prefer that one and hash join
-the other sources to maintain the sorting order.
+If a specific sorting order is requested, and one of the sources come in this order, we should always consider
 
-Once all sources have been joined, we apply the predicates, if necessary doing an entity lookup to ensure we have the full data.
-Finally, if the sort order is wrong, we sort.
+having this source first and hash join the other sources to maintain the sorting order.
+
+Once all sources have been joined, we apply the predicates that's not been covered by the source.
+If necessary we do an entity lookup to ensure we have the full data.
+Finally, we sort, de-duplicate and limit the data if needed.
 
 Pushing down filters
 --------------------

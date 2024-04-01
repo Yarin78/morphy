@@ -73,6 +73,9 @@ public class TournamentIndexRangeScan extends QueryOperator<Tournament> {
         if (tournamentFilter != null) {
             params.add("filter: " + tournamentFilter);
         }
+        if (reverse) {
+            params.add("reverse: true");
+        }
         return "TournamentIndexRangeScan(" + String.join(", ", params) + ")";
     }
 

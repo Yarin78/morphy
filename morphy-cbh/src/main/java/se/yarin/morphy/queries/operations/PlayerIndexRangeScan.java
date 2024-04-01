@@ -73,6 +73,9 @@ public class PlayerIndexRangeScan extends QueryOperator<Player> {
         if (playerFilter != null) {
             params.add("filter: " + playerFilter);
         }
+        if (reverse) {
+            params.add("reverse: true");
+        }
         return "PlayerIndexRangeScan(" + String.join(", ", params) + ")";
     }
 

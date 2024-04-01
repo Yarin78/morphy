@@ -4,13 +4,19 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import se.yarin.morphy.Game;
 import se.yarin.morphy.entities.Player;
+import se.yarin.morphy.entities.filters.EntityFilter;
+import se.yarin.morphy.queries.operations.HashJoin;
 import se.yarin.morphy.queries.operations.MergeJoin;
 import se.yarin.morphy.queries.operations.QueryOperator;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class PlayerSourceQuery implements SourceQuery<Player> {
-    private final @Nullable QueryOperator<Player> playerOperator;
+    private final @NotNull QueryOperator<Player> playerOperator;
 
     private final boolean optional;
+    private final List<EntityFilter<Player>> filtersCovered;
     private long estimateRows = -1;
 
     public boolean isOptional() {
@@ -21,19 +27,31 @@ public class PlayerSourceQuery implements SourceQuery<Player> {
         return playerOperator.context();
     }
 
-    private PlayerSourceQuery(@Nullable QueryOperator<Player> playerOperator,
-                            boolean optional) {
+    public @NotNull List<EntityFilter<Player>> filtersCovered() {
+        return filtersCovered;
+    }
+
+    private PlayerSourceQuery(@NotNull QueryOperator<Player> playerOperator,
+                            boolean optional,
+                            @NotNull List<EntityFilter<Player>> filtersCovered) {
         this.playerOperator = playerOperator;
         this.optional = optional;
+        this.filtersCovered = filtersCovered;
     }
 
 
-    public static PlayerSourceQuery fromPlayerQueryOperator(@NotNull QueryOperator<Player> playerQueryOperator, boolean optional) {
-        return new PlayerSourceQuery(playerQueryOperator, optional);
+    public static PlayerSourceQuery fromPlayerQueryOperator(@NotNull QueryOperator<Player> playerQueryOperator, boolean optional, @NotNull List<EntityFilter<Player>> filtersCovered) {
+        return new PlayerSourceQuery(playerQueryOperator, optional, filtersCovered);
     }
 
     public static PlayerSourceQuery join(@NotNull PlayerSourceQuery left, @NotNull PlayerSourceQuery right) {
-        return new PlayerSourceQuery(new MergeJoin<>(left.context(), left.playerOperator, right.playerOperator), false);
+        ArrayList<EntityFilter<Player>> coveredFilters = new ArrayList<>();
+        coveredFilters.addAll(left.filtersCovered());
+        coveredFilters.addAll(right.filtersCovered());
+        if (left.playerOperator.sortOrder().isSameOrStronger(QuerySortOrder.byId()) && right.playerOperator.sortOrder().isSameOrStronger(QuerySortOrder.byId())) {
+            return new PlayerSourceQuery(new MergeJoin<>(left.context(), left.playerOperator, right.playerOperator), false, coveredFilters);
+        }
+        return new PlayerSourceQuery(new HashJoin<>(left.context(), left.playerOperator, right.playerOperator), false, coveredFilters);
     }
 
     public QueryOperator<Player> playerOperator() {

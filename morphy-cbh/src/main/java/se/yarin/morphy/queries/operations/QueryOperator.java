@@ -249,12 +249,6 @@ public abstract class QueryOperator<T extends IdObject> {
 
     public String debugString(boolean includeCost) {
         StringBuilder sb = new StringBuilder();
-        buildDebugString(sb, 0, includeCost);
-        return sb.toString();
-    }
-
-    public void buildDebugString(StringBuilder sb, int indent, boolean includeCost) {
-        sb.append("  ".repeat(indent));
         sb.append(this);
         if (includeCost) {
             OperatorCost cost = getOperatorCost();
@@ -266,8 +260,9 @@ public abstract class QueryOperator<T extends IdObject> {
         }
         sb.append("\n");
         for (QueryOperator<?> source : sources()) {
-            source.buildDebugString(sb, indent + 1, includeCost);
+            sb.append(indent(source.debugString(includeCost))).append("\n");
         }
+        return sb.toString();
     }
 
     protected String indent(String s) {

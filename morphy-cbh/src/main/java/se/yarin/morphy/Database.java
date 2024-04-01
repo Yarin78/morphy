@@ -69,7 +69,7 @@ public class Database implements EntityRetriever, AutoCloseable {
 
     @NotNull private final GameAdapter gameAdapter;
     @NotNull private final DatabaseContext context;
-    @NotNull private final QueryPlanner queryPlanner;
+    @NotNull private QueryPlanner queryPlanner; // Should this really be in the Database instance!?
 
     @NotNull public String name() {
         return databaseName;
@@ -146,6 +146,10 @@ public class Database implements EntityRetriever, AutoCloseable {
     }
 
     @NotNull public QueryPlanner queryPlanner() { return queryPlanner; }
+
+    public void setQueryPlanner(@NotNull QueryPlanner queryPlanner) {
+        this.queryPlanner = queryPlanner;
+    }
 
     /**
      * Creates a new in-memory ChessBase database.

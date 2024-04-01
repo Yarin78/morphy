@@ -172,7 +172,7 @@ public class QueryTest {
             GameIdsByEntities<Tournament> gameIds = new GameIdsByEntities<>(context, new TournamentIndexRangeScan(context,
                     tournamentFilter, startKey, endKey, false), EntityType.TOURNAMENT);
             GameLookup worldChGames = new GameLookup(context, gameIds, new IsGameFilter());
-            QueryOperator<Player> playerIds = new Distinct<>(context, new Sort<>(context, new PlayerIdsByGames(context, worldChGames)));
+            QueryOperator<Player> playerIds = new Distinct<>(context, new Sort<>(context, new PlayerIdsByGames(context, worldChGames, GamePlayerJoinCondition.ANY)));
 
             //playerIds.stream().forEach(id -> System.out.println(txn.playerTransaction().get(id).lastName()));
             QueryOperator<Game> allGameIds = new Distinct<>(context, new Sort<>(context, new GameIdsByEntities<Player>(context, playerIds, EntityType.PLAYER)));

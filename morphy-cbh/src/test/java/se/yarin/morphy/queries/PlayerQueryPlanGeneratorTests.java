@@ -1,0 +1,196 @@
+package se.yarin.morphy.queries;
+
+import org.junit.Before;
+import org.junit.Test;
+import se.yarin.chess.Date;
+import se.yarin.morphy.Database;
+import se.yarin.morphy.DatabaseReadTransaction;
+import se.yarin.morphy.Game;
+import se.yarin.morphy.ResourceLoader;
+import se.yarin.morphy.entities.EntityType;
+import se.yarin.morphy.entities.Player;
+import se.yarin.morphy.entities.filters.CombinedFilter;
+import se.yarin.morphy.entities.filters.EntityFilter;
+import se.yarin.morphy.entities.filters.ManualFilter;
+import se.yarin.morphy.entities.filters.PlayerNameFilter;
+import se.yarin.morphy.queries.operations.*;
+
+import static org.mockito.Mockito.*;
+
+import java.util.List;
+import java.util.Set;
+
+import static org.junit.Assert.assertEquals;
+
+
+public class PlayerQueryPlanGeneratorTests {
+    private Database db;
+    private QueryPlanner spyPlanner;
+
+    @Before
+    public void setupTestDb() {
+        this.db = ResourceLoader.openWorldChDatabase();
+
+        QueryPlanner planner = new QueryPlanner(db);
+        this.spyPlanner = spy(planner);
+        this.db.setQueryPlanner(this.spyPlanner);
+    }
+
+    @Test
+    public void playerById() {
+        ManualFilter<Player> playerFilter = new ManualFilter<>(new int[]{7}, EntityType.PLAYER);
+        PlayerQuery playerQuery = new PlayerQuery(db, List.of(playerFilter));
+
+        try (var txn = new DatabaseReadTransaction(db)) {
+            QueryContext qc = new QueryContext(txn, false);
+            List<QueryOperator<Player>> plans = db.queryPlanner().getPlayerQueryPlans(qc, playerQuery, true);
+
+            this.assertPlanExists(plans, new PlayerTableScan(qc, playerFilter, 7, 8));
+            this.assertPlanExists(plans, new PlayerLookup(qc, new Manual<>(qc, Set.of(7)), null));
+        }
+    }
+
+    @Test
+    public void playerByGameQuery() {
+        PlayerQuery playerQuery = new PlayerQuery(db, List.of(), new GameQuery(db, List.of()), GamePlayerJoinCondition.ANY, QuerySortOrder.byPlayerDefaultIndex(), 0);
+
+        QueryOperator<Game> mockOperator = mock(QueryOperator.class);
+        when(mockOperator.debugString(anyBoolean())).thenReturn("mock");
+        when(mockOperator.getOperatorCost()).thenReturn(ImmutableOperatorCost.builder().build());
+
+        doReturn(List.of(mockOperator)).when(spyPlanner).getGameQueryPlans(any(), any(), anyBoolean());
+
+        try (var txn = new DatabaseReadTransaction(db)) {
+            QueryContext qc = new QueryContext(txn, false);
+            List<QueryOperator<Player>> plans = db.queryPlanner().getPlayerQueryPlans(qc, playerQuery, true);
+
+            this.assertPlanExists(plans,
+                    new Sort<>(qc,
+                            new PlayerLookup(qc,
+                                    new Distinct<>(qc,
+                                            new Sort<>(qc,
+                                                    new PlayerIdsByGames(qc, mockOperator, GamePlayerJoinCondition.ANY), QuerySortOrder.byId())), null),
+                                                    QuerySortOrder.byPlayerDefaultIndex()));
+        }
+    }
+
+    @Test
+    public void playerByPrefixNameFilter() {
+        PlayerNameFilter kaspFilter = new PlayerNameFilter("Kasp", "", true, false);
+        PlayerQuery pq = new PlayerQuery(db, List.of(kaspFilter));
+
+        QueryPlanner planner = new QueryPlanner(db);
+        try (var txn = new DatabaseReadTransaction(db)) {
+            QueryContext qc = new QueryContext(txn, false);
+            List<QueryOperator<Player>> plans = planner.getPlayerQueryPlans(qc, pq, true);
+
+            this.assertPlanExists(plans, new PlayerTableScan(qc, kaspFilter));
+            this.assertPlanExists(plans, new PlayerIndexRangeScan(qc, kaspFilter, Player.of("Kasp", ""), Player.of("Kaspzzz", ""), false));
+        }
+    }
+
+    @Test
+    public void playerByIdSortedByName() {
+        ManualFilter<Player> manualFilter = new ManualFilter<>(new int[]{8, 12, 15, 17}, EntityType.PLAYER);
+        PlayerQuery pq = new PlayerQuery(db, List.of(manualFilter), QuerySortOrder.byPlayerDefaultIndex(), 0);
+
+        QueryPlanner planner = new QueryPlanner(db);
+        try (var txn = new DatabaseReadTransaction(db)) {
+            QueryContext qc = new QueryContext(txn, false);
+            List<QueryOperator<Player>> plans = planner.getPlayerQueryPlans(qc, pq, true);
+
+            assertEquals(3, plans.size());
+            this.assertPlanExists(plans, new Sort(qc, new PlayerTableScan(qc, manualFilter, 8, 18), QuerySortOrder.byPlayerDefaultIndex()));
+            this.assertPlanExists(plans, new Sort(qc, new PlayerLookup(qc, new Manual<>(qc, Set.of(8, 12, 15, 17)), null), QuerySortOrder.byPlayerDefaultIndex()));
+            this.assertPlanExists(plans, new PlayerIndexRangeScan(qc, manualFilter, null, null, false));
+        }
+    }
+
+    @Test
+    public void playerByCaseInsensitiveNameExactMatch() {
+        PlayerNameFilter kasparovFilter = new PlayerNameFilter("kasparov", "garry", false, true);
+        PlayerQuery pq = new PlayerQuery(db, List.of(kasparovFilter));
+
+        QueryPlanner planner = new QueryPlanner(db);
+        try (var txn = new DatabaseReadTransaction(db)) {
+            QueryContext qc = new QueryContext(txn, false);
+            List<QueryOperator<Player>> plans = planner.getPlayerQueryPlans(qc, pq, true);
+
+            this.assertPlanExists(plans, new PlayerTableScan(qc, kasparovFilter));
+            this.assertPlanExists(plans, new PlayerIndexRangeScan(qc, kasparovFilter, null, null, false));
+        }
+    }
+
+    @Test
+    public void multiplePlayerNameFilters() {
+        PlayerNameFilter f1 = new PlayerNameFilter("Car", "", true, false);
+        PlayerNameFilter f2 = new PlayerNameFilter("Kar", "", true, false);
+        EntityFilter<Player> combined = CombinedFilter.combine(List.of(f1, f2));
+
+        PlayerQuery pq = new PlayerQuery(db, List.of(f1, f2));
+
+        QueryPlanner planner = new QueryPlanner(db);
+        try (var txn = new DatabaseReadTransaction(db)) {
+            QueryContext qc = new QueryContext(txn, false);
+            List<QueryOperator<Player>> plans = planner.getPlayerQueryPlans(qc, pq, true);
+
+            this.assertPlanExists(plans, new PlayerTableScan(qc, combined));
+            this.assertPlanExists(plans, new PlayerIndexRangeScan(qc, combined, Player.of("Kar", ""), Player.of("Carzzz", ""), false));
+        }
+    }
+
+    @Test
+    public void multipleSources() {
+        PlayerNameFilter kaspFilter = new PlayerNameFilter("Kasp", "", true, false);
+        PlayerQuery playerQuery = new PlayerQuery(db, List.of(kaspFilter), new GameQuery(db, List.of()), GamePlayerJoinCondition.ANY, QuerySortOrder.byPlayerDefaultIndex(true), 0);
+
+        QueryOperator<Game> mockOperator = mock(QueryOperator.class);
+        when(mockOperator.debugString(anyBoolean())).thenReturn("mock");
+        when(mockOperator.getOperatorCost()).thenReturn(ImmutableOperatorCost.builder().build());
+
+        // Ensure the PlayerIndexRangeScan is by default sorted after the PlayerIdsByGames operator
+        doReturn(10000L).when(spyPlanner).playerRangeEstimate(any(), any(), any());
+        doReturn(List.of(mockOperator)).when(spyPlanner).getGameQueryPlans(any(), any(), anyBoolean());
+
+        try (var txn = new DatabaseReadTransaction(db)) {
+            QueryContext qc = new QueryContext(txn, false);
+            List<QueryOperator<Player>> plans = db.queryPlanner().getPlayerQueryPlans(qc, playerQuery, true);
+
+            QueryOperator<Player> playersByGamesSub = new Distinct<>(qc, new Sort<>(qc, new PlayerIdsByGames(qc, mockOperator, GamePlayerJoinCondition.ANY), QuerySortOrder.byId()));
+            this.assertPlanExists(plans,
+                    new Sort<>(qc,
+                            new PlayerLookup(qc, playersByGamesSub, kaspFilter),
+                            QuerySortOrder.byPlayerDefaultIndex(true)));
+
+            this.assertPlanExists(plans,
+                    new Sort<>(qc,
+                            new MergeJoin<>(qc, playersByGamesSub, new PlayerTableScan(qc, kaspFilter)),
+                            QuerySortOrder.byPlayerDefaultIndex(true)));
+
+            QueryOperator<Player> rangeScanOp = new PlayerIndexRangeScan(qc, kaspFilter, Player.of("Kasp", ""), Player.of("Kaspzzz", ""), true);
+            this.assertPlanExists(plans,
+                    new Sort<>(qc,
+                            new HashJoin<>(qc, playersByGamesSub, rangeScanOp),
+                            QuerySortOrder.byPlayerDefaultIndex(true)));
+
+            this.assertPlanExists(plans, new HashJoin<>(qc, rangeScanOp, playersByGamesSub));
+        }
+    }
+
+    private void showPlans(List<QueryOperator<Player>> plans) {
+        for (QueryOperator<Player> plan : plans) {
+            System.out.println(plan.debugString(false));
+            System.out.println("---");
+        }
+    }
+
+    private void assertPlanExists(List<QueryOperator<Player>> plans, QueryOperator<Player> expectedPlan) {
+        String expected = expectedPlan.debugString(false);
+        for (QueryOperator<Player> plan : plans) {
+            if (plan.debugString(false).equals(expected)) {
+                return;
+            }
+        }
+        throw new AssertionError("Expected plan not found: " + expected + "\nActual plans: " + plans.stream().map(p -> p.debugString(false)).reduce("", (a, b) -> a + "\n" + b));
+    }
+}

@@ -28,6 +28,14 @@ public class ManualFilter<T extends IdObject> implements EntityFilter<T> {
         return ids;
     }
 
+    public int minId() {
+        return ids.stream().mapToInt(Integer::intValue).min().orElse(0);
+    }
+
+    public int maxId() {
+        return ids.stream().mapToInt(Integer::intValue).max().orElse(Integer.MAX_VALUE);
+    }
+
     @Override
     public boolean matches(@NotNull T item) {
         return ids.contains(item.id());
