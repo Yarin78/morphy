@@ -34,6 +34,7 @@ public class PlayerQueryPlanGeneratorTests {
         QueryPlanner planner = new QueryPlanner(db);
         this.spyPlanner = spy(planner);
         this.db.setQueryPlanner(this.spyPlanner);
+        planner.updatePlanners(this.spyPlanner);
 
         this.mockOperator = mock(QueryOperator.class);
         when(mockOperator.debugString(anyBoolean())).thenReturn("mock");
@@ -52,8 +53,8 @@ public class PlayerQueryPlanGeneratorTests {
             QueryContext qc = new QueryContext(txn, false);
             List<QueryOperator<Player>> plans = db.queryPlanner().getPlayerQueryPlans(qc, playerQuery, true);
 
-            this.assertPlanExists(plans, new PlayerTableScan(qc, playerFilter, 7, 8));
-            this.assertPlanExists(plans, new PlayerLookup(qc, new Manual<>(qc, Set.of(7)), null));
+            this.assertPlanExists(plans, new EntityTableScan<>(qc, EntityType.PLAYER, playerFilter, 7, 8));
+            this.assertPlanExists(plans, new EntityLookup(qc, EntityType.PLAYER, new Manual<>(qc, Set.of(7)), null));
         }
     }
 
@@ -67,7 +68,7 @@ public class PlayerQueryPlanGeneratorTests {
 
             this.assertPlanExists(plans,
                     new Sort<>(qc,
-                            new PlayerLookup(qc,
+                            new EntityLookup<>(qc, EntityType.PLAYER,
                                     new Distinct<>(qc,
                                             new Sort<>(qc,
                                                     new PlayerIdsByGames(qc, mockOperator, GamePlayerJoinCondition.ANY), QuerySortOrder.byId())), null),
@@ -85,8 +86,8 @@ public class PlayerQueryPlanGeneratorTests {
             QueryContext qc = new QueryContext(txn, false);
             List<QueryOperator<Player>> plans = planner.getPlayerQueryPlans(qc, pq, true);
 
-            this.assertPlanExists(plans, new PlayerTableScan(qc, kaspFilter));
-            this.assertPlanExists(plans, new PlayerIndexRangeScan(qc, kaspFilter, Player.of("Kasp", ""), Player.of("Kaspzzz", ""), false));
+            this.assertPlanExists(plans, new EntityTableScan<>(qc, EntityType.PLAYER, kaspFilter));
+            this.assertPlanExists(plans, new EntityIndexRangeScan<>(qc, EntityType.PLAYER, kaspFilter, Player.of("Kasp", ""), Player.of("Kaspzzz", ""), false));
         }
     }
 
@@ -101,9 +102,9 @@ public class PlayerQueryPlanGeneratorTests {
             List<QueryOperator<Player>> plans = planner.getPlayerQueryPlans(qc, pq, true);
 
             assertEquals(3, plans.size());
-            this.assertPlanExists(plans, new Sort(qc, new PlayerTableScan(qc, manualFilter, 8, 18), QuerySortOrder.byPlayerDefaultIndex()));
-            this.assertPlanExists(plans, new Sort(qc, new PlayerLookup(qc, new Manual<>(qc, Set.of(8, 12, 15, 17)), null), QuerySortOrder.byPlayerDefaultIndex()));
-            this.assertPlanExists(plans, new PlayerIndexRangeScan(qc, manualFilter, null, null, false));
+            this.assertPlanExists(plans, new Sort<>(qc, new EntityTableScan<>(qc, EntityType.PLAYER, manualFilter, 8, 18), QuerySortOrder.byPlayerDefaultIndex()));
+            this.assertPlanExists(plans, new Sort<>(qc, new EntityLookup<Player>(qc, EntityType.PLAYER, new Manual<>(qc, Set.of(8, 12, 15, 17)), null), QuerySortOrder.byPlayerDefaultIndex()));
+            this.assertPlanExists(plans, new EntityIndexRangeScan<>(qc, EntityType.PLAYER, manualFilter, null, null, false));
         }
     }
 
@@ -117,8 +118,8 @@ public class PlayerQueryPlanGeneratorTests {
             QueryContext qc = new QueryContext(txn, false);
             List<QueryOperator<Player>> plans = planner.getPlayerQueryPlans(qc, pq, true);
 
-            this.assertPlanExists(plans, new PlayerTableScan(qc, kasparovFilter));
-            this.assertPlanExists(plans, new PlayerIndexRangeScan(qc, kasparovFilter, null, null, false));
+            this.assertPlanExists(plans, new EntityTableScan<>(qc, EntityType.PLAYER, kasparovFilter));
+            this.assertPlanExists(plans, new EntityIndexRangeScan<>(qc, EntityType.PLAYER, kasparovFilter, null, null, false));
         }
     }
 
@@ -135,8 +136,8 @@ public class PlayerQueryPlanGeneratorTests {
             QueryContext qc = new QueryContext(txn, false);
             List<QueryOperator<Player>> plans = planner.getPlayerQueryPlans(qc, pq, true);
 
-            this.assertPlanExists(plans, new PlayerTableScan(qc, combined));
-            this.assertPlanExists(plans, new PlayerIndexRangeScan(qc, combined, Player.of("Kar", ""), Player.of("Carzzz", ""), false));
+            this.assertPlanExists(plans, new EntityTableScan<>(qc, EntityType.PLAYER, combined));
+            this.assertPlanExists(plans, new EntityIndexRangeScan(qc, EntityType.PLAYER, combined, Player.of("Kar", ""), Player.of("Carzzz", ""), false));
         }
     }
 
@@ -146,7 +147,7 @@ public class PlayerQueryPlanGeneratorTests {
         PlayerQuery playerQuery = new PlayerQuery(db, List.of(kaspFilter), new GameQuery(db, List.of()), GamePlayerJoinCondition.ANY, QuerySortOrder.byPlayerDefaultIndex(true), 0);
 
         // Ensure the PlayerIndexRangeScan is by default sorted after the PlayerIdsByGames operator
-        doReturn(10000L).when(spyPlanner).playerRangeEstimate(any(), any(), any());
+        doReturn(10000L).when(spyPlanner).entityRangeEstimate(any(), any(), any());
 
         try (var txn = new DatabaseReadTransaction(db)) {
             QueryContext qc = new QueryContext(txn, false);
@@ -155,15 +156,15 @@ public class PlayerQueryPlanGeneratorTests {
             QueryOperator<Player> playersByGamesSub = new Distinct<>(qc, new Sort<>(qc, new PlayerIdsByGames(qc, mockOperator, GamePlayerJoinCondition.ANY), QuerySortOrder.byId()));
             this.assertPlanExists(plans,
                     new Sort<>(qc,
-                            new PlayerLookup(qc, playersByGamesSub, kaspFilter),
+                            new EntityLookup<>(qc, EntityType.PLAYER, playersByGamesSub, kaspFilter),
                             QuerySortOrder.byPlayerDefaultIndex(true)));
 
             this.assertPlanExists(plans,
                     new Sort<>(qc,
-                            new MergeJoin<>(qc, playersByGamesSub, new PlayerTableScan(qc, kaspFilter)),
+                            new MergeJoin<>(qc, playersByGamesSub, new EntityTableScan<>(qc, EntityType.PLAYER, kaspFilter)),
                             QuerySortOrder.byPlayerDefaultIndex(true)));
 
-            QueryOperator<Player> rangeScanOp = new PlayerIndexRangeScan(qc, kaspFilter, Player.of("Kasp", ""), Player.of("Kaspzzz", ""), true);
+            QueryOperator<Player> rangeScanOp = new EntityIndexRangeScan<>(qc, EntityType.PLAYER, kaspFilter, Player.of("Kasp", ""), Player.of("Kaspzzz", ""), true);
             this.assertPlanExists(plans,
                     new Sort<>(qc,
                             new HashJoin<>(qc, playersByGamesSub, rangeScanOp),

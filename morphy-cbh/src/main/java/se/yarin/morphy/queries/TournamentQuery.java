@@ -8,34 +8,7 @@ import se.yarin.morphy.entities.filters.EntityFilter;
 
 import java.util.List;
 
-public class TournamentQuery {
-    private final @NotNull Database database;
-    private final @NotNull List<EntityFilter<Tournament>> filters;
-
-    private final @Nullable GameQuery gameQuery;
-
-    private final @NotNull QuerySortOrder<Tournament> sortOrder;
-    private final int limit;  // 0 = all
-
-    public @NotNull Database database() {
-        return database;
-    }
-
-    public @NotNull List<EntityFilter<Tournament>> filters() {
-        return filters;
-    }
-
-    public @Nullable GameQuery gameQuery() {
-        return gameQuery;
-    }
-
-    public @NotNull QuerySortOrder<Tournament> sortOrder() {
-        return sortOrder;
-    }
-
-    public int limit() {
-        return limit;
-    }
+public class TournamentQuery extends EntityQuery<Tournament> {
 
     public TournamentQuery(@NotNull Database database, @NotNull List<EntityFilter<Tournament>> filters) {
         this(database, filters, null);
@@ -50,10 +23,6 @@ public class TournamentQuery {
                            @Nullable GameQuery gameQuery,
                            @Nullable QuerySortOrder<Tournament> sortOrder,
                            int limit) {
-        this.database = database;
-        this.filters = filters;
-        this.gameQuery = gameQuery;
-        this.sortOrder = sortOrder == null ? QuerySortOrder.none() : sortOrder;
-        this.limit = limit;
+        super(database, filters, gameQuery, sortOrder, limit);
     }
 }

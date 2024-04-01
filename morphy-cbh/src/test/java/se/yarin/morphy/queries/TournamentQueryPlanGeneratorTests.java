@@ -32,6 +32,7 @@ public class TournamentQueryPlanGeneratorTests {
         QueryPlanner planner = new QueryPlanner(db);
         this.spyPlanner = spy(planner);
         this.db.setQueryPlanner(this.spyPlanner);
+        planner.updatePlanners(this.spyPlanner);
 
         this.mockOperator = mock(QueryOperator.class);
         when(mockOperator.debugString(anyBoolean())).thenReturn("mock");
@@ -50,8 +51,8 @@ public class TournamentQueryPlanGeneratorTests {
             QueryContext qc = new QueryContext(txn, false);
             List<QueryOperator<Tournament>> plans = db.queryPlanner().getTournamentQueryPlans(qc, tq, true);
 
-            this.assertPlanExists(plans, new TournamentTableScan(qc, tournamentFilter, 7, 8));
-            this.assertPlanExists(plans, new TournamentLookup(qc, new Manual<>(qc, Set.of(7)), null));
+            this.assertPlanExists(plans, new EntityTableScan<>(qc, EntityType.TOURNAMENT, tournamentFilter, 7, 8));
+            this.assertPlanExists(plans, new EntityLookup<Tournament>(qc, EntityType.TOURNAMENT, new Manual<>(qc, Set.of(7)), null));
         }
     }
 
@@ -67,8 +68,8 @@ public class TournamentQueryPlanGeneratorTests {
             QueryContext qc = new QueryContext(txn, false);
             List<QueryOperator<Tournament>> plans = db.queryPlanner().getTournamentQueryPlans(qc, tournamentQuery, true);
 
-            this.assertPlanExists(plans, new TournamentTableScan(qc, combinedFilter));
-            this.assertPlanExists(plans, new TournamentIndexRangeScan(qc, combinedFilter,
+            this.assertPlanExists(plans, new EntityTableScan<>(qc, EntityType.TOURNAMENT, combinedFilter));
+            this.assertPlanExists(plans, new EntityIndexRangeScan<>(qc, EntityType.TOURNAMENT, combinedFilter,
                     null, Tournament.of("", new Date(1950)), false));
         }
     }
@@ -84,10 +85,10 @@ public class TournamentQueryPlanGeneratorTests {
             List<QueryOperator<Tournament>> plans = db.queryPlanner().getTournamentQueryPlans(qc, tournamentQuery, true);
 
             QueryOperator<Tournament> tournamentsByGamesSub = new Distinct<>(qc, new Sort<>(qc, new TournamentIdsByGames(qc, mockOperator)));
-            this.assertPlanExists(plans, new TournamentLookup(qc, tournamentsByGamesSub, filter));
-            this.assertPlanExists(plans, new MergeJoin<>(qc, new TournamentTableScan(qc, filter), tournamentsByGamesSub));
-            this.assertPlanExists(plans, new HashJoin<>(qc, new TournamentIndexRangeScan(
-                    qc, filter, null, Tournament.of("", new Date(1950)),  false), tournamentsByGamesSub));
+            this.assertPlanExists(plans, new EntityLookup<>(qc, EntityType.TOURNAMENT, tournamentsByGamesSub, filter));
+            this.assertPlanExists(plans, new MergeJoin<>(qc, tournamentsByGamesSub, new EntityTableScan<>(qc, EntityType.TOURNAMENT, filter)));
+            this.assertPlanExists(plans, new HashJoin<>(qc, new EntityIndexRangeScan<>(
+                    qc, EntityType.TOURNAMENT, filter, null, Tournament.of("", new Date(1950)),  false), tournamentsByGamesSub));
         }
     }
 
@@ -97,7 +98,7 @@ public class TournamentQueryPlanGeneratorTests {
         TournamentQuery tournamentQuery = new TournamentQuery(db, List.of(yearFilter), new GameQuery(db, List.of()), QuerySortOrder.byTournamentDefaultIndex(true), 0);
 
         // Ensure the TournamentIndexRangeScan is by default sorted after the TournamentIdsByGames operator
-        doReturn(10000L).when(spyPlanner).tournamentRangeEstimate(any(), any(), any());
+        doReturn(10000L).when(spyPlanner).entityRangeEstimate(any(), any(), any());
 
         try (var txn = new DatabaseReadTransaction(db)) {
             QueryContext qc = new QueryContext(txn, false);
@@ -106,15 +107,15 @@ public class TournamentQueryPlanGeneratorTests {
             QueryOperator<Tournament> tournamentByGamesSub = new Distinct<>(qc, new Sort<>(qc, new TournamentIdsByGames(qc, mockOperator), QuerySortOrder.byId()));
             this.assertPlanExists(plans,
                     new Sort<>(qc,
-                            new TournamentLookup(qc, tournamentByGamesSub, yearFilter),
+                            new EntityLookup<>(qc, EntityType.TOURNAMENT, tournamentByGamesSub, yearFilter),
                             QuerySortOrder.byTournamentDefaultIndex(true)));
 
             this.assertPlanExists(plans,
                     new Sort<>(qc,
-                            new MergeJoin<>(qc, tournamentByGamesSub, new TournamentTableScan(qc, yearFilter)),
+                            new MergeJoin<>(qc, tournamentByGamesSub, new EntityTableScan<>(qc, EntityType.TOURNAMENT, yearFilter)),
                             QuerySortOrder.byTournamentDefaultIndex(true)));
 
-            QueryOperator<Tournament> rangeScanOp = new TournamentIndexRangeScan(qc, yearFilter, Tournament.of("Foo", new Date(2024)), Tournament.of("Foozzz", new Date(2024)), true);
+            QueryOperator<Tournament> rangeScanOp = new EntityIndexRangeScan<>(qc, EntityType.TOURNAMENT, yearFilter, Tournament.of("Foo", new Date(2024)), Tournament.of("Foozzz", new Date(2024)), true);
             this.assertPlanExists(plans,
                     new Sort<>(qc,
                             new HashJoin<>(qc, tournamentByGamesSub, rangeScanOp),

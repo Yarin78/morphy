@@ -91,8 +91,8 @@ public class QueryPlannerTest {
             List<QueryOperator<Player>> plans = db.queryPlanner().getPlayerQueryPlans(queryContext, playerQuery, true);
 
             assertTrue(plans.size() >= 2);
-            assertTrue(operatorExists(plans, List.of(PlayerTableScan.class)));
-            assertTrue(operatorExists(plans, List.of(PlayerLookup.class)));
+            assertTrue(operatorExists(plans, List.of(EntityTableScan.class)));
+            assertTrue(operatorExists(plans, List.of(EntityLookup.class)));
 
             verifyQueryPlans(plans, false);
         }
@@ -102,8 +102,8 @@ public class QueryPlannerTest {
             List<QueryOperator<Player>> plans = db.queryPlanner().getPlayerQueryPlans(queryContext, playerQuery, false);
 
             assertTrue(plans.size() >= 2);
-            assertTrue(operatorExists(plans, List.of(PlayerTableScan.class)));
-            assertFalse(operatorExists(plans, List.of(PlayerLookup.class)));
+            assertTrue(operatorExists(plans, List.of(EntityTableScan.class)));
+            assertFalse(operatorExists(plans, List.of(EntityLookup.class)));
 
             verifyQueryPlans(plans, false);
         }
@@ -120,8 +120,8 @@ public class QueryPlannerTest {
             List<QueryOperator<Player>> plans = db.queryPlanner().getPlayerQueryPlans(queryContext, playerQuery, true);
 
             assertTrue(plans.size() >= 2);
-            assertTrue(operatorExists(plans, List.of(PlayerTableScan.class)));
-            assertTrue(operatorExists(plans, List.of(PlayerIndexRangeScan.class)));
+            assertTrue(operatorExists(plans, List.of(EntityTableScan.class)));
+            assertTrue(operatorExists(plans, List.of(EntityIndexRangeScan.class)));
 
             verifyQueryPlans(plans, false);
         }
@@ -139,7 +139,7 @@ public class QueryPlannerTest {
             List<QueryOperator<Player>> plans = db.queryPlanner().getPlayerQueryPlans(queryContext, playerQuery, true);
 
             assertTrue(plans.size() >= 3);
-            assertTrue(operatorExists(plans, List.of(PlayerTableScan.class)));
+            assertTrue(operatorExists(plans, List.of(EntityTableScan.class)));
 
             verifyQueryPlans(plans, false);
         }
@@ -168,8 +168,8 @@ public class QueryPlannerTest {
             List<QueryOperator<Tournament>> plans = db.queryPlanner().getTournamentQueryPlans(queryContext, tournamentQuery, true);
 
             assertTrue(plans.size() >= 2);
-            assertTrue(operatorExists(plans, List.of(TournamentTableScan.class)));
-            assertTrue(operatorExists(plans, List.of(TournamentIndexRangeScan.class)));
+            assertTrue(operatorExists(plans, List.of(EntityTableScan.class)));
+            assertTrue(operatorExists(plans, List.of(EntityIndexRangeScan.class)));
 
             verifyQueryPlans(plans, false);
         }
@@ -186,8 +186,8 @@ public class QueryPlannerTest {
             List<QueryOperator<Tournament>> plans = db.queryPlanner().getTournamentQueryPlans(queryContext, tournamentQuery, true);
 
             assertTrue(plans.size() >= 2);
-            assertTrue(operatorExists(plans, List.of(TournamentTableScan.class)));
-            assertTrue(operatorExists(plans, List.of(TournamentIndexRangeScan.class)));
+            assertTrue(operatorExists(plans, List.of(EntityTableScan.class)));
+            assertTrue(operatorExists(plans, List.of(EntityIndexRangeScan.class)));
 
             verifyQueryPlans(plans, false);
         }
@@ -205,8 +205,8 @@ public class QueryPlannerTest {
             List<QueryOperator<Tournament>> plans = db.queryPlanner().getTournamentQueryPlans(queryContext, tournamentQuery, true);
 
             assertTrue(plans.size() >= 2);
-            assertTrue(operatorExists(plans, List.of(TournamentTableScan.class)));
-            assertTrue(operatorExists(plans, List.of(TournamentIndexRangeScan.class)));
+            assertTrue(operatorExists(plans, List.of(EntityTableScan.class)));
+            assertTrue(operatorExists(plans, List.of(EntityIndexRangeScan.class)));
 
             verifyQueryPlans(plans, false);
         }

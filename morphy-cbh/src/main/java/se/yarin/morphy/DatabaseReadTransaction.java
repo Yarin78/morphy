@@ -64,6 +64,18 @@ public class DatabaseReadTransaction extends DatabaseTransaction {
         return gameTagTransaction;
     }
 
+    public <T extends Entity & Comparable<T>> EntityIndexReadTransaction<?> entityTransaction(EntityType entityType) {
+        return switch (entityType) {
+            case PLAYER -> playerTransaction;
+            case TOURNAMENT -> tournamentTransaction;
+            case ANNOTATOR -> annotatorTransaction;
+            case SOURCE -> sourceTransaction;
+            case TEAM -> teamTransaction;
+            case GAME_TAG -> gameTagTransaction;
+            default -> throw new IllegalArgumentException("Unsupported entity type: " + entityType);
+        };
+    }
+
     /**
      * Returns an iterable of all games in the database, sorted by id.
      * @return an iterable of all games

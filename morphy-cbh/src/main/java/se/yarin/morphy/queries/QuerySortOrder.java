@@ -2,6 +2,8 @@ package se.yarin.morphy.queries;
 
 import org.jetbrains.annotations.NotNull;
 import se.yarin.morphy.IdObject;
+import se.yarin.morphy.entities.Entity;
+import se.yarin.morphy.entities.EntityType;
 import se.yarin.morphy.entities.Player;
 import se.yarin.morphy.entities.Tournament;
 import se.yarin.morphy.queries.operations.QueryData;
@@ -10,6 +12,7 @@ import java.util.Comparator;
 import java.util.List;
 
 public class QuerySortOrder<T extends IdObject> implements Comparator<QueryData<T>> {
+
 
     public enum Direction {
         ASCENDING,
@@ -59,6 +62,18 @@ public class QuerySortOrder<T extends IdObject> implements Comparator<QueryData<
                         !reverse ? Direction.ASCENDING : Direction.DESCENDING,
                         !reverse ? Direction.DESCENDING : Direction.ASCENDING));
     }
+
+    public static <T extends Entity & Comparable<T>> QuerySortOrder<?> byEntityDefaultIndex(EntityType entityType, boolean reverse) {
+        switch (entityType) {
+            case PLAYER:
+                return byPlayerDefaultIndex(reverse);
+            case TOURNAMENT:
+                return byTournamentDefaultIndex(reverse);
+            default:
+                throw new IllegalArgumentException("No default index for entity type " + entityType);
+        }
+    }
+
 
 
     private QuerySortOrder() {

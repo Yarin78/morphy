@@ -169,7 +169,7 @@ public class QueryTest {
             QueryContext context = new QueryContext(txn, true);
             Tournament startKey = ImmutableTournament.of("", new Date(endYear, 1, 1));
             Tournament endKey = ImmutableTournament.of("", new Date(startYear, 1, 1));
-            GameIdsByEntities<Tournament> gameIds = new GameIdsByEntities<>(context, new TournamentIndexRangeScan(context,
+            GameIdsByEntities<Tournament> gameIds = new GameIdsByEntities<>(context, new EntityIndexRangeScan<>(context, EntityType.TOURNAMENT,
                     tournamentFilter, startKey, endKey, false), EntityType.TOURNAMENT);
             GameLookup worldChGames = new GameLookup(context, gameIds, new IsGameFilter());
             QueryOperator<Player> playerIds = new Distinct<>(context, new Sort<>(context, new PlayerIdsByGames(context, worldChGames, GamePlayerJoinCondition.ANY)));
@@ -245,8 +245,9 @@ public class QueryTest {
         GamePlayerFilter games = new GamePlayerFilter(context,
                 new GameLookup(context,
                     new GameIdsByEntities<>(context,
-                            new TournamentTableScan(
+                            new EntityTableScan<>(
                                     context,
+                                    EntityType.TOURNAMENT,
                                     new CombinedFilter<>(List.of(
                                         new TournamentStartDateFilter(new Date(2000, 1, 1), new Date(3000, 1, 1)),
                                             // new TournamentPlaceFilter("London", true, true),
@@ -263,8 +264,9 @@ public class QueryTest {
         String namePrefix = "Car";
 
         QueryContext context = new QueryContext(txn, true);
-        QueryOperator<Player> playerIndexRangeScan = new PlayerIndexRangeScan(
+        QueryOperator<Player> playerIndexRangeScan = new EntityIndexRangeScan<>(
                 context,
+                EntityType.PLAYER,
                 new PlayerNameFilter(namePrefix, "", true, false),
                 Player.ofFullName(namePrefix), Player.ofFullName(namePrefix + "zzz"), false);
 
