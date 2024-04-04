@@ -2,6 +2,7 @@ package se.yarin.morphy.games.filters;
 
 import org.jetbrains.annotations.NotNull;
 import se.yarin.chess.GameResult;
+import se.yarin.morphy.entities.EntityType;
 import se.yarin.morphy.entities.Player;
 import se.yarin.morphy.games.GameHeader;
 import se.yarin.util.ByteBufferUtil;
@@ -10,12 +11,13 @@ import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.stream.Collectors;
 
-public class PlayerFilter extends IsGameFilter {
+public class PlayerFilter extends IsGameFilter implements GameEntityFilter<Player> {
 
-    private final @NotNull HashSet<Integer> playerIds;
+    private final @NotNull Set<Integer> playerIds;
     private final @NotNull PlayerColor color;
     private final @NotNull PlayerResult result;
 
+    // TODO: These enums should be merged into the GamePlayerJoin condition!?
     public enum PlayerColor {
         ANY,
         WHITE,
@@ -28,6 +30,16 @@ public class PlayerFilter extends IsGameFilter {
         LOSS
     }
 
+    public PlayerFilter(int playerId, @NotNull PlayerColor color, @NotNull PlayerResult result) {
+        this(new int[] { playerId }, color, result);
+    }
+
+    public PlayerFilter(int[] playerIds, @NotNull PlayerColor color, @NotNull PlayerResult result) {
+        this.playerIds = Arrays.stream(playerIds).boxed().collect(Collectors.toUnmodifiableSet());
+        this.color = color;
+        this.result = result;
+    }
+
     public PlayerFilter(@NotNull Player player, @NotNull PlayerColor color, @NotNull PlayerResult result) {
         this(Collections.singletonList(player), color, result);
     }
@@ -38,7 +50,12 @@ public class PlayerFilter extends IsGameFilter {
         this.result = result;
     }
 
-    public List<Integer> playerIds() {
+    @Override
+    public EntityType entityType() {
+        return EntityType.PLAYER;
+    }
+
+    public List<Integer> entityIds() {
         return new ArrayList<>(playerIds);
     }
 

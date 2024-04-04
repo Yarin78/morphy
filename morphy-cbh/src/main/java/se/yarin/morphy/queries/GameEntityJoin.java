@@ -5,14 +5,12 @@ import org.jetbrains.annotations.Nullable;
 import se.yarin.morphy.Game;
 import se.yarin.morphy.entities.Entity;
 import se.yarin.morphy.entities.EntityType;
-import se.yarin.morphy.entities.Player;
-import se.yarin.morphy.entities.Tournament;
 import se.yarin.morphy.entities.filters.CombinedFilter;
 import se.yarin.morphy.entities.filters.EntityFilter;
 import se.yarin.morphy.queries.joins.GameEntityFilterJoin;
 import se.yarin.morphy.queries.joins.GamePlayerFilterJoin;
 import se.yarin.morphy.queries.joins.GameTournamentFilterJoin;
-import se.yarin.morphy.queries.operations.GameEntityFilter;
+import se.yarin.morphy.queries.operations.GameEntityPredicate;
 import se.yarin.morphy.queries.operations.QueryOperator;
 
 public class GameEntityJoin<T extends Entity & Comparable<T>> {
@@ -30,6 +28,10 @@ public class GameEntityJoin<T extends Entity & Comparable<T>> {
 
     public @NotNull EntityType getEntityType() {
         return entityType;
+    }
+
+    public @Nullable GameQueryJoinCondition joinCondition() {
+        return joinCondition;
     }
 
     public GameEntityJoin(@NotNull EntityQuery<T> entityQuery, @Nullable GameQueryJoinCondition joinCondition) {
@@ -66,6 +68,6 @@ public class GameEntityJoin<T extends Entity & Comparable<T>> {
         };
 
 
-        return new GameEntityFilter<>(context, gameOperator, entityType, filter, join);
+        return new GameEntityPredicate<>(context, gameOperator, entityType, filter, join);
     }
 }

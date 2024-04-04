@@ -14,18 +14,18 @@ import se.yarin.morphy.queries.joins.GameEntityFilterJoin;
 import java.util.List;
 import java.util.stream.Stream;
 
-public class GameEntityFilter<T extends Entity & Comparable<T>> extends QueryOperator<Game> {
+public class GameEntityPredicate<T extends Entity & Comparable<T>> extends QueryOperator<Game> {
     private final @NotNull QueryOperator<Game> source;
     private final @NotNull EntityFilter<T> entityFilter;
     private final @NotNull EntityType entityType;
 
     private final @NotNull GameEntityFilterJoin<T> join;
 
-    public GameEntityFilter(@NotNull QueryContext queryContext,
-                            @NotNull QueryOperator<Game> source,
-                            @NotNull EntityType entityType,
-                            @NotNull EntityFilter<T> entityFilter,
-                            @NotNull GameEntityFilterJoin<T> join) {
+    public GameEntityPredicate(@NotNull QueryContext queryContext,
+                               @NotNull QueryOperator<Game> source,
+                               @NotNull EntityType entityType,
+                               @NotNull EntityFilter<T> entityFilter,
+                               @NotNull GameEntityFilterJoin<T> join) {
         super(queryContext, true);
         if (!source.hasFullData()) {
             throw new IllegalArgumentException("The source of GameEntityFilter must return full data");
@@ -53,6 +53,7 @@ public class GameEntityFilter<T extends Entity & Comparable<T>> extends QueryOpe
     public Stream<QueryData<Game>> operatorStream() {
         final EntityIndexReadTransaction<T> entityTransaction = (EntityIndexReadTransaction<T>) transaction().entityTransaction(entityType);
 
+        // TODO: This is all very strange, this doesn't use entityFilter!?
         return this.source.stream().filter(game -> this.join.gameFilter(game.data(), entityTransaction));
     }
 
@@ -74,6 +75,7 @@ public class GameEntityFilter<T extends Entity & Comparable<T>> extends QueryOpe
 
     @Override
     public String toString() {
+        // TODO: This doesn't print out the join!?
         return "Game" + entityType.nameSingularCapitalized() + "Filter(filter: " + entityFilter + ")";
     }
 

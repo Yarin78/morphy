@@ -225,6 +225,13 @@ public abstract class QueryOperator<T extends IdObject> {
                 .build();
     }
 
+    public QueryOperator<T> sortedAndDistinct() {
+        return sortedAndDistinct(QuerySortOrder.byId(), 0);
+    }
+
+    public QueryOperator<T> sortedAndDistinct(@NotNull QuerySortOrder<T> sortOrder) {
+        return sortedAndDistinct(sortOrder, 0);
+    }
 
     public QueryOperator<T> sortedAndDistinct(@NotNull QuerySortOrder<T> sortOrder, int limit) {
         // Wraps the query operator in a sort and/or distinct if needed

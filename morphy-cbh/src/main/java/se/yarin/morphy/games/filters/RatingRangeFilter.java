@@ -88,11 +88,11 @@ public class RatingRangeFilter extends IsGameFilter {
     public String toString() {
         // TODO: color
         if (minRating == 0) {
-            return "rating < " + maxRating;
+            return "rating <= " + maxRating;
         } else if (maxRating == 9999) {
-            return "rating > " + minRating;
+            return "rating >= " + minRating;
         } else {
-            return "rating > " + minRating + " and rating < " + maxRating;
+            return "rating >= " + minRating + " and rating <= " + maxRating;
         }
     }
 }

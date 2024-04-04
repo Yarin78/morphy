@@ -11,10 +11,8 @@ import se.yarin.morphy.IdObject;
 import se.yarin.morphy.boosters.GameEntityIndex;
 import se.yarin.morphy.entities.*;
 import se.yarin.morphy.entities.filters.*;
-import se.yarin.morphy.games.filters.CombinedGameFilter;
-import se.yarin.morphy.games.filters.GameFilter;
-import se.yarin.morphy.games.filters.PlayerFilter;
-import se.yarin.morphy.games.filters.TournamentFilter;
+import se.yarin.morphy.entities.filters.ManualFilter;
+import se.yarin.morphy.games.filters.*;
 import se.yarin.morphy.queries.operations.*;
 
 import java.util.*;
@@ -114,6 +112,7 @@ public class QueryPlanner {
 
     /**
      * Gets the ratio of games expected to pass the filter
+     *
      * @param gameFilter a filter
      * @return ratio between 0.0 and 1.0 of number of games expected to pass the filter,
      * 0.0 being none and 1.0 being all.
@@ -158,8 +157,9 @@ public class QueryPlanner {
 
     /**
      * Gets the expected number of players between the two given keys satisfying a filter
-     * @param rangeStart start of range
-     * @param rangeEnd end of range
+     *
+     * @param rangeStart   start of range
+     * @param rangeEnd     end of range
      * @param playerFilter an optional additional filter
      * @return number of expected players within range that matches the filter
      */
@@ -179,7 +179,7 @@ public class QueryPlanner {
 
     public long estimateUniquePages(long numPages, long drawnPages) {
         // https://stats.stackexchange.com/questions/296005/the-expected-number-of-unique-elements-drawn-with-replacement
-        return Math.round(numPages*(1-Math.exp(-1.0*drawnPages/numPages)));
+        return Math.round(numPages * (1 - Math.exp(-1.0 * drawnPages / numPages)));
     }
 
     public long estimateTournamentPageReads(long count) {
@@ -239,69 +239,6 @@ public class QueryPlanner {
         return bestPlan;
     }
 
-
-    List<GameSourceQuery> getGameQuerySources(@NotNull QueryContext context, @NotNull GameQuery gameQuery) {
-        List<GameSourceQuery> sources = new ArrayList<>();
-
-        sources.add(GameSourceQuery.fromGameQueryOperator(new GameTableScan(context, CombinedGameFilter.combine(gameQuery.gameFilters())), true, gameQuery.gameFilters()));
-
-        for (GameEntityJoin<?> entityJoin : gameQuery.entityJoins()) {
-            QueryOperator<?> entityQueryPlan = selectBestQueryPlan(entityQueryPlanner.getQueryPlans(context, entityJoin.entityQuery(), false));
-            QueryOperator<Game> gameOp = new Distinct<>(context, new Sort<>(context, new GameIdsByEntities<>(context, entityQueryPlan, entityJoin.getEntityType())));
-            sources.add(GameSourceQuery.fromGameQueryOperator(gameOp, entityJoin.isSimpleJoin(), List.of()));
-        }
-
-        for (GameFilter gameFilter : gameQuery.gameFilters()) {
-            if (gameFilter instanceof PlayerFilter) {
-                PlayerFilter playerFilter = (PlayerFilter) gameFilter;
-                QueryOperator<Game> gameOp = new GameIdsByEntities<Player>(context, new Manual<>(context, Set.copyOf(playerFilter.playerIds())), EntityType.PLAYER);
-
-                gameOp = new Distinct<>(context, new Sort<>(context, gameOp));
-                sources.add(GameSourceQuery.fromGameQueryOperator(gameOp, true, List.of(gameFilter)));
-            }
-            if (gameFilter instanceof TournamentFilter) {
-                TournamentFilter tournamentFilter = (TournamentFilter) gameFilter;
-                QueryOperator<Game> gameOp = new GameIdsByEntities<Tournament>(context, new Manual<>(context, Set.copyOf(tournamentFilter.tournamentIds())), EntityType.TOURNAMENT);
-
-                gameOp = new Distinct<>(context, new Sort<>(context, gameOp));
-                sources.add(GameSourceQuery.fromGameQueryOperator(gameOp, true, List.of(gameFilter)));
-            }
-        }
-
-        return sources;
-    }
-
-
-    <T extends SourceQuery<?>> List<List<T>> sourceCombinations(@NotNull List<T> sources) {
-        ArrayList<List<T>> combinations = new ArrayList<>();
-        int n = sources.size();
-        for (int i = 0; i < (1<<n); i++) {
-            HashSet<Object> seenFiltersCovered = new HashSet<>();
-            boolean valid = true;
-            ArrayList<T> current = new ArrayList<>();
-            for (int j = 0; j < n; j++) {
-                if (((1<<j) & i) > 0) {
-                    current.add(sources.get(j));
-                    if (!seenFiltersCovered.add(sources.get(j).filtersCovered()) && sources.get(j).isOptional()) {
-                        // Unnecessary to have this optional source since it's filters were already covered by another source
-                        valid = false;
-                    }
-                } else {
-                    if (!sources.get(j).isOptional()) {
-                        valid = false;
-                    }
-                }
-            }
-            if (valid && !current.isEmpty()) {
-                combinations.add(current);
-            }
-        }
-        assert !combinations.isEmpty();
-        return combinations;
-    }
-
-
-
     public List<QueryOperator<Game>> getGameQueryPlans(@NotNull QueryContext context, @NotNull GameQuery gameQuery, boolean fullData) {
         // The anatomy of a GameQuery is like this:
         // We have one or more sources of games to scan from (GameSourceQuery).
@@ -323,15 +260,7 @@ public class QueryPlanner {
 
         List<GameSourceQuery> sources = getGameQuerySources(context, gameQuery);
 
-        List<GameEntityJoin<?>> simpleEntityJoins = gameQuery.entityJoins(true);
-
-        boolean fullDataRequired = !simpleEntityJoins.isEmpty() || fullData;
-        // TODO: If a simple entity join is used as a game source, full data might still not be needed!?
-        // TODO: Shouldn't be null since we have QuerySortOrder.none()!?
         QuerySortOrder<Game> sortOrder = gameQuery.sortOrder();
-        if (sortOrder.requiresData()) {
-            fullDataRequired = true;
-        }
 
         for (List<GameSourceQuery> sourceCombination : sourceCombinations(sources)) {
             // Join the sources starting with the one returning least amount of expected rows
@@ -341,17 +270,27 @@ public class QueryPlanner {
             for (int i = 1; i < sorted.size(); i++) {
                 current = GameSourceQuery.join(current, sorted.get(i));
             }
-
             QueryOperator<Game> gameOperator = current.gameOperator();
-            // Ensure that full data exists in case we need to do additional entity filtering/sorting, or full data is required
-            if (!gameOperator.hasFullData() && fullDataRequired) {
-                // TODO: Are we sure that if we don't get here, that we've applied the gameQuery.gameFilters?!
-                gameOperator = new GameLookup(context, current.gameOperator(), CombinedGameFilter.combine(gameQuery.gameFilters()));
+
+            List<GameFilter> filtersLeft = new ArrayList<>(gameQuery.gameFilters());
+            filtersLeft.removeAll(current.filtersCovered());
+            List<GameEntityJoin<?>> entityJoinsLeft = new ArrayList<>(gameQuery.entityJoins());
+            entityJoinsLeft.removeAll(current.entityJoinsCovered());
+
+            // Ensure that full data exists in case we need to do additional filtering/sorting, or full data is required
+            boolean fullDataRequired = fullData;
+            if (sortOrder.requiresData() || !entityJoinsLeft.isEmpty()) {
+                fullDataRequired = true;
+            }
+            if ((!gameOperator.hasFullData() && fullDataRequired) || !filtersLeft.isEmpty()) {
+                // Note: If we have to this lookup, perhaps it's best to always use all game filters from
+                // the query instead of only filtersLeft? In theory we shouldn't, but if the entity indexes
+                // are broken, we could end up showing wrong data very needlessly.
+                gameOperator = new GameLookup(context, current.gameOperator(), CombinedGameFilter.combine(filtersLeft));
             }
 
-            for (List<GameEntityJoin<?>> entityJoinPermutation : generatePermutations(simpleEntityJoins)) {
+            for (List<GameEntityJoin<?>> entityJoinPermutation : generatePermutations(entityJoinsLeft)) {
                 QueryOperator<Game> currentGameOperator = gameOperator;
-                // TODO: If the entityJoin was a source, there's no need to apply it again
                 for (GameEntityJoin<?> entityJoin : entityJoinPermutation) {
                     currentGameOperator = entityJoin.applyGameFilter(context, currentGameOperator);
                 }
@@ -363,6 +302,64 @@ public class QueryPlanner {
         }
 
         return candidateQueryPlans;
+    }
+
+
+
+    List<GameSourceQuery> getGameQuerySources(@NotNull QueryContext context, @NotNull GameQuery gameQuery) {
+        List<GameSourceQuery> sources = new ArrayList<>();
+
+        // TODO: Investigate if a full GameTableScan is ever the right thing in case any other source is available
+        // Any entity index + game lookup should almost always be better
+        sources.add(GameSourceQuery.fromGameQueryOperator(new GameTableScan(context, CombinedGameFilter.combine(gameQuery.gameFilters())), true, gameQuery.gameFilters(), List.of()));
+
+        for (GameEntityJoin<?> entityJoin : gameQuery.entityJoins()) {
+            QueryOperator<?> entityQueryPlan = selectBestQueryPlan(entityQueryPlanner.getQueryPlans(context, entityJoin.entityQuery(), false));
+            QueryOperator<Game> gameOp = new GameIdsByEntities<>(context, entityQueryPlan, entityJoin.getEntityType());
+            // If joining with e.g. White players only, we still need to filter on this later on as the index will return
+            // games where the player is either White or Black
+            boolean coveredJoin = entityJoin.joinCondition() == null || entityJoin.joinCondition() == GameQueryJoinCondition.ANY;
+            sources.add(GameSourceQuery.fromGameQueryOperator(gameOp.sortedAndDistinct(), entityJoin.isSimpleJoin(), List.of(), coveredJoin ? List.of(entityJoin) : List.of()));
+        }
+
+        for (GameFilter gameFilter : gameQuery.gameFilters()) {
+            if (gameFilter instanceof GameEntityFilter<?>) {
+                GameEntityFilter<?> entityFilter = (GameEntityFilter<?>) gameFilter;
+                QueryOperator<Game> gameOp = new GameIdsByEntities<>(context, new Manual<>(context, Set.copyOf(entityFilter.entityIds())), entityFilter.entityType());
+
+                sources.add(GameSourceQuery.fromGameQueryOperator(gameOp.sortedAndDistinct(QuerySortOrder.byId(), 0), true, List.of(gameFilter), List.of()));
+            }
+        }
+
+        return sources;
+    }
+
+    <T extends SourceQuery<?>> List<List<T>> sourceCombinations(@NotNull List<T> sources) {
+        ArrayList<List<T>> combinations = new ArrayList<>();
+        int n = sources.size();
+        for (int i = 0; i < (1 << n); i++) {
+            HashSet<Object> seenFiltersCovered = new HashSet<>();
+            boolean valid = true;
+            ArrayList<T> current = new ArrayList<>();
+            for (int j = 0; j < n; j++) {
+                if (((1 << j) & i) > 0) {
+                    current.add(sources.get(j));
+                    if (!seenFiltersCovered.add(sources.get(j).filtersCovered()) && sources.get(j).isOptional()) {
+                        // Unnecessary to have this optional source since it's filters were already covered by another source
+                        valid = false;
+                    }
+                } else {
+                    if (!sources.get(j).isOptional()) {
+                        valid = false;
+                    }
+                }
+            }
+            if (valid && !current.isEmpty()) {
+                combinations.add(current);
+            }
+        }
+        assert !combinations.isEmpty();
+        return combinations;
     }
 
     public <T extends Entity & Comparable<T>> List<QueryOperator<T>> getEntityQueryPlans(QueryContext context, EntityQuery<T> entityQuery, boolean fullData) {

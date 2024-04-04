@@ -1,20 +1,27 @@
 package se.yarin.morphy.games.filters;
 
 import org.jetbrains.annotations.NotNull;
+import se.yarin.morphy.entities.EntityType;
 import se.yarin.morphy.entities.Source;
 import se.yarin.morphy.games.GameHeader;
 import se.yarin.morphy.storage.ItemStorageFilter;
 import se.yarin.util.ByteBufferUtil;
 
 import java.nio.ByteBuffer;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashSet;
+import java.util.*;
 import java.util.stream.Collectors;
 
-public class SourceFilter implements ItemStorageFilter<GameHeader> {
+public class SourceFilter implements ItemStorageFilter<GameHeader>, GameFilter, GameEntityFilter<Source> {
 
-    private final @NotNull HashSet<Integer> sourceIds;
+    private final @NotNull Set<Integer> sourceIds;
+
+    public SourceFilter(int sourceId) {
+        this(new int[] { sourceId });
+    }
+
+    public SourceFilter(int[] sourceIds) {
+        this.sourceIds = Arrays.stream(sourceIds).boxed().collect(Collectors.toUnmodifiableSet());
+    }
 
     public SourceFilter(@NotNull Source source) {
         this(Collections.singleton(source));
@@ -22,6 +29,16 @@ public class SourceFilter implements ItemStorageFilter<GameHeader> {
 
     public SourceFilter(@NotNull Collection<Source> sources) {
         this.sourceIds = sources.stream().map(Source::id).collect(Collectors.toCollection(HashSet::new));
+    }
+
+    @Override
+    public List<Integer> entityIds() {
+        return new ArrayList<>(sourceIds);
+    }
+
+    @Override
+    public EntityType entityType() {
+        return EntityType.SOURCE;
     }
 
     @Override

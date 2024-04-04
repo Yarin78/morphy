@@ -2,25 +2,33 @@ package se.yarin.morphy.games.filters;
 
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import se.yarin.morphy.entities.EntityType;
 import se.yarin.morphy.entities.Team;
 import se.yarin.morphy.games.ExtendedGameHeader;
 import se.yarin.morphy.storage.ItemStorageFilter;
 import se.yarin.util.ByteBufferUtil;
 
 import java.nio.ByteBuffer;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashSet;
+import java.util.*;
 import java.util.stream.Collectors;
 
-public class TeamFilter implements ItemStorageFilter<ExtendedGameHeader>, GameFilter {
-    private final @NotNull HashSet<Integer> teamIds;
+public class TeamFilter implements ItemStorageFilter<ExtendedGameHeader>, GameFilter, GameEntityFilter<Team> {
+    private final @NotNull Set<Integer> teamIds;
     private final @NotNull PlayerColor color;
 
     public enum PlayerColor {
         ANY,
         WHITE,
         BLACK
+    }
+
+    public TeamFilter(int teamId, @NotNull TeamFilter.PlayerColor color) {
+        this(new int[] { teamId }, color);
+    }
+
+    public TeamFilter(int[] teamIds, @NotNull TeamFilter.PlayerColor color) {
+        this.teamIds = Arrays.stream(teamIds).boxed().collect(Collectors.toUnmodifiableSet());
+        this.color = color;
     }
 
     public TeamFilter(@NotNull Team team, @NotNull PlayerColor color) {
@@ -30,6 +38,16 @@ public class TeamFilter implements ItemStorageFilter<ExtendedGameHeader>, GameFi
     public TeamFilter(@NotNull Collection<Team> teams, @NotNull PlayerColor color) {
         this.teamIds = teams.stream().map(Team::id).collect(Collectors.toCollection(HashSet::new));
         this.color = color;
+    }
+
+    @Override
+    public List<Integer> entityIds() {
+        return new ArrayList<>(teamIds);
+    }
+
+    @Override
+    public EntityType entityType() {
+        return EntityType.TEAM;
     }
 
     @Override

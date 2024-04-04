@@ -1,6 +1,7 @@
 package se.yarin.morphy.games.filters;
 
 import org.jetbrains.annotations.NotNull;
+import se.yarin.morphy.entities.EntityType;
 import se.yarin.morphy.entities.Tournament;
 import se.yarin.morphy.games.GameHeader;
 import se.yarin.morphy.storage.ItemStorageFilter;
@@ -10,8 +11,16 @@ import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.stream.Collectors;
 
-public class TournamentFilter implements ItemStorageFilter<GameHeader>, GameFilter {
-    private final @NotNull HashSet<Integer> tournamentIds;
+public class TournamentFilter implements ItemStorageFilter<GameHeader>, GameFilter, GameEntityFilter<Tournament> {
+    private final @NotNull Set<Integer> tournamentIds;
+
+    public TournamentFilter(int tournamentId) {
+        this(new int[] { tournamentId });
+    }
+
+    public TournamentFilter(int[] tournamentIds) {
+        this.tournamentIds = Arrays.stream(tournamentIds).boxed().collect(Collectors.toUnmodifiableSet());
+    }
 
     public TournamentFilter(@NotNull Tournament tournament) {
         this(Collections.singleton(tournament));
@@ -21,7 +30,12 @@ public class TournamentFilter implements ItemStorageFilter<GameHeader>, GameFilt
         this.tournamentIds = tournaments.stream().map(Tournament::id).collect(Collectors.toCollection(HashSet::new));
     }
 
-    public List<Integer> tournamentIds() {
+    @Override
+    public EntityType entityType() {
+        return EntityType.TOURNAMENT;
+    }
+
+    public List<Integer> entityIds() {
         return new ArrayList<>(tournamentIds);
     }
 
