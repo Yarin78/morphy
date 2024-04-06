@@ -65,7 +65,7 @@ public class QueryPlannerTest {
 
         GameQuery gameQuery = new GameQuery(db, null,
                 List.of(
-                        new GameEntityJoin<>(playerQuery, GameQueryJoinCondition.ANY),
+                        new GameEntityJoin<>(playerQuery, GameEntityJoinCondition.ANY),
                         new GameEntityJoin<>(tournamentQuery, null)),
                 QuerySortOrder.byId(), 0);
 
@@ -73,7 +73,13 @@ public class QueryPlannerTest {
             QueryContext queryContext = new QueryContext(txn, false);
             List<QueryOperator<Game>> plans = db.queryPlanner().getGameQueryPlans(queryContext, gameQuery, true);
 
-            // assertTrue(plans.size() >= 10);
+            /*
+            for (QueryOperator<Game> plan : plans) {
+                System.out.println(plan.debugString(false));
+                System.out.println("---");
+            }
+             */
+
             assertTrue(operatorExists(plans, List.of(GameTableScan.class)));
             assertTrue(operatorExists(plans, List.of(GameIdsByEntities.class)));
 
@@ -133,7 +139,7 @@ public class QueryPlannerTest {
         GameQuery games = new GameQuery(db, List.of(new DateRangeFilter(new Date(1900), new Date(2000))));
         EntityQuery<Player> playerQuery = new EntityQuery<Player>(db, EntityType.PLAYER, List.of(
                 new PlayerNameFilter("K", true, false)
-        ), games, GameQueryJoinCondition.ANY);
+        ), games, GameEntityJoinCondition.ANY);
 
         try (var txn = new DatabaseReadTransaction(db)) {
             QueryContext queryContext = new QueryContext(txn, false);
@@ -223,6 +229,7 @@ public class QueryPlannerTest {
 //                System.out.println(queryData.id() + " " + queryData.weight());
 //            }
 //            System.out.println("---");
+            // System.out.println("# elements: " + planList.size());
             if (expected == null) {
                 expected = planList;
                 expectedMap = new HashMap<>();

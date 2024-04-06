@@ -1,31 +1,33 @@
 package se.yarin.morphy.queries.operations;
 
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+import se.yarin.chess.GameResult;
 import se.yarin.morphy.Game;
 import se.yarin.morphy.entities.Entity;
 import se.yarin.morphy.entities.EntityIndexReadTransaction;
 import se.yarin.morphy.entities.EntityType;
 import se.yarin.morphy.entities.filters.EntityFilter;
 import se.yarin.morphy.metrics.MetricsProvider;
+import se.yarin.morphy.queries.GameEntityJoinCondition;
 import se.yarin.morphy.queries.QueryContext;
 import se.yarin.morphy.queries.QuerySortOrder;
-import se.yarin.morphy.queries.joins.GameEntityFilterJoin;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
 
-public class GameEntityPredicate<T extends Entity & Comparable<T>> extends QueryOperator<Game> {
+public class GameEntityLoopJoin<T extends Entity & Comparable<T>> extends QueryOperator<Game> {
     private final @NotNull QueryOperator<Game> source;
     private final @NotNull EntityFilter<T> entityFilter;
     private final @NotNull EntityType entityType;
+    private final @NotNull GameEntityJoinCondition joinCondition;
 
-    private final @NotNull GameEntityFilterJoin<T> join;
-
-    public GameEntityPredicate(@NotNull QueryContext queryContext,
-                               @NotNull QueryOperator<Game> source,
-                               @NotNull EntityType entityType,
-                               @NotNull EntityFilter<T> entityFilter,
-                               @NotNull GameEntityFilterJoin<T> join) {
+    public GameEntityLoopJoin(@NotNull QueryContext queryContext,
+                              @NotNull QueryOperator<Game> source,
+                              @NotNull EntityType entityType,
+                              @NotNull EntityFilter<T> entityFilter,
+                              @Nullable GameEntityJoinCondition joinCondition) {
         super(queryContext, true);
         if (!source.hasFullData()) {
             throw new IllegalArgumentException("The source of GameEntityFilter must return full data");
@@ -33,7 +35,7 @@ public class GameEntityPredicate<T extends Entity & Comparable<T>> extends Query
         this.source = source;
         this.entityType = entityType;
         this.entityFilter = entityFilter;
-        this.join = join;
+        this.joinCondition = joinCondition != null ? joinCondition : GameEntityJoinCondition.ANY;
     }
 
     @Override
@@ -53,8 +55,23 @@ public class GameEntityPredicate<T extends Entity & Comparable<T>> extends Query
     public Stream<QueryData<Game>> operatorStream() {
         final EntityIndexReadTransaction<T> entityTransaction = (EntityIndexReadTransaction<T>) transaction().entityTransaction(entityType);
 
-        // TODO: This is all very strange, this doesn't use entityFilter!?
-        return this.source.stream().filter(game -> this.join.gameFilter(game.data(), entityTransaction));
+        return this.source.stream().filter(game -> {
+            Game gameData = game.data();
+            int[][] joinIdGroups = GameEntityJoin.getJoinIds(gameData, entityType, joinCondition);
+            for (int[] joinIds : joinIdGroups) {
+                int matchCnt = 0;
+                for (int joinId : joinIds) {
+                    T entity = joinId < 0 ? null : entityTransaction.get(joinId, this.entityFilter);
+                    if (entity != null) {
+                        matchCnt++;
+                    }
+                }
+                if (matchCnt == joinIds.length) {
+                    return true;
+                }
+            }
+            return false;
+        } );
     }
 
     @Override
@@ -75,8 +92,13 @@ public class GameEntityPredicate<T extends Entity & Comparable<T>> extends Query
 
     @Override
     public String toString() {
-        // TODO: This doesn't print out the join!?
-        return "Game" + entityType.nameSingularCapitalized() + "Filter(filter: " + entityFilter + ")";
+        ArrayList<String> params = new ArrayList<>();
+        params.add("filter: " + entityFilter);
+        if (entityType == EntityType.PLAYER || entityType == EntityType.TEAM) {
+            params.add("join: " + joinCondition);
+        }
+
+        return "Game" + entityType.nameSingularCapitalized() + "LoopJoin(" + String.join(", ", params) + ")";
     }
 
     @Override

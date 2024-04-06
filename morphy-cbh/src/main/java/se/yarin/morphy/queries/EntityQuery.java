@@ -18,7 +18,7 @@ public class EntityQuery<T extends IdObject> {
     private final @NotNull EntityType entityType;
 
     private final @Nullable GameQuery gameQuery;
-    private final @Nullable GameQueryJoinCondition joinCondition;
+    private final @Nullable GameEntityJoinCondition joinCondition;
 
     private final @NotNull QuerySortOrder<T> sortOrder;
     private final int limit;  // 0 = all
@@ -39,7 +39,7 @@ public class EntityQuery<T extends IdObject> {
         return gameQuery;
     }
 
-    public @Nullable GameQueryJoinCondition joinCondition() {
+    public @Nullable GameEntityJoinCondition joinCondition() {
         return joinCondition;
     }
 
@@ -60,7 +60,7 @@ public class EntityQuery<T extends IdObject> {
     }
 
     public EntityQuery(@NotNull Database database, @NotNull EntityType entityType, @Nullable List<EntityFilter<T>> filters, @Nullable GameQuery gameQuery,
-                       @Nullable GameQueryJoinCondition joinCondition) {
+                       @Nullable GameEntityJoinCondition joinCondition) {
         this(database, entityType, filters, gameQuery, joinCondition, null, 0);
     }
 
@@ -73,7 +73,7 @@ public class EntityQuery<T extends IdObject> {
                        @NotNull EntityType entityType,
                        @Nullable List<EntityFilter<T>> filters,
                        @Nullable GameQuery gameQuery,
-                       @Nullable GameQueryJoinCondition joinCondition,
+                       @Nullable GameEntityJoinCondition joinCondition,
                        @Nullable QuerySortOrder<T> sortOrder,
                        int limit) {
         this.database = database;

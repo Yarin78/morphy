@@ -2,17 +2,13 @@ package se.yarin.morphy.queries;
 
 import org.jetbrains.annotations.NotNull;
 import se.yarin.morphy.IdObject;
-import se.yarin.morphy.entities.Entity;
-import se.yarin.morphy.entities.EntityType;
-import se.yarin.morphy.entities.Player;
-import se.yarin.morphy.entities.Tournament;
+import se.yarin.morphy.entities.*;
 import se.yarin.morphy.queries.operations.QueryData;
 
 import java.util.Comparator;
 import java.util.List;
 
 public class QuerySortOrder<T extends IdObject> implements Comparator<QueryData<T>> {
-
 
     public enum Direction {
         ASCENDING,
@@ -63,18 +59,77 @@ public class QuerySortOrder<T extends IdObject> implements Comparator<QueryData<
                         !reverse ? Direction.DESCENDING : Direction.ASCENDING));
     }
 
-    public static <T extends Entity & Comparable<T>> QuerySortOrder<?> byEntityDefaultIndex(EntityType entityType, boolean reverse) {
-        switch (entityType) {
-            case PLAYER:
-                return byPlayerDefaultIndex(reverse);
-            case TOURNAMENT:
-                return byTournamentDefaultIndex(reverse);
-            default:
-                throw new IllegalArgumentException("No default index for entity type " + entityType);
-        }
+    public static QuerySortOrder<Annotator> byAnnotatorDefaultIndex() {
+        return byAnnotatorDefaultIndex(false);
     }
 
+    public static QuerySortOrder<Annotator> byAnnotatorDefaultIndex(boolean reverse) {
+        return new QuerySortOrder<>(
+                List.of(QuerySortField.annotatorName()),
+                List.of(!reverse ? Direction.ASCENDING : Direction.DESCENDING)
+        );
+    }
 
+    public static QuerySortOrder<Source> bySourceDefaultIndex() {
+        return bySourceDefaultIndex(false);
+    }
+
+    public static QuerySortOrder<Source> bySourceDefaultIndex(boolean reverse) {
+        return new QuerySortOrder<>(
+                List.of(QuerySortField.sourceTitle()),
+                List.of(!reverse ? Direction.ASCENDING : Direction.DESCENDING)
+        );
+    }
+
+    public static QuerySortOrder<GameTag> byGameTagDefaultIndex() {
+        return byGameTagDefaultIndex(false);
+    }
+
+    public static QuerySortOrder<GameTag> byGameTagDefaultIndex(boolean reverse) {
+        Direction direction = !reverse ? Direction.ASCENDING : Direction.DESCENDING;
+        return new QuerySortOrder<>(
+                List.of(
+                        QuerySortField.gameTagEnglishTitle(),
+                        QuerySortField.gameTagGermanTitle(),
+                        QuerySortField.gameTagFrenchTitle(),
+                        QuerySortField.gameTagSpanishTitle(),
+                        QuerySortField.gameTagItalianTitle(),
+                        QuerySortField.gameTagDutchTitle(),
+                        QuerySortField.gameTagSlovenianTitle()
+                ),
+                List.of(direction, direction, direction, direction, direction, direction, direction)
+        );
+    }
+
+    public static QuerySortOrder<Team> byTeamDefaultIndex() {
+        return byTeamDefaultIndex(false);
+    }
+
+    public static QuerySortOrder<Team> byTeamDefaultIndex(boolean reverse) {
+        Direction direction = !reverse ? Direction.ASCENDING : Direction.DESCENDING;
+        return new QuerySortOrder<>(
+                List.of(
+                    QuerySortField.teamTitle(),
+                    QuerySortField.teamNumber(),
+                    QuerySortField.teamSeason(),
+                    QuerySortField.teamYear(),
+                    QuerySortField.teamNation()
+                ),
+                List.of(direction, direction, direction, direction, direction)
+        );
+    }
+
+    public static <T extends Entity & Comparable<T>> QuerySortOrder<?> byEntityDefaultIndex(EntityType entityType, boolean reverse) {
+        return switch (entityType) {
+            case PLAYER -> byPlayerDefaultIndex(reverse);
+            case TOURNAMENT -> byTournamentDefaultIndex(reverse);
+            case ANNOTATOR -> byAnnotatorDefaultIndex(reverse);
+            case SOURCE -> bySourceDefaultIndex(reverse);
+            case GAME_TAG -> byGameTagDefaultIndex(reverse);
+            case TEAM -> byTeamDefaultIndex(reverse);
+            default -> throw new IllegalArgumentException("No default index for entity type " + entityType);
+        };
+    }
 
     private QuerySortOrder() {
         this.sortFields = List.of();

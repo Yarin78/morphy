@@ -1,6 +1,7 @@
 package se.yarin.morphy.entities.filters;
 
 import org.jetbrains.annotations.NotNull;
+import se.yarin.morphy.entities.Entity;
 import se.yarin.morphy.entities.EntityType;
 import se.yarin.morphy.queries.QueryPlanner;
 

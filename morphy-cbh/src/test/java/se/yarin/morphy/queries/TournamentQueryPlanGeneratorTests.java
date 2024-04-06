@@ -6,7 +6,6 @@ import se.yarin.chess.Date;
 import se.yarin.morphy.Database;
 import se.yarin.morphy.DatabaseReadTransaction;
 import se.yarin.morphy.Game;
-import se.yarin.morphy.ResourceLoader;
 import se.yarin.morphy.entities.EntityType;
 import se.yarin.morphy.entities.Tournament;
 import se.yarin.morphy.entities.filters.*;
@@ -26,8 +25,8 @@ public class TournamentQueryPlanGeneratorTests {
     private QueryOperator<Game> mockOperator;
 
     @Before
-    public void setupTestDb() {
-        this.db = ResourceLoader.openWorldChDatabase();
+    public void setupContext() {
+        this.db = new Database();
 
         QueryPlanner planner = new QueryPlanner(db);
         this.spyPlanner = spy(planner);
@@ -86,7 +85,7 @@ public class TournamentQueryPlanGeneratorTests {
 
             QueryOperator<Tournament> tournamentsByGamesSub = new Distinct<>(qc, new Sort<>(qc, new EntityIdsByGames<Tournament>(qc, EntityType.TOURNAMENT, mockOperator, null)));
             this.assertPlanExists(plans, new EntityLookup<>(qc, EntityType.TOURNAMENT, tournamentsByGamesSub, filter));
-            this.assertPlanExists(plans, new MergeJoin<>(qc, tournamentsByGamesSub, new EntityTableScan<>(qc, EntityType.TOURNAMENT, filter)));
+            this.assertPlanExists(plans, new MergeJoin<>(qc, new EntityTableScan<>(qc, EntityType.TOURNAMENT, filter), tournamentsByGamesSub));
             this.assertPlanExists(plans, new HashJoin<>(qc, new EntityIndexRangeScan<>(
                     qc, EntityType.TOURNAMENT, filter, null, Tournament.of("", new Date(1950)),  false), tournamentsByGamesSub));
         }
@@ -112,7 +111,7 @@ public class TournamentQueryPlanGeneratorTests {
 
             this.assertPlanExists(plans,
                     new Sort<>(qc,
-                            new MergeJoin<>(qc, tournamentByGamesSub, new EntityTableScan<>(qc, EntityType.TOURNAMENT, yearFilter)),
+                            new MergeJoin<>(qc, new EntityTableScan<>(qc, EntityType.TOURNAMENT, yearFilter), tournamentByGamesSub),
                             QuerySortOrder.byTournamentDefaultIndex(true)));
 
             QueryOperator<Tournament> rangeScanOp = new EntityIndexRangeScan<>(qc, EntityType.TOURNAMENT, yearFilter, Tournament.of("Foo", new Date(2024)), Tournament.of("Foozzz", new Date(2024)), true);

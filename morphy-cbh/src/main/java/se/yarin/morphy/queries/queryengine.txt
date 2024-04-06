@@ -40,7 +40,7 @@ A join between Game and Player (or between Game and Team) have additional metada
 per game. It's possible to join specifically on the white player, black player, any player, or even based on the result (e.g. the winner).
 
 Because of how the database is constructed, the only joins are between Games are Entities. It's not possible
-to join between Entities and Entities.
+to join between Entities and Entities. See special section below for more details on the joins.
 
 There's no way in the query itself to limit the number of items returned. However, since a query returns a stream,
 you can limit the number of items returned by only reading the first N items from the stream. Queries are always
@@ -202,6 +202,41 @@ is Manual, used to pass in a static list of item id's.
     Input: Two streams of entities. Must not contain duplicates. Must be sorted by id MergeJoin.
     Output: A stream of entities that occurs in both streams. Full data is returned if any of the inputs have full data.
             Weights are multiplied.
+
+Joins between Games and Entities
+================================
+When querying for games, the default join with any entity is of type ANY. This means that only one of the players
+have to match the join condition (and it doesn't matter which one). If you want to only find games between
+two players from a specific list of players, you would use join condition BOTH. You can also join specifically
+on WHITE, BLACK or even based on the result, e.g. WINNER, LOSER. For entities such as Tournament, Soure, Annotator
+and GameTag there are no such distinction and only one join condition exists.
+
+All the information for the matching condition of a join is in the Game data. The typical way of joining
+a game query with an _simple_ entity subquery (that can be expressed as a filter, meaning it can be evaluated
+based on the full data of the entity) if to use a GameEntityLoopJoin. This takes as input a stream of games
+(with full data), and for each game looks up the entity in the entity table by ID and depending on the join
+condition and entity filter determines if the entity should be filtered out or not.
+
+For complex entity joins, where the entity filter is a subquery containing a game query, we have to
+use a GameEntityHashJoin. This will put all entities from the entity subquery in a hash table
+so that the join condition can be evaluated for each game.
+
+An entity join can optionally also be a game source, to limit the number of games we have to scan.
+This is done by using a GameIdsByEntities operator on the entity subquery.
+If the join condition is ANY, and this is a simple entity join, there should be no need then to
+apply the corresponding GameEntityLoopJoin/GameEntityHasJoin as the source should be a perfect match,
+assuming the reverse index is correct. However, this might be an unnecessary optimisation as all
+entities that needs looking up should already be in the cache, so might as well filter anyway.
+
+If the join condition is more complicated, the GameIdsByEntities can be followed by a GameLookup
+to evaluate the join, skipping the need of the latter filtering.
+
+
+When querying for entities and joining with games, this is done using EntityIdsByGames.
+This also takes the same join condition as input. The game subquery need to provide full data,
+and the operator picks out the right field given the join condition. Note that there
+is no difference between ANY and BOTH in this case; both players/teams will be returned for a game.
+
 
 Anatomy of a Game Query
 =======================

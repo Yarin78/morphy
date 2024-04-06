@@ -3,20 +3,19 @@ package se.yarin.morphy.queries;
 import org.junit.Before;
 import org.junit.Test;
 import se.yarin.morphy.*;
-import se.yarin.morphy.entities.EntityType;
-import se.yarin.morphy.entities.Player;
-import se.yarin.morphy.entities.Tournament;
-import se.yarin.morphy.entities.filters.CombinedFilter;
-import se.yarin.morphy.entities.filters.ManualFilter;
+import se.yarin.morphy.entities.*;
+import se.yarin.morphy.entities.filters.AnnotatorNameFilter;
 import se.yarin.morphy.entities.filters.PlayerNameFilter;
 import se.yarin.morphy.games.filters.*;
 import se.yarin.morphy.queries.operations.*;
 
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static org.junit.Assert.assertEquals;
-import static org.mockito.ArgumentMatchers.any;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.*;
 
@@ -26,8 +25,8 @@ public class GameQueryPlanGeneratorTests {
     private QueryOperator<Game> mockOperator;
 
     @Before
-    public void setupTestDb() {
-        this.db = ResourceLoader.openWorldChDatabase(); // TODO: Can be empty database?!
+    public void setupContext() {
+        this.db = new Database();
 
         QueryPlanner planner = new QueryPlanner(db);
         this.spyPlanner = spy(planner);
@@ -103,7 +102,7 @@ public class GameQueryPlanGeneratorTests {
             GameFilter combinedFilter = CombinedGameFilter.combine(List.of(playerFilter, ratingFilter));
             this.assertPlanExists(plans, new GameTableScan(qc, combinedFilter));
             this.assertPlanExists(plans, new GameLookup(qc, new GameIdsByEntities<>(qc, new Manual<>(qc, Set.of(7)), EntityType.PLAYER), ratingFilter));
-            this.assertPlanExists(plans, new MergeJoin<>(qc, new GameIdsByEntities<>(qc, new Manual<>(qc, Set.of(7)), EntityType.PLAYER), new GameTableScan(qc, combinedFilter)));
+            this.assertPlanExists(plans, new MergeJoin<>(qc, new GameTableScan(qc, combinedFilter), new GameIdsByEntities<>(qc, new Manual<>(qc, Set.of(7)), EntityType.PLAYER)));
         }
     }
 
@@ -129,30 +128,106 @@ public class GameQueryPlanGeneratorTests {
             this.assertPlanExists(plans, new GameLookup(qc,
                     new MergeJoin<>(
                             qc,
-                            new GameIdsByEntities<>(qc, new Manual<Tournament>(qc, Set.of(8)), EntityType.TOURNAMENT),
-                            new GameIdsByEntities<>(qc, new Manual<Player>(qc, Set.of(7)), EntityType.PLAYER)
+                            new GameIdsByEntities<>(qc, new Manual<Player>(qc, Set.of(7)), EntityType.PLAYER),
+                            new GameIdsByEntities<>(qc, new Manual<Tournament>(qc, Set.of(8)), EntityType.TOURNAMENT)
                     ), sourceFilter));
         }
     }
 
     @Test
-    public void gamesByEntityFilterAndGameFilter() {
+    public void gamesBySimplePlayerJoin() {
+        doReturn(mockOperator).when(spyPlanner).selectBestQueryPlan(anyList());
+
         PlayerNameFilter kasparovFilter = new PlayerNameFilter("Kasparov", true, false);
-        EntityQuery<Player> playerQuery = new EntityQuery<>(db, EntityType.PLAYER, List.of(kasparovFilter));
-        GameEntityJoin<Player> join = new GameEntityJoin<>(playerQuery, GameQueryJoinCondition.WHITE);
+        GameEntityJoin<Player> join = new GameEntityJoin<>(new EntityQuery<Player>(db, EntityType.PLAYER, List.of(kasparovFilter)), GameEntityJoinCondition.WHITE);
         GameQuery gameQuery = new GameQuery(db, null, List.of(join));
+
         try (var txn = new DatabaseReadTransaction(db)) {
             QueryContext qc = new QueryContext(txn, false);
             List<QueryOperator<Game>> plans = db.queryPlanner().getGameQueryPlans(qc, gameQuery, true);
-            showPlans(plans);
+
+            this.assertPlanExists(plans, new GameEntityLoopJoin<>(qc, new GameTableScan(qc, null), EntityType.PLAYER, kasparovFilter, GameEntityJoinCondition.WHITE));
+            this.assertPlanExists(plans, new GameEntityLoopJoin<>(qc, new GameLookup(qc, new Distinct<>(qc, new Sort<>(qc, new GameIdsByEntities<>(qc, mockOperator, EntityType.PLAYER))), null), EntityType.PLAYER, kasparovFilter, GameEntityJoinCondition.WHITE));
         }
     }
+
+    @Test
+    public void gamesBySimpleAnnotatorJoinAndComplexTournamentJoin() {
+        EntityQuery<Tournament> walkoverTournamentsQuery = new EntityQuery<>(db, EntityType.TOURNAMENT, null, new GameQuery(db, List.of(new ResultsFilter("0-0"))), null);
+        EntityQuery<Annotator> annotatorQuery = new EntityQuery<>(db, EntityType.ANNOTATOR, List.of(new AnnotatorNameFilter("foo", true, false)));
+        GameQuery gameQuery = new GameQuery(db, null, List.of(new GameEntityJoin<>(annotatorQuery, null), new GameEntityJoin<>(walkoverTournamentsQuery, null)));
+
+        try (var txn = new DatabaseReadTransaction(db)) {
+            QueryContext qc = new QueryContext(txn, false);
+            List<QueryOperator<Game>> plans = db.queryPlanner().getGameQueryPlans(qc, gameQuery, true);
+            //showPlans(plans);
+            this.assertPlanExists(plans,
+                    new GameEntityHashJoin(qc,
+                        new GameEntityLoopJoin<>(qc,
+                            new GameTableScan(qc, null), EntityType.ANNOTATOR, new AnnotatorNameFilter("foo", true, false), null), EntityType.TOURNAMENT,
+                            new Distinct<>(qc,
+                                    new Sort<Tournament>(qc,
+                                            new EntityIdsByGames<>(qc, EntityType.TOURNAMENT, new GameTableScan(qc, new ResultsFilter("0-0")), null)
+                                    )
+                            ),
+            null));
+
+            boolean hasHashJoinPlans = false, hasNonHashJoinPlans = false;
+            for (QueryOperator<Game> plan : plans) {
+                boolean hasHashJoin = false;
+                for (var operatorSourceClass : getOperatorSourceClasses(plan).collect(Collectors.toList())) {
+                    if (operatorSourceClass.equals(GameEntityHashJoin.class)) {
+                        hasHashJoin = true;
+                    }
+                }
+                hasHashJoinPlans |= hasHashJoin;
+                hasNonHashJoinPlans |= !hasHashJoin;
+            }
+
+            // Since there's only one complex subquery, it should always be possible to construct a plan
+            // without hash joins
+            assertTrue(hasHashJoinPlans);
+            assertTrue(hasNonHashJoinPlans);
+        }
+    }
+
+    @Test
+    public void gamesByTwoComplexJoinsAndGameFilter() {
+        EntityQuery<Tournament> walkoverTournamentsQuery = new EntityQuery<>(db, EntityType.TOURNAMENT, null, new GameQuery(db, List.of(new ResultsFilter("0-0"))), null);
+        EntityQuery<Player> playersInWorldChQuery = new EntityQuery<>(db, EntityType.PLAYER, null, new GameQuery(db, List.of(new TournamentFilter(1))), null);
+        GameQuery gameQuery = new GameQuery(db, null, List.of(new GameEntityJoin<>(playersInWorldChQuery, null), new GameEntityJoin<>(walkoverTournamentsQuery, null)));
+        try (var txn = new DatabaseReadTransaction(db)) {
+            QueryContext qc = new QueryContext(txn, false);
+            List<QueryOperator<Game>> plans = db.queryPlanner().getGameQueryPlans(qc, gameQuery, true);
+            // showPlans(plans);
+            this.assertPlanExists(plans,
+                    new GameEntityHashJoin(qc,
+                            new GameEntityHashJoin(qc,
+                                    new GameTableScan(qc, null),
+                                    EntityType.PLAYER,
+                                    new Distinct<>(qc,
+                                            new Sort<>(qc,
+                                                    new EntityIdsByGames<Player>(qc, EntityType.PLAYER, new GameTableScan(qc, new TournamentFilter(1)), null))),
+                                    null
+                            ),
+                            EntityType.TOURNAMENT,
+                            new Distinct<>(qc,
+                                    new Sort<Player>(qc,
+                                            new EntityIdsByGames<>(qc, EntityType.TOURNAMENT, new GameTableScan(qc, new ResultsFilter("0-0")), null))), null
+                            ));
+        }
+    }
+
 
     private <T extends IdObject> void showPlans(List<QueryOperator<T>> plans) {
         for (QueryOperator<T> plan : plans) {
             System.out.println(plan.debugString(false));
             System.out.println("---");
         }
+    }
+
+    private Stream<Class<?>> getOperatorSourceClasses(QueryOperator<?> op) {
+        return Stream.concat(Stream.of(op.getClass()), op.sources().stream().flatMap(this::getOperatorSourceClasses));
     }
 
     private <T extends IdObject> void assertPlanExists(List<QueryOperator<T>> plans, QueryOperator<T> expectedPlan) {

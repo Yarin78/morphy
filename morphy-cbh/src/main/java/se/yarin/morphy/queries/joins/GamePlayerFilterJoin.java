@@ -5,13 +5,13 @@ import se.yarin.morphy.Game;
 import se.yarin.morphy.entities.EntityIndexReadTransaction;
 import se.yarin.morphy.entities.Player;
 import se.yarin.morphy.entities.filters.EntityFilter;
-import se.yarin.morphy.queries.GameQueryJoinCondition;
+import se.yarin.morphy.queries.GameEntityJoinCondition;
 
 
 public class GamePlayerFilterJoin extends GameEntityFilterJoin<Player> {
-    private final @NotNull GameQueryJoinCondition joinCondition;
+    private final @NotNull GameEntityJoinCondition joinCondition;
 
-    public GamePlayerFilterJoin(@NotNull GameQueryJoinCondition joinCondition, @NotNull EntityFilter<Player> entityFilter) {
+    public GamePlayerFilterJoin(@NotNull GameEntityJoinCondition joinCondition, @NotNull EntityFilter<Player> entityFilter) {
         super(entityFilter);
         this.joinCondition = joinCondition;
     }

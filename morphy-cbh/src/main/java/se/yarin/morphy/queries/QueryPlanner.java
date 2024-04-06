@@ -122,7 +122,7 @@ public class QueryPlanner {
         return 1.0;
     }
 
-    public <T> double entityFilterEstimate(@Nullable EntityFilter<T> entityFilter, EntityType entityType) {
+    public <T extends Entity & Comparable<T>> double entityFilterEstimate(@Nullable EntityFilter<T> entityFilter, EntityType entityType) {
         // TODO
         if (entityFilter instanceof ManualFilter) {
             int count = ((ManualFilter<?>) entityFilter).ids().size();
@@ -172,7 +172,7 @@ public class QueryPlanner {
         return 0;
     }
 
-    public <T> long entityRangeEstimate(@Nullable T rangeStart, @Nullable T rangeEnd, @Nullable EntityFilter<T> entityFilter) {
+    public <T extends Entity & Comparable<T>> long entityRangeEstimate(@Nullable T rangeStart, @Nullable T rangeEnd, @Nullable EntityFilter<T> entityFilter) {
         // TODO: Make generic
         return 1;
     }
@@ -220,7 +220,7 @@ public class QueryPlanner {
         return estimateUniquePages(citPages, count) + estimateUniquePages(cibPages, count);
     }
 
-    public static @NotNull <T extends IdObject> QueryOperator<T> selectBestQueryPlan(@NotNull List<QueryOperator<T>> queryPlans) {
+    public @NotNull <T extends IdObject> QueryOperator<T> selectBestQueryPlan(@NotNull List<QueryOperator<T>> queryPlans) {
         if (queryPlans.isEmpty()) {
             throw new IllegalArgumentException("Need at least one query plan");
         }
@@ -289,15 +289,17 @@ public class QueryPlanner {
                 gameOperator = new GameLookup(context, current.gameOperator(), CombinedGameFilter.combine(filtersLeft));
             }
 
-            for (List<GameEntityJoin<?>> entityJoinPermutation : generatePermutations(entityJoinsLeft)) {
+            for (var entityJoinPermutation : generatePermutations(entityJoinsLeft)) {
                 QueryOperator<Game> currentGameOperator = gameOperator;
-                for (GameEntityJoin<?> entityJoin : entityJoinPermutation) {
-                    currentGameOperator = entityJoin.applyGameFilter(context, currentGameOperator);
+                for (var entityJoin : entityJoinPermutation) {
+                    if (entityJoin.isSimpleJoin()) {
+                        currentGameOperator = entityJoin.loopJoin(context, currentGameOperator);
+                    } else {
+                        var entityQueryOperator = selectBestQueryPlan(getEntityQueryPlans(context, entityJoin.entityQuery(), false));
+                        currentGameOperator = new GameEntityHashJoin(context, currentGameOperator, entityJoin.getEntityType(), entityQueryOperator, entityJoin.joinCondition());
+                    }
                 }
-
-                currentGameOperator = currentGameOperator.sortedAndDistinct(sortOrder, gameQuery.limit());
-
-                candidateQueryPlans.add(currentGameOperator);
+                candidateQueryPlans.add(currentGameOperator.sortedAndDistinct(sortOrder, gameQuery.limit()));
             }
         }
 
@@ -318,12 +320,13 @@ public class QueryPlanner {
             QueryOperator<Game> gameOp = new GameIdsByEntities<>(context, entityQueryPlan, entityJoin.getEntityType());
             // If joining with e.g. White players only, we still need to filter on this later on as the index will return
             // games where the player is either White or Black
-            boolean coveredJoin = entityJoin.joinCondition() == null || entityJoin.joinCondition() == GameQueryJoinCondition.ANY;
-            sources.add(GameSourceQuery.fromGameQueryOperator(gameOp.sortedAndDistinct(), entityJoin.isSimpleJoin(), List.of(), coveredJoin ? List.of(entityJoin) : List.of()));
+            boolean coveredJoin = entityJoin.joinCondition() == null || entityJoin.joinCondition() == GameEntityJoinCondition.ANY;
+            sources.add(GameSourceQuery.fromGameQueryOperator(gameOp.sortedAndDistinct(), true, List.of(), coveredJoin ? List.of(entityJoin) : List.of()));
         }
 
         for (GameFilter gameFilter : gameQuery.gameFilters()) {
             if (gameFilter instanceof GameEntityFilter<?>) {
+                // TODO: A GameEntityFilter should also have a join condition!?
                 GameEntityFilter<?> entityFilter = (GameEntityFilter<?>) gameFilter;
                 QueryOperator<Game> gameOp = new GameIdsByEntities<>(context, new Manual<>(context, Set.copyOf(entityFilter.entityIds())), entityFilter.entityType());
 

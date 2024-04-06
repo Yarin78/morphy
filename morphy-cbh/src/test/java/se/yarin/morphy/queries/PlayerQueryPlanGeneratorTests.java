@@ -28,8 +28,8 @@ public class PlayerQueryPlanGeneratorTests {
     private QueryOperator<Game> mockOperator;
 
     @Before
-    public void setupTestDb() {
-        this.db = ResourceLoader.openWorldChDatabase();
+    public void setupContext() {
+        this.db = new Database();
 
         QueryPlanner planner = new QueryPlanner(db);
         this.spyPlanner = spy(planner);
@@ -60,7 +60,7 @@ public class PlayerQueryPlanGeneratorTests {
 
     @Test
     public void playerByGameQuery() {
-        EntityQuery<Player> playerQuery = new EntityQuery<Player>(db, EntityType.PLAYER, List.of(), new GameQuery(db, List.of()), GameQueryJoinCondition.ANY, QuerySortOrder.byPlayerDefaultIndex(), 0);
+        EntityQuery<Player> playerQuery = new EntityQuery<Player>(db, EntityType.PLAYER, List.of(), new GameQuery(db, List.of()), GameEntityJoinCondition.ANY, QuerySortOrder.byPlayerDefaultIndex(), 0);
 
         try (var txn = new DatabaseReadTransaction(db)) {
             QueryContext qc = new QueryContext(txn, false);
@@ -71,7 +71,7 @@ public class PlayerQueryPlanGeneratorTests {
                             new EntityLookup<>(qc, EntityType.PLAYER,
                                     new Distinct<>(qc,
                                             new Sort<>(qc,
-                                                    new EntityIdsByGames<Player>(qc, EntityType.PLAYER, mockOperator, GameQueryJoinCondition.ANY), QuerySortOrder.byId())), null),
+                                                    new EntityIdsByGames<Player>(qc, EntityType.PLAYER, mockOperator, GameEntityJoinCondition.ANY), QuerySortOrder.byId())), null),
                                                     QuerySortOrder.byPlayerDefaultIndex()));
         }
     }
@@ -144,7 +144,7 @@ public class PlayerQueryPlanGeneratorTests {
     @Test
     public void multipleSources() {
         PlayerNameFilter kaspFilter = new PlayerNameFilter("Kasp", "", true, false);
-        EntityQuery<Player> playerQuery = new EntityQuery<Player>(db, EntityType.PLAYER, List.of(kaspFilter), new GameQuery(db, List.of()), GameQueryJoinCondition.ANY, QuerySortOrder.byPlayerDefaultIndex(true), 0);
+        EntityQuery<Player> playerQuery = new EntityQuery<Player>(db, EntityType.PLAYER, List.of(kaspFilter), new GameQuery(db, List.of()), GameEntityJoinCondition.ANY, QuerySortOrder.byPlayerDefaultIndex(true), 0);
 
         // Ensure the PlayerIndexRangeScan is by default sorted after the PlayerIdsByGames operator
         doReturn(10000L).when(spyPlanner).entityRangeEstimate(any(), any(), any());
@@ -153,7 +153,7 @@ public class PlayerQueryPlanGeneratorTests {
             QueryContext qc = new QueryContext(txn, false);
             List<QueryOperator<Player>> plans = db.queryPlanner().getEntityQueryPlans(qc, playerQuery, true);
 
-            QueryOperator<Player> playersByGamesSub = new Distinct<>(qc, new Sort<>(qc, new EntityIdsByGames<Player>(qc, EntityType.PLAYER, mockOperator, GameQueryJoinCondition.ANY), QuerySortOrder.byId()));
+            QueryOperator<Player> playersByGamesSub = new Distinct<>(qc, new Sort<>(qc, new EntityIdsByGames<Player>(qc, EntityType.PLAYER, mockOperator, GameEntityJoinCondition.ANY), QuerySortOrder.byId()));
             this.assertPlanExists(plans,
                     new Sort<>(qc,
                             new EntityLookup<>(qc, EntityType.PLAYER, playersByGamesSub, kaspFilter),
@@ -161,7 +161,7 @@ public class PlayerQueryPlanGeneratorTests {
 
             this.assertPlanExists(plans,
                     new Sort<>(qc,
-                            new MergeJoin<>(qc, playersByGamesSub, new EntityTableScan<>(qc, EntityType.PLAYER, kaspFilter)),
+                            new MergeJoin<>(qc, new EntityTableScan<>(qc, EntityType.PLAYER, kaspFilter), playersByGamesSub),
                             QuerySortOrder.byPlayerDefaultIndex(true)));
 
             QueryOperator<Player> rangeScanOp = new EntityIndexRangeScan<>(qc, EntityType.PLAYER, kaspFilter, Player.of("Kasp", ""), Player.of("Kaspzzz", ""), true);

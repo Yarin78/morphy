@@ -97,8 +97,8 @@ public class EntityQueryPlanner {
 
         GameQuery gameQuery = entityQuery.gameQuery();
         if (gameQuery != null) {
-            QueryOperator<Game> gameQueryPlan = QueryPlanner.selectBestQueryPlan(queryPlanner().getGameQueryPlans(context, gameQuery, true));
-            GameQueryJoinCondition joinCondition = entityQuery.joinCondition();
+            QueryOperator<Game> gameQueryPlan = queryPlanner.selectBestQueryPlan(queryPlanner().getGameQueryPlans(context, gameQuery, true));
+            GameEntityJoinCondition joinCondition = entityQuery.joinCondition();
             QueryOperator<T> complexEntityQuery = new Distinct<>(context, new Sort<>(context, new EntityIdsByGames<T>(context, entityQuery.entityType(), gameQueryPlan, joinCondition)));
             sources.add(EntitySourceQuery.fromQueryOperator(complexEntityQuery, false, List.of()));
         }

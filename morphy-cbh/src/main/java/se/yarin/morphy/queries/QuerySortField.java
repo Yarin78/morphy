@@ -3,8 +3,7 @@ package se.yarin.morphy.queries;
 import org.jetbrains.annotations.NotNull;
 import se.yarin.morphy.Game;
 import se.yarin.morphy.IdObject;
-import se.yarin.morphy.entities.Player;
-import se.yarin.morphy.entities.Tournament;
+import se.yarin.morphy.entities.*;
 import se.yarin.morphy.queries.operations.QueryData;
 
 import java.util.Comparator;
@@ -45,6 +44,62 @@ public class QuerySortField<T extends IdObject> {
 
     public static QuerySortField<Tournament> tournamentPlace() {
         return new QuerySortField<>(Comparator.comparing(o -> o.data().place()), "place", true);
+    }
+
+    public static QuerySortField<Annotator> annotatorName() {
+        return new QuerySortField<>(Comparator.comparing(o -> o.data().name()), "name", true);
+    }
+
+    public static QuerySortField<GameTag> gameTagEnglishTitle() {
+        return new QuerySortField<>(Comparator.comparing(o -> o.data().englishTitle()), "englishTitle", true);
+    }
+
+    public static QuerySortField<GameTag> gameTagGermanTitle() {
+        return new QuerySortField<>(Comparator.comparing(o -> o.data().germanTitle()), "germanTitle", true);
+    }
+
+    public static QuerySortField<GameTag> gameTagDutchTitle() {
+        return new QuerySortField<>(Comparator.comparing(o -> o.data().dutchTitle()), "dutchTitle", true);
+    }
+
+    public static QuerySortField<GameTag> gameTagFrenchTitle() {
+        return new QuerySortField<>(Comparator.comparing(o -> o.data().frenchTitle()), "frenchTitle", true);
+    }
+
+    public static QuerySortField<GameTag> gameTagItalianTitle() {
+        return new QuerySortField<>(Comparator.comparing(o -> o.data().italianTitle()), "italianTitle", true);
+    }
+
+    public static QuerySortField<GameTag> gameTagSlovenianTitle() {
+        return new QuerySortField<>(Comparator.comparing(o -> o.data().slovenianTitle()), "slovenianTitle", true);
+    }
+
+    public static QuerySortField<GameTag> gameTagSpanishTitle() {
+        return new QuerySortField<>(Comparator.comparing(o -> o.data().spanishTitle()), "spanishTitle", true);
+    }
+
+    public static QuerySortField<Source> sourceTitle() {
+        return new QuerySortField<>(Comparator.comparing(o -> o.data().title()), "title", true);
+    }
+
+    public static QuerySortField<Team> teamTitle() {
+        return new QuerySortField<>(Comparator.comparing(o -> o.data().title()), "title", true);
+    }
+
+    public static QuerySortField<Team> teamNumber() {
+        return new QuerySortField<>(Comparator.comparing(o -> o.data().teamNumber()), "number", true);
+    }
+
+    public static QuerySortField<Team> teamSeason() {
+        return new QuerySortField<>(Comparator.comparing(o -> o.data().season()), "season", true);
+    }
+
+    public static QuerySortField<Team> teamYear() {
+        return new QuerySortField<>(Comparator.comparing(o -> o.data().year()), "year", true);
+    }
+
+    public static QuerySortField<Team> teamNation() {
+        return new QuerySortField<>(Comparator.comparing(o -> o.data().nation()), "nation", true);
     }
 
     private QuerySortField(@NotNull Comparator<QueryData<T>> comparator, String name, boolean requiresData) {

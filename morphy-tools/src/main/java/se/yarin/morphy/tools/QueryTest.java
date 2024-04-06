@@ -7,6 +7,7 @@ import se.yarin.morphy.entities.filters.*;
 import se.yarin.morphy.games.filters.DateRangeFilter;
 import se.yarin.morphy.games.filters.IsGameFilter;
 import se.yarin.morphy.queries.*;
+import se.yarin.morphy.queries.GameEntityJoin;
 import se.yarin.morphy.queries.joins.GamePlayerFilterJoin;
 import se.yarin.morphy.queries.joins.GameTournamentFilterJoin;
 import se.yarin.morphy.queries.operations.*;
@@ -57,7 +58,7 @@ public class QueryTest {
 
         GameQuery gameQuery = new GameQuery(db, null,
                 List.of(
-                        new GameEntityJoin<>(new EntityQuery<>(db, EntityType.PLAYER, List.of(playerFilter)), GameQueryJoinCondition.ANY),
+                        new GameEntityJoin<>(new EntityQuery<>(db, EntityType.PLAYER, List.of(playerFilter)), GameEntityJoinCondition.ANY),
                         new GameEntityJoin<>(new EntityQuery<>(db, EntityType.TOURNAMENT, List.of(tf1, tf2)), null)
                 ));
 
@@ -85,7 +86,7 @@ public class QueryTest {
     public void playersFrom18thCentury() {
         try (var txn = new DatabaseReadTransaction(db)) {
             GameQuery games = new GameQuery(db, List.of(new DateRangeFilter(Date.unset(), new Date(1900, 1, 1))));
-            EntityQuery<Player> players = new EntityQuery<Player>(db, EntityType.PLAYER, null, games, GameQueryJoinCondition.ANY);
+            EntityQuery<Player> players = new EntityQuery<Player>(db, EntityType.PLAYER, null, games, GameEntityJoinCondition.ANY);
 
             QueryContext context = new QueryContext(txn, true);
 
@@ -114,7 +115,7 @@ public class QueryTest {
 
             GameQuery gameQuery = new GameQuery(db,
                     List.of(new DateRangeFilter(new Date(2000, 1, 1), Date.unset())),
-                    List.of(new GameEntityJoin<>(EntityQuery.manual(db, EntityType.PLAYER, List.of(carlsen)), GameQueryJoinCondition.WHITE)));
+                    List.of(new GameEntityJoin<>(EntityQuery.manual(db, EntityType.PLAYER, List.of(carlsen)), GameEntityJoinCondition.WHITE)));
             QueryContext context = new QueryContext(txn, true);
 
             List<QueryOperator<Game>> queryPlans = context.queryPlanner().getGameQueryPlans(context, gameQuery, true);
@@ -145,10 +146,13 @@ public class QueryTest {
             TournamentStartDateFilter t1 = new TournamentStartDateFilter(new Date(1950, 1, 1), new Date(2020, 1, 1));
             TournamentTitleFilter t2 = new TournamentTitleFilter("Tata", true, false);
 
+            /*
             GameEntityPredicate<Tournament> games1 = new GameEntityPredicate<Tournament>(context, games, EntityType.TOURNAMENT, t1, new GameTournamentFilterJoin(t1));
             GameEntityPredicate<Tournament> games2 = new GameEntityPredicate<Tournament>(context, games1, EntityType.TOURNAMENT, t2, new GameTournamentFilterJoin(t2));
 
             detailedQueryExecution(games2);
+
+             */
         }
     }
 
@@ -171,7 +175,7 @@ public class QueryTest {
             GameIdsByEntities<Tournament> gameIds = new GameIdsByEntities<>(context, new EntityIndexRangeScan<>(context, EntityType.TOURNAMENT,
                     tournamentFilter, startKey, endKey, false), EntityType.TOURNAMENT);
             GameLookup worldChGames = new GameLookup(context, gameIds, new IsGameFilter());
-            QueryOperator<Player> playerIds = new Distinct<>(context, new Sort<>(context, new EntityIdsByGames<Player>(context, EntityType.PLAYER, worldChGames, GameQueryJoinCondition.ANY)));
+            QueryOperator<Player> playerIds = new Distinct<>(context, new Sort<>(context, new EntityIdsByGames<Player>(context, EntityType.PLAYER, worldChGames, GameEntityJoinCondition.ANY)));
 
             //playerIds.stream().forEach(id -> System.out.println(txn.playerTransaction().get(id).lastName()));
             QueryOperator<Game> allGameIds = new Distinct<>(context, new Sort<>(context, new GameIdsByEntities<Player>(context, playerIds, EntityType.PLAYER)));
@@ -227,12 +231,15 @@ public class QueryTest {
         ));
 
         PlayerNameFilter playerFilter = new PlayerNameFilter(namePrefix, "", true, false);
-
+/*
         GameTableScan games = new GameTableScan(context, new IsGameFilter());
-        GameEntityPredicate<Player> games1 = new GameEntityPredicate<Player>(context, games, EntityType.PLAYER, playerFilter, new GamePlayerFilterJoin(GameQueryJoinCondition.ANY, playerFilter));
+        GameEntityPredicate<Player> games1 = new GameEntityPredicate<Player>(context, games, EntityType.PLAYER, playerFilter, new GamePlayerFilterJoin(GameEntityJoinCondition.ANY, playerFilter));
         GameEntityPredicate<Tournament> games2 = new GameEntityPredicate<>(context, games1, EntityType.TOURNAMENT, tournamentFilter, new GameTournamentFilterJoin(tournamentFilter));
 
         return games2;
+
+ */
+        return null;
     }
 
     private QueryOperator<Game> getCarlHighCategoryGames2(DatabaseReadTransaction txn) {
@@ -242,6 +249,7 @@ public class QueryTest {
 
         QueryContext context = new QueryContext(txn, true);
         PlayerNameFilter playerNameFilter = new PlayerNameFilter(namePrefix, "", true, false);
+        /*
         GameEntityPredicate<Player> games = new GameEntityPredicate<Player>(context,
                 new GameLookup(context,
                     new GameIdsByEntities<>(context,
@@ -256,9 +264,11 @@ public class QueryTest {
                             ))), EntityType.TOURNAMENT),
                     new IsGameFilter()),
                 EntityType.PLAYER,
-                playerNameFilter, new GamePlayerFilterJoin(GameQueryJoinCondition.ANY, playerNameFilter));
-
+                playerNameFilter, new GamePlayerFilterJoin(GameEntityJoinCondition.ANY, playerNameFilter));
         return games;
+*/
+        return null;
+
     }
 
     private QueryOperator<Game> getCarlHighCategoryGames1(DatabaseReadTransaction txn) {
@@ -279,8 +289,12 @@ public class QueryTest {
         CombinedFilter<Tournament> tournamentFilter = new CombinedFilter<>(List.of(
                 new TournamentStartDateFilter(new Date(2000, 1, 1), new Date(3000, 1, 1)),
                 new TournamentCategoryFilter(20, 99)));
+        /*
         games = new GameEntityPredicate<>(context, games, EntityType.TOURNAMENT, tournamentFilter, new GameTournamentFilterJoin(tournamentFilter));
 
         return games;
+
+         */
+        return null;
     }
 }
