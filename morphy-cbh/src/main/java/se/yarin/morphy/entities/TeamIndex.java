@@ -38,7 +38,7 @@ public class TeamIndex extends EntityIndex<Team> {
     }
 
     protected TeamIndex(@NotNull ItemStorage<EntityIndexHeader, EntityNode> storage, @Nullable DatabaseContext context) {
-        super(storage, "Team", context);
+        super(storage, EntityType.TEAM, context);
     }
 
     public static @NotNull TeamIndex create(@NotNull File file, @Nullable DatabaseContext context)

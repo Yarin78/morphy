@@ -36,7 +36,7 @@ public class SourceIndex extends EntityIndex<Source> {
     }
 
     protected SourceIndex(@NotNull ItemStorage<EntityIndexHeader, EntityNode> storage, @Nullable DatabaseContext context) {
-        super(storage, "Source", context);
+        super(storage, EntityType.SOURCE, context);
     }
 
     public static @NotNull SourceIndex create(@NotNull File file, @Nullable DatabaseContext context)

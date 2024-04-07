@@ -24,7 +24,7 @@ public class FooBarEntityIndex extends EntityIndex<FooBarEntity> {
     }
 
     protected FooBarEntityIndex(@NotNull ItemStorage<EntityIndexHeader, EntityNode> storage) {
-        super(storage, "FooBar", null);
+        super(storage, EntityType.TEAM, null);
     }
 
     public static @NotNull FooBarEntityIndex create(@NotNull File file)

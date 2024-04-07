@@ -29,7 +29,7 @@ public class FooEntityIndex extends EntityIndex<FooEntity> {
     }
 
     protected FooEntityIndex(@NotNull ItemStorage<EntityIndexHeader, EntityNode> storage, @Nullable DatabaseContext context) {
-        super(storage, "Foo", context);
+        super(storage, EntityType.PLAYER, context);
     }
 
     public static @NotNull FooEntityIndex create(@NotNull File file)

@@ -36,7 +36,7 @@ public class AnnotatorIndex extends EntityIndex<Annotator> {
     }
 
     protected AnnotatorIndex(@NotNull ItemStorage<EntityIndexHeader, EntityNode> storage, @Nullable DatabaseContext context) {
-        super(storage, "Annotator", context);
+        super(storage, EntityType.ANNOTATOR, context);
     }
 
     public static @NotNull AnnotatorIndex create(@NotNull File file, @Nullable DatabaseContext context)

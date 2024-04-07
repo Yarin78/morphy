@@ -44,7 +44,7 @@ public class EntityIndexReadTransaction<T extends Entity & Comparable<T>> extend
             id = index().storage.getItem(id).getRightChildId();
         }
         if (id >= 0) {
-            log.warn(String.format("Loop in deleted id chain in entity %s", index().entityType().toLowerCase()));
+            log.warn(String.format("Loop in deleted id chain in entity %s", index().entityType().nameSingular()));
         }
         return ids;
     }

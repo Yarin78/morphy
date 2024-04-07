@@ -31,7 +31,7 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>> implements M
     private static final Logger log = LoggerFactory.getLogger(EntityIndex.class);
 
     protected final @NotNull ItemStorage<EntityIndexHeader, EntityNode> storage;
-    private final @NotNull String entityType; // TODO: Use EntityType
+    private final @NotNull EntityType entityType;
     private final @NotNull DatabaseContext context;
 
     // Number of successfully committed transactions to the EntityIndex
@@ -44,17 +44,17 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>> implements M
         return storage.getHeader();
     }
 
-    @NotNull String entityType() { return this.entityType; }
+    @NotNull EntityType entityType() { return this.entityType; }
 
     @NotNull MetricsRef<ItemMetrics> itemMetricsRef() {
         return itemMetricsRef;
     }
 
-    protected EntityIndex(@NotNull ItemStorage<EntityIndexHeader, EntityNode> storage, @NotNull String entityType, @Nullable DatabaseContext context) {
+    protected EntityIndex(@NotNull ItemStorage<EntityIndexHeader, EntityNode> storage, @NotNull EntityType entityType, @Nullable DatabaseContext context) {
         this.storage = storage;
         this.entityType = entityType;
         this.context = context == null ? new DatabaseContext() : context;
-        this.itemMetricsRef = ItemMetrics.register(this.context.instrumentation(), entityType);
+        this.itemMetricsRef = ItemMetrics.register(this.context.instrumentation(), entityType.nameSingularCapitalized());
         this.currentVersion = new AtomicInteger(0);
     }
 
@@ -372,7 +372,7 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>> implements M
             // when there are just a few entities in the db
             log.debug(String.format(
                     "Found %d entities when traversing the %s base but the header says there should be %d entities.",
-                    result.count(), entityType.toLowerCase(), storageHeader().numEntities()));
+                    result.count(), entityType.nameSingular(), storageHeader().numEntities()));
         }
     }
 
@@ -410,13 +410,13 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>> implements M
 
     private @NotNull ValidationResult validate(int entityId, @Nullable T min, @Nullable T max, int depth) throws MorphyEntityIndexException {
         if (depth > 40) {
-            throw new MorphyEntityIndexException("Infinite loop when verifying storage structure for entity " + entityType.toLowerCase());
+            throw new MorphyEntityIndexException("Infinite loop when verifying storage structure for entity " + entityType.nameSingular());
         }
         EntityNode node = getNode(entityId);
         T entity = resolveEntity(node);
         if (node.isDeleted()) {
             throw new MorphyEntityIndexException(String.format(
-                    "Reached deleted %s entity %d when validating the storage structure.", entityType.toLowerCase(), entityId));
+                    "Reached deleted %s entity %d when validating the storage structure.", entityType.nameSingular(), entityId));
         }
         if ((min != null && min.compareTo(entity) > 0) || (max != null && max.compareTo(entity) < 0)) {
             throw new MorphyEntityIndexException(String.format(
@@ -439,12 +439,12 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>> implements M
 
         if (rightHeight - leftHeight != node.getBalance()) {
             throw new MorphyEntityIndexException(String.format("Height difference at node %d was %d but node data says it should be %d (entity type %s)",
-                    node.getId(), rightHeight - leftHeight, node.getBalance(), entityType.toLowerCase()));
+                    node.getId(), rightHeight - leftHeight, node.getBalance(), entityType.nameSingular()));
         }
 
         if (Math.abs(leftHeight - rightHeight) > 1) {
             throw new MorphyEntityIndexException(String.format("Height difference at node %d was %d (entity type %s)",
-                    node.getId(), leftHeight - rightHeight, entityType.toLowerCase()));
+                    node.getId(), leftHeight - rightHeight, entityType.nameSingular()));
         }
 
         return ValidationResult.of(cnt, 1 + Math.max(leftHeight, rightHeight));

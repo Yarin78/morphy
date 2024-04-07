@@ -42,7 +42,7 @@ public class PlayerIndex extends EntityIndex<Player> {
     }
 
     protected PlayerIndex(@NotNull ItemStorage<EntityIndexHeader, EntityNode> storage, @Nullable DatabaseContext context) {
-        super(storage, "Player", context);
+        super(storage, EntityType.PLAYER, context);
     }
 
     public static @NotNull PlayerIndex create(@NotNull File file, @Nullable DatabaseContext context)

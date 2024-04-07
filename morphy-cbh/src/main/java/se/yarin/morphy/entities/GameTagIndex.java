@@ -37,7 +37,7 @@ public class GameTagIndex extends EntityIndex<GameTag> {
     }
 
     protected GameTagIndex(@NotNull ItemStorage<EntityIndexHeader, EntityNode> storage, @Nullable DatabaseContext context) {
-        super(storage, "GameTag", context);
+        super(storage, EntityType.GAME_TAG, context);
     }
 
     public static GameTagIndex create(@NotNull File file, @Nullable DatabaseContext context)

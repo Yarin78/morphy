@@ -45,7 +45,7 @@ public class TournamentIndex extends EntityIndex<Tournament> {
 
     protected TournamentIndex(
             @NotNull ItemStorage<EntityIndexHeader, EntityNode> storage, @Nullable DatabaseContext context) {
-        super(storage, "Tournament", context);
+        super(storage, EntityType.TOURNAMENT, context);
     }
 
     public static @NotNull TournamentIndex create(@NotNull File file, @Nullable DatabaseContext context)
