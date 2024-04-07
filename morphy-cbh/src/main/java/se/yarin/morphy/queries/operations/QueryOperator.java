@@ -143,7 +143,9 @@ public abstract class QueryOperator<T extends IdObject> {
                 .build();
     }
 
-    protected abstract List<MetricsProvider> metricProviders();
+    protected List<MetricsProvider> metricProviders() {
+        return List.of();
+    }
 
     protected abstract Stream<QueryData<T>> operatorStream();
 

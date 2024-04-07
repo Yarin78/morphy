@@ -53,9 +53,4 @@ public class Sort<T extends IdObject> extends QueryOperator<T> {
     public String toString() {
         return "Sort(sortOrder=" + sortOrder + ")";
     }
-
-    @Override
-    protected List<MetricsProvider> metricProviders() {
-        return List.of();
-    }
 }

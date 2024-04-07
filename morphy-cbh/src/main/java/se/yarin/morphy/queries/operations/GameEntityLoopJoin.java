@@ -100,11 +100,4 @@ public class GameEntityLoopJoin<T extends Entity & Comparable<T>> extends QueryO
 
         return "Game" + entityType.nameSingularCapitalized() + "LoopJoin(" + String.join(", ", params) + ")";
     }
-
-    @Override
-    protected List<MetricsProvider> metricProviders() {
-        // TODO: Make generic
-        // return List.of(database().tournamentIndex(), database().tournamentExtraStorage());
-        return List.of(database().playerIndex());
-    }
 }

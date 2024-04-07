@@ -67,9 +67,4 @@ public class EntityIdsByGames<T extends Entity & Comparable<T>> extends QueryOpe
     public String toString() {
         return entityType.nameSingularCapitalized() + "IdsByGames()";
     }
-
-    @Override
-    protected List<MetricsProvider> metricProviders() {
-        return List.of();
-    }
 }

@@ -6,6 +6,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.morphy.DatabaseContext;
 import se.yarin.morphy.entities.filters.EntityFilter;
+import se.yarin.morphy.metrics.MetricsProvider;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -307,4 +308,7 @@ public class EntityIndexReadTransaction<T extends Entity & Comparable<T>> extend
         return StreamSupport.stream(iterableDescending(start, end, filter).spliterator(), false);
     }
 
+    public @NotNull List<MetricsProvider> metricsProviders() {
+        return List.of(index());
+    }
 }

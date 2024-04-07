@@ -67,9 +67,4 @@ public class Distinct<T extends IdObject> extends QueryOperator<T> {
     public String toString() {
         return "Distinct()";
     }
-
-    @Override
-    protected List<MetricsProvider> metricProviders() {
-        return List.of();
-    }
 }

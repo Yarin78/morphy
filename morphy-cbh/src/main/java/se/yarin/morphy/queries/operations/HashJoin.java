@@ -24,11 +24,6 @@ public class HashJoin<T extends IdObject> extends QueryOperator<T> {
     }
 
     @Override
-    protected List<MetricsProvider> metricProviders() {
-        return List.of();
-    }
-
-    @Override
     protected Stream<QueryData<T>> operatorStream() {
         return StreamUtil.hashJoin(left.stream(), right.stream(), QueryData.merger());
     }

@@ -83,8 +83,6 @@ public class EntityIndexRangeScan<T extends Entity & Comparable<T>> extends Quer
 
     @Override
     protected List<MetricsProvider> metricProviders() {
-        // TODO: Make generic
-        // return List.of(database().playerIndex());
-        return List.of(database().tournamentIndex(), database().tournamentExtraStorage());
+        return this.txn.metricsProviders();
     }
 }

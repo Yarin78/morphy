@@ -30,11 +30,6 @@ public class MergeJoin<T extends IdObject> extends QueryOperator<T> {
     }
 
     @Override
-    protected List<MetricsProvider> metricProviders() {
-        return List.of();
-    }
-
-    @Override
     protected Stream<QueryData<T>> operatorStream() {
         return StreamUtil.mergeJoin(left.stream(), right.stream(), QueryData.merger());
     }

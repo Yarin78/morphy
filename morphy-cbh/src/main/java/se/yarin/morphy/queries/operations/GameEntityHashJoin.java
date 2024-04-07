@@ -4,7 +4,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import se.yarin.morphy.Game;
 import se.yarin.morphy.IdObject;
-import se.yarin.morphy.entities.Entity;
 import se.yarin.morphy.entities.EntityType;
 import se.yarin.morphy.metrics.MetricsProvider;
 import se.yarin.morphy.queries.GameEntityJoinCondition;
@@ -91,12 +90,5 @@ public class GameEntityHashJoin extends QueryOperator<Game> {
         }
 
         return "Game" + entityType.nameSingularCapitalized() + "HashJoin(" + String.join(", ", params) + ")";
-    }
-
-    @Override
-    protected List<MetricsProvider> metricProviders() {
-        // TODO: Make generic
-        // return List.of(database().tournamentIndex(), database().tournamentExtraStorage());
-        return List.of(database().playerIndex());
     }
 }

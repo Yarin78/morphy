@@ -49,9 +49,4 @@ public class Limit<T extends IdObject> extends QueryOperator<T> {
     public String toString() {
         return "Limit(limit=" + limit + ")";
     }
-
-    @Override
-    protected List<MetricsProvider> metricProviders() {
-        return List.of();
-    }
 }
