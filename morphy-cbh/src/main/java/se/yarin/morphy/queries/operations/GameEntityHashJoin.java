@@ -55,8 +55,8 @@ public class GameEntityHashJoin extends QueryOperator<Game> {
     @Override
     public Stream<QueryData<Game>> operatorStream() {
         // No need to keep the full entity data in memory
-        // TODO: If entitySource contains duplicates, weights should be added
-        Map<Integer, QueryData<?>> hashMap = entitySource.stream().collect(Collectors.toMap(IdObject::id, data -> new QueryData<>(data.id(), null, data.weight())));
+        Map<Integer, QueryData<?>> hashMap = entitySource.stream().collect(Collectors.toMap(IdObject::id, data -> new QueryData<>(data.id(), null, data.weight()),
+            (a, b) -> new QueryData<>(a.id(), null, a.weight() + b.weight())));
 
         return this.source.stream().map(game -> {
             Game gameData = game.data();

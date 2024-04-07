@@ -64,7 +64,7 @@ public class DatabaseReadTransaction extends DatabaseTransaction {
         return gameTagTransaction;
     }
 
-    public <T extends Entity & Comparable<T>> EntityIndexReadTransaction<?> entityTransaction(EntityType entityType) {
+    public <T extends Entity & Comparable<T>> EntityIndexReadTransaction<?> entityTransaction(@NotNull EntityType entityType) {
         return switch (entityType) {
             case PLAYER -> playerTransaction;
             case TOURNAMENT -> tournamentTransaction;

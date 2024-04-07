@@ -44,18 +44,8 @@ public class EntityLookup<T extends Entity & Comparable<T>> extends QueryOperato
 
     public Stream<QueryData<T>> operatorStream() {
         return this.source.stream()
-//                TODO: Something like this is nicer, but this loses the weight
-//                .map(entity -> txn.get(entity.id(), entityFilter))
-//                .filter(Objects::nonNull)
-//                .map(QueryData::new);
-                .flatMap(data -> {
-                    T entity = txn.get(data.id(), entityFilter);
-                    if (entity == null) {
-                        return Stream.of();
-                    } else {
-                        return Stream.of(new QueryData<>(data.id(), entity, data.weight()));
-                    }
-                });
+                .map(entity -> new QueryData<>(entity.id(), txn.get(entity.id(), entityFilter), entity.weight()))
+                .filter(data -> data.data() != null);
     }
 
     @Override

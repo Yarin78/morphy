@@ -7,8 +7,10 @@ import se.yarin.morphy.metrics.MetricsProvider;
 import se.yarin.morphy.queries.QueryContext;
 import se.yarin.morphy.queries.QuerySortOrder;
 
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
 public class Distinct<T extends IdObject> extends QueryOperator<T> {
@@ -33,10 +35,22 @@ public class Distinct<T extends IdObject> extends QueryOperator<T> {
     }
 
     public Stream<QueryData<T>> operatorStream() {
-        HashSet<Integer> seen = new HashSet<>();
-        // TODO: If source is sorted by Id, no need to store everything in a hash map
-        // TODO: This will get the first weight. Perhaps group instead and accumulate weights?
-        return source.stream().filter(data -> seen.add(data.id()));
+        if (source.sortOrder().isSameOrStronger(QuerySortOrder.byId())) {
+            var lastId = new AtomicInteger(-1);
+            return source.stream().filter(data -> {
+                if (data.id() == lastId.get()) {
+                    return false;
+                }
+                assert data.id() > lastId.get();
+                lastId.set(data.id());
+                return true;
+            });
+
+        } else {
+            HashSet<Integer> seen = new HashSet<>();
+            return source.stream().filter(data -> seen.add(data.id()));
+        }
+
     }
 
     @Override
