@@ -31,14 +31,11 @@ public class GameQueryPlanGeneratorTests {
         QueryPlanner planner = new QueryPlanner(db);
         this.spyPlanner = spy(planner);
         this.db.setQueryPlanner(this.spyPlanner);
-        planner.updatePlanners(this.spyPlanner);
 
         this.mockOperator = mock(QueryOperator.class);
         when(mockOperator.debugString(anyBoolean())).thenReturn("mock");
         when(mockOperator.getOperatorCost()).thenReturn(ImmutableOperatorCost.builder().build());
         when(mockOperator.hasFullData()).thenReturn(true);
-
-        // doReturn(List.of(mockOperator)).when(spyPlanner).getGameQueryPlans(any(), any(), anyBoolean());
     }
 
     @Test

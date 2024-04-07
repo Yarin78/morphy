@@ -34,7 +34,6 @@ public class PlayerQueryPlanGeneratorTests {
         QueryPlanner planner = new QueryPlanner(db);
         this.spyPlanner = spy(planner);
         this.db.setQueryPlanner(this.spyPlanner);
-        planner.updatePlanners(this.spyPlanner);
 
         this.mockOperator = mock(QueryOperator.class);
         when(mockOperator.debugString(anyBoolean())).thenReturn("mock");
