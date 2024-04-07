@@ -2,9 +2,11 @@ package se.yarin.morphy.games.filters;
 
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import se.yarin.chess.GameResult;
 import se.yarin.morphy.entities.EntityType;
 import se.yarin.morphy.entities.Team;
 import se.yarin.morphy.games.ExtendedGameHeader;
+import se.yarin.morphy.queries.GameEntityJoinCondition;
 import se.yarin.morphy.storage.ItemStorageFilter;
 import se.yarin.util.ByteBufferUtil;
 
@@ -14,30 +16,31 @@ import java.util.stream.Collectors;
 
 public class TeamFilter implements ItemStorageFilter<ExtendedGameHeader>, GameFilter, GameEntityFilter<Team> {
     private final @NotNull Set<Integer> teamIds;
-    private final @NotNull PlayerColor color;
+    private final @NotNull GameEntityJoinCondition matchCondition;
 
-    public enum PlayerColor {
-        ANY,
-        WHITE,
-        BLACK
+    public TeamFilter(int teamId, @Nullable GameEntityJoinCondition matchCondition) {
+        this(new int[] { teamId }, matchCondition);
     }
 
-    public TeamFilter(int teamId, @NotNull TeamFilter.PlayerColor color) {
-        this(new int[] { teamId }, color);
-    }
-
-    public TeamFilter(int[] teamIds, @NotNull TeamFilter.PlayerColor color) {
+    public TeamFilter(int[] teamIds, @Nullable GameEntityJoinCondition matchCondition) {
         this.teamIds = Arrays.stream(teamIds).boxed().collect(Collectors.toUnmodifiableSet());
-        this.color = color;
+        // This ought to be supported, but requires that we have the default GameHeader as well as ExtendedGameHeader
+        if (matchCondition == GameEntityJoinCondition.WINNER || matchCondition == GameEntityJoinCondition.LOSER) {
+            throw new IllegalArgumentException("Cannot use WINNER or LOSER with TeamFilter");
+        }
+        this.matchCondition = matchCondition == null ? GameEntityJoinCondition.ANY : matchCondition;
     }
 
-    public TeamFilter(@NotNull Team team, @NotNull PlayerColor color) {
-        this(Collections.singletonList(team), color);
+    public TeamFilter(@NotNull Team team, @Nullable GameEntityJoinCondition matchCondition) {
+        this(Collections.singletonList(team), matchCondition);
     }
 
-    public TeamFilter(@NotNull Collection<Team> teams, @NotNull PlayerColor color) {
+    public TeamFilter(@NotNull Collection<Team> teams, @Nullable GameEntityJoinCondition matchCondition) {
         this.teamIds = teams.stream().map(Team::id).collect(Collectors.toCollection(HashSet::new));
-        this.color = color;
+        if (matchCondition == GameEntityJoinCondition.WINNER || matchCondition == GameEntityJoinCondition.LOSER) {
+            throw new IllegalArgumentException("Cannot use WINNER or LOSER with TeamFilter");
+        }
+        this.matchCondition = matchCondition == null ? GameEntityJoinCondition.ANY : matchCondition;
     }
 
     @Override
@@ -52,9 +55,7 @@ public class TeamFilter implements ItemStorageFilter<ExtendedGameHeader>, GameFi
 
     @Override
     public boolean matches(@NotNull ExtendedGameHeader extendedGameHeader) {
-        boolean isWhite = teamIds.contains(extendedGameHeader.whiteTeamId());
-        boolean isBlack = teamIds.contains(extendedGameHeader.blackTeamId());
-        return (isWhite && this.color != PlayerColor.BLACK) || (isBlack && this.color != PlayerColor.WHITE);
+        return matchCondition.matches(extendedGameHeader.whiteTeamId(), extendedGameHeader.blackTeamId(), GameResult.DRAW, teamIds);
     }
 
     @Override
@@ -62,20 +63,19 @@ public class TeamFilter implements ItemStorageFilter<ExtendedGameHeader>, GameFi
         int whiteTeamId = ByteBufferUtil.getIntB(buf, 0);
         int blackTeamId = ByteBufferUtil.getIntB(buf, 4);
 
-        boolean isWhite = teamIds.contains(whiteTeamId);
-        boolean isBlack = teamIds.contains(blackTeamId);
-        return (isWhite && this.color != PlayerColor.BLACK) || (isBlack && this.color != PlayerColor.WHITE);
+        return matchCondition.matches(whiteTeamId, blackTeamId, GameResult.DRAW, teamIds);
     }
 
     public @Nullable ItemStorageFilter<ExtendedGameHeader> extendedGameHeaderFilter() { return this; }
 
     @Override
     public String toString() {
-        // TODO: color
+        String s;
         if (teamIds.size() == 1) {
-            return "teamId=" + teamIds.stream().findFirst().get();
+            s = "teamId=" + teamIds.stream().findFirst().get();
         } else {
-            return "teamId in ( " + teamIds.stream().map(Object::toString).collect(Collectors.joining(", ")) + ")";
+            s = "teamId in ( " + teamIds.stream().map(Object::toString).collect(Collectors.joining(", ")) + ")";
         }
+        return s + ", condition=" + matchCondition;
     }
 }

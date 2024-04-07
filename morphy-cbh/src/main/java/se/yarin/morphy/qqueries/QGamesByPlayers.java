@@ -8,6 +8,7 @@ import se.yarin.morphy.entities.Entity;
 import se.yarin.morphy.entities.Player;
 import se.yarin.morphy.games.filters.GameFilter;
 import se.yarin.morphy.games.filters.PlayerFilter;
+import se.yarin.morphy.queries.GameEntityJoinCondition;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -15,21 +16,19 @@ import java.util.stream.Stream;
 
 public class QGamesByPlayers extends ItemQuery<Game> {
     private final @NotNull ItemQuery<Player> playerQuery;
-    private final PlayerFilter.PlayerColor color;
-    private final PlayerFilter.PlayerResult result;
+    private final @NotNull GameEntityJoinCondition matchCondition;
 
     private @Nullable List<Player> playerResult;
     private @Nullable PlayerFilter playerFilter;
 
 
     public QGamesByPlayers(@NotNull ItemQuery<Player> playerQuery) {
-        this(playerQuery, PlayerFilter.PlayerColor.ANY, PlayerFilter.PlayerResult.ANY);
+        this(playerQuery, null);
     }
 
-    public QGamesByPlayers(@NotNull ItemQuery<Player> playerQuery, @NotNull PlayerFilter.PlayerColor color, @NotNull PlayerFilter.PlayerResult result) {
+    public QGamesByPlayers(@NotNull ItemQuery<Player> playerQuery, @Nullable GameEntityJoinCondition matchCondition) {
         this.playerQuery = playerQuery;
-        this.color = color;
-        this.result = result;
+        this.matchCondition = matchCondition == null ? GameEntityJoinCondition.ANY : matchCondition;
     }
 
     @Override
@@ -49,7 +48,7 @@ public class QGamesByPlayers extends ItemQuery<Game> {
     public void evaluateSubQuery(@NotNull DatabaseReadTransaction txn) {
         if (playerResult == null) {
             playerResult = playerQuery.stream(txn).collect(Collectors.toList());
-            playerFilter = new PlayerFilter(playerResult, color, result);
+            playerFilter = new PlayerFilter(playerResult, matchCondition);
         }
     }
 

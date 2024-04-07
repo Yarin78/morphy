@@ -1,10 +1,14 @@
 package se.yarin.morphy.games.filters;
 
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+import se.yarin.cbhlib.util.CBUtil;
 import se.yarin.chess.GameResult;
 import se.yarin.morphy.entities.EntityType;
 import se.yarin.morphy.entities.Player;
 import se.yarin.morphy.games.GameHeader;
+import se.yarin.morphy.queries.GameEntityJoin;
+import se.yarin.morphy.queries.GameEntityJoinCondition;
 import se.yarin.util.ByteBufferUtil;
 
 import java.nio.ByteBuffer;
@@ -14,40 +18,25 @@ import java.util.stream.Collectors;
 public class PlayerFilter extends IsGameFilter implements GameEntityFilter<Player> {
 
     private final @NotNull Set<Integer> playerIds;
-    private final @NotNull PlayerColor color;
-    private final @NotNull PlayerResult result;
 
-    // TODO: These enums should be merged into the GamePlayerJoin condition!?
-    public enum PlayerColor {
-        ANY,
-        WHITE,
-        BLACK
+    private final @NotNull GameEntityJoinCondition matchCondition;
+
+    public PlayerFilter(int playerId, @Nullable GameEntityJoinCondition matchCondition) {
+        this(new int[] { playerId }, matchCondition);
     }
 
-    public enum PlayerResult {
-        ANY,
-        WIN,
-        LOSS
-    }
-
-    public PlayerFilter(int playerId, @NotNull PlayerColor color, @NotNull PlayerResult result) {
-        this(new int[] { playerId }, color, result);
-    }
-
-    public PlayerFilter(int[] playerIds, @NotNull PlayerColor color, @NotNull PlayerResult result) {
+    public PlayerFilter(int[] playerIds, @Nullable GameEntityJoinCondition matchCondition) {
         this.playerIds = Arrays.stream(playerIds).boxed().collect(Collectors.toUnmodifiableSet());
-        this.color = color;
-        this.result = result;
+        this.matchCondition = matchCondition == null ? GameEntityJoinCondition.ANY : matchCondition;
     }
 
-    public PlayerFilter(@NotNull Player player, @NotNull PlayerColor color, @NotNull PlayerResult result) {
-        this(Collections.singletonList(player), color, result);
+    public PlayerFilter(@NotNull Player player, @Nullable GameEntityJoinCondition matchCondition) {
+        this(Collections.singletonList(player), matchCondition);
     }
 
-    public PlayerFilter(@NotNull Collection<Player> players, @NotNull PlayerColor color, @NotNull PlayerResult result) {
+    public PlayerFilter(@NotNull Collection<Player> players, @Nullable GameEntityJoinCondition matchCondition) {
         this.playerIds = players.stream().map(Player::id).collect(Collectors.toCollection(HashSet::new));
-        this.color = color;
-        this.result = result;
+        this.matchCondition = matchCondition == null ? GameEntityJoinCondition.ANY : matchCondition;
     }
 
     @Override
@@ -64,16 +53,7 @@ public class PlayerFilter extends IsGameFilter implements GameEntityFilter<Playe
         if (!super.matches(gameHeader)) {
             return false;
         }
-        boolean isWhite = playerIds.contains(gameHeader.whitePlayerId());
-        boolean isBlack = playerIds.contains(gameHeader.blackPlayerId());
-        // TODO: Test this logic
-        boolean colorMatches = (isWhite && this.color != PlayerColor.BLACK) || (isBlack && this.color != PlayerColor.WHITE);
-
-        boolean resultMatches = result == PlayerResult.ANY ||
-                (result == PlayerResult.WIN && playerIds.contains(gameHeader.winningPlayerId())) ||
-                (result == PlayerResult.LOSS && (playerIds.contains(gameHeader.losingPlayerId()) || gameHeader.result() == GameResult.BOTH_LOST));
-
-        return colorMatches && resultMatches;
+        return matchCondition.matches(gameHeader.whitePlayerId(), gameHeader.blackPlayerId(), gameHeader.result(), playerIds);
     }
 
     @Override
@@ -84,20 +64,18 @@ public class PlayerFilter extends IsGameFilter implements GameEntityFilter<Playe
 
         int whitePlayerId = ByteBufferUtil.getUnsigned24BitB(buf, 9);
         int blackPlayerId = ByteBufferUtil.getUnsigned24BitB(buf, 12);
-
-        boolean isWhite = playerIds.contains(whitePlayerId);
-        boolean isBlack = playerIds.contains(blackPlayerId);
-        // TODO: Add support for results
-        return (isWhite && this.color != PlayerColor.BLACK) || (isBlack && this.color != PlayerColor.WHITE);
+        GameResult result = CBUtil.decodeGameResult(ByteBufferUtil.getUnsignedByte(buf, 27));
+        return matchCondition.matches(whitePlayerId, blackPlayerId, result, playerIds);
     }
 
     @Override
     public String toString() {
-        // TODO: color and result
+        String s;
         if (playerIds.size() == 1) {
-            return "playerId=" + playerIds.stream().findFirst().get();
+            s = "playerId=" + playerIds.stream().findFirst().get();
         } else {
-            return "playerId in ( " + playerIds.stream().map(Object::toString).collect(Collectors.joining(", ")) + ")";
+            s = "playerId in ( " + playerIds.stream().map(Object::toString).collect(Collectors.joining(", ")) + ")";
         }
+        return s + ", condition=" + matchCondition;
     }
 }

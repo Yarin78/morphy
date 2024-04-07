@@ -43,7 +43,7 @@ public class QueryPlannerTest {
     @Test
     public void gamesBySinglePlayer() {
         GameQuery gameQuery = new GameQuery(db, List.of(new PlayerFilter(
-                db.getPlayer(10), PlayerFilter.PlayerColor.ANY, PlayerFilter.PlayerResult.ANY)),
+                db.getPlayer(10), null)),
                 null, QuerySortOrder.byId(), 0);
         try (var txn = new DatabaseReadTransaction(db)) {
             QueryContext queryContext = new QueryContext(txn, false);

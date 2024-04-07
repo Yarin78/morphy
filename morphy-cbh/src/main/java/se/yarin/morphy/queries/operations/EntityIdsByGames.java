@@ -44,7 +44,7 @@ public class EntityIdsByGames<T extends Entity & Comparable<T>> extends QueryOpe
     @Override
     public Stream<QueryData<T>> operatorStream() {
         return source.stream().flatMap(row -> {
-            int[][] joinIds = GameEntityJoin.getJoinIds(row.data(), entityType, joinCondition);
+            int[][] joinIds = joinCondition.getJoinIds(row.data(), entityType);
             return Arrays.stream(joinIds).flatMap(ids -> Arrays.stream(ids).boxed().filter(id -> id >= 0)).map(QueryData<T>::new);
         });
     }

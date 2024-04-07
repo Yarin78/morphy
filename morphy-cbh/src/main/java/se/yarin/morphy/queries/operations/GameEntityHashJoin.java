@@ -60,7 +60,7 @@ public class GameEntityHashJoin extends QueryOperator<Game> {
 
         return this.source.stream().map(game -> {
             Game gameData = game.data();
-            int[][] joinIdGroups = GameEntityJoin.getJoinIds(gameData, entityType, joinCondition);
+            int[][] joinIdGroups = joinCondition.getJoinIds(gameData, entityType);
             for (int[] joinIds : joinIdGroups) {
                 int matchCnt = 0;
                 double weight = 0;

@@ -14,6 +14,7 @@ import se.yarin.morphy.entities.Player;
 import se.yarin.morphy.entities.Tournament;
 import se.yarin.morphy.games.filters.*;
 import se.yarin.morphy.qqueries.*;
+import se.yarin.morphy.queries.GameEntityJoinCondition;
 
 import java.io.File;
 import java.io.IOException;
@@ -218,13 +219,13 @@ public class Games extends BaseCommand implements Callable<Integer> {
                             .collect(Collectors.toList()));
 
                 }
-                PlayerFilter.PlayerResult playerResult = PlayerFilter.PlayerResult.ANY;
+                GameEntityJoinCondition matchCondition = GameEntityJoinCondition.ANY;
                 if ("win".equals(result)) {
-                    playerResult = PlayerFilter.PlayerResult.WIN;
+                    matchCondition = GameEntityJoinCondition.WINNER;
                 } else if ("loss".equals(result)) {
-                    playerResult = PlayerFilter.PlayerResult.LOSS;
+                    matchCondition = GameEntityJoinCondition.LOSER;
                 }
-                gameQueries.add(new QGamesByPlayers(playerSearcher, PlayerFilter.PlayerColor.ANY, playerResult));
+                gameQueries.add(new QGamesByPlayers(playerSearcher, matchCondition));
                 if (primaryPlayerSearcher == null) {
                     primaryPlayerSearcher = playerSearcher;
                 }

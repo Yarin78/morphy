@@ -57,7 +57,7 @@ public class GameEntityLoopJoin<T extends Entity & Comparable<T>> extends QueryO
 
         return this.source.stream().filter(game -> {
             Game gameData = game.data();
-            int[][] joinIdGroups = GameEntityJoin.getJoinIds(gameData, entityType, joinCondition);
+            int[][] joinIdGroups = joinCondition.getJoinIds(gameData, entityType);
             for (int[] joinIds : joinIdGroups) {
                 int matchCnt = 0;
                 for (int joinId : joinIds) {

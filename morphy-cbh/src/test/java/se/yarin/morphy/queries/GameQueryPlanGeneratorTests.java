@@ -56,7 +56,7 @@ public class GameQueryPlanGeneratorTests {
 
     @Test
     public void gamesBySingleFixedPlayer() {
-        GameFilter playerFilter = new PlayerFilter(7, PlayerFilter.PlayerColor.WHITE, PlayerFilter.PlayerResult.ANY);
+        GameFilter playerFilter = new PlayerFilter(7, GameEntityJoinCondition.WHITE);
         GameQuery gameQuery = new GameQuery(db, List.of(playerFilter));
 
         try (var txn = new DatabaseReadTransaction(db)) {
@@ -77,7 +77,7 @@ public class GameQueryPlanGeneratorTests {
 
     @Test
     public void gamesByMultipleFixedPlayers() {
-        GameFilter playerFilter = new PlayerFilter(new int[] {7, 19, 15}, PlayerFilter.PlayerColor.ANY, PlayerFilter.PlayerResult.ANY);
+        GameFilter playerFilter = new PlayerFilter(new int[] {7, 19, 15}, null);
         GameQuery gameQuery = new GameQuery(db, List.of(playerFilter));
 
         try (var txn = new DatabaseReadTransaction(db)) {
@@ -91,7 +91,7 @@ public class GameQueryPlanGeneratorTests {
 
     @Test
     public void gamesByFixedPlayerAndRegularGameFilter() {
-        GameFilter playerFilter = new PlayerFilter(7, PlayerFilter.PlayerColor.WHITE, PlayerFilter.PlayerResult.ANY);
+        GameFilter playerFilter = new PlayerFilter(7, GameEntityJoinCondition.WHITE);
         GameFilter ratingFilter = new RatingRangeFilter(2500, 2600, RatingRangeFilter.RatingColor.ANY);
         GameQuery gameQuery = new GameQuery(db, List.of(playerFilter, ratingFilter));
 
@@ -108,7 +108,7 @@ public class GameQueryPlanGeneratorTests {
 
     @Test
     public void gamesByMultipleFixedEntities() {
-        GameFilter playerFilter = new PlayerFilter(7, PlayerFilter.PlayerColor.WHITE, PlayerFilter.PlayerResult.ANY);
+        GameFilter playerFilter = new PlayerFilter(7, GameEntityJoinCondition.WHITE);
         GameFilter tournamentFilter = new TournamentFilter(8);
         GameFilter sourceFilter = new SourceFilter(9);
         GameQuery gameQuery = new GameQuery(db, List.of(playerFilter, tournamentFilter, sourceFilter));

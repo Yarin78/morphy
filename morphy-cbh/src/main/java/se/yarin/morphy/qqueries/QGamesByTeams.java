@@ -39,7 +39,7 @@ public class QGamesByTeams extends ItemQuery<Game> {
     public void evaluateSubQuery(@NotNull DatabaseReadTransaction txn) {
         if (teamResult == null) {
             teamResult = teamQuery.stream(txn).collect(Collectors.toList());
-            teamFilter = new TeamFilter(teamResult, TeamFilter.PlayerColor.ANY);
+            teamFilter = new TeamFilter(teamResult, null);
         }
     }
 
