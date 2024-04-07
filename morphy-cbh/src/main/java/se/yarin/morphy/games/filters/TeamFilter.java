@@ -54,6 +54,11 @@ public class TeamFilter implements ItemStorageFilter<ExtendedGameHeader>, GameFi
     }
 
     @Override
+    public @NotNull GameEntityJoinCondition matchCondition() {
+        return matchCondition;
+    }
+
+    @Override
     public boolean matches(@NotNull ExtendedGameHeader extendedGameHeader) {
         return matchCondition.matches(extendedGameHeader.whiteTeamId(), extendedGameHeader.blackTeamId(), GameResult.DRAW, teamIds);
     }

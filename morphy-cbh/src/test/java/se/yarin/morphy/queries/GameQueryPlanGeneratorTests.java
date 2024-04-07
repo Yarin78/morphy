@@ -53,7 +53,7 @@ public class GameQueryPlanGeneratorTests {
 
     @Test
     public void gamesBySingleFixedPlayer() {
-        GameFilter playerFilter = new PlayerFilter(7, GameEntityJoinCondition.WHITE);
+        GameFilter playerFilter = new PlayerFilter(7, GameEntityJoinCondition.ANY);
         GameQuery gameQuery = new GameQuery(db, List.of(playerFilter));
 
         try (var txn = new DatabaseReadTransaction(db)) {
@@ -88,7 +88,7 @@ public class GameQueryPlanGeneratorTests {
 
     @Test
     public void gamesByFixedPlayerAndRegularGameFilter() {
-        GameFilter playerFilter = new PlayerFilter(7, GameEntityJoinCondition.WHITE);
+        GameFilter playerFilter = new PlayerFilter(7, GameEntityJoinCondition.ANY);
         GameFilter ratingFilter = new RatingRangeFilter(2500, 2600, RatingRangeFilter.RatingColor.ANY);
         GameQuery gameQuery = new GameQuery(db, List.of(playerFilter, ratingFilter));
 
@@ -116,7 +116,7 @@ public class GameQueryPlanGeneratorTests {
             // showPlans(plans);
             // TODO: This causes very many query plans, probably too many
             this.assertPlanExists(plans, new GameLookup(qc,
-                new GameIdsByEntities<>(qc, new Manual<>(qc, Set.of(7)), EntityType.PLAYER), CombinedGameFilter.combine(List.of(tournamentFilter, sourceFilter))));
+                new GameIdsByEntities<>(qc, new Manual<>(qc, Set.of(7)), EntityType.PLAYER), CombinedGameFilter.combine(List.of(playerFilter, tournamentFilter, sourceFilter))));
             this.assertPlanExists(plans, new GameLookup(qc,
                 new GameIdsByEntities<>(qc, new Manual<>(qc, Set.of(8)), EntityType.TOURNAMENT), CombinedGameFilter.combine(List.of(playerFilter, sourceFilter))));
             this.assertPlanExists(plans, new GameLookup(qc,
@@ -127,7 +127,7 @@ public class GameQueryPlanGeneratorTests {
                             qc,
                             new GameIdsByEntities<>(qc, new Manual<Player>(qc, Set.of(7)), EntityType.PLAYER),
                             new GameIdsByEntities<>(qc, new Manual<Tournament>(qc, Set.of(8)), EntityType.TOURNAMENT)
-                    ), sourceFilter));
+                    ), CombinedGameFilter.combine(List.of(playerFilter, sourceFilter))));
         }
     }
 

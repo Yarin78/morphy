@@ -20,7 +20,8 @@ import java.util.stream.Stream;
 
 import static org.junit.Assert.*;
 
-public class QueryPlannerTest {
+public class QueryPlanComparisonTests {
+    // Tests that all query plans evaluate to the same result
     private Database db;
 
     @Before
@@ -58,6 +59,23 @@ public class QueryPlannerTest {
     }
 
     @Test
+    public void gamesBySinglePlayerWithMatchCondition() {
+        GameQuery gameQuery = new GameQuery(db, List.of(new PlayerFilter(
+                db.getPlayer(10), GameEntityJoinCondition.WINNER)),
+                null, QuerySortOrder.byId(), 0);
+        try (var txn = new DatabaseReadTransaction(db)) {
+            QueryContext queryContext = new QueryContext(txn, false);
+            List<QueryOperator<Game>> plans = db.queryPlanner().getGameQueryPlans(queryContext, gameQuery, true);
+
+            assertTrue(plans.size() >= 2);
+            assertTrue(operatorExists(plans, List.of(GameTableScan.class)));
+            assertTrue(operatorExists(plans, List.of(GameIdsByEntities.class)));
+
+            verifyQueryPlans(plans, true);
+        }
+    }
+
+    @Test
     public void gamesByPlayerNamePrefixAndTournamentDateRange() {
         EntityQuery<Player> playerQuery = new EntityQuery<Player>(db, EntityType.PLAYER, List.of(new PlayerNameFilter("K", "", true, false)));
         EntityQuery<Tournament> tournamentQuery = new EntityQuery<Tournament>(db, EntityType.TOURNAMENT, List.of(
@@ -72,13 +90,6 @@ public class QueryPlannerTest {
         try (var txn = new DatabaseReadTransaction(db)) {
             QueryContext queryContext = new QueryContext(txn, false);
             List<QueryOperator<Game>> plans = db.queryPlanner().getGameQueryPlans(queryContext, gameQuery, true);
-
-            /*
-            for (QueryOperator<Game> plan : plans) {
-                System.out.println(plan.debugString(false));
-                System.out.println("---");
-            }
-             */
 
             assertTrue(operatorExists(plans, List.of(GameTableScan.class)));
             assertTrue(operatorExists(plans, List.of(GameIdsByEntities.class)));

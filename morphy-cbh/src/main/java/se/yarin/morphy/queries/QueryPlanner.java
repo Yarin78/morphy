@@ -303,8 +303,6 @@ public class QueryPlanner {
         return candidateQueryPlans;
     }
 
-
-
     List<GameSourceQuery> getGameQuerySources(@NotNull QueryContext context, @NotNull GameQuery gameQuery) {
         List<GameSourceQuery> sources = new ArrayList<>();
 
@@ -323,12 +321,10 @@ public class QueryPlanner {
 
         for (GameFilter gameFilter : gameQuery.gameFilters()) {
             if (gameFilter instanceof GameEntityFilter<?>) {
-                // TODO: A GameEntityFilter should also have a join condition!?
-                // Either support join condition in GameIdsByEntities or make this a non-covering source (add unit test for this)
                 GameEntityFilter<?> entityFilter = (GameEntityFilter<?>) gameFilter;
                 QueryOperator<Game> gameOp = new GameIdsByEntities<>(context, new Manual<>(context, Set.copyOf(entityFilter.entityIds())), entityFilter.entityType());
-
-                sources.add(GameSourceQuery.fromGameQueryOperator(gameOp.sortedAndDistinct(QuerySortOrder.byId(), 0), true, List.of(gameFilter), List.of()));
+                boolean coveredFilter = entityFilter.matchCondition() == GameEntityJoinCondition.ANY;
+                sources.add(GameSourceQuery.fromGameQueryOperator(gameOp.sortedAndDistinct(QuerySortOrder.byId(), 0), true, coveredFilter ? List.of(gameFilter) : List.of(), List.of()));
             }
         }
 

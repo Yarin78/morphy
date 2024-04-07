@@ -49,6 +49,11 @@ public class PlayerFilter extends IsGameFilter implements GameEntityFilter<Playe
     }
 
     @Override
+    public @NotNull GameEntityJoinCondition matchCondition() {
+        return matchCondition;
+    }
+
+    @Override
     public boolean matches(@NotNull GameHeader gameHeader) {
         if (!super.matches(gameHeader)) {
             return false;

@@ -4,6 +4,7 @@ import org.jetbrains.annotations.NotNull;
 import se.yarin.morphy.entities.Annotator;
 import se.yarin.morphy.entities.EntityType;
 import se.yarin.morphy.games.GameHeader;
+import se.yarin.morphy.queries.GameEntityJoinCondition;
 import se.yarin.morphy.storage.ItemStorageFilter;
 import se.yarin.util.ByteBufferUtil;
 
