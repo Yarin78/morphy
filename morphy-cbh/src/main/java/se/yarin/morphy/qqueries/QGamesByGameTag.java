@@ -26,7 +26,7 @@ public class QGamesByGameTag extends ItemQuery<Game> {
     public boolean matches(@NotNull DatabaseReadTransaction txn, @NotNull Game game) {
         evaluateSubQuery(txn);
         assert gameTagFilter != null;
-        return gameTagFilter.matches(game.extendedHeader());
+        return gameTagFilter.matches(game.id(), game.extendedHeader());
     }
 
     public int rowEstimate(@NotNull DatabaseReadTransaction txn) {

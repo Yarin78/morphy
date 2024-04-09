@@ -26,7 +26,7 @@ public class QGamesByAnnotators extends ItemQuery<Game> {
     public boolean matches(@NotNull DatabaseReadTransaction txn, @NotNull Game game) {
         evaluateSubQuery(txn);
         assert annotatorFilter != null;
-        return annotatorFilter.matches(game.header());
+        return annotatorFilter.matches(game.id(), game.header());
     }
 
     public int rowEstimate(@NotNull DatabaseReadTransaction txn) {

@@ -39,13 +39,13 @@ public class ResultsFilter extends IsGameFilter {
     }
 
     @Override
-    public boolean matches(@NotNull GameHeader header) {
-        return super.matches(header) && result.equals(header.result());
+    public boolean matches(int id, @NotNull GameHeader header) {
+        return super.matches(id, header) && result.equals(header.result());
     }
 
     @Override
-    public boolean matchesSerialized(@NotNull ByteBuffer buf) {
-        return super.matchesSerialized(buf) &&
+    public boolean matchesSerialized(int id, @NotNull ByteBuffer buf) {
+        return super.matchesSerialized(id, buf) &&
                 result.equals(CBUtil.decodeGameResult(ByteBufferUtil.getUnsignedByte(buf, 27)));
     }
 

@@ -23,14 +23,14 @@ public class RawGameHeaderFilter implements ItemStorageFilter<GameHeader>, GameF
     }
 
     @Override
-    public boolean matches(@NotNull GameHeader gameHeader) {
+    public boolean matches(int id, @NotNull GameHeader gameHeader) {
         // The raw filter is a bit special as the filter can only happen when scanning a range of games
         // It means that it will not work when looking at individual games
         return true;
     }
 
     @Override
-    public boolean matchesSerialized(@NotNull ByteBuffer buf) {
+    public boolean matchesSerialized(int id, @NotNull ByteBuffer buf) {
         buf.mark();
         byte[] bytes = new byte[GameHeaderIndex.Prolog.DEFAULT_SERIALIZED_ITEM_SIZE];
         buf.get(bytes, 0, bytes.length);

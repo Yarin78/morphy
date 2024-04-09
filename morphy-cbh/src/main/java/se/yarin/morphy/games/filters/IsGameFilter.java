@@ -10,12 +10,12 @@ import java.nio.ByteBuffer;
 
 public class IsGameFilter implements ItemStorageFilter<GameHeader>, GameFilter {
     @Override
-    public boolean matches(@NotNull GameHeader gameHeader) {
+    public boolean matches(int id, @NotNull GameHeader gameHeader) {
         return !gameHeader.guidingText();
     }
 
     @Override
-    public boolean matchesSerialized(@NotNull ByteBuffer buf) {
+    public boolean matchesSerialized(int id, @NotNull ByteBuffer buf) {
         return isGame(buf);
     }
 

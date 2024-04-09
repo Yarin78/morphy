@@ -21,8 +21,8 @@ public class QGamesWithFilter extends ItemQuery<Game> {
     public boolean matches(@NotNull DatabaseReadTransaction txn, @NotNull Game game) {
         ItemStorageFilter<GameHeader> headerFilter = filter.gameHeaderFilter();
         ItemStorageFilter<ExtendedGameHeader> extendedHeaderFilter = filter.extendedGameHeaderFilter();
-        return (headerFilter == null || headerFilter.matches(game.header())) &&
-                (extendedHeaderFilter == null || extendedHeaderFilter.matches(game.extendedHeader()));
+        return (headerFilter == null || headerFilter.matches(game.id(), game.header())) &&
+                (extendedHeaderFilter == null || extendedHeaderFilter.matches(game.id(), game.extendedHeader()));
     }
 
     @Override

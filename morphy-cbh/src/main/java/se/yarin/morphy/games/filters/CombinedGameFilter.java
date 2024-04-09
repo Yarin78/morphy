@@ -45,13 +45,13 @@ public class CombinedGameFilter implements GameFilter {
         if (!gameHeaderFilters.isEmpty()) {
             combinedGameHeaderFilter = new ItemStorageFilter<>() {
                 @Override
-                public boolean matches(@NotNull GameHeader gameHeader) {
-                    return gameHeaderFilters.stream().allMatch(itemFilter -> itemFilter.matches(gameHeader));
+                public boolean matches(int id, @NotNull GameHeader gameHeader) {
+                    return gameHeaderFilters.stream().allMatch(itemFilter -> itemFilter.matches(id, gameHeader));
                 }
 
                 @Override
-                public boolean matchesSerialized(@NotNull ByteBuffer buf) {
-                    return gameHeaderFilters.stream().allMatch(itemFilter -> itemFilter.matchesSerialized(buf));
+                public boolean matchesSerialized(int id, @NotNull ByteBuffer buf) {
+                    return gameHeaderFilters.stream().allMatch(itemFilter -> itemFilter.matchesSerialized(id, buf));
                 }
             };
         } else {
@@ -61,13 +61,13 @@ public class CombinedGameFilter implements GameFilter {
         if (!extendedGameHeaderFilters.isEmpty()) {
             combinedExtendedGameHeaderFilter = new ItemStorageFilter<>() {
                 @Override
-                public boolean matches(@NotNull ExtendedGameHeader extendedGameHeader) {
-                    return extendedGameHeaderFilters.stream().allMatch(itemFilter -> itemFilter.matches(extendedGameHeader));
+                public boolean matches(int id, @NotNull ExtendedGameHeader extendedGameHeader) {
+                    return extendedGameHeaderFilters.stream().allMatch(itemFilter -> itemFilter.matches(id, extendedGameHeader));
                 }
 
                 @Override
-                public boolean matchesSerialized(@NotNull ByteBuffer buf) {
-                    return extendedGameHeaderFilters.stream().allMatch(itemFilter -> itemFilter.matchesSerialized(buf));
+                public boolean matchesSerialized(int id, @NotNull ByteBuffer buf) {
+                    return extendedGameHeaderFilters.stream().allMatch(itemFilter -> itemFilter.matchesSerialized(id, buf));
                 }
             };
         } else {

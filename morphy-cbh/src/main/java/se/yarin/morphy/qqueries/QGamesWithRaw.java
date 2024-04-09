@@ -23,8 +23,8 @@ public class QGamesWithRaw extends ItemQuery<Game> {
     public boolean matches(@NotNull DatabaseReadTransaction txn, @NotNull Game game) {
         // This actually matches everything
         // TODO: Force match serialized?
-        return (headerFilter == null || headerFilter.matches(game.header())) &&
-                (extendedHeaderFilter == null || extendedHeaderFilter.matches(game.extendedHeader()));
+        return (headerFilter == null || headerFilter.matches(game.id(), game.header())) &&
+                (extendedHeaderFilter == null || extendedHeaderFilter.matches(game.id(), game.extendedHeader()));
     }
 
     @Override

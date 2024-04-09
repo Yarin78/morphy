@@ -154,7 +154,7 @@ public class InMemoryItemStorage<THeader, TItem> implements ItemStorage<THeader,
                 } else {
                     item = items.get(j);
                 }
-                result.add(filter == null || filter.matches(item) ? item : null);
+                result.add(filter == null || filter.matches(j + (oneIndexed ? 1 : 0), item) ? item : null);
             }
             return result;
         }

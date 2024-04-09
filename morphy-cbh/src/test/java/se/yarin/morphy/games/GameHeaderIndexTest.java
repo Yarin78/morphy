@@ -193,14 +193,15 @@ public class GameHeaderIndexTest {
 
         List<GameHeader> matchingHeaders = headerIndex.getRange(1, headerIndex.count() + 1, new ItemStorageFilter<>() {
             @Override
-            public boolean matches(@NotNull GameHeader gameHeader) {
+            public boolean matches(int id, @NotNull GameHeader gameHeader) {
                 // Send everything through, we're testing the serialized filter here
                 return true;
             }
 
             @Override
-            public boolean matchesSerialized(@NotNull ByteBuffer buf) {
-                int id = ByteBufferUtil.getUnsigned24BitB(buf.slice(buf.position() + 9, 3)); // id of white player offset
+            public boolean matchesSerialized(int id, @NotNull ByteBuffer buf) {
+                int actualId = ByteBufferUtil.getUnsigned24BitB(buf.slice(buf.position() + 9, 3)); // id of white player offset
+                assertEquals(actualId, id);
                 return lookupIds.contains(id);
             }
         });
@@ -220,10 +221,7 @@ public class GameHeaderIndexTest {
         // The sparsity of this will cause some batches in the internal iterator to be empty
         List<Integer> lookupIds = Arrays.asList(1024, 5191, 5192, 5195, 5823, 9015);
 
-        List<GameHeader> matchingHeaders = headerIndex.getRange(1, headerIndex.count() + 1, gameHeader -> {
-            // Send everything through, we're testing the serialized filter here
-            return lookupIds.contains(gameHeader.id());
-        });
+        List<GameHeader> matchingHeaders = headerIndex.getRange(1, headerIndex.count() + 1, (id, gameHeader) -> lookupIds.contains(id));
 
         assertEquals(headerIndex.count(), matchingHeaders.size());
 

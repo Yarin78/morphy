@@ -74,7 +74,6 @@ public class QueryTest {
                 System.out.println(queryPlan.debugString(false));
                 System.out.println(queryPlan.getQueryCost().format());
                 System.out.println();
-
                  */
 
                 detailedQueryExecution(queryPlan);
@@ -87,7 +86,6 @@ public class QueryTest {
         try (var txn = new DatabaseReadTransaction(db)) {
             GameQuery games = new GameQuery(db, List.of(new DateRangeFilter(Date.unset(), new Date(1900, 1, 1))));
             EntityQuery<Player> players = new EntityQuery<Player>(db, EntityType.PLAYER, null, games, GameEntityJoinCondition.ANY);
-
             QueryContext context = new QueryContext(txn, true);
 
             List<QueryOperator<Player>> queryPlans = db.queryPlanner().getEntityQueryPlans(context, players, true);

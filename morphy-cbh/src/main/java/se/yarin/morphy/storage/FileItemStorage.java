@@ -189,9 +189,9 @@ public class FileItemStorage<THeader, TItem> implements ItemStorage<THeader, TIt
             if (filter == null) {
                 result.add(serializer.deserializeItem(index + i, buf, this.header));
             } else {
-                if (filter.matchesSerialized(buf)) {
+                if (filter.matchesSerialized(index + i, buf)) {
                     TItem item = serializer.deserializeItem(index + i, buf, this.header);
-                    result.add(filter.matches(item) ? item : null);
+                    result.add(filter.matches(index + i, item) ? item : null);
                 } else {
                     buf.position(buf.position() + serializedItemSize);
                     result.add(null);
@@ -205,7 +205,7 @@ public class FileItemStorage<THeader, TItem> implements ItemStorage<THeader, TIt
         ArrayList<TItem> result = new ArrayList<>(count);
         for (int i = 0; i < count; i++) {
             TItem item = getItem(index + i);
-            result.add(filter == null || filter.matches(item) ? item : null);
+            result.add(filter == null || filter.matches(index + i, item) ? item : null);
         }
         return result;
     }

@@ -35,7 +35,7 @@ public class QGamesByPlayers extends ItemQuery<Game> {
     public boolean matches(@NotNull DatabaseReadTransaction txn, @NotNull Game game) {
         evaluateSubQuery(txn);
         assert playerFilter != null;
-        return playerFilter.matches(game.header());
+        return playerFilter.matches(game.id(), game.header());
     }
 
     public int rowEstimate(@NotNull DatabaseReadTransaction txn) {

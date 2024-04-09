@@ -4,9 +4,12 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import se.yarin.morphy.exceptions.MorphyInternalException;
 import se.yarin.morphy.games.ExtendedGameHeader;
+import se.yarin.morphy.games.ExtendedGameHeaderStorage;
 import se.yarin.morphy.games.GameHeader;
 import se.yarin.morphy.games.filters.GameFilter;
+import se.yarin.morphy.storage.ItemStorageFilter;
 
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -40,10 +43,29 @@ public class GameIterator implements Iterator<Game> {
             if (nextBatchStart >= endIdExclusive) {
                 batch = null;
             } else {
-                List<GameHeader> gameHeaders = transaction.database().gameHeaderIndex().getRange(
-                        nextBatchStart, endIdExclusive, filter == null ? null : filter.gameHeaderFilter());
-                List<ExtendedGameHeader> extendedGameHeaders = transaction.database().extendedGameHeaderStorage().getRange(
-                        nextBatchStart, endIdExclusive, filter == null ? null : filter.extendedGameHeaderFilter());
+                List<GameHeader> gameHeaders;
+                List<ExtendedGameHeader> extendedGameHeaders;
+                if (filter == null) {
+                    gameHeaders = transaction.database().gameHeaderIndex().getRange(nextBatchStart, endIdExclusive, null);
+                    extendedGameHeaders = transaction.database().extendedGameHeaderStorage().getRange(nextBatchStart, endIdExclusive);
+                } else {
+                    gameHeaders = transaction.database().gameHeaderIndex().getRange(nextBatchStart, endIdExclusive, filter.gameHeaderFilter());
+                    var extendedFilter = filter.extendedGameHeaderFilter();
+                    // In case we filter out games from the first filter, we don't have to check those games again in the next filter
+                    // This prevents us from having to do costly deserializations in the extended gameheader storage
+                    ItemStorageFilter<ExtendedGameHeader> shortCircuitedFilter = new ItemStorageFilter<>() {
+                        @Override
+                        public boolean matches(int id, @NotNull ExtendedGameHeader extendedGameHeader) {
+                            return gameHeaders.get(id - nextBatchStart) != null && (extendedFilter == null || extendedFilter.matches(id, extendedGameHeader));
+                        }
+
+                        @Override
+                        public boolean matchesSerialized(int id, @NotNull ByteBuffer buf) {
+                            return gameHeaders.get(id - nextBatchStart) != null && (extendedFilter == null || extendedFilter.matchesSerialized(id, buf));
+                        }
+                    };
+                    extendedGameHeaders = transaction.database().extendedGameHeaderStorage().getRange(nextBatchStart, endIdExclusive, shortCircuitedFilter);
+                }
                 if (gameHeaders.size() != extendedGameHeaders.size()) {
                     throw new MorphyInternalException("Number of elements returned from the GameHeader and ExtendedGameHeader storage mismatches");
                 }

@@ -54,16 +54,16 @@ public class PlayerFilter extends IsGameFilter implements GameEntityFilter<Playe
     }
 
     @Override
-    public boolean matches(@NotNull GameHeader gameHeader) {
-        if (!super.matches(gameHeader)) {
+    public boolean matches(int id, @NotNull GameHeader gameHeader) {
+        if (!super.matches(id, gameHeader)) {
             return false;
         }
         return matchCondition.matches(gameHeader.whitePlayerId(), gameHeader.blackPlayerId(), gameHeader.result(), playerIds);
     }
 
     @Override
-    public boolean matchesSerialized(@NotNull ByteBuffer buf) {
-        if (!super.matchesSerialized(buf)) {
+    public boolean matchesSerialized(int id, @NotNull ByteBuffer buf) {
+        if (!super.matchesSerialized(id, buf)) {
             return false;
         }
 

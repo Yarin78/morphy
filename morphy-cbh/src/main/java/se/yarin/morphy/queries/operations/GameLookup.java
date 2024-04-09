@@ -41,10 +41,10 @@ public class GameLookup extends QueryOperator<Game> {
 
         if (gameFilter != null) {
             if (gameFilter.gameHeaderFilter() != null) {
-                stream = stream.filter(game -> gameFilter.gameHeaderFilter().matches(game.data().header()));
+                stream = stream.filter(game -> gameFilter.gameHeaderFilter().matches(game.id(), game.data().header()));
             }
             if (gameFilter.extendedGameHeaderFilter() != null) {
-                stream = stream.filter(game -> gameFilter.extendedGameHeaderFilter().matches(game.data().extendedHeader()));
+                stream = stream.filter(game -> gameFilter.extendedGameHeaderFilter().matches(game.id(), game.data().extendedHeader()));
             }
         }
         return stream;

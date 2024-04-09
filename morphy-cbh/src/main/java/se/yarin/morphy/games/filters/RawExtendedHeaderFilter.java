@@ -23,14 +23,14 @@ public class RawExtendedHeaderFilter implements ItemStorageFilter<ExtendedGameHe
     }
 
     @Override
-    public boolean matches(@NotNull ExtendedGameHeader gameHeader) {
+    public boolean matches(int id, @NotNull ExtendedGameHeader gameHeader) {
         // The raw filter is a bit special as the filter can only happen when scanning a range of games
         // It means that it will not work when looking at individual games
         return true;
     }
 
     @Override
-    public boolean matchesSerialized(@NotNull ByteBuffer buf) {
+    public boolean matchesSerialized(int id, @NotNull ByteBuffer buf) {
         buf.mark();
         byte[] bytes = new byte[ExtendedGameHeaderStorage.ExtProlog.DEFAULT_SERIALIZED_ITEM_SIZE];
         // TODO: If the underlying data has a shorter extended game header, this will copy part of the next game header into the buffer

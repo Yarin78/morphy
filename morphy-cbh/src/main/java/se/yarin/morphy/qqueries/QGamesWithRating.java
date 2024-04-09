@@ -25,7 +25,7 @@ public class QGamesWithRating extends ItemQuery<Game> {
 
     @Override
     public boolean matches(@NotNull DatabaseReadTransaction txn, @NotNull Game game) {
-        return this.filter.matches(game.header());
+        return this.filter.matches(game.id(), game.header());
     }
 
     @Override

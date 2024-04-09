@@ -26,7 +26,7 @@ public class QGamesBySource extends ItemQuery<Game> {
     public boolean matches(@NotNull DatabaseReadTransaction txn, @NotNull Game game) {
         evaluateSubQuery(txn);
         assert sourceFilter != null;
-        return sourceFilter.matches(game.header());
+        return sourceFilter.matches(game.id(), game.header());
     }
 
     public int rowEstimate(@NotNull DatabaseReadTransaction txn) {

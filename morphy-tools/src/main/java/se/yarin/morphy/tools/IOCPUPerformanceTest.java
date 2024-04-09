@@ -190,13 +190,15 @@ public class IOCPUPerformanceTest {
         try {
             String[] cmd = {"/bin/bash","-c","sudo -S purge"};
             Process pb = Runtime.getRuntime().exec(cmd);
-
+            /*
             String line;
             BufferedReader input = new BufferedReader(new InputStreamReader(pb.getInputStream()));
             while ((line = input.readLine()) != null) {
                 System.out.println(line);
             }
             input.close();
+
+             */
             System.out.println("Page cache cleared");
         } catch (IOException e) {
             throw new RuntimeException("Failed to clear page cache");

@@ -27,7 +27,7 @@ public class QGamesWithPlayedDate extends ItemQuery<Game> {
 
     @Override
     public boolean matches(@NotNull DatabaseReadTransaction txn, @NotNull Game game) {
-        return filter.matches(game.header());
+        return filter.matches(game.id(), game.header());
     }
 
     @Override
