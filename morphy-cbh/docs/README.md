@@ -1,6 +1,10 @@
 # Using the Morphy CBH library
 
-This document describes basic usage of the Morphy CBH library. For more details, see the API documentation.
+This document describes basic usage of the Morphy CBH library. For more details, see the package documentation:
+
+- **[`se.yarin.chess`](chess-package.md)**: Core chess functionality for representing positions, moves, and games. This package is independent of any database format and can be used as a standalone chess library.
+
+- **[`se.yarin.morphy`](morphy-package.md)**: Modern API for working with ChessBase databases. Provides transaction-based, type-safe interfaces for reading and writing chess games and entities.
 
 ## Opening a database
 
