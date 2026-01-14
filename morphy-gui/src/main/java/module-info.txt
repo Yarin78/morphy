@@ -1,9 +1,0 @@
-module se.yarin.morphy.gui {
-    requires slf4j.api;
-    requires javafx.controls;
-    requires javafx.fxml;
-    //requires vlcj;
-    //requires jna;
-    //requires javafxsvg;
-    requires se.yarin.morphy.cbh;
-}
