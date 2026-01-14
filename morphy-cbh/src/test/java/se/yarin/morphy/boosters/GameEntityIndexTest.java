@@ -3,7 +3,7 @@ package se.yarin.morphy.boosters;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
-import se.yarin.cbhlib.util.CBUtil;
+import se.yarin.morphy.util.CBUtil;
 import se.yarin.morphy.Database;
 import se.yarin.morphy.ResourceLoader;
 import se.yarin.morphy.entities.EntityType;

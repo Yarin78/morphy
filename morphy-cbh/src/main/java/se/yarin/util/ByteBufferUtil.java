@@ -1,6 +1,6 @@
 package se.yarin.util;
 
-import se.yarin.cbhlib.util.CBUtil;
+import se.yarin.morphy.util.CBUtil;
 
 import java.nio.ByteBuffer;
 

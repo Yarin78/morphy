@@ -4,7 +4,7 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import se.yarin.cbhlib.annotations.TextAfterMoveAnnotation;
+import se.yarin.morphy.games.annotations.ImmutableTextAfterMoveAnnotation;
 import se.yarin.chess.annotations.*;
 
 import java.util.EnumSet;
@@ -426,7 +426,7 @@ public class GameMovesModelTest {
         assertNotEquals(moves.toString(), clone.toString());
 
         clone = new GameMovesModel(moves);
-        clone.root().mainNode().mainNode().children().get(1).addAnnotation(new TextAfterMoveAnnotation("variant"));
+        clone.root().mainNode().mainNode().children().get(1).addAnnotation(ImmutableTextAfterMoveAnnotation.of("variant"));
         assertNotEquals(moves.toString(), clone.toString());
     }
 }

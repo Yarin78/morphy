@@ -3,7 +3,7 @@ package se.yarin.morphy.cli.commands;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import picocli.CommandLine;
-import se.yarin.cbhlib.util.CBUtil;
+import se.yarin.morphy.util.CBUtil;
 import se.yarin.morphy.Database;
 import se.yarin.morphy.DatabaseMode;
 import se.yarin.morphy.DatabaseReadTransaction;

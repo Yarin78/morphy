@@ -19,11 +19,7 @@
         </layout>
     </appender>
 
-    <logger name="yarin.cbhlib">
-        <level value="INFO"/>
-    </logger>
-
-    <logger name="se.yarin.cbhlib">
+    <logger name="se.yarin.morphy">
         <level value="INFO"/>
     </logger>
 

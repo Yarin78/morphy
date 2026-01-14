@@ -9,9 +9,6 @@
         <Logger name="se.yarin.morphy" level="info">
         </Logger>
 
-        <Logger name="se.yarin.cbhlib" level="info">
-        </Logger>
-
         <Root level="warn">
             <AppenderRef ref="Console"/>
         </Root>

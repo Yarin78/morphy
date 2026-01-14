@@ -77,14 +77,14 @@ morphy/
 ├── morphy-cbh/                    # Main library module
 │   ├── src/main/java/
 │   │   ├── se/yarin/chess/        # Chess core (format-independent)
-│   │   ├── se/yarin/morphy/       # Modern API (transaction-based)
-│   │   ├── se/yarin/cbhlib/       # Legacy API (direct file access)
+│   │   ├── se/yarin/morphy/       # Database API (transaction-based)
 │   │   ├── se/yarin/asflib/       # ChessBase script support
 │   │   └── se/yarin/util/         # Shared utilities
 │   ├── src/test/java/             # Test classes
 │   ├── src/test/resources/        # Test databases and fixtures
 │   └── docs/                      # Documentation
-├── other-modules/                 # Other Maven modules (not primary focus)
+├── morphy-cli/                    # Command-line interface
+├── morphy-tools/                  # Development/debug tools
 └── pom.xml                        # Parent POM
 ```
 
@@ -164,34 +164,6 @@ se.yarin.morphy/
 - Transactions provide isolation and consistency
 - Entities are immutable (using Immutables library)
 - Index structures use AVL-like binary trees
-
-### `se.yarin.cbhlib` - Legacy API
-
-Direct file access without transaction overhead.
-
-```
-se.yarin.cbhlib/
-├── Database.java                   # Main entry point
-├── Game.java                       # Game reference
-├── entities/                       # Entity storage
-│   ├── PlayerBase.java
-│   ├── TournamentBase.java
-│   └── ...
-├── games/                          # Game storage
-│   ├── GameHeaderBase.java
-│   ├── MovesBase.java
-│   └── ...
-├── annotations/                    # All annotation types
-│   ├── AnnotationBase.java
-│   ├── TextAnnotation.java
-│   └── ...
-└── media/                          # Media file support
-```
-
-**When to Use:**
-- Maintaining backward compatibility
-- Simple scripts needing direct access
-- In-memory only operations
 
 ---
 
@@ -429,8 +401,6 @@ Database.beginWriteTransaction()
 
 2. **Add serialization in `AnnotationSerializer`**
 
-3. **Add CBH format support in `se.yarin.cbhlib.annotations`**
-
 ---
 
 ## Testing
@@ -440,8 +410,7 @@ Database.beginWriteTransaction()
 ```
 src/test/java/
 ├── se/yarin/chess/           # Chess core tests
-├── se/yarin/morphy/          # Modern API tests
-├── se/yarin/cbhlib/          # Legacy API tests
+├── se/yarin/morphy/          # Database API tests
 └── se/yarin/util/            # Utility tests
 
 src/test/resources/

@@ -7,13 +7,12 @@ This document describes the architecture of the Morphy library, explaining how c
 1. [Overview](#overview)
 2. [Layer Architecture](#layer-architecture)
 3. [Chess Core Layer](#chess-core-layer)
-4. [Modern API Layer](#modern-api-layer)
-5. [Legacy API Layer](#legacy-api-layer)
-6. [Storage Layer](#storage-layer)
-7. [Data Flow](#data-flow)
-8. [Concurrency Model](#concurrency-model)
-9. [File Format Support](#file-format-support)
-10. [Design Decisions](#design-decisions)
+4. [Database API Layer](#database-api-layer)
+5. [Storage Layer](#storage-layer)
+6. [Data Flow](#data-flow)
+7. [Concurrency Model](#concurrency-model)
+8. [File Format Support](#file-format-support)
+9. [Design Decisions](#design-decisions)
 
 ---
 
@@ -23,29 +22,27 @@ Morphy is structured as a layered library with clear separation of concerns:
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                     Application Code                            │
+│                     Application Code                             │
 └─────────────────────────────────────────────────────────────────┘
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                   Modern API (se.yarin.morphy)                  │
-│         Transaction-based, type-safe database operations        │
+│                   Database API (se.yarin.morphy)                 │
+│         Transaction-based, type-safe database operations         │
 └─────────────────────────────────────────────────────────────────┘
                               │
-              ┌───────────────┼───────────────┐
-              ▼               ▼               ▼
-┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐
-│   Chess Core    │  │  Legacy API     │  │  Storage Layer  │
-│ (se.yarin.chess)│  │(se.yarin.cbhlib)│  │(se.yarin.morphy │
-│                 │  │                 │  │    .storage)    │
-└─────────────────┘  └─────────────────┘  └─────────────────┘
-                              │               │
-                              └───────┬───────┘
-                                      ▼
-                        ┌─────────────────────────┐
-                        │    ChessBase Files      │
-                        │  (.cbh, .cbg, .cba...)  │
-                        └─────────────────────────┘
+              ┌───────────────┴───────────────┐
+              ▼                               ▼
+┌─────────────────────────┐      ┌─────────────────────────┐
+│      Chess Core         │      │     Storage Layer       │
+│   (se.yarin.chess)      │      │ (se.yarin.morphy.storage)│
+└─────────────────────────┘      └────────────┬────────────┘
+                                              │
+                                              ▼
+                              ┌─────────────────────────┐
+                              │    ChessBase Files      │
+                              │  (.cbh, .cbg, .cba...)  │
+                              └─────────────────────────┘
 ```
 
 ### Key Characteristics
@@ -53,7 +50,6 @@ Morphy is structured as a layered library with clear separation of concerns:
 - **Layered design**: Each layer has a specific responsibility
 - **Dependency direction**: Higher layers depend on lower layers, never reverse
 - **Chess core independence**: Chess logic has no database dependencies
-- **Two API options**: Modern (recommended) and Legacy (compatibility)
 
 ---
 
@@ -63,9 +59,8 @@ Morphy is structured as a layered library with clear separation of concerns:
 
 | Layer | Package | Responsibility |
 |-------|---------|----------------|
-| **Modern API** | `se.yarin.morphy` | Transaction-based database operations, querying, type-safe entities |
+| **Database API** | `se.yarin.morphy` | Transaction-based database operations, querying, type-safe entities |
 | **Chess Core** | `se.yarin.chess` | Chess rules, positions, moves, game models |
-| **Legacy API** | `se.yarin.cbhlib` | Direct file access, format conversion, backward compatibility |
 | **Storage** | `se.yarin.morphy.storage` | Low-level file I/O, item serialization |
 | **Utilities** | `se.yarin.util` | Shared utilities (byte handling, etc.) |
 
@@ -75,10 +70,6 @@ Morphy is structured as a layered library with clear separation of concerns:
 se.yarin.morphy
     ├── depends on → se.yarin.chess
     ├── depends on → se.yarin.morphy.storage
-    └── depends on → se.yarin.util
-
-se.yarin.cbhlib
-    ├── depends on → se.yarin.chess
     └── depends on → se.yarin.util
 
 se.yarin.chess
@@ -166,9 +157,9 @@ Each `Node` contains:
 
 ---
 
-## Modern API Layer
+## Database API Layer
 
-The `se.yarin.morphy` package provides the recommended database API.
+The `se.yarin.morphy` package provides the database API.
 
 ### Entity System
 
@@ -232,45 +223,6 @@ GameHeader header = game.header();
 // Full model requires parsing (lazy loaded)
 GameModel model = game.getModel();
 ```
-
----
-
-## Legacy API Layer
-
-The `se.yarin.cbhlib` package provides direct file access.
-
-### Structure
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    Database (cbhlib)                         │
-│  ┌──────────────────────────────────────────────────────┐   │
-│  │                   *Base classes                       │   │
-│  │  ┌───────────────┐  ┌───────────────┐                │   │
-│  │  │GameHeaderBase │  │ExtendedHeader │                │   │
-│  │  │   (.cbh)      │  │   Base(.cbj)  │                │   │
-│  │  └───────────────┘  └───────────────┘                │   │
-│  │  ┌───────────────┐  ┌───────────────┐                │   │
-│  │  │  MovesBase    │  │AnnotationBase│                │   │
-│  │  │   (.cbg)      │  │   (.cba)      │                │   │
-│  │  └───────────────┘  └───────────────┘                │   │
-│  │  ┌───────────────┐  ┌───────────────┐                │   │
-│  │  │  PlayerBase   │  │TournamentBase │  ...           │   │
-│  │  │   (.cbp)      │  │   (.cbt)      │                │   │
-│  │  └───────────────┘  └───────────────┘                │   │
-│  └──────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────┘
-```
-
-### Comparison with Modern API
-
-| Aspect | Modern API | Legacy API |
-|--------|-----------|------------|
-| Transactions | Yes | No |
-| Thread safety | Via transactions | Manual |
-| Entity mutability | Immutable | Mutable |
-| Abstraction level | High | Low |
-| Performance | Optimized | Direct |
 
 ---
 
