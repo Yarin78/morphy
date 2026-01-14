@@ -221,4 +221,14 @@ public final class CBUtil {
         }
         return file.getPath().substring(extensionStart).toLowerCase(Locale.ROOT);
     }
+
+    /**
+     * Gets the extension of a file (case preserved)
+     * @param file the file to get the extension
+     * @return the file extension including the period, or empty string if no extension
+     */
+    public static String getExtension(@NotNull File file) {
+        int extensionStart = file.getPath().lastIndexOf(".");
+        return extensionStart < 0 ? "" : file.getPath().substring(extensionStart);
+    }
 }

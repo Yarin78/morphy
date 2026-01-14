@@ -4,7 +4,7 @@ import lombok.Getter;
 import lombok.NonNull;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import se.yarin.cbhlib.util.CBUtil;
+import se.yarin.morphy.util.CBUtil;
 import se.yarin.chess.Date;
 import se.yarin.morphy.games.GameHeader;
 import se.yarin.util.ByteBufferUtil;

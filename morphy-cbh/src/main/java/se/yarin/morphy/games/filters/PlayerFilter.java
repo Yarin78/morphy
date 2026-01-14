@@ -2,7 +2,7 @@ package se.yarin.morphy.games.filters;
 
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import se.yarin.cbhlib.util.CBUtil;
+import se.yarin.morphy.util.CBUtil;
 import se.yarin.chess.GameResult;
 import se.yarin.morphy.entities.EntityType;
 import se.yarin.morphy.entities.Player;
