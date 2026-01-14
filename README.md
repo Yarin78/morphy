@@ -1,3 +1,7 @@
-# cbhlib
+# Morphy
 
-A Java library for working with ChessBase bases. Not feature complete!
+A Java library and CLI for working with ChessBase databases (the .cbh format).
+
+Complete documentation can be found in the [morphy-cbh](morphy-cbh/docs/README.md) module.
+
+
