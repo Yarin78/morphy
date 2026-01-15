@@ -56,22 +56,15 @@ public enum Stone {
     }
 
     public Piece toPiece() {
-        switch (this) {
-            case NO_STONE:     return Piece.NO_PIECE;
-            case WHITE_PAWN:   return Piece.PAWN;
-            case WHITE_KNIGHT: return Piece.KNIGHT;
-            case WHITE_BISHOP: return Piece.BISHOP;
-            case WHITE_ROOK:   return Piece.ROOK;
-            case WHITE_QUEEN:  return Piece.QUEEN;
-            case WHITE_KING:   return Piece.KING;
-            case BLACK_PAWN:   return Piece.PAWN;
-            case BLACK_KNIGHT: return Piece.KNIGHT;
-            case BLACK_BISHOP: return Piece.BISHOP;
-            case BLACK_ROOK:   return Piece.ROOK;
-            case BLACK_QUEEN:  return Piece.QUEEN;
-            case BLACK_KING:   return Piece.KING;
-        }
-        throw new RuntimeException("Invalid stone: " + this);
+        return switch (this) {
+            case NO_STONE -> Piece.NO_PIECE;
+            case WHITE_PAWN, BLACK_PAWN -> Piece.PAWN;
+            case WHITE_KNIGHT, BLACK_KNIGHT -> Piece.KNIGHT;
+            case WHITE_BISHOP, BLACK_BISHOP -> Piece.BISHOP;
+            case WHITE_ROOK, BLACK_ROOK -> Piece.ROOK;
+            case WHITE_QUEEN, BLACK_QUEEN -> Piece.QUEEN;
+            case WHITE_KING, BLACK_KING -> Piece.KING;
+        };
     }
 
     public char toChar() {

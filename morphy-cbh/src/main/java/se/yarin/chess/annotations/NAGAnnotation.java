@@ -20,15 +20,12 @@ public class NAGAnnotation extends Annotation {
 
     @Override
     public int priority() {
-        switch (nag.getType()) {
-            case MOVE_COMMENT:
-                return 100;
-            case LINE_EVALUATION:
-                return 98;
-            case MOVE_PREFIX:
-                return 99;
-        }
-        return 0;
+        return switch (nag.getType()) {
+            case MOVE_COMMENT -> 100;
+            case LINE_EVALUATION -> 98;
+            case MOVE_PREFIX -> 99;
+            default -> 0;
+        };
     }
 
     @Override

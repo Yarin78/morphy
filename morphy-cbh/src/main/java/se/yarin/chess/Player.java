@@ -8,12 +8,11 @@ public enum Player {
     private final int value;
 
     public Player otherPlayer() {
-        switch (this) {
-            case WHITE:  return Player.BLACK;
-            case BLACK:  return Player.WHITE;
-            case NOBODY: return Player.NOBODY;
-        }
-        throw new RuntimeException("Invalid player: " + this);
+        return switch (this) {
+            case WHITE -> Player.BLACK;
+            case BLACK -> Player.WHITE;
+            case NOBODY -> Player.NOBODY;
+        };
     }
 
     Player(int value) {

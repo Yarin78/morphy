@@ -25,16 +25,15 @@ public enum Piece {
 
     public Stone toStone(Player player) {
         if (player == Player.NOBODY) return Stone.NO_STONE;
-        switch (this) {
-            case NO_PIECE: return Stone.NO_STONE;
-            case PAWN:     return player == Player.WHITE ? Stone.WHITE_PAWN : Stone.BLACK_PAWN;
-            case KNIGHT:   return player == Player.WHITE ? Stone.WHITE_KNIGHT: Stone.BLACK_KNIGHT;
-            case BISHOP:   return player == Player.WHITE ? Stone.WHITE_BISHOP: Stone.BLACK_BISHOP;
-            case ROOK:     return player == Player.WHITE ? Stone.WHITE_ROOK: Stone.BLACK_ROOK;
-            case QUEEN:    return player == Player.WHITE ? Stone.WHITE_QUEEN: Stone.BLACK_QUEEN;
-            case KING:     return player == Player.WHITE ? Stone.WHITE_KING: Stone.BLACK_KING;
-        }
-        throw new RuntimeException("Invalid piece: " + this);
+        return switch (this) {
+            case NO_PIECE -> Stone.NO_STONE;
+            case PAWN -> player == Player.WHITE ? Stone.WHITE_PAWN : Stone.BLACK_PAWN;
+            case KNIGHT -> player == Player.WHITE ? Stone.WHITE_KNIGHT : Stone.BLACK_KNIGHT;
+            case BISHOP -> player == Player.WHITE ? Stone.WHITE_BISHOP : Stone.BLACK_BISHOP;
+            case ROOK -> player == Player.WHITE ? Stone.WHITE_ROOK : Stone.BLACK_ROOK;
+            case QUEEN -> player == Player.WHITE ? Stone.WHITE_QUEEN : Stone.BLACK_QUEEN;
+            case KING -> player == Player.WHITE ? Stone.WHITE_KING : Stone.BLACK_KING;
+        };
     }
 
     public char toChar() {

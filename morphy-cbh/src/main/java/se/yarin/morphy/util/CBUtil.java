@@ -118,12 +118,12 @@ public final class CBUtil {
         // bit 6: rapid
         // bit 7: correspondence
         // But only one of bit 5-7 is actually set
-        int typeValue = 0;
-        switch (timeControl) {
-            case BLITZ: typeValue = 32; break;
-            case RAPID: typeValue = 64; break;
-            case CORRESPONDENCE: typeValue = 128; break;
-        }
+        int typeValue = switch (timeControl) {
+            case BLITZ -> 32;
+            case RAPID -> 64;
+            case CORRESPONDENCE -> 128;
+            default -> 0;
+        };
         typeValue += type.ordinal();
         return typeValue;
     }

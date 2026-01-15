@@ -29,15 +29,10 @@ public abstract class SymbolAnnotation extends Annotation implements Statistical
                 continue;
             }
             switch (nag.getType()) {
-                case MOVE_COMMENT:
-                    comment = nag;
-                    break;
-                case LINE_EVALUATION:
-                    eval = nag;
-                    break;
-                case MOVE_PREFIX:
-                    prefix = nag;
-                    break;
+                case MOVE_COMMENT -> comment = nag;
+                case LINE_EVALUATION -> eval = nag;
+                case MOVE_PREFIX -> prefix = nag;
+                default -> {}
             }
         }
         return ImmutableSymbolAnnotation.of(comment, prefix, eval);

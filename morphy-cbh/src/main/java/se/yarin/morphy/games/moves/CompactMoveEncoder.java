@@ -368,16 +368,13 @@ public class CompactMoveEncoder implements MoveEncoder {
             if (piece == Piece.BISHOP || piece == Piece.ROOK || piece == Piece.QUEEN) {
                 int px = Chess.sqiToCol(sqi), py = Chess.sqiToRow(sqi);
                 int dir = ofs / 7, stride = ofs % 7 + 1;
-                switch (dir + (piece == Piece.BISHOP ? 2 : 0)) {
-                    case 0:
-                        return new Move(position, sqi, Chess.coorToSqi(px, (py + stride) % 8));
-                    case 1:
-                        return new Move(position, sqi, Chess.coorToSqi((px + stride) % 8, py));
-                    case 2:
-                        return new Move(position, sqi, Chess.coorToSqi((px + stride) % 8, (py + stride) % 8));
-                    case 3:
-                        return new Move(position, sqi, Chess.coorToSqi((px + stride) % 8, (py + 8 - stride) % 8));
-                }
+                return switch (dir + (piece == Piece.BISHOP ? 2 : 0)) {
+                    case 0 -> new Move(position, sqi, Chess.coorToSqi(px, (py + stride) % 8));
+                    case 1 -> new Move(position, sqi, Chess.coorToSqi((px + stride) % 8, py));
+                    case 2 -> new Move(position, sqi, Chess.coorToSqi((px + stride) % 8, (py + stride) % 8));
+                    case 3 -> new Move(position, sqi, Chess.coorToSqi((px + stride) % 8, (py + 8 - stride) % 8));
+                    default -> throw new MorphyMoveDecodingException("Invalid direction: " + dir);
+                };
             }
 
             if (piece == Piece.KNIGHT) {
@@ -386,16 +383,13 @@ public class CompactMoveEncoder implements MoveEncoder {
 
             if (piece == Piece.PAWN) {
                 int dir = playerToMove == Player.WHITE ? 1 : -1;
-                switch (ofs) {
-                    case 0:
-                        return new Move(position, sqi, sqi + dir);
-                    case 1:
-                        return new Move(position, sqi, sqi + dir * 2);
-                    case 2:
-                        return new Move(position, sqi, sqi + dir * 9);
-                    case 3:
-                        return new Move(position, sqi, sqi - dir * 7);
-                }
+                return switch (ofs) {
+                    case 0 -> new Move(position, sqi, sqi + dir);
+                    case 1 -> new Move(position, sqi, sqi + dir * 2);
+                    case 2 -> new Move(position, sqi, sqi + dir * 9);
+                    case 3 -> new Move(position, sqi, sqi - dir * 7);
+                    default -> throw new MorphyMoveDecodingException("Invalid pawn offset: " + ofs);
+                };
             }
         } catch (IllegalArgumentException e) {
             throw new MorphyMoveDecodingException("Invalid move with opcode: " + opcode, e);
@@ -434,15 +428,13 @@ public class CompactMoveEncoder implements MoveEncoder {
             throw new MorphyMoveDecodingException("Double bytes used for non-promotion pawn move");
         }
 
-        Piece promotedPiece;
-        switch (opcode / 4096) {
-            case 0: promotedPiece = Piece.QUEEN;  break;
-            case 1: promotedPiece = Piece.ROOK;   break;
-            case 2: promotedPiece = Piece.BISHOP; break;
-            case 3: promotedPiece = Piece.KNIGHT; break;
-            default:
-                throw new MorphyMoveDecodingException("Illegal promoted piece: " + opcode / 4096);
-        }
+        Piece promotedPiece = switch (opcode / 4096) {
+            case 0 -> Piece.QUEEN;
+            case 1 -> Piece.ROOK;
+            case 2 -> Piece.BISHOP;
+            case 3 -> Piece.KNIGHT;
+            default -> throw new MorphyMoveDecodingException("Illegal promoted piece: " + opcode / 4096);
+        };
 
         return new Move(board, fromSqi, toSqi, promotedPiece.toStone(playerToMove));
     }

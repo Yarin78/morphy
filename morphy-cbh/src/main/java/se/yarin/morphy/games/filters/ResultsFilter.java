@@ -13,28 +13,13 @@ public class ResultsFilter extends IsGameFilter {
 
     public ResultsFilter(@NotNull String results) {
         switch (results.toLowerCase()) {
-            case "1-0" :
-            case "white":
-                result = GameResult.WHITE_WINS;
-                break;
-            case "i-o":
-                result = GameResult.WHITE_WINS_ON_FORFEIT;
-                break;
-            case "0-1":
-            case "black":
-                result = GameResult.BLACK_WINS;
-            case "o-i":
-                result = GameResult.BLACK_WINS_ON_FORFEIT;
-                break;
-            case "draw":
-                result = GameResult.DRAW;
-                break;
-            case "0-0":
-            case "o-o":
-                result = GameResult.BOTH_LOST;
-                break;
-            default:
-                throw new IllegalArgumentException("Invalid result: " + results);
+            case "1-0", "white" -> result = GameResult.WHITE_WINS;
+            case "i-o" -> result = GameResult.WHITE_WINS_ON_FORFEIT;
+            case "0-1", "black" -> result = GameResult.BLACK_WINS;
+            case "o-i" -> result = GameResult.BLACK_WINS_ON_FORFEIT;
+            case "draw" -> result = GameResult.DRAW;
+            case "0-0", "o-o" -> result = GameResult.BOTH_LOST;
+            default -> throw new IllegalArgumentException("Invalid result: " + results);
         }
     }
 
