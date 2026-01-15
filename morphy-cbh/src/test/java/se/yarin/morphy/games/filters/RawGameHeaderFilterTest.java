@@ -15,22 +15,23 @@ import java.util.Objects;
 import static org.junit.Assert.assertEquals;
 
 public class RawGameHeaderFilterTest {
-    @Rule
-    public TemporaryFolder folder = new TemporaryFolder();
-    private Database database;
+  @Rule public TemporaryFolder folder = new TemporaryFolder();
+  private Database database;
 
-    @Before
-    public void setupFilterTest() {
-        database = ResourceLoader.openWorldChDatabase();
-    }
+  @Before
+  public void setupFilterTest() {
+    database = ResourceLoader.openWorldChDatabase();
+  }
 
-    private int countMatches(@NotNull Database database, @NotNull ItemStorageFilter<GameHeader> filter) {
-        return (int) database.gameHeaderIndex().getFiltered(filter).stream().filter(Objects::nonNull).count();
-    }
+  private int countMatches(
+      @NotNull Database database, @NotNull ItemStorageFilter<GameHeader> filter) {
+    return (int)
+        database.gameHeaderIndex().getFiltered(filter).stream().filter(Objects::nonNull).count();
+  }
 
-    @Test
-    public void testGetGuidingTexts() {
-        RawGameHeaderFilter filter = new RawGameHeaderFilter("(byte(0) & 2) > 0");
-        assertEquals(13, countMatches(database, filter));
-    }
+  @Test
+  public void testGetGuidingTexts() {
+    RawGameHeaderFilter filter = new RawGameHeaderFilter("(byte(0) & 2) > 0");
+    assertEquals(13, countMatches(database, filter));
+  }
 }

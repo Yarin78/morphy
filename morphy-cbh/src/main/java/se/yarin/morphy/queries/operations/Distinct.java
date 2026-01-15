@@ -14,57 +14,58 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
 public class Distinct<T extends IdObject> extends QueryOperator<T> {
-    private final @NotNull QueryOperator<T> source;
+  private final @NotNull QueryOperator<T> source;
 
-    public Distinct(@NotNull QueryContext queryContext, @NotNull QueryOperator<T> source) {
-        super(queryContext, source.hasFullData());
-        this.source = source;
-    }
+  public Distinct(@NotNull QueryContext queryContext, @NotNull QueryOperator<T> source) {
+    super(queryContext, source.hasFullData());
+    this.source = source;
+  }
 
-    @Override
-    public List<QueryOperator<?>> sources() {
-        return List.of(source);
-    }
+  @Override
+  public List<QueryOperator<?>> sources() {
+    return List.of(source);
+  }
 
-    public @NotNull QuerySortOrder<T> sortOrder() {
-        return source.sortOrder();
-    }
+  public @NotNull QuerySortOrder<T> sortOrder() {
+    return source.sortOrder();
+  }
 
-    public boolean mayContainDuplicates() {
-        return false;
-    }
+  public boolean mayContainDuplicates() {
+    return false;
+  }
 
-    public Stream<QueryData<T>> operatorStream() {
-        if (source.sortOrder().isSameOrStronger(QuerySortOrder.byId())) {
-            var lastId = new AtomicInteger(-1);
-            return source.stream().filter(data -> {
+  public Stream<QueryData<T>> operatorStream() {
+    if (source.sortOrder().isSameOrStronger(QuerySortOrder.byId())) {
+      var lastId = new AtomicInteger(-1);
+      return source.stream()
+          .filter(
+              data -> {
                 if (data.id() == lastId.get()) {
-                    return false;
+                  return false;
                 }
                 assert data.id() > lastId.get();
                 lastId.set(data.id());
                 return true;
-            });
+              });
 
-        } else {
-            HashSet<Integer> seen = new HashSet<>();
-            return source.stream().filter(data -> seen.add(data.id()));
-        }
-
+    } else {
+      HashSet<Integer> seen = new HashSet<>();
+      return source.stream().filter(data -> seen.add(data.id()));
     }
+  }
 
-    @Override
-    public void estimateOperatorCost(@NotNull ImmutableOperatorCost.Builder operatorCost) {
-        OperatorCost sourceCost = source.getOperatorCost();
-        operatorCost
-            .estimateRows(sourceCost.estimateRows())
-            .estimateDeserializations(0)
-            .estimatePageReads(0)
-            .build();
-    }
+  @Override
+  public void estimateOperatorCost(@NotNull ImmutableOperatorCost.Builder operatorCost) {
+    OperatorCost sourceCost = source.getOperatorCost();
+    operatorCost
+        .estimateRows(sourceCost.estimateRows())
+        .estimateDeserializations(0)
+        .estimatePageReads(0)
+        .build();
+  }
 
-    @Override
-    public String toString() {
-        return "Distinct()";
-    }
+  @Override
+  public String toString() {
+    return "Distinct()";
+  }
 }

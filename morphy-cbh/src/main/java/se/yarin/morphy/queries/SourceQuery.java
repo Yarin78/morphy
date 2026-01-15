@@ -7,7 +7,8 @@ import se.yarin.morphy.entities.filters.EntityFilter;
 import java.util.List;
 
 public interface SourceQuery<T> {
-    boolean isOptional();
+  boolean isOptional();
 
-    @NotNull List<?> filtersCovered();
+  @NotNull
+  List<?> filtersCovered();
 }

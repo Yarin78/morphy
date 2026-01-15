@@ -11,29 +11,32 @@ import se.yarin.morphy.games.filters.RawGameHeaderFilter;
 import java.util.stream.Stream;
 
 public class QGamesWithRaw extends ItemQuery<Game> {
-    private final @Nullable RawGameHeaderFilter headerFilter;
-    private final @Nullable RawExtendedHeaderFilter extendedHeaderFilter;
+  private final @Nullable RawGameHeaderFilter headerFilter;
+  private final @Nullable RawExtendedHeaderFilter extendedHeaderFilter;
 
-    public QGamesWithRaw(@Nullable RawGameHeaderFilter headerFilter, @Nullable RawExtendedHeaderFilter extendedHeaderFilter) {
-        this.headerFilter = headerFilter;
-        this.extendedHeaderFilter = extendedHeaderFilter;
-    }
+  public QGamesWithRaw(
+      @Nullable RawGameHeaderFilter headerFilter,
+      @Nullable RawExtendedHeaderFilter extendedHeaderFilter) {
+    this.headerFilter = headerFilter;
+    this.extendedHeaderFilter = extendedHeaderFilter;
+  }
 
-    @Override
-    public boolean matches(@NotNull DatabaseReadTransaction txn, @NotNull Game game) {
-        // This actually matches everything
-        // TODO: Force match serialized?
-        return (headerFilter == null || headerFilter.matches(game.id(), game.header())) &&
-                (extendedHeaderFilter == null || extendedHeaderFilter.matches(game.id(), game.extendedHeader()));
-    }
+  @Override
+  public boolean matches(@NotNull DatabaseReadTransaction txn, @NotNull Game game) {
+    // This actually matches everything
+    // TODO: Force match serialized?
+    return (headerFilter == null || headerFilter.matches(game.id(), game.header()))
+        && (extendedHeaderFilter == null
+            || extendedHeaderFilter.matches(game.id(), game.extendedHeader()));
+  }
 
-    @Override
-    public int rowEstimate(@NotNull DatabaseReadTransaction txn) {
-        return INFINITE;
-    }
+  @Override
+  public int rowEstimate(@NotNull DatabaseReadTransaction txn) {
+    return INFINITE;
+  }
 
-    @Override
-    public @NotNull Stream<Game> stream(@NotNull DatabaseReadTransaction txn) {
-        return txn.stream(GameFilter.of(headerFilter, extendedHeaderFilter));
-    }
+  @Override
+  public @NotNull Stream<Game> stream(@NotNull DatabaseReadTransaction txn) {
+    return txn.stream(GameFilter.of(headerFilter, extendedHeaderFilter));
+  }
 }

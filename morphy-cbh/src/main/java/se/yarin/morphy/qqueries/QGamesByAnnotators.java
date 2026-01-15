@@ -14,39 +14,39 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class QGamesByAnnotators extends ItemQuery<Game> {
-    private final @NotNull ItemQuery<Annotator> annotatorQuery;
-    private @Nullable List<Annotator> annotatorResult;
-    private @Nullable AnnotatorFilter annotatorFilter;
+  private final @NotNull ItemQuery<Annotator> annotatorQuery;
+  private @Nullable List<Annotator> annotatorResult;
+  private @Nullable AnnotatorFilter annotatorFilter;
 
-    public QGamesByAnnotators(@NotNull ItemQuery<Annotator> annotatorQuery) {
-        this.annotatorQuery = annotatorQuery;
-    }
+  public QGamesByAnnotators(@NotNull ItemQuery<Annotator> annotatorQuery) {
+    this.annotatorQuery = annotatorQuery;
+  }
 
-    @Override
-    public boolean matches(@NotNull DatabaseReadTransaction txn, @NotNull Game game) {
-        evaluateSubQuery(txn);
-        assert annotatorFilter != null;
-        return annotatorFilter.matches(game.id(), game.header());
-    }
+  @Override
+  public boolean matches(@NotNull DatabaseReadTransaction txn, @NotNull Game game) {
+    evaluateSubQuery(txn);
+    assert annotatorFilter != null;
+    return annotatorFilter.matches(game.id(), game.header());
+  }
 
-    public int rowEstimate(@NotNull DatabaseReadTransaction txn) {
-        if (annotatorResult == null) {
-            return INFINITE;
-        }
-        return annotatorResult.stream().map(Entity::count).reduce(0, Integer::sum);
+  public int rowEstimate(@NotNull DatabaseReadTransaction txn) {
+    if (annotatorResult == null) {
+      return INFINITE;
     }
+    return annotatorResult.stream().map(Entity::count).reduce(0, Integer::sum);
+  }
 
-    public void evaluateSubQuery(@NotNull DatabaseReadTransaction txn) {
-        if (annotatorResult == null) {
-            annotatorResult = annotatorQuery.stream(txn).collect(Collectors.toList());
-            annotatorFilter = new AnnotatorFilter(annotatorResult);
-        }
+  public void evaluateSubQuery(@NotNull DatabaseReadTransaction txn) {
+    if (annotatorResult == null) {
+      annotatorResult = annotatorQuery.stream(txn).collect(Collectors.toList());
+      annotatorFilter = new AnnotatorFilter(annotatorResult);
     }
+  }
 
-    @Override
-    public @NotNull Stream<Game> stream(@NotNull DatabaseReadTransaction txn) {
-        evaluateSubQuery(txn);
-        assert annotatorFilter != null;
-        return txn.stream(GameFilter.of(annotatorFilter, null));
-    }
+  @Override
+  public @NotNull Stream<Game> stream(@NotNull DatabaseReadTransaction txn) {
+    evaluateSubQuery(txn);
+    assert annotatorFilter != null;
+    return txn.stream(GameFilter.of(annotatorFilter, null));
+  }
 }

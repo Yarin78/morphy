@@ -8,5 +8,5 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.FIELD)
 @interface HeaderData {
-    String fieldName() default "";
+  String fieldName() default "";
 }

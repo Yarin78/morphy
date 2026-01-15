@@ -5,33 +5,30 @@ import org.immutables.value.Value;
 @Value.Immutable
 public abstract class FooEntity extends Entity implements Comparable<FooEntity> {
 
-    public abstract String key();
-    public abstract int value();
+  public abstract String key();
 
-    @Override
-    public Entity withCountAndFirstGameId(int count, int firstGameId) {
-        return ImmutableFooEntity.builder().from(this).count(count).firstGameId(firstGameId).build();
-    }
+  public abstract int value();
 
-    public static FooEntity of(String key) {
-        return ImmutableFooEntity.builder().key(key).value(0).build();
-    }
+  @Override
+  public Entity withCountAndFirstGameId(int count, int firstGameId) {
+    return ImmutableFooEntity.builder().from(this).count(count).firstGameId(firstGameId).build();
+  }
 
-    public static FooEntity of(String key, int value) {
-        return ImmutableFooEntity.builder().key(key).value(value).build();
-    }
+  public static FooEntity of(String key) {
+    return ImmutableFooEntity.builder().key(key).value(0).build();
+  }
 
-    @Override
-    public int compareTo(FooEntity o) {
-        return key().compareTo(o.key());
-    }
+  public static FooEntity of(String key, int value) {
+    return ImmutableFooEntity.builder().key(key).value(value).build();
+  }
 
-    @Override
-    public String toString() {
-        return "TestEntity{" +
-                "id=" + id() +
-                ", key='" + key() + '\'' +
-                ", value=" + value() +
-                '}';
-    }
+  @Override
+  public int compareTo(FooEntity o) {
+    return key().compareTo(o.key());
+  }
+
+  @Override
+  public String toString() {
+    return "TestEntity{" + "id=" + id() + ", key='" + key() + '\'' + ", value=" + value() + '}';
+  }
 }

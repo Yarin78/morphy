@@ -8,30 +8,32 @@ import se.yarin.morphy.entities.filters.GameTagTitleFilter;
 import java.util.stream.Stream;
 
 public class QGameTagsWithTitle extends ItemQuery<GameTag> {
-    private final @NotNull GameTagTitleFilter filter;
+  private final @NotNull GameTagTitleFilter filter;
 
-    public QGameTagsWithTitle(@NotNull String englishTitle, boolean caseSensitive, boolean exactMatch) {
-        this(new GameTagTitleFilter(englishTitle, caseSensitive, exactMatch));
-    }
+  public QGameTagsWithTitle(
+      @NotNull String englishTitle, boolean caseSensitive, boolean exactMatch) {
+    this(new GameTagTitleFilter(englishTitle, caseSensitive, exactMatch));
+  }
 
-    public QGameTagsWithTitle(@NotNull GameTagTitleFilter filter) {
-        this.filter = filter;
-    }
+  public QGameTagsWithTitle(@NotNull GameTagTitleFilter filter) {
+    this.filter = filter;
+  }
 
-    @Override
-    public boolean matches(@NotNull DatabaseReadTransaction txn, @NotNull GameTag gameTag) {
-        return filter.matches(gameTag);
-    }
+  @Override
+  public boolean matches(@NotNull DatabaseReadTransaction txn, @NotNull GameTag gameTag) {
+    return filter.matches(gameTag);
+  }
 
-    @Override
-    public int rowEstimate(@NotNull DatabaseReadTransaction txn) {
-        // TODO: if case sensitive, we can iterate alphabetically in the index and know if there are few matching
-        return INFINITE;
-    }
+  @Override
+  public int rowEstimate(@NotNull DatabaseReadTransaction txn) {
+    // TODO: if case sensitive, we can iterate alphabetically in the index and know if there are few
+    // matching
+    return INFINITE;
+  }
 
-    @Override
-    public @NotNull Stream<GameTag> stream(@NotNull DatabaseReadTransaction txn) {
-        // TODO: Serialization stream
-        return txn.gameTagTransaction().stream().filter(gameTag -> matches(txn, gameTag));
-    }
+  @Override
+  public @NotNull Stream<GameTag> stream(@NotNull DatabaseReadTransaction txn) {
+    // TODO: Serialization stream
+    return txn.gameTagTransaction().stream().filter(gameTag -> matches(txn, gameTag));
+  }
 }

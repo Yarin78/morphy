@@ -6,13 +6,15 @@ import se.yarin.morphy.entities.EntityType;
 import se.yarin.morphy.queries.QueryPlanner;
 
 public interface EntityFilter<T> {
-    boolean matches(@NotNull T item);
+  boolean matches(@NotNull T item);
 
-    EntityType entityType();
+  EntityType entityType();
 
-    default boolean matchesSerialized(byte[] serializedItem) {
-        return true;
-    }
+  default boolean matchesSerialized(byte[] serializedItem) {
+    return true;
+  }
 
-    default double expectedMatch(@NotNull QueryPlanner planner) { return 1.0; }
+  default double expectedMatch(@NotNull QueryPlanner planner) {
+    return 1.0;
+  }
 }

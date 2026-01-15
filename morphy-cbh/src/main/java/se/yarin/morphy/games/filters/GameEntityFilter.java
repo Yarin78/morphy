@@ -8,11 +8,14 @@ import se.yarin.morphy.queries.GameEntityJoinCondition;
 import java.util.List;
 
 public interface GameEntityFilter<T extends Entity & Comparable<T>> extends GameFilter {
-    @NotNull List<Integer> entityIds();
+  @NotNull
+  List<Integer> entityIds();
 
-    @NotNull EntityType entityType();
+  @NotNull
+  EntityType entityType();
 
-    @NotNull default GameEntityJoinCondition matchCondition() {
-        return GameEntityJoinCondition.ANY;
-    }
+  @NotNull
+  default GameEntityJoinCondition matchCondition() {
+    return GameEntityJoinCondition.ANY;
+  }
 }

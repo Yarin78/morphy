@@ -12,42 +12,48 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-public class TournamentTypeFilter implements EntityFilter<Tournament>  {
+public class TournamentTypeFilter implements EntityFilter<Tournament> {
 
-    private final @NotNull Set<TournamentType> types;
+  private final @NotNull Set<TournamentType> types;
 
-    public TournamentTypeFilter(@NotNull Set<TournamentType> types) {
-        this.types = new HashSet<>(types);
+  public TournamentTypeFilter(@NotNull Set<TournamentType> types) {
+    this.types = new HashSet<>(types);
+  }
+
+  public TournamentTypeFilter(@NotNull String tournamentType) {
+    List<String> specTypes =
+        Arrays.stream(tournamentType.split("\\|")).collect(Collectors.toList());
+    types =
+        Arrays.stream(TournamentType.values())
+            .filter(x -> specTypes.contains(x.getName()))
+            .collect(Collectors.toSet());
+  }
+
+  @Override
+  public boolean matches(@NotNull Tournament tournament) {
+    return types.contains(tournament.type());
+  }
+
+  @Override
+  public boolean matchesSerialized(byte[] serializedItem) {
+    return types.contains(CBUtil.decodeTournamentType(serializedItem[74]));
+  }
+
+  @Override
+  public String toString() {
+    if (types.size() == 1) {
+      return "type = '" + types.stream().findFirst().get().getName() + "'";
+    } else {
+      return "type in ("
+          + types.stream()
+              .map(type -> String.format("'%s'", type.getName()))
+              .collect(Collectors.joining(", "))
+          + ")";
     }
+  }
 
-    public TournamentTypeFilter(@NotNull String tournamentType) {
-        List<String> specTypes = Arrays.stream(tournamentType.split("\\|")).collect(Collectors.toList());
-        types = Arrays.stream(TournamentType.values()).filter(x -> specTypes.contains(x.getName())).collect(Collectors.toSet());
-    }
-
-    @Override
-    public boolean matches(@NotNull Tournament tournament) {
-        return types.contains(tournament.type());
-    }
-
-    @Override
-    public boolean matchesSerialized(byte[] serializedItem) {
-        return types.contains(CBUtil.decodeTournamentType(serializedItem[74]));
-    }
-
-    @Override
-    public String toString() {
-        if (types.size() == 1) {
-            return "type = '" + types.stream().findFirst().get().getName() + "'";
-        } else {
-            return "type in (" + types.stream()
-                    .map(type -> String.format("'%s'", type.getName()))
-                    .collect(Collectors.joining(", ")) + ")";
-        }
-    }
-
-    @Override
-    public EntityType entityType() {
-        return EntityType.TOURNAMENT;
-    }
+  @Override
+  public EntityType entityType() {
+    return EntityType.TOURNAMENT;
+  }
 }

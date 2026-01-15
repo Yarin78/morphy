@@ -1,7 +1,7 @@
 package se.yarin.morphy.games.annotations;
 
 public interface RawAnnotation {
-    int annotationType();
+  int annotationType();
 
-    byte[] rawData();
+  byte[] rawData();
 }

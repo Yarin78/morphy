@@ -14,39 +14,39 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class QGamesBySource extends ItemQuery<Game> {
-    private final @NotNull ItemQuery<Source> sourceQuery;
-    private @Nullable List<Source> sourceResult;
-    private @Nullable SourceFilter sourceFilter;
+  private final @NotNull ItemQuery<Source> sourceQuery;
+  private @Nullable List<Source> sourceResult;
+  private @Nullable SourceFilter sourceFilter;
 
-    public QGamesBySource(@NotNull ItemQuery<Source> sourceQuery) {
-        this.sourceQuery = sourceQuery;
-    }
+  public QGamesBySource(@NotNull ItemQuery<Source> sourceQuery) {
+    this.sourceQuery = sourceQuery;
+  }
 
-    @Override
-    public boolean matches(@NotNull DatabaseReadTransaction txn, @NotNull Game game) {
-        evaluateSubQuery(txn);
-        assert sourceFilter != null;
-        return sourceFilter.matches(game.id(), game.header());
-    }
+  @Override
+  public boolean matches(@NotNull DatabaseReadTransaction txn, @NotNull Game game) {
+    evaluateSubQuery(txn);
+    assert sourceFilter != null;
+    return sourceFilter.matches(game.id(), game.header());
+  }
 
-    public int rowEstimate(@NotNull DatabaseReadTransaction txn) {
-        if (sourceResult == null) {
-            return INFINITE;
-        }
-        return sourceResult.stream().map(Entity::count).reduce(0, Integer::sum);
+  public int rowEstimate(@NotNull DatabaseReadTransaction txn) {
+    if (sourceResult == null) {
+      return INFINITE;
     }
+    return sourceResult.stream().map(Entity::count).reduce(0, Integer::sum);
+  }
 
-    public void evaluateSubQuery(@NotNull DatabaseReadTransaction txn) {
-        if (sourceResult == null) {
-            sourceResult = sourceQuery.stream(txn).collect(Collectors.toList());
-            sourceFilter = new SourceFilter(sourceResult);
-        }
+  public void evaluateSubQuery(@NotNull DatabaseReadTransaction txn) {
+    if (sourceResult == null) {
+      sourceResult = sourceQuery.stream(txn).collect(Collectors.toList());
+      sourceFilter = new SourceFilter(sourceResult);
     }
+  }
 
-    @Override
-    public @NotNull Stream<Game> stream(@NotNull DatabaseReadTransaction txn) {
-        evaluateSubQuery(txn);
-        assert sourceFilter != null;
-        return txn.stream(GameFilter.of(sourceFilter, null));
-    }
+  @Override
+  public @NotNull Stream<Game> stream(@NotNull DatabaseReadTransaction txn) {
+    evaluateSubQuery(txn);
+    assert sourceFilter != null;
+    return txn.stream(GameFilter.of(sourceFilter, null));
+  }
 }

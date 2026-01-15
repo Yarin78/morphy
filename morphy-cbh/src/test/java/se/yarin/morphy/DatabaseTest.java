@@ -27,438 +27,452 @@ import static se.yarin.chess.Chess.D4;
 
 public class DatabaseTest {
 
-    @Rule
-    public TemporaryFolder folder = new TemporaryFolder();
-
-    private int countDatabaseFiles(@NotNull File file) {
-        String baseName = CBUtil.baseName(file).toLowerCase(Locale.ROOT);
-        return file.getParentFile().listFiles((dir, name) -> name.toLowerCase().startsWith(baseName)).length;
-    }
-
-    @Test
-    public void openVeryOldDatabaseInReadOnly() throws IOException {
-        // Open a database with only the minimum files, check that it works and nothing new is created
-        File file = ResourceLoader.materializeDatabaseStream(getClass(), "database/veryold", "Mate2");
-        int numFiles = countDatabaseFiles(file);
-
-        Database.open(file, DatabaseMode.READ_ONLY);
-
-        assertEquals(numFiles, countDatabaseFiles(file));
-    }
-
-    @Test
-    public void openDatabaseInMemory() {
-        // Ensures the context is the same in the newly opened database
-        ResourceLoader.openWorldChDatabaseInMemory();
-    }
-
-    @Test
-    public void openVeryOldDatabaseInMemory() throws IOException {
-        // Open a database with only the minimum files; make sure no new files are created
-        File file = ResourceLoader.materializeDatabaseStream(getClass(), "database/veryold", "Mate2");
-
-        int numFiles = countDatabaseFiles(file);
-
-        Database.open(file, DatabaseMode.IN_MEMORY);
-
-        assertEquals(numFiles, countDatabaseFiles(file));
-    }
+  @Rule public TemporaryFolder folder = new TemporaryFolder();
+
+  private int countDatabaseFiles(@NotNull File file) {
+    String baseName = CBUtil.baseName(file).toLowerCase(Locale.ROOT);
+    return file.getParentFile()
+        .listFiles((dir, name) -> name.toLowerCase().startsWith(baseName))
+        .length;
+  }
+
+  @Test
+  public void openVeryOldDatabaseInReadOnly() throws IOException {
+    // Open a database with only the minimum files, check that it works and nothing new is created
+    File file = ResourceLoader.materializeDatabaseStream(getClass(), "database/veryold", "Mate2");
+    int numFiles = countDatabaseFiles(file);
+
+    Database.open(file, DatabaseMode.READ_ONLY);
+
+    assertEquals(numFiles, countDatabaseFiles(file));
+  }
+
+  @Test
+  public void openDatabaseInMemory() {
+    // Ensures the context is the same in the newly opened database
+    ResourceLoader.openWorldChDatabaseInMemory();
+  }
+
+  @Test
+  public void openVeryOldDatabaseInMemory() throws IOException {
+    // Open a database with only the minimum files; make sure no new files are created
+    File file = ResourceLoader.materializeDatabaseStream(getClass(), "database/veryold", "Mate2");
+
+    int numFiles = countDatabaseFiles(file);
+
+    Database.open(file, DatabaseMode.IN_MEMORY);
+
+    assertEquals(numFiles, countDatabaseFiles(file));
+  }
+
+  @Test
+  public void openVeryOldDatabase() throws IOException {
+    // Open a database with only the minimum files, check that it works and that the missing files
+    // are created
+    File file = ResourceLoader.materializeDatabaseStream(getClass(), "database/veryold", "Mate2");
+
+    int numFiles = countDatabaseFiles(file);
+    assertFalse(CBUtil.fileWithExtension(file, ".cbj").exists());
+
+    Database.open(file, DatabaseMode.READ_WRITE);
+
+    assertTrue(CBUtil.fileWithExtension(file, ".cbj").exists());
+    assertTrue(countDatabaseFiles(file) > numFiles);
+  }
+
+  @Test(expected = IOException.class)
+  public void openDatabaseWithMissingEssentialFiles() throws IOException {
+    // Try opening the database without the source index should fail
+    List<String> extensions =
+        Database.MANDATORY_EXTENSIONS.stream()
+            .filter(x -> !x.equals(".cbs"))
+            .collect(Collectors.toList());
+    File file =
+        ResourceLoader.materializeDatabaseStream(
+            getClass(), "database/veryold", "Mate2", extensions);
+    Database.open(file, DatabaseMode.READ_ONLY);
+  }
+
+  @Test
+  public void openOldDatabaseInReadOnly() throws IOException {
+    // Open a database with old version of cbj and cbtt file, check that it works and files are not
+    // upgraded
+    File file = ResourceLoader.materializeDatabaseStream(getClass(), "database/old", "linares");
+    int numFiles = countDatabaseFiles(file);
+    long oldExtendedHeaderFileSize = CBUtil.fileWithExtension(file, ".cbj").length();
+    long oldTournamentExtraFileSize = CBUtil.fileWithExtension(file, ".cbtt").length();
+
+    Database.open(file, DatabaseMode.READ_ONLY);
+
+    assertEquals(numFiles, countDatabaseFiles(file));
+    assertEquals(oldExtendedHeaderFileSize, CBUtil.fileWithExtension(file, ".cbj").length());
+    assertEquals(oldTournamentExtraFileSize, CBUtil.fileWithExtension(file, ".cbtt").length());
+  }
+
+  @Test
+  public void openOldDatabase() throws IOException {
+    // Open a database with old version of cbj and no cbtt file, check that it works and files are
+    // upgraded
+    File file = ResourceLoader.materializeDatabaseStream(getClass(), "database/old", "linares");
+    int numFiles = countDatabaseFiles(file);
+    long oldFileSize = CBUtil.fileWithExtension(file, ".cbj").length();
+    assertFalse(CBUtil.fileWithExtension(file, ".cbtt").exists());
+
+    Database.open(file, DatabaseMode.READ_WRITE);
+
+    assertEquals(numFiles + 1, countDatabaseFiles(file)); // the .cbtt file got created
+    assertTrue(oldFileSize < CBUtil.fileWithExtension(file, ".cbj").length());
+    assertTrue(CBUtil.fileWithExtension(file, ".cbtt").exists());
+  }
+
+  @Test(expected = MorphyInvalidDataException.class)
+  public void getGameWithShorterExtendedHeaderStrict() throws IOException {
+    // cbj file exists but contains fewer games than the cbh file
+    // Database won't even open
+    File cbh_cbj =
+        ResourceLoader.materializeDatabaseStream(
+            Database.class, "database/shorter_cbj_test", "shorter_cbj_test");
+    Database.open(cbh_cbj, DatabaseMode.READ_ONLY);
+  }
+
+  @Test(expected = MorphyInvalidDataException.class)
+  public void getGameAfterOpenInMemoryWithShorterExtendedHeaders() throws IOException {
+    File cbh_cbj =
+        ResourceLoader.materializeDatabaseStream(
+            Database.class, "database/shorter_cbj_test", "shorter_cbj_test");
+    Database.open(cbh_cbj, DatabaseMode.IN_MEMORY);
+  }
 
-    @Test
-    public void openVeryOldDatabase() throws IOException {
-        // Open a database with only the minimum files, check that it works and that the missing files are created
-        File file = ResourceLoader.materializeDatabaseStream(getClass(), "database/veryold", "Mate2");
-
-        int numFiles = countDatabaseFiles(file);
-        assertFalse(CBUtil.fileWithExtension(file, ".cbj").exists());
+  @Test
+  public void createDatabase() throws IOException {
+    File file = folder.newFile("new_db.cbh");
+    file.delete();
 
-        Database.open(file, DatabaseMode.READ_WRITE);
+    assertEquals(0, countDatabaseFiles(file));
+
+    Database.create(file, false);
 
-        assertTrue(CBUtil.fileWithExtension(file, ".cbj").exists());
-        assertTrue(countDatabaseFiles(file) > numFiles);
-    }
+    assertEquals(18, countDatabaseFiles(file));
+  }
 
-    @Test(expected = IOException.class)
-    public void openDatabaseWithMissingEssentialFiles() throws IOException {
-        // Try opening the database without the source index should fail
-        List<String> extensions = Database.MANDATORY_EXTENSIONS.stream().filter(x -> !x.equals(".cbs")).collect(Collectors.toList());
-        File file = ResourceLoader.materializeDatabaseStream(getClass(), "database/veryold", "Mate2", extensions);
-        Database.open(file, DatabaseMode.READ_ONLY);
-    }
+  @Test(expected = IOException.class)
+  public void createDatabaseButExists() throws IOException {
+    File file = folder.newFile("new_db.cbh");
 
-    @Test
-    public void openOldDatabaseInReadOnly() throws IOException {
-        // Open a database with old version of cbj and cbtt file, check that it works and files are not upgraded
-        File file = ResourceLoader.materializeDatabaseStream(getClass(), "database/old", "linares");
-        int numFiles = countDatabaseFiles(file);
-        long oldExtendedHeaderFileSize = CBUtil.fileWithExtension(file, ".cbj").length();
-        long oldTournamentExtraFileSize = CBUtil.fileWithExtension(file, ".cbtt").length();
+    assertEquals(1, countDatabaseFiles(file));
+
+    Database.create(file, false);
+  }
 
-        Database.open(file, DatabaseMode.READ_ONLY);
+  @Test(expected = IOException.class)
+  public void createDatabaseStrayFileExists() throws IOException {
+    folder.newFile("my-Database.stray");
+    File file = folder.newFile("MY-database.cbh");
+    file.delete();
 
-        assertEquals(numFiles, countDatabaseFiles(file));
-        assertEquals(oldExtendedHeaderFileSize, CBUtil.fileWithExtension(file, ".cbj").length());
-        assertEquals(oldTournamentExtraFileSize, CBUtil.fileWithExtension(file, ".cbtt").length());
-    }
+    assertEquals(1, countDatabaseFiles(file));
 
-    @Test
-    public void openOldDatabase() throws IOException {
-        // Open a database with old version of cbj and no cbtt file, check that it works and files are upgraded
-        File file = ResourceLoader.materializeDatabaseStream(getClass(), "database/old", "linares");
-        int numFiles = countDatabaseFiles(file);
-        long oldFileSize = CBUtil.fileWithExtension(file, ".cbj").length();
-        assertFalse(CBUtil.fileWithExtension(file, ".cbtt").exists());
+    Database.create(file, false);
+  }
 
-        Database.open(file, DatabaseMode.READ_WRITE);
+  @Test
+  public void createAndOverwriteDatabase() throws IOException {
+    File file = folder.newFile("new_db.cbh");
+    File secondFile = folder.newFile("new_db.test");
 
-        assertEquals(numFiles + 1, countDatabaseFiles(file));  // the .cbtt file got created
-        assertTrue(oldFileSize < CBUtil.fileWithExtension(file, ".cbj").length());
-        assertTrue(CBUtil.fileWithExtension(file, ".cbtt").exists());
-    }
+    assertEquals(2, countDatabaseFiles(file));
 
+    Database.create(file, true);
 
-    @Test(expected = MorphyInvalidDataException.class)
-    public void getGameWithShorterExtendedHeaderStrict() throws IOException {
-        // cbj file exists but contains fewer games than the cbh file
-        // Database won't even open
-        File cbh_cbj = ResourceLoader.materializeDatabaseStream(Database.class, "database/shorter_cbj_test", "shorter_cbj_test");
-        Database.open(cbh_cbj, DatabaseMode.READ_ONLY);
-    }
+    assertEquals(18, countDatabaseFiles(file));
+  }
 
-    @Test(expected = MorphyInvalidDataException.class)
-    public void getGameAfterOpenInMemoryWithShorterExtendedHeaders() throws IOException {
-        File cbh_cbj = ResourceLoader.materializeDatabaseStream(Database.class, "database/shorter_cbj_test", "shorter_cbj_test");
-        Database.open(cbh_cbj, DatabaseMode.IN_MEMORY);
-    }
+  @Test
+  public void deleteDatabase() throws IOException {
+    File file = ResourceLoader.materializeStreamPath(Database.class, "database/World-ch");
+    assertEquals(20, file.listFiles().length);
 
-    @Test
-    public void createDatabase() throws IOException {
-        File file = folder.newFile("new_db.cbh");
-        file.delete();
+    Database.delete(new File(file, "World-ch.cbh"));
 
-        assertEquals(0, countDatabaseFiles(file));
+    assertEquals(0, file.listFiles().length);
+  }
 
-        Database.create(file, false);
+  @Test
+  public void deletePartialDeletedDatabase() throws IOException {
+    File file = ResourceLoader.materializeStreamPath(Database.class, "database/World-ch");
+    File cbhFile = new File(file, "World-ch.cbh");
+    cbhFile.delete();
+    assertEquals(19, file.listFiles().length);
 
-        assertEquals(18, countDatabaseFiles(file));
-    }
+    Database.delete(cbhFile);
 
-    @Test(expected = IOException.class)
-    public void createDatabaseButExists() throws IOException {
-        File file = folder.newFile("new_db.cbh");
+    assertEquals(0, file.listFiles().length);
+  }
 
-        assertEquals(1, countDatabaseFiles(file));
+  @Test
+  public void getSingleGame() {
+    Database database = ResourceLoader.openWorldChDatabase();
 
-        Database.create(file, false);
-    }
+    Game game = database.getGame(73);
+    assertEquals("Chigorin, Mikhail Ivanovich", game.white().getFullName());
+    assertEquals("Steinitz, William", game.black().getFullName());
+    assertEquals("World-ch04 Steinitz-Chigorin +10-8=5", game.tournament().title());
+  }
 
-    @Test(expected = IOException.class)
-    public void createDatabaseStrayFileExists() throws IOException {
-        folder.newFile("my-Database.stray");
-        File file = folder.newFile("MY-database.cbh");
-        file.delete();
+  @Test(expected = IllegalArgumentException.class)
+  public void getGame0() {
+    Database database = ResourceLoader.openWorldChDatabase();
+    database.getGame(0);
+  }
 
-        assertEquals(1, countDatabaseFiles(file));
+  @Test(expected = IllegalArgumentException.class)
+  public void getSingleMissingGame() {
+    Database database = ResourceLoader.openWorldChDatabase();
+    database.getGame(100000);
+  }
 
-        Database.create(file, false);
-    }
+  @Test
+  public void addSingleGameToEmptyDatabase() throws IOException {
+    Database db = new Database();
 
-    @Test
-    public void createAndOverwriteDatabase() throws IOException {
-        File file = folder.newFile("new_db.cbh");
-        File secondFile = folder.newFile("new_db.test");
+    GameModel gameModel =
+        TestGames.getSimpleGame("Mardell", "Carlsen", "Sample tournament", null, null);
 
-        assertEquals(2, countDatabaseFiles(file));
+    db.addGame(gameModel);
 
-        Database.create(file, true);
+    assertEquals(1, db.gameHeaderIndex().count());
+    assertEquals(2, db.playerIndex().count());
+    assertEquals(1, db.tournamentIndex().count());
+    assertEquals(1, db.annotatorIndex().count());
+    assertEquals(1, db.sourceIndex().count());
 
-        assertEquals(18, countDatabaseFiles(file));
-    }
+    Player p1 = db.playerIndex().get(0);
+    Player p2 = db.playerIndex().get(1);
+    Tournament t = db.tournamentIndex().get(0);
 
-    @Test
-    public void deleteDatabase() throws IOException {
-        File file = ResourceLoader.materializeStreamPath(Database.class, "database/World-ch");
-        assertEquals(20, file.listFiles().length);
+    assertEquals("Mardell", p1.lastName());
+    assertEquals(1, p1.firstGameId());
+    assertEquals(1, p1.count());
 
-        Database.delete(new File(file, "World-ch.cbh"));
+    assertEquals("Carlsen", p2.lastName());
+    assertEquals(1, p2.firstGameId());
+    assertEquals(1, p2.count());
 
-        assertEquals(0, file.listFiles().length);
-    }
+    assertEquals("Sample tournament", t.title());
+    assertEquals(1, t.firstGameId());
+    assertEquals(1, t.count());
 
-    @Test
-    public void deletePartialDeletedDatabase() throws IOException {
-        File file = ResourceLoader.materializeStreamPath(Database.class, "database/World-ch");
-        File cbhFile = new File(file, "World-ch.cbh");
-        cbhFile.delete();
-        assertEquals(19, file.listFiles().length);
+    assertEquals("", db.annotatorIndex().get(0).name());
+    assertEquals("", db.sourceIndex().get(0).title());
 
-        Database.delete(cbhFile);
+    new EntityStatsValidator(db).validateEntityStatistics(true);
 
-        assertEquals(0, file.listFiles().length);
-    }
+    db.close();
+  }
 
+  @Test
+  public void addMultipleGames() throws IOException {
+    Database db = new Database();
 
-    @Test
-    public void getSingleGame() {
-        Database database = ResourceLoader.openWorldChDatabase();
+    db.addGame(TestGames.getSimpleGame("Mardell", "Carlsen", "t1", "my source", "myself"));
+    db.addGame(TestGames.getSimpleGame("Kasparov", "Mardell", "t1", "", ""));
+    db.addGame(TestGames.getSimpleGame("Karpov", "Fischer", "t2", null, ""));
+    db.addGame(TestGames.getSimpleGame("Caruana", "Giri", "t2", "my source", "myself"));
+    db.addGame(TestGames.getSimpleGame("Mardell", "Giri", "t3", null, ""));
 
-        Game game = database.getGame(73);
-        assertEquals("Chigorin, Mikhail Ivanovich", game.white().getFullName());
-        assertEquals("Steinitz, William", game.black().getFullName());
-        assertEquals("World-ch04 Steinitz-Chigorin +10-8=5", game.tournament().title());
-    }
+    new EntityStatsValidator(db).validateEntityStatistics(true);
 
-    @Test(expected = IllegalArgumentException.class)
-    public void getGame0() {
-        Database database = ResourceLoader.openWorldChDatabase();
-        database.getGame(0);
-    }
+    db.close();
+  }
 
-    @Test(expected = IllegalArgumentException.class)
-    public void getSingleMissingGame() {
-        Database database = ResourceLoader.openWorldChDatabase();
-        database.getGame(100000);
-    }
+  @Test
+  public void replaceGame() throws IOException {
+    Database db = new Database();
 
+    db.addGame(TestGames.getSimpleGame("Mardell", "Carlsen", "t1", "my source", "myself"));
+    db.addGame(TestGames.getSimpleGame("Kasparov", "Mardell", "t1", "", ""));
 
-    @Test
-    public void addSingleGameToEmptyDatabase() throws IOException {
-        Database db = new Database();
+    db.replaceGame(2, TestGames.getSimpleGame("Karpov", "Fischer", "t2", null, ""));
 
-        GameModel gameModel = TestGames.getSimpleGame("Mardell", "Carlsen", "Sample tournament", null, null);
+    EntityStatsValidator validator = new EntityStatsValidator(db);
+    validator.validateEntityStatistics(true);
+    new GamesValidator(db).readAllGames();
 
-        db.addGame(gameModel);
+    db.close();
+  }
 
-        assertEquals(1, db.gameHeaderIndex().count());
-        assertEquals(2, db.playerIndex().count());
-        assertEquals(1, db.tournamentIndex().count());
-        assertEquals(1, db.annotatorIndex().count());
-        assertEquals(1, db.sourceIndex().count());
+  @Test
+  public void replaceGameCorrectlyUpdatesFirstGame() throws IOException {
+    Database db = new Database();
 
-        Player p1 = db.playerIndex().get(0);
-        Player p2 = db.playerIndex().get(1);
-        Tournament t = db.tournamentIndex().get(0);
+    db.addGame(TestGames.getSimpleGame("a", "b"));
+    db.addGame(TestGames.getSimpleGame("c", "c"));
+    db.addGame(TestGames.getSimpleGame("d", "e"));
+    db.addGame(TestGames.getSimpleGame("c", "a"));
+    db.addGame(TestGames.getSimpleGame("b", "d"));
 
-        assertEquals("Mardell", p1.lastName());
-        assertEquals(1, p1.firstGameId());
-        assertEquals(1, p1.count());
+    // First game of c is still 2, first of d becomes 2
+    db.replaceGame(2, TestGames.getSimpleGame("c", "d"));
+    new EntityStatsValidator(db).validateEntityStatistics(true);
 
-        assertEquals("Carlsen", p2.lastName());
-        assertEquals(1, p2.firstGameId());
-        assertEquals(1, p2.count());
+    // First game of a and c is unchanged
+    db.replaceGame(4, TestGames.getSimpleGame("f", "g"));
+    new EntityStatsValidator(db).validateEntityStatistics(true);
 
-        assertEquals("Sample tournament", t.title());
-        assertEquals(1, t.firstGameId());
-        assertEquals(1, t.count());
+    // First game of b becomes 2
+    db.replaceGame(1, TestGames.getSimpleGame("a", "d"));
+    new EntityStatsValidator(db).validateEntityStatistics(true);
 
-        assertEquals("", db.annotatorIndex().get(0).name());
-        assertEquals("", db.sourceIndex().get(0).title());
+    db.close();
+  }
 
-        new EntityStatsValidator(db).validateEntityStatistics(true);
+  @Test
+  public void replaceGameCausingMoveAdjustment() throws IOException {
+    Database db = new Database();
 
-        db.close();
-    }
+    GameModel gameModel1 = TestGames.getSimpleGame("foo", "bar", "t1", "my source", "myself");
+    GameModel gameModel2 = TestGames.getSimpleGame("foo", "bar", "t1", "my source", "myself");
+    GameModel gameModel3 = TestGames.getSimpleGame("foo", "bar", "t1", "my source", "myself");
+    gameModel3.moves().root().addMove(D2, D4);
 
-    @Test
-    public void addMultipleGames() throws IOException {
-        Database db = new Database();
+    db.addGame(gameModel1);
+    db.addGame(gameModel2);
+    Game game2 = db.getGame(2);
+    long oldMovesOffset = game2.getMovesOffset();
 
-        db.addGame(TestGames.getSimpleGame("Mardell", "Carlsen", "t1", "my source", "myself"));
-        db.addGame(TestGames.getSimpleGame("Kasparov", "Mardell", "t1", "", ""));
-        db.addGame(TestGames.getSimpleGame("Karpov", "Fischer", "t2", null, ""));
-        db.addGame(TestGames.getSimpleGame("Caruana", "Giri", "t2", "my source", "myself"));
-        db.addGame(TestGames.getSimpleGame("Mardell", "Giri", "t3", null, ""));
+    db.replaceGame(1, gameModel3);
 
-        new EntityStatsValidator(db).validateEntityStatistics(true);
+    Game game2New = db.getGame(2);
+    long newMovesOffset = game2New.getMovesOffset();
 
-        db.close();
-    }
+    assertEquals(oldMovesOffset + 3, newMovesOffset);
+    assertEquals(gameModel2.moves().root().toSAN(), game2New.getModel().moves().root().toSAN());
 
-    @Test
-    public void replaceGame() throws IOException {
-        Database db = new Database();
+    db.close();
+  }
 
-        db.addGame(TestGames.getSimpleGame("Mardell", "Carlsen", "t1", "my source", "myself"));
-        db.addGame(TestGames.getSimpleGame("Kasparov", "Mardell", "t1", "", ""));
+  @Test
+  public void replaceGameCausingAnnotationAdjustment() throws IOException {
+    Database db = new Database();
 
-        db.replaceGame(2, TestGames.getSimpleGame("Karpov", "Fischer", "t2", null, ""));
+    GameModel gameModel1 = TestGames.getSimpleGame("foo", "bar", "t1", "my source", "myself");
+    GameModel gameModel2 = TestGames.getSimpleGame("foo", "bar", "t1", "my source", "myself");
+    GameModel gameModel3 = TestGames.getSimpleGame("foo", "bar", "t1", "my source", "myself");
+    gameModel1.moves().root().addAnnotation(ImmutableTextAfterMoveAnnotation.of("foo"));
+    gameModel2.moves().root().addAnnotation(ImmutableTextAfterMoveAnnotation.of("blah"));
+    gameModel3.moves().root().addAnnotation(ImmutableTextAfterMoveAnnotation.of("foobar"));
 
-        EntityStatsValidator validator = new EntityStatsValidator(db);
-        validator.validateEntityStatistics(true);
-        new GamesValidator(db).readAllGames();
+    db.addGame(gameModel1);
+    db.addGame(gameModel2);
+    Game game2 = db.getGame(2);
+    long oldAnnotationOffset = game2.getAnnotationOffset();
 
-        db.close();
-    }
+    db.replaceGame(1, gameModel3);
 
-    @Test
-    public void replaceGameCorrectlyUpdatesFirstGame() throws IOException {
-        Database db = new Database();
+    Game game2New = db.getGame(2);
+    long newAnnotationOffset = game2New.getAnnotationOffset();
 
-        db.addGame(TestGames.getSimpleGame("a", "b"));
-        db.addGame(TestGames.getSimpleGame("c", "c"));
-        db.addGame(TestGames.getSimpleGame("d", "e"));
-        db.addGame(TestGames.getSimpleGame("c", "a"));
-        db.addGame(TestGames.getSimpleGame("b", "d"));
+    assertEquals(oldAnnotationOffset + 3, newAnnotationOffset);
+    System.out.println(gameModel2.moves().root().toSAN());
 
-        // First game of c is still 2, first of d becomes 2
-        db.replaceGame(2, TestGames.getSimpleGame("c", "d"));
-        new EntityStatsValidator(db).validateEntityStatistics(true);
+    // Make sure we can still read the annotation after the game has been moved
+    String annotationText =
+        ((ImmutableTextAfterMoveAnnotation) gameModel2.moves().root().getAnnotations().get(1))
+            .text();
+    assertEquals("blah", annotationText);
 
-        // First game of a and c is unchanged
-        db.replaceGame(4, TestGames.getSimpleGame("f", "g"));
-        new EntityStatsValidator(db).validateEntityStatistics(true);
+    db.close();
+  }
 
-        // First game of b becomes 2
-        db.replaceGame(1, TestGames.getSimpleGame("a", "d"));
-        new EntityStatsValidator(db).validateEntityStatistics(true);
+  @Test
+  public void replaceGameCausingInsertionOfAnnotation() throws IOException {
+    Database db = new Database();
 
-        db.close();
-    }
+    GameModel gameModel1 = TestGames.getSimpleGame("foo", "bar", "t1", "my source", "myself");
+    GameModel gameModel2 = TestGames.getSimpleGame("foo", "bar", "t1", "my source", "myself");
+    GameModel gameModel3 = TestGames.getSimpleGame("foo", "bar", "t1", "my source", "myself");
+    gameModel1.moves().root().deleteAnnotations();
+    gameModel2.moves().root().addAnnotation(ImmutableTextAfterMoveAnnotation.of("blah"));
+    gameModel3.moves().root().addAnnotation(ImmutableTextAfterMoveAnnotation.of("foobar"));
 
-    @Test
-    public void replaceGameCausingMoveAdjustment() throws IOException {
-        Database db = new Database();
+    db.addGame(gameModel1);
+    db.addGame(gameModel2);
+    Game game2 = db.getGame(2);
+    long oldAnnotationOffset = game2.getAnnotationOffset();
+    assertEquals(0, db.getGame(1).getAnnotationOffset()); // Ensure no annotations
 
-        GameModel gameModel1 = TestGames.getSimpleGame("foo", "bar", "t1", "my source", "myself");
-        GameModel gameModel2 = TestGames.getSimpleGame("foo", "bar", "t1", "my source", "myself");
-        GameModel gameModel3 = TestGames.getSimpleGame("foo", "bar", "t1", "my source", "myself");
-        gameModel3.moves().root().addMove(D2, D4);
+    db.replaceGame(1, gameModel3);
 
-        db.addGame(gameModel1);
-        db.addGame(gameModel2);
-        Game game2 = db.getGame(2);
-        long oldMovesOffset = game2.getMovesOffset();
+    assertNotEquals(0, db.getGame(1).getAnnotationOffset()); // Now there should be!
 
-        db.replaceGame(1, gameModel3);
+    Game game2New = db.getGame(2);
+    long newAnnotationOffset = game2New.getAnnotationOffset();
 
-        Game game2New = db.getGame(2);
-        long newMovesOffset = game2New.getMovesOffset();
+    assertEquals(oldAnnotationOffset + 53, newAnnotationOffset);
 
-        assertEquals(oldMovesOffset + 3, newMovesOffset);
-        assertEquals(gameModel2.moves().root().toSAN(), game2New.getModel().moves().root().toSAN());
+    // Make sure we can still read the annotation after the game has been moved
+    String annotationText =
+        ((ImmutableTextAfterMoveAnnotation) gameModel2.moves().root().getAnnotations().get(1))
+            .text();
+    assertEquals("blah", annotationText);
 
-        db.close();
-    }
+    db.close();
+  }
 
-    @Test
-    public void replaceGameCausingAnnotationAdjustment() throws IOException {
-        Database db = new Database();
+  @Test
+  public void randomlyAddAndReplaceGames() throws IOException {
+    Random random = new Random(0);
+    GameGenerator gameGenerator = new GameGenerator();
 
-        GameModel gameModel1 = TestGames.getSimpleGame("foo", "bar", "t1", "my source", "myself");
-        GameModel gameModel2 = TestGames.getSimpleGame("foo", "bar", "t1", "my source", "myself");
-        GameModel gameModel3 = TestGames.getSimpleGame("foo", "bar", "t1", "my source", "myself");
-        gameModel1.moves().root().addAnnotation(ImmutableTextAfterMoveAnnotation.of("foo"));
-        gameModel2.moves().root().addAnnotation(ImmutableTextAfterMoveAnnotation.of("blah"));
-        gameModel3.moves().root().addAnnotation(ImmutableTextAfterMoveAnnotation.of("foobar"));
+    for (int iter = 0; iter < 10; iter++) {
+      File file = folder.newFile("random" + iter + ".cbh");
+      file.delete();
 
-        db.addGame(gameModel1);
-        db.addGame(gameModel2);
-        Game game2 = db.getGame(2);
-        long oldAnnotationOffset = game2.getAnnotationOffset();
+      try (Database db = Database.create(file)) {
+        int noOps = iter * 10 + 10, maxGames = 20;
 
-        db.replaceGame(1, gameModel3);
+        for (int i = 0; i < noOps; i++) {
+          int gameId = random.nextInt(maxGames) + 1;
+          GameModel game = gameGenerator.getRandomGame();
 
-        Game game2New = db.getGame(2);
-        long newAnnotationOffset = game2New.getAnnotationOffset();
+          if (gameId <= db.gameHeaderIndex().count()) {
+            db.replaceGame(gameId, game);
+          } else {
+            db.addGame(game);
+          }
 
-        assertEquals(oldAnnotationOffset + 3, newAnnotationOffset);
-        System.out.println(gameModel2.moves().root().toSAN());
+          EntityStatsValidator validator = new EntityStatsValidator(db);
+          GamesValidator gamesValidator = new GamesValidator(db);
 
-        // Make sure we can still read the annotation after the game has been moved
-        String annotationText = ((ImmutableTextAfterMoveAnnotation) gameModel2.moves().root().getAnnotations().get(1)).text();
-        assertEquals("blah", annotationText);
-
-        db.close();
-    }
-
-    @Test
-    public void replaceGameCausingInsertionOfAnnotation() throws IOException {
-        Database db = new Database();
-
-        GameModel gameModel1 = TestGames.getSimpleGame("foo", "bar", "t1", "my source", "myself");
-        GameModel gameModel2 = TestGames.getSimpleGame("foo", "bar", "t1", "my source", "myself");
-        GameModel gameModel3 = TestGames.getSimpleGame("foo", "bar", "t1", "my source", "myself");
-        gameModel1.moves().root().deleteAnnotations();
-        gameModel2.moves().root().addAnnotation(ImmutableTextAfterMoveAnnotation.of("blah"));
-        gameModel3.moves().root().addAnnotation(ImmutableTextAfterMoveAnnotation.of("foobar"));
-
-        db.addGame(gameModel1);
-        db.addGame(gameModel2);
-        Game game2 = db.getGame(2);
-        long oldAnnotationOffset = game2.getAnnotationOffset();
-        assertEquals(0, db.getGame(1).getAnnotationOffset()); // Ensure no annotations
-
-        db.replaceGame(1, gameModel3);
-
-        assertNotEquals(0, db.getGame(1).getAnnotationOffset()); // Now there should be!
-
-        Game game2New = db.getGame(2);
-        long newAnnotationOffset = game2New.getAnnotationOffset();
-
-        assertEquals(oldAnnotationOffset + 53, newAnnotationOffset);
-
-        // Make sure we can still read the annotation after the game has been moved
-        String annotationText = ((ImmutableTextAfterMoveAnnotation) gameModel2.moves().root().getAnnotations().get(1)).text();
-        assertEquals("blah", annotationText);
-
-        db.close();
-    }
-
-
-    @Test
-    public void randomlyAddAndReplaceGames() throws IOException {
-        Random random = new Random(0);
-        GameGenerator gameGenerator = new GameGenerator();
-
-        for (int iter = 0; iter < 10; iter++) {
-            File file = folder.newFile("random" + iter + ".cbh");
-            file.delete();
-
-            try (Database db = Database.create(file)) {
-                int noOps = iter * 10 + 10, maxGames = 20;
-
-                for (int i = 0; i < noOps; i++) {
-                    int gameId = random.nextInt(maxGames) + 1;
-                    GameModel game = gameGenerator.getRandomGame();
-
-                    if (gameId <= db.gameHeaderIndex().count()) {
-                        db.replaceGame(gameId, game);
-                    } else {
-                        db.addGame(game);
-                    }
-
-                    EntityStatsValidator validator = new EntityStatsValidator(db);
-                    GamesValidator gamesValidator = new GamesValidator(db);
-
-                    validator.validateEntityStatistics(true);
-                    // TODO: Validate "unused bytes" in moves/annotations headers
-                    gamesValidator.validateMovesAndAnnotationOffsets();
-                    gamesValidator.readAllGames();
-                }
-            }
-            file.delete();
+          validator.validateEntityStatistics(true);
+          // TODO: Validate "unused bytes" in moves/annotations headers
+          gamesValidator.validateMovesAndAnnotationOffsets();
+          gamesValidator.readAllGames();
         }
+      }
+      file.delete();
     }
+  }
 
-    @Test
-    public void upgradeOldDatabaseAndWrite() throws IOException {
-        // This tests that we can write to MoveRepository and AnnotationRepository
-        // despite their headers being in the old format (they should not be upgraded)
-        File file = ResourceLoader.materializeDatabaseStream(getClass(), "database/old", "linares");
+  @Test
+  public void upgradeOldDatabaseAndWrite() throws IOException {
+    // This tests that we can write to MoveRepository and AnnotationRepository
+    // despite their headers being in the old format (they should not be upgraded)
+    File file = ResourceLoader.materializeDatabaseStream(getClass(), "database/old", "linares");
 
-        Database db = Database.open(file, DatabaseMode.READ_WRITE);
-        assertEquals(10, db.moveRepository().getStorage().getHeader().headerSize());
-        assertEquals(10, db.annotationRepository().getStorage().getHeader().headerSize());
+    Database db = Database.open(file, DatabaseMode.READ_WRITE);
+    assertEquals(10, db.moveRepository().getStorage().getHeader().headerSize());
+    assertEquals(10, db.annotationRepository().getStorage().getHeader().headerSize());
 
-        GameModel simpleGame = TestGames.getSimpleGame("foo", "bar");
-        int id = db.addGame(simpleGame);
+    GameModel simpleGame = TestGames.getSimpleGame("foo", "bar");
+    int id = db.addGame(simpleGame);
 
-        Game game = db.getGame(id);
-        String movesText = game.getModel().moves().root().toSAN();
-        assertEquals("1.e4 c5", movesText);
-    }
+    Game game = db.getGame(id);
+    String movesText = game.getModel().moves().root().toSAN();
+    assertEquals("1.e4 c5", movesText);
+  }
 
-    // TODO: Some tests when opening a database where the filenames have different casing
-    // This is not uncommon on Windows system
+  // TODO: Some tests when opening a database where the filenames have different casing
+  // This is not uncommon on Windows system
 
 }

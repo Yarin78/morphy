@@ -13,7 +13,7 @@
     <appender name="file" class="org.apache.log4j.FileAppender">
         <param name="file" value="/Users/yarin/chessbasemedia/log.txt"/>
         <param name="append" value="false"/>
-        <param name="threshold" value="debug" />
+        <param name="threshold" value="debug"/>
         <layout class="org.apache.log4j.PatternLayout">
             <param name="ConversionPattern" value="%-5p %c{1} - %m%n"/>
         </layout>
@@ -24,8 +24,8 @@
     </logger>
 
     <root>
-        <priority value ="WARN" />
-        <appender-ref ref="console" />
+        <priority value="WARN"/>
+        <appender-ref ref="console"/>
         <!--<appender-ref ref="file" />-->
     </root>
 

@@ -18,58 +18,56 @@ import java.nio.ByteBuffer;
 import static org.junit.Assert.assertEquals;
 
 public class GameEventStorageTest {
-    @Rule
-    public TemporaryFolder folder = new TemporaryFolder();
+  @Rule public TemporaryFolder folder = new TemporaryFolder();
 
-    private File gameEventsStorageFile;
+  private File gameEventsStorageFile;
 
-    @Before
-    public void setupGameEventsStorageTest() throws IOException {
-        gameEventsStorageFile = folder.newFile("testbase.cbb");
-        gameEventsStorageFile.delete();
+  @Before
+  public void setupGameEventsStorageTest() throws IOException {
+    gameEventsStorageFile = folder.newFile("testbase.cbb");
+    gameEventsStorageFile.delete();
+  }
+
+  @Test
+  public void validateWorldCh() {
+    Database db = ResourceLoader.openWorldChDatabase();
+    GameEventStorage storage = db.gameEventStorage();
+    assert storage != null;
+    for (int gameId = 1; gameId <= db.count(); gameId++) {
+      GameEvents gameEvents = storage.get(gameId);
+      Game game = db.getGame(gameId);
+      if (!game.guidingText()) {
+        GameEvents deducedGameEvents = new GameEvents(db.getGameModel(gameId).moves());
+        assertEquals(gameEvents, deducedGameEvents);
+      }
     }
+  }
 
-    @Test
-    public void validateWorldCh() {
-        Database db = ResourceLoader.openWorldChDatabase();
-        GameEventStorage storage = db.gameEventStorage();
-        assert storage != null;
-        for (int gameId = 1; gameId <= db.count(); gameId++) {
-            GameEvents gameEvents = storage.get(gameId);
-            Game game = db.getGame(gameId);
-            if (!game.guidingText()) {
-                GameEvents deducedGameEvents = new GameEvents(db.getGameModel(gameId).moves());
-                assertEquals(gameEvents, deducedGameEvents);
-            }
-        }
-    }
+  @Test
+  public void createNew() throws IOException {
+    GameEventStorage storage = GameEventStorage.create(gameEventsStorageFile, null);
+    assertEquals(0, storage.count());
+    storage.close();
 
-    @Test
-    public void createNew() throws IOException {
-        GameEventStorage storage = GameEventStorage.create(gameEventsStorageFile, null);
-        assertEquals(0, storage.count());
-        storage.close();
+    storage = GameEventStorage.open(gameEventsStorageFile, null);
+    assertEquals(0, storage.count());
+    storage.close();
+  }
 
-        storage = GameEventStorage.open(gameEventsStorageFile, null);
-        assertEquals(0, storage.count());
-        storage.close();
-    }
+  @Test
+  public void putSingleGame() throws IOException {
+    GameEventStorage storage = GameEventStorage.create(gameEventsStorageFile, null);
 
-    @Test
-    public void putSingleGame() throws IOException {
-        GameEventStorage storage = GameEventStorage.create(gameEventsStorageFile, null);
+    byte[] bytes = new byte[52];
+    bytes[10] = 5;
+    storage.put(1, new GameEvents(ByteBuffer.wrap(bytes)));
+    assertEquals(1, storage.count());
+    storage.close();
 
-        byte[] bytes = new byte[52];
-        bytes[10] = 5;
-        storage.put(1, new GameEvents(ByteBuffer.wrap(bytes)));
-        assertEquals(1, storage.count());
-        storage.close();
-
-        storage = GameEventStorage.open(gameEventsStorageFile, null);
-        assertEquals(1, storage.count());
-        GameEvents gameEvents = storage.get(1);
-        assertEquals(5, gameEvents.getBytes()[10]);
-        storage.close();
-    }
-
+    storage = GameEventStorage.open(gameEventsStorageFile, null);
+    assertEquals(1, storage.count());
+    GameEvents gameEvents = storage.get(1);
+    assertEquals(5, gameEvents.getBytes()[10]);
+    storage.close();
+  }
 }

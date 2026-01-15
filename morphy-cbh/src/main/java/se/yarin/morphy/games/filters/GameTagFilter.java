@@ -12,53 +12,59 @@ import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.stream.Collectors;
 
-public class GameTagFilter implements ItemStorageFilter<ExtendedGameHeader>, GameFilter, GameEntityFilter<GameTag> {
-    private final @NotNull Set<Integer> gameTagIds;
+public class GameTagFilter
+    implements ItemStorageFilter<ExtendedGameHeader>, GameFilter, GameEntityFilter<GameTag> {
+  private final @NotNull Set<Integer> gameTagIds;
 
-    public GameTagFilter(int gameTagId) {
-        this(new int[] { gameTagId });
+  public GameTagFilter(int gameTagId) {
+    this(new int[] {gameTagId});
+  }
+
+  public GameTagFilter(int[] gameTagIds) {
+    this.gameTagIds = Arrays.stream(gameTagIds).boxed().collect(Collectors.toUnmodifiableSet());
+  }
+
+  public GameTagFilter(@NotNull GameTag gameTag) {
+    this(Collections.singleton(gameTag));
+  }
+
+  public GameTagFilter(@NotNull Collection<GameTag> gameTags) {
+    this.gameTagIds =
+        gameTags.stream().map(GameTag::id).collect(Collectors.toCollection(HashSet::new));
+  }
+
+  @Override
+  public EntityType entityType() {
+    return EntityType.GAME_TAG;
+  }
+
+  @Override
+  public List<Integer> entityIds() {
+    return new ArrayList<>(gameTagIds);
+  }
+
+  @Override
+  public boolean matches(int id, @NotNull ExtendedGameHeader extendedGameHeader) {
+    return gameTagIds.contains(extendedGameHeader.gameTagId());
+  }
+
+  @Override
+  public boolean matchesSerialized(int id, @NotNull ByteBuffer buf) {
+    return gameTagIds.contains(ByteBufferUtil.getIntB(buf, 116));
+  }
+
+  public @Nullable ItemStorageFilter<ExtendedGameHeader> extendedGameHeaderFilter() {
+    return this;
+  }
+
+  @Override
+  public String toString() {
+    if (gameTagIds.size() == 1) {
+      return "gameTagId=" + gameTagIds.stream().findFirst().get();
+    } else {
+      return "gameTagId in ( "
+          + gameTagIds.stream().map(Object::toString).collect(Collectors.joining(", "))
+          + ")";
     }
-
-    public GameTagFilter(int[] gameTagIds) {
-        this.gameTagIds = Arrays.stream(gameTagIds).boxed().collect(Collectors.toUnmodifiableSet());
-    }
-
-    public GameTagFilter(@NotNull GameTag gameTag) {
-        this(Collections.singleton(gameTag));
-    }
-
-    public GameTagFilter(@NotNull Collection<GameTag> gameTags) {
-        this.gameTagIds = gameTags.stream().map(GameTag::id).collect(Collectors.toCollection(HashSet::new));
-    }
-
-    @Override
-    public EntityType entityType() {
-        return EntityType.GAME_TAG;
-    }
-
-    @Override
-    public List<Integer> entityIds() {
-        return new ArrayList<>(gameTagIds);
-    }
-
-    @Override
-    public boolean matches(int id, @NotNull ExtendedGameHeader extendedGameHeader) {
-        return gameTagIds.contains(extendedGameHeader.gameTagId());
-    }
-
-    @Override
-    public boolean matchesSerialized(int id, @NotNull ByteBuffer buf) {
-        return gameTagIds.contains(ByteBufferUtil.getIntB(buf, 116));
-    }
-
-    public @Nullable ItemStorageFilter<ExtendedGameHeader> extendedGameHeaderFilter() { return this; }
-
-    @Override
-    public String toString() {
-        if (gameTagIds.size() == 1) {
-            return "gameTagId=" + gameTagIds.stream().findFirst().get();
-        } else {
-            return "gameTagId in ( " + gameTagIds.stream().map(Object::toString).collect(Collectors.joining(", ")) + ")";
-        }
-    }
+  }
 }

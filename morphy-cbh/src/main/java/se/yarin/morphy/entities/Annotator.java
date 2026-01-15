@@ -7,47 +7,47 @@ import se.yarin.morphy.util.CBUtil;
 
 @Value.Immutable
 public abstract class Annotator extends Entity implements Comparable<Annotator> {
-    @Value.Default
-    @NotNull
-    public String name() {
-        return "";
+  @Value.Default
+  @NotNull
+  public String name() {
+    return "";
+  }
+
+  @Override
+  public Entity withCountAndFirstGameId(int count, int firstGameId) {
+    return ImmutableAnnotator.builder().from(this).count(count).firstGameId(firstGameId).build();
+  }
+
+  public static Annotator of(@Nullable String name) {
+    ImmutableAnnotator.Builder builder = ImmutableAnnotator.builder();
+    if (name != null) {
+      builder.name(name);
     }
+    return builder.build();
+  }
 
-    @Override
-    public Entity withCountAndFirstGameId(int count, int firstGameId) {
-        return ImmutableAnnotator.builder().from(this).count(count).firstGameId(firstGameId).build();
-    }
+  @Override
+  public String toString() {
+    return name();
+  }
 
-    public static Annotator of(@Nullable String name) {
-        ImmutableAnnotator.Builder builder = ImmutableAnnotator.builder();
-        if (name != null) {
-            builder.name(name);
-        }
-        return builder.build();
-    }
+  @Override
+  public int compareTo(Annotator o) {
+    return CBUtil.compareString(name(), o.name());
+  }
 
-    @Override
-    public String toString() {
-        return name();
-    }
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
 
-    @Override
-    public int compareTo(Annotator o) {
-        return CBUtil.compareString(name(), o.name());
-    }
+    Annotator that = (Annotator) o;
 
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+    return name().equals(that.name());
+  }
 
-        Annotator that = (Annotator) o;
-
-        return name().equals(that.name());
-    }
-
-    @Override
-    public int hashCode() {
-        return name().hashCode();
-    }
+  @Override
+  public int hashCode() {
+    return name().hashCode();
+  }
 }

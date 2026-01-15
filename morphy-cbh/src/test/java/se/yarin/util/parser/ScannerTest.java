@@ -10,19 +10,38 @@ import static org.junit.Assert.assertEquals;
 import static se.yarin.util.parser.TokenType.*;
 
 public class ScannerTest {
-    @Test
-    public void simpleTest() {
-        Scanner scanner = new Scanner("!(shortb(2)&1) || (byte(3)&12) >= 0");
-        List<Token> tokens = scanner.scanTokens();
+  @Test
+  public void simpleTest() {
+    Scanner scanner = new Scanner("!(shortb(2)&1) || (byte(3)&12) >= 0");
+    List<Token> tokens = scanner.scanTokens();
 
-        List<TokenType> expected = Arrays.asList(
-                BANG, LEFT_PAREN, IDENTIFIER, LEFT_PAREN, INTEGER, RIGHT_PAREN, BITWISE_AND,
-                INTEGER, RIGHT_PAREN, LOGICAL_OR, LEFT_PAREN, IDENTIFIER, LEFT_PAREN, INTEGER,
-                RIGHT_PAREN, BITWISE_AND, INTEGER, RIGHT_PAREN, GREATER_EQUAL, INTEGER, EOF);
+    List<TokenType> expected =
+        Arrays.asList(
+            BANG,
+            LEFT_PAREN,
+            IDENTIFIER,
+            LEFT_PAREN,
+            INTEGER,
+            RIGHT_PAREN,
+            BITWISE_AND,
+            INTEGER,
+            RIGHT_PAREN,
+            LOGICAL_OR,
+            LEFT_PAREN,
+            IDENTIFIER,
+            LEFT_PAREN,
+            INTEGER,
+            RIGHT_PAREN,
+            BITWISE_AND,
+            INTEGER,
+            RIGHT_PAREN,
+            GREATER_EQUAL,
+            INTEGER,
+            EOF);
 
-        assertEquals(expected, tokens.stream().map(token -> token.type).collect(Collectors.toList()));
-        assertEquals("shortb", tokens.get(2).lexeme);
-        assertEquals(2, tokens.get(4).literal);
-        assertEquals(12, tokens.get(16).literal);
-    }
+    assertEquals(expected, tokens.stream().map(token -> token.type).collect(Collectors.toList()));
+    assertEquals("shortb", tokens.get(2).lexeme);
+    assertEquals(2, tokens.get(4).literal);
+    assertEquals(12, tokens.get(16).literal);
+  }
 }

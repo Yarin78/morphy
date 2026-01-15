@@ -4,17 +4,17 @@ import org.jetbrains.annotations.NotNull;
 
 public interface Metrics {
 
-    void merge(@NotNull Metrics metrics);
+  void merge(@NotNull Metrics metrics);
 
-    void clear();
+  void clear();
 
-    String formatHeaderRow();
+  String formatHeaderRow();
 
-    String formatTableRow();
+  String formatTableRow();
 
-    default boolean isEmpty() {
-        return isEmpty(0);
-    }
+  default boolean isEmpty() {
+    return isEmpty(0);
+  }
 
-    boolean isEmpty(int threshold);
+  boolean isEmpty(int threshold);
 }

@@ -8,14 +8,15 @@ import se.yarin.morphy.entities.filters.EntityFilter;
 
 public class GameTournamentFilterJoin extends GameEntityFilterJoin<Tournament> {
 
-    public GameTournamentFilterJoin(@NotNull EntityFilter<Tournament> entityFilter) {
-        super(entityFilter);
-    }
+  public GameTournamentFilterJoin(@NotNull EntityFilter<Tournament> entityFilter) {
+    super(entityFilter);
+  }
 
-    @Override
-    public boolean gameFilter(@NotNull Game game, @NotNull EntityIndexReadTransaction<Tournament> txn) {
-        EntityFilter<Tournament> filter = getEntityFilter();
-        Tournament tournament = txn.get(game.tournamentId(), filter);
-        return tournament != null && filter.matches(tournament);
-    }
+  @Override
+  public boolean gameFilter(
+      @NotNull Game game, @NotNull EntityIndexReadTransaction<Tournament> txn) {
+    EntityFilter<Tournament> filter = getEntityFilter();
+    Tournament tournament = txn.get(game.tournamentId(), filter);
+    return tournament != null && filter.matches(tournament);
+  }
 }

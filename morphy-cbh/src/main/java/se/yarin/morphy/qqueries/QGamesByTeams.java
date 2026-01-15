@@ -14,39 +14,39 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class QGamesByTeams extends ItemQuery<Game> {
-    private final @NotNull ItemQuery<Team> teamQuery;
-    private @Nullable List<Team> teamResult;
-    private @Nullable TeamFilter teamFilter;
+  private final @NotNull ItemQuery<Team> teamQuery;
+  private @Nullable List<Team> teamResult;
+  private @Nullable TeamFilter teamFilter;
 
-    public QGamesByTeams(@NotNull ItemQuery<Team> teamQuery) {
-        this.teamQuery = teamQuery;
-    }
+  public QGamesByTeams(@NotNull ItemQuery<Team> teamQuery) {
+    this.teamQuery = teamQuery;
+  }
 
-    @Override
-    public boolean matches(@NotNull DatabaseReadTransaction txn, @NotNull Game game) {
-        evaluateSubQuery(txn);
-        assert teamFilter != null;
-        return teamFilter.matches(game.id(), game.extendedHeader());
-    }
+  @Override
+  public boolean matches(@NotNull DatabaseReadTransaction txn, @NotNull Game game) {
+    evaluateSubQuery(txn);
+    assert teamFilter != null;
+    return teamFilter.matches(game.id(), game.extendedHeader());
+  }
 
-    public int rowEstimate(@NotNull DatabaseReadTransaction txn) {
-        if (teamResult == null) {
-            return INFINITE;
-        }
-        return teamResult.stream().map(Entity::count).reduce(0, Integer::sum);
+  public int rowEstimate(@NotNull DatabaseReadTransaction txn) {
+    if (teamResult == null) {
+      return INFINITE;
     }
+    return teamResult.stream().map(Entity::count).reduce(0, Integer::sum);
+  }
 
-    public void evaluateSubQuery(@NotNull DatabaseReadTransaction txn) {
-        if (teamResult == null) {
-            teamResult = teamQuery.stream(txn).collect(Collectors.toList());
-            teamFilter = new TeamFilter(teamResult, null);
-        }
+  public void evaluateSubQuery(@NotNull DatabaseReadTransaction txn) {
+    if (teamResult == null) {
+      teamResult = teamQuery.stream(txn).collect(Collectors.toList());
+      teamFilter = new TeamFilter(teamResult, null);
     }
+  }
 
-    @Override
-    public @NotNull Stream<Game> stream(@NotNull DatabaseReadTransaction txn) {
-        evaluateSubQuery(txn);
-        assert teamFilter != null;
-        return txn.stream(GameFilter.of(null, teamFilter));
-    }
+  @Override
+  public @NotNull Stream<Game> stream(@NotNull DatabaseReadTransaction txn) {
+    evaluateSubQuery(txn);
+    assert teamFilter != null;
+    return txn.stream(GameFilter.of(null, teamFilter));
+  }
 }

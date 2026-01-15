@@ -24,227 +24,238 @@ import java.util.Set;
 
 import static java.nio.file.StandardOpenOption.*;
 
-public class FileItemStorage<THeader, TItem> implements ItemStorage<THeader, TItem>, MetricsProvider {
-    private final MetricsRef<ItemMetrics> itemMetricsRef;
-    private long fileSize;
-    private THeader header;
-    private final BlobChannel channel;
-    private final boolean laxMode;
-    private final ItemStorageSerializer<THeader, TItem> serializer;
+public class FileItemStorage<THeader, TItem>
+    implements ItemStorage<THeader, TItem>, MetricsProvider {
+  private final MetricsRef<ItemMetrics> itemMetricsRef;
+  private long fileSize;
+  private THeader header;
+  private final BlobChannel channel;
+  private final boolean laxMode;
+  private final ItemStorageSerializer<THeader, TItem> serializer;
 
-    public FileItemStorage(
-            @NotNull File file,
-            @NotNull DatabaseContext context,
-            @NotNull String storageName,
-            @NotNull ItemStorageSerializer<THeader, TItem> serializer,
-            @NotNull THeader emptyHeader,
-            @NotNull Set<OpenOption> options)
-            throws IOException, MorphyInvalidDataException {
-        boolean laxMode = options.contains(MorphyOpenOption.IGNORE_NON_CRITICAL_ERRORS);
+  public FileItemStorage(
+      @NotNull File file,
+      @NotNull DatabaseContext context,
+      @NotNull String storageName,
+      @NotNull ItemStorageSerializer<THeader, TItem> serializer,
+      @NotNull THeader emptyHeader,
+      @NotNull Set<OpenOption> options)
+      throws IOException, MorphyInvalidDataException {
+    boolean laxMode = options.contains(MorphyOpenOption.IGNORE_NON_CRITICAL_ERRORS);
 
-        if (options.contains(WRITE) && laxMode) {
-            throw new IllegalArgumentException("A storage open in WRITE mode can't also ignore non critical errors");
-        }
+    if (options.contains(WRITE) && laxMode) {
+      throw new IllegalArgumentException(
+          "A storage open in WRITE mode can't also ignore non critical errors");
+    }
 
-        this.channel = BlobChannel.open(file.toPath(), context, MorphyOpenOption.valid(options));
-        this.serializer = serializer;
+    this.channel = BlobChannel.open(file.toPath(), context, MorphyOpenOption.valid(options));
+    this.serializer = serializer;
+    this.fileSize = this.channel.size();
+    this.laxMode = laxMode;
+    this.itemMetricsRef = ItemMetrics.register(context.instrumentation(), storageName);
+
+    if (this.fileSize == 0) {
+      if (options.contains(CREATE) || options.contains(CREATE_NEW)) {
+        // The storage was presumably created
+        putHeader(emptyHeader);
         this.fileSize = this.channel.size();
-        this.laxMode = laxMode;
-        this.itemMetricsRef = ItemMetrics.register(context.instrumentation(), storageName);
+      } else {
+        throw new IllegalStateException("File was empty");
+      }
+    } else {
+      refreshHeader();
+      if (this.serializer.serializedHeaderSize() != this.serializer.headerSize(this.header)
+          && options.contains(WRITE)) {
+        throw new MorphyNotSupportedException(
+            String.format(
+                "The header in %s was %d bytes (%d bytes expected) and needs to be upgraded which is not yet supported",
+                file,
+                this.serializer.headerSize(this.header),
+                this.serializer.serializedHeaderSize()));
+      }
+    }
+  }
 
-        if (this.fileSize == 0) {
-            if (options.contains(CREATE) || options.contains(CREATE_NEW)) {
-                // The storage was presumably created
-                putHeader(emptyHeader);
-                this.fileSize = this.channel.size();
-            } else {
-                throw new IllegalStateException("File was empty");
-            }
+  private void refreshHeader() throws IOException, MorphyInvalidDataException {
+    ByteBuffer buf = ByteBuffer.allocate(serializer.serializedHeaderSize());
+    channel.read(0, buf);
+    buf.position(0); // No flip since serializer expects buf to be of length prefetchHeaderSize()
+    this.header = this.serializer.deserializeHeader(buf);
+  }
+
+  @Override
+  public @NotNull THeader getHeader() {
+    return this.header;
+  }
+
+  @Override
+  public void putHeader(@NotNull THeader header) {
+    ByteBuffer buf = ByteBuffer.allocate(this.serializer.serializedHeaderSize());
+    this.serializer.serializeHeader(header, buf);
+    buf.flip();
+    try {
+      channel.write(0, buf);
+    } catch (IOException e) {
+      throw new MorphyIOException(e);
+    }
+    this.header = header;
+  }
+
+  @Override
+  public boolean isEmpty() {
+    return this.fileSize <= serializer.headerSize(header);
+  }
+
+  @Override
+  public int count() {
+    long itemBytes = this.fileSize - serializer.headerSize(header);
+    int itemSize = serializer.itemSize(header);
+    return (int) ((itemBytes + itemSize - 1) / itemSize); // round up
+  }
+
+  public long numPages() {
+    return fileSize / PagedBlobChannel.PAGE_SIZE + 1;
+  }
+
+  public @NotNull ByteBuffer getItemRaw(int index) {
+    ByteBuffer buf = ByteBuffer.allocate(serializer.itemSize(this.header));
+    try {
+      long offset = serializer.itemOffset(this.header, index);
+      if (offset >= 0 && offset < this.fileSize) {
+        channel.read(offset, buf);
+        buf.rewind();
+      }
+    } catch (IOException e) {
+      throw new MorphyIOException(e);
+    }
+    itemMetricsRef.update(metrics -> metrics.addGetRaw(1));
+    return buf;
+  }
+
+  @Override
+  public @NotNull TItem getItem(int index) {
+    ByteBuffer buf = ByteBuffer.allocate(serializer.itemSize(this.header));
+    itemMetricsRef.update(metrics -> metrics.addGet(1));
+
+    try {
+      long offset = serializer.itemOffset(this.header, index);
+      if (offset < 0 || offset >= this.fileSize) {
+        if (!laxMode) {
+          throw new IllegalArgumentException(
+              String.format(
+                  "Tried to get item with id %d at offset %d but file size was %d",
+                  index, offset, this.fileSize));
+        }
+        return serializer.emptyItem(index);
+      } else {
+        channel.read(offset, buf);
+        buf.rewind();
+      }
+    } catch (IOException e) {
+      throw new MorphyIOException(e);
+    }
+
+    return serializer.deserializeItem(index, buf, this.header);
+  }
+
+  @Override
+  public @NotNull List<TItem> getItems(int index, int count) {
+    return getItems(index, count, null);
+  }
+
+  @Override
+  public @NotNull List<TItem> getItems(
+      int index, int count, @Nullable ItemStorageFilter<TItem> filter) {
+    if (count < 0) {
+      throw new IllegalArgumentException("count must be non-negative");
+    }
+
+    int serializedItemSize = serializer.itemSize(this.header);
+    ByteBuffer buf = ByteBuffer.allocate(serializedItemSize * count);
+    try {
+      long offset = serializer.itemOffset(this.header, index);
+      // If there's something weird with the input parameters, fall back to getting items
+      // in a slightly un-optimized way to ensure we get the same behaviour
+      // as multiple calls to getItem would yield
+      if (offset < 0 || offset >= this.fileSize) {
+        return getItemsSimple(index, count, filter);
+      } else {
+        channel.read(offset, buf);
+        if (buf.position() != buf.limit()) {
+          // Fewer bytes than expected were read
+          return getItemsSimple(index, count, filter);
+        }
+        buf.rewind();
+      }
+    } catch (IOException e) {
+      throw new MorphyIOException(e);
+    }
+
+    itemMetricsRef.update(metrics -> metrics.addGet(1));
+    ArrayList<TItem> result = new ArrayList<>(count);
+    for (int i = 0; i < count; i++) {
+      if (filter == null) {
+        result.add(serializer.deserializeItem(index + i, buf, this.header));
+      } else {
+        if (filter.matchesSerialized(index + i, buf)) {
+          TItem item = serializer.deserializeItem(index + i, buf, this.header);
+          result.add(filter.matches(index + i, item) ? item : null);
         } else {
-            refreshHeader();
-            if (this.serializer.serializedHeaderSize() != this.serializer.headerSize(this.header)
-                && options.contains(WRITE)) {
-                throw new MorphyNotSupportedException(String.format(
-                        "The header in %s was %d bytes (%d bytes expected) and needs to be upgraded which is not yet supported",
-                        file, this.serializer.headerSize(this.header), this.serializer.serializedHeaderSize()));
-            }
+          buf.position(buf.position() + serializedItemSize);
+          result.add(null);
         }
+      }
     }
+    return result;
+  }
 
-    private void refreshHeader() throws IOException, MorphyInvalidDataException {
-        ByteBuffer buf = ByteBuffer.allocate(serializer.serializedHeaderSize());
-        channel.read(0, buf);
-        buf.position(0); // No flip since serializer expects buf to be of length prefetchHeaderSize()
-        this.header = this.serializer.deserializeHeader(buf);
+  private @NotNull List<TItem> getItemsSimple(
+      int index, int count, @Nullable ItemStorageFilter<TItem> filter) {
+    ArrayList<TItem> result = new ArrayList<>(count);
+    for (int i = 0; i < count; i++) {
+      TItem item = getItem(index + i);
+      result.add(filter == null || filter.matches(index + i, item) ? item : null);
     }
+    return result;
+  }
 
-    @Override
-    public @NotNull THeader getHeader() {
-        return this.header;
+  @Override
+  public void putItem(int index, @NotNull TItem item) {
+    long offset = serializer.itemOffset(this.header, index);
+    if (offset > this.fileSize) {
+      throw new MorphyIOException(
+          String.format(
+              "Tried to put item with id %d at offset %d but file size was %d",
+              index, offset, this.fileSize));
     }
-
-    @Override
-    public void putHeader(@NotNull THeader header) {
-        ByteBuffer buf = ByteBuffer.allocate(this.serializer.serializedHeaderSize());
-        this.serializer.serializeHeader(header, buf);
-        buf.flip();
-        try {
-            channel.write(0, buf);
-        } catch (IOException e) {
-            throw new MorphyIOException(e);
-        }
-        this.header = header;
+    itemMetricsRef.update(metrics -> metrics.addPut(1));
+    ByteBuffer buf = ByteBuffer.allocate(serializer.itemSize(this.header));
+    serializer.serializeItem(item, buf, this.header);
+    buf.flip();
+    try {
+      channel.write(offset, buf);
+    } catch (IOException e) {
+      throw new MorphyIOException(e);
     }
+    this.fileSize = Math.max(this.fileSize, offset + buf.position());
+  }
 
-    @Override
-    public boolean isEmpty() {
-        return this.fileSize <= serializer.headerSize(header);
+  @Override
+  public void close() throws MorphyException {
+    try {
+      channel.close();
+    } catch (IOException e) {
+      throw new MorphyIOException("Failed to close storage", e);
     }
+  }
 
-    @Override
-    public int count() {
-        long itemBytes = this.fileSize - serializer.headerSize(header);
-        int itemSize = serializer.itemSize(header);
-        return (int) ((itemBytes + itemSize - 1) / itemSize); // round up
+  @Override
+  public @NotNull List<MetricsKey> getMetricsKeys() {
+    ArrayList<MetricsKey> metrics = new ArrayList<>();
+    metrics.add(itemMetricsRef.metricsKey());
+    if (channel instanceof MetricsProvider) {
+      metrics.addAll(((MetricsProvider) channel).getMetricsKeys());
     }
-
-    public long numPages() {
-        return fileSize / PagedBlobChannel.PAGE_SIZE + 1;
-    }
-
-    public @NotNull ByteBuffer getItemRaw(int index) {
-        ByteBuffer buf = ByteBuffer.allocate(serializer.itemSize(this.header));
-        try {
-            long offset = serializer.itemOffset(this.header, index);
-            if (offset >= 0 && offset < this.fileSize) {
-                channel.read(offset, buf);
-                buf.rewind();
-            }
-        } catch (IOException e) {
-            throw new MorphyIOException(e);
-        }
-        itemMetricsRef.update(metrics -> metrics.addGetRaw(1));
-        return buf;
-    }
-
-    @Override
-    public @NotNull TItem getItem(int index) {
-        ByteBuffer buf = ByteBuffer.allocate(serializer.itemSize(this.header));
-        itemMetricsRef.update(metrics -> metrics.addGet(1));
-
-        try {
-            long offset = serializer.itemOffset(this.header, index);
-            if (offset < 0 || offset >= this.fileSize) {
-                if (!laxMode) {
-                    throw new IllegalArgumentException(String.format("Tried to get item with id %d at offset %d but file size was %d",
-                            index, offset, this.fileSize));
-                }
-                return serializer.emptyItem(index);
-            } else {
-                channel.read(offset, buf);
-                buf.rewind();
-            }
-        } catch (IOException e) {
-            throw new MorphyIOException(e);
-        }
-
-        return serializer.deserializeItem(index, buf, this.header);
-    }
-
-    @Override
-    public @NotNull List<TItem> getItems(int index, int count) {
-        return getItems(index, count, null);
-    }
-
-    @Override
-    public @NotNull List<TItem> getItems(int index, int count, @Nullable ItemStorageFilter<TItem> filter) {
-        if (count < 0) {
-            throw new IllegalArgumentException("count must be non-negative");
-        }
-
-        int serializedItemSize = serializer.itemSize(this.header);
-        ByteBuffer buf = ByteBuffer.allocate(serializedItemSize * count);
-        try {
-            long offset = serializer.itemOffset(this.header, index);
-            // If there's something weird with the input parameters, fall back to getting items
-            // in a slightly un-optimized way to ensure we get the same behaviour
-            // as multiple calls to getItem would yield
-            if (offset < 0 || offset >= this.fileSize) {
-                return getItemsSimple(index, count, filter);
-            } else {
-                channel.read(offset, buf);
-                if (buf.position() != buf.limit()) {
-                    // Fewer bytes than expected were read
-                    return getItemsSimple(index, count, filter);
-                }
-                buf.rewind();
-            }
-        } catch (IOException e) {
-            throw new MorphyIOException(e);
-        }
-
-        itemMetricsRef.update(metrics -> metrics.addGet(1));
-        ArrayList<TItem> result = new ArrayList<>(count);
-        for (int i = 0; i < count; i++) {
-            if (filter == null) {
-                result.add(serializer.deserializeItem(index + i, buf, this.header));
-            } else {
-                if (filter.matchesSerialized(index + i, buf)) {
-                    TItem item = serializer.deserializeItem(index + i, buf, this.header);
-                    result.add(filter.matches(index + i, item) ? item : null);
-                } else {
-                    buf.position(buf.position() + serializedItemSize);
-                    result.add(null);
-                }
-            }
-        }
-        return result;
-    }
-
-    private @NotNull List<TItem> getItemsSimple(int index, int count, @Nullable ItemStorageFilter<TItem> filter) {
-        ArrayList<TItem> result = new ArrayList<>(count);
-        for (int i = 0; i < count; i++) {
-            TItem item = getItem(index + i);
-            result.add(filter == null || filter.matches(index + i, item) ? item : null);
-        }
-        return result;
-    }
-
-    @Override
-    public void putItem(int index, @NotNull TItem item) {
-        long offset = serializer.itemOffset(this.header, index);
-        if (offset > this.fileSize) {
-            throw new MorphyIOException(String.format("Tried to put item with id %d at offset %d but file size was %d",
-                    index, offset, this.fileSize));
-        }
-        itemMetricsRef.update(metrics -> metrics.addPut(1));
-        ByteBuffer buf = ByteBuffer.allocate(serializer.itemSize(this.header));
-        serializer.serializeItem(item, buf, this.header);
-        buf.flip();
-        try {
-            channel.write(offset, buf);
-        } catch (IOException e) {
-            throw new MorphyIOException(e);
-        }
-        this.fileSize = Math.max(this.fileSize, offset + buf.position());
-    }
-
-    @Override
-    public void close() throws MorphyException {
-        try {
-            channel.close();
-        } catch (IOException e) {
-            throw new MorphyIOException("Failed to close storage", e);
-        }
-    }
-
-    @Override
-    public @NotNull List<MetricsKey> getMetricsKeys() {
-        ArrayList<MetricsKey> metrics = new ArrayList<>();
-        metrics.add(itemMetricsRef.metricsKey());
-        if (channel instanceof MetricsProvider) {
-            metrics.addAll(((MetricsProvider) channel).getMetricsKeys());
-        }
-        return metrics;
-    }
+    return metrics;
+  }
 }

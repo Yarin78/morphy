@@ -12,89 +12,89 @@ import java.util.stream.StreamSupport;
 
 public class StreamUtil {
 
-    /**
-     * Merges two streams of identical IdObjects. The two source streams
-     * must be in strictly increasing id order.
-     */
-    public static <T extends IdObject> Stream<T> mergeJoin(
-            @NotNull Stream<T> leftStream,
-            @NotNull Stream<T> rightStream,
-            @NotNull BiFunction<T, T, T> merger) {
-        final Iterator<T> leftIterator = leftStream.iterator();
-        final Iterator<T> rightIterator = rightStream.iterator();
+  /**
+   * Merges two streams of identical IdObjects. The two source streams must be in strictly
+   * increasing id order.
+   */
+  public static <T extends IdObject> Stream<T> mergeJoin(
+      @NotNull Stream<T> leftStream,
+      @NotNull Stream<T> rightStream,
+      @NotNull BiFunction<T, T, T> merger) {
+    final Iterator<T> leftIterator = leftStream.iterator();
+    final Iterator<T> rightIterator = rightStream.iterator();
 
+    final Iterator<T> mergeIterator =
+        new Iterator<T>() {
+          private T nextLeft = null;
+          private T nextRight = null;
+          private boolean hasInit = false;
 
-        final Iterator<T> mergeIterator = new Iterator<T>() {
-            private T nextLeft = null;
-            private T nextRight = null;
-            private boolean hasInit = false;
+          void init() {
+            assert !hasInit;
+            nextLeft = leftIterator.hasNext() ? leftIterator.next() : null;
+            nextRight = rightIterator.hasNext() ? rightIterator.next() : null;
+            prepareNext();
+            hasInit = true;
+          }
 
-            void init() {
-                assert !hasInit;
+          private void prepareNext() {
+            while (nextLeft != null && nextRight != null && nextLeft.id() != nextRight.id()) {
+              if (nextLeft.id() < nextRight.id()) {
+                int oldId = nextLeft.id();
                 nextLeft = leftIterator.hasNext() ? leftIterator.next() : null;
+                assert nextLeft == null || nextLeft.id() > oldId;
+              } else {
+                int oldId = nextRight.id();
                 nextRight = rightIterator.hasNext() ? rightIterator.next() : null;
-                prepareNext();
-                hasInit = true;
+                assert nextRight == null || nextRight.id() > oldId;
+              }
             }
+          }
 
-            private void prepareNext() {
-                while (nextLeft != null && nextRight != null && nextLeft.id() != nextRight.id()) {
-                    if (nextLeft.id() < nextRight.id()) {
-                        int oldId = nextLeft.id();
-                        nextLeft = leftIterator.hasNext() ? leftIterator.next() : null;
-                        assert nextLeft == null || nextLeft.id() > oldId;
-                    } else {
-                        int oldId = nextRight.id();
-                        nextRight = rightIterator.hasNext() ? rightIterator.next() : null;
-                        assert nextRight == null || nextRight.id() > oldId;
-                    }
-                }
+          @Override
+          public boolean hasNext() {
+            if (!hasInit) {
+              init();
             }
-            @Override
-            public boolean hasNext() {
-                if (!hasInit) {
-                    init();
-                }
-                if (nextLeft == null || nextRight == null) {
-                    return false;
-                }
-                assert nextLeft.id() == nextRight.id();
-                return true;
+            if (nextLeft == null || nextRight == null) {
+              return false;
             }
+            assert nextLeft.id() == nextRight.id();
+            return true;
+          }
 
-            @Override
-            public T next() {
-                if (!hasInit) {
-                    init();
-                }
-                if (nextLeft == null || nextRight == null) {
-                     throw new NoSuchElementException();
-                }
-                assert nextLeft.id() == nextRight.id();
-                T result = merger.apply(nextLeft, nextRight);
-                nextLeft = leftIterator.hasNext() ? leftIterator.next() : null;
-                prepareNext();
-                return result;
+          @Override
+          public T next() {
+            if (!hasInit) {
+              init();
             }
+            if (nextLeft == null || nextRight == null) {
+              throw new NoSuchElementException();
+            }
+            assert nextLeft.id() == nextRight.id();
+            T result = merger.apply(nextLeft, nextRight);
+            nextLeft = leftIterator.hasNext() ? leftIterator.next() : null;
+            prepareNext();
+            return result;
+          }
         };
 
-        final Iterable<T> iterable = () -> mergeIterator;
-        return StreamSupport.stream(iterable.spliterator(), false);
-    }
+    final Iterable<T> iterable = () -> mergeIterator;
+    return StreamSupport.stream(iterable.spliterator(), false);
+  }
 
-    /**
-     * Merges two streams of identical IdObjects.
-     * A hashtable is created from the right stream; the left stream is filtered
-     * on the contents of the hashtable.
-     */
-    public static <T extends IdObject> Stream<T> hashJoin(
-            @NotNull Stream<T> leftStream,
-            @NotNull Stream<T> rightStream,
-            @NotNull BiFunction<T, T, T> merger) {
-        Map<Integer, T> hashMap = rightStream.collect(Collectors.toMap(IdObject::id, Function.identity()));
-        return leftStream
-                .filter(idObject -> hashMap.containsKey(idObject.id()))
-                .map(idObject -> merger.apply(idObject, hashMap.get(idObject.id())));
-    }
-
+  /**
+   * Merges two streams of identical IdObjects. A hashtable is created from the right stream; the
+   * left stream is filtered on the contents of the hashtable.
+   */
+  public static <T extends IdObject> Stream<T> hashJoin(
+      @NotNull Stream<T> leftStream,
+      @NotNull Stream<T> rightStream,
+      @NotNull BiFunction<T, T, T> merger) {
+    Map<Integer, T> hashMap =
+        rightStream.collect(Collectors.toMap(IdObject::id, Function.identity()));
+    return leftStream
+        .filter(idObject -> hashMap.containsKey(idObject.id()))
+        .map(idObject -> merger.apply(idObject, hashMap.get(idObject.id())));
+  }
 }

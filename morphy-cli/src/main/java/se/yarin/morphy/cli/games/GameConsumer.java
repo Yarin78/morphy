@@ -6,9 +6,9 @@ import se.yarin.morphy.qqueries.QueryResult;
 import java.util.function.Consumer;
 
 public interface GameConsumer extends Consumer<Game> {
-    void init();
+  void init();
 
-    void searchDone(QueryResult<Game> searchResult);
+  void searchDone(QueryResult<Game> searchResult);
 
-    void finish();
+  void finish();
 }

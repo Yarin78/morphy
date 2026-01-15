@@ -6,31 +6,33 @@ import se.yarin.morphy.entities.Tournament;
 
 public abstract class TournamentBaseColumn implements GameColumn, TournamentColumn {
 
-    public int width() {
-        return getHeader().length();
-    }
+  public int width() {
+    return getHeader().length();
+  }
 
-    public int marginLeft() {
-        return 1;
-    }
+  public int marginLeft() {
+    return 1;
+  }
 
-    public int marginRight() {
-        return 1;
-    }
+  public int marginRight() {
+    return 1;
+  }
 
-    public boolean trimValueToWidth() { return true; }
+  public boolean trimValueToWidth() {
+    return true;
+  }
 
-    @Override
-    public String getValue(Game game) {
-        return getTournamentValue(game.database(), game.tournament());
-    }
+  @Override
+  public String getValue(Game game) {
+    return getTournamentValue(game.database(), game.tournament());
+  }
 
-    public abstract String getTournamentValue(Database db, Tournament tournament);
+  public abstract String getTournamentValue(Database db, Tournament tournament);
 
-    @Override
-    public String getTournamentId() {
-        String id = getId();
-        assert id.startsWith("tournament-") : id;
-        return id.substring(11);
-    }
+  @Override
+  public String getTournamentId() {
+    String id = getId();
+    assert id.startsWith("tournament-") : id;
+    return id.substring(11);
+  }
 }

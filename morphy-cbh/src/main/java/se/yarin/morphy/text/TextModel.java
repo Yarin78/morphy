@@ -4,8 +4,7 @@ import org.immutables.value.Value;
 
 @Value.Immutable
 public interface TextModel {
-    TextHeaderModel header();
+  TextHeaderModel header();
 
-    TextContentsModel contents();
+  TextContentsModel contents();
 }
-

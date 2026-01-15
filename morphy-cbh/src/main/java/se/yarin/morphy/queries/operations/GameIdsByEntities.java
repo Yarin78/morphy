@@ -13,67 +13,77 @@ import java.util.List;
 import java.util.stream.Stream;
 
 public class GameIdsByEntities<T extends IdObject> extends QueryOperator<Game> {
-    private final @NotNull QueryOperator<T> source;
-    private final @NotNull GameEntityIndex gameEntityIndex;
-    private final @NotNull EntityType entityType;
-    private final boolean singleSource;
+  private final @NotNull QueryOperator<T> source;
+  private final @NotNull GameEntityIndex gameEntityIndex;
+  private final @NotNull EntityType entityType;
+  private final boolean singleSource;
 
-    public GameIdsByEntities(@NotNull QueryContext queryContext, @NotNull QueryOperator<T> source, @NotNull EntityType entityType) {
-        super(queryContext, false);
-        // Note: This will return all games referencing any of the entities in the source
-        // If a join condition different than ANY is used, further filtering is needed
-        singleSource = (source instanceof Manual<?>) && (((Manual<T>) source).singleItem());
+  public GameIdsByEntities(
+      @NotNull QueryContext queryContext,
+      @NotNull QueryOperator<T> source,
+      @NotNull EntityType entityType) {
+    super(queryContext, false);
+    // Note: This will return all games referencing any of the entities in the source
+    // If a join condition different than ANY is used, further filtering is needed
+    singleSource = (source instanceof Manual<?>) && (((Manual<T>) source).singleItem());
 
-        GameEntityIndex gameEntityIndex = queryContext.transaction().database().gameEntityIndex(entityType);
-        if (gameEntityIndex == null) {
-            throw new IllegalArgumentException("No game entity index exists for " + entityType.namePlural());
-        }
-
-        this.source = source;
-        this.gameEntityIndex = gameEntityIndex;
-        this.entityType = entityType;
+    GameEntityIndex gameEntityIndex =
+        queryContext.transaction().database().gameEntityIndex(entityType);
+    if (gameEntityIndex == null) {
+      throw new IllegalArgumentException(
+          "No game entity index exists for " + entityType.namePlural());
     }
 
-    @Override
-    public List<QueryOperator<?>> sources() {
-        return List.of(source);
-    }
+    this.source = source;
+    this.gameEntityIndex = gameEntityIndex;
+    this.entityType = entityType;
+  }
 
-    public @NotNull QuerySortOrder<Game> sortOrder() {
-        return singleSource ? QuerySortOrder.byId() : QuerySortOrder.none();
-    }
+  @Override
+  public List<QueryOperator<?>> sources() {
+    return List.of(source);
+  }
 
-    public boolean mayContainDuplicates() {
-        return !singleSource;
-    }
+  public @NotNull QuerySortOrder<Game> sortOrder() {
+    return singleSource ? QuerySortOrder.byId() : QuerySortOrder.none();
+  }
 
-    @Override
-    public Stream<QueryData<Game>> operatorStream() {
-        return this.source.stream().flatMap(data -> gameEntityIndex.stream(data.id(), entityType, false).map(QueryData<Game>::new));
-    }
+  public boolean mayContainDuplicates() {
+    return !singleSource;
+  }
 
-    @Override
-    public void estimateOperatorCost(@NotNull ImmutableOperatorCost.Builder operatorCost) {
-        OperatorCost sourceCost = source.getOperatorCost();
+  @Override
+  public Stream<QueryData<Game>> operatorStream() {
+    return this.source.stream()
+        .flatMap(
+            data -> gameEntityIndex.stream(data.id(), entityType, false).map(QueryData<Game>::new));
+  }
 
-        int entityCount = Math.max(1, context().entityIndex(entityType).count());
-        int gameCount = Math.max(1, context().database().count());
+  @Override
+  public void estimateOperatorCost(@NotNull ImmutableOperatorCost.Builder operatorCost) {
+    OperatorCost sourceCost = source.getOperatorCost();
 
-        long expectedMatchingGames = sourceCost.estimateRows() * gameCount / entityCount;
+    int entityCount = Math.max(1, context().entityIndex(entityType).count());
+    int gameCount = Math.max(1, context().database().count());
 
-        operatorCost
-            .estimateRows(OperatorCost.capRowEstimate(expectedMatchingGames))
-            .estimateDeserializations(expectedMatchingGames / 13 + sourceCost.estimateRows())
-            .estimatePageReads(context().queryPlanner().estimateGameEntityIndexPageReads(entityType, sourceCost.estimateRows()));
-    }
+    long expectedMatchingGames = sourceCost.estimateRows() * gameCount / entityCount;
 
-    @Override
-    public String toString() {
-        return "GameIdsBy" + entityType.nameSingularCapitalized() + "Ids()";
-    }
+    operatorCost
+        .estimateRows(OperatorCost.capRowEstimate(expectedMatchingGames))
+        .estimateDeserializations(expectedMatchingGames / 13 + sourceCost.estimateRows())
+        .estimatePageReads(
+            context()
+                .queryPlanner()
+                .estimateGameEntityIndexPageReads(entityType, sourceCost.estimateRows()));
+  }
 
-    @Override
-    protected List<MetricsProvider> metricProviders() {
-        return List.of(gameEntityIndex);
-    }
+  @Override
+  public String toString() {
+    return "GameIdsBy" + entityType.nameSingularCapitalized() + "Ids()";
+  }
+
+  @Override
+  protected List<MetricsProvider> metricProviders() {
+    return List.of(gameEntityIndex);
+  }
 }
