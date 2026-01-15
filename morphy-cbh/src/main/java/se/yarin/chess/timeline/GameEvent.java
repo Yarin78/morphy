@@ -1,6 +1,6 @@
 package se.yarin.chess.timeline;
 
-import lombok.NonNull;
+import org.jetbrains.annotations.NotNull;
 import se.yarin.chess.NavigableGameModel;
 
 /**
@@ -14,7 +14,7 @@ public abstract class GameEvent {
      * @param model the model to apply the event to
      * @throws GameEventException if the event could not be applied
      */
-    public abstract void apply(@NonNull NavigableGameModel model) throws GameEventException;
+    public abstract void apply(@NotNull NavigableGameModel model) throws GameEventException;
 
     /**
      * @return true if this event incrementally updates the game model;

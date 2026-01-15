@@ -1,11 +1,11 @@
 package se.yarin.chess.annotations;
 
-import lombok.NonNull;
+import org.jetbrains.annotations.NotNull;
 
 public class CommentaryAfterMoveAnnotation extends Annotation {
     private final String commentary;
 
-    public CommentaryAfterMoveAnnotation(@NonNull String commentary) {
+    public CommentaryAfterMoveAnnotation(@NotNull String commentary) {
         this.commentary = commentary.trim();
     }
 
@@ -19,7 +19,7 @@ public class CommentaryAfterMoveAnnotation extends Annotation {
     }
 
     @Override
-    public String format(@NonNull String text, boolean ascii) {
+    public String format(@NotNull String text, boolean ascii) {
         String s = this.commentary;
         if (ascii) {
             s = s.replaceAll("[^\\x20-\\x7E]", "?");

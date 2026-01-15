@@ -1,6 +1,6 @@
 package se.yarin.chess;
 
-import lombok.NonNull;
+import org.jetbrains.annotations.NotNull;
 
 import static se.yarin.chess.Piece.NO_PIECE;
 
@@ -98,7 +98,7 @@ public class ShortMove {
         return shortCastling;
     }
 
-    public Move toMove(@NonNull Position fromPosition) {
+    public Move toMove(@NotNull Position fromPosition) {
         if (shortCastling) {
             return Move.shortCastles(fromPosition);
         }

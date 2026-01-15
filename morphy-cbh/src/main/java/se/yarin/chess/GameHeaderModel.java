@@ -1,7 +1,6 @@
 package se.yarin.chess;
 
-import lombok.Getter;
-import lombok.NonNull;
+import org.jetbrains.annotations.NotNull;
 
 import java.lang.reflect.Field;
 import java.util.*;
@@ -22,7 +21,6 @@ public class GameHeaderModel {
 
     // Define the standard fields and their types
     // The types must be an immutable type, to avoid the data from being changed outside of the model
-    // Can't unfortunately use Lombok @Setter since we need to notify listeners upon change
 
     private static final String FIELD_WHITE = "white";
     private static final String FIELD_BLACK = "black";
@@ -53,34 +51,61 @@ public class GameHeaderModel {
     private static final String FIELD_ANNOTATOR = "annotator";
     private static final String FIELD_GAME_TAG = "gameTag";
 
-    @HeaderData @Getter private String white;
-    @HeaderData @Getter private String black;
-    @HeaderData @Getter private Integer whiteElo;
-    @HeaderData @Getter private Integer blackElo;
-    @HeaderData @Getter private String whiteTeam;
-    @HeaderData @Getter private String blackTeam;
-    @HeaderData @Getter private GameResult result;
-    @HeaderData @Getter private NAG lineEvaluation;
-    @HeaderData @Getter private Date date;
-    @HeaderData @Getter private Eco eco;
-    @HeaderData @Getter private Integer round;
-    @HeaderData @Getter private Integer subRound;
+    @HeaderData private String white;
+    @HeaderData private String black;
+    @HeaderData private Integer whiteElo;
+    @HeaderData private Integer blackElo;
+    @HeaderData private String whiteTeam;
+    @HeaderData private String blackTeam;
+    @HeaderData private GameResult result;
+    @HeaderData private NAG lineEvaluation;
+    @HeaderData private Date date;
+    @HeaderData private Eco eco;
+    @HeaderData private Integer round;
+    @HeaderData private Integer subRound;
 
-    @HeaderData @Getter private String event;
-    @HeaderData @Getter private Date eventDate;
-    @HeaderData @Getter private Date eventEndDate;
-    @HeaderData @Getter private String eventSite;
-    @HeaderData @Getter private String eventCountry;
-    @HeaderData @Getter private Integer eventCategory;
-    @HeaderData @Getter private Integer eventRounds;
-    @HeaderData @Getter private String eventType;
-    @HeaderData @Getter private String eventTimeControl;
+    @HeaderData private String event;
+    @HeaderData private Date eventDate;
+    @HeaderData private Date eventEndDate;
+    @HeaderData private String eventSite;
+    @HeaderData private String eventCountry;
+    @HeaderData private Integer eventCategory;
+    @HeaderData private Integer eventRounds;
+    @HeaderData private String eventType;
+    @HeaderData private String eventTimeControl;
 
-    @HeaderData @Getter private String sourceTitle;
-    @HeaderData @Getter private String source;
-    @HeaderData @Getter private Date sourceDate;
-    @HeaderData @Getter private String annotator;
-    @HeaderData @Getter private String gameTag;
+    @HeaderData private String sourceTitle;
+    @HeaderData private String source;
+    @HeaderData private Date sourceDate;
+    @HeaderData private String annotator;
+    @HeaderData private String gameTag;
+
+    public String getWhite() { return white; }
+    public String getBlack() { return black; }
+    public Integer getWhiteElo() { return whiteElo; }
+    public Integer getBlackElo() { return blackElo; }
+    public String getWhiteTeam() { return whiteTeam; }
+    public String getBlackTeam() { return blackTeam; }
+    public GameResult getResult() { return result; }
+    public NAG getLineEvaluation() { return lineEvaluation; }
+    public Date getDate() { return date; }
+    public Eco getEco() { return eco; }
+    public Integer getRound() { return round; }
+    public Integer getSubRound() { return subRound; }
+    public String getEvent() { return event; }
+    public Date getEventDate() { return eventDate; }
+    public Date getEventEndDate() { return eventEndDate; }
+    public String getEventSite() { return eventSite; }
+    public String getEventCountry() { return eventCountry; }
+    public Integer getEventCategory() { return eventCategory; }
+    public Integer getEventRounds() { return eventRounds; }
+    public String getEventType() { return eventType; }
+    public String getEventTimeControl() { return eventTimeControl; }
+    public String getSourceTitle() { return sourceTitle; }
+    public String getSource() { return source; }
+    public Date getSourceDate() { return sourceDate; }
+    public String getAnnotator() { return annotator; }
+    public String getGameTag() { return gameTag; }
 
     public void setWhite(String name) { setField(FIELD_WHITE, name); }
     public void setBlack(String name) { setField(FIELD_BLACK, name); }
@@ -163,7 +188,7 @@ public class GameHeaderModel {
      * Unsets the header value for the specified field.
      * @param fieldName the name of the field to unset
      */
-    public void unsetField(@NonNull String fieldName) {
+    public void unsetField(@NotNull String fieldName) {
         setField(fieldName, null);
     }
 
@@ -174,7 +199,7 @@ public class GameHeaderModel {
      * @exception IllegalArgumentException thrown if the field is a predefined field
      * and the type of the value doesn't match
      */
-    public void setField(@NonNull String fieldName, Object value) {
+    public void setField(@NotNull String fieldName, Object value) {
         internalSetField(fieldName, value, false);
         notifyHeaderChanged();
     }
@@ -185,7 +210,7 @@ public class GameHeaderModel {
      *
      * @param headerData a mapping of header fields to header values
      */
-    public void setFields(@NonNull Map<String, Object> headerData) {
+    public void setFields(@NotNull Map<String, Object> headerData) {
         for (Map.Entry<String, Object> entry : headerData.entrySet()) {
             internalSetField(entry.getKey(), entry.getValue(), true);
         }
@@ -241,7 +266,7 @@ public class GameHeaderModel {
      * Adds a listener of header model changes
      * @param listener the listener
      */
-    public void addChangeListener(@NonNull GameHeaderModelChangeListener listener) {
+    public void addChangeListener(@NotNull GameHeaderModelChangeListener listener) {
         this.changeListeners.add(listener);
     }
 
@@ -250,7 +275,7 @@ public class GameHeaderModel {
      * @param listener the listener
      * @return true if the listener was removed
      */
-    public boolean removeChangeListener(@NonNull GameHeaderModelChangeListener listener) {
+    public boolean removeChangeListener(@NotNull GameHeaderModelChangeListener listener) {
         return this.changeListeners.remove(listener);
     }
 

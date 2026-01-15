@@ -1,6 +1,6 @@
 package se.yarin.chess.timeline;
 
-import lombok.NonNull;
+import org.jetbrains.annotations.NotNull;
 import org.junit.Before;
 import org.junit.Test;
 import se.yarin.chess.NavigableGameModel;
@@ -20,7 +20,7 @@ public class NavigableGameModelTimelineTest {
         }
 
         @Override
-        public void apply(@NonNull NavigableGameModel model) throws GameEventException {
+        public void apply(@NotNull NavigableGameModel model) throws GameEventException {
             if (Character.toUpperCase(this.c) == 'X')
                 throw new GameEventException(this, model, "failed");
             eventString.append(this.c);

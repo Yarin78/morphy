@@ -1,6 +1,6 @@
 package se.yarin.chess.timeline;
 
-import lombok.NonNull;
+import org.jetbrains.annotations.NotNull;
 import se.yarin.chess.NavigableGameModel;
 
 /**
@@ -8,7 +8,7 @@ import se.yarin.chess.NavigableGameModel;
  */
 public class DeleteRemainingMovesEvent extends GameEvent {
     @Override
-    public void apply(@NonNull NavigableGameModel model) throws GameEventException {
+    public void apply(@NotNull NavigableGameModel model) throws GameEventException {
         model.deleteRemainingMoves();
     }
 }

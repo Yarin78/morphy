@@ -1,7 +1,5 @@
 package se.yarin.chess;
 
-import lombok.Getter;
-
 /**
  * Numerical annotation glyphs
  *
@@ -265,8 +263,11 @@ public enum NAG {
     RESERVED_254,
     RESERVED_255;
 
-    @Getter
     private final NAGType type;
+
+    public NAGType getType() {
+        return type;
+    }
 
     private final String ascii;
 

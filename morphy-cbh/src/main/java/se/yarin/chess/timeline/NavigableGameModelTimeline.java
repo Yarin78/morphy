@@ -1,6 +1,6 @@
 package se.yarin.chess.timeline;
 
-import lombok.NonNull;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.chess.NavigableGameModel;
@@ -86,7 +86,7 @@ public class NavigableGameModelTimeline {
      * @param event the event to add to the timeline
      * @throws IllegalArgumentException if the timestamp is invalid
      */
-    public void addEvent(int timestamp, @NonNull GameEvent event) {
+    public void addEvent(int timestamp, @NotNull GameEvent event) {
         if (timestamp < getLastEventTimestamp()) {
             throw new IllegalArgumentException("Can only add events to the end of the event list");
         }

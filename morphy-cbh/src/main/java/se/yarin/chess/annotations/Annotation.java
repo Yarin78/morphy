@@ -1,6 +1,6 @@
 package se.yarin.chess.annotations;
 
-import lombok.NonNull;
+import org.jetbrains.annotations.NotNull;
 import se.yarin.chess.GameMovesModel;
 
 /**
@@ -29,7 +29,7 @@ public abstract class Annotation {
      * @param ascii if true, then only ASCII characters are allowed to be added to text
      * @return an updated
      */
-    public String format(@NonNull String text, boolean ascii) {
+    public String format(@NotNull String text, boolean ascii) {
         return text;
     }
 

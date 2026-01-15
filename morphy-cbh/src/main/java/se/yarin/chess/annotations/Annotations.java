@@ -1,6 +1,6 @@
 package se.yarin.chess.annotations;
 
-import lombok.NonNull;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -16,7 +16,7 @@ public class Annotations extends ArrayList<Annotation> {
      * will be removed.
      * @param annotation the annotation to add
      */
-    public void replace(@NonNull Annotation annotation) {
+    public void replace(@NotNull Annotation annotation) {
         removeByClass(annotation.getClass());
         add(annotation);
     }
@@ -51,7 +51,7 @@ public class Annotations extends ArrayList<Annotation> {
      * @param ascii if true, only ASCII characters will be outputted
      * @return the move decorated with annotations
      */
-    public String format(@NonNull String moveText, boolean ascii) {
+    public String format(@NotNull String moveText, boolean ascii) {
         List<Annotation> sortedAnnotations = this
                 .stream()
                 .sorted((o1, o2) -> o2.priority() - o1.priority())

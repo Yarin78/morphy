@@ -1,17 +1,24 @@
 package se.yarin.chess.timeline;
 
-import lombok.Getter;
-import lombok.NonNull;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * A {@link GameEvent} that occurs at a specific time.
  * This class is immutable.
  */
 public class TimestampedGameEvent implements Comparable<TimestampedGameEvent> {
-    @Getter private int timestamp;
-    @Getter private GameEvent event;
+    private final int timestamp;
+    private final GameEvent event;
 
-    public TimestampedGameEvent(int timestamp, @NonNull GameEvent event) {
+    public int getTimestamp() {
+        return timestamp;
+    }
+
+    public GameEvent getEvent() {
+        return event;
+    }
+
+    public TimestampedGameEvent(int timestamp, @NotNull GameEvent event) {
         this.timestamp = timestamp;
         this.event = event;
     }

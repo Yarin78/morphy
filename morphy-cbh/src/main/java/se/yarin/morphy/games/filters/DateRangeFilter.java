@@ -1,7 +1,5 @@
 package se.yarin.morphy.games.filters;
 
-import lombok.Getter;
-import lombok.NonNull;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import se.yarin.morphy.util.CBUtil;
@@ -16,10 +14,16 @@ import java.util.regex.Pattern;
 public class DateRangeFilter extends IsGameFilter {
     private static final Pattern dateRangePattern = Pattern.compile("^(([0-9]{4})(-([0-9]{2})(-([0-9]{2}))?)?)?-(([0-9]{4})(-([0-9]{2})(-([0-9]{2}))?)?)?$");
 
-    @Getter
-    private final @NonNull Date fromDate;
-    @Getter
-    private final @NonNull Date toDate;
+    private final @NotNull Date fromDate;
+    private final @NotNull Date toDate;
+
+    public @NotNull Date getFromDate() {
+        return fromDate;
+    }
+
+    public @NotNull Date getToDate() {
+        return toDate;
+    }
 
     public DateRangeFilter(@NotNull String dateRange) {
         this.fromDate = parseFromDate(dateRange);

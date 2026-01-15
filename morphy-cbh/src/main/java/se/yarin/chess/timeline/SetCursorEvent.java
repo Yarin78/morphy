@@ -1,6 +1,6 @@
 package se.yarin.chess.timeline;
 
-import lombok.NonNull;
+import org.jetbrains.annotations.NotNull;
 import se.yarin.chess.GameMovesModel;
 import se.yarin.chess.NavigableGameModel;
 
@@ -19,7 +19,7 @@ public class SetCursorEvent extends GameEvent {
     }
 
     @Override
-    public void apply(@NonNull NavigableGameModel model) throws GameEventException {
+    public void apply(@NotNull NavigableGameModel model) throws GameEventException {
         List<GameMovesModel.Node> allNodes = model.moves().getAllNodes();
         if (index < 0 || index >= allNodes.size()) {
             throw new GameEventException(this, model,

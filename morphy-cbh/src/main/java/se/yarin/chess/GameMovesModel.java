@@ -1,6 +1,6 @@
 package se.yarin.chess;
 
-import lombok.NonNull;
+import org.jetbrains.annotations.NotNull;
 import se.yarin.chess.annotations.Annotation;
 import se.yarin.chess.annotations.Annotations;
 
@@ -41,7 +41,7 @@ public class GameMovesModel {
      * @param startPosition the start position of the game
      * @param moveNumber the current move number
      */
-    public GameMovesModel(@NonNull Position startPosition, int moveNumber) {
+    public GameMovesModel(@NotNull Position startPosition, int moveNumber) {
         if (moveNumber < 1) {
             throw new IllegalArgumentException("Move number must be 1 or greater");
         }
@@ -53,7 +53,7 @@ public class GameMovesModel {
      * The listeners are not copied.
      * @param model
      */
-    public GameMovesModel(@NonNull GameMovesModel model) {
+    public GameMovesModel(@NotNull GameMovesModel model) {
         this.root = new Node(model.root(), (Node) null);
     }
 
@@ -109,7 +109,7 @@ public class GameMovesModel {
      * @param startPosition the new starting position
      * @param startPly the ply of the starting position
      */
-    public void setupPosition(@NonNull Position startPosition, int startPly) {
+    public void setupPosition(@NotNull Position startPosition, int startPly) {
         if (Chess.isWhitePly(startPly) != (startPosition.playerToMove() == Player.WHITE)) {
             throw new IllegalArgumentException("The player to lastMove according to the ply doesn't match the position");
         }
@@ -154,7 +154,7 @@ public class GameMovesModel {
      * Replaces the game tree with a copy of the game tree in the specified model.
      * @param moves the moves model to copy the game tree from
      */
-    public void replaceAll(@NonNull GameMovesModel moves) {
+    public void replaceAll(@NotNull GameMovesModel moves) {
         this.root = new Node(moves.root, (Node) null);
         notifyMovesChanged(this.root);
     }
@@ -163,7 +163,7 @@ public class GameMovesModel {
      * Adds a listener of moves model changes
      * @param listener the listener
      */
-    public void addChangeListener(@NonNull GameMovesModelChangeListener listener) {
+    public void addChangeListener(@NotNull GameMovesModelChangeListener listener) {
         this.changeListeners.add(listener);
     }
 
@@ -172,7 +172,7 @@ public class GameMovesModel {
      * @param listener the listener
      * @return true if the listener was removed
      */
-    public boolean removeChangeListener(@NonNull GameMovesModelChangeListener listener) {
+    public boolean removeChangeListener(@NotNull GameMovesModelChangeListener listener) {
         return this.changeListeners.remove(listener);
     }
 
@@ -200,14 +200,14 @@ public class GameMovesModel {
         // and that listeners and undo functionality works properly.
         // All internal methods should carry out their actions atomicly.
 
-        private Node(@NonNull Position position, int ply) {
+        private Node(@NotNull Position position, int ply) {
             this.parent = null;
             this.move = null;
             this.position = position;
             this.ply = ply;
         }
 
-        private Node(@NonNull Node parentNode, @NonNull Move move) {
+        private Node(@NotNull Node parentNode, @NotNull Move move) {
             this.parent = parentNode;
             this.move = move;
             this.position = parentNode.position.doMove(move);
@@ -220,7 +220,7 @@ public class GameMovesModel {
          * @param newParentNode the parent node the target node should have
          * @return a clone of the sourceNode
          */
-        private Node(@NonNull Node sourceNode, Node newParentNode) {
+        private Node(@NotNull Node sourceNode, Node newParentNode) {
             this.parent = newParentNode;
             this.move = sourceNode.move;
             this.position = sourceNode.position;
@@ -479,7 +479,7 @@ public class GameMovesModel {
          * @return the node representing the position after the added move has been made
          * @throws IllegalMoveException if the move is illegal from this position
          */
-        public Node addMove(@NonNull Move move) {
+        public Node addMove(@NotNull Move move) {
             validateMove(move);
             return internalAddNode(move, false);
         }
@@ -492,7 +492,7 @@ public class GameMovesModel {
          * @param move the move to add
          * @return the node representing the position after the added move has been made
          */
-        public Node addMoveUnsafe(@NonNull Move move) {
+        public Node addMoveUnsafe(@NotNull Move move) {
             return internalAddNode(move, false);
         }
 
@@ -503,7 +503,7 @@ public class GameMovesModel {
          * @return the node representing the position after the added move has been made
          * @throws IllegalMoveException if the move is illegal from this position
          */
-        public Node addMove(@NonNull ShortMove move) {
+        public Node addMove(@NotNull ShortMove move) {
             return addMove(move.toMove(position));
         }
 
@@ -539,7 +539,7 @@ public class GameMovesModel {
          * @throws IllegalMoveException if the move is illegal from this position.
          * No change will be made to the game tree in this case.
          */
-        public Node overwriteMove(@NonNull Move move) {
+        public Node overwriteMove(@NotNull Move move) {
             validateMove(move);
             internalRemoveAllChildren(true);
             Node node = internalAddNode(move, true);
@@ -568,7 +568,7 @@ public class GameMovesModel {
          * @throws IllegalMoveException if the move is illegal from this position.
          * No change will be made to the game tree in this case.
          */
-        public Node insertMove(@NonNull Move move) {
+        public Node insertMove(@NotNull Move move) {
             validateMove(move);
 
             Node oldNode = mainNode();
@@ -718,7 +718,7 @@ public class GameMovesModel {
          * Traverse the nodes in the game tree in depth first order
          * @param listener the listener of events when reaching nodes
          */
-        public void traverseDepthFirst(@NonNull NodeListener listener) {
+        public void traverseDepthFirst(@NotNull NodeListener listener) {
             listener.notifyNode(this);
             children.forEach(node -> node.traverseDepthFirst(listener));
         }

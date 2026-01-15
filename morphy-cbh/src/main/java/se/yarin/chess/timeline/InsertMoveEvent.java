@@ -1,6 +1,6 @@
 package se.yarin.chess.timeline;
 
-import lombok.NonNull;
+import org.jetbrains.annotations.NotNull;
 import se.yarin.chess.IllegalMoveException;
 import se.yarin.chess.NavigableGameModel;
 import se.yarin.chess.ShortMove;
@@ -18,7 +18,7 @@ public class InsertMoveEvent extends GameEvent {
     }
 
     @Override
-    public void apply(@NonNull NavigableGameModel model) throws GameEventException {
+    public void apply(@NotNull NavigableGameModel model) throws GameEventException {
         try {
             model.insertMove(move.toMove(model.cursor().position()));
         } catch (IllegalMoveException e) {

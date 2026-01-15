@@ -1,6 +1,6 @@
 package se.yarin.chess;
 
-import lombok.NonNull;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -100,7 +100,7 @@ public final class Chess960 {
      * @return the position number, between 0 and 959
      * @throws IllegalArgumentException if firstRank is not a valid Chess960 start position
      */
-    public static int getStartPositionNo(@NonNull String firstRank) {
+    public static int getStartPositionNo(@NotNull String firstRank) {
         Integer no = firstRankToNo.get(firstRank.toUpperCase());
         if (no == null)
             throw new IllegalArgumentException("Invalid Chess960 first rank: " + firstRank);
@@ -113,7 +113,7 @@ public final class Chess960 {
      * @return the position number, between 0 and 959
      * @throws IllegalArgumentException if stones is not a valid Chess960 start position
      */
-    public static int getStartPositionNo(@NonNull Stone[] stones) {
+    public static int getStartPositionNo(@NotNull Stone[] stones) {
         if (stones.length != 64) {
             throw new IllegalArgumentException("stones must contain 64 elements");
         }

@@ -1,6 +1,6 @@
 package se.yarin.chess;
 
-import lombok.NonNull;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.EnumSet;
 
@@ -23,19 +23,19 @@ public class Move {
     private Boolean isCapture, isCheck, isMate;
     private String sanCache;
 
-    public Move(@NonNull Position fromPosition, int fromCol, int fromRow, int toCol, int toRow) {
+    public Move(@NotNull Position fromPosition, int fromCol, int fromRow, int toCol, int toRow) {
         this(fromPosition, Chess.coorToSqi(fromCol, fromRow), Chess.coorToSqi(toCol, toRow));
     }
 
-    public Move(@NonNull Position fromPosition, int fromCol, int fromRow, int toCol, int toRow, @NonNull Stone promotionStone) {
+    public Move(@NotNull Position fromPosition, int fromCol, int fromRow, int toCol, int toRow, @NotNull Stone promotionStone) {
         this(fromPosition, Chess.coorToSqi(fromCol, fromRow), Chess.coorToSqi(toCol, toRow), promotionStone);
     }
 
-    public Move(@NonNull Position fromPosition, int fromSqi, int toSqi) {
+    public Move(@NotNull Position fromPosition, int fromSqi, int toSqi) {
         this(fromPosition, fromSqi, toSqi, Stone.NO_STONE);
     }
 
-    public Move(@NonNull Position fromPosition, int fromSqi, int toSqi, Stone promotionStone) {
+    public Move(@NotNull Position fromPosition, int fromSqi, int toSqi, Stone promotionStone) {
         if (fromSqi < 0 || fromSqi >= 64 || toSqi < 0 || toSqi >= 64) {
             // Check if the null move
             if (!(fromSqi == Chess.NO_SQUARE && toSqi == Chess.NO_SQUARE && promotionStone == Stone.NO_STONE)) {
@@ -51,7 +51,7 @@ public class Move {
         this.castles = Math.abs(fromSqi - toSqi) == 16 && fromPosition.stoneAt(fromSqi).toPiece() == KING;
     }
 
-    private Move(@NonNull Position fromPosition, int fromSqi, int toSqi, boolean castles) {
+    private Move(@NotNull Position fromPosition, int fromSqi, int toSqi, boolean castles) {
         this.fromSqi = fromSqi;
         this.toSqi = toSqi;
         this.promotionStone = Stone.NO_STONE;
@@ -65,7 +65,7 @@ public class Move {
      * @param fromPosition the position to castle in
      * @return a long castle move
      */
-    public static Move longCastles(@NonNull Position fromPosition) {
+    public static Move longCastles(@NotNull Position fromPosition) {
         int sp = fromPosition.chess960StartPosition();
         Player player = fromPosition.playerToMove();
         return new Move(fromPosition, Chess960.getKingSqi(sp, player),
@@ -77,7 +77,7 @@ public class Move {
      * @param fromPosition the position to castle in
      * @return a short castle move
      */
-    public static Move shortCastles(@NonNull Position fromPosition) {
+    public static Move shortCastles(@NotNull Position fromPosition) {
         int sp = fromPosition.chess960StartPosition();
         Player player = fromPosition.playerToMove();
         return new Move(fromPosition, Chess960.getKingSqi(sp, player),
@@ -89,7 +89,7 @@ public class Move {
      * @param fromPosition the position to to a null move
      * @return a null move
      */
-    public static Move nullMove(@NonNull Position fromPosition) {
+    public static Move nullMove(@NotNull Position fromPosition) {
         return new Move(fromPosition, Chess.NO_SQUARE, Chess.NO_SQUARE);
     }
 

@@ -1,6 +1,6 @@
 package se.yarin.chess;
 
-import lombok.NonNull;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Represents a complete chess game with header, moves and annotations.
@@ -14,7 +14,7 @@ public class GameModel {
         this(new GameHeaderModel(), new GameMovesModel());
     }
 
-    public GameModel(@NonNull GameHeaderModel header, @NonNull GameMovesModel moves) {
+    public GameModel(@NotNull GameHeaderModel header, @NotNull GameMovesModel moves) {
         this.header = header;
         this.moves = moves;
     }
@@ -37,7 +37,7 @@ public class GameModel {
      * Replaces the data inside the underlying models by copying the data from a source model
      * @param model the model to copy data from
      */
-    public void replaceAll(@NonNull GameModel model) {
+    public void replaceAll(@NotNull GameModel model) {
         header.replaceAll(model.header());
         moves.replaceAll(model.moves());
     }

@@ -1,6 +1,6 @@
 package se.yarin.chess;
 
-import lombok.NonNull;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Represents an Eco classification
@@ -20,7 +20,7 @@ public class Eco {
      * @param eco the Eco code, A00-E99
      * @throws IllegalArgumentException if the Eco code is invalid
      */
-    public Eco(@NonNull String eco) {
+    public Eco(@NotNull String eco) {
         if (eco.length() == 6 && eco.charAt(3) == '/') {
             int q1 = eco.charAt(4) - '0';
             int q2 = eco.charAt(5) - '0';

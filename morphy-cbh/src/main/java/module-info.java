@@ -1,6 +1,5 @@
 module se.yarin.morphy.cbh {
     requires org.slf4j;
-    requires static lombok;
     requires static org.immutables.value;
     requires me.tongfei.progressbar;
     requires java.compiler;

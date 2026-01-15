@@ -1,6 +1,6 @@
 package se.yarin.chess;
 
-import lombok.NonNull;
+import org.jetbrains.annotations.NotNull;
 import se.yarin.chess.annotations.Annotation;
 
 import java.util.ArrayList;
@@ -21,7 +21,7 @@ public class NavigableGameModel {
         this(new GameModel());
     }
 
-    public NavigableGameModel(@NonNull GameModel model) {
+    public NavigableGameModel(@NotNull GameModel model) {
         this.model = model;
         this.cursor = moves().root();
     }
@@ -55,7 +55,7 @@ public class NavigableGameModel {
      * @param cursor the new position of the cursor
      * @return true if the cursor was set; false if node was not in the game model
      */
-    public boolean setCursor(@NonNull GameMovesModel.Node cursor) {
+    public boolean setCursor(@NotNull GameMovesModel.Node cursor) {
         if (!cursor.isValid()) {
             return false;
         }
@@ -127,7 +127,7 @@ public class NavigableGameModel {
      * @param move the move to add
      * @throws IllegalMoveException if the move is illegal
      */
-    public void addMove(@NonNull Move move) {
+    public void addMove(@NotNull Move move) {
         setCursor(cursor().addMove(move));
     }
     
@@ -138,7 +138,7 @@ public class NavigableGameModel {
      * @param move the move to add
      * @throws IllegalMoveException if the move is illegal
      */
-    public void addMainMove(@NonNull Move move) {
+    public void addMainMove(@NotNull Move move) {
         addMove(move);
         promoteVariation();
     }
@@ -148,7 +148,7 @@ public class NavigableGameModel {
      * @param move the move to overwrite with
      * @throws IllegalMoveException if the move is illegal
      */
-    public void overwriteMove(@NonNull Move move) {
+    public void overwriteMove(@NotNull Move move) {
         setCursor(cursor().overwriteMove(move));
     }
 
@@ -158,14 +158,14 @@ public class NavigableGameModel {
      * @param move the move to insert
      * @throws IllegalMoveException if the move is illegal
      */
-    public void insertMove(@NonNull Move move) {
+    public void insertMove(@NotNull Move move) {
         setCursor(cursor().insertMove(move));
     }
 
     /**
      * Adds an annotation at the current position in the game.
      */
-    public void addAnnotation(@NonNull Annotation annotation) {
+    public void addAnnotation(@NotNull Annotation annotation) {
         cursor().addAnnotation(annotation);
     }
 
@@ -213,7 +213,7 @@ public class NavigableGameModel {
      * Replaces the data in the underlying headers and moves models, including the cursor.
      * @param newModel the model containing the data to replace with
      */
-    public void replaceAll(@NonNull NavigableGameModel newModel) {
+    public void replaceAll(@NotNull NavigableGameModel newModel) {
         // When the game tree is cloned, we need to figure out which new node
         // corresponds to the cursor in newModel.
         // We do this by finding the node index of the cursor node, and then using the fact
@@ -237,7 +237,7 @@ public class NavigableGameModel {
      * Adds a listener of model changes
      * @param listener the listener
      */
-    public void addChangeListener(@NonNull NavigableGameModelChangeListener listener) {
+    public void addChangeListener(@NotNull NavigableGameModelChangeListener listener) {
         moves().addChangeListener(listener);
         header().addChangeListener(listener);
         this.changeListeners.add(listener);
@@ -248,7 +248,7 @@ public class NavigableGameModel {
      * @param listener the listener
      * @return true if the listener was removed
      */
-    public boolean removeChangeListener(@NonNull NavigableGameModelChangeListener listener) {
+    public boolean removeChangeListener(@NotNull NavigableGameModelChangeListener listener) {
         return this.changeListeners.remove(listener);
     }
 

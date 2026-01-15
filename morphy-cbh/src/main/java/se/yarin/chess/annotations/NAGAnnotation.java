@@ -1,7 +1,6 @@
 package se.yarin.chess.annotations;
 
-import lombok.Getter;
-import lombok.NonNull;
+import org.jetbrains.annotations.NotNull;
 import se.yarin.chess.NAG;
 
 /**
@@ -9,10 +8,13 @@ import se.yarin.chess.NAG;
  */
 public class NAGAnnotation extends Annotation {
 
-    @Getter
     private final NAG nag;
 
-    public NAGAnnotation(@NonNull NAG nag) {
+    public NAG getNag() {
+        return nag;
+    }
+
+    public NAGAnnotation(@NotNull NAG nag) {
         this.nag = nag;
     }
 
@@ -30,7 +32,7 @@ public class NAGAnnotation extends Annotation {
     }
 
     @Override
-    public String format(@NonNull String text, boolean ascii) {
+    public String format(@NotNull String text, boolean ascii) {
         switch (nag.getType()) {
             case MOVE_COMMENT:
                 String symbol = ascii ? nag.toASCIIString() : nag.toUnicodeString();
