@@ -1,14 +1,13 @@
 package se.yarin.chess;
 
-import java.util.Calendar;
+import java.time.LocalDate;
 
 /**
  * Represents a date where each of the year, month and day parts are optional.
- *
  * Date is immutable.
  */
 public final class Date implements Comparable<Date> {
-    private int year, month, day;
+    private final int year, month, day;
 
     public Date(int year) {
         this(year, 0, 0);
@@ -29,11 +28,8 @@ public final class Date implements Comparable<Date> {
     }
 
     public static Date today() {
-        Calendar cal = Calendar.getInstance();
-        return new Date(
-                cal.get(Calendar.YEAR),
-                cal.get(Calendar.MONTH) + 1,
-                cal.get(Calendar.DAY_OF_MONTH));
+        LocalDate now = LocalDate.now();
+        return new Date(now.getYear(), now.getMonthValue(), now.getDayOfMonth());
     }
 
     public boolean isUnset() {
