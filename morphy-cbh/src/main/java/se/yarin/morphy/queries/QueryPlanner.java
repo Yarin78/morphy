@@ -121,8 +121,8 @@ public class QueryPlanner {
 
     public <T extends Entity & Comparable<T>> double entityFilterEstimate(@Nullable EntityFilter<T> entityFilter, EntityType entityType) {
         // TODO
-        if (entityFilter instanceof ManualFilter) {
-            int count = ((ManualFilter<?>) entityFilter).ids().size();
+        if (entityFilter instanceof ManualFilter<?> mf) {
+            int count = mf.ids().size();
             return 1.0 * count / database.entityIndex(entityType).count();
         }
         return 1.0;
@@ -130,8 +130,8 @@ public class QueryPlanner {
 
     public double playerFilterEstimate(@Nullable EntityFilter<Player> playerFilter) {
         // TODO
-        if (playerFilter instanceof ManualFilter) {
-            int count = ((ManualFilter<?>) playerFilter).ids().size();
+        if (playerFilter instanceof ManualFilter<?> mf) {
+            int count = mf.ids().size();
             return 1.0 * count / database.playerIndex().count();
         }
         return 1.0;
@@ -139,8 +139,8 @@ public class QueryPlanner {
 
     public double tournamentFilterEstimate(@Nullable EntityFilter<Tournament> tournamentFilter) {
         // TODO
-        if (tournamentFilter instanceof ManualFilter) {
-            int count = ((ManualFilter<?>) tournamentFilter).ids().size();
+        if (tournamentFilter instanceof ManualFilter<?> mf) {
+            int count = mf.ids().size();
             return 1.0 * count / database.tournamentIndex().count();
         }
         return 1.0;
@@ -320,8 +320,7 @@ public class QueryPlanner {
         }
 
         for (GameFilter gameFilter : gameQuery.gameFilters()) {
-            if (gameFilter instanceof GameEntityFilter<?>) {
-                GameEntityFilter<?> entityFilter = (GameEntityFilter<?>) gameFilter;
+            if (gameFilter instanceof GameEntityFilter<?> entityFilter) {
                 QueryOperator<Game> gameOp = new GameIdsByEntities<>(context, new Manual<>(context, Set.copyOf(entityFilter.entityIds())), entityFilter.entityType());
                 boolean coveredFilter = entityFilter.matchCondition() == GameEntityJoinCondition.ANY;
                 sources.add(GameSourceQuery.fromGameQueryOperator(gameOp.sortedAndDistinct(QuerySortOrder.byId(), 0), true, coveredFilter ? List.of(gameFilter) : List.of(), List.of()));
@@ -399,8 +398,7 @@ public class QueryPlanner {
         T startEntity = null, endEntity = null;
 
         for (EntityFilter<T> filter : entityQuery.filters()) {
-            if (filter instanceof ManualFilter) {
-                ManualFilter<T> manualFilter = (ManualFilter<T>) filter;
+            if (filter instanceof ManualFilter<T> manualFilter) {
                 QueryOperator<T> entities = new Manual<>(context, Set.copyOf(manualFilter.ids()));
                 sources.add(EntitySourceQuery.fromQueryOperator(entities, true, List.of(filter)));
                 int minId = manualFilter.minId(), maxId = manualFilter.maxId() + 1; // endId is exclusive
@@ -409,8 +407,7 @@ public class QueryPlanner {
                 if (endId == null || maxId < endId)
                     endId = maxId;
             }
-            if (filter instanceof EntityIndexFilter) {
-                EntityIndexFilter<T> indexFilter = (EntityIndexFilter<T>) filter;
+            if (filter instanceof EntityIndexFilter<T> indexFilter) {
                 T p = indexFilter.start();
                 if (p != null && (startEntity == null || p.compareTo(startEntity) > 0))
                     startEntity = p;

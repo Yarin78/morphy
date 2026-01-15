@@ -238,11 +238,11 @@ public class GameEntityIndex implements MetricsProvider {
         if (blockMetricsRef != null) {
             metricsKeys.add(blockMetricsRef.metricsKey());
         }
-        if (citStorage instanceof MetricsProvider) {
-            metricsKeys.addAll(((MetricsProvider) citStorage).getMetricsKeys());
+        if (citStorage instanceof MetricsProvider mp) {
+            metricsKeys.addAll(mp.getMetricsKeys());
         }
-        if (cibStorage instanceof MetricsProvider) {
-            metricsKeys.addAll(((MetricsProvider) cibStorage).getMetricsKeys());
+        if (cibStorage instanceof MetricsProvider mp) {
+            metricsKeys.addAll(mp.getMetricsKeys());
         }
         return metricsKeys;
     }
@@ -490,16 +490,16 @@ public class GameEntityIndex implements MetricsProvider {
     }
 
     public long numBlocksDiskPages() {
-        if (cibStorage instanceof FileItemStorage) {
-            return ((FileItemStorage<IndexBlockHeader, IndexBlockItem>) cibStorage).numPages();
+        if (cibStorage instanceof FileItemStorage<?, ?> fs) {
+            return fs.numPages();
         } else {
             return 0;
         }
     }
 
     public long numTableDiskPages() {
-        if (citStorage instanceof FileItemStorage) {
-            return ((FileItemStorage<IndexHeader, IndexItem>) citStorage).numPages();
+        if (citStorage instanceof FileItemStorage<?, ?> fs) {
+            return fs.numPages();
         } else {
             return 0;
         }

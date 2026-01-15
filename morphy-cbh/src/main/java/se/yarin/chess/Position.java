@@ -676,9 +676,9 @@ public class Position {
 
     public boolean equals(Object obj) {
         // Assume that two boards with the same zobrist key (128 bit) are identical
-        if (obj instanceof Position) {
-            return this.getZobristHashLo() == ((Position) obj).getZobristHashLo()
-                && this.getZobristHashHi() == ((Position) obj).getZobristHashHi();
+        if (obj instanceof Position pos) {
+            return this.getZobristHashLo() == pos.getZobristHashLo()
+                && this.getZobristHashHi() == pos.getZobristHashHi();
         }
         return super.equals(obj);
     }

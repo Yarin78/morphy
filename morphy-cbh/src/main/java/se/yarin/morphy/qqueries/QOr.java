@@ -19,8 +19,8 @@ public class QOr<T> extends ItemQuery<T> {
     public QOr(@NotNull List<ItemQuery<T>> subQueries) {
         this.orQueries = new ArrayList<>();
         for (ItemQuery<T> subQuery : subQueries) {
-            if (subQuery instanceof QOr) {
-                this.orQueries.addAll(((QOr<T>)subQuery).orQueries);
+            if (subQuery instanceof QOr<T> qor) {
+                this.orQueries.addAll(qor.orQueries);
             } else {
                 this.orQueries.add(subQuery);
             }

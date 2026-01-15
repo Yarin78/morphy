@@ -121,12 +121,12 @@ public abstract class QueryOperator<T extends IdObject> {
             List<MetricsKey> metricKeys = metricProvider.getMetricsKeys().stream().distinct().collect(Collectors.toList());
             for (MetricsKey key : metricKeys) {
                 Metrics metric = metricsRepository.getMetrics(key);
-                if (metric instanceof ItemMetrics) {
-                    deserializations += (((ItemMetrics) metric).deserializations());
+                if (metric instanceof ItemMetrics im) {
+                    deserializations += im.deserializations();
                 }
-                if (metric instanceof FileMetrics) {
-                    physicalReads += ((FileMetrics) metric).physicalPageReads();
-                    logicalReads += ((FileMetrics) metric).logicalPageReads();
+                if (metric instanceof FileMetrics fm) {
+                    physicalReads += fm.physicalPageReads();
+                    logicalReads += fm.logicalPageReads();
                 }
                 if (duplicateKeys.contains(key)) {
                     duplicate = true;

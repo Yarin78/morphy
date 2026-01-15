@@ -25,8 +25,8 @@ public class QAnd<T> extends ItemQuery<T> {
         }
         this.andQueries = new ArrayList<>();
         for (ItemQuery<T> subQuery : subQueries) {
-            if (subQuery instanceof QAnd) {
-                this.andQueries.addAll(((QAnd<T>)subQuery).andQueries);
+            if (subQuery instanceof QAnd<T> qand) {
+                this.andQueries.addAll(qand.andQueries);
             } else {
                 this.andQueries.add(subQuery);
             }

@@ -164,8 +164,7 @@ public final class AnnotationsSerializer {
      * @throws IllegalArgumentException if no serializer has been registered for the annotation class
      */
     public static void serializeAnnotation(@NotNull Annotation annotation, ByteBuffer buf) {
-        if (annotation instanceof RawAnnotation) {
-            RawAnnotation ra = (RawAnnotation) annotation;
+        if (annotation instanceof RawAnnotation ra) {
             ByteBufferUtil.putByte(buf, ra.annotationType());
             ByteBufferUtil.putShortB(buf, ra.rawData().length + 6);
             buf.put(ra.rawData());

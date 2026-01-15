@@ -57,8 +57,8 @@ public class MetricsRepository implements AutoCloseable {
         while (current.parent != null) {
             current = current.parent;
         }
-        if (current instanceof Instrumentation) {
-            ((Instrumentation) current).popContext();
+        if (current instanceof Instrumentation instr) {
+            instr.popContext();
         } else {
             throw new IllegalStateException("The source of a metrics repository should be an Instrumentation");
         }

@@ -284,8 +284,8 @@ public class GameAdapter {
 
     private void collectStats(@NotNull GameMovesModel.Node node, @NotNull AnnotationStatistics stats) {
         for (Annotation annotation : node.getAnnotations()) {
-            if (annotation instanceof StatisticalAnnotation) {
-                ((StatisticalAnnotation) annotation).updateStatistics(stats);
+            if (annotation instanceof StatisticalAnnotation sa) {
+                sa.updateStatistics(stats);
             }
         }
         for (GameMovesModel.Node child : node.children()) {
