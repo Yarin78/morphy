@@ -1,8 +1,8 @@
 module se.yarin.morphy.cbh {
-    requires slf4j.api;
+    requires org.slf4j;
     requires static lombok;
     requires static org.immutables.value;
-    requires progressbar;
+    requires me.tongfei.progressbar;
     requires java.compiler;
     requires org.jetbrains.annotations;
     requires concurrent.locks;
