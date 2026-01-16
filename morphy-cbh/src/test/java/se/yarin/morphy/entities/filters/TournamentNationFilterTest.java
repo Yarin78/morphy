@@ -17,7 +17,7 @@ public class TournamentNationFilterTest {
   public void testWch() {
     Database db = ResourceLoader.openWorldChDatabase();
     try (var txn = db.tournamentIndex().beginReadTransaction()) {
-      HashMap<Nation, Integer> cnt = new HashMap<Nation, Integer>();
+      HashMap<Nation, Integer> cnt = new HashMap<>();
       for (Tournament tournament : txn.iterable()) {
         cnt.compute(tournament.nation(), (nation, integer) -> integer == null ? 1 : integer + 1);
       }

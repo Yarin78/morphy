@@ -31,7 +31,7 @@ public class PlayerFilter extends IsGameFilter implements GameEntityFilter<Playe
   }
 
   public PlayerFilter(@NotNull Player player, @Nullable GameEntityJoinCondition matchCondition) {
-    this(Collections.singletonList(player), matchCondition);
+    this(List.of(player), matchCondition);
   }
 
   public PlayerFilter(

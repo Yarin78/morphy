@@ -356,7 +356,7 @@ public class GameQueryPlanGeneratorTests {
     throw new AssertionError(
         "Expected plan not found: "
             + expected
-            + "\nActual plans: "
-            + plans.stream().map(p -> p.debugString(false)).reduce("", (a, b) -> a + "\n" + b));
+            + "\nActual plans:\n"
+            + String.join("\n", plans.stream().map(p -> p.debugString(false)).toList()));
   }
 }

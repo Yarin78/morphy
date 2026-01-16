@@ -33,7 +33,7 @@ public class QGamesByGameTag extends ItemQuery<Game> {
     if (gameTagResult == null) {
       return INFINITE;
     }
-    return gameTagResult.stream().map(Entity::count).reduce(0, Integer::sum);
+    return gameTagResult.stream().mapToInt(Entity::count).sum();
   }
 
   public void evaluateSubQuery(@NotNull DatabaseReadTransaction txn) {

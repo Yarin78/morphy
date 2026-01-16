@@ -26,7 +26,7 @@ public class SourceFilter
   }
 
   public SourceFilter(@NotNull Source source) {
-    this(Collections.singleton(source));
+    this(Set.of(source));
   }
 
   public SourceFilter(@NotNull Collection<Source> sources) {

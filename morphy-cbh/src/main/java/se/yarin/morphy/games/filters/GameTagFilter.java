@@ -25,7 +25,7 @@ public class GameTagFilter
   }
 
   public GameTagFilter(@NotNull GameTag gameTag) {
-    this(Collections.singleton(gameTag));
+    this(Set.of(gameTag));
   }
 
   public GameTagFilter(@NotNull Collection<GameTag> gameTags) {

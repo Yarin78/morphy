@@ -22,7 +22,7 @@ public class AddMoveEvent extends GameEvent {
     try {
       model.addMove(move.toMove(model.cursor().position()));
     } catch (IllegalMoveException e) {
-      throw new GameEventException(this, model, "Illegal move: " + move.toString());
+      throw new GameEventException(this, model, "Illegal move: " + move);
     }
   }
 

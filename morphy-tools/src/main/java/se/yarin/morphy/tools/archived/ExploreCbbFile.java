@@ -30,7 +30,7 @@ public class ExploreCbbFile {
       currentSourceNode = currentSourceNode.mainNode();
 
       GameHeaderModel headerModel = new GameHeaderModel();
-      headerModel.setEvent(currentTargetNode.ply() + " " + nextMove.toString());
+      headerModel.setEvent(currentTargetNode.ply() + " " + nextMove);
       targetDb.addGame(new GameModel(headerModel, targetModel));
     }
 

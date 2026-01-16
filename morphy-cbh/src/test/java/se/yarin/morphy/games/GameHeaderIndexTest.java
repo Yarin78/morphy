@@ -29,7 +29,7 @@ public class GameHeaderIndexTest {
   public void setupEntityTest() throws IOException {
     gameHeaderFile =
         ResourceLoader.materializeDatabaseStream(
-            GameHeaderIndex.class, "cbh_test", Collections.singletonList(".cbh"));
+            GameHeaderIndex.class, "cbh_test", List.of(".cbh"));
   }
 
   @Test
@@ -186,7 +186,7 @@ public class GameHeaderIndexTest {
   public void testGetFilteredSerialized() throws IOException {
     File manyHeaderFile =
         ResourceLoader.materializeDatabaseStream(
-            GameHeaderIndex.class, "many_headers", Collections.singletonList(".cbh"));
+            GameHeaderIndex.class, "many_headers", List.of(".cbh"));
     GameHeaderIndex headerIndex = GameHeaderIndex.open(manyHeaderFile, null);
     // Create an iterator that will use the raw level filter to pick a handful of headers
     // The sparsity of this will cause some batches in the internal iterator to be empty
@@ -227,7 +227,7 @@ public class GameHeaderIndexTest {
   public void testGetFiltered() throws IOException {
     File manyHeaderFile =
         ResourceLoader.materializeDatabaseStream(
-            GameHeaderIndex.class, "many_headers", Collections.singletonList(".cbh"));
+            GameHeaderIndex.class, "many_headers", List.of(".cbh"));
     GameHeaderIndex headerIndex = GameHeaderIndex.open(manyHeaderFile, null);
     // Create an iterator that will use the raw level filter to pick a handful of headers
     // The sparsity of this will cause some batches in the internal iterator to be empty

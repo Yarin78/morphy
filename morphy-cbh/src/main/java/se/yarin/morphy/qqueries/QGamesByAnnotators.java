@@ -33,7 +33,7 @@ public class QGamesByAnnotators extends ItemQuery<Game> {
     if (annotatorResult == null) {
       return INFINITE;
     }
-    return annotatorResult.stream().map(Entity::count).reduce(0, Integer::sum);
+    return annotatorResult.stream().mapToInt(Entity::count).sum();
   }
 
   public void evaluateSubQuery(@NotNull DatabaseReadTransaction txn) {

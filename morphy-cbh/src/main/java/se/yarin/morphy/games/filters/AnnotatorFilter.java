@@ -26,7 +26,7 @@ public class AnnotatorFilter
   }
 
   public AnnotatorFilter(@NotNull Annotator annotator) {
-    this(Collections.singleton(annotator));
+    this(Set.of(annotator));
   }
 
   public AnnotatorFilter(@NotNull Collection<Annotator> annotators) {

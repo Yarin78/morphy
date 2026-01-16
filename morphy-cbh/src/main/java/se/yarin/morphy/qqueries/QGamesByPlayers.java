@@ -42,7 +42,7 @@ public class QGamesByPlayers extends ItemQuery<Game> {
     if (playerResult == null) {
       return INFINITE;
     }
-    return playerResult.stream().map(Entity::count).reduce(0, Integer::sum);
+    return playerResult.stream().mapToInt(Entity::count).sum();
   }
 
   public void evaluateSubQuery(@NotNull DatabaseReadTransaction txn) {

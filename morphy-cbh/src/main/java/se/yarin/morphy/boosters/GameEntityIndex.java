@@ -456,7 +456,7 @@ public class GameEntityIndex implements MetricsProvider {
       int blockId = oldBlocks.pollFirst();
       IndexBlockItem block =
           ImmutableIndexBlockItem.builder()
-              .gameIds(Collections.emptyList())
+              .gameIds(List.of())
               .nextBlockId(nextDeletedId)
               .unknown(0)
               .build();

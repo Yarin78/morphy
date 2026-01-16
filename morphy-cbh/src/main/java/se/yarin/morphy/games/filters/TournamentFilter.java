@@ -25,7 +25,7 @@ public class TournamentFilter
   }
 
   public TournamentFilter(@NotNull Tournament tournament) {
-    this(Collections.singleton(tournament));
+    this(Set.of(tournament));
   }
 
   public TournamentFilter(@NotNull Collection<Tournament> tournaments) {

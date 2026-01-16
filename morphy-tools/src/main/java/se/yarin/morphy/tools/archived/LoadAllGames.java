@@ -72,16 +72,16 @@ public class LoadAllGames {
                                               GameMovesModel moves = gqa.getMoves();
                                               if (gqa.hasSetupPosition()) {
                                                   log.info("Setup position in game " + i);
-                                                  log.info("  " + moves.toString());
+                                                  log.info("  " + moves);
                                               }
                                           } catch (Exception e) {
                                               log.error("Error parsing moves", e);
-                                              log.info(String.format("Game %d after move %d: %s", i, posNo, gqa.toString()));
+                                              log.info(String.format("Game %d after move %d: %s", i, posNo, gqa));
                                               log.info(String.format("  Type is %d, eco is %s, unknown value is %d (%04x)",
                                                       gqa.getType(), gqa.getEco(), gqa.getUnknown(), gqa.getUnknown()));
                                               log.info(String.format("  Tournament: type = %s, nation = %s, rounds = %d, time control = %s, category = %d",
                                                       gqa.getTournamentType(), gqa.getTournamentCountry(), gqa.getTournamentRounds(), gqa.getTournamentTimeControl(), gqa.getTournamentCategory()));
-          //                                    log.info("  " + moves.toString());
+          //                                    log.info("  " + moves);
                                           }
                                       }
                                       */

@@ -216,7 +216,7 @@ public class CompactMoveEncoder implements MoveEncoder {
       if (delta == dir * 2) return ofs + 1;
       if (delta == dir * 9) return ofs + 2;
       if (delta == dir * -7) return ofs + 3;
-      throw new IllegalArgumentException("Can't encode illegal move: " + move.toString());
+      throw new IllegalArgumentException("Can't encode illegal move: " + move);
     }
 
     if (piece == Piece.KING) {
@@ -224,7 +224,7 @@ public class CompactMoveEncoder implements MoveEncoder {
       if (move.isLongCastle()) return ofs + 9;
       int dif = move.toSqi() - move.fromSqi() + 32;
       if (dif >= 0 && dif < 64 && kingDelta[dif] >= 0) return ofs + kingDelta[dif];
-      throw new IllegalArgumentException("Can't encode illegal move: " + move.toString());
+      throw new IllegalArgumentException("Can't encode illegal move: " + move);
     }
 
     if (piece == Piece.BISHOP || piece == Piece.ROOK || piece == Piece.QUEEN) {
@@ -244,7 +244,7 @@ public class CompactMoveEncoder implements MoveEncoder {
         dir = 3;
         stride = (dx + 6) % 7;
       } else {
-        throw new IllegalArgumentException("Can't encode illegal move: " + move.toString());
+        throw new IllegalArgumentException("Can't encode illegal move: " + move);
       }
       if (piece == Piece.BISHOP) dir -= 2;
       return ofs + dir * 7 + stride;
@@ -253,10 +253,10 @@ public class CompactMoveEncoder implements MoveEncoder {
     if (piece == Piece.KNIGHT) {
       int dif = move.toSqi() - move.fromSqi() + 32;
       if (dif >= 0 && dif < 64 && knightDelta[dif] >= 0) return ofs + knightDelta[dif];
-      throw new IllegalArgumentException("Can't encode illegal move: " + move.toString());
+      throw new IllegalArgumentException("Can't encode illegal move: " + move);
     }
 
-    throw new IllegalArgumentException("Can't encode illegal move: " + move.toString());
+    throw new IllegalArgumentException("Can't encode illegal move: " + move);
   }
 
   private int encodeSpecialMove(Move move) {

@@ -17,7 +17,7 @@ public interface IndexBlockItem {
     return ImmutableIndexBlockItem.builder()
         .nextBlockId(-1)
         .unknown(0)
-        .gameIds(Collections.emptyList())
+        .gameIds(List.of())
         .build();
   }
 }

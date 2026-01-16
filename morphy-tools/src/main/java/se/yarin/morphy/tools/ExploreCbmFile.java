@@ -59,7 +59,7 @@ public class ExploreCbmFile {
         }
     }
      */
-    HashMap<String, Integer> fileCnt = new HashMap<String, Integer>();
+    HashMap<String, Integer> fileCnt = new HashMap<>();
     System.out.println(numRecords + " records in " + cbmFile + " (unknown is " + unknown + ")");
     for (int i = 0; i < numRecords; i++) {
       ByteBuffer buf = ByteBuffer.allocate(8);

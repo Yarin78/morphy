@@ -165,8 +165,8 @@ public class GameEntityIndexTest {
     GameEntityIndex index =
         new GameEntityIndex(Arrays.asList(EntityType.PLAYER, EntityType.SOURCE));
     index.updateEntity(0, EntityType.PLAYER, Map.of(2, 1));
-    assertEquals(Collections.emptyList(), index.getGameIds(0, EntityType.SOURCE, true));
-    assertEquals(Collections.emptyList(), index.getGameIds(1, EntityType.PLAYER, true));
+    assertEquals(List.of(), index.getGameIds(0, EntityType.SOURCE, true));
+    assertEquals(List.of(), index.getGameIds(1, EntityType.PLAYER, true));
   }
 
   @Test
@@ -180,9 +180,9 @@ public class GameEntityIndexTest {
           }
         };
     index.updateEntity(5, EntityType.PLAYER, map);
-    assertEquals(Collections.emptyList(), index.getGameIds(2, EntityType.PLAYER, true));
-    assertEquals(Collections.emptyList(), index.getGameIds(4, EntityType.PLAYER, true));
-    assertEquals(Collections.singletonList(2), index.getGameIds(5, EntityType.PLAYER, true));
+    assertEquals(List.of(), index.getGameIds(2, EntityType.PLAYER, true));
+    assertEquals(List.of(), index.getGameIds(4, EntityType.PLAYER, true));
+    assertEquals(List.of(2), index.getGameIds(5, EntityType.PLAYER, true));
   }
 
   @Test
@@ -235,7 +235,7 @@ public class GameEntityIndexTest {
           }
         };
     index.updateEntity(0, EntityType.PLAYER, tm);
-    assertEquals(Collections.singletonList(15), index.getGameIds(0, EntityType.PLAYER, true));
+    assertEquals(List.of(15), index.getGameIds(0, EntityType.PLAYER, true));
     assertEquals(1, index.getNumBlocks());
     assertEquals(0, index.getDeletedBlockIds().size());
   }
@@ -343,7 +343,7 @@ public class GameEntityIndexTest {
     index.updateEntity(0, EntityType.PLAYER, Map.of(5, 0));
 
     assertEquals(0, index.getNumBlocks());
-    assertEquals(Collections.emptyList(), index.getGameIds(0, EntityType.PLAYER, true));
+    assertEquals(List.of(), index.getGameIds(0, EntityType.PLAYER, true));
   }
 
   @Test
@@ -355,6 +355,6 @@ public class GameEntityIndexTest {
     assertEquals(2, index.getNumBlocks());
 
     index.updateEntity(0, EntityType.PLAYER, Map.of(2, 0, 3, 0));
-    assertEquals(Collections.singletonList(1), index.getGameIds(0, EntityType.PLAYER, false));
+    assertEquals(List.of(1), index.getGameIds(0, EntityType.PLAYER, false));
   }
 }

@@ -20,7 +20,7 @@ public class OverwriteMoveEvent extends GameEvent {
     try {
       model.overwriteMove(move.toMove(model.cursor().position()));
     } catch (IllegalMoveException e) {
-      throw new GameEventException(this, model, "Illegal move: " + move.toString());
+      throw new GameEventException(this, model, "Illegal move: " + move);
     }
   }
 }

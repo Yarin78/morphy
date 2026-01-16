@@ -35,7 +35,7 @@ public class TeamFilter
   }
 
   public TeamFilter(@NotNull Team team, @Nullable GameEntityJoinCondition matchCondition) {
-    this(Collections.singletonList(team), matchCondition);
+    this(List.of(team), matchCondition);
   }
 
   public TeamFilter(
