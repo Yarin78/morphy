@@ -1,0 +1,224 @@
+# Morphy - ChessBase Database Library
+
+## Project Overview
+
+Morphy is a Java 21 library and CLI tool for reading and writing ChessBase databases (.cbh format). It provides a transaction-based API for accessing chess game data stored in ChessBase's proprietary binary format.
+
+## Technology Stack
+
+- **Language:** Java 21 (uses records, pattern matching, switch expressions)
+- **Build:** Maven 3.6+ (multi-module)
+- **Key Dependencies:**
+  - Immutables 2.10.1 - Code generation for immutable value objects
+  - JUnit 5 Jupiter - Testing
+  - Picocli 4.7.6 - CLI framework
+  - Log4j2 2.24.3 - Logging
+  - JetBrains Annotations - Nullability (@NotNull, @Nullable)
+
+## Project Structure
+
+```
+morphy/
+├── morphy-cbh/          # Core library (main module)
+│   └── src/main/java/
+│       ├── se/yarin/chess/       # Format-independent chess logic
+│       │   ├── Position.java     # Immutable board state
+│       │   ├── Move.java         # Chess move with context
+│       │   ├── GameModel.java    # Game header + moves
+│       │   └── annotations/      # Move annotations
+│       │
+│       ├── se/yarin/morphy/      # Database API
+│       │   ├── Database.java     # Main entry point
+│       │   ├── DatabaseReadTransaction.java
+│       │   ├── DatabaseWriteTransaction.java
+│       │   ├── entities/         # Player, Tournament, etc.
+│       │   ├── games/            # Game storage
+│       │   ├── queries/          # Query planning
+│       │   └── storage/          # Low-level file I/O
+│       │
+│       └── se/yarin/util/        # General utilities
+│
+├── morphy-cli/          # Command-line interface
+│   └── commands/        # Picocli commands (Games, Players, etc.)
+│
+└── morphy-tools/        # Development utilities
+```
+
+## Architecture
+
+### Three-Layer Design
+
+1. **Chess Core** (`se.yarin.chess`) - Format-independent chess logic
+   - Reusable, no database dependencies
+   - Position, Move, GameModel classes
+
+2. **Database API** (`se.yarin.morphy`) - Transaction-based operations
+   - Database facade, transactions, queries
+   - Entity management (Player, Tournament, etc.)
+
+3. **Storage Layer** (`se.yarin.morphy.storage`) - File I/O abstraction
+   - ItemStorage (fixed-size records)
+   - BlobStorage (variable-length data)
+
+### Key Patterns
+
+**Immutability:** All entities use `@Value.Immutable` from Immutables library
+```java
+@Value.Immutable
+public interface Player extends Entity {
+    String lastName();
+    @Nullable String firstName();
+    // ...
+}
+// Usage: ImmutablePlayer.builder().lastName("Carlsen").build()
+```
+
+**Transaction Pattern:**
+```java
+try (DatabaseReadTransaction txn = db.beginReadTransaction()) {
+    Game game = txn.getGame(1);
+    GameModel model = game.getModel();
+}
+```
+
+**Position Immutability:**
+```java
+Position pos = Position.start();
+Move e4 = new Move(pos, E2, E4);
+Position newPos = pos.doMove(e4);  // Returns NEW Position
+```
+
+## Coding Conventions
+
+### Style
+- **Google Java Format** - All code formatted with Google style
+- **Modern Java 21 features:**
+  - Records for simple data classes
+  - Switch expressions (not statements)
+  - Pattern matching in instanceof
+  - No Lombok (recently removed)
+
+### Naming
+| Type | Convention | Example |
+|------|------------|---------|
+| Interface | No prefix | `Entity`, `GameFilter` |
+| Implementation | Descriptive suffix | `FileItemStorage` |
+| Immutable impl | `Immutable` prefix (generated) | `ImmutablePlayer` |
+| Test class | `Test` suffix | `DatabaseTest` |
+| Constants | UPPER_SNAKE_CASE | `MANDATORY_EXTENSIONS` |
+
+### Null Safety
+- Use `@NotNull` and `@Nullable` from JetBrains Annotations
+- Every public method should have nullability annotations
+
+### Resource Management
+- Always use try-with-resources for `AutoCloseable` resources
+- Transactions, streams, and file handles must be closed
+
+### Code Organization (in classes)
+1. Static constants
+2. Instance fields (prefer final)
+3. Constructors
+4. Public methods
+5. Package-private methods
+6. Private helpers
+
+## Important Classes
+
+### Database Entry Points
+- `Database` - Main facade, open/create databases
+- `DatabaseReadTransaction` - Read operations (multiple concurrent allowed)
+- `DatabaseWriteTransaction` - Write operations (exclusive access)
+
+### Chess Core
+- `Position` - Immutable 8x8 board with pieces
+- `Move` - From/to square with capture/promotion info
+- `GameModel` - Complete game (header + move tree)
+- `GameMovesModel` - Tree structure with variations
+
+### Entities
+- `Player`, `Tournament`, `Annotator`, `Source`, `Team`, `GameTag`
+- All immutable, stored in separate indexes
+- Referenced by ID from games
+
+### Storage
+- `ItemStorage<T>` - Fixed-size records interface
+- `BlobStorage` - Variable-length data interface
+- File and InMemory implementations available
+
+## Testing
+
+- JUnit 5 Jupiter with Mockito
+- Test databases in `src/test/resources/databases/`
+- Run: `mvn test`
+
+## Build Commands
+
+```bash
+# Build all modules
+mvn clean install
+
+# Run tests
+mvn test
+
+# Build CLI JAR with dependencies
+mvn package -pl morphy-cli
+
+# Run CLI
+java -jar morphy-cli/target/morphy-cli-*-jar-with-dependencies.jar
+```
+
+## File Format
+
+ChessBase databases consist of multiple files:
+
+**Mandatory:** `.cbh` (headers), `.cbg` (moves), `.cba` (annotations), `.cbp` (players), `.cbt` (tournaments), `.cbc` (annotators), `.cbs` (sources)
+
+**Optional:** `.cbj` (extended headers), `.cbtt` (tournament extra), `.cbe` (teams), `.cbl` (tags)
+
+## Common Tasks
+
+### Opening a Database
+```java
+Database db = Database.open(new File("path/to/database.cbh"));
+// or read-only:
+Database db = Database.open(file, DatabaseMode.READ_ONLY);
+```
+
+### Reading Games
+```java
+try (var txn = db.beginReadTransaction()) {
+    Game game = txn.getGame(gameId);
+    GameModel model = game.getModel();
+    System.out.println(model.header().white());
+}
+```
+
+### Querying
+```java
+GameQuery query = new GameQuery(db)
+    .filter(new PlayerFilter(db, "Carlsen"))
+    .filter(new DateRangeFilter(startDate, endDate));
+
+try (var txn = db.beginReadTransaction()) {
+    for (Game game : txn.stream(query)) {
+        // process games
+    }
+}
+```
+
+### Writing Games
+```java
+try (var txn = db.beginWriteTransaction()) {
+    txn.addGame(gameModel);
+    txn.commit();
+}
+```
+
+## Documentation
+
+Detailed docs available in `morphy-cbh/docs/`:
+- `ARCHITECTURE.md` - System design
+- `DEVELOPER-GUIDE.md` - Contributing guide
+- `USER-GUIDE.md` - Library usage
+- `cbh-format/` - File format specification
