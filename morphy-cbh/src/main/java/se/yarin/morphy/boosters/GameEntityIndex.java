@@ -437,11 +437,7 @@ public class GameEntityIndex implements MetricsProvider {
       }
 
       IndexBlockItem block =
-          ImmutableIndexBlockItem.builder()
-              .gameIds(Collections.unmodifiableList(blockGames))
-              .nextBlockId(nextBlockId)
-              .unknown(0)
-              .build();
+          new IndexBlockItem(nextBlockId, 0, Collections.unmodifiableList(blockGames));
       cibStorage.putItem(currentBlockId, block);
 
       if (newHeadBlockId < 0) {
@@ -454,22 +450,14 @@ public class GameEntityIndex implements MetricsProvider {
 
     while (!oldBlocks.isEmpty()) {
       int blockId = oldBlocks.pollFirst();
-      IndexBlockItem block =
-          ImmutableIndexBlockItem.builder()
-              .gameIds(List.of())
-              .nextBlockId(nextDeletedId)
-              .unknown(0)
-              .build();
+      IndexBlockItem block = new IndexBlockItem(nextDeletedId, 0, List.of());
       cibStorage.putItem(blockId, block);
       nextDeletedId = blockId;
     }
 
+    IndexBlockHeader currentHeader = cibStorage.getHeader();
     cibStorage.putHeader(
-        ImmutableIndexBlockHeader.builder()
-            .from(cibStorage.getHeader())
-            .numBlocks(nextNewBlockId)
-            .deletedBlockId(nextDeletedId)
-            .build());
+        new IndexBlockHeader(currentHeader.itemSize(), nextNewBlockId, nextDeletedId));
   }
 
   public @NotNull List<Integer> getDeletedBlockIds() {
@@ -589,7 +577,7 @@ public class GameEntityIndex implements MetricsProvider {
     newHeadTails[order * 2] = headBlock;
     newHeadTails[order * 2 + 1] = tailBlock;
 
-    IndexItem newItem = ImmutableIndexItem.builder().headTails(newHeadTails).build();
+    IndexItem newItem = new IndexItem(newHeadTails);
 
     // We can't write beyond the end of the file, so make sure to fill up with empty index table
     // items

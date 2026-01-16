@@ -1,32 +1,19 @@
 package se.yarin.morphy.queries.operations;
 
-import org.immutables.value.Value;
+public record QueryCost(
+    long actualRows,
+    long actualPhysicalPageReads,
+    long actualLogicalPageReads,
+    long actualDeserializations,
+    long actualWallClockTime,
+    long estimatedRows,
+    long estimatedPageReads,
+    long estimatedDeserializations,
+    double estimatedCpuCost,
+    double estimatedIOCost,
+    double estimatedTotalCost) {
 
-@Value.Immutable
-public interface QueryCost {
-  long actualRows();
-
-  long actualPhysicalPageReads();
-
-  long actualLogicalPageReads();
-
-  long actualDeserializations();
-
-  long actualWallClockTime();
-
-  long estimatedRows();
-
-  long estimatedPageReads();
-
-  long estimatedDeserializations();
-
-  double estimatedCpuCost();
-
-  double estimatedIOCost();
-
-  double estimatedTotalCost();
-
-  default String format() {
+  public String format() {
     String actual = "";
     if (actualRows() > 0) {
       // We have actual data

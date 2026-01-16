@@ -215,19 +215,18 @@ public abstract class QueryOperator<T extends IdObject> {
       }
     }
 
-    return ImmutableQueryCost.builder()
-        .estimatedPageReads(totalEstimatePageReads)
-        .estimatedDeserializations(totalEstimateDeserializations)
-        .estimatedRows(totalEstimateRows)
-        .estimatedIOCost(totalEstimateIOCost)
-        .estimatedCpuCost(totalEstimateCPUCost)
-        .estimatedTotalCost(totalEstimateIOCost + totalEstimateCPUCost)
-        .actualRows(totalActualRows)
-        .actualDeserializations(totalActualDeserializations)
-        .actualLogicalPageReads(totalActualLogicalReads)
-        .actualPhysicalPageReads(totalActualPhysicalReads)
-        .actualWallClockTime(actualWallClockTime)
-        .build();
+    return new QueryCost(
+        totalActualRows,
+        totalActualPhysicalReads,
+        totalActualLogicalReads,
+        totalActualDeserializations,
+        actualWallClockTime,
+        totalEstimateRows,
+        totalEstimatePageReads,
+        totalEstimateDeserializations,
+        totalEstimateCPUCost,
+        totalEstimateIOCost,
+        totalEstimateIOCost + totalEstimateCPUCost);
   }
 
   public QueryOperator<T> sortedAndDistinct() {

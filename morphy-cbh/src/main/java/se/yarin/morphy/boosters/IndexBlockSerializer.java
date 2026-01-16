@@ -43,11 +43,10 @@ public class IndexBlockSerializer
   @Override
   public @NotNull IndexBlockHeader deserializeHeader(@NotNull ByteBuffer buf)
       throws MorphyInvalidDataException {
-    return ImmutableIndexBlockHeader.builder()
-        .itemSize(ByteBufferUtil.getIntL(buf))
-        .numBlocks(ByteBufferUtil.getIntL(buf))
-        .deletedBlockId(ByteBufferUtil.getIntL(buf))
-        .build();
+    return new IndexBlockHeader(
+        ByteBufferUtil.getIntL(buf),
+        ByteBufferUtil.getIntL(buf),
+        ByteBufferUtil.getIntL(buf));
   }
 
   @Override
@@ -56,11 +55,8 @@ public class IndexBlockSerializer
     itemMetricsRef.update(metrics -> metrics.addDeserialization(1));
 
     int prevPos = buf.position();
-    ImmutableIndexBlockItem.Builder builder =
-        ImmutableIndexBlockItem.builder()
-            .nextBlockId(ByteBufferUtil.getIntL(buf))
-            .unknown(ByteBufferUtil.getIntL(buf));
-
+    int nextBlockId = ByteBufferUtil.getIntL(buf);
+    int unknown = ByteBufferUtil.getIntL(buf);
     int numGames = ByteBufferUtil.getIntL(buf);
 
     ArrayList<Integer> gameIds = new ArrayList<>();
@@ -69,7 +65,7 @@ public class IndexBlockSerializer
     }
     buf.position(prevPos + header.itemSize());
 
-    return builder.gameIds(Collections.unmodifiableList(gameIds)).build();
+    return new IndexBlockItem(nextBlockId, unknown, Collections.unmodifiableList(gameIds));
   }
 
   @Override

@@ -3,9 +3,9 @@ package se.yarin.morphy.qqueries;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import se.yarin.morphy.DatabaseReadTransaction;
-import se.yarin.morphy.qqueries.ImmutableQueryResult;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
@@ -61,12 +61,11 @@ public class QueryExecutor<T> {
           }
         });
 
-    return ImmutableQueryResult.<T>builder()
-        .total(hitsFound.get())
-        .result(result)
-        .consumed(0)
-        .elapsedTime(System.currentTimeMillis() - startTime)
-        .build();
+    return new QueryResult<>(
+        hitsFound.get(),
+        0,
+        result,
+        System.currentTimeMillis() - startTime);
   }
 
   /**
@@ -98,10 +97,10 @@ public class QueryExecutor<T> {
             progressUpdater.accept(item);
           }
         });
-    return ImmutableQueryResult.<T>builder()
-        .total(hitsFound.get())
-        .consumed(hitsConsumed.get())
-        .elapsedTime(System.currentTimeMillis() - startTime)
-        .build();
+    return new QueryResult<>(
+        hitsFound.get(),
+        hitsConsumed.get(),
+        List.of(),
+        System.currentTimeMillis() - startTime);
   }
 }

@@ -1,6 +1,5 @@
 package se.yarin.morphy.games.moves;
 
-import org.immutables.value.Value;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.morphy.exceptions.MorphyMoveDecodingException;
@@ -24,29 +23,9 @@ public class CompactMoveEncoder implements MoveEncoder {
   // move
   public static boolean INTEGRITY_CHECKS_ENABLED = false;
 
-  @Value.Immutable
-  interface OpcodeRange {
-    @Value.Parameter
-    Piece piece();
+  record OpcodeRange(Piece piece, int opcode, int pieceNo) {}
 
-    @Value.Parameter
-    int opcode();
-
-    @Value.Parameter
-    int pieceNo();
-  }
-
-  @Value.Immutable
-  interface OpcodeMap {
-    @Value.Parameter
-    Piece piece();
-
-    @Value.Parameter
-    int ofs();
-
-    @Value.Parameter
-    int pieceNo();
-  }
+  record OpcodeMap(Piece piece, int ofs, int pieceNo) {}
 
   private static final int OPCODE_NULLMOVE = 0;
   private static final int OPCODE_TWO_BYTES = 235;
@@ -56,28 +35,28 @@ public class CompactMoveEncoder implements MoveEncoder {
 
   private static final OpcodeRange[] opcodeRanges =
       new OpcodeRange[] {
-        ImmutableOpcodeRange.of(Piece.KING, 1, 0),
-        ImmutableOpcodeRange.of(Piece.QUEEN, 11, 0),
-        ImmutableOpcodeRange.of(Piece.ROOK, 39, 0),
-        ImmutableOpcodeRange.of(Piece.ROOK, 53, 1),
-        ImmutableOpcodeRange.of(Piece.BISHOP, 67, 0),
-        ImmutableOpcodeRange.of(Piece.BISHOP, 81, 1),
-        ImmutableOpcodeRange.of(Piece.KNIGHT, 95, 0),
-        ImmutableOpcodeRange.of(Piece.KNIGHT, 103, 1),
-        ImmutableOpcodeRange.of(Piece.PAWN, 111, 0),
-        ImmutableOpcodeRange.of(Piece.PAWN, 115, 1),
-        ImmutableOpcodeRange.of(Piece.PAWN, 119, 2),
-        ImmutableOpcodeRange.of(Piece.PAWN, 123, 3),
-        ImmutableOpcodeRange.of(Piece.PAWN, 127, 4),
-        ImmutableOpcodeRange.of(Piece.PAWN, 131, 5),
-        ImmutableOpcodeRange.of(Piece.PAWN, 135, 6),
-        ImmutableOpcodeRange.of(Piece.PAWN, 139, 7),
-        ImmutableOpcodeRange.of(Piece.QUEEN, 143, 1),
-        ImmutableOpcodeRange.of(Piece.QUEEN, 171, 2),
-        ImmutableOpcodeRange.of(Piece.ROOK, 199, 2),
-        ImmutableOpcodeRange.of(Piece.BISHOP, 213, 2),
-        ImmutableOpcodeRange.of(Piece.KNIGHT, 227, 2),
-        ImmutableOpcodeRange.of(Piece.NO_PIECE, OPCODE_TWO_BYTES, 0)
+        new OpcodeRange(Piece.KING, 1, 0),
+        new OpcodeRange(Piece.QUEEN, 11, 0),
+        new OpcodeRange(Piece.ROOK, 39, 0),
+        new OpcodeRange(Piece.ROOK, 53, 1),
+        new OpcodeRange(Piece.BISHOP, 67, 0),
+        new OpcodeRange(Piece.BISHOP, 81, 1),
+        new OpcodeRange(Piece.KNIGHT, 95, 0),
+        new OpcodeRange(Piece.KNIGHT, 103, 1),
+        new OpcodeRange(Piece.PAWN, 111, 0),
+        new OpcodeRange(Piece.PAWN, 115, 1),
+        new OpcodeRange(Piece.PAWN, 119, 2),
+        new OpcodeRange(Piece.PAWN, 123, 3),
+        new OpcodeRange(Piece.PAWN, 127, 4),
+        new OpcodeRange(Piece.PAWN, 131, 5),
+        new OpcodeRange(Piece.PAWN, 135, 6),
+        new OpcodeRange(Piece.PAWN, 139, 7),
+        new OpcodeRange(Piece.QUEEN, 143, 1),
+        new OpcodeRange(Piece.QUEEN, 171, 2),
+        new OpcodeRange(Piece.ROOK, 199, 2),
+        new OpcodeRange(Piece.BISHOP, 213, 2),
+        new OpcodeRange(Piece.KNIGHT, 227, 2),
+        new OpcodeRange(Piece.NO_PIECE, OPCODE_TWO_BYTES, 0)
       };
 
   private static final int opcodeOffsets[][];
@@ -99,8 +78,7 @@ public class CompactMoveEncoder implements MoveEncoder {
         ofs = 0;
       }
       opcodeMap[op] =
-          ImmutableOpcodeMap.of(
-              opcodeRanges[rangeNo].piece(), ofs, opcodeRanges[rangeNo].pieceNo());
+          new OpcodeMap(opcodeRanges[rangeNo].piece(), ofs, opcodeRanges[rangeNo].pieceNo());
     }
 
     // Create inverse map of opcodeRanges

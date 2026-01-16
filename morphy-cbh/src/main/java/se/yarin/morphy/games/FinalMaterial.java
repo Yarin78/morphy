@@ -1,31 +1,13 @@
 package se.yarin.morphy.games;
 
-import org.immutables.value.Value;
-
-@Value.Immutable
-public abstract class FinalMaterial {
-  @Value.Parameter
-  public abstract int numPawns();
-
-  @Value.Parameter
-  public abstract int numQueens();
-
-  @Value.Parameter
-  public abstract int numKnights();
-
-  @Value.Parameter
-  public abstract int numBishops();
-
-  @Value.Parameter
-  public abstract int numRooks();
-
+public record FinalMaterial(int numPawns, int numQueens, int numKnights, int numBishops, int numRooks) {
   public static FinalMaterial decode(int value) {
     int numPawns = (value >> 12) & 15;
     int numQueens = (value >> 9) & 7;
     int numKnights = (value >> 6) & 7;
     int numBishops = (value >> 3) & 7;
     int numRooks = (value >> 3) & 7;
-    return ImmutableFinalMaterial.of(numPawns, numQueens, numKnights, numBishops, numRooks);
+    return new FinalMaterial(numPawns, numQueens, numKnights, numBishops, numRooks);
   }
 
   public static int encode(FinalMaterial material) {

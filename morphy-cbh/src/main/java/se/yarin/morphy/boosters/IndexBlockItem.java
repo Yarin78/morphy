@@ -1,23 +1,10 @@
 package se.yarin.morphy.boosters;
 
-import org.immutables.value.Value;
-
 import java.util.*;
 
 /** Represents an item in the .cib/.cib2 file */
-@Value.Immutable
-public interface IndexBlockItem {
-  int nextBlockId();
-
-  int unknown();
-
-  List<Integer> gameIds();
-
-  static IndexBlockItem empty() {
-    return ImmutableIndexBlockItem.builder()
-        .nextBlockId(-1)
-        .unknown(0)
-        .gameIds(List.of())
-        .build();
+public record IndexBlockItem(int nextBlockId, int unknown, List<Integer> gameIds) {
+  public static IndexBlockItem empty() {
+    return new IndexBlockItem(-1, 0, List.of());
   }
 }

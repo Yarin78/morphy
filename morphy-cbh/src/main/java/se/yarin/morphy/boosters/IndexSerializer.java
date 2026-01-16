@@ -41,11 +41,10 @@ public class IndexSerializer implements ItemStorageSerializer<IndexHeader, Index
   @Override
   public @NotNull IndexHeader deserializeHeader(@NotNull ByteBuffer buf)
       throws MorphyInvalidDataException {
-    return ImmutableIndexHeader.builder()
-        .itemSize(ByteBufferUtil.getIntL(buf))
-        .unknown1(ByteBufferUtil.getIntL(buf))
-        .unknown2(ByteBufferUtil.getIntL(buf))
-        .build();
+    return new IndexHeader(
+        ByteBufferUtil.getIntL(buf),
+        ByteBufferUtil.getIntL(buf),
+        ByteBufferUtil.getIntL(buf));
   }
 
   @Override
@@ -57,7 +56,7 @@ public class IndexSerializer implements ItemStorageSerializer<IndexHeader, Index
     for (int i = 0; i < ints.length; i++) {
       ints[i] = ByteBufferUtil.getIntL(buf);
     }
-    return ImmutableIndexItem.builder().headTails(ints).build();
+    return new IndexItem(ints);
   }
 
   @Override
