@@ -739,8 +739,9 @@ Ensure all files are present when opening a database.
 
 ## Further Reading
 
+- [Database Reference](DATABASE-REFERENCE.md) - Complete reference of all game header fields and entities
 - [Architecture Overview](ARCHITECTURE.md) - System design and component interactions
 - [Developer Guide](DEVELOPER-GUIDE.md) - For contributors to the Morphy library
 - [Chess Package](chess-package.md) - Detailed `se.yarin.chess` documentation
 - [Morphy Package](morphy-package.md) - Detailed `se.yarin.morphy` documentation
-- [CBH Format](cbh-format/README.md) - ChessBase file format specification
+- [CBH Format](cbh-format/README.md) - ChessBase file format specification (low-level binary format)
