@@ -5,19 +5,8 @@ import se.yarin.morphy.Instrumentation;
 
 import java.util.function.Consumer;
 
-public class MetricsRef<T extends Metrics> {
-  private final @NotNull Instrumentation instrumentation;
-  private final @NotNull MetricsKey metricsKey;
-
-  public MetricsRef(@NotNull Instrumentation instrumentation, @NotNull MetricsKey metricsKey) {
-    this.instrumentation = instrumentation;
-    this.metricsKey = metricsKey;
-  }
-
-  public @NotNull MetricsKey metricsKey() {
-    return metricsKey;
-  }
-
+public record MetricsRef<T extends Metrics>(
+    @NotNull Instrumentation instrumentation, @NotNull MetricsKey metricsKey) {
   public void update(Consumer<T> metricUpdater) {
     metricUpdater.accept(get());
   }

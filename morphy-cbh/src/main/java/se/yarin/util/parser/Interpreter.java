@@ -17,7 +17,7 @@ public class Interpreter implements Expr.Visitor<Object> {
     Object left = evaluate(expr.left);
     Object right = evaluate(expr.right);
 
-    return switch (expr.operator.type) {
+    return switch (expr.operator.type()) {
       case PLUS -> (int) left + (int) right;
       case MINUS -> (int) left - (int) right;
       case SLASH -> (int) left / (int) right;
@@ -33,7 +33,7 @@ public class Interpreter implements Expr.Visitor<Object> {
       case LESS_EQUAL -> (int) left <= (int) right;
       case BANG_EQUAL -> !left.equals(right);
       case EQUAL_EQUAL -> left.equals(right);
-      default -> throw new RuntimeException("Unexpected operator type: " + expr.operator.type);
+      default -> throw new RuntimeException("Unexpected operator type: " + expr.operator.type());
     };
   }
 
@@ -41,11 +41,11 @@ public class Interpreter implements Expr.Visitor<Object> {
   public Object visitUnaryExpr(Expr.Unary expr) {
     Object right = evaluate(expr.right);
 
-    return switch (expr.operator.type) {
+    return switch (expr.operator.type()) {
       case MINUS -> -(int) right;
       case BANG -> !(boolean) right;
       case TILDE -> ~(int) right;
-      default -> throw new RuntimeException("Unexpected operator type: " + expr.operator.type);
+      default -> throw new RuntimeException("Unexpected operator type: " + expr.operator.type());
     };
   }
 

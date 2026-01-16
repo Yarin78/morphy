@@ -58,17 +58,17 @@ public class Parser {
   }
 
   private ParseError error(Token token, String message) {
-    if (token.type == TokenType.EOF) {
+    if (token.type() == TokenType.EOF) {
       log.error("at end: " + message);
     } else {
-      log.error(" at '" + token.lexeme + "': " + message);
+      log.error(" at '" + token.lexeme() + "': " + message);
     }
     return new ParseError();
   }
 
   private boolean check(TokenType type) {
     if (isAtEnd()) return false;
-    return peek().type == type;
+    return peek().type() == type;
   }
 
   private Token advance() {
@@ -77,7 +77,7 @@ public class Parser {
   }
 
   private boolean isAtEnd() {
-    return peek().type == EOF;
+    return peek().type() == EOF;
   }
 
   private Token peek() {
@@ -217,7 +217,7 @@ public class Parser {
     consume(RIGHT_PAREN, "Expect ')' after function call");
 
     BiFunction<byte[], Integer, Integer> function;
-    String functionName = functionToken.lexeme;
+    String functionName = functionToken.lexeme();
     switch (functionName) {
       case "byte" -> function = ByteBufferUtil::getUnsignedByte;
       case "shortb" -> function = ByteBufferUtil::getUnsignedShortB;
@@ -233,7 +233,7 @@ public class Parser {
     if (match(FALSE)) return new Expr.Literal(false);
     if (match(TRUE)) return new Expr.Literal(true);
     if (match(INTEGER, STRING)) {
-      return new Expr.Literal(previous().literal);
+      return new Expr.Literal(previous().literal());
     }
     if (check(IDENTIFIER)) {
       return function();

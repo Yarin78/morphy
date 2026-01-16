@@ -5,21 +5,13 @@ import java.time.LocalDate;
 /**
  * Represents a date where each of the year, month and day parts are optional. Date is immutable.
  */
-public final class Date implements Comparable<Date> {
-  private final int year, month, day;
-
+public record Date(int year, int month, int day) implements Comparable<Date> {
   public Date(int year) {
     this(year, 0, 0);
   }
 
   public Date(int year, int month) {
     this(year, month, 0);
-  }
-
-  public Date(int year, int month, int day) {
-    this.year = year;
-    this.month = month;
-    this.day = day;
   }
 
   public static Date unset() {
@@ -33,18 +25,6 @@ public final class Date implements Comparable<Date> {
 
   public boolean isUnset() {
     return this.year == 0;
-  }
-
-  public int year() {
-    return year;
-  }
-
-  public int month() {
-    return month;
-  }
-
-  public int day() {
-    return day;
   }
 
   @Override
@@ -84,26 +64,6 @@ public final class Date implements Comparable<Date> {
     } else {
       return "";
     }
-  }
-
-  @Override
-  public boolean equals(Object o) {
-    if (this == o) return true;
-    if (o == null || getClass() != o.getClass()) return false;
-
-    Date date = (Date) o;
-
-    if (year != date.year) return false;
-    if (month != date.month) return false;
-    return day == date.day;
-  }
-
-  @Override
-  public int hashCode() {
-    int result = year;
-    result = 31 * result + month;
-    result = 31 * result + day;
-    return result;
   }
 
   @Override

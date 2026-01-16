@@ -12,11 +12,21 @@ import static se.yarin.chess.Piece.NO_PIECE;
  * <p>Note: There may be different ways of representing castles, in which case equals/hashcode
  * doesn't work
  */
-public class ShortMove {
-  private final int fromSqi, toSqi;
-  private final Stone promotionStone;
-  // Must be explicitly set to determine castling in a Chess960 game in some situations
-  private final boolean longCastling, shortCastling;
+public record ShortMove(
+    int fromSqi, int toSqi, Stone promotionStone, boolean longCastling, boolean shortCastling) {
+  public ShortMove {
+    // Skip validation for castling moves (which have special square values)
+    if (!longCastling && !shortCastling) {
+      if (fromSqi < 0 || fromSqi >= 64 || toSqi < 0 || toSqi >= 64) {
+        // Check if the null move
+        if (!(fromSqi == Chess.NO_SQUARE
+            && toSqi == Chess.NO_SQUARE
+            && promotionStone == Stone.NO_STONE)) {
+          throw new IllegalArgumentException("Not a valid move");
+        }
+      }
+    }
+  }
 
   /**
    * Creates a new short move. To create a castling move, use {@link #shortCastles()} or {@link
@@ -26,7 +36,7 @@ public class ShortMove {
    * @param toSqi to to square index
    */
   public ShortMove(int fromSqi, int toSqi) {
-    this(fromSqi, toSqi, Stone.NO_STONE);
+    this(fromSqi, toSqi, Stone.NO_STONE, false, false);
   }
 
   /**
@@ -37,27 +47,7 @@ public class ShortMove {
    * @param promotionStone the new stone after the promotion
    */
   public ShortMove(int fromSqi, int toSqi, Stone promotionStone) {
-    if (fromSqi < 0 || fromSqi >= 64 || toSqi < 0 || toSqi >= 64) {
-      // Check if the null move
-      if (!(fromSqi == Chess.NO_SQUARE
-          && toSqi == Chess.NO_SQUARE
-          && promotionStone == Stone.NO_STONE)) {
-        throw new IllegalArgumentException("Not a valid move");
-      }
-    }
-    this.fromSqi = fromSqi;
-    this.toSqi = toSqi;
-    this.promotionStone = promotionStone;
-    this.longCastling = false;
-    this.shortCastling = false;
-  }
-
-  private ShortMove(boolean queenSideCastles, boolean kingSideCastles) {
-    this.fromSqi = 0;
-    this.toSqi = 0;
-    this.promotionStone = Stone.NO_STONE;
-    this.longCastling = queenSideCastles;
-    this.shortCastling = kingSideCastles;
+    this(fromSqi, toSqi, promotionStone, false, false);
   }
 
   /**
@@ -66,7 +56,7 @@ public class ShortMove {
    * @return a long castle move
    */
   public static ShortMove longCastles() {
-    return new ShortMove(true, false);
+    return new ShortMove(0, 0, Stone.NO_STONE, true, false);
   }
 
   /**
@@ -75,7 +65,7 @@ public class ShortMove {
    * @return a short castle move
    */
   public static ShortMove shortCastles() {
-    return new ShortMove(false, true);
+    return new ShortMove(0, 0, Stone.NO_STONE, false, true);
   }
 
   /**
@@ -85,14 +75,6 @@ public class ShortMove {
    */
   public static ShortMove nullMove() {
     return new ShortMove(Chess.NO_SQUARE, Chess.NO_SQUARE);
-  }
-
-  public int fromSqi() {
-    return fromSqi;
-  }
-
-  public int toSqi() {
-    return toSqi;
   }
 
   public int fromCol() {
@@ -109,10 +91,6 @@ public class ShortMove {
 
   public int toRow() {
     return Chess.sqiToRow(toSqi);
-  }
-
-  public Stone promotionStone() {
-    return promotionStone;
   }
 
   public boolean isLongCastle() {
@@ -146,30 +124,6 @@ public class ShortMove {
     return fromSqi() == move.fromSqi()
         && toSqi() == move.toSqi()
         && promotionStone() == move.promotionStone();
-  }
-
-  @Override
-  public boolean equals(Object o) {
-    if (this == o) return true;
-    if (o == null || !(o instanceof ShortMove)) return false;
-
-    ShortMove move = (ShortMove) o;
-
-    if (fromSqi != move.fromSqi) return false;
-    if (toSqi != move.toSqi) return false;
-    if (longCastling != move.longCastling) return false;
-    if (shortCastling != move.shortCastling) return false;
-    return promotionStone == move.promotionStone;
-  }
-
-  @Override
-  public int hashCode() {
-    int result = fromSqi;
-    result = 31 * result + toSqi;
-    result = 31 * result + promotionStone.hashCode();
-    result = 2 * result + (longCastling ? 1 : 0);
-    result = 2 * result + (shortCastling ? 1 : 0);
-    return result;
   }
 
   @Override

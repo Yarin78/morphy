@@ -59,8 +59,8 @@ public class ASFScriptCommandReaderTest {
 
     Assert.assertTrue(reader.hasMore());
     ASFScriptCommand cmd = reader.read();
-    Assert.assertEquals(5000, cmd.getMillis());
-    Assert.assertEquals("TEXT", cmd.getType());
+    Assert.assertEquals(5000, cmd.millis());
+    Assert.assertEquals("TEXT", cmd.type());
     Assert.assertEquals(
         "0000000590020000000000000000000000000000000b47757267656e6964"
             + "7a65000842756b68757469000748656e6c65790006526f6e205700085462"
@@ -82,7 +82,7 @@ public class ASFScriptCommandReaderTest {
             + "000a1c0000000d2d0000002930000000091b00000030390000002d240000"
             + "002233000000241c00000033220000001c3400000022280000003c3b0000"
             + "0011170000003f3e01000800000000030008008a0000000000",
-        cmd.getCommand());
+        cmd.command());
   }
 
   @Test

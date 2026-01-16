@@ -54,7 +54,7 @@ public class NavigableGameModelTimeline {
    */
   public int getLastEventTimestamp() {
     if (events.size() == 0) return 0;
-    return events.get(events.size() - 1).getTimestamp();
+    return events.get(events.size() - 1).timestamp();
   }
 
   /**
@@ -67,7 +67,7 @@ public class NavigableGameModelTimeline {
     if (indexOfLastAppliedEvent + 1 >= events.size()) {
       return Integer.MAX_VALUE;
     }
-    return events.get(indexOfLastAppliedEvent + 1).getTimestamp();
+    return events.get(indexOfLastAppliedEvent + 1).timestamp();
   }
 
   /**
@@ -79,7 +79,7 @@ public class NavigableGameModelTimeline {
     if (indexOfLastAppliedEvent + 1 >= events.size()) {
       return null;
     }
-    return events.get(indexOfLastAppliedEvent + 1).getEvent();
+    return events.get(indexOfLastAppliedEvent + 1).event();
   }
 
   /**
@@ -121,8 +121,8 @@ public class NavigableGameModelTimeline {
     } else {
       TimestampedGameEvent event = events.get(ix);
       try {
-        log.debug("Applying event " + event.getEvent());
-        event.getEvent().apply(model);
+        log.debug("Applying event " + event.event());
+        event.event().apply(model);
       } catch (GameEventException e) {
         // This is bad; if a full replace fails there's not much we can do.
         // This shouldn't really happen.
@@ -130,12 +130,12 @@ public class NavigableGameModelTimeline {
             String.format(
                 "Failed to apply full update event %s at %s: %s",
                 event.getClass().getSimpleName(),
-                formatMillis(event.getTimestamp()),
+                formatMillis(event.timestamp()),
                 e.getMessage()));
         return;
       }
       indexOfLastAppliedEvent = ix;
-      currentTimestamp = events.get(ix).getTimestamp();
+      currentTimestamp = events.get(ix).timestamp();
     }
 
     playTo(timestamp);
@@ -158,12 +158,12 @@ public class NavigableGameModelTimeline {
     } else {
       // There was (at least) one event with this timestamp
       // Find the last event with this timestamp
-      while (ix + 1 < events.size() && events.get(ix + 1).getTimestamp() == timestamp) {
+      while (ix + 1 < events.size() && events.get(ix + 1).timestamp() == timestamp) {
         ix++;
       }
     }
     // ix = index of last event with highest timestamp not greater than the specified one
-    while (ix >= 0 && events.get(ix).getEvent().isIncremental()) {
+    while (ix >= 0 && events.get(ix).event().isIncremental()) {
       ix--;
     }
     return ix;
@@ -189,15 +189,15 @@ public class NavigableGameModelTimeline {
     while (getNextEventTimestamp() <= timestamp) {
       TimestampedGameEvent event = events.get(++indexOfLastAppliedEvent);
       try {
-        log.debug("Applying event " + event.getEvent());
-        event.getEvent().apply(model);
+        log.debug("Applying event " + event.event());
+        event.event().apply(model);
         numEventsApplied++;
       } catch (GameEventException e) {
         log.warn(
             String.format(
                 "Failed to apply event %s at %s: %s",
                 event.getClass().getSimpleName(),
-                formatMillis(event.getTimestamp()),
+                formatMillis(event.timestamp()),
                 e.getMessage()));
       }
     }

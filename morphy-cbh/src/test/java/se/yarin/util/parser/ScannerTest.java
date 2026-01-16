@@ -39,9 +39,9 @@ public class ScannerTest {
             INTEGER,
             EOF);
 
-    assertEquals(expected, tokens.stream().map(token -> token.type).collect(Collectors.toList()));
-    assertEquals("shortb", tokens.get(2).lexeme);
-    assertEquals(2, tokens.get(4).literal);
-    assertEquals(12, tokens.get(16).literal);
+    assertEquals(expected, tokens.stream().map(Token::type).collect(Collectors.toList()));
+    assertEquals("shortb", tokens.get(2).lexeme());
+    assertEquals(2, tokens.get(4).literal());
+    assertEquals(12, tokens.get(16).literal());
   }
 }
