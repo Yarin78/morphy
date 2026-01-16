@@ -3,47 +3,42 @@ package se.yarin.util;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.HashMap;
-import java.util.LinkedList;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
-// TODO: Write tests, improve performance
+/**
+ * A simple LRU (Least Recently Used) cache implementation.
+ *
+ * <p>Uses {@link LinkedHashMap} in access-order mode for O(1) performance on all operations.
+ */
 public class SimpleLRUCache<K, V> {
   private static final Logger log = LoggerFactory.getLogger(SimpleLRUCache.class);
 
   private final int capacity;
-  private final Map<K, Data> cache;
-  private final LinkedList<Data> dataList;
+  private final LinkedHashMap<K, V> cache;
 
   private int cacheGetRequests = 0, cacheHits = 0, cacheMisses = 0;
 
-  private class Data {
-    private final K key;
-    private final V value;
-
-    public Data(K key, V value) {
-      this.key = key;
-      this.value = value;
-    }
-  }
-
   public SimpleLRUCache(int capacity) {
     this.capacity = capacity;
-    this.cache = new HashMap<>();
-    this.dataList = new LinkedList<>();
+    // accessOrder=true makes it maintain access order (LRU) rather than insertion order
+    this.cache =
+        new LinkedHashMap<>(capacity, 0.75f, true) {
+          @Override
+          protected boolean removeEldestEntry(Map.Entry<K, V> eldest) {
+            return size() > SimpleLRUCache.this.capacity;
+          }
+        };
   }
 
   public V get(K key) {
     cacheGetRequests += 1;
-    V res = null;
-    if (cache.containsKey(key)) {
+    V value = cache.get(key);
+    if (value != null) {
       cacheHits += 1;
-      Data data = cache.get(key);
-      // Remove the data from its location
-      dataList.remove(data);
-      // Add it to the end of the list
-      dataList.add(data);
-      res = data.value;
+    } else if (cache.containsKey(key)) {
+      // Handle null values stored in cache
+      cacheHits += 1;
     } else {
       cacheMisses += 1;
     }
@@ -51,41 +46,38 @@ public class SimpleLRUCache<K, V> {
       log.debug(
           "{} cache requests, {} hits and {} misses", cacheGetRequests, cacheHits, cacheMisses);
     }
-    return res;
+    return value;
   }
 
   public void clear() {
     cache.clear();
-    dataList.clear();
   }
 
   public void evict(K key) {
-    if (cache.containsKey(key)) {
-      Data oldData = cache.get(key);
-      // Remove old data from linked list
-      dataList.remove(oldData); // TODO: This is a linear operation
-      cache.remove(key);
-    }
+    cache.remove(key);
   }
 
   public void set(K key, V value) {
-    if (cache.containsKey(key)) {
-      Data oldData = cache.get(key);
-      // Remove old data from linked list
-      dataList.remove(oldData); // TODO: This is a linear operation
-      Data newData = new Data(key, value);
-      // Update the value
-      cache.put(key, newData);
-      // Add new data at the end of the linked list
-      dataList.add(newData);
-    } else {
-      Data data = new Data(key, value);
-      if (cache.size() >= capacity) {
-        // Remove the oldest value from both map and linked list
-        cache.remove(dataList.pollFirst().key);
-      }
-      cache.put(key, data);
-      dataList.add(data);
-    }
+    cache.put(key, value);
+  }
+
+  public int size() {
+    return cache.size();
+  }
+
+  public int getCapacity() {
+    return capacity;
+  }
+
+  public int getCacheGetRequests() {
+    return cacheGetRequests;
+  }
+
+  public int getCacheHits() {
+    return cacheHits;
+  }
+
+  public int getCacheMisses() {
+    return cacheMisses;
   }
 }
