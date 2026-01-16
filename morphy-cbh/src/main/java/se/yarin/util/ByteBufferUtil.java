@@ -49,9 +49,11 @@ public final class ByteBufferUtil {
    */
   public static String getByteStringZeroTerminated(ByteBuffer buf) {
     int len = 0, start = buf.position();
-    while (buf.get(start + len) != 0) len++;
-    byte[] bytes = new byte[len + 1];
-    buf.get(bytes, 0, len + 1);
+    while (start + len < buf.limit() && buf.get(start + len) != 0) len++;
+    boolean hasNullTerminator = start + len < buf.limit();
+    int bytesToRead = hasNullTerminator ? len + 1 : len;
+    byte[] bytes = new byte[bytesToRead];
+    buf.get(bytes, 0, bytesToRead);
     return new String(bytes, 0, len, CBUtil.cbCharSet);
   }
 
@@ -176,11 +178,7 @@ public final class ByteBufferUtil {
   }
 
   public static short getSignedShortB(ByteBuffer buf) {
-    int val = getUnsignedShortB(buf);
-    if (val >= (1 << 15))
-      ;
-    val -= (1 << 16);
-    return (short) val;
+    return (short) getUnsignedShortB(buf);
   }
 
   public static int getUnsigned24BitB(ByteBuffer buf) {
@@ -284,11 +282,7 @@ public final class ByteBufferUtil {
   }
 
   public static short getSignedShortL(ByteBuffer buf) {
-    int val = getUnsignedShortL(buf);
-    if (val >= (1 << 15))
-      ;
-    val -= (1 << 16);
-    return (short) val;
+    return (short) getUnsignedShortL(buf);
   }
 
   public static int getUnsigned24BitL(ByteBuffer buf) {
