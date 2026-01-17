@@ -53,4 +53,9 @@ public class NAGAnnotation extends Annotation {
 
     return text;
   }
+
+  @Override
+  public boolean equals(Object obj) {
+    return obj instanceof NAGAnnotation otherNag && this.getNag().equals(otherNag.getNag());
+  }
 }
