@@ -30,4 +30,5 @@ module se.yarin.morphy.cbh {
   exports se.yarin.morphy.metrics;
   exports se.yarin.morphy.text;
   exports se.yarin.morphy.util;
+    exports se.yarin.chess.pgn;
 }
