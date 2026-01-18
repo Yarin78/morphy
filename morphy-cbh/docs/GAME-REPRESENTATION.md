@@ -12,7 +12,7 @@ This document explains how chess games are represented in Morphy across three di
 6. [The Bridge: GameAdapter](#the-bridge-gameadapter)
 7. [PGN Conversion](#pgn-conversion)
 8. [Annotation Architecture](#annotation-architecture)
-9. [Complete Data Flow Examples](#complete-data-flow-examples)
+9. [Data Flow Examples](#data-flow-examples)
 10. [Design Rationale](#design-rationale)
 
 ---
@@ -123,25 +123,6 @@ public class Game {
 
     // Convert to logic layer
     public GameModel getModel();
-}
-```
-
-### Offset Management
-
-The `Game` class handles a subtle complexity: **32-bit offset overflow** in large databases.
-
-- `GameHeader` stores 32-bit offsets (legacy format)
-- `ExtendedGameHeader` stores 64-bit offsets (newer format)
-- For databases > 4GB, the extended header offset is authoritative
-
-```java
-public long getMovesOffset() {
-    // Use extended header if available and different
-    if (extendedHeader != null &&
-        extendedHeader.movesOffset() != header.movesOffset()) {
-        return extendedHeader.movesOffset();
-    }
-    return header.movesOffset() & 0xFFFFFFFFL;  // Unsigned 32-bit
 }
 ```
 
@@ -471,175 +452,34 @@ gameAdapter.setGameData(headerBuilder, extHeaderBuilder, gameModel);
 
 **Class:** `se.yarin.chess.pgn.PgnParser`
 
-```java
-GameModel game = PgnParser.parseGame(pgnString);
-```
-
-**Process:**
-
-1. **Parse headers**
-   ```java
-   GameHeaderModel header = new GameHeaderModel();
-
-   // Required Seven Tag Roster
-   header.setEvent(tags.get("Event"));
-   header.setSite(tags.get("Site"));
-   header.setDate(Date.parse(tags.get("Date")));
-   header.setRound(tags.get("Round"));
-   header.setWhite(tags.get("White"));
-   header.setBlack(tags.get("Black"));
-   header.setResult(GameResult.parse(tags.get("Result")));
-
-   // Optional tags
-   if (tags.containsKey("WhiteElo")) {
-       header.setWhiteElo(Integer.parseInt(tags.get("WhiteElo")));
-   }
-
-   // Custom tags stored as fields
-   for (String customTag : otherTags) {
-       header.setField(customTag, tags.get(customTag));
-   }
-   ```
-
-2. **Handle setup positions**
-   ```java
-   if (tags.get("SetUp").equals("1") && tags.containsKey("FEN")) {
-       Position startPos = Position.fromFEN(tags.get("FEN"));
-       movesModel = new GameMovesModel(startPos);
-   }
-   ```
-
-3. **Parse move text**
-   ```java
-   // Main line: 1.e4 e5 2.Nf3 Nc6
-   // Variations: ( 2.Bc4 Bc5 )
-   // Comments: { This is the main line }
-   // NAGs: $1 for ! (good move)
-
-   PgnGameBuilder builder = new PgnGameBuilder(movesModel);
-   for (Token token : lexer) {
-       switch (token.type) {
-           case MOVE -> builder.addMove(token.value);
-           case COMMENT -> builder.addComment(token.value);
-           case NAG -> builder.addNAG(token.value);
-           case VARIATION_START -> builder.startVariation();
-           case VARIATION_END -> builder.endVariation();
-       }
-   }
-   ```
-
-4. **Attach annotations**
-
-   Comments become `CommentaryBeforeMoveAnnotation` or `CommentaryAfterMoveAnnotation`.
-   NAGs become `NAGAnnotation` objects.
+The parser converts PGN text to `GameModel` in several steps:
+1. Parse headers (Seven Tag Roster + optional tags)
+2. Handle setup positions (FEN if present)
+3. Parse move text including variations `( ... )`, comments `{ ... }`, and NAGs `!`, `?`, `$1`, etc.
+4. Create annotations: comments become `CommentaryAnnotation`, NAGs become `NAGAnnotation`
+5. Preserve square bracket notation (`[%csl ...]`, `[%cal ...]`) for graphical annotations
 
 ### Exporting: GameModel → PGN
 
 **Class:** `se.yarin.chess.pgn.PgnExporter`
 
-```java
-PgnFormatOptions options = PgnFormatOptions.DEFAULT;
-String pgn = PgnExporter.exportGame(gameModel, options);
-```
+The exporter supports configurable formatting via `PgnFormatOptions`:
+- Line wrapping (default 79 characters)
+- Optional vs. required headers
+- Include/exclude variations, comments, NAGs
+- Symbol format (! vs $1)
+- Predefined options: `DEFAULT`, `COMPACT`, `DEFAULT_WITHOUT_PLYCOUNT`
 
-**Configuration Options:**
-
-```java
-record PgnFormatOptions(
-    int maxLineLength,              // Line wrapping (default: 79)
-    boolean includeOptionalHeaders, // ECO, Elo, Source, etc.
-    boolean includePlyCount,        // PlyCount tag
-    boolean exportVariations,       // Include variations in output
-    boolean exportComments,         // Include { comments }
-    boolean exportNAGs,             // Include ! ? !! etc.
-    boolean useSymbolsForNAGs,      // Use ! vs $1
-    String lineEnding               // \n or \r\n
-) {}
-
-// Predefined options
-PgnFormatOptions.DEFAULT                    // Full export
-PgnFormatOptions.DEFAULT_WITHOUT_PLYCOUNT   // Omit PlyCount tag
-PgnFormatOptions.COMPACT                    // Seven Tag Roster only
-```
-
-**Export Process:**
-
-1. **Write headers**
-   ```pgn
-   [Event "World Championship"]
-   [Site "London ENG"]
-   [Date "2018.11.24"]
-   [Round "12"]
-   [White "Carlsen, Magnus"]
-   [Black "Caruana, Fabiano"]
-   [Result "1/2-1/2"]
-   [WhiteElo "2835"]
-   [BlackElo "2832"]
-   [ECO "B33"]
-   ```
-
-2. **Write setup position (if applicable)**
-   ```pgn
-   [SetUp "1"]
-   [FEN "rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR w KQkq c6 0 2"]
-   ```
-
-3. **Export move tree with formatting**
-   ```java
-   StringBuilder output = new StringBuilder();
-   int lineLength = 0;
-
-   void exportNode(Node node, boolean inVariation) {
-       // Before-move comments
-       for (Annotation ann : node.annotations().sorted()) {
-           if (ann instanceof CommentaryBeforeMoveAnnotation) {
-               append("{ " + ann.getComment() + " }");
-           }
-       }
-
-       // Move with number
-       if (needsMoveNumber(node)) {
-           append(node.lastMove().moveNumber() + ".");
-       }
-       append(node.lastMove().toSAN());
-
-       // Annotations after move (NAGs, comments)
-       for (Annotation ann : node.annotations().sorted()) {
-           if (ann instanceof NAGAnnotation nag) {
-               append(options.useSymbolsForNAGs
-                   ? nag.symbol()   // "!"
-                   : nag.numeric()); // "$1"
-           }
-           if (ann instanceof CommentaryAfterMoveAnnotation) {
-               append("{ " + ann.getComment() + " }");
-           }
-       }
-
-       // Main line continuation (first child)
-       if (!node.children().isEmpty()) {
-           exportNode(node.children().get(0), inVariation);
-       }
-
-       // Variations (remaining children)
-       for (int i = 1; i < node.children().size(); i++) {
-           append("( ");
-           exportNode(node.children().get(i), true);
-           append(") ");
-       }
-   }
-   ```
-
-4. **Line wrapping**
-   ```java
-   void append(String text) {
-       if (lineLength + text.length() > maxLineLength) {
-           output.append("\n");
-           lineLength = 0;
-       }
-       output.append(text);
-       lineLength += text.length();
-   }
-   ```
+Export process:
+1. Write headers (Seven Tag Roster + optional headers like ECO, Elo)
+2. Write setup position if non-standard (SetUp + FEN tags)
+3. Export move tree recursively with proper formatting:
+   - Before-move comments `{ ... }`
+   - Move with number if needed
+   - After-move annotations (NAGs and comments)
+   - Main line continuation (first child)
+   - Variations enclosed in parentheses `( ... )`
+4. Apply line wrapping at configured length
 
 ---
 
@@ -660,454 +500,130 @@ Annotations are the most complex aspect of the game representation system. Morph
 **Package:** `se.yarin.chess.annotations`
 
 Simple, PGN-compatible annotations:
+- **NAGAnnotation** - Numeric Annotation Glyphs (!, ?, !!, ??, +=, etc.)
+- **CommentaryBeforeMoveAnnotation** - Text before a move
+- **CommentaryAfterMoveAnnotation** - Text after a move
 
-```java
-// Base class
-public abstract class Annotation {
-    public abstract int priority();  // Sort order for formatting
-    public String format(String moveText, boolean ascii) {
-        return moveText;  // Default: no decoration
-    }
-}
-
-// Move evaluation symbols
-NAGAnnotation(NAG.GOOD_MOVE)              // !
-NAGAnnotation(NAG.POOR_MOVE)              // ?
-NAGAnnotation(NAG.VERY_GOOD_MOVE)         // !!
-NAGAnnotation(NAG.VERY_POOR_MOVE)         // ??
-NAGAnnotation(NAG.SPECULATIVE_MOVE)       // !?
-NAGAnnotation(NAG.DUBIOUS_MOVE)           // ?!
-
-// Position evaluation
-NAGAnnotation(NAG.WHITE_MODERATE_ADVANTAGE)   // +=
-NAGAnnotation(NAG.BLACK_MODERATE_ADVANTAGE)   // =+
-NAGAnnotation(NAG.WHITE_DECISIVE_ADVANTAGE)   // +-
-NAGAnnotation(NAG.BLACK_DECISIVE_ADVANTAGE)   // -+
-
-// Text comments
-CommentaryBeforeMoveAnnotation("The critical moment")
-CommentaryAfterMoveAnnotation("A serious mistake")
-```
-
-**Priority System** (controls export order):
-
-| Priority | Annotation Type | Example |
-|----------|----------------|---------|
-| 1 | Before-move commentary | `{ comment } move` |
-| 98 | Line evaluation | `+=` |
-| 99 | Move prefix | `□` (only move) |
-| 100 | Move comment | `!` (good move) |
-| 0 | After-move commentary | `move { comment }` |
+These annotations have a priority system that controls export order in PGN format.
 
 ### Storage Annotations (Storage Layer)
 
 **Package:** `se.yarin.morphy.games.annotations`
 
-Rich, ChessBase-specific annotations that extend generic annotations:
+ChessBase-specific annotations with additional features:
+- **SymbolAnnotation** - Compact storage for up to 3 NAGs per move
+- **TextBeforeMoveAnnotation/TextAfterMoveAnnotation** - Text with language metadata
+- **ComputerEvaluationAnnotation** - Engine analysis (centipawn evaluation, depth)
+- **GraphicalSquaresAnnotation/GraphicalArrowsAnnotation** - Visual board markup (green, yellow, red)
+- **TimeSpentAnnotation/WhiteClockAnnotation/BlackClockAnnotation** - Time information
+- **Media annotations** - Pictures, sounds, videos, web links, piece paths
+- **Training annotations** - Critical positions, training questions, pawn structures
+- **GameQuotationAnnotation** - References to other games
 
-#### 1. Text Annotations
-
-```java
-TextBeforeMoveAnnotation(language, text, unknownByte)
-TextAfterMoveAnnotation(language, text, unknownByte)
-```
-
-Unlike generic commentary, these store language metadata.
-
-#### 2. Symbol Annotation (Compact)
-
-```java
-SymbolAnnotation(
-    NAG moveComment,      // !, ?, !!, ??, !?, ?!
-    NAG movePrefix,       // □ (only move), ∆ (better move)
-    NAG lineEvaluation    // +=, =+, +-, -+, =
-)
-```
-
-**Key advantage:** Stores up to **three NAGs in one annotation** (vs. three separate `NAGAnnotation` objects).
-
-#### 3. Computer Analysis
-
-```java
-ComputerEvaluationAnnotation(
-    int centipawns,       // +50 = +0.50 advantage
-    int evalType,         // 0 = normal, 1 = mate in N
-    Integer depth         // Search depth (optional)
-)
-
-// Examples:
-new ComputerEvaluationAnnotation(50, 0, 20)    // +0.50, depth 20
-new ComputerEvaluationAnnotation(3, 1, null)   // Mate in 3
-```
-
-#### 4. Graphical Annotations
-
-```java
-GraphicalSquaresAnnotation(
-    Map<Stone, GraphicalAnnotationColor> squares
-)
-
-GraphicalArrowsAnnotation(
-    Map<Arrow, GraphicalAnnotationColor> arrows
-)
-
-// Available colors
-enum GraphicalAnnotationColor {
-    GREEN, YELLOW, RED
-}
-
-// Example: Mark e4 and d5 green, draw green arrow e2→e4
-Map<Stone, Color> squares = Map.of(
-    Chess.E4, GREEN,
-    Chess.D5, GREEN
-);
-Map<Arrow, Color> arrows = Map.of(
-    new Arrow(Chess.E2, Chess.E4), GREEN
-);
-```
-
-#### 5. Time and Clock
-
-```java
-TimeSpentAnnotation(Duration timeSpent)
-WhiteClockAnnotation(Duration remaining)
-BlackClockAnnotation(Duration remaining)
-```
-
-#### 6. Media Annotations
-
-```java
-PictureAnnotation(String filePath, String description)
-SoundAnnotation(String filePath)
-VideoAnnotation(String filePath)
-WebLinkAnnotation(String url, String title)
-PiecePathAnnotation(List<Square> path)  // Piece movement visualization
-```
-
-#### 7. Training and Metadata
-
-```java
-CriticalPositionAnnotation()              // Mark key position
-TrainingAnnotation(...)                   // Training questions
-PawnStructureAnnotation(...)              // Pawn structure classification
-GameQuotationAnnotation(...)              // Reference to another game
-CorrespondenceMoveAnnotation(...)         // Correspondence chess metadata
-```
-
-### Annotation Serialization
-
-Each storage annotation has an associated **type code** and **serializer**:
-
-```java
-interface AnnotationSerializer<T extends Annotation> {
-    void serialize(ByteBuffer buffer, T annotation);
-    T deserialize(ByteBuffer buffer, int length);
-}
-
-// Binary format:
-// [1 byte]  type code (0x03, 0x04, 0x21, etc.)
-// [2 bytes] total length (including 6-byte header)
-// [3 bytes] reserved
-// [N bytes] payload
-
-// Type code registry
-0x03 -> SymbolAnnotation.Serializer
-0x04 -> GraphicalSquaresAnnotation.Serializer
-0x05 -> GraphicalArrowsAnnotation.Serializer
-0x21 -> ComputerEvaluationAnnotation.Serializer
-0x81 -> TextAfterMoveAnnotation.Serializer
-0x82 -> TextBeforeMoveAnnotation.Serializer
-// ... etc.
-```
-
-### Unknown Annotation Handling
-
-Morphy gracefully handles unrecognized annotations:
-
-```java
-// Preserve unknown types for round-trip fidelity
-UnknownAnnotation(int typeCode, byte[] rawData)
-
-// Capture parse errors without failing
-InvalidAnnotation(int typeCode, Exception error)
-```
+Each storage annotation has a unique type code (e.g., 0x03, 0x04) and serializer for binary encoding. Unrecognized annotations are preserved as `UnknownAnnotation` for round-trip fidelity.
 
 ### Annotation Statistics
 
-The `AnnotationStatistics` class aggregates annotation metadata for game headers:
+The `AnnotationStatistics` class (in `se.yarin.morphy.games.annotations`) aggregates annotation data for game headers, calculating magnitude values used for filtering and display in the database.
+
+### Annotation Conversion: Bridging Generic and Storage Annotations
+
+**Package:** `se.yarin.morphy.games.annotations`
+**Class:** `AnnotationConverter`
+
+#### Purpose
+
+The `AnnotationConverter` provides **bidirectional conversion** between generic annotations (used by PGN and the logic layer) and storage annotations (used by the database). This allows seamless round-tripping of games through PGN while preserving ChessBase-specific features.
+
+#### Conversion Direction 1: Generic → Storage
+
+When saving games imported from PGN, generic annotations must be converted to storage format:
 
 ```java
-class AnnotationStatistics {
-    Set<Medal> medals;                  // Best game, novelty, etc.
-    Set<GameHeaderFlags> flags;         // VARIATIONS, COMMENTARY, etc.
-    int commentariesLength;
-    int noSymbols;
-    int noGraphicalSquares;
-    int noGraphicalArrows;
-    int noTraining;
-    int noTimeSpent;
+// Automatically called by DatabaseWriteTransaction before saving
+AnnotationConverter.convertToStorageAnnotations(gameModel.moves());
 
-    // Magnitude calculations for UI filtering
-    int getCommentariesMagnitude() {
-        if (commentariesLength == 0) return 0;
-        if (commentariesLength <= 200) return 1;
-        return 2;
-    }
+// Conversions performed:
+NAGAnnotation → SymbolAnnotation (with NAG consolidation)
+CommentaryAfterMoveAnnotation → TextAfterMoveAnnotation
+CommentaryBeforeMoveAnnotation → TextBeforeMoveAnnotation
+Graphical encoding → GraphicalSquaresAnnotation/GraphicalArrowsAnnotation
+```
 
-    int getSymbolsMagnitude() {
-        if (noSymbols == 0) return 0;
-        if (noSymbols < 10) return 1;
-        return 2;
-    }
+**NAG Consolidation:** ChessBase stores up to 3 NAGs per move (move comment, line evaluation, move prefix) in a single `SymbolAnnotation`. The converter groups multiple `NAGAnnotation` objects by type and creates a consolidated annotation.
+
+**Graphical Annotation Parsing:** Text comments containing PGN square bracket notation are parsed:
+- `[%csl Ga4,Rb5]` → `GraphicalSquaresAnnotation` (colored squares)
+- `[%cal Ge2e4,Rh1h8]` → `GraphicalArrowsAnnotation` (colored arrows)
+- Color codes: `G`=Green, `R`=Red, `Y`=Yellow
+
+#### Conversion Direction 2: Storage → Generic
+
+When exporting games or preparing them for display:
+
+```java
+AnnotationConverter.convertToGenericAnnotations(gameModel.moves());
+
+// Conversions performed:
+SymbolAnnotation → NAGAnnotation (one per NAG type)
+TextAfterMoveAnnotation → CommentaryAfterMoveAnnotation (with graphical encoding)
+TextBeforeMoveAnnotation → CommentaryBeforeMoveAnnotation
+GraphicalSquaresAnnotation → [%csl ...] encoding in text
+GraphicalArrowsAnnotation → [%cal ...] encoding in text
+```
+
+**Graphical Annotation Encoding:** Graphical annotations are embedded into text comments using PGN square bracket notation, making them exportable to PGN format and compatible with tools like SCID and ChessBase.
+
+#### Automatic Integration
+
+Conversion happens **automatically** in `DatabaseWriteTransaction`:
+
+```java
+public Game addGame(@NotNull GameModel model) {
+    // Convert generic annotations to storage format before saving
+    AnnotationConverter.convertToStorageAnnotations(model.moves());
+
+    // Continue with normal save process...
 }
 ```
 
-These statistics populate game header fields used for filtering and display.
+This ensures that games imported from PGN don't lose their annotations when saved to the database.
 
 ---
 
-## Complete Data Flow Examples
+## Data Flow Examples
 
-### Example 1: Loading and Displaying a Game
+### Loading and Displaying a Game
 
-```java
-// 1. Open database and start transaction
-try (Database db = Database.open(new File("database.cbh"))) {
-    try (DatabaseReadTransaction txn = db.beginReadTransaction()) {
-
-        // 2. Get storage-layer game reference
-        Game game = txn.getGame(1);
-
-        // 3. Convert to logic layer (GameAdapter runs internally)
-        GameModel model = game.getModel();
-
-        // 4. Access metadata
-        GameHeaderModel header = model.header();
-        System.out.println(header.white() + " vs " + header.black());
-        System.out.println("Event: " + header.event());
-        System.out.println("Date: " + header.date());
-
-        // 5. Export to PGN for frontend
-        String pgn = PgnExporter.exportGame(model);
-
-        // 6. Send to frontend (hypothetical)
-        sendToFrontend(pgn);
-    }
-}
-```
-
-**Data flow:**
 ```
 Database (.cbh/.cbg/.cba files)
-    ↓ [DatabaseReadTransaction.getGame(1)]
-Game (storage layer reference)
-    ↓ [Game.getModel() → GameAdapter.getGameModel()]
-GameModel (logic layer, mutable)
-    ↓ [PgnExporter.exportGame()]
-PGN String (frontend representation)
-    ↓ [network/IPC]
-Frontend (Chess.js library)
+    ↓ DatabaseReadTransaction.getGame()
+Game (storage layer)
+    ↓ Game.getModel() via GameAdapter
+GameModel (logic layer)
+    ↓ PgnExporter.exportGame()
+PGN String
+    ↓
+Frontend
 ```
 
-### Example 2: Importing a PGN Game
+**Key classes:** `Database`, `DatabaseReadTransaction`, `Game`, `GameAdapter`, `PgnExporter`
 
-```java
-// 1. Receive PGN from frontend or file
-String pgn = """
-    [Event "Casual Game"]
-    [White "Doe, John"]
-    [Black "Smith, Jane"]
-    [Result "1-0"]
+### Importing a PGN Game
 
-    1.e4 e5 2.Nf3 Nc6 3.Bb5 1-0
-    """;
-
-// 2. Parse to logic layer
-GameModel model = PgnParser.parseGame(pgn);
-
-// 3. Open database for writing
-try (Database db = Database.open(new File("database.cbh"))) {
-    try (DatabaseWriteTransaction txn = db.beginWriteTransaction()) {
-
-        // 4. Add game (GameAdapter converts to storage layer)
-        int gameId = txn.addGame(model);
-
-        // 5. Commit to disk
-        txn.commit();
-
-        System.out.println("Game saved with ID: " + gameId);
-    }
-}
 ```
-
-**Data flow:**
-```
-PGN String (from frontend/file)
-    ↓ [PgnParser.parseGame()]
-GameModel (logic layer, generic annotations)
-    ↓ [DatabaseWriteTransaction.addGame() → GameAdapter.setGameData()]
-Game (storage layer, entity resolution, move encoding)
-    ↓ [commit()]
+PGN String
+    ↓ PgnParser.parseGame()
+GameModel (with generic annotations)
+    ↓ DatabaseWriteTransaction.addGame()
+    ↓ AnnotationConverter.convertToStorageAnnotations()
+    ↓ GameAdapter.setGameData()
+Game (storage layer)
+    ↓ commit()
 Database (.cbh/.cbg/.cba files)
 ```
 
-### Example 3: Modifying a Game
-
-```java
-try (Database db = Database.open(new File("database.cbh"))) {
-    try (DatabaseWriteTransaction txn = db.beginWriteTransaction()) {
-
-        // 1. Load game
-        Game game = txn.getGame(1);
-        GameModel model = game.getModel();
-
-        // 2. Modify header
-        model.header().setWhiteElo(2850);
-        model.header().setAnnotator("Kasparov, Garry");
-
-        // 3. Add annotation to first move
-        Node firstMove = model.moves().root().children().get(0);
-        firstMove.annotations().add(
-            new NAGAnnotation(NAG.GOOD_MOVE)
-        );
-        firstMove.annotations().add(
-            new CommentaryAfterMoveAnnotation("The best move")
-        );
-
-        // 4. Replace game in database
-        txn.replaceGame(game.id(), model);
-
-        // 5. Commit
-        txn.commit();
-    }
-}
-```
-
-### Example 4: Round-Trip with Annotations
-
-```java
-// Storage → Logic → PGN → Logic → Storage
-
-// 1. Load from database (has rich annotations)
-Game game = txn.getGame(1);
-GameModel model1 = game.getModel();  // Has SymbolAnnotation, GraphicalSquaresAnnotation
-
-// 2. Export to PGN
-String pgn = PgnExporter.exportGame(model1);
-// Graphical annotations lost (no PGN representation)
-// SymbolAnnotation converted to individual ! ? symbols
-
-// 3. Parse back from PGN
-GameModel model2 = PgnParser.parseGame(pgn);
-// Now has NAGAnnotation objects instead of SymbolAnnotation
-// Graphical annotations gone
-
-// 4. Save back to database
-// TODO: Convert NAGAnnotation → SymbolAnnotation (not yet implemented)
-txn.addGame(model2);
-```
-
-**Conversion matrix:**
-
-| Annotation | Storage → PGN | PGN → Logic | Logic → Storage |
-|------------|---------------|-------------|-----------------|
-| SymbolAnnotation | ✅ → `!`, `?` | ❌ | ✅ |
-| NAGAnnotation | ✅ → `!`, `?` | ✅ | ⚠️ TODO |
-| ComputerEvaluationAnnotation | ⚠️ → comment | ❌ | ✅ |
-| GraphicalSquaresAnnotation | ❌ lost | ❌ | ✅ |
-| TextAfterMoveAnnotation | ✅ → `{ text }` | ✅ → Commentary | ⚠️ TODO |
-
----
-
-## Design Rationale
-
-### Why Not a Single Representation?
-
-**Option 1: Use storage format everywhere**
-- ❌ Requires binary serialization for every operation
-- ❌ Hard to work with (offsets, entity IDs instead of objects)
-- ❌ Mutating would require immediate disk writes
-
-**Option 2: Use logic model everywhere**
-- ❌ Inefficient on disk (larger files)
-- ❌ Breaks ChessBase compatibility
-- ❌ Loses optimization (compact move encoding)
-
-**Option 3: Use PGN everywhere**
-- ❌ Loses ChessBase-specific features (graphics, media, detailed analysis)
-- ❌ String parsing overhead
-- ❌ Ambiguity in representation
-
-**✅ Three-layer architecture:**
-- Each layer optimized for its purpose
-- Clear boundaries and conversion points
-- Flexibility to evolve layers independently
-
-### Why Mutable Models?
-
-The logic layer uses **mutable objects** despite modern preferences for immutability:
-
-```java
-// Mutable approach (current)
-GameHeaderModel header = model.header();
-header.setWhite("Carlsen, Magnus");
-header.setWhiteElo(2850);
-
-// vs. Immutable approach (alternative)
-GameHeaderModel updated = ImmutableGameHeaderModel.builder()
-    .from(model.header())
-    .white("Carlsen, Magnus")
-    .whiteElo(2850)
-    .build();
-```
-
-**Rationale:**
-1. **UI binding** - Forms and editors benefit from mutation with listeners
-2. **Incremental changes** - Chess GUI often makes many small edits
-3. **Tree structure** - Immutable trees are complex (persistent data structures)
-4. **Performance** - Avoid copying entire game trees for small changes
-
-**Trade-off:** Users must manage when to persist changes.
-
-### Why Separate Annotation Hierarchies?
-
-**Alternative: Single hierarchy with PGN-only annotations**
-- ❌ Loses computer evaluation, graphics, media
-- ❌ Can't round-trip ChessBase databases
-
-**Alternative: Single hierarchy with storage annotations only**
-- ❌ Complex serialization for simple PGN parsing
-- ❌ PGN library would need ChessBase format knowledge
-
-**✅ Dual hierarchy:**
-- PGN parsing creates generic annotations
-- Database loading creates storage annotations
-- Both extend common `Annotation` base for polymorphism
-- TODO: Convert generic → storage when saving PGN to database
-
-### Entity Resolution Strategy
-
-Entities (players, tournaments) are resolved **during adapter conversion**:
-
-```java
-// Storage layer: ID references
-game.whitePlayerId() → 42
-
-// Logic layer: Resolved objects
-model.header().white() → "Carlsen, Magnus"
-```
-
-**Why not store entity objects in GameModel?**
-- ✅ GameModel is self-contained (no database dependency)
-- ✅ Enables creating games without a database
-- ✅ Simpler serialization to PGN
-
-**Why not store IDs in GameModel?**
-- ✅ Type-safe (String names vs int IDs)
-- ✅ User-friendly (developers work with names)
-- ❌ Requires re-resolution when saving (fuzzy matching)
-
-**Compromise:** Store IDs as custom fields for round-trip fidelity.
+**Key classes:** `PgnParser`, `DatabaseWriteTransaction`, `AnnotationConverter`, `GameAdapter`
 
 ---
 

@@ -20,7 +20,7 @@ This guide is for developers contributing to the Morphy library itself. It cover
 
 ### Prerequisites
 
-- **Java 11+** (Java 17 recommended)
+- **Java 21+**
 - **Maven 3.6+**
 - **Git**
 
