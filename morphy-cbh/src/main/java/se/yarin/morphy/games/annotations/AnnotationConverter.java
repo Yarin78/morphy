@@ -3,6 +3,7 @@ package se.yarin.morphy.games.annotations;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import se.yarin.chess.Chess;
 import se.yarin.chess.GameMovesModel;
 import se.yarin.chess.NAG;
 import se.yarin.chess.NAGType;
@@ -16,6 +17,9 @@ import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 /**
  * Bidirectional converter between generic annotations and storage annotations.
@@ -119,10 +123,17 @@ public class AnnotationConverter {
             convertNAGAnnotationsToStorage(annotations, nagAnnotations);
         }
 
-        // Convert commentary after move
+        // Convert commentary after move, parsing out any graphical annotations
         if (afterMove != null) {
             annotations.remove(afterMove);
-            annotations.add(ImmutableTextAfterMoveAnnotation.of(afterMove.getCommentary()));
+
+            // Parse and extract graphical annotations from the commentary text
+            String remainingText = parseAndExtractGraphicalAnnotations(annotations, afterMove.getCommentary());
+
+            // Only create TextAfterMoveAnnotation if there's remaining text
+            if (!remainingText.isEmpty()) {
+                annotations.add(ImmutableTextAfterMoveAnnotation.of(remainingText));
+            }
         }
 
         // Convert commentary before move
@@ -146,6 +157,8 @@ public class AnnotationConverter {
         List<SymbolAnnotation> symbolAnnotations = new ArrayList<>();
         TextAfterMoveAnnotation afterMove = null;
         TextBeforeMoveAnnotation beforeMove = null;
+        GraphicalSquaresAnnotation squaresAnnotation = null;
+        GraphicalArrowsAnnotation arrowsAnnotation = null;
 
         for (Annotation annotation : annotations) {
             if (annotation instanceof SymbolAnnotation) {
@@ -154,6 +167,10 @@ public class AnnotationConverter {
                 afterMove = (TextAfterMoveAnnotation) annotation;
             } else if (annotation instanceof TextBeforeMoveAnnotation) {
                 beforeMove = (TextBeforeMoveAnnotation) annotation;
+            } else if (annotation instanceof GraphicalSquaresAnnotation) {
+                squaresAnnotation = (GraphicalSquaresAnnotation) annotation;
+            } else if (annotation instanceof GraphicalArrowsAnnotation) {
+                arrowsAnnotation = (GraphicalArrowsAnnotation) annotation;
             }
         }
 
@@ -163,10 +180,42 @@ public class AnnotationConverter {
             convertSymbolAnnotationToNAGs(annotations, symbolAnnotation);
         }
 
-        // Convert text after move
+        // Build combined text annotation with graphical annotations encoded
+        StringBuilder textAfterBuilder = new StringBuilder();
+
+        // Add graphical squares annotation in PGN format [%csl ...]
+        if (squaresAnnotation != null) {
+            annotations.remove(squaresAnnotation);
+            String squaresText = formatGraphicalSquares(squaresAnnotation);
+            if (!squaresText.isEmpty()) {
+                textAfterBuilder.append(squaresText);
+            }
+        }
+
+        // Add graphical arrows annotation in PGN format [%cal ...]
+        if (arrowsAnnotation != null) {
+            annotations.remove(arrowsAnnotation);
+            String arrowsText = formatGraphicalArrows(arrowsAnnotation);
+            if (!arrowsText.isEmpty()) {
+                if (!textAfterBuilder.isEmpty()) {
+                    textAfterBuilder.append(" ");
+                }
+                textAfterBuilder.append(arrowsText);
+            }
+        }
+
+        // Add existing text after move
         if (afterMove != null) {
             annotations.remove(afterMove);
-            annotations.add(new CommentaryAfterMoveAnnotation(afterMove.text()));
+            if (!textAfterBuilder.isEmpty() && !afterMove.text().isEmpty()) {
+                textAfterBuilder.append(" ");
+            }
+            textAfterBuilder.append(afterMove.text());
+        }
+
+        // Create combined CommentaryAfterMoveAnnotation if we have any content
+        if (!textAfterBuilder.isEmpty()) {
+            annotations.add(new CommentaryAfterMoveAnnotation(textAfterBuilder.toString()));
         }
 
         // Convert text before move
@@ -242,5 +291,207 @@ public class AnnotationConverter {
 
             annotations.add(ImmutableSymbolAnnotation.of(moveComment, movePrefix, lineEvaluation));
         }
+    }
+
+    // ========== Graphical Annotation Encoding/Decoding ==========
+
+    /**
+     * Formats a GraphicalSquaresAnnotation into PGN square bracket notation.
+     * Format: [%csl Ga4,Ya5,Rc6] where G=Green, R=Red, Y=Yellow
+     *
+     * @param annotation the graphical squares annotation
+     * @return the formatted string, or empty string if no squares
+     */
+    private static String formatGraphicalSquares(@NotNull GraphicalSquaresAnnotation annotation) {
+        if (annotation.squares().isEmpty()) {
+            return "";
+        }
+
+        String squaresStr = annotation.squares().stream()
+                .map(square -> colorToChar(square.color()) + Chess.sqiToStr(square.sqi()))
+                .collect(Collectors.joining(","));
+
+        return "[%csl " + squaresStr + "]";
+    }
+
+    /**
+     * Formats a GraphicalArrowsAnnotation into PGN square bracket notation.
+     * Format: [%cal Ga1h8,Rb3c4] where G=Green, R=Red, Y=Yellow
+     *
+     * @param annotation the graphical arrows annotation
+     * @return the formatted string, or empty string if no arrows
+     */
+    private static String formatGraphicalArrows(@NotNull GraphicalArrowsAnnotation annotation) {
+        if (annotation.arrows().isEmpty()) {
+            return "";
+        }
+
+        String arrowsStr = annotation.arrows().stream()
+                .map(arrow -> colorToChar(arrow.color()) +
+                        Chess.sqiToStr(arrow.fromSqi()) +
+                        Chess.sqiToStr(arrow.toSqi()))
+                .collect(Collectors.joining(","));
+
+        return "[%cal " + arrowsStr + "]";
+    }
+
+    /**
+     * Converts a GraphicalAnnotationColor to its single-character PGN representation.
+     *
+     * @param color the color
+     * @return single character: G, R, or Y
+     */
+    private static String colorToChar(@NotNull GraphicalAnnotationColor color) {
+        return switch (color) {
+            case GREEN -> "G";
+            case RED -> "R";
+            case YELLOW -> "Y";
+            default -> "G"; // Default to green for NONE or NOT_USED
+        };
+    }
+
+    /**
+     * Converts a single-character PGN color to GraphicalAnnotationColor.
+     *
+     * @param ch the character (G, R, or Y)
+     * @return the color, or null if invalid
+     */
+    private static GraphicalAnnotationColor charToColor(char ch) {
+        return switch (ch) {
+            case 'G', 'g' -> GraphicalAnnotationColor.GREEN;
+            case 'R', 'r' -> GraphicalAnnotationColor.RED;
+            case 'Y', 'y' -> GraphicalAnnotationColor.YELLOW;
+            default -> null;
+        };
+    }
+
+    // Regex patterns for parsing graphical annotations from text
+    private static final Pattern SQUARES_PATTERN = Pattern.compile("\\[%csl\\s+([^\\]]+)\\]");
+    private static final Pattern ARROWS_PATTERN = Pattern.compile("\\[%cal\\s+([^\\]]+)\\]");
+
+    /**
+     * Parses graphical annotations from commentary text and adds them to the annotations collection.
+     * Removes the square bracket notation from the text.
+     *
+     * @param annotations the annotations collection to add graphical annotations to
+     * @param commentary the commentary text that may contain square bracket notation
+     * @return the commentary text with square bracket notation removed
+     */
+    private static String parseAndExtractGraphicalAnnotations(@NotNull Annotations annotations, @NotNull String commentary) {
+        String remainingText = commentary;
+
+        // Parse and extract squares annotation [%csl ...]
+        Matcher squaresMatcher = SQUARES_PATTERN.matcher(remainingText);
+        if (squaresMatcher.find()) {
+            String squaresData = squaresMatcher.group(1);
+            GraphicalSquaresAnnotation squaresAnnotation = parseGraphicalSquares(squaresData);
+            if (squaresAnnotation != null) {
+                annotations.add(squaresAnnotation);
+            }
+            remainingText = squaresMatcher.replaceFirst("").trim();
+        }
+
+        // Parse and extract arrows annotation [%cal ...]
+        Matcher arrowsMatcher = ARROWS_PATTERN.matcher(remainingText);
+        if (arrowsMatcher.find()) {
+            String arrowsData = arrowsMatcher.group(1);
+            GraphicalArrowsAnnotation arrowsAnnotation = parseGraphicalArrows(arrowsData);
+            if (arrowsAnnotation != null) {
+                annotations.add(arrowsAnnotation);
+            }
+            remainingText = arrowsMatcher.replaceFirst("").trim();
+        }
+
+        return remainingText.trim();
+    }
+
+    /**
+     * Parses a graphical squares annotation from the data inside [%csl ...].
+     * Format: Ga4,Bb5,Rc6 (color + square, comma-separated)
+     *
+     * @param data the data string (e.g., "Ga4,Bb5,Rc6")
+     * @return the GraphicalSquaresAnnotation, or null if invalid
+     */
+    private static GraphicalSquaresAnnotation parseGraphicalSquares(@NotNull String data) {
+        List<GraphicalSquaresAnnotation.Square> squares = new ArrayList<>();
+
+        for (String item : data.split(",")) {
+            item = item.trim();
+            if (item.length() < 3) {
+                log.warn("Invalid square annotation format: {}", item);
+                continue;
+            }
+
+            GraphicalAnnotationColor color = charToColor(item.charAt(0));
+            if (color == null) {
+                log.warn("Invalid color in square annotation: {}", item.charAt(0));
+                continue;
+            }
+
+            String squareStr = item.substring(1);
+            int sqi = Chess.strToSqi(squareStr);
+            if (sqi == -1) {
+                log.warn("Invalid square in square annotation: {}", squareStr);
+                continue;
+            }
+
+            squares.add(ImmutableSquare.of(color, sqi));
+        }
+
+        if (squares.isEmpty()) {
+            return null;
+        }
+
+        return ImmutableGraphicalSquaresAnnotation.of(squares);
+    }
+
+    /**
+     * Parses a graphical arrows annotation from the data inside [%cal ...].
+     * Format: Ga1h8,Rb3c4 (color + from-square + to-square, comma-separated)
+     *
+     * @param data the data string (e.g., "Ga1h8,Rb3c4")
+     * @return the GraphicalArrowsAnnotation, or null if invalid
+     */
+    private static GraphicalArrowsAnnotation parseGraphicalArrows(@NotNull String data) {
+        List<GraphicalArrowsAnnotation.Arrow> arrows = new ArrayList<>();
+
+        for (String item : data.split(",")) {
+            item = item.trim();
+            if (item.length() < 5) {
+                log.warn("Invalid arrow annotation format: {}", item);
+                continue;
+            }
+
+            GraphicalAnnotationColor color = charToColor(item.charAt(0));
+            if (color == null) {
+                log.warn("Invalid color in arrow annotation: {}", item.charAt(0));
+                continue;
+            }
+
+            String squaresStr = item.substring(1);
+            if (squaresStr.length() != 4) {
+                log.warn("Invalid arrow squares format: {}", squaresStr);
+                continue;
+            }
+
+            String fromStr = squaresStr.substring(0, 2);
+            String toStr = squaresStr.substring(2, 4);
+
+            int fromSqi = Chess.strToSqi(fromStr);
+            int toSqi = Chess.strToSqi(toStr);
+
+            if (fromSqi == -1 || toSqi == -1) {
+                log.warn("Invalid squares in arrow annotation: {} -> {}", fromStr, toStr);
+                continue;
+            }
+
+            arrows.add(ImmutableArrow.of(color, fromSqi, toSqi));
+        }
+
+        if (arrows.isEmpty()) {
+            return null;
+        }
+
+        return ImmutableGraphicalArrowsAnnotation.of(arrows);
     }
 }

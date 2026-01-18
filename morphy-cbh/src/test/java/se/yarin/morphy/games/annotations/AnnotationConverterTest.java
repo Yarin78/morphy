@@ -1,6 +1,7 @@
 package se.yarin.morphy.games.annotations;
 
 import org.junit.Test;
+import se.yarin.chess.Chess;
 import se.yarin.chess.GameMovesModel;
 import se.yarin.chess.NAG;
 import se.yarin.chess.annotations.Annotation;
@@ -8,6 +9,9 @@ import se.yarin.chess.annotations.Annotations;
 import se.yarin.chess.annotations.CommentaryAfterMoveAnnotation;
 import se.yarin.chess.annotations.CommentaryBeforeMoveAnnotation;
 import se.yarin.chess.annotations.NAGAnnotation;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import static org.junit.Assert.*;
 import static se.yarin.chess.Chess.*;
@@ -481,18 +485,18 @@ public class AnnotationConverterTest {
     }
 
     @Test
-    public void testConvertToGenericLeavesOtherAnnotationsUntouched() {
+    public void testConvertToGenericEncodesGraphicalAnnotations() {
         GameMovesModel moves = new GameMovesModel();
         GameMovesModel.Node node = moves.root().addMove(E2, E4);
 
         // Add storage annotations that should be converted
         SymbolAnnotation symbol = ImmutableSymbolAnnotation.of(NAG.GOOD_MOVE, NAG.NONE, NAG.NONE);
         TextAfterMoveAnnotation textAfter = ImmutableTextAfterMoveAnnotation.of("Test");
-        
+
         node.addAnnotation(symbol);
         node.addAnnotation(textAfter);
 
-        // Add a storage annotation that has no generic equivalent (should be left alone)
+        // Add a graphical annotation that should be encoded into text
         GraphicalSquaresAnnotation graphical = ImmutableGraphicalSquaresAnnotation.of(
             java.util.Arrays.asList(
                 ImmutableSquare.of(GraphicalAnnotationColor.GREEN, 0x10)
@@ -502,22 +506,24 @@ public class AnnotationConverterTest {
 
         AnnotationConverter.convertToGenericAnnotations(moves);
 
-        // Should have: NAGAnnotation + CommentaryAfterMoveAnnotation + GraphicalSquaresAnnotation
-        assertEquals(3, node.getAnnotations().size());
+        // Should have: NAGAnnotation + CommentaryAfterMoveAnnotation (with graphical encoded)
+        assertEquals(2, node.getAnnotations().size());
 
         boolean hasNAG = false;
-        boolean hasCommentary = false;
-        boolean hasGraphical = false;
+        CommentaryAfterMoveAnnotation commentary = null;
 
         for (Annotation annotation : node.getAnnotations()) {
             if (annotation instanceof NAGAnnotation) hasNAG = true;
-            if (annotation instanceof CommentaryAfterMoveAnnotation) hasCommentary = true;
-            if (annotation instanceof GraphicalSquaresAnnotation) hasGraphical = true;
+            if (annotation instanceof CommentaryAfterMoveAnnotation) {
+                commentary = (CommentaryAfterMoveAnnotation) annotation;
+            }
         }
 
         assertTrue("Should have NAG", hasNAG);
-        assertTrue("Should have commentary", hasCommentary);
-        assertTrue("Should have graphical annotation unchanged", hasGraphical);
+        assertNotNull("Should have commentary", commentary);
+        // Commentary should contain both the encoded graphical annotation and the original text
+        assertTrue("Should contain graphical encoding", commentary.getCommentary().contains("[%csl Gc1]"));
+        assertTrue("Should contain original text", commentary.getCommentary().contains("Test"));
     }
 
     @Test
@@ -542,5 +548,271 @@ public class AnnotationConverterTest {
 
         // Should have no annotations (all were NONE)
         assertEquals(0, node.getAnnotations().size());
+    }
+
+    // ========== Tests for Graphical Annotation Encoding/Decoding ==========
+
+    @Test
+    public void testConvertGraphicalSquaresToGeneric() {
+        GameMovesModel moves = new GameMovesModel();
+        GameMovesModel.Node node = moves.root().addMove(E2, E4);
+        
+        // Add graphical squares annotation
+        GraphicalSquaresAnnotation squares = ImmutableGraphicalSquaresAnnotation.of(
+            java.util.Arrays.asList(
+                ImmutableSquare.of(GraphicalAnnotationColor.GREEN, Chess.strToSqi("a4")),
+                ImmutableSquare.of(GraphicalAnnotationColor.RED, Chess.strToSqi("b5"))
+            )
+        );
+        node.addAnnotation(squares);
+
+        AnnotationConverter.convertToGenericAnnotations(moves);
+
+        // Should have CommentaryAfterMoveAnnotation with encoded squares
+        assertEquals(1, node.getAnnotations().size());
+        assertTrue(node.getAnnotations().get(0) instanceof CommentaryAfterMoveAnnotation);
+        
+        CommentaryAfterMoveAnnotation commentary = (CommentaryAfterMoveAnnotation) node.getAnnotations().get(0);
+        String text = commentary.getCommentary();
+        
+        assertTrue("Should contain [%csl", text.contains("[%csl"));
+        assertTrue("Should contain Ga4", text.contains("Ga4"));
+        assertTrue("Should contain Rb5", text.contains("Rb5"));
+    }
+
+    @Test
+    public void testConvertGraphicalArrowsToGeneric() {
+        GameMovesModel moves = new GameMovesModel();
+        GameMovesModel.Node node = moves.root().addMove(E2, E4);
+        
+        // Add graphical arrows annotation
+        GraphicalArrowsAnnotation arrows = ImmutableGraphicalArrowsAnnotation.of(
+            java.util.Arrays.asList(
+                ImmutableArrow.of(GraphicalAnnotationColor.GREEN, Chess.strToSqi("a1"), Chess.strToSqi("h8")),
+                ImmutableArrow.of(GraphicalAnnotationColor.RED, Chess.strToSqi("b3"), Chess.strToSqi("c4"))
+            )
+        );
+        node.addAnnotation(arrows);
+
+        AnnotationConverter.convertToGenericAnnotations(moves);
+
+        // Should have CommentaryAfterMoveAnnotation with encoded arrows
+        assertEquals(1, node.getAnnotations().size());
+        assertTrue(node.getAnnotations().get(0) instanceof CommentaryAfterMoveAnnotation);
+        
+        CommentaryAfterMoveAnnotation commentary = (CommentaryAfterMoveAnnotation) node.getAnnotations().get(0);
+        String text = commentary.getCommentary();
+        
+        assertTrue("Should contain [%cal", text.contains("[%cal"));
+        assertTrue("Should contain Ga1h8", text.contains("Ga1h8"));
+        assertTrue("Should contain Rb3c4", text.contains("Rb3c4"));
+    }
+
+    @Test
+    public void testConvertGraphicalSquaresAndArrowsToGeneric() {
+        GameMovesModel moves = new GameMovesModel();
+        GameMovesModel.Node node = moves.root().addMove(E2, E4);
+        
+        // Add both squares and arrows
+        GraphicalSquaresAnnotation squares = ImmutableGraphicalSquaresAnnotation.of(
+            java.util.Arrays.asList(
+                ImmutableSquare.of(GraphicalAnnotationColor.GREEN, Chess.strToSqi("e4"))
+            )
+        );
+        GraphicalArrowsAnnotation arrows = ImmutableGraphicalArrowsAnnotation.of(
+            java.util.Arrays.asList(
+                ImmutableArrow.of(GraphicalAnnotationColor.RED, Chess.strToSqi("e2"), Chess.strToSqi("e4"))
+            )
+        );
+        node.addAnnotation(squares);
+        node.addAnnotation(arrows);
+
+        AnnotationConverter.convertToGenericAnnotations(moves);
+
+        // Should have CommentaryAfterMoveAnnotation with both encoded
+        assertEquals(1, node.getAnnotations().size());
+        assertTrue(node.getAnnotations().get(0) instanceof CommentaryAfterMoveAnnotation);
+        
+        CommentaryAfterMoveAnnotation commentary = (CommentaryAfterMoveAnnotation) node.getAnnotations().get(0);
+        String text = commentary.getCommentary();
+        
+        assertTrue("Should contain [%csl Ge4]", text.contains("[%csl Ge4]"));
+        assertTrue("Should contain [%cal Re2e4]", text.contains("[%cal Re2e4]"));
+    }
+
+    @Test
+    public void testConvertGraphicalWithTextToGeneric() {
+        GameMovesModel moves = new GameMovesModel();
+        GameMovesModel.Node node = moves.root().addMove(E2, E4);
+        
+        // Add graphical annotation and text
+        GraphicalSquaresAnnotation squares = ImmutableGraphicalSquaresAnnotation.of(
+            java.util.Arrays.asList(
+                ImmutableSquare.of(GraphicalAnnotationColor.GREEN, Chess.strToSqi("e4"))
+            )
+        );
+        TextAfterMoveAnnotation text = ImmutableTextAfterMoveAnnotation.of("Best opening move");
+        
+        node.addAnnotation(squares);
+        node.addAnnotation(text);
+
+        AnnotationConverter.convertToGenericAnnotations(moves);
+
+        // Should have CommentaryAfterMoveAnnotation with graphical annotation before text
+        assertEquals(1, node.getAnnotations().size());
+        assertTrue(node.getAnnotations().get(0) instanceof CommentaryAfterMoveAnnotation);
+        
+        CommentaryAfterMoveAnnotation commentary = (CommentaryAfterMoveAnnotation) node.getAnnotations().get(0);
+        String commentText = commentary.getCommentary();
+        
+        assertTrue("Should contain [%csl Ge4]", commentText.contains("[%csl Ge4]"));
+        assertTrue("Should contain text", commentText.contains("Best opening move"));
+        
+        // Graphical annotation should come before text
+        int graphicalIndex = commentText.indexOf("[%csl");
+        int textIndex = commentText.indexOf("Best opening move");
+        assertTrue("Graphical annotation should come before text", graphicalIndex < textIndex);
+    }
+
+    @Test
+    public void testParseGraphicalSquaresFromGeneric() {
+        GameMovesModel moves = new GameMovesModel();
+        GameMovesModel.Node node = moves.root().addMove(E2, E4);
+        
+        // Add commentary with encoded graphical squares
+        node.addAnnotation(new CommentaryAfterMoveAnnotation("[%csl Ga4,Rb5]"));
+
+        AnnotationConverter.convertToStorageAnnotations(moves);
+
+        // Should have GraphicalSquaresAnnotation extracted
+        GraphicalSquaresAnnotation squares = node.getAnnotation(GraphicalSquaresAnnotation.class);
+        assertNotNull("Should have extracted squares annotation", squares);
+        assertEquals("Should have 2 squares", 2, squares.squares().size());
+        
+        // Verify squares
+        List<GraphicalSquaresAnnotation.Square> squareList = new ArrayList<>(squares.squares());
+        assertEquals(GraphicalAnnotationColor.GREEN, squareList.get(0).color());
+        assertEquals(Chess.strToSqi("a4"), squareList.get(0).sqi());
+        assertEquals(GraphicalAnnotationColor.RED, squareList.get(1).color());
+        assertEquals(Chess.strToSqi("b5"), squareList.get(1).sqi());
+        
+        // Should not have text annotation (all text was graphical)
+        assertNull("Should not have text annotation", node.getAnnotation(TextAfterMoveAnnotation.class));
+    }
+
+    @Test
+    public void testParseGraphicalArrowsFromGeneric() {
+        GameMovesModel moves = new GameMovesModel();
+        GameMovesModel.Node node = moves.root().addMove(E2, E4);
+        
+        // Add commentary with encoded graphical arrows
+        node.addAnnotation(new CommentaryAfterMoveAnnotation("[%cal Ga1h8,Rb3c4]"));
+
+        AnnotationConverter.convertToStorageAnnotations(moves);
+
+        // Should have GraphicalArrowsAnnotation extracted
+        GraphicalArrowsAnnotation arrows = node.getAnnotation(GraphicalArrowsAnnotation.class);
+        assertNotNull("Should have extracted arrows annotation", arrows);
+        assertEquals("Should have 2 arrows", 2, arrows.arrows().size());
+        
+        // Verify arrows
+        List<GraphicalArrowsAnnotation.Arrow> arrowList = new ArrayList<>(arrows.arrows());
+        assertEquals(GraphicalAnnotationColor.GREEN, arrowList.get(0).color());
+        assertEquals(Chess.strToSqi("a1"), arrowList.get(0).fromSqi());
+        assertEquals(Chess.strToSqi("h8"), arrowList.get(0).toSqi());
+        assertEquals(GraphicalAnnotationColor.RED, arrowList.get(1).color());
+        assertEquals(Chess.strToSqi("b3"), arrowList.get(1).fromSqi());
+        assertEquals(Chess.strToSqi("c4"), arrowList.get(1).toSqi());
+    }
+
+    @Test
+    public void testParseGraphicalWithTextFromGeneric() {
+        GameMovesModel moves = new GameMovesModel();
+        GameMovesModel.Node node = moves.root().addMove(E2, E4);
+        
+        // Add commentary with encoded graphical annotation and text
+        node.addAnnotation(new CommentaryAfterMoveAnnotation("[%csl Ge4] Best opening move"));
+
+        AnnotationConverter.convertToStorageAnnotations(moves);
+
+        // Should have both GraphicalSquaresAnnotation and TextAfterMoveAnnotation
+        GraphicalSquaresAnnotation squares = node.getAnnotation(GraphicalSquaresAnnotation.class);
+        assertNotNull("Should have squares annotation", squares);
+        assertEquals(1, squares.squares().size());
+        
+        TextAfterMoveAnnotation text = node.getAnnotation(TextAfterMoveAnnotation.class);
+        assertNotNull("Should have text annotation", text);
+        assertEquals("Best opening move", text.text());
+    }
+
+    @Test
+    public void testRoundTripGraphicalAnnotations() {
+        GameMovesModel moves = new GameMovesModel();
+        GameMovesModel.Node node = moves.root().addMove(E2, E4);
+        
+        // Start with storage annotations
+        GraphicalSquaresAnnotation squares = ImmutableGraphicalSquaresAnnotation.of(
+            java.util.Arrays.asList(
+                ImmutableSquare.of(GraphicalAnnotationColor.GREEN, Chess.strToSqi("e4")),
+                ImmutableSquare.of(GraphicalAnnotationColor.YELLOW, Chess.strToSqi("d5"))
+            )
+        );
+        GraphicalArrowsAnnotation arrows = ImmutableGraphicalArrowsAnnotation.of(
+            java.util.Arrays.asList(
+                ImmutableArrow.of(GraphicalAnnotationColor.RED, Chess.strToSqi("e2"), Chess.strToSqi("e4"))
+            )
+        );
+        TextAfterMoveAnnotation text = ImmutableTextAfterMoveAnnotation.of("King's pawn opening");
+        
+        node.addAnnotation(squares);
+        node.addAnnotation(arrows);
+        node.addAnnotation(text);
+
+        // Convert to generic
+        AnnotationConverter.convertToGenericAnnotations(moves);
+        
+        // Should have one CommentaryAfterMoveAnnotation
+        assertEquals(1, node.getAnnotations().size());
+        assertTrue(node.getAnnotations().get(0) instanceof CommentaryAfterMoveAnnotation);
+
+        // Convert back to storage
+        AnnotationConverter.convertToStorageAnnotations(moves);
+
+        // Should have all three storage annotations back
+        GraphicalSquaresAnnotation squaresBack = node.getAnnotation(GraphicalSquaresAnnotation.class);
+        GraphicalArrowsAnnotation arrowsBack = node.getAnnotation(GraphicalArrowsAnnotation.class);
+        TextAfterMoveAnnotation textBack = node.getAnnotation(TextAfterMoveAnnotation.class);
+        
+        assertNotNull(squaresBack);
+        assertNotNull(arrowsBack);
+        assertNotNull(textBack);
+        
+        assertEquals(2, squaresBack.squares().size());
+        assertEquals(1, arrowsBack.arrows().size());
+        assertEquals("King's pawn opening", textBack.text());
+    }
+
+    @Test
+    public void testParseMultipleGraphicalAnnotationsFromGeneric() {
+        GameMovesModel moves = new GameMovesModel();
+        GameMovesModel.Node node = moves.root().addMove(E2, E4);
+        
+        // Add commentary with both squares and arrows
+        node.addAnnotation(new CommentaryAfterMoveAnnotation("[%csl Ga4,Rb5] [%cal Ye2e4] Strong move"));
+
+        AnnotationConverter.convertToStorageAnnotations(moves);
+
+        // Should have extracted both graphical annotations
+        GraphicalSquaresAnnotation squares = node.getAnnotation(GraphicalSquaresAnnotation.class);
+        GraphicalArrowsAnnotation arrows = node.getAnnotation(GraphicalArrowsAnnotation.class);
+        TextAfterMoveAnnotation text = node.getAnnotation(TextAfterMoveAnnotation.class);
+        
+        assertNotNull(squares);
+        assertNotNull(arrows);
+        assertNotNull(text);
+        
+        assertEquals(2, squares.squares().size());
+        assertEquals(1, arrows.arrows().size());
+        assertEquals("Strong move", text.text());
     }
 }
