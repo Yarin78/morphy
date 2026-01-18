@@ -11,6 +11,7 @@ import se.yarin.morphy.boosters.GameEvents;
 import se.yarin.morphy.entities.*;
 import se.yarin.morphy.exceptions.MorphyInvalidDataException;
 import se.yarin.morphy.games.*;
+import se.yarin.morphy.games.annotations.AnnotationConverter;
 import se.yarin.morphy.text.TextHeaderModel;
 import se.yarin.morphy.text.TextModel;
 
@@ -331,6 +332,9 @@ public class DatabaseWriteTransaction extends DatabaseTransaction {
   public @NotNull Game replaceGame(int gameId, @NotNull GameModel model) {
     ImmutableGameHeader.Builder header = ImmutableGameHeader.builder();
     ImmutableExtendedGameHeader.Builder extendedHeader = ImmutableExtendedGameHeader.builder();
+
+    // Convert generic annotations to storage annotations before serialization
+    AnnotationConverter.convertAnnotations(model.moves());
 
     gameAdapter().setGameData(header, extendedHeader, model);
     buildEntities(header, extendedHeader, model.header());
