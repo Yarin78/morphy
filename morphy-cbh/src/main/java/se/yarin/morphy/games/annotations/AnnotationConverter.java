@@ -18,24 +18,38 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Converts generic annotations (from PGN parsing) to storage annotations (for ChessBase database).
+ * Bidirectional converter between generic annotations and storage annotations.
  *
- * This is necessary before saving a game to the database, as generic annotations might
- * not have registered annotation serializers.
- *
- * <p>This converter handles the translation layer between:
+ * <p>This converter handles the translation layer in both directions:
  * <ul>
- *   <li>{@link NAGAnnotation} → {@link SymbolAnnotation} (with NAG consolidation)</li>
- *   <li>{@link CommentaryAfterMoveAnnotation} → {@link TextAfterMoveAnnotation}</li>
- *   <li>{@link CommentaryBeforeMoveAnnotation} → {@link TextBeforeMoveAnnotation}</li>
+ *   <li><b>To Storage (for database save):</b>
+ *     <ul>
+ *       <li>{@link NAGAnnotation} → {@link SymbolAnnotation} (with NAG consolidation)</li>
+ *       <li>{@link CommentaryAfterMoveAnnotation} → {@link TextAfterMoveAnnotation}</li>
+ *       <li>{@link CommentaryBeforeMoveAnnotation} → {@link TextBeforeMoveAnnotation}</li>
+ *     </ul>
+ *   </li>
+ *   <li><b>To Generic (for PGN export/display):</b>
+ *     <ul>
+ *       <li>{@link SymbolAnnotation} → multiple {@link NAGAnnotation} (one per NAG type)</li>
+ *       <li>{@link TextAfterMoveAnnotation} → {@link CommentaryAfterMoveAnnotation}</li>
+ *       <li>{@link TextBeforeMoveAnnotation} → {@link CommentaryBeforeMoveAnnotation}</li>
+ *     </ul>
+ *   </li>
  * </ul>
  *
- * <p>NAG Consolidation: ChessBase {@link SymbolAnnotation} can store up to 3 NAGs (one of each type:
- * MOVE_COMMENT, LINE_EVALUATION, MOVE_PREFIX). If multiple NAGs of the same type exist on a node,
- * only the first one is kept and a warning is logged about the data loss.
+ * <p>NAG Consolidation (to storage): ChessBase {@link SymbolAnnotation} can store up to 3 NAGs
+ * (one of each type: MOVE_COMMENT, LINE_EVALUATION, MOVE_PREFIX). If multiple NAGs of the same
+ * type exist on a node, only the first one is kept and a warning is logged.
  *
- * <p>Usage: Call {@link #convertAnnotations(GameMovesModel)} before saving a game to the database
- * to ensure all annotations are in the correct storage format.
+ * <p>NAG Expansion (to generic): A {@link SymbolAnnotation} is expanded into separate
+ * {@link NAGAnnotation} objects for each non-NONE NAG it contains.
+ *
+ * <p>Usage:
+ * <ul>
+ *   <li>Call {@link #convertToStorageAnnotations(GameMovesModel)} before saving to database</li>
+ *   <li>Call {@link #convertToGenericAnnotations(GameMovesModel)} after loading from database or before PGN export</li>
+ * </ul>
  */
 public class AnnotationConverter {
     private static final Logger log = LoggerFactory.getLogger(AnnotationConverter.class);
@@ -44,18 +58,43 @@ public class AnnotationConverter {
      * Converts all generic annotations in a game to storage annotations.
      * This method traverses the entire move tree including all variations.
      *
+     * <p>Use this before saving a game to the database.
+     *
      * @param moves the game moves model to convert annotations for
      */
-    public static void convertAnnotations(@NotNull GameMovesModel moves) {
-        moves.root().traverseDepthFirst(node -> convertNodeAnnotations(node.getAnnotations()));
+    public static void convertToStorageAnnotations(@NotNull GameMovesModel moves) {
+        moves.root().traverseDepthFirst(node -> convertNodeToStorageAnnotations(node.getAnnotations()));
     }
 
     /**
-     * Converts annotations on a single node.
+     * Converts all storage annotations in a game to generic annotations.
+     * This method traverses the entire move tree including all variations.
+     *
+     * <p>Use this after loading a game from the database or before exporting to PGN.
+     *
+     * @param moves the game moves model to convert annotations for
+     */
+    public static void convertToGenericAnnotations(@NotNull GameMovesModel moves) {
+        moves.root().traverseDepthFirst(node -> convertNodeToGenericAnnotations(node.getAnnotations()));
+    }
+
+    /**
+     * Legacy method for backward compatibility. Delegates to {@link #convertToStorageAnnotations(GameMovesModel)}.
+     *
+     * @param moves the game moves model to convert annotations for
+     * @deprecated Use {@link #convertToStorageAnnotations(GameMovesModel)} instead for clarity
+     */
+    @Deprecated
+    public static void convertAnnotations(@NotNull GameMovesModel moves) {
+        convertToStorageAnnotations(moves);
+    }
+
+    /**
+     * Converts annotations on a single node from generic to storage format.
      *
      * @param annotations the annotations collection to convert
      */
-    private static void convertNodeAnnotations(@NotNull Annotations annotations) {
+    private static void convertNodeToStorageAnnotations(@NotNull Annotations annotations) {
         if (annotations.isEmpty()) {
             return;
         }
@@ -77,7 +116,7 @@ public class AnnotationConverter {
 
         // Convert NAG annotations if present
         if (!nagAnnotations.isEmpty()) {
-            convertNAGAnnotations(annotations, nagAnnotations);
+            convertNAGAnnotationsToStorage(annotations, nagAnnotations);
         }
 
         // Convert commentary after move
@@ -94,6 +133,73 @@ public class AnnotationConverter {
     }
 
     /**
+     * Converts annotations on a single node from storage to generic format.
+     *
+     * @param annotations the annotations collection to convert
+     */
+    private static void convertNodeToGenericAnnotations(@NotNull Annotations annotations) {
+        if (annotations.isEmpty()) {
+            return;
+        }
+
+        // Collect storage annotations that need conversion
+        List<SymbolAnnotation> symbolAnnotations = new ArrayList<>();
+        TextAfterMoveAnnotation afterMove = null;
+        TextBeforeMoveAnnotation beforeMove = null;
+
+        for (Annotation annotation : annotations) {
+            if (annotation instanceof SymbolAnnotation) {
+                symbolAnnotations.add((SymbolAnnotation) annotation);
+            } else if (annotation instanceof TextAfterMoveAnnotation) {
+                afterMove = (TextAfterMoveAnnotation) annotation;
+            } else if (annotation instanceof TextBeforeMoveAnnotation) {
+                beforeMove = (TextBeforeMoveAnnotation) annotation;
+            }
+        }
+
+        // Convert SymbolAnnotation to NAGAnnotations
+        for (SymbolAnnotation symbolAnnotation : symbolAnnotations) {
+            annotations.remove(symbolAnnotation);
+            convertSymbolAnnotationToNAGs(annotations, symbolAnnotation);
+        }
+
+        // Convert text after move
+        if (afterMove != null) {
+            annotations.remove(afterMove);
+            annotations.add(new CommentaryAfterMoveAnnotation(afterMove.text()));
+        }
+
+        // Convert text before move
+        if (beforeMove != null) {
+            annotations.remove(beforeMove);
+            annotations.add(new CommentaryBeforeMoveAnnotation(beforeMove.text()));
+        }
+    }
+
+    /**
+     * Expands a SymbolAnnotation into individual NAGAnnotation objects.
+     *
+     * @param annotations the annotations collection to add to
+     * @param symbolAnnotation the symbol annotation to expand
+     */
+    private static void convertSymbolAnnotationToNAGs(@NotNull Annotations annotations, @NotNull SymbolAnnotation symbolAnnotation) {
+        // Add NAG for move comment if present
+        if (symbolAnnotation.moveComment() != NAG.NONE) {
+            annotations.add(new NAGAnnotation(symbolAnnotation.moveComment()));
+        }
+
+        // Add NAG for line evaluation if present
+        if (symbolAnnotation.lineEvaluation() != NAG.NONE) {
+            annotations.add(new NAGAnnotation(symbolAnnotation.lineEvaluation()));
+        }
+
+        // Add NAG for move prefix if present
+        if (symbolAnnotation.movePrefix() != NAG.NONE) {
+            annotations.add(new NAGAnnotation(symbolAnnotation.movePrefix()));
+        }
+    }
+
+    /**
      * Consolidates multiple NAG annotations into a single SymbolAnnotation.
      * ChessBase format supports exactly 3 NAGs: one MOVE_COMMENT, one LINE_EVALUATION, and one MOVE_PREFIX.
      * If multiple NAGs of the same type exist, only the first one is kept and a warning is logged.
@@ -101,7 +207,7 @@ public class AnnotationConverter {
      * @param annotations the annotations collection to modify
      * @param nagAnnotations the list of NAG annotations to consolidate
      */
-    private static void convertNAGAnnotations(@NotNull Annotations annotations, @NotNull List<NAGAnnotation> nagAnnotations) {
+    private static void convertNAGAnnotationsToStorage(@NotNull Annotations annotations, @NotNull List<NAGAnnotation> nagAnnotations) {
         // Group NAGs by type, keeping only the first of each type
         Map<NAGType, NAG> nagsByType = new EnumMap<>(NAGType.class);
 

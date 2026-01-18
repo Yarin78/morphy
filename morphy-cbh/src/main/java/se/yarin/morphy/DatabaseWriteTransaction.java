@@ -334,7 +334,7 @@ public class DatabaseWriteTransaction extends DatabaseTransaction {
     ImmutableExtendedGameHeader.Builder extendedHeader = ImmutableExtendedGameHeader.builder();
 
     // Convert generic annotations to storage annotations before serialization
-    AnnotationConverter.convertAnnotations(model.moves());
+    AnnotationConverter.convertToStorageAnnotations(model.moves());
 
     gameAdapter().setGameData(header, extendedHeader, model);
     buildEntities(header, extendedHeader, model.header());
