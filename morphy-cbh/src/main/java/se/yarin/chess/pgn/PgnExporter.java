@@ -3,6 +3,8 @@ package se.yarin.chess.pgn;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import se.yarin.chess.*;
+import se.yarin.chess.annotations.AnnotationTransformer;
+import se.yarin.chess.annotations.Annotations;
 import se.yarin.chess.annotations.CommentaryAfterMoveAnnotation;
 import se.yarin.chess.annotations.CommentaryBeforeMoveAnnotation;
 import se.yarin.chess.annotations.NAGAnnotation;
@@ -19,12 +21,13 @@ import java.util.stream.Stream;
 public class PgnExporter {
 
     private final PgnFormatOptions options;
+    private final AnnotationTransformer annotationTransformer;
 
     /**
      * Creates an exporter with default options.
      */
     public PgnExporter() {
-        this(PgnFormatOptions.DEFAULT);
+        this(PgnFormatOptions.DEFAULT, null);
     }
 
     /**
@@ -33,7 +36,18 @@ public class PgnExporter {
      * @param options the format options
      */
     public PgnExporter(@NotNull PgnFormatOptions options) {
+        this(options, null);
+    }
+
+    /**
+     * Creates an exporter with custom options and annotation transformer.
+     *
+     * @param options the format options
+     * @param annotationTransformer the transformer to apply to annotations before export (may be null)
+     */
+    public PgnExporter(@NotNull PgnFormatOptions options, @Nullable AnnotationTransformer annotationTransformer) {
         this.options = options;
+        this.annotationTransformer = annotationTransformer;
     }
 
     /**
@@ -268,10 +282,18 @@ public class PgnExporter {
 
     private void exportSingleMove(GameMovesModel.Node child, GameMovesModel.Node parent,
                                    MoveTextWriter writer, boolean isMainLine) throws IOException {
+        // Create a copy of annotations to avoid modifying the original game model
+        Annotations annotations = new Annotations(child.getAnnotations());
+
+        // Apply annotation transformer if present
+        if (annotationTransformer != null) {
+            annotationTransformer.transform(annotations);
+        }
+
         // Export comments before the move
         if (options.exportComments()) {
             CommentaryBeforeMoveAnnotation beforeComment =
-                    child.getAnnotations().getByClass(CommentaryBeforeMoveAnnotation.class);
+                    annotations.getByClass(CommentaryBeforeMoveAnnotation.class);
             if (beforeComment != null) {
                 writer.write("{" + beforeComment.getCommentary() + "}");
             }
@@ -296,7 +318,7 @@ public class PgnExporter {
         // Export NAG annotations
         if (options.exportNAGs()) {
             List<NAGAnnotation> nags = new ArrayList<>();
-            for (var annotation : child.getAnnotations()) {
+            for (var annotation : annotations) {
                 if (annotation instanceof NAGAnnotation) {
                     nags.add((NAGAnnotation) annotation);
                 }
@@ -319,7 +341,7 @@ public class PgnExporter {
         // Export comments after the move
         if (options.exportComments()) {
             CommentaryAfterMoveAnnotation afterComment =
-                    child.getAnnotations().getByClass(CommentaryAfterMoveAnnotation.class);
+                    annotations.getByClass(CommentaryAfterMoveAnnotation.class);
             if (afterComment != null) {
                 writer.ensureSpace();
                 writer.write("{" + afterComment.getCommentary() + "}");

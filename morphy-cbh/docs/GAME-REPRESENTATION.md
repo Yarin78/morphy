@@ -537,13 +537,14 @@ The `AnnotationConverter` provides **bidirectional conversion** between generic 
 
 #### Conversion Direction 1: Generic → Storage
 
-When saving games imported from PGN, generic annotations must be converted to storage format:
+When saving games imported from PGN, generic annotations are automatically converted to storage format using an `AnnotationTransformer`:
 
 ```java
-// Automatically called by DatabaseWriteTransaction before saving
-AnnotationConverter.convertToStorageAnnotations(gameModel.moves());
+// Configure PgnParser with automatic conversion to storage annotations
+PgnParser parser = new PgnParser(AnnotationConverter::convertNodeToStorageAnnotations);
+GameModel model = parser.parseGame(pgnString);
 
-// Conversions performed:
+// Conversions performed at each node:
 NAGAnnotation → SymbolAnnotation (with NAG consolidation)
 CommentaryAfterMoveAnnotation → TextAfterMoveAnnotation
 CommentaryBeforeMoveAnnotation → TextBeforeMoveAnnotation
@@ -559,12 +560,17 @@ Graphical encoding → GraphicalSquaresAnnotation/GraphicalArrowsAnnotation
 
 #### Conversion Direction 2: Storage → Generic
 
-When exporting games or preparing them for display:
+When exporting games to PGN, storage annotations are automatically converted to generic format using an `AnnotationTransformer`:
 
 ```java
-AnnotationConverter.convertToGenericAnnotations(gameModel.moves());
+// Configure PgnExporter with automatic conversion to generic annotations
+PgnExporter exporter = new PgnExporter(
+    PgnFormatOptions.DEFAULT,
+    AnnotationConverter::convertNodeToGenericAnnotations
+);
+String pgn = exporter.exportGame(gameModel);
 
-// Conversions performed:
+// Conversions performed at each node:
 SymbolAnnotation → NAGAnnotation (one per NAG type)
 TextAfterMoveAnnotation → CommentaryAfterMoveAnnotation (with graphical encoding)
 TextBeforeMoveAnnotation → CommentaryBeforeMoveAnnotation
@@ -576,18 +582,25 @@ GraphicalArrowsAnnotation → [%cal ...] encoding in text
 
 #### Automatic Integration
 
-Conversion happens **automatically** in `DatabaseWriteTransaction`:
+Conversion happens **automatically** through the `AnnotationTransformer` mechanism:
 
+**PGN Import Flow:**
 ```java
-public Game addGame(@NotNull GameModel model) {
-    // Convert generic annotations to storage format before saving
-    AnnotationConverter.convertToStorageAnnotations(model.moves());
-
-    // Continue with normal save process...
-}
+// Parser applies transformer as it builds the game tree
+PgnParser parser = new PgnParser(AnnotationConverter::convertNodeToStorageAnnotations);
+GameModel model = parser.parseGame(pgnString);
+// model now has storage annotations, ready for database save
 ```
 
-This ensures that games imported from PGN don't lose their annotations when saved to the database.
+**PGN Export Flow:**
+```java
+// Exporter applies transformer as it exports each node
+PgnExporter exporter = new PgnExporter(options, AnnotationConverter::convertNodeToGenericAnnotations);
+String pgn = exporter.exportGame(gameModel);
+// PGN contains generic annotations with graphical encoding
+```
+
+This ensures that games round-trip correctly between PGN and database formats without losing annotations.
 
 ---
 
@@ -613,17 +626,16 @@ Frontend
 
 ```
 PGN String
-    ↓ PgnParser.parseGame()
-GameModel (with generic annotations)
+    ↓ PgnParser.parseGame() (with AnnotationTransformer)
+GameModel (with storage annotations)
     ↓ DatabaseWriteTransaction.addGame()
-    ↓ AnnotationConverter.convertToStorageAnnotations()
     ↓ GameAdapter.setGameData()
 Game (storage layer)
     ↓ commit()
 Database (.cbh/.cbg/.cba files)
 ```
 
-**Key classes:** `PgnParser`, `DatabaseWriteTransaction`, `AnnotationConverter`, `GameAdapter`
+**Key classes:** `PgnParser`, `AnnotationConverter`, `DatabaseWriteTransaction`, `GameAdapter`
 
 ---
 

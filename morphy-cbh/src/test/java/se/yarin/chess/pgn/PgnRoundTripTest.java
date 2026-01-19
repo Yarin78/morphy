@@ -33,14 +33,14 @@ public class PgnRoundTripTest {
                 """;
 
         // Parse
-        GameModel game1 = PgnParser.parseGame(originalPgn);
+        GameModel game1 = new PgnParser().parseGame(originalPgn);
 
         // Export
         PgnExporter exporter = new PgnExporter();
         String exportedPgn = exporter.exportGame(game1);
 
         // Parse again
-        GameModel game2 = PgnParser.parseGame(exportedPgn);
+        GameModel game2 = new PgnParser().parseGame(exportedPgn);
 
         // Compare game trees
         assertGamesEqual(game1, game2);
@@ -60,10 +60,10 @@ public class PgnRoundTripTest {
                 1. e4 e5 (1... c5 2. Nf3 d6 3. d4 cxd4 4. Nxd4) 2. Nf3 Nc6 (2... Nf6) 3. Bb5 a6 *
                 """;
 
-        GameModel game1 = PgnParser.parseGame(originalPgn);
+        GameModel game1 = new PgnParser().parseGame(originalPgn);
         PgnExporter exporter = new PgnExporter();
         String exportedPgn = exporter.exportGame(game1);
-        GameModel game2 = PgnParser.parseGame(exportedPgn);
+        GameModel game2 = new PgnParser().parseGame(exportedPgn);
 
         assertGamesEqual(game1, game2);
     }
@@ -82,10 +82,10 @@ public class PgnRoundTripTest {
                 1. e4 $1 {Best move} e5 $2 {Dubious} 2. Nf3 $3 Nc6 *
                 """;
 
-        GameModel game1 = PgnParser.parseGame(originalPgn);
+        GameModel game1 = new PgnParser().parseGame(originalPgn);
         PgnExporter exporter = new PgnExporter();
         String exportedPgn = exporter.exportGame(game1);
-        GameModel game2 = PgnParser.parseGame(exportedPgn);
+        GameModel game2 = new PgnParser().parseGame(exportedPgn);
 
         // Verify move count
         assertEquals(game1.moves().countPly(true), game2.moves().countPly(true));
@@ -108,7 +108,7 @@ public class PgnRoundTripTest {
         String pgn = exporter.exportGame(game1);
 
         // Parse
-        GameModel game2 = PgnParser.parseGame(pgn);
+        GameModel game2 = new PgnParser().parseGame(pgn);
 
         // Verify
         assertGamesEqual(game1, game2);
@@ -124,7 +124,7 @@ public class PgnRoundTripTest {
             PgnExporter exporter = new PgnExporter();
             String pgn = exporter.exportGame(game1);
 
-            GameModel game2 = PgnParser.parseGame(pgn);
+            GameModel game2 = new PgnParser().parseGame(pgn);
 
             assertGamesEqual(game1, game2);
         }
@@ -140,7 +140,7 @@ public class PgnRoundTripTest {
         PgnExporter exporter = new PgnExporter();
         String pgn = exporter.exportGame(game1);
 
-        GameModel game2 = PgnParser.parseGame(pgn);
+        GameModel game2 = new PgnParser().parseGame(pgn);
 
         assertGamesEqual(game1, game2);
     }
@@ -161,10 +161,10 @@ public class PgnRoundTripTest {
                 2... Nc6 3. Bb5 *
                 """;
 
-        GameModel game1 = PgnParser.parseGame(originalPgn);
+        GameModel game1 = new PgnParser().parseGame(originalPgn);
         PgnExporter exporter = new PgnExporter();
         String exportedPgn = exporter.exportGame(game1);
-        GameModel game2 = PgnParser.parseGame(exportedPgn);
+        GameModel game2 = new PgnParser().parseGame(exportedPgn);
 
         // Verify setup position is preserved
         assertTrue(game2.moves().isSetupPosition());
@@ -198,7 +198,7 @@ public class PgnRoundTripTest {
                 """;
 
         // Parse the games
-        Stream<GameModel> games = PgnParser.parseGames(new StringReader(inputPgn));
+        Stream<GameModel> games = new PgnParser().parseGames(new StringReader(inputPgn));
 
         // Export using exportGames
         StringWriter writer = new StringWriter();

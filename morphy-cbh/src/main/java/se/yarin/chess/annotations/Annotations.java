@@ -10,6 +10,12 @@ import java.util.stream.Collectors;
  * may have multiple annotations, but only one annotation per class.
  */
 public class Annotations extends ArrayList<Annotation> {
+  public Annotations() {
+  }
+
+  public Annotations(List<Annotation> annotations) {
+    super(annotations);
+  }
 
   /**
    * Replaces an annotation. Any annotations of the same class as annotation will be removed.

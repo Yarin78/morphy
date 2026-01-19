@@ -1,7 +1,6 @@
 package se.yarin.chess.pgn;
 
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import se.yarin.chess.*;
 import se.yarin.chess.annotations.Annotation;
 import se.yarin.chess.annotations.CommentaryAfterMoveAnnotation;

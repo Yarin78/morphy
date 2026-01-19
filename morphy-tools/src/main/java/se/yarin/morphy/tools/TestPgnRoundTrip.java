@@ -9,6 +9,7 @@ import se.yarin.morphy.Database;
 import se.yarin.morphy.DatabaseMode;
 import se.yarin.morphy.DatabaseReadTransaction;
 import se.yarin.morphy.Game;
+import se.yarin.morphy.games.annotations.AnnotationConverter;
 
 import java.io.File;
 import java.io.IOException;
@@ -38,7 +39,10 @@ public class TestPgnRoundTrip {
         System.out.println("Opening database: " + databasePath);
         Database db = Database.open(dbFile, DatabaseMode.READ_ONLY);
 
-        PgnExporter exporter = new PgnExporter(PgnFormatOptions.DEFAULT_WITHOUT_PLYCOUNT);
+        PgnExporter exporter = new PgnExporter(
+                PgnFormatOptions.DEFAULT_WITHOUT_PLYCOUNT,
+                AnnotationConverter::convertNodeToGenericAnnotations);
+        PgnParser parser = new PgnParser(AnnotationConverter::convertNodeToStorageAnnotations);
 
         int totalGames = 0;
         int identicalGames = 0;
@@ -67,7 +71,7 @@ public class TestPgnRoundTrip {
                     String pgn = exporter.exportGame(original);
 
                     // Parse back from PGN
-                    GameModel roundTripped = PgnParser.parseGame(pgn);
+                    GameModel roundTripped = parser.parseGame(pgn);
 
                     // Compare
                     GameModelComparator.ComparisonResult result =
@@ -88,7 +92,6 @@ public class TestPgnRoundTrip {
                             System.out.println("PGN:");
                             System.out.println(pgn);
                             System.out.println();
-                            break;
                         }
                     }
                 } catch (Exception e) {

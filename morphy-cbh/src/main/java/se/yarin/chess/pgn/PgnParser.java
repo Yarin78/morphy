@@ -1,7 +1,9 @@
 package se.yarin.chess.pgn;
 
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import se.yarin.chess.*;
+import se.yarin.chess.annotations.AnnotationTransformer;
 
 import java.io.Reader;
 import java.io.StringReader;
@@ -10,9 +12,29 @@ import java.util.stream.Stream;
 
 /**
  * Main parser for PGN (Portable Game Notation) files.
- * Converts PGN text into GameModel objects.
+ * Converts PGN text into GameModel objects with the default
+ * chess annotations, unless an annotation converter has been
+ * specified.
  */
 public class PgnParser {
+
+    private final AnnotationTransformer annotationTransformer;
+
+    /**
+     * Creates a parser without an annotation transformer.
+     */
+    public PgnParser() {
+        this(null);
+    }
+
+    /**
+     * Creates a parser with an annotation transformer.
+     *
+     * @param annotationTransformer the transformer to apply to annotations (may be null)
+     */
+    public PgnParser(@Nullable AnnotationTransformer annotationTransformer) {
+        this.annotationTransformer = annotationTransformer;
+    }
 
     /**
      * Parses a single game from a PGN string.
@@ -22,7 +44,7 @@ public class PgnParser {
      * @throws PgnFormatException if the PGN is invalid
      */
     @NotNull
-    public static GameModel parseGame(@NotNull String pgnText) throws PgnFormatException {
+    public GameModel parseGame(@NotNull String pgnText) throws PgnFormatException {
         return parseGame(new StringReader(pgnText));
     }
 
@@ -34,7 +56,7 @@ public class PgnParser {
      * @throws PgnFormatException if the PGN is invalid
      */
     @NotNull
-    public static GameModel parseGame(@NotNull Reader reader) throws PgnFormatException {
+    public GameModel parseGame(@NotNull Reader reader) throws PgnFormatException {
         PgnLexer lexer = new PgnLexer(reader);
         GameModel game = parseNextGame(lexer);
         if (game == null) {
@@ -51,7 +73,7 @@ public class PgnParser {
      * @return a stream of parsed game models
      */
     @NotNull
-    public static Stream<GameModel> parseGames(@NotNull Reader reader) {
+    public Stream<GameModel> parseGames(@NotNull Reader reader) {
         PgnLexer lexer = new PgnLexer(reader);
         return Stream.generate(() -> {
             try {
@@ -71,7 +93,7 @@ public class PgnParser {
      * @return the next parsed game model, or null if EOF
      * @throws PgnFormatException if the PGN is invalid
      */
-    private static GameModel parseNextGame(PgnLexer lexer) throws PgnFormatException {
+    private GameModel parseNextGame(PgnLexer lexer) throws PgnFormatException {
         // Parse headers
         HeaderParseResult headerResult = parseHeadersWithToken(lexer);
 
@@ -111,7 +133,7 @@ public class PgnParser {
         }
     }
 
-    private static HeaderParseResult parseHeadersWithToken(PgnLexer lexer) throws PgnFormatException {
+    private HeaderParseResult parseHeadersWithToken(PgnLexer lexer) throws PgnFormatException {
         PgnHeaderParser headerParser = new PgnHeaderParser();
 
         PgnToken token = lexer.nextToken();
@@ -146,7 +168,7 @@ public class PgnParser {
         return new HeaderParseResult(headerParser.getHeader(), token);
     }
 
-    private static GameMovesModel createMovesModel(GameHeaderModel header) throws PgnFormatException {
+    private GameMovesModel createMovesModel(GameHeaderModel header) throws PgnFormatException {
         // Check for FEN setup position
         Object fenObj = header.getField("FEN");
         Object setupObj = header.getField("SetUp");
@@ -160,7 +182,7 @@ public class PgnParser {
         return new GameMovesModel();
     }
 
-    private static void parseMoveText(PgnLexer lexer, GameMovesModel moves, PgnToken firstToken) throws PgnFormatException {
+    private void parseMoveText(PgnLexer lexer, GameMovesModel moves, PgnToken firstToken) throws PgnFormatException {
         PgnGameBuilder builder = new PgnGameBuilder(moves);
 
         PgnToken token = firstToken;
@@ -226,6 +248,10 @@ public class PgnParser {
         if (token.type() == PgnToken.TokenType.RESULT) {
             // Could validate against header result
             // For now, just accept it
+        }
+
+        if (annotationTransformer != null) {
+            moves.root().traverseDepthFirst(node -> annotationTransformer.transform(node.getAnnotations()));
         }
     }
 }

@@ -545,6 +545,9 @@ public class Database implements EntityRetriever, AutoCloseable {
         file.getAbsoluteFile()
             .getParentFile()
             .listFiles((dir, name) -> name.toLowerCase(Locale.ROOT).startsWith(baseNameLower));
+    if (files == null) {
+      throw new IOException("Path " + file.getPath() + " is invalid");
+    }
     if (files.length > 0) {
       throw new IOException(
           String.format(

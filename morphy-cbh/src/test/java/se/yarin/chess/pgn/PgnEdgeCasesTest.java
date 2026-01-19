@@ -27,7 +27,7 @@ public class PgnEdgeCasesTest {
                 *
                 """;
 
-        GameModel game = PgnParser.parseGame(pgn);
+        GameModel game = new PgnParser().parseGame(pgn);
         assertEquals(0, game.moves().countPly(false));
     }
 
@@ -45,7 +45,7 @@ public class PgnEdgeCasesTest {
                 1. e4 e5 2. Nf3 Nc6 3. Bc4 Bc5 4. O-O Nf6 5. Re1 O-O *
                 """;
 
-        GameModel game = PgnParser.parseGame(pgn);
+        GameModel game = new PgnParser().parseGame(pgn);
 
         // Find White's O-O (move 7: 4. O-O)
         GameMovesModel.Node node = game.moves().root();
@@ -77,7 +77,7 @@ public class PgnEdgeCasesTest {
                 1. a8=Q h1=N *
                 """;
 
-        GameModel game = PgnParser.parseGame(pgn);
+        GameModel game = new PgnParser().parseGame(pgn);
 
         // Check white promotion
         GameMovesModel.Node a8Q = game.moves().root().mainNode();
@@ -104,7 +104,7 @@ public class PgnEdgeCasesTest {
                 1. e4 a6 2. e5 d5 3. exd6 *
                 """;
 
-        GameModel game = PgnParser.parseGame(pgn);
+        GameModel game = new PgnParser().parseGame(pgn);
 
         // Find the en passant capture
         GameMovesModel.Node node = game.moves().root();
@@ -130,7 +130,7 @@ public class PgnEdgeCasesTest {
                 1. Nf3 Nf6 2. Nc3 Nc6 3. Ng5 Ng4 4. Nge4 *
                 """;
 
-        GameModel game = PgnParser.parseGame(pgn);
+        GameModel game = new PgnParser().parseGame(pgn);
 
         // Find the disambiguated move Nge4
         GameMovesModel.Node node = game.moves().root();
@@ -155,7 +155,7 @@ public class PgnEdgeCasesTest {
                 1. e4 e5 2. Bc4 Nc6 3. Qh5 Nf6 4. Qxf7# 1-0
                 """;
 
-        GameModel game = PgnParser.parseGame(pgn);
+        GameModel game = new PgnParser().parseGame(pgn);
 
         // Find checkmate
         GameMovesModel.Node node = game.moves().root();
@@ -181,7 +181,7 @@ public class PgnEdgeCasesTest {
                 1. e4 e5 (1... c5) (1... e6) (1... c6) 2. Nf3 *
                 """;
 
-        GameModel game = PgnParser.parseGame(pgn);
+        GameModel game = new PgnParser().parseGame(pgn);
 
         GameMovesModel.Node afterE4 = game.moves().root().mainNode();
 
@@ -209,7 +209,7 @@ public class PgnEdgeCasesTest {
                 1. e2e4 e7e5 2. Ng1f3 Nb8c6 *
                 """;
 
-        GameModel game = PgnParser.parseGame(pgn);
+        GameModel game = new PgnParser().parseGame(pgn);
         assertEquals(4, game.moves().countPly(false));
     }
 
@@ -228,7 +228,7 @@ public class PgnEdgeCasesTest {
                 """;
 
         // This should fail because Qxe5 is illegal (queen can't capture e5)
-        PgnParser.parseGame(pgn);
+        new PgnParser().parseGame(pgn);
     }
 
     @Test(expected = PgnFormatException.class)
@@ -238,7 +238,7 @@ public class PgnEdgeCasesTest {
                 """;
 
         // Should fail without headers
-        PgnParser.parseGame(pgn);
+        new PgnParser().parseGame(pgn);
     }
 
     @Test
@@ -290,7 +290,7 @@ public class PgnEdgeCasesTest {
                 1. e4 e5 (1... c5) 2. Nf3 *
                 """;
 
-        GameModel game = PgnParser.parseGame(pgn);
+        GameModel game = new PgnParser().parseGame(pgn);
 
         // Export without variations
         PgnFormatOptions options = new PgnFormatOptions(

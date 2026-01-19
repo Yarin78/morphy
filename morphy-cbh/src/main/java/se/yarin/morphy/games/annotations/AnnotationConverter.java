@@ -4,7 +4,6 @@ import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.chess.Chess;
-import se.yarin.chess.GameMovesModel;
 import se.yarin.chess.NAG;
 import se.yarin.chess.NAGType;
 import se.yarin.chess.annotations.Annotation;
@@ -51,54 +50,27 @@ import java.util.stream.Collectors;
  *
  * <p>Usage:
  * <ul>
- *   <li>Call {@link #convertToStorageAnnotations(GameMovesModel)} before saving to database</li>
- *   <li>Call {@link #convertToGenericAnnotations(GameMovesModel)} after loading from database or before PGN export</li>
+ *   <li>Use {@link #convertNodeToStorageAnnotations(Annotations)} as a method reference in
+ *       {@link se.yarin.chess.annotations.AnnotationTransformer} when parsing PGN or saving to database</li>
+ *   <li>Use {@link #convertNodeToGenericAnnotations(Annotations)} as a method reference in
+ *       {@link se.yarin.chess.annotations.AnnotationTransformer} when exporting to PGN or loading from database</li>
  * </ul>
+ *
+ * <p>Example with PgnParser and PgnExporter:
+ * <pre>{@code
+ * PgnParser parser = new PgnParser(AnnotationConverter::convertNodeToStorageAnnotations);
+ * PgnExporter exporter = new PgnExporter(options, AnnotationConverter::convertNodeToGenericAnnotations);
+ * }</pre>
  */
 public class AnnotationConverter {
     private static final Logger log = LoggerFactory.getLogger(AnnotationConverter.class);
-
-    /**
-     * Converts all generic annotations in a game to storage annotations.
-     * This method traverses the entire move tree including all variations.
-     *
-     * <p>Use this before saving a game to the database.
-     *
-     * @param moves the game moves model to convert annotations for
-     */
-    public static void convertToStorageAnnotations(@NotNull GameMovesModel moves) {
-        moves.root().traverseDepthFirst(node -> convertNodeToStorageAnnotations(node.getAnnotations()));
-    }
-
-    /**
-     * Converts all storage annotations in a game to generic annotations.
-     * This method traverses the entire move tree including all variations.
-     *
-     * <p>Use this after loading a game from the database or before exporting to PGN.
-     *
-     * @param moves the game moves model to convert annotations for
-     */
-    public static void convertToGenericAnnotations(@NotNull GameMovesModel moves) {
-        moves.root().traverseDepthFirst(node -> convertNodeToGenericAnnotations(node.getAnnotations()));
-    }
-
-    /**
-     * Legacy method for backward compatibility. Delegates to {@link #convertToStorageAnnotations(GameMovesModel)}.
-     *
-     * @param moves the game moves model to convert annotations for
-     * @deprecated Use {@link #convertToStorageAnnotations(GameMovesModel)} instead for clarity
-     */
-    @Deprecated
-    public static void convertAnnotations(@NotNull GameMovesModel moves) {
-        convertToStorageAnnotations(moves);
-    }
 
     /**
      * Converts annotations on a single node from generic to storage format.
      *
      * @param annotations the annotations collection to convert
      */
-    private static void convertNodeToStorageAnnotations(@NotNull Annotations annotations) {
+    public static void convertNodeToStorageAnnotations(@NotNull Annotations annotations) {
         if (annotations.isEmpty()) {
             return;
         }
@@ -148,7 +120,7 @@ public class AnnotationConverter {
      *
      * @param annotations the annotations collection to convert
      */
-    private static void convertNodeToGenericAnnotations(@NotNull Annotations annotations) {
+    public static void convertNodeToGenericAnnotations(@NotNull Annotations annotations) {
         if (annotations.isEmpty()) {
             return;
         }

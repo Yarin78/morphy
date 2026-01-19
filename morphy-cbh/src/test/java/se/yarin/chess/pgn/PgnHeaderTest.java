@@ -28,7 +28,7 @@ public class PgnHeaderTest {
                 1. e4 e5 *
                 """;
 
-        GameModel game = PgnParser.parseGame(pgn);
+        GameModel game = new PgnParser().parseGame(pgn);
         GameHeaderModel header = game.header();
 
         assertEquals("F/S Return Match", header.getEvent());
@@ -60,7 +60,7 @@ public class PgnHeaderTest {
                 1. e4 e5 *
                 """;
 
-        GameModel game = PgnParser.parseGame(pgn);
+        GameModel game = new PgnParser().parseGame(pgn);
         GameHeaderModel header = game.header();
 
         assertEquals(Integer.valueOf(2500), header.getWhiteElo());
@@ -87,7 +87,7 @@ public class PgnHeaderTest {
                 1. e4 *
                 """;
 
-        GameModel game = PgnParser.parseGame(pgn);
+        GameModel game = new PgnParser().parseGame(pgn);
         GameHeaderModel header = game.header();
 
         assertEquals("Value1", header.getField("CustomField1"));
@@ -108,7 +108,7 @@ public class PgnHeaderTest {
                 1. e4 *
                 """;
 
-        GameModel game = PgnParser.parseGame(pgn);
+        GameModel game = new PgnParser().parseGame(pgn);
         Date date = game.header().getDate();
 
         assertEquals(2024, date.year());
@@ -130,7 +130,7 @@ public class PgnHeaderTest {
                 1. e4 *
                 """;
 
-        GameModel game = PgnParser.parseGame(pgn);
+        GameModel game = new PgnParser().parseGame(pgn);
         GameHeaderModel header = game.header();
 
         assertEquals(Integer.valueOf(5), header.getRound());
@@ -187,12 +187,12 @@ public class PgnHeaderTest {
                 1. e4 *
                 """;
 
-        GameModel game = PgnParser.parseGame(originalPgn);
+        GameModel game = new PgnParser().parseGame(originalPgn);
         PgnExporter exporter = new PgnExporter();
         String exportedPgn = exporter.exportGame(game);
 
         // Parse again
-        GameModel game2 = PgnParser.parseGame(exportedPgn);
+        GameModel game2 = new PgnParser().parseGame(exportedPgn);
 
         // Verify headers match
         assertEquals(game.header().getEvent(), game2.header().getEvent());

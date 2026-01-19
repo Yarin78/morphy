@@ -2,9 +2,6 @@ package se.yarin.chess;
 
 import org.jetbrains.annotations.NotNull;
 import se.yarin.chess.annotations.Annotation;
-import se.yarin.chess.annotations.CommentaryAfterMoveAnnotation;
-import se.yarin.chess.annotations.CommentaryBeforeMoveAnnotation;
-import se.yarin.chess.annotations.NAGAnnotation;
 
 import java.util.*;
 
@@ -108,77 +105,62 @@ public class GameModelComparator {
                                            @NotNull GameMovesModel.Node node2,
                                            @NotNull ComparisonResult result,
                                            @NotNull List<String> path) {
-        // Compare NAG annotations
-        List<NAGAnnotation> nags1 = new ArrayList<>();
-        List<NAGAnnotation> nags2 = new ArrayList<>();
+        // Group annotations by class type
+        Map<Class<? extends Annotation>, List<Annotation>> annotationsByClass1 = groupAnnotationsByClass(node1);
+        Map<Class<? extends Annotation>, List<Annotation>> annotationsByClass2 = groupAnnotationsByClass(node2);
 
-        for (Annotation ann : node1.getAnnotations()) {
-            if (ann instanceof NAGAnnotation) {
-                nags1.add((NAGAnnotation) ann);
+        // Get all annotation classes from both nodes
+        Set<Class<? extends Annotation>> allClasses = new HashSet<>();
+        allClasses.addAll(annotationsByClass1.keySet());
+        allClasses.addAll(annotationsByClass2.keySet());
+
+        // Compare annotations for each class type
+        for (Class<? extends Annotation> annotationClass : allClasses) {
+            List<Annotation> list1 = annotationsByClass1.getOrDefault(annotationClass, new ArrayList<>());
+            List<Annotation> list2 = annotationsByClass2.getOrDefault(annotationClass, new ArrayList<>());
+
+            if (!annotationListsEqual(list1, list2)) {
+                // Count differences
+                int onlyInModel1 = countOnlyInFirst(list1, list2);
+                int onlyInModel2 = countOnlyInFirst(list2, list1);
+                int inBothButDifferent = Math.min(list1.size(), list2.size()) -
+                                        countInBoth(list1, list2);
+
+                result.addAnnotationDifference(path, annotationClass,
+                    list1, list2, onlyInModel1, onlyInModel2, inBothButDifferent);
             }
         }
+    }
 
-        for (Annotation ann : node2.getAnnotations()) {
-            if (ann instanceof NAGAnnotation) {
-                nags2.add((NAGAnnotation) ann);
+    private static Map<Class<? extends Annotation>, List<Annotation>> groupAnnotationsByClass(
+            @NotNull GameMovesModel.Node node) {
+        Map<Class<? extends Annotation>, List<Annotation>> result = new HashMap<>();
+        for (Annotation annotation : node.getAnnotations()) {
+            result.computeIfAbsent(annotation.getClass(), k -> new ArrayList<>()).add(annotation);
+        }
+        return result;
+    }
+
+    private static int countOnlyInFirst(List<Annotation> list1, List<Annotation> list2) {
+        int count = 0;
+        List<Annotation> remaining = new ArrayList<>(list2);
+        for (Annotation ann : list1) {
+            if (!remaining.remove(ann)) {
+                count++;
             }
         }
+        return count;
+    }
 
-        if (!annotationListsEqual(nags1, nags2)) {
-            result.addNAGDifference(path, nags1, nags2);
-        }
-
-        // Compare commentary before move
-        CommentaryBeforeMoveAnnotation before1 =
-                node1.getAnnotations().getByClass(CommentaryBeforeMoveAnnotation.class);
-        CommentaryBeforeMoveAnnotation before2 =
-                node2.getAnnotations().getByClass(CommentaryBeforeMoveAnnotation.class);
-
-        if (!Objects.equals(before1, before2)) {
-            String comment1 = before1 != null ? before1.getCommentary() : null;
-            String comment2 = before2 != null ? before2.getCommentary() : null;
-            if (!Objects.equals(comment1, comment2)) {
-                result.addCommentDifference(path, "before", comment1, comment2);
+    private static int countInBoth(List<Annotation> list1, List<Annotation> list2) {
+        int count = 0;
+        List<Annotation> remaining = new ArrayList<>(list2);
+        for (Annotation ann : list1) {
+            if (remaining.remove(ann)) {
+                count++;
             }
         }
-
-        // Compare commentary after move
-        CommentaryAfterMoveAnnotation after1 =
-                node1.getAnnotations().getByClass(CommentaryAfterMoveAnnotation.class);
-        CommentaryAfterMoveAnnotation after2 =
-                node2.getAnnotations().getByClass(CommentaryAfterMoveAnnotation.class);
-
-        if (!Objects.equals(after1, after2)) {
-            String comment1 = after1 != null ? after1.getCommentary() : null;
-            String comment2 = after2 != null ? after2.getCommentary() : null;
-            if (!Objects.equals(comment1, comment2)) {
-                result.addCommentDifference(path, "after", comment1, comment2);
-            }
-        }
-
-        // Compare other annotations
-        List<Annotation> other1 = new ArrayList<>();
-        List<Annotation> other2 = new ArrayList<>();
-
-        for (Annotation ann : node1.getAnnotations()) {
-            if (!(ann instanceof NAGAnnotation) &&
-                    !(ann instanceof CommentaryBeforeMoveAnnotation) &&
-                    !(ann instanceof CommentaryAfterMoveAnnotation)) {
-                other1.add(ann);
-            }
-        }
-
-        for (Annotation ann : node2.getAnnotations()) {
-            if (!(ann instanceof NAGAnnotation) &&
-                    !(ann instanceof CommentaryBeforeMoveAnnotation) &&
-                    !(ann instanceof CommentaryAfterMoveAnnotation)) {
-                other2.add(ann);
-            }
-        }
-
-        if (!annotationListsEqual(other1, other2)) {
-            result.addOtherAnnotationDifference(path, other1, other2);
-        }
+        return count;
     }
 
     private static boolean annotationListsEqual(List<? extends Annotation> list1,
@@ -201,9 +183,7 @@ public class GameModelComparator {
         private final List<FieldDifference> headerDifferences = new ArrayList<>();
         private final List<MoveDifference> moveDifferences = new ArrayList<>();
         private final List<VariationCountDifference> variationCountDifferences = new ArrayList<>();
-        private final List<NAGDifference> nagDifferences = new ArrayList<>();
-        private final List<CommentDifference> commentDifferences = new ArrayList<>();
-        private final List<AnnotationDifference> otherAnnotationDifferences = new ArrayList<>();
+        private final List<GenericAnnotationDifference> annotationDifferences = new ArrayList<>();
         private boolean setupPositionsDiffer = false;
         private boolean setupPlyDiffers = false;
 
@@ -211,9 +191,7 @@ public class GameModelComparator {
             return headerDifferences.isEmpty() &&
                     moveDifferences.isEmpty() &&
                     variationCountDifferences.isEmpty() &&
-                    nagDifferences.isEmpty() &&
-                    commentDifferences.isEmpty() &&
-                    otherAnnotationDifferences.isEmpty() &&
+                    annotationDifferences.isEmpty() &&
                     !setupPositionsDiffer &&
                     !setupPlyDiffers;
         }
@@ -230,16 +208,8 @@ public class GameModelComparator {
             return variationCountDifferences.isEmpty() && moveDifferences.isEmpty();
         }
 
-        public boolean nagsMatch() {
-            return nagDifferences.isEmpty();
-        }
-
-        public boolean commentsMatch() {
-            return commentDifferences.isEmpty();
-        }
-
-        public boolean otherAnnotationsMatch() {
-            return otherAnnotationDifferences.isEmpty();
+        public boolean annotationsMatch() {
+            return annotationDifferences.isEmpty();
         }
 
         public List<FieldDifference> getHeaderDifferences() {
@@ -254,16 +224,8 @@ public class GameModelComparator {
             return Collections.unmodifiableList(variationCountDifferences);
         }
 
-        public List<NAGDifference> getNAGDifferences() {
-            return Collections.unmodifiableList(nagDifferences);
-        }
-
-        public List<CommentDifference> getCommentDifferences() {
-            return Collections.unmodifiableList(commentDifferences);
-        }
-
-        public List<AnnotationDifference> getOtherAnnotationDifferences() {
-            return Collections.unmodifiableList(otherAnnotationDifferences);
+        public List<GenericAnnotationDifference> getAnnotationDifferences() {
+            return Collections.unmodifiableList(annotationDifferences);
         }
 
         public boolean setupPositionsDiffer() {
@@ -282,16 +244,11 @@ public class GameModelComparator {
             moveDifferences.add(new MoveDifference(path, move1, move2));
         }
 
-        void addNAGDifference(List<String> path, List<NAGAnnotation> nags1, List<NAGAnnotation> nags2) {
-            nagDifferences.add(new NAGDifference(path, nags1, nags2));
-        }
-
-        void addCommentDifference(List<String> path, String position, String comment1, String comment2) {
-            commentDifferences.add(new CommentDifference(path, position, comment1, comment2));
-        }
-
-        void addOtherAnnotationDifference(List<String> path, List<Annotation> annotations1, List<Annotation> annotations2) {
-            otherAnnotationDifferences.add(new AnnotationDifference(path, annotations1, annotations2));
+        void addAnnotationDifference(List<String> path, Class<? extends Annotation> annotationClass,
+                                      List<Annotation> annotations1, List<Annotation> annotations2,
+                                      int onlyInModel1, int onlyInModel2, int inBothButDifferent) {
+            annotationDifferences.add(new GenericAnnotationDifference(path, annotationClass,
+                annotations1, annotations2, onlyInModel1, onlyInModel2, inBothButDifferent));
         }
 
         @Override
@@ -339,25 +296,9 @@ public class GameModelComparator {
                 sb.append("\n");
             }
 
-            if (!nagDifferences.isEmpty()) {
-                sb.append("NAG annotation differences (").append(nagDifferences.size()).append("):\n");
-                for (NAGDifference diff : nagDifferences) {
-                    sb.append("  ").append(diff).append("\n");
-                }
-                sb.append("\n");
-            }
-
-            if (!commentDifferences.isEmpty()) {
-                sb.append("Comment differences (").append(commentDifferences.size()).append("):\n");
-                for (CommentDifference diff : commentDifferences) {
-                    sb.append("  ").append(diff).append("\n");
-                }
-                sb.append("\n");
-            }
-
-            if (!otherAnnotationDifferences.isEmpty()) {
-                sb.append("Other annotation differences (").append(otherAnnotationDifferences.size()).append("):\n");
-                for (AnnotationDifference diff : otherAnnotationDifferences) {
+            if (!annotationDifferences.isEmpty()) {
+                sb.append("Annotation differences (").append(annotationDifferences.size()).append("):\n");
+                for (GenericAnnotationDifference diff : annotationDifferences) {
                     sb.append("  ").append(diff).append("\n");
                 }
                 sb.append("\n");
@@ -411,62 +352,33 @@ public class GameModelComparator {
         }
     }
 
-    public record NAGDifference(List<String> path, List<NAGAnnotation> nags1, List<NAGAnnotation> nags2) {
-        public NAGDifference(List<String> path, List<NAGAnnotation> nags1, List<NAGAnnotation> nags2) {
-            this.path = new ArrayList<>(path);
-            this.nags1 = new ArrayList<>(nags1);
-            this.nags2 = new ArrayList<>(nags2);
-        }
-
-        @Override
-        public List<String> path() {
-            return Collections.unmodifiableList(path);
-        }
-
-        @Override
-        public List<NAGAnnotation> nags1() {
-            return Collections.unmodifiableList(nags1);
-        }
-
-        @Override
-        public List<NAGAnnotation> nags2() {
-            return Collections.unmodifiableList(nags2);
-        }
-
-        @Override
-        public String toString() {
-            return "At " + String.join(" ", path) + ": NAGs differ - " + nags1 + " != " + nags2;
-        }
-    }
-
     /**
-     * @param position "before" or "after"
+     * Represents a difference in annotations of a specific type at a node.
+     * Provides detailed counts of differences for that annotation type.
      */
-    public record CommentDifference(List<String> path, String position, String comment1, String comment2) {
-        public CommentDifference(List<String> path, String position, String comment1, String comment2) {
+    public record GenericAnnotationDifference(
+            List<String> path,
+            Class<? extends Annotation> annotationClass,
+            List<Annotation> annotations1,
+            List<Annotation> annotations2,
+            int onlyInModel1,
+            int onlyInModel2,
+            int inBothButDifferent) {
+
+        public GenericAnnotationDifference(List<String> path,
+                                           Class<? extends Annotation> annotationClass,
+                                           List<Annotation> annotations1,
+                                           List<Annotation> annotations2,
+                                           int onlyInModel1,
+                                           int onlyInModel2,
+                                           int inBothButDifferent) {
             this.path = new ArrayList<>(path);
-            this.position = position;
-            this.comment1 = comment1;
-            this.comment2 = comment2;
-        }
-
-        @Override
-        public List<String> path() {
-            return Collections.unmodifiableList(path);
-        }
-
-        @Override
-        public String toString() {
-            return "At " + String.join(" ", path) + " (" + position + "): \"" + comment1 + "\" != \"" + comment2 + "\"";
-        }
-    }
-
-    public record AnnotationDifference(List<String> path, List<Annotation> annotations1,
-                                       List<Annotation> annotations2) {
-        public AnnotationDifference(List<String> path, List<Annotation> annotations1, List<Annotation> annotations2) {
-            this.path = new ArrayList<>(path);
+            this.annotationClass = annotationClass;
             this.annotations1 = new ArrayList<>(annotations1);
             this.annotations2 = new ArrayList<>(annotations2);
+            this.onlyInModel1 = onlyInModel1;
+            this.onlyInModel2 = onlyInModel2;
+            this.inBothButDifferent = inBothButDifferent;
         }
 
         @Override
@@ -486,8 +398,28 @@ public class GameModelComparator {
 
         @Override
         public String toString() {
-            return "At " + String.join(" ", path) + ": Other annotations differ - " +
-                    annotations1.size() + " vs " + annotations2.size();
+            String className = annotationClass.getSimpleName();
+            StringBuilder sb = new StringBuilder();
+            sb.append("At ").append(String.join(" ", path)).append(": ")
+              .append(className).append(" differs");
+
+            if (onlyInModel1 > 0 || onlyInModel2 > 0 || inBothButDifferent > 0) {
+                sb.append(" (");
+                List<String> details = new ArrayList<>();
+                if (onlyInModel1 > 0) {
+                    details.add(onlyInModel1 + " only in model1");
+                }
+                if (onlyInModel2 > 0) {
+                    details.add(onlyInModel2 + " only in model2");
+                }
+                if (inBothButDifferent > 0) {
+                    details.add(inBothButDifferent + " different");
+                }
+                sb.append(String.join(", ", details));
+                sb.append(")");
+            }
+
+            return sb.toString();
         }
     }
 }

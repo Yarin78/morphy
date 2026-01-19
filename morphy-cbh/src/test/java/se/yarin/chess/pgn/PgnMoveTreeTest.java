@@ -31,7 +31,7 @@ public class PgnMoveTreeTest {
                 1. e4 e5 2. Nf3 Nc6 3. Bb5 *
                 """;
 
-        GameModel game = PgnParser.parseGame(pgn);
+        GameModel game = new PgnParser().parseGame(pgn);
         GameMovesModel moves = game.moves();
 
         // Verify we have a simple main line with 5 plies
@@ -81,7 +81,7 @@ public class PgnMoveTreeTest {
                 1. e4 e5 (1... c5 2. Nf3) 2. Nf3 Nc6 *
                 """;
 
-        GameModel game = PgnParser.parseGame(pgn);
+        GameModel game = new PgnParser().parseGame(pgn);
         GameMovesModel moves = game.moves();
 
         // Main line has 4 plies, variation adds 2 more
@@ -116,7 +116,7 @@ public class PgnMoveTreeTest {
                 1. e4 e5 (1... c5 2. Nf3 (2. c3) 2... d6) 2. Nf3 *
                 """;
 
-        GameModel game = PgnParser.parseGame(pgn);
+        GameModel game = new PgnParser().parseGame(pgn);
         GameMovesModel moves = game.moves();
 
         // Navigate to variation after 1. e4 e5
@@ -145,7 +145,7 @@ public class PgnMoveTreeTest {
                 1. e4 $1 e5 $2 $3 2. Nf3 $4 *
                 """;
 
-        GameModel game = PgnParser.parseGame(pgn);
+        GameModel game = new PgnParser().parseGame(pgn);
         GameMovesModel moves = game.moves();
 
         // Check e4 has NAG $1 (GOOD_MOVE)
@@ -173,7 +173,7 @@ public class PgnMoveTreeTest {
                 1. e4 {Best by test} e5 {Classical response} *
                 """;
 
-        GameModel game = PgnParser.parseGame(pgn);
+        GameModel game = new PgnParser().parseGame(pgn);
         GameMovesModel moves = game.moves();
 
         // Check e4 has comment
@@ -220,7 +220,7 @@ public class PgnMoveTreeTest {
                 1. e4 e5 (1... c5 $6 {Sicilian} 2. Nf3 d6 (2... Nc6) 3. d4) 2. Nf3 $1 Nc6 3. Bb5 {Ruy Lopez} *
                 """;
 
-        GameModel game = PgnParser.parseGame(pgn);
+        GameModel game = new PgnParser().parseGame(pgn);
         GameMovesModel moves = game.moves();
 
         // Verify main line

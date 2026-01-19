@@ -34,7 +34,7 @@ public class PgnParserTest {
                 1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 1-0
                 """;
 
-        GameModel game = PgnParser.parseGame(pgn);
+        GameModel game = new PgnParser().parseGame(pgn);
 
         assertNotNull(game);
         assertEquals("Test Event", game.header().getEvent());
@@ -59,7 +59,7 @@ public class PgnParserTest {
                 1. e4 $1 e5 (1... c5) 2. Nf3 (2. Nc3 $3) Nc6 {Black forfeited} 1-0
                 """;
 
-        GameModel game = PgnParser.parseGame(pgn);
+        GameModel game = new PgnParser().parseGame(pgn);
         PgnExporter exporter = new PgnExporter(PgnFormatOptions.DEFAULT_WITHOUT_PLYCOUNT);
         String exported = exporter.exportGame(game);
         assertEquals(pgn, exported);
@@ -88,7 +88,7 @@ public class PgnParserTest {
 
                 1. d4 d5 1/2-1/2
                 """;
-        var games = PgnParser.parseGames(new StringReader(pgn)).toList();
+        var games = new PgnParser().parseGames(new StringReader(pgn)).toList();
 
         assertEquals(2, games.size());
 
