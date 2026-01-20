@@ -11,6 +11,7 @@ import se.yarin.chess.annotations.Annotations;
 import se.yarin.chess.annotations.CommentaryAfterMoveAnnotation;
 import se.yarin.chess.annotations.CommentaryBeforeMoveAnnotation;
 import se.yarin.chess.annotations.NAGAnnotation;
+import se.yarin.morphy.entities.Nation;
 
 import java.util.ArrayList;
 import java.util.EnumMap;
@@ -65,6 +66,38 @@ import java.util.stream.Collectors;
 public class AnnotationConverter {
     private static final Logger log = LoggerFactory.getLogger(AnnotationConverter.class);
 
+    public static void trimAnnotations(@NotNull Annotations annotations) {
+        // Mainly for testing round trips
+        Annotations newAnnotations = new Annotations();
+
+        for (Annotation annotation : annotations) {
+            if (annotation instanceof TextAfterMoveAnnotation a) {
+                String trim = a.text().trim();
+                if (trim.isEmpty()) continue;
+                annotation = ImmutableTextAfterMoveAnnotation.builder().from(a).text(trim).build();
+            }
+            if (annotation instanceof TextBeforeMoveAnnotation a) {
+                String trim = a.text().trim();
+                if (trim.isEmpty()) continue;
+                annotation = ImmutableTextBeforeMoveAnnotation.builder().from(a).text(trim).build();
+            }
+            if (annotation instanceof CommentaryAfterMoveAnnotation a) {
+                String trim = a.getCommentary().trim();
+                if (trim.isEmpty()) continue;
+                annotation = new CommentaryAfterMoveAnnotation(trim);
+            }
+            if (annotation instanceof CommentaryBeforeMoveAnnotation a) {
+                String trim = a.getCommentary().trim();
+                if (trim.isEmpty()) continue;
+                annotation = new CommentaryBeforeMoveAnnotation(trim);
+            }
+            newAnnotations.add(annotation);
+        }
+
+        annotations.clear();
+        annotations.addAll(newAnnotations);
+    }
+
     /**
      * Converts annotations from generic to storage format.
      *
@@ -100,7 +133,7 @@ public class AnnotationConverter {
             annotations.remove(afterMove);
 
             // Parse and extract graphical annotations from the commentary text
-            String remainingText = parseAndExtractGraphicalAnnotations(annotations, afterMove.getCommentary());
+            String remainingText = parseAndExtractDecodedAnnotations(annotations, afterMove.getCommentary());
 
             // Only create TextAfterMoveAnnotation if there's remaining text
             if (!remainingText.isEmpty()) {
@@ -127,8 +160,8 @@ public class AnnotationConverter {
 
         // Collect storage annotations that need conversion
         List<SymbolAnnotation> symbolAnnotations = new ArrayList<>();
-        TextAfterMoveAnnotation afterMove = null;
-        TextBeforeMoveAnnotation beforeMove = null;
+        List<TextAfterMoveAnnotation> afterMoveAnnotations = new ArrayList<>();
+        List<TextBeforeMoveAnnotation> beforeMoveAnnotations = new ArrayList<>();
         GraphicalSquaresAnnotation squaresAnnotation = null;
         GraphicalArrowsAnnotation arrowsAnnotation = null;
 
@@ -136,9 +169,9 @@ public class AnnotationConverter {
             if (annotation instanceof SymbolAnnotation) {
                 symbolAnnotations.add((SymbolAnnotation) annotation);
             } else if (annotation instanceof TextAfterMoveAnnotation) {
-                afterMove = (TextAfterMoveAnnotation) annotation;
+                afterMoveAnnotations.add((TextAfterMoveAnnotation) annotation);
             } else if (annotation instanceof TextBeforeMoveAnnotation) {
-                beforeMove = (TextBeforeMoveAnnotation) annotation;
+                beforeMoveAnnotations.add((TextBeforeMoveAnnotation) annotation);
             } else if (annotation instanceof GraphicalSquaresAnnotation) {
                 squaresAnnotation = (GraphicalSquaresAnnotation) annotation;
             } else if (annotation instanceof GraphicalArrowsAnnotation) {
@@ -177,12 +210,16 @@ public class AnnotationConverter {
         }
 
         // Add existing text after move
-        if (afterMove != null) {
+        for (TextAfterMoveAnnotation afterMove : afterMoveAnnotations) {
             annotations.remove(afterMove);
             if (!textAfterBuilder.isEmpty() && !afterMove.text().isEmpty()) {
                 textAfterBuilder.append(" ");
             }
-            textAfterBuilder.append(afterMove.text());
+            if (afterMove.language() == Nation.NONE) {
+                textAfterBuilder.append(afterMove.text());
+            } else {
+                textAfterBuilder.append("[%lang ").append(afterMove.language().getIocCode()).append(" ").append(afterMove.text()).append("]");
+            }
         }
 
         // Create combined CommentaryAfterMoveAnnotation if we have any content
@@ -190,10 +227,20 @@ public class AnnotationConverter {
             annotations.add(new CommentaryAfterMoveAnnotation(textAfterBuilder.toString()));
         }
 
+        StringBuilder textBeforeBuilder = new StringBuilder();
+
         // Convert text before move
-        if (beforeMove != null) {
+        for (TextBeforeMoveAnnotation beforeMove : beforeMoveAnnotations) {
             annotations.remove(beforeMove);
-            annotations.add(new CommentaryBeforeMoveAnnotation(beforeMove.text()));
+            if (beforeMove.language() == Nation.NONE) {
+                textBeforeBuilder.append(beforeMove.text());
+            } else {
+                textBeforeBuilder.append("[%lang ").append(beforeMove.language().getIocCode()).append(" ").append(beforeMove.text()).append("]");
+            }
+        }
+
+        if (!textBeforeBuilder.isEmpty()) {
+            annotations.add(new CommentaryBeforeMoveAnnotation(textBeforeBuilder.toString()));
         }
     }
 
@@ -340,16 +387,18 @@ public class AnnotationConverter {
     // Regex patterns for parsing graphical annotations from text
     private static final Pattern SQUARES_PATTERN = Pattern.compile("\\[%csl\\s+([^\\]]+)\\]");
     private static final Pattern ARROWS_PATTERN = Pattern.compile("\\[%cal\\s+([^\\]]+)\\]");
+    // Regex patterns for parsing language specific text annotations
+    private static final Pattern LANGUAGE_PATTERN = Pattern.compile("\\[%lang\\s+([A-Z]+)\\s+([^\\]]+)\\]");
 
     /**
-     * Parses graphical annotations from commentary text and adds them to the annotations collection.
-     * Removes the square bracket notation from the text.
+     * Parses annotations that are decoded into commentary text as [%...] and
+     * adds them to the annotations collection. Removes the square bracket notation from the text.
      *
-     * @param annotations the annotations collection to add graphical annotations to
+     * @param annotations the annotations collection to add the decoded annotations to
      * @param commentary the commentary text that may contain square bracket notation
      * @return the commentary text with square bracket notation removed
      */
-    private static String parseAndExtractGraphicalAnnotations(@NotNull Annotations annotations, @NotNull String commentary) {
+    private static String parseAndExtractDecodedAnnotations(@NotNull Annotations annotations, @NotNull String commentary) {
         String remainingText = commentary;
 
         // Parse and extract squares annotation [%csl ...]
@@ -372,6 +421,18 @@ public class AnnotationConverter {
                 annotations.add(arrowsAnnotation);
             }
             remainingText = arrowsMatcher.replaceFirst("").trim();
+        }
+
+        while (true) {
+            Matcher langMatcher = LANGUAGE_PATTERN.matcher(remainingText);
+            if (langMatcher.find()) {
+                Nation nation = Nation.fromIOC(langMatcher.group(1));
+                String text = langMatcher.group(2);
+                annotations.add(ImmutableTextAfterMoveAnnotation.builder().text(text).language(nation).build());
+                remainingText = langMatcher.replaceFirst("").trim();
+            } else {
+                break;
+            }
         }
 
         return remainingText.trim();

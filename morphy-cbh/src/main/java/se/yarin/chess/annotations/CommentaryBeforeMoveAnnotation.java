@@ -26,4 +26,15 @@ public class CommentaryBeforeMoveAnnotation extends Annotation {
     }
     return "{ " + s + " } " + text;
   }
+
+  @Override
+  public boolean equals(Object obj) {
+    return obj instanceof CommentaryBeforeMoveAnnotation other &&
+           this.commentary.equals(other.commentary);
+  }
+
+  @Override
+  public int hashCode() {
+    return commentary.hashCode();
+  }
 }

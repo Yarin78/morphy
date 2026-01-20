@@ -169,11 +169,20 @@ public class GameModelComparator {
             return false;
         }
 
-        // Compare annotations as sets (order doesn't matter)
-        Set<Annotation> set1 = new HashSet<>(list1);
-        Set<Annotation> set2 = new HashSet<>(list2);
+        // Compare annotations as multisets (order doesn't matter, but duplicates do)
+        // Count occurrences of each annotation
+        Map<Annotation, Integer> counts1 = countAnnotations(list1);
+        Map<Annotation, Integer> counts2 = countAnnotations(list2);
 
-        return set1.equals(set2);
+        return counts1.equals(counts2);
+    }
+
+    private static Map<Annotation, Integer> countAnnotations(List<? extends Annotation> annotations) {
+        Map<Annotation, Integer> counts = new HashMap<>();
+        for (Annotation annotation : annotations) {
+            counts.merge(annotation, 1, Integer::sum);
+        }
+        return counts;
     }
 
     /**

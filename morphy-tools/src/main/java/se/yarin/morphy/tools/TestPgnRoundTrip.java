@@ -67,6 +67,8 @@ public class TestPgnRoundTrip {
                     // Get the original GameModel
                     GameModel original = game.getModel();
 
+                    original.moves().root().traverseDepthFirst(node -> AnnotationConverter.trimAnnotations(node.getAnnotations()));
+
                     // Export to PGN
                     String pgn = exporter.exportGame(original);
 
