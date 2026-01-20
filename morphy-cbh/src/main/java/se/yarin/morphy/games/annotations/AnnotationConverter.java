@@ -50,9 +50,9 @@ import java.util.stream.Collectors;
  *
  * <p>Usage:
  * <ul>
- *   <li>Use {@link #convertNodeToStorageAnnotations(Annotations)} as a method reference in
+ *   <li>Use {@link #convertToStorageAnnotations(Annotations)} as a method reference in
  *       {@link se.yarin.chess.annotations.AnnotationTransformer} when parsing PGN or saving to database</li>
- *   <li>Use {@link #convertNodeToGenericAnnotations(Annotations)} as a method reference in
+ *   <li>Use {@link #convertToGenericAnnotations(Annotations)} as a method reference in
  *       {@link se.yarin.chess.annotations.AnnotationTransformer} when exporting to PGN or loading from database</li>
  * </ul>
  *
@@ -66,11 +66,11 @@ public class AnnotationConverter {
     private static final Logger log = LoggerFactory.getLogger(AnnotationConverter.class);
 
     /**
-     * Converts annotations on a single node from generic to storage format.
+     * Converts annotations from generic to storage format.
      *
      * @param annotations the annotations collection to convert
      */
-    public static void convertNodeToStorageAnnotations(@NotNull Annotations annotations) {
+    public static void convertToStorageAnnotations(@NotNull Annotations annotations) {
         if (annotations.isEmpty()) {
             return;
         }
@@ -116,11 +116,11 @@ public class AnnotationConverter {
     }
 
     /**
-     * Converts annotations on a single node from storage to generic format.
+     * Converts annotations from storage to generic format.
      *
      * @param annotations the annotations collection to convert
      */
-    public static void convertNodeToGenericAnnotations(@NotNull Annotations annotations) {
+    public static void convertToGenericAnnotations(@NotNull Annotations annotations) {
         if (annotations.isEmpty()) {
             return;
         }

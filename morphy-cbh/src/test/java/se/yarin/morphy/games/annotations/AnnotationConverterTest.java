@@ -30,7 +30,7 @@ public class AnnotationConverterTest {
         assertEquals(1, node.getAnnotations().size());
         assertTrue(node.getAnnotations().get(0) instanceof NAGAnnotation);
 
-        AnnotationConverter.convertNodeToStorageAnnotations(node.getAnnotations());
+        AnnotationConverter.convertToStorageAnnotations(node.getAnnotations());
 
         // After conversion: should have SymbolAnnotation
         assertEquals(1, node.getAnnotations().size());
@@ -49,7 +49,7 @@ public class AnnotationConverterTest {
         node.addAnnotation(new NAGAnnotation(NAG.WHITE_SLIGHT_ADVANTAGE)); // LINE_EVALUATION
         node.addAnnotation(new NAGAnnotation(NAG.WITH_THE_IDEA));       // MOVE_PREFIX
 
-        AnnotationConverter.convertNodeToStorageAnnotations(node.getAnnotations());
+        AnnotationConverter.convertToStorageAnnotations(node.getAnnotations());
 
         // After conversion: should have one SymbolAnnotation with all three NAGs
         assertEquals(1, node.getAnnotations().size());
@@ -68,7 +68,7 @@ public class AnnotationConverterTest {
         node.addAnnotation(new NAGAnnotation(NAG.GOOD_MOVE));      // First MOVE_COMMENT
         node.addAnnotation(new NAGAnnotation(NAG.DUBIOUS_MOVE));   // Second MOVE_COMMENT (should be dropped)
 
-        AnnotationConverter.convertNodeToStorageAnnotations(node.getAnnotations());
+        AnnotationConverter.convertToStorageAnnotations(node.getAnnotations());
 
         // Should keep only the first NAG
         assertEquals(1, node.getAnnotations().size());
@@ -89,7 +89,7 @@ public class AnnotationConverterTest {
         assertEquals(1, node.getAnnotations().size());
         assertTrue(node.getAnnotations().get(0) instanceof CommentaryAfterMoveAnnotation);
 
-        AnnotationConverter.convertNodeToStorageAnnotations(node.getAnnotations());
+        AnnotationConverter.convertToStorageAnnotations(node.getAnnotations());
 
         // After conversion: should have TextAfterMoveAnnotation
         assertEquals(1, node.getAnnotations().size());
@@ -108,7 +108,7 @@ public class AnnotationConverterTest {
         assertEquals(1, node.getAnnotations().size());
         assertTrue(node.getAnnotations().get(0) instanceof CommentaryBeforeMoveAnnotation);
 
-        AnnotationConverter.convertNodeToStorageAnnotations(node.getAnnotations());
+        AnnotationConverter.convertToStorageAnnotations(node.getAnnotations());
 
         // After conversion: should have TextBeforeMoveAnnotation
         assertEquals(1, node.getAnnotations().size());
@@ -130,7 +130,7 @@ public class AnnotationConverterTest {
         // GraphicalSquaresAnnotation is a storage annotation
         node.addAnnotation(ImmutableSymbolAnnotation.of(NAG.DUBIOUS_MOVE, NAG.NONE, NAG.NONE));
 
-        AnnotationConverter.convertNodeToStorageAnnotations(node.getAnnotations());
+        AnnotationConverter.convertToStorageAnnotations(node.getAnnotations());
 
         // Should have 3 annotations: SymbolAnnotation (from NAG), TextAfterMoveAnnotation, and SymbolAnnotation (pre-existing)
         assertEquals(3, node.getAnnotations().size());
@@ -165,9 +165,9 @@ public class AnnotationConverterTest {
         c5.addAnnotation(new CommentaryAfterMoveAnnotation("Sicilian Defense"));
 
         // Convert each node's annotations
-        AnnotationConverter.convertNodeToStorageAnnotations(e4.getAnnotations());
-        AnnotationConverter.convertNodeToStorageAnnotations(e5.getAnnotations());
-        AnnotationConverter.convertNodeToStorageAnnotations(c5.getAnnotations());
+        AnnotationConverter.convertToStorageAnnotations(e4.getAnnotations());
+        AnnotationConverter.convertToStorageAnnotations(e5.getAnnotations());
+        AnnotationConverter.convertToStorageAnnotations(c5.getAnnotations());
 
         // Check main line annotations
         assertEquals(2, e4.getAnnotations().size());
@@ -193,7 +193,7 @@ public class AnnotationConverterTest {
         node.addAnnotation(new NAGAnnotation(NAG.GOOD_MOVE));
         node.addAnnotation(new CommentaryAfterMoveAnnotation("After"));
 
-        AnnotationConverter.convertNodeToStorageAnnotations(node.getAnnotations());
+        AnnotationConverter.convertToStorageAnnotations(node.getAnnotations());
 
         // All annotations should be present (order may vary)
         assertEquals(3, node.getAnnotations().size());
@@ -227,7 +227,7 @@ public class AnnotationConverterTest {
         node.addAnnotation(textAfter);
         node.addAnnotation(textBefore);
 
-        AnnotationConverter.convertNodeToStorageAnnotations(node.getAnnotations());
+        AnnotationConverter.convertToStorageAnnotations(node.getAnnotations());
 
         // Should still have 3 annotations, unchanged
         assertEquals(3, node.getAnnotations().size());
@@ -244,7 +244,7 @@ public class AnnotationConverterTest {
         // CommentaryAfterMoveAnnotation trims whitespace
         node.addAnnotation(new CommentaryAfterMoveAnnotation("  Whitespace test  "));
 
-        AnnotationConverter.convertNodeToStorageAnnotations(node.getAnnotations());
+        AnnotationConverter.convertToStorageAnnotations(node.getAnnotations());
 
         TextAfterMoveAnnotation text = (TextAfterMoveAnnotation) node.getAnnotations().get(0);
         assertEquals("Whitespace test", text.text()); // Should be trimmed
@@ -259,14 +259,14 @@ public class AnnotationConverterTest {
         node.addAnnotation(new CommentaryAfterMoveAnnotation("Test"));
 
         // First conversion
-        AnnotationConverter.convertNodeToStorageAnnotations(node.getAnnotations());
+        AnnotationConverter.convertToStorageAnnotations(node.getAnnotations());
         assertEquals(2, node.getAnnotations().size());
 
         Annotations firstResult = new Annotations();
         firstResult.addAll(node.getAnnotations());
 
         // Second conversion should have no effect
-        AnnotationConverter.convertNodeToStorageAnnotations(node.getAnnotations());
+        AnnotationConverter.convertToStorageAnnotations(node.getAnnotations());
         assertEquals(2, node.getAnnotations().size());
 
         // Annotations should be identical
@@ -289,7 +289,7 @@ public class AnnotationConverterTest {
         assertEquals(1, node.getAnnotations().size());
         assertTrue(node.getAnnotations().get(0) instanceof SymbolAnnotation);
 
-        AnnotationConverter.convertNodeToGenericAnnotations(node.getAnnotations());
+        AnnotationConverter.convertToGenericAnnotations(node.getAnnotations());
 
         // After conversion: should have NAGAnnotation
         assertEquals(1, node.getAnnotations().size());
@@ -306,7 +306,7 @@ public class AnnotationConverterTest {
         // Add a SymbolAnnotation with all three NAG types
         node.addAnnotation(ImmutableSymbolAnnotation.of(NAG.GOOD_MOVE, NAG.WITH_THE_IDEA, NAG.WHITE_SLIGHT_ADVANTAGE));
 
-        AnnotationConverter.convertNodeToGenericAnnotations(node.getAnnotations());
+        AnnotationConverter.convertToGenericAnnotations(node.getAnnotations());
 
         // After conversion: should have 3 NAGAnnotations
         assertEquals(3, node.getAnnotations().size());
@@ -338,7 +338,7 @@ public class AnnotationConverterTest {
         assertEquals(1, node.getAnnotations().size());
         assertTrue(node.getAnnotations().get(0) instanceof TextAfterMoveAnnotation);
 
-        AnnotationConverter.convertNodeToGenericAnnotations(node.getAnnotations());
+        AnnotationConverter.convertToGenericAnnotations(node.getAnnotations());
 
         // After conversion: should have CommentaryAfterMoveAnnotation
         assertEquals(1, node.getAnnotations().size());
@@ -357,7 +357,7 @@ public class AnnotationConverterTest {
         assertEquals(1, node.getAnnotations().size());
         assertTrue(node.getAnnotations().get(0) instanceof TextBeforeMoveAnnotation);
 
-        AnnotationConverter.convertNodeToGenericAnnotations(node.getAnnotations());
+        AnnotationConverter.convertToGenericAnnotations(node.getAnnotations());
 
         // After conversion: should have CommentaryBeforeMoveAnnotation
         assertEquals(1, node.getAnnotations().size());
@@ -375,7 +375,7 @@ public class AnnotationConverterTest {
         node.addAnnotation(ImmutableSymbolAnnotation.of(NAG.GOOD_MOVE, NAG.NONE, NAG.WHITE_SLIGHT_ADVANTAGE));
         node.addAnnotation(ImmutableTextAfterMoveAnnotation.of("Best opening"));
 
-        AnnotationConverter.convertNodeToGenericAnnotations(node.getAnnotations());
+        AnnotationConverter.convertToGenericAnnotations(node.getAnnotations());
 
         // Should have 3 annotations: 2 NAGs + 1 commentary
         assertEquals(3, node.getAnnotations().size());
@@ -403,11 +403,11 @@ public class AnnotationConverterTest {
         node.addAnnotation(new CommentaryAfterMoveAnnotation("Excellent choice"));
 
         // Convert to storage
-        AnnotationConverter.convertNodeToStorageAnnotations(node.getAnnotations());
+        AnnotationConverter.convertToStorageAnnotations(node.getAnnotations());
         assertEquals(2, node.getAnnotations().size()); // SymbolAnnotation + TextAfterMoveAnnotation
 
         // Convert back to generic
-        AnnotationConverter.convertNodeToGenericAnnotations(node.getAnnotations());
+        AnnotationConverter.convertToGenericAnnotations(node.getAnnotations());
         assertEquals(3, node.getAnnotations().size()); // 2 NAGs + 1 commentary
 
         // Verify we got back the same annotations
@@ -450,9 +450,9 @@ public class AnnotationConverterTest {
         c5.addAnnotation(ImmutableTextAfterMoveAnnotation.of("Sicilian"));
 
         // Convert each node's annotations
-        AnnotationConverter.convertNodeToGenericAnnotations(e4.getAnnotations());
-        AnnotationConverter.convertNodeToGenericAnnotations(e5.getAnnotations());
-        AnnotationConverter.convertNodeToGenericAnnotations(c5.getAnnotations());
+        AnnotationConverter.convertToGenericAnnotations(e4.getAnnotations());
+        AnnotationConverter.convertToGenericAnnotations(e5.getAnnotations());
+        AnnotationConverter.convertToGenericAnnotations(c5.getAnnotations());
 
         // Check main line
         assertEquals(2, e4.getAnnotations().size());
@@ -488,7 +488,7 @@ public class AnnotationConverterTest {
         );
         node.addAnnotation(graphical);
 
-        AnnotationConverter.convertNodeToGenericAnnotations(node.getAnnotations());
+        AnnotationConverter.convertToGenericAnnotations(node.getAnnotations());
 
         // Should have: NAGAnnotation + CommentaryAfterMoveAnnotation (with graphical encoded)
         assertEquals(2, node.getAnnotations().size());
@@ -518,7 +518,7 @@ public class AnnotationConverterTest {
         // Add a SymbolAnnotation with all NONE NAGs
         node.addAnnotation(ImmutableSymbolAnnotation.of(NAG.NONE, NAG.NONE, NAG.NONE));
 
-        AnnotationConverter.convertNodeToGenericAnnotations(node.getAnnotations());
+        AnnotationConverter.convertToGenericAnnotations(node.getAnnotations());
 
         // Should have no annotations (all were NONE)
         assertEquals(0, node.getAnnotations().size());
@@ -540,7 +540,7 @@ public class AnnotationConverterTest {
         );
         node.addAnnotation(squares);
 
-        AnnotationConverter.convertNodeToGenericAnnotations(node.getAnnotations());
+        AnnotationConverter.convertToGenericAnnotations(node.getAnnotations());
 
         // Should have CommentaryAfterMoveAnnotation with encoded squares
         assertEquals(1, node.getAnnotations().size());
@@ -568,7 +568,7 @@ public class AnnotationConverterTest {
         );
         node.addAnnotation(arrows);
 
-        AnnotationConverter.convertNodeToGenericAnnotations(node.getAnnotations());
+        AnnotationConverter.convertToGenericAnnotations(node.getAnnotations());
 
         // Should have CommentaryAfterMoveAnnotation with encoded arrows
         assertEquals(1, node.getAnnotations().size());
@@ -601,7 +601,7 @@ public class AnnotationConverterTest {
         node.addAnnotation(squares);
         node.addAnnotation(arrows);
 
-        AnnotationConverter.convertNodeToGenericAnnotations(node.getAnnotations());
+        AnnotationConverter.convertToGenericAnnotations(node.getAnnotations());
 
         // Should have CommentaryAfterMoveAnnotation with both encoded
         assertEquals(1, node.getAnnotations().size());
@@ -630,7 +630,7 @@ public class AnnotationConverterTest {
         node.addAnnotation(squares);
         node.addAnnotation(text);
 
-        AnnotationConverter.convertNodeToGenericAnnotations(node.getAnnotations());
+        AnnotationConverter.convertToGenericAnnotations(node.getAnnotations());
 
         // Should have CommentaryAfterMoveAnnotation with graphical annotation before text
         assertEquals(1, node.getAnnotations().size());
@@ -656,7 +656,7 @@ public class AnnotationConverterTest {
         // Add commentary with encoded graphical squares
         node.addAnnotation(new CommentaryAfterMoveAnnotation("[%csl Ga4,Rb5]"));
 
-        AnnotationConverter.convertNodeToStorageAnnotations(node.getAnnotations());
+        AnnotationConverter.convertToStorageAnnotations(node.getAnnotations());
 
         // Should have GraphicalSquaresAnnotation extracted
         GraphicalSquaresAnnotation squares = node.getAnnotation(GraphicalSquaresAnnotation.class);
@@ -682,7 +682,7 @@ public class AnnotationConverterTest {
         // Add commentary with encoded graphical arrows
         node.addAnnotation(new CommentaryAfterMoveAnnotation("[%cal Ga1h8,Rb3c4]"));
 
-        AnnotationConverter.convertNodeToStorageAnnotations(node.getAnnotations());
+        AnnotationConverter.convertToStorageAnnotations(node.getAnnotations());
 
         // Should have GraphicalArrowsAnnotation extracted
         GraphicalArrowsAnnotation arrows = node.getAnnotation(GraphicalArrowsAnnotation.class);
@@ -707,7 +707,7 @@ public class AnnotationConverterTest {
         // Add commentary with encoded graphical annotation and text
         node.addAnnotation(new CommentaryAfterMoveAnnotation("[%csl Ge4] Best opening move"));
 
-        AnnotationConverter.convertNodeToStorageAnnotations(node.getAnnotations());
+        AnnotationConverter.convertToStorageAnnotations(node.getAnnotations());
 
         // Should have both GraphicalSquaresAnnotation and TextAfterMoveAnnotation
         GraphicalSquaresAnnotation squares = node.getAnnotation(GraphicalSquaresAnnotation.class);
@@ -743,14 +743,14 @@ public class AnnotationConverterTest {
         node.addAnnotation(text);
 
         // Convert to generic
-        AnnotationConverter.convertNodeToGenericAnnotations(node.getAnnotations());
+        AnnotationConverter.convertToGenericAnnotations(node.getAnnotations());
         
         // Should have one CommentaryAfterMoveAnnotation
         assertEquals(1, node.getAnnotations().size());
         assertTrue(node.getAnnotations().get(0) instanceof CommentaryAfterMoveAnnotation);
 
         // Convert back to storage
-        AnnotationConverter.convertNodeToStorageAnnotations(node.getAnnotations());
+        AnnotationConverter.convertToStorageAnnotations(node.getAnnotations());
 
         // Should have all three storage annotations back
         GraphicalSquaresAnnotation squaresBack = node.getAnnotation(GraphicalSquaresAnnotation.class);
@@ -774,7 +774,7 @@ public class AnnotationConverterTest {
         // Add commentary with both squares and arrows
         node.addAnnotation(new CommentaryAfterMoveAnnotation("[%csl Ga4,Rb5] [%cal Ye2e4] Strong move"));
 
-        AnnotationConverter.convertNodeToStorageAnnotations(node.getAnnotations());
+        AnnotationConverter.convertToStorageAnnotations(node.getAnnotations());
 
         // Should have extracted both graphical annotations
         GraphicalSquaresAnnotation squares = node.getAnnotation(GraphicalSquaresAnnotation.class);

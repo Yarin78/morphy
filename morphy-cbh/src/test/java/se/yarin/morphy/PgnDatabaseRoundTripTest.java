@@ -39,11 +39,11 @@ public class PgnDatabaseRoundTripTest {
         // Configure exporter to convert storage → generic annotations
         exporter = new PgnExporter(
             PgnFormatOptions.DEFAULT,
-            AnnotationConverter::convertNodeToGenericAnnotations
+            AnnotationConverter::convertToGenericAnnotations
         );
 
         // Configure parser to convert generic → storage annotations
-        parser = new PgnParser(AnnotationConverter::convertNodeToStorageAnnotations);
+        parser = new PgnParser(AnnotationConverter::convertToStorageAnnotations);
     }
 
     @After

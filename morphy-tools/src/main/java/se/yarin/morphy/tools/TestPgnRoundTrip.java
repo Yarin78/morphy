@@ -41,8 +41,8 @@ public class TestPgnRoundTrip {
 
         PgnExporter exporter = new PgnExporter(
                 PgnFormatOptions.DEFAULT_WITHOUT_PLYCOUNT,
-                AnnotationConverter::convertNodeToGenericAnnotations);
-        PgnParser parser = new PgnParser(AnnotationConverter::convertNodeToStorageAnnotations);
+                AnnotationConverter::convertToGenericAnnotations);
+        PgnParser parser = new PgnParser(AnnotationConverter::convertToStorageAnnotations);
 
         int totalGames = 0;
         int identicalGames = 0;
