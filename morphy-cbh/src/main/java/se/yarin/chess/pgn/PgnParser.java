@@ -215,8 +215,8 @@ public class PgnParser {
 
                 case COMMENT:
                     // Determine if this is a before-move or after-move comment
-                    // For simplicity, treat it as after-move if we've made moves, otherwise before
-                    if (builder.getCurrentNode().isRoot()) {
+                    // Treat as before-move if we're at root or just started a variation
+                    if (builder.isAtBeforeCommentPosition()) {
                         builder.addCommentBefore(token.value());
                     } else {
                         builder.addCommentAfter(token.value());

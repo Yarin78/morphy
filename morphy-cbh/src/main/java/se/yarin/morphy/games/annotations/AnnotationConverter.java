@@ -138,7 +138,7 @@ public class AnnotationConverter {
             // Parse and extract graphical annotations from the commentary text
             ArrayList<String> remaining = new ArrayList<>();
             for (CommentaryAfterMoveAnnotation afterMove : afterMoveAnnotations) {
-                String s = parseAndExtractDecodedAnnotations(annotations, afterMove.getCommentary()).strip();
+                String s = parseAndExtractDecodedAnnotations(annotations, afterMove.getCommentary(), false).strip();
                 if (!s.isEmpty()) {
                     remaining.add(s);
                 }
@@ -150,13 +150,21 @@ public class AnnotationConverter {
             }
         }
 
-        // Convert commentary before move
+        // Convert commentary before move, parsing out any graphical annotations
         if (!beforeMoveAnnotations.isEmpty()) {
-            annotations.add(ImmutableTextBeforeMoveAnnotation.of(
-                    beforeMoveAnnotations
-                            .stream()
-                            .map(CommentaryBeforeMoveAnnotation::getCommentary)
-                            .collect(Collectors.joining(" "))));
+            // Parse and extract graphical annotations from the commentary text
+            ArrayList<String> remaining = new ArrayList<>();
+            for (CommentaryBeforeMoveAnnotation beforeMove : beforeMoveAnnotations) {
+                String s = parseAndExtractDecodedAnnotations(annotations, beforeMove.getCommentary(), true).strip();
+                if (!s.isEmpty()) {
+                    remaining.add(s);
+                }
+            }
+
+            // Only create TextBeforeMoveAnnotation if there's remaining text
+            if (!remaining.isEmpty()) {
+                annotations.add(ImmutableTextBeforeMoveAnnotation.of(String.join(" ", remaining)));
+            }
         }
     }
 
@@ -244,6 +252,9 @@ public class AnnotationConverter {
         // Convert text before move
         for (TextBeforeMoveAnnotation beforeMove : beforeMoveAnnotations) {
             annotations.remove(beforeMove);
+            if (!textBeforeBuilder.isEmpty() && !beforeMove.text().isEmpty()) {
+                textBeforeBuilder.append(" ");
+            }
             if (beforeMove.language() == Nation.NONE) {
                 textBeforeBuilder.append(beforeMove.text());
             } else {
@@ -407,9 +418,10 @@ public class AnnotationConverter {
      *
      * @param annotations the annotations collection to add the decoded annotations to
      * @param commentary the commentary text that may contain square bracket notation
+     * @param isBeforeMove whether to create TextBeforeMoveAnnotation (true) or TextAfterMoveAnnotation (false)
      * @return the commentary text with square bracket notation removed
      */
-    private static String parseAndExtractDecodedAnnotations(@NotNull Annotations annotations, @NotNull String commentary) {
+    private static String parseAndExtractDecodedAnnotations(@NotNull Annotations annotations, @NotNull String commentary, boolean isBeforeMove) {
         String remainingText = commentary;
 
         // Parse and extract squares annotation [%csl ...]
@@ -439,7 +451,11 @@ public class AnnotationConverter {
             if (langMatcher.find()) {
                 Nation nation = Nation.fromIOC(langMatcher.group(1));
                 String text = langMatcher.group(2);
-                annotations.add(ImmutableTextAfterMoveAnnotation.builder().text(text).language(nation).build());
+                if (isBeforeMove) {
+                    annotations.add(ImmutableTextBeforeMoveAnnotation.builder().text(text).language(nation).build());
+                } else {
+                    annotations.add(ImmutableTextAfterMoveAnnotation.builder().text(text).language(nation).build());
+                }
                 remainingText = langMatcher.replaceFirst("").trim();
             } else {
                 break;

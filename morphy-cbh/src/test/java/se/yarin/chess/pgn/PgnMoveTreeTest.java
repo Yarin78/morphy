@@ -254,4 +254,46 @@ public class PgnMoveTreeTest {
         assertNotNull(comment);
         assertEquals("Ruy Lopez", comment.getCommentary());
     }
+
+    @Test
+    public void testCommentBeforeMoveInVariation() throws PgnFormatException {
+        // Test for bug fix: comments before moves in variations should be CommentaryBeforeMoveAnnotation
+        String pgn = SEVEN_TAG_ROSTER + """
+                1. e4 e5 (1... {Before c5} c5 {After c5}) 2. Nf3 *
+                """;
+
+        GameModel game = new PgnParser().parseGame(pgn);
+        GameMovesModel.Node e4 = game.moves().root().mainNode();
+
+        // Get the c5 variation
+        GameMovesModel.Node c5 = e4.children().get(1);
+        assertEquals("c5", c5.lastMove().toSAN());
+
+        // Check that the "Before c5" comment is a CommentaryBeforeMoveAnnotation
+        se.yarin.chess.annotations.CommentaryBeforeMoveAnnotation beforeComment =
+            c5.getAnnotation(se.yarin.chess.annotations.CommentaryBeforeMoveAnnotation.class);
+        assertNotNull("Comment before move in variation should be CommentaryBeforeMoveAnnotation", beforeComment);
+        assertEquals("Before c5", beforeComment.getCommentary());
+
+        // Check that the "After c5" comment is a CommentaryAfterMoveAnnotation
+        CommentaryAfterMoveAnnotation afterComment =
+            c5.getAnnotation(CommentaryAfterMoveAnnotation.class);
+        assertNotNull("Comment after move should be CommentaryAfterMoveAnnotation", afterComment);
+        assertEquals("After c5", afterComment.getCommentary());
+
+        // Verify round-trip: export and re-parse should preserve the comment positions
+        PgnExporter exporter = new PgnExporter();
+        String exportedPgn = exporter.exportGame(game);
+
+        GameModel reparsedGame = new PgnParser().parseGame(exportedPgn);
+        GameMovesModel.Node reparsedC5 = reparsedGame.moves().root().mainNode().children().get(1);
+
+        beforeComment = reparsedC5.getAnnotation(se.yarin.chess.annotations.CommentaryBeforeMoveAnnotation.class);
+        assertNotNull("Comment before move should survive round-trip", beforeComment);
+        assertEquals("Before c5", beforeComment.getCommentary());
+
+        afterComment = reparsedC5.getAnnotation(CommentaryAfterMoveAnnotation.class);
+        assertNotNull("Comment after move should survive round-trip", afterComment);
+        assertEquals("After c5", afterComment.getCommentary());
+    }
 }

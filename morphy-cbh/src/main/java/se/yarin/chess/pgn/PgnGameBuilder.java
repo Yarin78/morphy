@@ -28,6 +28,9 @@ public class PgnGameBuilder {
     // Pending annotations to add to the next node (or current node for after-move comments)
     private final List<Annotation> pendingAnnotations = new ArrayList<>();
 
+    // Track if we just started a variation (no moves added yet in current variation)
+    private boolean isVariationStart = false;
+
     /**
      * Creates a builder with the standard starting position.
      */
@@ -67,6 +70,9 @@ public class PgnGameBuilder {
         currentNode = newNode;
         currentPosition = currentPosition.doMove(move);
 
+        // We've added a move, so we're no longer at the start of a variation
+        isVariationStart = false;
+
         return this;
     }
 
@@ -89,6 +95,9 @@ public class PgnGameBuilder {
 
         // Clear pending annotations
         pendingAnnotations.clear();
+
+        // Mark that we just started a variation (no moves added yet)
+        isVariationStart = true;
     }
 
     /**
@@ -105,6 +114,9 @@ public class PgnGameBuilder {
 
         // Clear pending annotations
         pendingAnnotations.clear();
+
+        // We're back in the previous context, not at the start of a variation
+        isVariationStart = false;
     }
 
     /**
@@ -166,6 +178,16 @@ public class PgnGameBuilder {
     @NotNull
     public Position getCurrentPosition() {
         return currentPosition;
+    }
+
+    /**
+     * Checks if we're at a position where comments should be treated as "before" comments.
+     * This is true if we're at the root or if we just started a variation (no moves added yet).
+     *
+     * @return true if at a position for before-move comments
+     */
+    public boolean isAtBeforeCommentPosition() {
+        return currentNode.isRoot() || isVariationStart;
     }
 
     /**
