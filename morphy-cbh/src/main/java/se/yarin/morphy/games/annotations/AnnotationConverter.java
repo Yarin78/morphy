@@ -107,44 +107,56 @@ public class AnnotationConverter {
         if (annotations.isEmpty()) {
             return;
         }
+        Annotations originalAnnotations = new Annotations(annotations);
+        annotations.clear();
 
         // Collect generic annotations that need conversion
         List<NAGAnnotation> nagAnnotations = new ArrayList<>();
-        CommentaryAfterMoveAnnotation afterMove = null;
-        CommentaryBeforeMoveAnnotation beforeMove = null;
+        List<CommentaryAfterMoveAnnotation> afterMoveAnnotations = new ArrayList<>();
+        List<CommentaryBeforeMoveAnnotation> beforeMoveAnnotations = new ArrayList<>();
 
-        for (Annotation annotation : annotations) {
-            if (annotation instanceof NAGAnnotation) {
-                nagAnnotations.add((NAGAnnotation) annotation);
-            } else if (annotation instanceof CommentaryAfterMoveAnnotation) {
-                afterMove = (CommentaryAfterMoveAnnotation) annotation;
-            } else if (annotation instanceof CommentaryBeforeMoveAnnotation) {
-                beforeMove = (CommentaryBeforeMoveAnnotation) annotation;
+        for (Annotation annotation : originalAnnotations) {
+            if (annotation instanceof NAGAnnotation a) {
+                nagAnnotations.add(a);
+            } else if (annotation instanceof CommentaryAfterMoveAnnotation a) {
+                afterMoveAnnotations.add(a);
+            } else if (annotation instanceof CommentaryBeforeMoveAnnotation a) {
+                beforeMoveAnnotations.add(a);
+            } else {
+                log.warn("Unsupported annotation type: {}", annotation.getClass().getName());
+                annotations.add(annotation);
             }
         }
 
         // Convert NAG annotations if present
         if (!nagAnnotations.isEmpty()) {
-            convertNAGAnnotationsToStorage(annotations, nagAnnotations);
+            annotations.addAll(convertNAGAnnotationsToStorage(nagAnnotations));
         }
 
         // Convert commentary after move, parsing out any graphical annotations
-        if (afterMove != null) {
-            annotations.remove(afterMove);
-
+        if (!afterMoveAnnotations.isEmpty()) {
             // Parse and extract graphical annotations from the commentary text
-            String remainingText = parseAndExtractDecodedAnnotations(annotations, afterMove.getCommentary());
+            ArrayList<String> remaining = new ArrayList<>();
+            for (CommentaryAfterMoveAnnotation afterMove : afterMoveAnnotations) {
+                String s = parseAndExtractDecodedAnnotations(annotations, afterMove.getCommentary()).strip();
+                if (!s.isEmpty()) {
+                    remaining.add(s);
+                }
+            }
 
             // Only create TextAfterMoveAnnotation if there's remaining text
-            if (!remainingText.isEmpty()) {
-                annotations.add(ImmutableTextAfterMoveAnnotation.of(remainingText));
+            if (!remaining.isEmpty()) {
+                annotations.add(ImmutableTextAfterMoveAnnotation.of(String.join(" ", remaining)));
             }
         }
 
         // Convert commentary before move
-        if (beforeMove != null) {
-            annotations.remove(beforeMove);
-            annotations.add(ImmutableTextBeforeMoveAnnotation.of(beforeMove.getCommentary()));
+        if (!beforeMoveAnnotations.isEmpty()) {
+            annotations.add(ImmutableTextBeforeMoveAnnotation.of(
+                    beforeMoveAnnotations
+                            .stream()
+                            .map(CommentaryBeforeMoveAnnotation::getCommentary)
+                            .collect(Collectors.joining(" "))));
         }
     }
 
@@ -272,10 +284,10 @@ public class AnnotationConverter {
      * ChessBase format supports exactly 3 NAGs: one MOVE_COMMENT, one LINE_EVALUATION, and one MOVE_PREFIX.
      * If multiple NAGs of the same type exist, only the first one is kept and a warning is logged.
      *
-     * @param annotations the annotations collection to modify
      * @param nagAnnotations the list of NAG annotations to consolidate
      */
-    private static void convertNAGAnnotationsToStorage(@NotNull Annotations annotations, @NotNull List<NAGAnnotation> nagAnnotations) {
+    private static List<Annotation> convertNAGAnnotationsToStorage(@NotNull List<NAGAnnotation> nagAnnotations) {
+        ArrayList<Annotation> annotations = new ArrayList<>();
         // Group NAGs by type, keeping only the first of each type
         Map<NAGType, NAG> nagsByType = new EnumMap<>(NAGType.class);
 
@@ -299,9 +311,6 @@ public class AnnotationConverter {
             }
         }
 
-        // Remove all NAG annotations
-        annotations.removeAll(nagAnnotations);
-
         // Create consolidated SymbolAnnotation if we have any NAGs
         if (!nagsByType.isEmpty()) {
             NAG moveComment = nagsByType.getOrDefault(NAGType.MOVE_COMMENT, NAG.NONE);
@@ -310,6 +319,8 @@ public class AnnotationConverter {
 
             annotations.add(ImmutableSymbolAnnotation.of(moveComment, movePrefix, lineEvaluation));
         }
+
+        return annotations;
     }
 
     // ========== Graphical Annotation Encoding/Decoding ==========
