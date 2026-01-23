@@ -62,8 +62,8 @@ public class TestPgnRoundTrip {
             original.moves().root().traverseDepthFirst(node ->
                 node.getAnnotations().forEach(a -> annos.add(a.getClass())));
             if (!supportedAnnotationClasses.containsAll(annos)) {
-                stats.skippedGames++;
-                return;
+  //              stats.skippedGames++;
+//                return;
             }
 
             // Export to PGN

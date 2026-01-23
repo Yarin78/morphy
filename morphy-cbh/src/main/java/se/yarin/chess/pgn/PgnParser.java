@@ -215,10 +215,10 @@ public class PgnParser {
 
                 case COMMENT:
                     // Determine if this is a before-move or after-move comment
-                    // 1. If comment contains [%blang ...], it explicitly indicates a before-comment
+                    // 1. If comment contains before-move markers ([%pre ...] or [%pre:XXX ...])
                     // 2. Otherwise, treat as before-move if we're at root or just started a variation
                     // 3. Otherwise treat as after-move (the common case)
-                    if (token.value().contains("[%blang ") || builder.isAtBeforeCommentPosition()) {
+                    if (isBeforeMoveComment(token.value()) || builder.isAtBeforeCommentPosition()) {
                         builder.addCommentBefore(token.value());
                     } else {
                         builder.addCommentAfter(token.value());
@@ -252,8 +252,22 @@ public class PgnParser {
             // For now, just accept it
         }
 
+        // Apply annotation transformer if present
         if (annotationTransformer != null) {
-            moves.root().traverseDepthFirst(node -> annotationTransformer.transform(node.getAnnotations()));
+            moves.root().traverseDepthFirst(node -> {
+                // Determine which player made the last move to reach this node
+                Player lastMoveBy = node.isRoot() ? null : node.parent().position().playerToMove();
+                annotationTransformer.transform(node.getAnnotations(), lastMoveBy);
+            });
         }
+    }
+
+    /**
+     * Checks if a comment contains markers that indicate it's a before-move comment.
+     * These markers are: [%pre ...] or [%pre:XXX ...]
+     */
+    private static boolean isBeforeMoveComment(String comment) {
+        return comment.contains("[%pre ") ||
+               comment.contains("[%pre:");
     }
 }

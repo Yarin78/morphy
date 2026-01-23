@@ -287,7 +287,9 @@ public class PgnExporter {
 
         // Apply annotation transformer if present
         if (annotationTransformer != null) {
-            annotationTransformer.transform(annotations);
+            // Determine which player made the move (the parent's player to move)
+            Player lastMoveBy = parent.position().playerToMove();
+            annotationTransformer.transform(annotations, lastMoveBy);
         }
 
         // Export comments before the move
