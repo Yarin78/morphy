@@ -359,11 +359,11 @@ public class AnnotationConverterTest {
 
         AnnotationConverter.convertToGenericAnnotations(node.getAnnotations());
 
-        // After conversion: should have CommentaryBeforeMoveAnnotation
+        // After conversion: should have CommentaryBeforeMoveAnnotation with [%blang NONE ...] notation
         assertEquals(1, node.getAnnotations().size());
         assertTrue(node.getAnnotations().get(0) instanceof CommentaryBeforeMoveAnnotation);
         CommentaryBeforeMoveAnnotation commentary = (CommentaryBeforeMoveAnnotation) node.getAnnotations().get(0);
-        assertEquals("Consider this", commentary.getCommentary());
+        assertEquals("[%blang NONE Consider this]", commentary.getCommentary());
     }
 
     @Test

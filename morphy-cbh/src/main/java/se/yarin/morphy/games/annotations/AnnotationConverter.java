@@ -250,16 +250,15 @@ public class AnnotationConverter {
         StringBuilder textBeforeBuilder = new StringBuilder();
 
         // Convert text before move
+        // Always use [%blang LANG text] notation to explicitly mark before-move comments
+        // This distinguishes them from after-move comments when in ambiguous positions
         for (TextBeforeMoveAnnotation beforeMove : beforeMoveAnnotations) {
             annotations.remove(beforeMove);
             if (!textBeforeBuilder.isEmpty() && !beforeMove.text().isEmpty()) {
                 textBeforeBuilder.append(" ");
             }
-            if (beforeMove.language() == Nation.NONE) {
-                textBeforeBuilder.append(beforeMove.text());
-            } else {
-                textBeforeBuilder.append("[%lang ").append(beforeMove.language().getIocCode()).append(" ").append(beforeMove.text()).append("]");
-            }
+            String langCode = beforeMove.language() == Nation.NONE ? "NONE" : beforeMove.language().getIocCode();
+            textBeforeBuilder.append("[%blang ").append(langCode).append(" ").append(beforeMove.text()).append("]");
         }
 
         if (!textBeforeBuilder.isEmpty()) {
@@ -411,6 +410,8 @@ public class AnnotationConverter {
     private static final Pattern ARROWS_PATTERN = Pattern.compile("\\[%cal\\s+([^\\]]+)\\]");
     // Regex patterns for parsing language specific text annotations
     private static final Pattern LANGUAGE_PATTERN = Pattern.compile("\\[%lang\\s+([A-Z]+)\\s+([^\\]]+)\\]");
+    // Regex pattern for parsing before-move language specific text annotations
+    private static final Pattern BEFORE_LANGUAGE_PATTERN = Pattern.compile("\\[%blang\\s+([A-Z]+)\\s+([^\\]]+)\\]");
 
     /**
      * Parses annotations that are decoded into commentary text as [%...] and
@@ -446,6 +447,22 @@ public class AnnotationConverter {
             remainingText = arrowsMatcher.replaceFirst("").trim();
         }
 
+        // Parse and extract before-move language annotations [%blang LANG text]
+        // These explicitly indicate before-move comments regardless of context
+        while (true) {
+            Matcher blangMatcher = BEFORE_LANGUAGE_PATTERN.matcher(remainingText);
+            if (blangMatcher.find()) {
+                String langCode = blangMatcher.group(1);
+                Nation nation = langCode.equals("NONE") ? Nation.NONE : Nation.fromIOC(langCode);
+                String text = blangMatcher.group(2);
+                annotations.add(ImmutableTextBeforeMoveAnnotation.builder().text(text).language(nation).build());
+                remainingText = blangMatcher.replaceFirst("").trim();
+            } else {
+                break;
+            }
+        }
+
+        // Parse and extract regular language annotations [%lang LANG text]
         while (true) {
             Matcher langMatcher = LANGUAGE_PATTERN.matcher(remainingText);
             if (langMatcher.find()) {

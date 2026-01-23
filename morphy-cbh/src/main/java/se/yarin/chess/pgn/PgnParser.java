@@ -215,8 +215,10 @@ public class PgnParser {
 
                 case COMMENT:
                     // Determine if this is a before-move or after-move comment
-                    // Treat as before-move if we're at root or just started a variation
-                    if (builder.isAtBeforeCommentPosition()) {
+                    // 1. If comment contains [%blang ...], it explicitly indicates a before-comment
+                    // 2. Otherwise, treat as before-move if we're at root or just started a variation
+                    // 3. Otherwise treat as after-move (the common case)
+                    if (token.value().contains("[%blang ") || builder.isAtBeforeCommentPosition()) {
                         builder.addCommentBefore(token.value());
                     } else {
                         builder.addCommentAfter(token.value());
