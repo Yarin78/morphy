@@ -1080,7 +1080,7 @@ public class AnnotationConverter {
         try {
             // Tokenize quoted strings and other parts
             List<String> tokens = tokenizeQuotedString(data);
-            if (tokens.size() < 10) {
+            if (tokens.size() < 9) {
                 log.warn("Invalid quote format, not enough tokens: {}", data);
                 return null;
             }
@@ -1134,13 +1134,17 @@ public class AnnotationConverter {
                 GameMovesModel.Node current = moves.root();
 
                 for (String moveToken : moveTokens) {
-                    // Skip move numbers
+                    // Skip pure move numbers (e.g., "1." or "2...")
                     if (moveToken.matches("\\d+\\.+")) continue;
                     if (moveToken.isEmpty()) continue;
 
+                    // Strip move number prefix (e.g., "1.e4" -> "e4", "2...Nf6" -> "Nf6")
+                    String sanMove = moveToken.replaceFirst("^\\d+\\.+", "");
+                    if (sanMove.isEmpty()) continue;
+
                     try {
                         PgnMoveParser moveParser = new PgnMoveParser(current.position());
-                        Move move = moveParser.parseMove(moveToken);
+                        Move move = moveParser.parseMove(sanMove);
                         current = current.addMove(move);
                     } catch (PgnFormatException e) {
                         log.debug("Failed to parse move in quotation: {}", moveToken);

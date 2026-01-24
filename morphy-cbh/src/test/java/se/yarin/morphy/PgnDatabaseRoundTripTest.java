@@ -4,6 +4,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import se.yarin.chess.GameModel;
+import se.yarin.chess.GameModelComparator;
 import se.yarin.chess.NAG;
 import se.yarin.morphy.games.annotations.*;
 import se.yarin.chess.pgn.PgnExporter;
@@ -14,6 +15,8 @@ import se.yarin.chess.pgn.PgnParser;
 import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
+import java.util.ArrayList;
+import java.util.List;
 
 import static org.junit.Assert.*;
 
@@ -246,5 +249,86 @@ public class PgnDatabaseRoundTripTest {
         }
         assertTrue("Should have GraphicalSquaresAnnotation after round-trip", rtHasSquares);
         assertTrue("Should have GraphicalArrowsAnnotation after round-trip", rtHasArrows);
+    }
+
+    @Test
+    public void testWorldChampionshipDatabaseRoundTrip() throws IOException {
+        // Open the World Championship database
+        File dbFile = ResourceLoader.materializeDatabaseStream(
+            getClass(), "database/World-ch", "World-ch");
+        Database worldChDb = Database.open(dbFile, DatabaseMode.READ_ONLY);
+
+        PgnExporter worldExporter = new PgnExporter(
+            PgnFormatOptions.DEFAULT_WITHOUT_PLYCOUNT,
+            AnnotationConverter::convertToGenericAnnotations);
+        PgnParser worldParser = new PgnParser(AnnotationConverter::convertToStorageAnnotations);
+
+        int totalGames = 0;
+        int identicalGames = 0;
+        List<Integer> gamesWithDifferences = new ArrayList<>();
+        List<Integer> failedGames = new ArrayList<>();
+
+        try (var txn = new DatabaseReadTransaction(worldChDb)) {
+            for (Game game : txn.iterable()) {
+                if (game.guidingText()) {
+                    continue;
+                }
+                totalGames++;
+
+                try {
+                    GameModel original = game.getModel();
+
+                    // Trim annotations before comparison
+                    original.moves().root().traverseDepthFirst(node ->
+                        AnnotationConverter.trimAnnotations(node.getAnnotations()));
+
+                    // Export to PGN
+                    String pgn = worldExporter.exportGame(original);
+
+                    // Parse back from PGN
+                    GameModel roundTripped = worldParser.parseGame(pgn);
+
+                    // Compare
+                    GameModelComparator.ComparisonResult result =
+                        GameModelComparator.compare(original, roundTripped);
+
+                    if (result.isIdentical()) {
+                        identicalGames++;
+                    } else {
+                        gamesWithDifferences.add(game.id());
+                    }
+                } catch (Exception e) {
+                    failedGames.add(game.id());
+                }
+            }
+        }
+
+        worldChDb.close();
+
+        // Print summary
+        System.out.println();
+        System.out.println("========================================");
+        System.out.println("World Championship Database Round-Trip Summary");
+        System.out.println("========================================");
+        System.out.println("Total games processed: " + totalGames);
+        System.out.println("Identical after round-trip: " + identicalGames +
+            " (" + String.format("%.2f%%", 100.0 * identicalGames / totalGames) + ")");
+        System.out.println("Games with differences: " + gamesWithDifferences.size() +
+            " (" + String.format("%.2f%%", 100.0 * gamesWithDifferences.size() / totalGames) + ")");
+        System.out.println("Failed games: " + failedGames.size());
+
+        if (!gamesWithDifferences.isEmpty()) {
+            System.out.println();
+            System.out.println("Game IDs with differences (first 20): " +
+                gamesWithDifferences.subList(0, Math.min(20, gamesWithDifferences.size())));
+        }
+
+        if (!failedGames.isEmpty()) {
+            System.out.println("Failed game IDs: " + failedGames);
+        }
+
+        // Assert all games should match
+        assertEquals("All games should be identical after round-trip",
+            totalGames, identicalGames);
     }
 }

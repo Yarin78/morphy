@@ -827,6 +827,76 @@ public class AnnotationConverterTest {
         assertArrayEquals(data, train.rawData());
     }
 
+    @Test
+    public void testRoundTripGameQuotationHeaderOnly() {
+        GameHeaderModel header = new GameHeaderModel();
+        header.setWhite("Carlsen, Magnus");
+        header.setBlack("Nepomniachtchi, Ian");
+        header.setEvent("World Championship");
+        header.setEventSite("Dubai");
+        header.setDate(new Date(2021, 12, 3));
+        header.setResult(GameResult.WHITE_WINS);
+        header.setWhiteElo(2856);
+        header.setBlackElo(2782);
+        header.setEco(new Eco("C88"));
+
+        Annotations annotations = new Annotations();
+        annotations.add(new GameQuotationAnnotation(header));
+
+        AnnotationConverter.convertToGenericAnnotations(annotations);
+        AnnotationConverter.convertToStorageAnnotations(annotations);
+
+        GameQuotationAnnotation quote = annotations.getByClass(GameQuotationAnnotation.class);
+        assertNotNull(quote);
+        assertEquals("Carlsen, Magnus", quote.header().getWhite());
+        assertEquals("Nepomniachtchi, Ian", quote.header().getBlack());
+        assertEquals("World Championship", quote.header().getEvent());
+        assertEquals("Dubai", quote.header().getEventSite());
+        assertEquals(new Date(2021, 12, 3), quote.header().getDate());
+        assertEquals(GameResult.WHITE_WINS, quote.header().getResult());
+        assertEquals(Integer.valueOf(2856), quote.header().getWhiteElo());
+        assertEquals(Integer.valueOf(2782), quote.header().getBlackElo());
+        assertEquals(new Eco("C88"), quote.header().getEco());
+        assertFalse(quote.hasGame());
+    }
+
+    @Test
+    public void testRoundTripGameQuotationWithMoves() {
+        GameHeaderModel header = new GameHeaderModel();
+        header.setWhite("Fischer, Bobby");
+        header.setBlack("Spassky, Boris");
+        header.setEvent("World Championship");
+        header.setEventSite("Reykjavik");
+        header.setDate(new Date(1972, 7, 11));
+        header.setResult(GameResult.WHITE_WINS);
+        header.setWhiteElo(2785);
+        header.setBlackElo(2660);
+        header.setEco(new Eco("B97"));
+
+        GameMovesModel moves = new GameMovesModel();
+        GameMovesModel.Node node = moves.root();
+        node = node.addMove(E2, E4);
+        node = node.addMove(C7, C5);
+        node = node.addMove(G1, F3);
+
+        GameModel game = new GameModel(header, moves);
+        Annotations annotations = new Annotations();
+        annotations.add(new GameQuotationAnnotation(game));
+
+        AnnotationConverter.convertToGenericAnnotations(annotations);
+        AnnotationConverter.convertToStorageAnnotations(annotations);
+
+        GameQuotationAnnotation quote = annotations.getByClass(GameQuotationAnnotation.class);
+        assertNotNull(quote);
+        assertEquals("Fischer, Bobby", quote.header().getWhite());
+        assertEquals("Spassky, Boris", quote.header().getBlack());
+        assertTrue(quote.hasGame());
+
+        // Verify moves were preserved
+        GameModel roundTrippedGame = quote.getGameModel();
+        assertEquals(3, roundTrippedGame.moves().countPly(false));
+    }
+
     // ========== Tests for Mixed Annotations ==========
 
     @Test
