@@ -693,6 +693,27 @@ public class AnnotationConverterTest {
     // ========== Tests for Round-Trip Conversion ==========
 
     @Test
+    public void testRoundTripTextWithBrackets() {
+        GameMovesModel moves = new GameMovesModel();
+        GameMovesModel.Node node = moves.root().addMove(E2, E4);
+        node.addAnnotation(ImmutableTextAfterMoveAnnotation.builder()
+                .text("This need escaping [yarin] 1-0")
+                .language(Nation.ENGLAND)
+                .build());
+
+        AnnotationConverter.convertToGenericAnnotations(node.getAnnotations());
+
+        CommentaryAfterMoveAnnotation annotation = node.getAnnotation(CommentaryAfterMoveAnnotation.class);
+        System.out.println(annotation.getCommentary());
+
+        AnnotationConverter.convertToStorageAnnotations(node.getAnnotations());
+        TextAfterMoveAnnotation annotation2 = node.getAnnotation(TextAfterMoveAnnotation.class);
+        System.out.println(annotation2.text());
+
+        assertEquals("This need escaping [yarin] 1-0", annotation2.text());
+    }
+
+    @Test
     public void testRoundTripGenericToStorageToGeneric() {
         GameMovesModel moves = new GameMovesModel();
         GameMovesModel.Node node = moves.root().addMove(E2, E4);
@@ -857,7 +878,7 @@ public class AnnotationConverterTest {
         assertEquals(Integer.valueOf(2856), quote.header().getWhiteElo());
         assertEquals(Integer.valueOf(2782), quote.header().getBlackElo());
         assertEquals(new Eco("C88"), quote.header().getEco());
-        assertFalse(quote.hasGame());
+        assertEquals(0, quote.getGameModel().moves().countPly(true));
     }
 
     @Test
@@ -895,6 +916,86 @@ public class AnnotationConverterTest {
         // Verify moves were preserved
         GameModel roundTrippedGame = quote.getGameModel();
         assertEquals(3, roundTrippedGame.moves().countPly(false));
+    }
+
+    @Test
+    public void testRoundTripGameQuotationWithAllHeaderFields() {
+        // Test that ALL header fields are preserved during round-trip conversion
+        GameHeaderModel header = new GameHeaderModel();
+
+        // Basic player info
+        header.setWhite("Carlsen, Magnus");
+        header.setBlack("Nepomniachtchi, Ian");
+        header.setWhiteElo(2856);
+        header.setBlackElo(2782);
+        header.setWhiteTeam("Norway");
+        header.setBlackTeam("Russia");
+
+        // Game info
+        header.setResult(GameResult.WHITE_WINS);
+        header.setLineEvaluation(NAG.GOOD_MOVE);
+        header.setDate(new Date(2021, 12, 3));
+        header.setEco(new Eco("C88"));
+        header.setRound(6);
+        header.setSubRound(1);
+
+        // Event info
+        header.setEvent("World Championship");
+        header.setEventDate(new Date(2021, 11, 24));
+        header.setEventEndDate(new Date(2021, 12, 10));
+        header.setEventSite("Dubai");
+        header.setEventCountry("UAE");
+        header.setEventCategory(22);
+        header.setEventRounds(14);
+        header.setEventType("match");
+        header.setEventTimeControl("classical");
+
+        // Source info
+        header.setSource("ChessBase");
+        header.setSourceTitle("TWIC 1413");
+        header.setSourceDate(new Date(2021, 12, 6));
+        header.setAnnotator("Yarin Morphy");
+        header.setGameTag("brilliancy");
+
+        Annotations annotations = new Annotations();
+        annotations.add(new GameQuotationAnnotation(header));
+
+        AnnotationConverter.convertToGenericAnnotations(annotations);
+        AnnotationConverter.convertToStorageAnnotations(annotations);
+
+        GameQuotationAnnotation quote = annotations.getByClass(GameQuotationAnnotation.class);
+        assertNotNull(quote);
+
+        // Verify ALL fields are preserved
+        assertEquals("Carlsen, Magnus", quote.header().getWhite());
+        assertEquals("Nepomniachtchi, Ian", quote.header().getBlack());
+        assertEquals(Integer.valueOf(2856), quote.header().getWhiteElo());
+        assertEquals(Integer.valueOf(2782), quote.header().getBlackElo());
+        assertEquals("Norway", quote.header().getWhiteTeam());
+        assertEquals("Russia", quote.header().getBlackTeam());
+
+        assertEquals(GameResult.WHITE_WINS, quote.header().getResult());
+        assertEquals(NAG.GOOD_MOVE, quote.header().getLineEvaluation());
+        assertEquals(new Date(2021, 12, 3), quote.header().getDate());
+        assertEquals(new Eco("C88"), quote.header().getEco());
+        assertEquals(Integer.valueOf(6), quote.header().getRound());
+        assertEquals(Integer.valueOf(1), quote.header().getSubRound());
+
+        assertEquals("World Championship", quote.header().getEvent());
+        assertEquals(new Date(2021, 11, 24), quote.header().getEventDate());
+        assertEquals(new Date(2021, 12, 10), quote.header().getEventEndDate());
+        assertEquals("Dubai", quote.header().getEventSite());
+        assertEquals("UAE", quote.header().getEventCountry());
+        assertEquals(Integer.valueOf(22), quote.header().getEventCategory());
+        assertEquals(Integer.valueOf(14), quote.header().getEventRounds());
+        assertEquals("match", quote.header().getEventType());
+        assertEquals("classical", quote.header().getEventTimeControl());
+
+        assertEquals("ChessBase", quote.header().getSource());
+        assertEquals("TWIC 1413", quote.header().getSourceTitle());
+        assertEquals(new Date(2021, 12, 6), quote.header().getSourceDate());
+        assertEquals("Yarin Morphy", quote.header().getAnnotator());
+        assertEquals("brilliancy", quote.header().getGameTag());
     }
 
     // ========== Tests for Mixed Annotations ==========

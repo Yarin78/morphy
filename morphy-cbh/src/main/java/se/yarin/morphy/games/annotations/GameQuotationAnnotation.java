@@ -34,6 +34,7 @@ public class GameQuotationAnnotation extends Annotation implements StatisticalAn
   private byte[] setupPositionData;
   private byte[] gameData;
 
+  // TODO: Is set in some games that have no moves. References to a game ID in the same database perhaps?
   private int unknown;
 
   public int unknown() {
@@ -47,10 +48,14 @@ public class GameQuotationAnnotation extends Annotation implements StatisticalAn
    * @param header the header model of the game to quote
    */
   public GameQuotationAnnotation(@NotNull GameHeaderModel header) {
+    this(header, 0);
+  }
+
+  public GameQuotationAnnotation(@NotNull GameHeaderModel header, int unknown) {
     this.header = header;
     this.setupPositionData = null;
-    this.gameData = null;
-    this.unknown = 0;
+    this.gameData = new byte[] { -75, -81 };  // This is an encoded null move
+    this.unknown = unknown;
   }
 
   /**
@@ -60,7 +65,12 @@ public class GameQuotationAnnotation extends Annotation implements StatisticalAn
    * @param game the game model of the game to quote
    */
   public GameQuotationAnnotation(@NotNull GameModel game) {
+    this(game, 0);
+  }
+
+  public GameQuotationAnnotation(@NotNull GameModel game, int unknown) {
     this.header = game.header();
+    this.unknown = unknown;
 
     // Only embed moves data if it's a regular chess game.
     // ChessBase doesn't seem to support embedding unorthodox games
@@ -69,7 +79,7 @@ public class GameQuotationAnnotation extends Annotation implements StatisticalAn
         this.setupPositionData = new byte[28];
         // TODO: DatabaseContext should be passed to MoveSerializer
         new MoveSerializer()
-            .serializeInitialPosition(game.moves(), ByteBuffer.wrap(this.setupPositionData), false);
+                .serializeInitialPosition(game.moves(), ByteBuffer.wrap(this.setupPositionData), false);
       }
 
       MoveEncoder moveEncoder = new GameQuotationMoveEncoder();

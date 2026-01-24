@@ -73,9 +73,9 @@ public class AnnotationConverter {
     private static final Pattern VIDEO_PATTERN = Pattern.compile("\\[%video\\s+([A-Za-z0-9+/=]+)\\]");
     private static final Pattern PICTURE_PATTERN = Pattern.compile("\\[%picture\\s+([A-Za-z0-9+/=]+)\\]");
     private static final Pattern QUOTE_PATTERN = Pattern.compile("\\[%quote\\s+(.+?)\\](?=\\s*(?:\\[%|$|[^\\[]))", Pattern.DOTALL);
-    private static final Pattern PRE_LANG_PATTERN = Pattern.compile("\\[%pre:([A-Z]{3})\\s+([^\\]]+)\\]");
-    private static final Pattern PRE_PATTERN = Pattern.compile("\\[%pre\\s+([^\\]]+)\\]");
-    private static final Pattern POST_LANG_PATTERN = Pattern.compile("\\[%post:([A-Z]{3})\\s+([^\\]]+)\\]");
+    private static final Pattern PRE_LANG_PATTERN = Pattern.compile("\\[%pre:([A-Z]{3})\\s+((?:[^\\]\\\\]|\\\\.)*)\\]");
+    private static final Pattern PRE_PATTERN = Pattern.compile("\\[%pre\\s+((?:[^\\]\\\\]|\\\\.)*)\\]");
+    private static final Pattern POST_LANG_PATTERN = Pattern.compile("\\[%post:([A-Z]{3})\\s+((?:[^\\]\\\\]|\\\\.)*)\\]");
 
     // Medal name mappings
     private static final Map<String, Medal> MEDAL_FROM_STRING = new HashMap<>();
@@ -353,7 +353,7 @@ public class AnnotationConverter {
             if (afterMove.language() == Nation.NONE) {
                 appendWithSpace(textAfterBuilder, afterMove.text());
             } else {
-                appendWithSpace(textAfterBuilder, "[%post:" + afterMove.language().getIocCode() + " " + afterMove.text() + "]");
+                appendWithSpace(textAfterBuilder, "[%post:" + afterMove.language().getIocCode() + " " + escapeString(afterMove.text()) + "]");
             }
         }
 
@@ -366,9 +366,9 @@ public class AnnotationConverter {
         StringBuilder textBeforeBuilder = new StringBuilder();
         for (TextBeforeMoveAnnotation beforeMove : beforeMoveAnnotations) {
             if (beforeMove.language() == Nation.NONE) {
-                appendWithSpace(textBeforeBuilder, "[%pre " + beforeMove.text() + "]");
+                appendWithSpace(textBeforeBuilder, "[%pre " + escapeString(beforeMove.text()) + "]");
             } else {
-                appendWithSpace(textBeforeBuilder, "[%pre:" + beforeMove.language().getIocCode() + " " + beforeMove.text() + "]");
+                appendWithSpace(textBeforeBuilder, "[%pre:" + beforeMove.language().getIocCode() + " " + escapeString(beforeMove.text()) + "]");
             }
         }
 
@@ -447,7 +447,13 @@ public class AnnotationConverter {
     // ========== String escaping ==========
 
     private static String escapeString(String s) {
-        return s.replace("\\", "\\\\").replace("\"", "\\\"").replace("]", "\\]");
+        // Escape backslashes first, then other special characters
+        // Replace curly braces with placeholders since PGN comments don't support escaping them
+        return s.replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("]", "\\]")
+                .replace("{", "\\<")  // Use \< as placeholder for {
+                .replace("}", "\\>");  // Use \> as placeholder for }
     }
 
     private static String unescapeString(String s) {
@@ -455,7 +461,14 @@ public class AnnotationConverter {
         boolean escaped = false;
         for (char c : s.toCharArray()) {
             if (escaped) {
-                sb.append(c);
+                // Map escape sequences back to original characters
+                if (c == '<') {
+                    sb.append('{');
+                } else if (c == '>') {
+                    sb.append('}');
+                } else {
+                    sb.append(c);
+                }
                 escaped = false;
             } else if (c == '\\') {
                 escaped = true;
@@ -597,61 +610,44 @@ public class AnnotationConverter {
     }
 
     private static String formatGameQuotation(GameQuotationAnnotation a) {
-        StringBuilder sb = new StringBuilder("[%quote ");
+        StringBuilder sb = new StringBuilder("[%quote");
         GameHeaderModel h = a.header();
 
-        // Player names
-        sb.append("\"").append(escapeString(h.getWhite() != null ? h.getWhite() : "")).append("\" ");
-        sb.append("\"").append(escapeString(h.getBlack() != null ? h.getBlack() : "")).append("\" ");
+        // Serialize all header fields as key="value" pairs (no curly braces to avoid PGN comment conflicts)
+        for (Map.Entry<String, Object> entry : h.getAllFields().entrySet()) {
+            String fieldName = entry.getKey();
+            Object value = entry.getValue();
 
-        // Event and site
-        sb.append("\"").append(escapeString(h.getEvent() != null ? h.getEvent() : "")).append("\" ");
-        sb.append("\"").append(escapeString(h.getEventSite() != null ? h.getEventSite() : "")).append("\" ");
+            if (value == null) {
+                continue; // Skip null values
+            }
 
-        // Date
-        if (h.getDate() != null && !h.getDate().isUnset()) {
-            sb.append(h.getDate().toString());
-        } else {
-            sb.append("????.??.??");
-        }
-        sb.append(" ");
-
-        // Result
-        if (h.getResult() != null) {
-            sb.append(h.getResult().toString());
-        } else {
-            sb.append("*");
-        }
-        sb.append(" ");
-
-        // Elos
-        sb.append(h.getWhiteElo() != null ? h.getWhiteElo() : 0).append(" ");
-        sb.append(h.getBlackElo() != null ? h.getBlackElo() : 0).append(" ");
-
-        // ECO
-        if (h.getEco() != null && h.getEco().isSet()) {
-            sb.append(h.getEco().toString());
-        } else {
-            sb.append("???");
+            sb.append(" ");
+            sb.append(fieldName);
+            sb.append("=\"");
+            sb.append(escapeString(serializeHeaderValue(value)));
+            sb.append("\"");
         }
 
-        // Moves (if present)
+        if (a.unknown() != 0) {
+            sb.append(" unknown=\"").append(a.unknown()).append("\"");
+        }
+
+        // Moves (if present) - add as a special "moves" field
         if (a.hasGame()) {
-            sb.append(" \"");
+            sb.append(" moves=\"");
             GameModel game = a.getGameModel();
             GameMovesModel.Node node = game.moves().root();
-            boolean first = true;
+            boolean firstMove = true;
             while (node.hasMoves()) {
                 node = node.mainNode();
                 Move move = node.lastMove();
-                if (!first) sb.append(" ");
-                first = false;
+                if (!firstMove) sb.append(" ");
+                firstMove = false;
 
                 int ply = node.ply();
                 if (ply % 2 == 1) {
-                    sb.append((ply + 1) / 2).append(".");
-                } else if (first) {
-                    sb.append((ply + 1) / 2).append("...");
+                    sb.append((ply + 1) / 2).append(". ");
                 }
                 sb.append(move.toSAN());
             }
@@ -660,6 +656,78 @@ public class AnnotationConverter {
 
         sb.append("]");
         return sb.toString();
+    }
+
+    /**
+     * Serializes a header value to a string representation suitable for text encoding.
+     */
+    private static String serializeHeaderValue(Object value) {
+        if (value == null) {
+            return "";
+        }
+        if (value instanceof String s) {
+            return s;
+        }
+        if (value instanceof Integer i) {
+            return i.toString();
+        }
+        if (value instanceof se.yarin.chess.Date d) {
+            return d.isUnset() ? "" : d.toString();
+        }
+        if (value instanceof Eco e) {
+            return e.isSet() ? e.toString() : "";
+        }
+        if (value instanceof GameResult r) {
+            return r.toString();
+        }
+        if (value instanceof NAG n) {
+            return n.toString();
+        }
+        // Fallback for any other type
+        return value.toString();
+    }
+
+    /**
+     * Deserializes a header value from string based on the field name and expected type.
+     */
+    private static Object deserializeHeaderValue(String fieldName, String valueStr) {
+        if (valueStr.isEmpty()) {
+            return null;
+        }
+
+        // Try to determine the type based on field name and parse accordingly
+        return switch (fieldName) {
+            case "whiteElo", "blackElo", "round", "subRound", "eventCategory", "eventRounds" -> {
+                try {
+                    yield Integer.parseInt(valueStr);
+                } catch (NumberFormatException e) {
+                    yield null;
+                }
+            }
+            case "date", "eventDate", "eventEndDate", "sourceDate" -> {
+                try {
+                    yield parsePgnDate(valueStr);
+                } catch (Exception e) {
+                    yield null;
+                }
+            }
+            case "eco" -> {
+                try {
+                    yield new Eco(valueStr);
+                } catch (Exception e) {
+                    yield null;
+                }
+            }
+            case "result" -> parseGameResult(valueStr);
+            case "lineEvaluation" -> {
+                try {
+                    yield NAG.valueOf(valueStr);
+                } catch (Exception e) {
+                    yield null;
+                }
+            }
+            default -> valueStr; // Default to String
+        };
     }
 
     private static String formatGraphicalSquares(@NotNull GraphicalSquaresAnnotation annotation) {
@@ -847,7 +915,7 @@ public class AnnotationConverter {
             Matcher preLangMatcher = PRE_LANG_PATTERN.matcher(remainingText);
             if (preLangMatcher.find()) {
                 Nation nation = Nation.fromIOC(preLangMatcher.group(1));
-                String text = preLangMatcher.group(2);
+                String text = unescapeString(preLangMatcher.group(2));
                 annotations.add(ImmutableTextBeforeMoveAnnotation.builder().text(text).language(nation).build());
                 remainingText = preLangMatcher.replaceFirst("").trim();
                 continue;
@@ -855,7 +923,7 @@ public class AnnotationConverter {
 
             Matcher preMatcher = PRE_PATTERN.matcher(remainingText);
             if (preMatcher.find()) {
-                String text = preMatcher.group(1);
+                String text = unescapeString(preMatcher.group(1));
                 annotations.add(ImmutableTextBeforeMoveAnnotation.of(text));
                 remainingText = preMatcher.replaceFirst("").trim();
                 continue;
@@ -868,7 +936,7 @@ public class AnnotationConverter {
             Matcher postLangMatcher = POST_LANG_PATTERN.matcher(remainingText);
             if (postLangMatcher.find()) {
                 Nation nation = Nation.fromIOC(postLangMatcher.group(1));
-                String text = postLangMatcher.group(2);
+                String text = unescapeString(postLangMatcher.group(2));
                 annotations.add(ImmutableTextAfterMoveAnnotation.builder().text(text).language(nation).build());
                 remainingText = postLangMatcher.replaceFirst("").trim();
             } else {
@@ -1076,129 +1144,115 @@ public class AnnotationConverter {
         }
     }
 
+    /**
+     * Parses the new key="value" format: field1="value1" field2="value2" ...
+     * This format avoids curly braces which conflict with PGN comment syntax.
+     */
     private static GameQuotationAnnotation parseGameQuotation(String data) {
-        try {
-            // Tokenize quoted strings and other parts
-            List<String> tokens = tokenizeQuotedString(data);
-            if (tokens.size() < 9) {
-                log.warn("Invalid quote format, not enough tokens: {}", data);
-                return null;
+        GameHeaderModel header = new GameHeaderModel();
+        Map<String, String> fields = parseKeyValuePairs(data);
+
+        // Extract moves if present
+        String movesStr = fields.remove("moves");
+
+        String unknownStr = fields.remove("unknown");
+        int unknown = unknownStr != null ? Integer.parseInt(unknownStr) : 0;
+
+        // Set all other fields in the header
+        for (Map.Entry<String, String> entry : fields.entrySet()) {
+            Object value = deserializeHeaderValue(entry.getKey(), entry.getValue());
+            if (value != null) {
+                header.setField(entry.getKey(), value);
             }
-
-            GameHeaderModel header = new GameHeaderModel();
-            header.setWhite(tokens.get(0));
-            header.setBlack(tokens.get(1));
-            header.setEvent(tokens.get(2));
-            header.setEventSite(tokens.get(3));
-
-            // Parse date (format: YYYY.MM.DD with ?? for unknown parts)
-            String dateStr = tokens.get(4);
-            if (!dateStr.equals("????.??.??")) {
-                try {
-                    header.setDate(parsePgnDate(dateStr));
-                } catch (Exception e) {
-                    // Leave date unset
-                }
-            }
-
-            // Parse result
-            String resultStr = tokens.get(5);
-            header.setResult(parseGameResult(resultStr));
-
-            // Parse elos
-            try {
-                int whiteElo = Integer.parseInt(tokens.get(6));
-                int blackElo = Integer.parseInt(tokens.get(7));
-                if (whiteElo > 0) header.setWhiteElo(whiteElo);
-                if (blackElo > 0) header.setBlackElo(blackElo);
-            } catch (NumberFormatException e) {
-                // Ignore elo parsing errors
-            }
-
-            // Parse ECO
-            String ecoStr = tokens.get(8);
-            if (!ecoStr.equals("???") && !ecoStr.isEmpty()) {
-                try {
-                    header.setEco(new Eco(ecoStr));
-                } catch (Exception e) {
-                    // Leave eco unset
-                }
-            }
-
-            // Parse moves (if present)
-            if (tokens.size() > 9 && !tokens.get(9).isEmpty()) {
-                String movesStr = tokens.get(9);
-                GameMovesModel moves = new GameMovesModel();
-                // Simple move parsing - just the main line
-                String[] moveTokens = movesStr.split("\\s+");
-                GameMovesModel.Node current = moves.root();
-
-                for (String moveToken : moveTokens) {
-                    // Skip pure move numbers (e.g., "1." or "2...")
-                    if (moveToken.matches("\\d+\\.+")) continue;
-                    if (moveToken.isEmpty()) continue;
-
-                    // Strip move number prefix (e.g., "1.e4" -> "e4", "2...Nf6" -> "Nf6")
-                    String sanMove = moveToken.replaceFirst("^\\d+\\.+", "");
-                    if (sanMove.isEmpty()) continue;
-
-                    try {
-                        PgnMoveParser moveParser = new PgnMoveParser(current.position());
-                        Move move = moveParser.parseMove(sanMove);
-                        current = current.addMove(move);
-                    } catch (PgnFormatException e) {
-                        log.debug("Failed to parse move in quotation: {}", moveToken);
-                        break;
-                    }
-                }
-
-                return new GameQuotationAnnotation(new GameModel(header, moves));
-            }
-
-            return new GameQuotationAnnotation(header);
-        } catch (Exception e) {
-            log.warn("Failed to parse quote: {}", data, e);
-            return null;
         }
+
+        // Parse moves if present
+        if (movesStr != null && !movesStr.isEmpty()) {
+            GameMovesModel moves = new GameMovesModel();
+            String[] moveTokens = movesStr.split("\\s+");
+            GameMovesModel.Node current = moves.root();
+
+            for (String moveToken : moveTokens) {
+                if (moveToken.matches("\\d+\\.+")) continue;
+                if (moveToken.isEmpty()) continue;
+
+                try {
+                    PgnMoveParser moveParser = new PgnMoveParser(current.position());
+                    Move move = moveParser.parseMove(moveToken);
+                    current = current.addMove(move);
+                } catch (PgnFormatException e) {
+                    log.debug("Failed to parse move in quotation: {}", moveToken);
+                    break;
+                }
+            }
+
+            return new GameQuotationAnnotation(new GameModel(header, moves), unknown);
+        }
+
+        return new GameQuotationAnnotation(header, unknown);
     }
 
-    private static List<String> tokenizeQuotedString(String data) {
-        List<String> tokens = new ArrayList<>();
-        StringBuilder current = new StringBuilder();
-        boolean inQuotes = false;
-        boolean escaped = false;
+    /**
+     * Parses key="value" pairs from a string.
+     * Format: key1="value1" key2="value2" ...
+     */
+    private static Map<String, String> parseKeyValuePairs(String content) {
+        Map<String, String> result = new HashMap<>();
+        if (content.isEmpty()) {
+            return result;
+        }
 
-        for (int i = 0; i < data.length(); i++) {
-            char c = data.charAt(i);
-
-            if (escaped) {
-                current.append(c);
-                escaped = false;
-            } else if (c == '\\') {
-                escaped = true;
-            } else if (c == '"') {
-                if (inQuotes) {
-                    tokens.add(current.toString());
-                    current = new StringBuilder();
-                    inQuotes = false;
-                } else {
-                    inQuotes = true;
-                }
-            } else if (!inQuotes && Character.isWhitespace(c)) {
-                if (!current.isEmpty()) {
-                    tokens.add(current.toString());
-                    current = new StringBuilder();
-                }
-            } else {
-                current.append(c);
+        int i = 0;
+        while (i < content.length()) {
+            // Skip whitespace
+            while (i < content.length() && Character.isWhitespace(content.charAt(i))) {
+                i++;
             }
+            if (i >= content.length()) break;
+
+            // Read key (everything until '=')
+            StringBuilder key = new StringBuilder();
+            while (i < content.length() && content.charAt(i) != '=') {
+                key.append(content.charAt(i));
+                i++;
+            }
+
+            if (i >= content.length() || content.charAt(i) != '=') {
+                log.warn("Expected '=' after key in quote annotation");
+                break;
+            }
+            i++; // Skip '='
+
+            // Expect opening quote
+            if (i >= content.length() || content.charAt(i) != '"') {
+                log.warn("Expected '\"' after '=' in quote annotation");
+                break;
+            }
+            i++; // Skip opening quote
+
+            // Read value (everything until unescaped closing quote)
+            StringBuilder value = new StringBuilder();
+            boolean escaped = false;
+            while (i < content.length()) {
+                char c = content.charAt(i);
+                if (escaped) {
+                    value.append(c);
+                    escaped = false;
+                } else if (c == '\\') {
+                    escaped = true;
+                } else if (c == '"') {
+                    i++; // Skip closing quote
+                    break;
+                } else {
+                    value.append(c);
+                }
+                i++;
+            }
+
+            result.put(key.toString().trim(), value.toString());
         }
 
-        if (!current.isEmpty()) {
-            tokens.add(current.toString());
-        }
-
-        return tokens;
+        return result;
     }
 
     private static GraphicalAnnotationColor charToColor(char ch) {
