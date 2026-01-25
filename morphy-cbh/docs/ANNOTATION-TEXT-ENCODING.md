@@ -1,6 +1,6 @@
-# Storage Annotation Text Encoding Specification
+# ChessBase Annotation Text Encoding Specification
 
-This document specifies the format for encoding ChessBase storage annotations as text in PGN comments, enabling lossless round-trip conversion between CBH (storage) and PGN (generic) formats.
+This document specifies the format for encoding ChessBase annotations as text in PGN comments, enabling lossless round-trip conversion between CBH (ChessBase) and PGN formats.
 
 ## Table of Contents
 
@@ -24,7 +24,7 @@ ChessBase databases support rich annotations beyond what standard PGN can repres
 
 ### The Solution
 
-All complex storage annotations are encoded using **square bracket notation** within PGN comments:
+All complex ChessBase annotations are encoded using **square bracket notation** within PGN comments:
 
 ```
 [%command arg1 arg2 ...]

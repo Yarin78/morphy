@@ -22,9 +22,9 @@ import static org.junit.Assert.*;
 
 /**
  * Integration tests for PGN round-trips through the database.
- * Tests that storage annotations survive export to PGN and re-import.
+ * Tests that ChessBase annotations survive export to PGN and re-import.
  *
- * Flow: Database (storage annotations) → PGN (generic annotations) → Database (storage annotations)
+ * Flow: Database (ChessBase annotations) → PGN (PGN annotations) → Database (ChessBase annotations)
  */
 public class PgnDatabaseRoundTripTest {
     private Database testDatabase;
@@ -39,14 +39,14 @@ public class PgnDatabaseRoundTripTest {
         // File dbFile = new File(getClass().getResource("/test-annotations.cbh").toURI());
         testDatabase = Database.open(dbFile, DatabaseMode.READ_ONLY);
 
-        // Configure exporter to convert storage → generic annotations
+        // Configure exporter to convert ChessBase → PGN annotations
         exporter = new PgnExporter(
             PgnFormatOptions.DEFAULT,
-            AnnotationConverter::convertToGenericAnnotations
+            AnnotationConverter::convertToPgnAnnotations
         );
 
-        // Configure parser to convert generic → storage annotations
-        parser = new PgnParser(AnnotationConverter::convertToStorageAnnotations);
+        // Configure parser to convert PGN → ChessBase annotations
+        parser = new PgnParser(AnnotationConverter::convertToChessBaseAnnotations);
     }
 
     @After
@@ -62,18 +62,18 @@ public class PgnDatabaseRoundTripTest {
         Game game = testDatabase.getGame(1);
         GameModel original = game.getModel();
 
-        // Verify original has storage annotations (SymbolAnnotation)
+        // Verify original has ChessBase annotations (SymbolAnnotation)
         var e4 = original.moves().root().mainNode();
         assertEquals(1, e4.getAnnotations().size());
         assertTrue("Should have SymbolAnnotation", e4.getAnnotations().get(0) instanceof SymbolAnnotation);
         SymbolAnnotation symbol = (SymbolAnnotation) e4.getAnnotations().get(0);
         assertEquals(NAG.GOOD_MOVE, symbol.moveComment());
 
-        // Export to PGN (converts to generic annotations)
+        // Export to PGN (converts to PGN annotations)
         String pgn = exporter.exportGame(original);
         assertTrue("PGN should contain $1", pgn.contains("$1"));
 
-        // Parse back (converts to storage annotations)
+        // Parse back (converts to ChessBase annotations)
         GameModel roundTripped = parser.parseGame(pgn);
 
         // Verify annotations match
@@ -260,8 +260,8 @@ public class PgnDatabaseRoundTripTest {
 
         PgnExporter worldExporter = new PgnExporter(
             PgnFormatOptions.DEFAULT_WITHOUT_PLYCOUNT,
-            AnnotationConverter::convertToGenericAnnotations);
-        PgnParser worldParser = new PgnParser(AnnotationConverter::convertToStorageAnnotations);
+            AnnotationConverter::convertToPgnAnnotations);
+        PgnParser worldParser = new PgnParser(AnnotationConverter::convertToChessBaseAnnotations);
 
         int totalGames = 0;
         int identicalGames = 0;

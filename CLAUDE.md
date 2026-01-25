@@ -20,6 +20,8 @@ Morphy is a Java 21 library and CLI for reading/writing ChessBase databases (.cb
 - **morphy-cli**: Command-line interface using Picocli
 - **morphy-tools**: Development utilities
 
+This is an internal project! There is no need to keep things around for backward compatibility, unless explicitly told to do so.
+
 ## Architecture
 
 Three-layer design:
@@ -46,7 +48,6 @@ Key patterns:
 - **Java 21 features**: records, switch expressions, pattern matching
 - **Null safety**: Use `@NotNull`/`@Nullable` from JetBrains Annotations
 - **Resource management**: Always use try-with-resources for AutoCloseable
-- No Lombok (recently removed)
 
 ## ChessBase File Format
 

@@ -19,21 +19,21 @@ import java.util.regex.Pattern;
 import static se.yarin.morphy.games.annotations.AnnotationPgnUtil.appendWithSpace;
 
 /**
- * Bidirectional converter between generic annotations and storage annotations.
+ * Bidirectional converter between PGN annotations and ChessBase annotations.
  *
  * <p>This converter handles the translation layer in both directions:
  * <ul>
- *   <li><b>To Storage (for database save):</b>
+ *   <li><b>To ChessBase (for database save):</b>
  *     <ul>
  *       <li>{@link NAGAnnotation} → {@link SymbolAnnotation} (with NAG consolidation)</li>
- *       <li>{@link CommentaryAfterMoveAnnotation} → Various storage annotations + {@link TextAfterMoveAnnotation}</li>
- *       <li>{@link CommentaryBeforeMoveAnnotation} → Various storage annotations + {@link TextBeforeMoveAnnotation}</li>
+ *       <li>{@link CommentaryAfterMoveAnnotation} → Various ChessBase annotations + {@link TextAfterMoveAnnotation}</li>
+ *       <li>{@link CommentaryBeforeMoveAnnotation} → Various ChessBase annotations + {@link TextBeforeMoveAnnotation}</li>
  *     </ul>
  *   </li>
- *   <li><b>To Generic (for PGN export/display):</b>
+ *   <li><b>To PGN (for PGN export/display):</b>
  *     <ul>
  *       <li>{@link SymbolAnnotation} → multiple {@link NAGAnnotation} (one per NAG type)</li>
- *       <li>All storage annotations → {@link CommentaryAfterMoveAnnotation} with [%...] encoding</li>
+ *       <li>All ChessBase annotations → {@link CommentaryAfterMoveAnnotation} with [%...] encoding</li>
  *       <li>{@link TextBeforeMoveAnnotation} → {@link CommentaryBeforeMoveAnnotation} with [%pre] encoding</li>
  *     </ul>
  *   </li>
@@ -41,8 +41,8 @@ import static se.yarin.morphy.games.annotations.AnnotationPgnUtil.appendWithSpac
  *
  * <p>Usage with PgnParser and PgnExporter:
  * <pre>{@code
- * PgnParser parser = new PgnParser(AnnotationConverter::convertToStorageAnnotations);
- * PgnExporter exporter = new PgnExporter(options, AnnotationConverter::convertToGenericAnnotations);
+ * PgnParser parser = new PgnParser(AnnotationConverter::convertToChessBaseAnnotations);
+ * PgnExporter exporter = new PgnExporter(options, AnnotationConverter::convertToPgnAnnotations);
  * }</pre>
  */
 public class AnnotationConverter {
@@ -131,30 +131,30 @@ public class AnnotationConverter {
     }
 
     /**
-     * Converts annotations from generic to storage format.
+     * Converts annotations from PGN to ChessBase format.
      * Without player context, %clk annotations cannot be properly decoded (will default to White).
      *
      * @param annotations the annotations collection to convert
      */
-    public static void convertToStorageAnnotations(@NotNull Annotations annotations) {
-        convertToStorageAnnotations(annotations, null);
+    public static void convertToChessBaseAnnotations(@NotNull Annotations annotations) {
+        convertToChessBaseAnnotations(annotations, null);
     }
 
     /**
-     * Converts annotations from generic to storage format.
+     * Converts annotations from PGN to ChessBase format.
      * This method can be used as a method reference for {@link se.yarin.chess.annotations.AnnotationTransformer}.
      *
      * @param annotations the annotations collection to convert
      * @param lastMoveBy the player who made the last move (for %clk decoding), or null if unknown
      */
-    public static void convertToStorageAnnotations(@NotNull Annotations annotations, @Nullable Player lastMoveBy) {
+    public static void convertToChessBaseAnnotations(@NotNull Annotations annotations, @Nullable Player lastMoveBy) {
         if (annotations.isEmpty()) {
             return;
         }
         Annotations originalAnnotations = new Annotations(annotations);
         annotations.clear();
 
-        // Collect generic annotations that need conversion
+        // Collect PGN annotations that need conversion
         List<NAGAnnotation> nagAnnotations = new ArrayList<>();
         List<CommentaryAfterMoveAnnotation> afterMoveAnnotations = new ArrayList<>();
         List<CommentaryBeforeMoveAnnotation> beforeMoveAnnotations = new ArrayList<>();
@@ -167,7 +167,7 @@ public class AnnotationConverter {
             } else if (annotation instanceof CommentaryBeforeMoveAnnotation a) {
                 beforeMoveAnnotations.add(a);
             } else {
-                // Keep non-generic annotations as-is
+                // Keep non-PGN annotations as-is
                 annotations.add(annotation);
             }
         }
@@ -211,27 +211,27 @@ public class AnnotationConverter {
     }
 
     /**
-     * Converts annotations from storage to generic format.
+     * Converts annotations from ChessBase to PGN format.
      *
      * @param annotations the annotations collection to convert
      */
-    public static void convertToGenericAnnotations(@NotNull Annotations annotations) {
-        convertToGenericAnnotations(annotations, null);
+    public static void convertToPgnAnnotations(@NotNull Annotations annotations) {
+        convertToPgnAnnotations(annotations, null);
     }
 
     /**
-     * Converts annotations from storage to generic format.
+     * Converts annotations from ChessBase to PGN format.
      * This method can be used as a method reference for {@link se.yarin.chess.annotations.AnnotationTransformer}.
      *
      * @param annotations the annotations collection to convert
      * @param lastMoveBy the player who made the last move (not used for encoding, but required by interface)
      */
-    public static void convertToGenericAnnotations(@NotNull Annotations annotations, @Nullable Player lastMoveBy) {
+    public static void convertToPgnAnnotations(@NotNull Annotations annotations, @Nullable Player lastMoveBy) {
         if (annotations.isEmpty()) {
             return;
         }
 
-        // Collect storage annotations that need conversion
+        // Collect ChessBase annotations that need conversion
         List<SymbolAnnotation> symbolAnnotations = new ArrayList<>();
         List<TextAfterMoveAnnotation> afterMoveAnnotations = new ArrayList<>();
         List<TextBeforeMoveAnnotation> beforeMoveAnnotations = new ArrayList<>();
@@ -376,7 +376,7 @@ public class AnnotationConverter {
                 || annotation instanceof PictureAnnotation;
     }
 
-    // ========== Decoding methods (Generic → Storage) ==========
+    // ========== Decoding methods (PGN → ChessBase) ==========
 
     /**
      * Parses annotations that are encoded in commentary text as [%...] and

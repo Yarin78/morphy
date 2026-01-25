@@ -491,11 +491,11 @@ Annotations are the most complex aspect of the game representation system. Morph
 
 | Concern | Solution |
 |---------|----------|
-| PGN interoperability | Generic annotations (`NAGAnnotation`, `CommentaryAnnotation`) |
-| ChessBase features | Storage annotations (graphics, media, computer eval) |
+| PGN interoperability | PGN annotations (`NAGAnnotation`, `CommentaryAnnotation`) |
+| ChessBase features | ChessBase annotations (graphics, media, computer eval) |
 | Round-trip fidelity | Both extend common `Annotation` base |
 
-### Generic Annotations (Logic Layer)
+### PGN Annotations (Logic Layer)
 
 **Package:** `se.yarin.chess.annotations`
 
@@ -506,7 +506,7 @@ Simple, PGN-compatible annotations:
 
 These annotations have a priority system that controls export order in PGN format.
 
-### Storage Annotations (Storage Layer)
+### ChessBase Annotations (Storage Layer)
 
 **Package:** `se.yarin.morphy.games.annotations`
 
@@ -520,28 +520,28 @@ ChessBase-specific annotations with additional features:
 - **Training annotations** - Critical positions, training questions, pawn structures
 - **GameQuotationAnnotation** - References to other games
 
-Each storage annotation has a unique type code (e.g., 0x03, 0x04) and serializer for binary encoding. Unrecognized annotations are preserved as `UnknownAnnotation` for round-trip fidelity.
+Each ChessBase annotation has a unique type code (e.g., 0x03, 0x04) and serializer for binary encoding. Unrecognized annotations are preserved as `UnknownAnnotation` for round-trip fidelity.
 
 ### Annotation Statistics
 
 The `AnnotationStatistics` class (in `se.yarin.morphy.games.annotations`) aggregates annotation data for game headers, calculating magnitude values used for filtering and display in the database.
 
-### Annotation Conversion: Bridging Generic and Storage Annotations
+### Annotation Conversion: Bridging PGN and ChessBase Annotations
 
 **Package:** `se.yarin.morphy.games.annotations`
 **Class:** `AnnotationConverter`
 
 #### Purpose
 
-The `AnnotationConverter` provides **bidirectional conversion** between generic annotations (used by PGN and the logic layer) and storage annotations (used by the database). This allows seamless round-tripping of games through PGN while preserving ChessBase-specific features.
+The `AnnotationConverter` provides **bidirectional conversion** between PGN annotations (used by PGN and the logic layer) and ChessBase annotations (used by the database). This allows seamless round-tripping of games through PGN while preserving ChessBase-specific features.
 
-#### Conversion Direction 1: Generic → Storage
+#### Conversion Direction 1: PGN → ChessBase
 
-When saving games imported from PGN, generic annotations are automatically converted to storage format using an `AnnotationTransformer`:
+When saving games imported from PGN, PGN annotations are automatically converted to ChessBase format using an `AnnotationTransformer`:
 
 ```java
-// Configure PgnParser with automatic conversion to storage annotations
-PgnParser parser = new PgnParser(AnnotationConverter::convertNodeToStorageAnnotations);
+// Configure PgnParser with automatic conversion to ChessBase annotations
+PgnParser parser = new PgnParser(AnnotationConverter::convertNodeToChessBaseAnnotations);
 GameModel model = parser.parseGame(pgnString);
 
 // Conversions performed at each node:
@@ -558,15 +558,15 @@ Graphical encoding → GraphicalSquaresAnnotation/GraphicalArrowsAnnotation
 - `[%cal Ge2e4,Rh1h8]` → `GraphicalArrowsAnnotation` (colored arrows)
 - Color codes: `G`=Green, `R`=Red, `Y`=Yellow
 
-#### Conversion Direction 2: Storage → Generic
+#### Conversion Direction 2: ChessBase → PGN
 
-When exporting games to PGN, storage annotations are automatically converted to generic format using an `AnnotationTransformer`:
+When exporting games to PGN, ChessBase annotations are automatically converted to PGN format using an `AnnotationTransformer`:
 
 ```java
-// Configure PgnExporter with automatic conversion to generic annotations
+// Configure PgnExporter with automatic conversion to PGN annotations
 PgnExporter exporter = new PgnExporter(
     PgnFormatOptions.DEFAULT,
-    AnnotationConverter::convertNodeToGenericAnnotations
+    AnnotationConverter::convertToPgnAnnotations
 );
 String pgn = exporter.exportGame(gameModel);
 
@@ -587,17 +587,17 @@ Conversion happens **automatically** through the `AnnotationTransformer` mechani
 **PGN Import Flow:**
 ```java
 // Parser applies transformer as it builds the game tree
-PgnParser parser = new PgnParser(AnnotationConverter::convertNodeToStorageAnnotations);
+PgnParser parser = new PgnParser(AnnotationConverter::convertNodeToChessBaseAnnotations);
 GameModel model = parser.parseGame(pgnString);
-// model now has storage annotations, ready for database save
+// model now has ChessBase annotations, ready for database save
 ```
 
 **PGN Export Flow:**
 ```java
 // Exporter applies transformer as it exports each node
-PgnExporter exporter = new PgnExporter(options, AnnotationConverter::convertNodeToGenericAnnotations);
+PgnExporter exporter = new PgnExporter(options, AnnotationConverter::convertToPgnAnnotations);
 String pgn = exporter.exportGame(gameModel);
-// PGN contains generic annotations with graphical encoding
+// PGN contains PGN annotations with graphical encoding
 ```
 
 This ensures that games round-trip correctly between PGN and database formats without losing annotations.
@@ -627,7 +627,7 @@ Frontend
 ```
 PGN String
     ↓ PgnParser.parseGame() (with AnnotationTransformer)
-GameModel (with storage annotations)
+GameModel (with ChessBase annotations)
     ↓ DatabaseWriteTransaction.addGame()
     ↓ GameAdapter.setGameData()
 Game (storage layer)

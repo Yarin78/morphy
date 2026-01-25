@@ -139,8 +139,8 @@ public class TestPgnRoundTrip {
 
         PgnExporter exporter = new PgnExporter(
                 PgnFormatOptions.DEFAULT_WITHOUT_PLYCOUNT,
-                AnnotationConverter::convertToGenericAnnotations);
-        PgnParser parser = new PgnParser(AnnotationConverter::convertToStorageAnnotations);
+                AnnotationConverter::convertToPgnAnnotations);
+        PgnParser parser = new PgnParser(AnnotationConverter::convertToChessBaseAnnotations);
 
         Stats stats = new Stats();
 

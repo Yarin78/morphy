@@ -20,10 +20,10 @@ import static se.yarin.chess.Chess.*;
 
 public class AnnotationConverterTest {
 
-    // ========== Tests for Generic → Storage Conversion ==========
+    // ========== Tests for PGN → ChessBase Conversion ==========
 
     @Test
-    public void testConvertSingleNAGToStorage() {
+    public void testConvertSingleNAGToChessBase() {
         GameMovesModel moves = new GameMovesModel();
         GameMovesModel.Node node = moves.root().addMove(E2, E4);
         node.addAnnotation(new NAGAnnotation(NAG.GOOD_MOVE));
@@ -31,7 +31,7 @@ public class AnnotationConverterTest {
         assertEquals(1, node.getAnnotations().size());
         assertTrue(node.getAnnotations().get(0) instanceof NAGAnnotation);
 
-        AnnotationConverter.convertToStorageAnnotations(node.getAnnotations());
+        AnnotationConverter.convertToChessBaseAnnotations(node.getAnnotations());
 
         assertEquals(1, node.getAnnotations().size());
         assertTrue(node.getAnnotations().get(0) instanceof SymbolAnnotation);
@@ -49,7 +49,7 @@ public class AnnotationConverterTest {
         node.addAnnotation(new NAGAnnotation(NAG.WHITE_SLIGHT_ADVANTAGE));
         node.addAnnotation(new NAGAnnotation(NAG.WITH_THE_IDEA));
 
-        AnnotationConverter.convertToStorageAnnotations(node.getAnnotations());
+        AnnotationConverter.convertToChessBaseAnnotations(node.getAnnotations());
 
         assertEquals(1, node.getAnnotations().size());
         assertTrue(node.getAnnotations().get(0) instanceof SymbolAnnotation);
@@ -66,7 +66,7 @@ public class AnnotationConverterTest {
         node.addAnnotation(new NAGAnnotation(NAG.GOOD_MOVE));
         node.addAnnotation(new NAGAnnotation(NAG.DUBIOUS_MOVE));
 
-        AnnotationConverter.convertToStorageAnnotations(node.getAnnotations());
+        AnnotationConverter.convertToChessBaseAnnotations(node.getAnnotations());
 
         assertEquals(1, node.getAnnotations().size());
         assertTrue(node.getAnnotations().get(0) instanceof SymbolAnnotation);
@@ -85,7 +85,7 @@ public class AnnotationConverterTest {
         assertEquals(1, node.getAnnotations().size());
         assertTrue(node.getAnnotations().get(0) instanceof CommentaryAfterMoveAnnotation);
 
-        AnnotationConverter.convertToStorageAnnotations(node.getAnnotations());
+        AnnotationConverter.convertToChessBaseAnnotations(node.getAnnotations());
 
         assertEquals(1, node.getAnnotations().size());
         assertTrue(node.getAnnotations().get(0) instanceof TextAfterMoveAnnotation);
@@ -102,7 +102,7 @@ public class AnnotationConverterTest {
         assertEquals(1, node.getAnnotations().size());
         assertTrue(node.getAnnotations().get(0) instanceof CommentaryBeforeMoveAnnotation);
 
-        AnnotationConverter.convertToStorageAnnotations(node.getAnnotations());
+        AnnotationConverter.convertToChessBaseAnnotations(node.getAnnotations());
 
         assertEquals(1, node.getAnnotations().size());
         assertTrue(node.getAnnotations().get(0) instanceof TextBeforeMoveAnnotation);
@@ -113,7 +113,7 @@ public class AnnotationConverterTest {
     // ========== Tests for Storage → Generic Conversion ==========
 
     @Test
-    public void testConvertSymbolAnnotationToGeneric() {
+    public void testConvertSymbolAnnotationToPgn() {
         GameMovesModel moves = new GameMovesModel();
         GameMovesModel.Node node = moves.root().addMove(E2, E4);
 
@@ -122,7 +122,7 @@ public class AnnotationConverterTest {
         assertEquals(1, node.getAnnotations().size());
         assertTrue(node.getAnnotations().get(0) instanceof SymbolAnnotation);
 
-        AnnotationConverter.convertToGenericAnnotations(node.getAnnotations());
+        AnnotationConverter.convertToPgnAnnotations(node.getAnnotations());
 
         assertEquals(1, node.getAnnotations().size());
         assertTrue(node.getAnnotations().get(0) instanceof NAGAnnotation);
@@ -131,13 +131,13 @@ public class AnnotationConverterTest {
     }
 
     @Test
-    public void testConvertSymbolAnnotationWithMultipleNAGsToGeneric() {
+    public void testConvertSymbolAnnotationWithMultipleNAGsToPgn() {
         GameMovesModel moves = new GameMovesModel();
         GameMovesModel.Node node = moves.root().addMove(E2, E4);
 
         node.addAnnotation(ImmutableSymbolAnnotation.of(NAG.GOOD_MOVE, NAG.WITH_THE_IDEA, NAG.WHITE_SLIGHT_ADVANTAGE));
 
-        AnnotationConverter.convertToGenericAnnotations(node.getAnnotations());
+        AnnotationConverter.convertToPgnAnnotations(node.getAnnotations());
 
         assertEquals(3, node.getAnnotations().size());
 
@@ -165,7 +165,7 @@ public class AnnotationConverterTest {
         Annotations annotations = new Annotations();
         annotations.add(ImmutableWhiteClockAnnotation.of(538500)); // 1:29:45 = (1*3600 + 29*60 + 45) * 100
 
-        AnnotationConverter.convertToGenericAnnotations(annotations);
+        AnnotationConverter.convertToPgnAnnotations(annotations);
 
         assertEquals(1, annotations.size());
         assertTrue(annotations.get(0) instanceof CommentaryAfterMoveAnnotation);
@@ -178,7 +178,7 @@ public class AnnotationConverterTest {
         Annotations annotations = new Annotations();
         annotations.add(new CommentaryAfterMoveAnnotation("[%clk 1:29:45]"));
 
-        AnnotationConverter.convertToStorageAnnotations(annotations, Player.WHITE);
+        AnnotationConverter.convertToChessBaseAnnotations(annotations, Player.WHITE);
 
         WhiteClockAnnotation clock = annotations.getByClass(WhiteClockAnnotation.class);
         assertNotNull(clock);
@@ -190,7 +190,7 @@ public class AnnotationConverterTest {
         Annotations annotations = new Annotations();
         annotations.add(new CommentaryAfterMoveAnnotation("[%clk 1:28:30]"));
 
-        AnnotationConverter.convertToStorageAnnotations(annotations, Player.BLACK);
+        AnnotationConverter.convertToChessBaseAnnotations(annotations, Player.BLACK);
 
         BlackClockAnnotation clock = annotations.getByClass(BlackClockAnnotation.class);
         assertNotNull(clock);
@@ -202,7 +202,7 @@ public class AnnotationConverterTest {
         Annotations annotations = new Annotations();
         annotations.add(new CommentaryAfterMoveAnnotation("[%clkw 1:00:00] [%clkb 0:59:00]"));
 
-        AnnotationConverter.convertToStorageAnnotations(annotations);
+        AnnotationConverter.convertToChessBaseAnnotations(annotations);
 
         WhiteClockAnnotation whiteClock = annotations.getByClass(WhiteClockAnnotation.class);
         BlackClockAnnotation blackClock = annotations.getByClass(BlackClockAnnotation.class);
@@ -220,7 +220,7 @@ public class AnnotationConverterTest {
         Annotations annotations = new Annotations();
         annotations.add(ImmutableComputerEvaluationAnnotation.of(150, 0, 20)); // +1.50 at depth 20
 
-        AnnotationConverter.convertToGenericAnnotations(annotations);
+        AnnotationConverter.convertToPgnAnnotations(annotations);
 
         assertEquals(1, annotations.size());
         String commentary = ((CommentaryAfterMoveAnnotation) annotations.get(0)).getCommentary();
@@ -232,7 +232,7 @@ public class AnnotationConverterTest {
         Annotations annotations = new Annotations();
         annotations.add(ImmutableComputerEvaluationAnnotation.of(-75, 0, 18)); // -0.75 at depth 18
 
-        AnnotationConverter.convertToGenericAnnotations(annotations);
+        AnnotationConverter.convertToPgnAnnotations(annotations);
 
         String commentary = ((CommentaryAfterMoveAnnotation) annotations.get(0)).getCommentary();
         assertTrue(commentary.contains("[%eval -0.75/18]"));
@@ -243,7 +243,7 @@ public class AnnotationConverterTest {
         Annotations annotations = new Annotations();
         annotations.add(ImmutableComputerEvaluationAnnotation.of(5, 1, 30)); // #5 at depth 30
 
-        AnnotationConverter.convertToGenericAnnotations(annotations);
+        AnnotationConverter.convertToPgnAnnotations(annotations);
 
         String commentary = ((CommentaryAfterMoveAnnotation) annotations.get(0)).getCommentary();
         assertTrue(commentary.contains("[%eval #5/30]"));
@@ -254,7 +254,7 @@ public class AnnotationConverterTest {
         Annotations annotations = new Annotations();
         annotations.add(ImmutableComputerEvaluationAnnotation.of(-3, 1, 25)); // #-3 at depth 25
 
-        AnnotationConverter.convertToGenericAnnotations(annotations);
+        AnnotationConverter.convertToPgnAnnotations(annotations);
 
         String commentary = ((CommentaryAfterMoveAnnotation) annotations.get(0)).getCommentary();
         assertTrue(commentary.contains("[%eval #-3/25]"));
@@ -265,7 +265,7 @@ public class AnnotationConverterTest {
         Annotations annotations = new Annotations();
         annotations.add(new CommentaryAfterMoveAnnotation("[%eval +1.50/20]"));
 
-        AnnotationConverter.convertToStorageAnnotations(annotations);
+        AnnotationConverter.convertToChessBaseAnnotations(annotations);
 
         ComputerEvaluationAnnotation eval = annotations.getByClass(ComputerEvaluationAnnotation.class);
         assertNotNull(eval);
@@ -279,7 +279,7 @@ public class AnnotationConverterTest {
         Annotations annotations = new Annotations();
         annotations.add(new CommentaryAfterMoveAnnotation("[%eval #5/30]"));
 
-        AnnotationConverter.convertToStorageAnnotations(annotations);
+        AnnotationConverter.convertToChessBaseAnnotations(annotations);
 
         ComputerEvaluationAnnotation eval = annotations.getByClass(ComputerEvaluationAnnotation.class);
         assertNotNull(eval);
@@ -293,7 +293,7 @@ public class AnnotationConverterTest {
         Annotations annotations = new Annotations();
         annotations.add(ImmutableComputerEvaluationAnnotation.of(100, 3, 10)); // Type 3 should be skipped
 
-        AnnotationConverter.convertToGenericAnnotations(annotations);
+        AnnotationConverter.convertToPgnAnnotations(annotations);
 
         assertEquals(0, annotations.size()); // No output since type 3 is skipped
     }
@@ -305,7 +305,7 @@ public class AnnotationConverterTest {
         Annotations annotations = new Annotations();
         annotations.add(ImmutableTimeSpentAnnotation.of(0, 5, 30, 0));
 
-        AnnotationConverter.convertToGenericAnnotations(annotations);
+        AnnotationConverter.convertToPgnAnnotations(annotations);
 
         String commentary = ((CommentaryAfterMoveAnnotation) annotations.get(0)).getCommentary();
         assertTrue(commentary.contains("[%emt 0:05:30]"));
@@ -316,7 +316,7 @@ public class AnnotationConverterTest {
         Annotations annotations = new Annotations();
         annotations.add(ImmutableTimeSpentAnnotation.of(0, 0, 45, 30));
 
-        AnnotationConverter.convertToGenericAnnotations(annotations);
+        AnnotationConverter.convertToPgnAnnotations(annotations);
 
         String commentary = ((CommentaryAfterMoveAnnotation) annotations.get(0)).getCommentary();
         assertTrue(commentary.contains("[%emt 0:00:45|30]"));
@@ -327,7 +327,7 @@ public class AnnotationConverterTest {
         Annotations annotations = new Annotations();
         annotations.add(new CommentaryAfterMoveAnnotation("[%emt 1:15:00]"));
 
-        AnnotationConverter.convertToStorageAnnotations(annotations);
+        AnnotationConverter.convertToChessBaseAnnotations(annotations);
 
         TimeSpentAnnotation ts = annotations.getByClass(TimeSpentAnnotation.class);
         assertNotNull(ts);
@@ -346,7 +346,7 @@ public class AnnotationConverterTest {
         Annotations annotations = new Annotations();
         annotations.add(ImmutableTimeControlAnnotation.of(series));
 
-        AnnotationConverter.convertToGenericAnnotations(annotations);
+        AnnotationConverter.convertToPgnAnnotations(annotations);
 
         String commentary = ((CommentaryAfterMoveAnnotation) annotations.get(0)).getCommentary();
         assertTrue(commentary.contains("[%tc 90m/40+30m+30s]"));
@@ -360,7 +360,7 @@ public class AnnotationConverterTest {
         Annotations annotations = new Annotations();
         annotations.add(ImmutableTimeControlAnnotation.of(series));
 
-        AnnotationConverter.convertToGenericAnnotations(annotations);
+        AnnotationConverter.convertToPgnAnnotations(annotations);
 
         String commentary = ((CommentaryAfterMoveAnnotation) annotations.get(0)).getCommentary();
         assertTrue(commentary.contains("[%tc (15m+10s)]"));
@@ -371,7 +371,7 @@ public class AnnotationConverterTest {
         Annotations annotations = new Annotations();
         annotations.add(new CommentaryAfterMoveAnnotation("[%tc 90m/40+30m]"));
 
-        AnnotationConverter.convertToStorageAnnotations(annotations);
+        AnnotationConverter.convertToChessBaseAnnotations(annotations);
 
         TimeControlAnnotation tc = annotations.getByClass(TimeControlAnnotation.class);
         assertNotNull(tc);
@@ -387,7 +387,7 @@ public class AnnotationConverterTest {
         Annotations annotations = new Annotations();
         annotations.add(ImmutableCriticalPositionAnnotation.of(CriticalPositionAnnotation.CriticalPositionType.MIDDLEGAME));
 
-        AnnotationConverter.convertToGenericAnnotations(annotations);
+        AnnotationConverter.convertToPgnAnnotations(annotations);
 
         String commentary = ((CommentaryAfterMoveAnnotation) annotations.get(0)).getCommentary();
         assertTrue(commentary.contains("[%crit middlegame]"));
@@ -398,7 +398,7 @@ public class AnnotationConverterTest {
         Annotations annotations = new Annotations();
         annotations.add(new CommentaryAfterMoveAnnotation("[%crit endgame]"));
 
-        AnnotationConverter.convertToStorageAnnotations(annotations);
+        AnnotationConverter.convertToChessBaseAnnotations(annotations);
 
         CriticalPositionAnnotation crit = annotations.getByClass(CriticalPositionAnnotation.class);
         assertNotNull(crit);
@@ -411,7 +411,7 @@ public class AnnotationConverterTest {
         Annotations annotations = new Annotations();
         annotations.add(ImmutableMedalAnnotation.of(medals));
 
-        AnnotationConverter.convertToGenericAnnotations(annotations);
+        AnnotationConverter.convertToPgnAnnotations(annotations);
 
         String commentary = ((CommentaryAfterMoveAnnotation) annotations.get(0)).getCommentary();
         assertTrue(commentary.contains("[%medal"));
@@ -425,7 +425,7 @@ public class AnnotationConverterTest {
         Annotations annotations = new Annotations();
         annotations.add(new CommentaryAfterMoveAnnotation("[%medal tactics,sacrifice,best]"));
 
-        AnnotationConverter.convertToStorageAnnotations(annotations);
+        AnnotationConverter.convertToChessBaseAnnotations(annotations);
 
         MedalAnnotation medal = annotations.getByClass(MedalAnnotation.class);
         assertNotNull(medal);
@@ -439,7 +439,7 @@ public class AnnotationConverterTest {
         Annotations annotations = new Annotations();
         annotations.add(ImmutableVariationColorAnnotation.of(255, 0, 0, true, false)); // Red, moves only
 
-        AnnotationConverter.convertToGenericAnnotations(annotations);
+        AnnotationConverter.convertToPgnAnnotations(annotations);
 
         String commentary = ((CommentaryAfterMoveAnnotation) annotations.get(0)).getCommentary();
         assertTrue(commentary.contains("[%varcolor #FF0000 M]"));
@@ -450,7 +450,7 @@ public class AnnotationConverterTest {
         Annotations annotations = new Annotations();
         annotations.add(ImmutableVariationColorAnnotation.of(255, 255, 0, true, true)); // Yellow, ML
 
-        AnnotationConverter.convertToGenericAnnotations(annotations);
+        AnnotationConverter.convertToPgnAnnotations(annotations);
 
         String commentary = ((CommentaryAfterMoveAnnotation) annotations.get(0)).getCommentary();
         assertTrue(commentary.contains("[%varcolor #FFFF00 ML]"));
@@ -461,7 +461,7 @@ public class AnnotationConverterTest {
         Annotations annotations = new Annotations();
         annotations.add(new CommentaryAfterMoveAnnotation("[%varcolor #0000FF L]"));
 
-        AnnotationConverter.convertToStorageAnnotations(annotations);
+        AnnotationConverter.convertToChessBaseAnnotations(annotations);
 
         VariationColorAnnotation vc = annotations.getByClass(VariationColorAnnotation.class);
         assertNotNull(vc);
@@ -477,7 +477,7 @@ public class AnnotationConverterTest {
         Annotations annotations = new Annotations();
         annotations.add(ImmutablePiecePathAnnotation.of(3, Chess.strToSqi("e4")));
 
-        AnnotationConverter.convertToGenericAnnotations(annotations);
+        AnnotationConverter.convertToPgnAnnotations(annotations);
 
         String commentary = ((CommentaryAfterMoveAnnotation) annotations.get(0)).getCommentary();
         assertTrue(commentary.contains("[%path e4 3]"));
@@ -488,7 +488,7 @@ public class AnnotationConverterTest {
         Annotations annotations = new Annotations();
         annotations.add(ImmutablePawnStructureAnnotation.of(3));
 
-        AnnotationConverter.convertToGenericAnnotations(annotations);
+        AnnotationConverter.convertToPgnAnnotations(annotations);
 
         String commentary = ((CommentaryAfterMoveAnnotation) annotations.get(0)).getCommentary();
         assertTrue(commentary.contains("[%pawnstruct 3]"));
@@ -499,7 +499,7 @@ public class AnnotationConverterTest {
         Annotations annotations = new Annotations();
         annotations.add(ImmutableVideoStreamTimeAnnotation.of(12345));
 
-        AnnotationConverter.convertToGenericAnnotations(annotations);
+        AnnotationConverter.convertToPgnAnnotations(annotations);
 
         String commentary = ((CommentaryAfterMoveAnnotation) annotations.get(0)).getCommentary();
         assertTrue(commentary.contains("[%vst 12345]"));
@@ -512,7 +512,7 @@ public class AnnotationConverterTest {
         Annotations annotations = new Annotations();
         annotations.add(ImmutableWebLinkAnnotation.of("https://lichess.org/study/abc123", "See analysis"));
 
-        AnnotationConverter.convertToGenericAnnotations(annotations);
+        AnnotationConverter.convertToPgnAnnotations(annotations);
 
         String commentary = ((CommentaryAfterMoveAnnotation) annotations.get(0)).getCommentary();
         assertTrue(commentary.contains("[%weblink \"https://lichess.org/study/abc123\" \"See analysis\"]"));
@@ -523,7 +523,7 @@ public class AnnotationConverterTest {
         Annotations annotations = new Annotations();
         annotations.add(ImmutableWebLinkAnnotation.of("https://example.com?a=1", "Click \"here\""));
 
-        AnnotationConverter.convertToGenericAnnotations(annotations);
+        AnnotationConverter.convertToPgnAnnotations(annotations);
 
         String commentary = ((CommentaryAfterMoveAnnotation) annotations.get(0)).getCommentary();
         assertTrue(commentary.contains("\\\"here\\\""));
@@ -534,7 +534,7 @@ public class AnnotationConverterTest {
         Annotations annotations = new Annotations();
         annotations.add(new CommentaryAfterMoveAnnotation("[%weblink \"https://lichess.org\" \"Analyze\"]"));
 
-        AnnotationConverter.convertToStorageAnnotations(annotations);
+        AnnotationConverter.convertToChessBaseAnnotations(annotations);
 
         WebLinkAnnotation wl = annotations.getByClass(WebLinkAnnotation.class);
         assertNotNull(wl);
@@ -550,7 +550,7 @@ public class AnnotationConverterTest {
         Annotations annotations = new Annotations();
         annotations.add(ImmutableTrainingAnnotation.of(data));
 
-        AnnotationConverter.convertToGenericAnnotations(annotations);
+        AnnotationConverter.convertToPgnAnnotations(annotations);
 
         String commentary = ((CommentaryAfterMoveAnnotation) annotations.get(0)).getCommentary();
         assertTrue(commentary.contains("[%train SGVsbG8gV29ybGQ=]"));
@@ -561,7 +561,7 @@ public class AnnotationConverterTest {
         Annotations annotations = new Annotations();
         annotations.add(new CommentaryAfterMoveAnnotation("[%train SGVsbG8gV29ybGQ=]"));
 
-        AnnotationConverter.convertToStorageAnnotations(annotations);
+        AnnotationConverter.convertToChessBaseAnnotations(annotations);
 
         TrainingAnnotation train = annotations.getByClass(TrainingAnnotation.class);
         assertNotNull(train);
@@ -574,7 +574,7 @@ public class AnnotationConverterTest {
         Annotations annotations = new Annotations();
         annotations.add(ImmutableCorrespondenceMoveAnnotation.of(data));
 
-        AnnotationConverter.convertToGenericAnnotations(annotations);
+        AnnotationConverter.convertToPgnAnnotations(annotations);
 
         String commentary = ((CommentaryAfterMoveAnnotation) annotations.get(0)).getCommentary();
         assertTrue(commentary.contains("[%corr AQIDBAU=]"));
@@ -587,7 +587,7 @@ public class AnnotationConverterTest {
         Annotations annotations = new Annotations();
         annotations.add(ImmutableTextBeforeMoveAnnotation.of("This is before the move"));
 
-        AnnotationConverter.convertToGenericAnnotations(annotations);
+        AnnotationConverter.convertToPgnAnnotations(annotations);
 
         assertEquals(1, annotations.size());
         assertTrue(annotations.get(0) instanceof CommentaryBeforeMoveAnnotation);
@@ -603,7 +603,7 @@ public class AnnotationConverterTest {
                 .language(Nation.GERMANY)
                 .build());
 
-        AnnotationConverter.convertToGenericAnnotations(annotations);
+        AnnotationConverter.convertToPgnAnnotations(annotations);
 
         String commentary = ((CommentaryBeforeMoveAnnotation) annotations.get(0)).getCommentary();
         assertTrue(commentary.contains("[%pre:GER Dies ist auf Deutsch]"));
@@ -617,7 +617,7 @@ public class AnnotationConverterTest {
                 .language(Nation.FRANCE)
                 .build());
 
-        AnnotationConverter.convertToGenericAnnotations(annotations);
+        AnnotationConverter.convertToPgnAnnotations(annotations);
 
         String commentary = ((CommentaryAfterMoveAnnotation) annotations.get(0)).getCommentary();
         assertTrue(commentary.contains("[%post:FRA Ceci est en français]"));
@@ -628,7 +628,7 @@ public class AnnotationConverterTest {
         Annotations annotations = new Annotations();
         annotations.add(new CommentaryAfterMoveAnnotation("[%pre Important decision coming]"));
 
-        AnnotationConverter.convertToStorageAnnotations(annotations);
+        AnnotationConverter.convertToChessBaseAnnotations(annotations);
 
         TextBeforeMoveAnnotation text = annotations.getByClass(TextBeforeMoveAnnotation.class);
         assertNotNull(text);
@@ -640,7 +640,7 @@ public class AnnotationConverterTest {
         Annotations annotations = new Annotations();
         annotations.add(new CommentaryAfterMoveAnnotation("[%pre:GER Eine wichtige Entscheidung]"));
 
-        AnnotationConverter.convertToStorageAnnotations(annotations);
+        AnnotationConverter.convertToChessBaseAnnotations(annotations);
 
         TextBeforeMoveAnnotation text = annotations.getByClass(TextBeforeMoveAnnotation.class);
         assertNotNull(text);
@@ -653,7 +653,7 @@ public class AnnotationConverterTest {
         Annotations annotations = new Annotations();
         annotations.add(new CommentaryAfterMoveAnnotation("[%post:FRA Un bon coup]"));
 
-        AnnotationConverter.convertToStorageAnnotations(annotations);
+        AnnotationConverter.convertToChessBaseAnnotations(annotations);
 
         TextAfterMoveAnnotation text = annotations.getByClass(TextAfterMoveAnnotation.class);
         assertNotNull(text);
@@ -679,7 +679,7 @@ public class AnnotationConverterTest {
         Annotations annotations = new Annotations();
         annotations.add(new GameQuotationAnnotation(header));
 
-        AnnotationConverter.convertToGenericAnnotations(annotations);
+        AnnotationConverter.convertToPgnAnnotations(annotations);
 
         String commentary = ((CommentaryAfterMoveAnnotation) annotations.get(0)).getCommentary();
         assertTrue(commentary.contains("[%quote"));
@@ -701,12 +701,12 @@ public class AnnotationConverterTest {
                 .language(Nation.ENGLAND)
                 .build());
 
-        AnnotationConverter.convertToGenericAnnotations(node.getAnnotations());
+        AnnotationConverter.convertToPgnAnnotations(node.getAnnotations());
 
         CommentaryAfterMoveAnnotation annotation = node.getAnnotation(CommentaryAfterMoveAnnotation.class);
         System.out.println(annotation.getCommentary());
 
-        AnnotationConverter.convertToStorageAnnotations(node.getAnnotations());
+        AnnotationConverter.convertToChessBaseAnnotations(node.getAnnotations());
         TextAfterMoveAnnotation annotation2 = node.getAnnotation(TextAfterMoveAnnotation.class);
         System.out.println(annotation2.text());
 
@@ -714,7 +714,7 @@ public class AnnotationConverterTest {
     }
 
     @Test
-    public void testRoundTripGenericToStorageToGeneric() {
+    public void testRoundTripPgnToChessBaseToPgn() {
         GameMovesModel moves = new GameMovesModel();
         GameMovesModel.Node node = moves.root().addMove(E2, E4);
 
@@ -722,10 +722,10 @@ public class AnnotationConverterTest {
         node.addAnnotation(new NAGAnnotation(NAG.WHITE_SLIGHT_ADVANTAGE));
         node.addAnnotation(new CommentaryAfterMoveAnnotation("Excellent choice"));
 
-        AnnotationConverter.convertToStorageAnnotations(node.getAnnotations());
+        AnnotationConverter.convertToChessBaseAnnotations(node.getAnnotations());
         assertEquals(2, node.getAnnotations().size());
 
-        AnnotationConverter.convertToGenericAnnotations(node.getAnnotations());
+        AnnotationConverter.convertToPgnAnnotations(node.getAnnotations());
         assertEquals(3, node.getAnnotations().size());
 
         boolean hasGoodMove = false;
@@ -771,12 +771,12 @@ public class AnnotationConverterTest {
         node.addAnnotation(arrows);
         node.addAnnotation(text);
 
-        AnnotationConverter.convertToGenericAnnotations(node.getAnnotations());
+        AnnotationConverter.convertToPgnAnnotations(node.getAnnotations());
 
         assertEquals(1, node.getAnnotations().size());
         assertTrue(node.getAnnotations().get(0) instanceof CommentaryAfterMoveAnnotation);
 
-        AnnotationConverter.convertToStorageAnnotations(node.getAnnotations());
+        AnnotationConverter.convertToChessBaseAnnotations(node.getAnnotations());
 
         GraphicalSquaresAnnotation squaresBack = node.getAnnotation(GraphicalSquaresAnnotation.class);
         GraphicalArrowsAnnotation arrowsBack = node.getAnnotation(GraphicalArrowsAnnotation.class);
@@ -796,8 +796,8 @@ public class AnnotationConverterTest {
         Annotations annotations = new Annotations();
         annotations.add(ImmutableWhiteClockAnnotation.of(539745));
 
-        AnnotationConverter.convertToGenericAnnotations(annotations);
-        AnnotationConverter.convertToStorageAnnotations(annotations, Player.WHITE);
+        AnnotationConverter.convertToPgnAnnotations(annotations);
+        AnnotationConverter.convertToChessBaseAnnotations(annotations, Player.WHITE);
 
         WhiteClockAnnotation clock = annotations.getByClass(WhiteClockAnnotation.class);
         assertNotNull(clock);
@@ -809,8 +809,8 @@ public class AnnotationConverterTest {
         Annotations annotations = new Annotations();
         annotations.add(ImmutableComputerEvaluationAnnotation.of(150, 0, 20));
 
-        AnnotationConverter.convertToGenericAnnotations(annotations);
-        AnnotationConverter.convertToStorageAnnotations(annotations);
+        AnnotationConverter.convertToPgnAnnotations(annotations);
+        AnnotationConverter.convertToChessBaseAnnotations(annotations);
 
         ComputerEvaluationAnnotation eval = annotations.getByClass(ComputerEvaluationAnnotation.class);
         assertNotNull(eval);
@@ -825,8 +825,8 @@ public class AnnotationConverterTest {
         Annotations annotations = new Annotations();
         annotations.add(ImmutableMedalAnnotation.of(medals));
 
-        AnnotationConverter.convertToGenericAnnotations(annotations);
-        AnnotationConverter.convertToStorageAnnotations(annotations);
+        AnnotationConverter.convertToPgnAnnotations(annotations);
+        AnnotationConverter.convertToChessBaseAnnotations(annotations);
 
         MedalAnnotation medalBack = annotations.getByClass(MedalAnnotation.class);
         assertNotNull(medalBack);
@@ -840,8 +840,8 @@ public class AnnotationConverterTest {
         Annotations annotations = new Annotations();
         annotations.add(ImmutableTrainingAnnotation.of(data));
 
-        AnnotationConverter.convertToGenericAnnotations(annotations);
-        AnnotationConverter.convertToStorageAnnotations(annotations);
+        AnnotationConverter.convertToPgnAnnotations(annotations);
+        AnnotationConverter.convertToChessBaseAnnotations(annotations);
 
         TrainingAnnotation train = annotations.getByClass(TrainingAnnotation.class);
         assertNotNull(train);
@@ -864,8 +864,8 @@ public class AnnotationConverterTest {
         Annotations annotations = new Annotations();
         annotations.add(new GameQuotationAnnotation(header));
 
-        AnnotationConverter.convertToGenericAnnotations(annotations);
-        AnnotationConverter.convertToStorageAnnotations(annotations);
+        AnnotationConverter.convertToPgnAnnotations(annotations);
+        AnnotationConverter.convertToChessBaseAnnotations(annotations);
 
         GameQuotationAnnotation quote = annotations.getByClass(GameQuotationAnnotation.class);
         assertNotNull(quote);
@@ -904,8 +904,8 @@ public class AnnotationConverterTest {
         Annotations annotations = new Annotations();
         annotations.add(new GameQuotationAnnotation(game));
 
-        AnnotationConverter.convertToGenericAnnotations(annotations);
-        AnnotationConverter.convertToStorageAnnotations(annotations);
+        AnnotationConverter.convertToPgnAnnotations(annotations);
+        AnnotationConverter.convertToChessBaseAnnotations(annotations);
 
         GameQuotationAnnotation quote = annotations.getByClass(GameQuotationAnnotation.class);
         assertNotNull(quote);
@@ -960,8 +960,8 @@ public class AnnotationConverterTest {
         Annotations annotations = new Annotations();
         annotations.add(new GameQuotationAnnotation(header));
 
-        AnnotationConverter.convertToGenericAnnotations(annotations);
-        AnnotationConverter.convertToStorageAnnotations(annotations);
+        AnnotationConverter.convertToPgnAnnotations(annotations);
+        AnnotationConverter.convertToChessBaseAnnotations(annotations);
 
         GameQuotationAnnotation quote = annotations.getByClass(GameQuotationAnnotation.class);
         assertNotNull(quote);
@@ -1011,7 +1011,7 @@ public class AnnotationConverterTest {
         annotations.add(ImmutableCriticalPositionAnnotation.of(CriticalPositionAnnotation.CriticalPositionType.OPENING));
         annotations.add(ImmutableTextAfterMoveAnnotation.of("A classic opening"));
 
-        AnnotationConverter.convertToGenericAnnotations(annotations);
+        AnnotationConverter.convertToPgnAnnotations(annotations);
 
         assertEquals(1, annotations.size());
         String commentary = ((CommentaryAfterMoveAnnotation) annotations.get(0)).getCommentary();
@@ -1043,7 +1043,7 @@ public class AnnotationConverterTest {
                 "[%csl Ge4,Rd5] [%cal Ye2e4] [%clk 1:30:00] [%eval +0.25/22] The Ruy Lopez."
         ));
 
-        AnnotationConverter.convertToStorageAnnotations(annotations, Player.WHITE);
+        AnnotationConverter.convertToChessBaseAnnotations(annotations, Player.WHITE);
 
         assertNotNull(annotations.getByClass(GraphicalSquaresAnnotation.class));
         assertNotNull(annotations.getByClass(GraphicalArrowsAnnotation.class));
@@ -1058,13 +1058,13 @@ public class AnnotationConverterTest {
     // ========== Context-Aware Conversion ==========
 
     @Test
-    public void testConvertToStorageAnnotationsWhiteContext() {
+    public void testConvertToChessBaseAnnotationsWhiteContext() {
         GameMovesModel moves = new GameMovesModel();
         GameMovesModel.Node e4 = moves.root().addMove(E2, E4);
         e4.addAnnotation(new CommentaryAfterMoveAnnotation("[%clk 1:59:52]"));
 
         // e4 was White's move, so lastMoveBy = WHITE
-        AnnotationConverter.convertToStorageAnnotations(e4.getAnnotations(), Player.WHITE);
+        AnnotationConverter.convertToChessBaseAnnotations(e4.getAnnotations(), Player.WHITE);
 
         // Should create a WhiteClockAnnotation
         WhiteClockAnnotation clock = e4.getAnnotation(WhiteClockAnnotation.class);
@@ -1072,14 +1072,14 @@ public class AnnotationConverterTest {
     }
 
     @Test
-    public void testConvertToStorageAnnotationsBlackContext() {
+    public void testConvertToChessBaseAnnotationsBlackContext() {
         GameMovesModel moves = new GameMovesModel();
         GameMovesModel.Node e4 = moves.root().addMove(E2, E4);
         GameMovesModel.Node e5 = e4.addMove(E7, E5);
         e5.addAnnotation(new CommentaryAfterMoveAnnotation("[%clk 1:58:30]"));
 
         // e5 was Black's move, so lastMoveBy = BLACK
-        AnnotationConverter.convertToStorageAnnotations(e5.getAnnotations(), Player.BLACK);
+        AnnotationConverter.convertToChessBaseAnnotations(e5.getAnnotations(), Player.BLACK);
 
         // Should create a BlackClockAnnotation
         BlackClockAnnotation clock = e5.getAnnotation(BlackClockAnnotation.class);
@@ -1089,7 +1089,7 @@ public class AnnotationConverterTest {
     // ========== Existing Tests (kept for backward compatibility) ==========
 
     @Test
-    public void testConvertGraphicalSquaresToGeneric() {
+    public void testConvertGraphicalSquaresToPgn() {
         GameMovesModel moves = new GameMovesModel();
         GameMovesModel.Node node = moves.root().addMove(E2, E4);
 
@@ -1101,7 +1101,7 @@ public class AnnotationConverterTest {
         );
         node.addAnnotation(squares);
 
-        AnnotationConverter.convertToGenericAnnotations(node.getAnnotations());
+        AnnotationConverter.convertToPgnAnnotations(node.getAnnotations());
 
         assertEquals(1, node.getAnnotations().size());
         assertTrue(node.getAnnotations().get(0) instanceof CommentaryAfterMoveAnnotation);
@@ -1121,7 +1121,7 @@ public class AnnotationConverterTest {
 
         node.addAnnotation(new CommentaryAfterMoveAnnotation("[%csl Ga4,Rb5]"));
 
-        AnnotationConverter.convertToStorageAnnotations(node.getAnnotations());
+        AnnotationConverter.convertToChessBaseAnnotations(node.getAnnotations());
 
         GraphicalSquaresAnnotation squares = node.getAnnotation(GraphicalSquaresAnnotation.class);
         assertNotNull(squares);
@@ -1143,7 +1143,7 @@ public class AnnotationConverterTest {
 
         node.addAnnotation(new CommentaryAfterMoveAnnotation("[%csl Ge4] Best opening move"));
 
-        AnnotationConverter.convertToStorageAnnotations(node.getAnnotations());
+        AnnotationConverter.convertToChessBaseAnnotations(node.getAnnotations());
 
         GraphicalSquaresAnnotation squares = node.getAnnotation(GraphicalSquaresAnnotation.class);
         assertNotNull(squares);

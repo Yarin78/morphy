@@ -7,7 +7,7 @@ import se.yarin.chess.annotations.Annotation;
 import java.util.regex.Pattern;
 
 /**
- * Interface for encoding and decoding annotations between storage format and PGN text format.
+ * Interface for encoding and decoding annotations between ChessBase format and PGN text format.
  *
  * <p>Each annotation class that supports PGN encoding/decoding should have a nested class
  * implementing this interface, following the same pattern as the {@link AnnotationSerializer}
@@ -62,7 +62,7 @@ public interface AnnotationPgnCodec {
     Pattern getPattern();
 
     /**
-     * Encodes a storage annotation to PGN text format (e.g., "[%eval +0.50/20]").
+     * Encodes a ChessBase annotation to PGN text format (e.g., "[%eval +0.50/20]").
      *
      * @param annotation the annotation to encode (will be of the type returned by {@link #getAnnotationClass()})
      * @return the PGN text representation, or null/empty string if the annotation should be skipped
