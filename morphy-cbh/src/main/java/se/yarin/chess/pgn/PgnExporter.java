@@ -369,6 +369,7 @@ public class PgnExporter {
         private final Writer writer;
         private int currentLineLength = 0;
         private boolean needsSpace = false;
+        private boolean pendingLeftParen = false;
         boolean wasNewline = false;
 
         public MoveTextWriter(Writer writer) {
@@ -376,13 +377,51 @@ public class PgnExporter {
         }
 
         public void write(String text) throws IOException {
-            int textLength = text.length();
+            // Handle pending "(" from previous call
+            if (pendingLeftParen) {
+                // Calculate total length needed: space before "(" + "(" + text
+                int totalLength = 1 + text.length(); // "(" + text
+                if (needsSpace) {
+                    totalLength++; // space before "("
+                }
 
+                // Check if it fits on current line
+                if (currentLineLength + totalLength > options.maxLineLength() && currentLineLength > 0) {
+                    // Doesn't fit, wrap to new line before "("
+                    writer.write(options.lineEnding());
+                    currentLineLength = 0;
+                    needsSpace = false;
+                    wasNewline = true;
+                } else {
+                    wasNewline = false;
+                }
+
+                // Write space before "(" if needed
+                if (needsSpace) {
+                    writer.write(" ");
+                    currentLineLength++;
+                }
+
+                // Write the "("
+                writer.write("(");
+                currentLineLength++;
+                pendingLeftParen = false;
+                needsSpace = false; // No space between "(" and what follows
+            }
+
+            // Special case: no space before ")"
             if (text.equals(")")) {
                 needsSpace = false;
             }
 
-            // Check if we need to wrap
+            // If this is a "(", delay its output
+            if (text.equals("(")) {
+                pendingLeftParen = true;
+                return;
+            }
+
+            // Normal processing for non-"(" tokens
+            int textLength = text.length();
             if (needsSpace) {
                 textLength++; // Account for the space
             }
@@ -404,7 +443,7 @@ public class PgnExporter {
             writer.write(text);
             currentLineLength += text.length();
 
-            needsSpace = !text.equals("(");
+            needsSpace = true; // Space before next token (since text is not "(")
         }
 
         public void ensureSpace() {
