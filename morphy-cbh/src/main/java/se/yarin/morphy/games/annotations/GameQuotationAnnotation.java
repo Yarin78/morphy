@@ -1,8 +1,11 @@
 package se.yarin.morphy.games.annotations;
 
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import se.yarin.chess.pgn.PgnFormatException;
+import se.yarin.chess.pgn.PgnMoveParser;
 import se.yarin.morphy.entities.Nation;
 import se.yarin.morphy.entities.TournamentTimeControl;
 import se.yarin.morphy.entities.TournamentType;
@@ -18,6 +21,8 @@ import se.yarin.chess.annotations.Annotation;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.Map;
+import java.util.regex.Pattern;
 
 public class GameQuotationAnnotation extends Annotation implements StatisticalAnnotation {
 
@@ -298,6 +303,121 @@ public class GameQuotationAnnotation extends Annotation implements StatisticalAn
     @Override
     public int getAnnotationType() {
       return 0x13;
+    }
+  }
+
+  public static class PgnCodec implements AnnotationPgnCodec {
+    private static final Logger log = LoggerFactory.getLogger(PgnCodec.class);
+    private static final Pattern QUOTE_PATTERN = Pattern.compile("\\[%quote\\s+(.+?)\\](?=\\s*(?:\\[%|$|[^\\[]))", Pattern.DOTALL);
+
+    @Override
+    @NotNull
+    public Pattern getPattern() {
+      return QUOTE_PATTERN;
+    }
+
+    @Override
+    @Nullable
+    public String encode(@NotNull Annotation annotation) {
+      GameQuotationAnnotation a = (GameQuotationAnnotation) annotation;
+      StringBuilder sb = new StringBuilder("[%quote");
+      GameHeaderModel h = a.header();
+
+      // Serialize all header fields as key="value" pairs (no curly braces to avoid PGN comment conflicts)
+      for (Map.Entry<String, Object> entry : h.getAllFields().entrySet()) {
+        String fieldName = entry.getKey();
+        Object value = entry.getValue();
+
+        if (value == null) {
+          continue; // Skip null values
+        }
+
+        sb.append(" ");
+        sb.append(fieldName);
+        sb.append("=\"");
+        sb.append(AnnotationPgnUtil.escapeString(AnnotationPgnUtil.serializeHeaderValue(value)));
+        sb.append("\"");
+      }
+
+      if (a.unknown() != 0) {
+        sb.append(" unknown=\"").append(a.unknown()).append("\"");
+      }
+
+      // Moves (if present) - add as a special "moves" field
+      if (a.hasGame()) {
+        sb.append(" moves=\"");
+        GameModel game = a.getGameModel();
+        GameMovesModel.Node node = game.moves().root();
+        boolean firstMove = true;
+        while (node.hasMoves()) {
+          node = node.mainNode();
+          Move move = node.lastMove();
+          if (!firstMove) sb.append(" ");
+          firstMove = false;
+
+          int ply = node.ply();
+          if (ply % 2 == 1) {
+            sb.append((ply + 1) / 2).append(". ");
+          }
+          sb.append(move.toSAN());
+        }
+        sb.append("\"");
+      }
+
+      sb.append("]");
+      return sb.toString();
+    }
+
+    @Override
+    @Nullable
+    public Annotation decode(@NotNull String data) {
+      GameHeaderModel header = new GameHeaderModel();
+      Map<String, String> fields = AnnotationPgnUtil.parseKeyValuePairs(data);
+
+      // Extract moves if present
+      String movesStr = fields.remove("moves");
+
+      String unknownStr = fields.remove("unknown");
+      int unknown = unknownStr != null ? Integer.parseInt(unknownStr) : 0;
+
+      // Set all other fields in the header
+      for (Map.Entry<String, String> entry : fields.entrySet()) {
+        Object value = AnnotationPgnUtil.deserializeHeaderValue(entry.getKey(), entry.getValue());
+        if (value != null) {
+          header.setField(entry.getKey(), value);
+        }
+      }
+
+      // Parse moves if present
+      if (movesStr != null && !movesStr.isEmpty()) {
+        GameMovesModel moves = new GameMovesModel();
+        String[] moveTokens = movesStr.split("\\s+");
+        GameMovesModel.Node current = moves.root();
+
+        for (String moveToken : moveTokens) {
+          if (moveToken.matches("\\d+\\.+")) continue;
+          if (moveToken.isEmpty()) continue;
+
+          try {
+            PgnMoveParser moveParser = new PgnMoveParser(current.position());
+            Move move = moveParser.parseMove(moveToken);
+            current = current.addMove(move);
+          } catch (PgnFormatException e) {
+            log.debug("Failed to parse move in quotation: {}", moveToken);
+            break;
+          }
+        }
+
+        return new GameQuotationAnnotation(new GameModel(header, moves), unknown);
+      }
+
+      return new GameQuotationAnnotation(header, unknown);
+    }
+
+    @Override
+    @NotNull
+    public Class<? extends Annotation> getAnnotationClass() {
+      return GameQuotationAnnotation.class;
     }
   }
 }

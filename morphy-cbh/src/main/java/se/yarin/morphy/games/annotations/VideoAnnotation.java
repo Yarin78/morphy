@@ -1,11 +1,15 @@
 package se.yarin.morphy.games.annotations;
 
 import org.immutables.value.Value;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import se.yarin.morphy.util.CBUtil;
 import se.yarin.morphy.games.GameHeaderFlags;
 import se.yarin.chess.annotations.Annotation;
 
 import java.nio.ByteBuffer;
+import java.util.Base64;
+import java.util.regex.Pattern;
 
 /**
  * Video annotations are not supported. ChessBase 13 doesn't either - probably a deprecated feature?
@@ -53,6 +57,36 @@ public abstract class VideoAnnotation extends Annotation implements StatisticalA
     @Override
     public int getAnnotationType() {
       return 0x20;
+    }
+  }
+
+  public static class PgnCodec implements AnnotationPgnCodec {
+    private static final Pattern VIDEO_PATTERN = Pattern.compile("\\[%video\\s+([A-Za-z0-9+/=]+)\\]");
+
+    @Override
+    @NotNull
+    public Pattern getPattern() {
+      return VIDEO_PATTERN;
+    }
+
+    @Override
+    @Nullable
+    public String encode(@NotNull Annotation annotation) {
+      VideoAnnotation a = (VideoAnnotation) annotation;
+      return "[%video " + Base64.getEncoder().encodeToString(a.rawData()) + "]";
+    }
+
+    @Override
+    @Nullable
+    public Annotation decode(@NotNull String data) {
+      byte[] bytes = Base64.getDecoder().decode(data);
+      return ImmutableVideoAnnotation.of(bytes);
+    }
+
+    @Override
+    @NotNull
+    public Class<? extends Annotation> getAnnotationClass() {
+      return ImmutableVideoAnnotation.class;
     }
   }
 }
