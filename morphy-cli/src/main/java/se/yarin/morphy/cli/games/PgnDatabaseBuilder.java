@@ -19,6 +19,7 @@ public class PgnDatabaseBuilder extends GameConsumerBase {
 
   private final FileWriter pgnFileWriter;
   private final PgnExporter exporter;
+  private final AnnotationConverter converter;
   private boolean firstGame = true;
 
   public PgnDatabaseBuilder(File file) throws IOException {
@@ -32,6 +33,9 @@ public class PgnDatabaseBuilder extends GameConsumerBase {
       Set<Nation> commentLanguageFilter)
       throws IOException {
     this.pgnFileWriter = new FileWriter(file);
+
+    // Use simplified converter for human-readable PGN
+    this.converter = AnnotationConverter.getSimplifiedPgnConverter();
 
     PgnFormatOptions options =
         new PgnFormatOptions(
@@ -47,7 +51,8 @@ public class PgnDatabaseBuilder extends GameConsumerBase {
 
     AnnotationTransformer transformer =
         (annotations, lastMoveBy) -> {
-          AnnotationConverter.convertToPgnAnnotations(annotations, lastMoveBy);
+          // Use instance method instead of static method
+          converter.convertToPgn(annotations, lastMoveBy);
           if (standardAnnotationsOnly
               || (commentLanguageFilter != null && !commentLanguageFilter.isEmpty())) {
             new PgnAnnotationFilter(standardAnnotationsOnly, commentLanguageFilter)

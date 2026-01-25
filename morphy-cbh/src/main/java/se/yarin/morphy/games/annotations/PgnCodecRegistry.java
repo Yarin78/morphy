@@ -10,25 +10,27 @@ import java.util.*;
  * Registry for PGN annotation codecs.
  * Maintains mappings between annotation classes and their codecs for encoding/decoding.
  *
- * <p>This is a singleton class that provides centralized access to all annotation codecs.
- * Codecs should be registered during static initialization of the AnnotationConverter class.
+ * <p>This class can be instantiated to create separate codec registries for different conversion modes.
+ * For backward compatibility, a shared instance is available via {@link #getInstance()}.
  */
 public class PgnCodecRegistry {
 
-    private static final PgnCodecRegistry INSTANCE = new PgnCodecRegistry();
+    private static final PgnCodecRegistry SHARED_INSTANCE = new PgnCodecRegistry();
 
     private final Map<Class<? extends Annotation>, AnnotationPgnCodec> codecsByClass = new HashMap<>();
     private final List<AnnotationPgnCodec> codecs = new ArrayList<>();
 
-    private PgnCodecRegistry() {
-        // Singleton
+    public PgnCodecRegistry() {
+        // Public constructor for creating custom registry instances
     }
 
     /**
-     * Returns the singleton instance of the registry.
+     * Returns a shared instance of the registry for backward compatibility.
+     * @deprecated Use instance-based AnnotationConverter factory methods instead.
      */
+    @Deprecated
     public static PgnCodecRegistry getInstance() {
-        return INSTANCE;
+        return SHARED_INSTANCE;
     }
 
     /**

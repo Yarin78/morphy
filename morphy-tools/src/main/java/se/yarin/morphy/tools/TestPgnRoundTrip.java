@@ -137,10 +137,11 @@ public class TestPgnRoundTrip {
         System.out.println("Opening database: " + databasePath);
         Database db = Database.open(dbFile, DatabaseMode.READ_ONLY);
 
+        AnnotationConverter roundTripConverter = AnnotationConverter.getRoundTripConverter();
         PgnExporter exporter = new PgnExporter(
                 PgnFormatOptions.DEFAULT_WITHOUT_PLYCOUNT,
-                AnnotationConverter::convertToPgnAnnotations);
-        PgnParser parser = new PgnParser(AnnotationConverter::convertToChessBaseAnnotations);
+                roundTripConverter::convertToPgn);
+        PgnParser parser = new PgnParser(roundTripConverter::convertToChessBase);
 
         Stats stats = new Stats();
 

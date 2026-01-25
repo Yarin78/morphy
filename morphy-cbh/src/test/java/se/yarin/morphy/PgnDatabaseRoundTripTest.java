@@ -23,7 +23,7 @@ import static org.junit.Assert.*;
 /**
  * Integration tests for PGN round-trips through the database.
  * Tests that ChessBase annotations survive export to PGN and re-import.
- *
+ * <p>
  * Flow: Database (ChessBase annotations) → PGN (PGN annotations) → Database (ChessBase annotations)
  */
 public class PgnDatabaseRoundTripTest {
@@ -40,13 +40,13 @@ public class PgnDatabaseRoundTripTest {
         testDatabase = Database.open(dbFile, DatabaseMode.READ_ONLY);
 
         // Configure exporter to convert ChessBase → PGN annotations
+        AnnotationConverter roundTripConverter = AnnotationConverter.getRoundTripConverter();
         exporter = new PgnExporter(
-            PgnFormatOptions.DEFAULT,
-            AnnotationConverter::convertToPgnAnnotations
+                PgnFormatOptions.DEFAULT, roundTripConverter::convertToPgn
         );
 
         // Configure parser to convert PGN → ChessBase annotations
-        parser = new PgnParser(AnnotationConverter::convertToChessBaseAnnotations);
+        parser = new PgnParser(roundTripConverter::convertToChessBase);
     }
 
     @After
@@ -80,7 +80,7 @@ public class PgnDatabaseRoundTripTest {
         var rtE4 = roundTripped.moves().root().mainNode();
         assertEquals(1, rtE4.getAnnotations().size());
         assertTrue("Should have SymbolAnnotation after round-trip",
-            rtE4.getAnnotations().get(0) instanceof SymbolAnnotation);
+                rtE4.getAnnotations().get(0) instanceof SymbolAnnotation);
         SymbolAnnotation rtSymbol = (SymbolAnnotation) rtE4.getAnnotations().get(0);
         assertEquals(NAG.GOOD_MOVE, rtSymbol.moveComment());
     }
@@ -95,7 +95,7 @@ public class PgnDatabaseRoundTripTest {
         var e4 = original.moves().root().mainNode();
         assertEquals(1, e4.getAnnotations().size());
         assertTrue("Should have TextAfterMoveAnnotation",
-            e4.getAnnotations().get(0) instanceof TextAfterMoveAnnotation);
+                e4.getAnnotations().get(0) instanceof TextAfterMoveAnnotation);
         TextAfterMoveAnnotation text = (TextAfterMoveAnnotation) e4.getAnnotations().get(0);
         assertEquals("Best move", text.text());
 
@@ -110,7 +110,7 @@ public class PgnDatabaseRoundTripTest {
         var rtE4 = roundTripped.moves().root().mainNode();
         assertEquals(1, rtE4.getAnnotations().size());
         assertTrue("Should have TextAfterMoveAnnotation after round-trip",
-            rtE4.getAnnotations().get(0) instanceof TextAfterMoveAnnotation);
+                rtE4.getAnnotations().get(0) instanceof TextAfterMoveAnnotation);
         TextAfterMoveAnnotation rtText = (TextAfterMoveAnnotation) rtE4.getAnnotations().get(0);
         assertEquals("Best move", rtText.text());
     }
@@ -255,13 +255,14 @@ public class PgnDatabaseRoundTripTest {
     public void testWorldChampionshipDatabaseRoundTrip() throws IOException {
         // Open the World Championship database
         File dbFile = ResourceLoader.materializeDatabaseStream(
-            getClass(), "database/World-ch", "World-ch");
+                getClass(), "database/World-ch", "World-ch");
         Database worldChDb = Database.open(dbFile, DatabaseMode.READ_ONLY);
 
+        AnnotationConverter roundTripConverter = AnnotationConverter.getRoundTripConverter();
         PgnExporter worldExporter = new PgnExporter(
-            PgnFormatOptions.DEFAULT_WITHOUT_PLYCOUNT,
-            AnnotationConverter::convertToPgnAnnotations);
-        PgnParser worldParser = new PgnParser(AnnotationConverter::convertToChessBaseAnnotations);
+                PgnFormatOptions.DEFAULT_WITHOUT_PLYCOUNT,
+                roundTripConverter::convertToPgn);
+        PgnParser worldParser = new PgnParser(roundTripConverter::convertToChessBase);
 
         int totalGames = 0;
         int identicalGames = 0;
@@ -280,7 +281,7 @@ public class PgnDatabaseRoundTripTest {
 
                     // Trim annotations before comparison
                     original.moves().root().traverseDepthFirst(node ->
-                        AnnotationConverter.trimAnnotations(node.getAnnotations()));
+                            AnnotationConverter.trimAnnotations(node.getAnnotations()));
 
                     // Export to PGN
                     String pgn = worldExporter.exportGame(original);
@@ -290,7 +291,7 @@ public class PgnDatabaseRoundTripTest {
 
                     // Compare
                     GameModelComparator.ComparisonResult result =
-                        GameModelComparator.compare(original, roundTripped);
+                            GameModelComparator.compare(original, roundTripped);
 
                     if (result.isIdentical()) {
                         identicalGames++;
@@ -312,15 +313,15 @@ public class PgnDatabaseRoundTripTest {
         System.out.println("========================================");
         System.out.println("Total games processed: " + totalGames);
         System.out.println("Identical after round-trip: " + identicalGames +
-            " (" + String.format("%.2f%%", 100.0 * identicalGames / totalGames) + ")");
+                " (" + String.format("%.2f%%", 100.0 * identicalGames / totalGames) + ")");
         System.out.println("Games with differences: " + gamesWithDifferences.size() +
-            " (" + String.format("%.2f%%", 100.0 * gamesWithDifferences.size() / totalGames) + ")");
+                " (" + String.format("%.2f%%", 100.0 * gamesWithDifferences.size() / totalGames) + ")");
         System.out.println("Failed games: " + failedGames.size());
 
         if (!gamesWithDifferences.isEmpty()) {
             System.out.println();
             System.out.println("Game IDs with differences (first 20): " +
-                gamesWithDifferences.subList(0, Math.min(20, gamesWithDifferences.size())));
+                    gamesWithDifferences.subList(0, Math.min(20, gamesWithDifferences.size())));
         }
 
         if (!failedGames.isEmpty()) {
@@ -329,6 +330,6 @@ public class PgnDatabaseRoundTripTest {
 
         // Assert all games should match
         assertEquals("All games should be identical after round-trip",
-            totalGames, identicalGames);
+                totalGames, identicalGames);
     }
 }
