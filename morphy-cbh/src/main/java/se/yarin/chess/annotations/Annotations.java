@@ -6,8 +6,8 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * Represents a list of {@link Annotation} on a {@link se.yarin.chess.GameMovesModel.Node}. A node
- * may have multiple annotations, but only one annotation per class.
+ * Represents a list of {@link Annotation} on a {@link se.yarin.chess.GameMovesModel.Node}.
+ * A node may have multiple annotations.
  */
 public class Annotations extends ArrayList<Annotation> {
   public Annotations() {
@@ -64,7 +64,7 @@ public class Annotations extends ArrayList<Annotation> {
     List<Annotation> sortedAnnotations =
         this.stream()
             .sorted((o1, o2) -> o2.priority() - o1.priority())
-            .collect(Collectors.toList());
+            .toList();
     for (Annotation annotation : sortedAnnotations) {
       moveText = annotation.format(moveText, ascii);
     }

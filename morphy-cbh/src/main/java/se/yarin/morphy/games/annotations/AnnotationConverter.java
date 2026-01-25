@@ -145,7 +145,7 @@ public class AnnotationConverter {
      * This method can be used as a method reference for {@link se.yarin.chess.annotations.AnnotationTransformer}.
      *
      * @param annotations the annotations collection to convert
-     * @param lastMoveBy the player who made the last move (for %clk decoding), or null if unknown
+     * @param lastMoveBy  the player who made the last move (for %clk decoding), or null if unknown
      */
     public static void convertToChessBaseAnnotations(@NotNull Annotations annotations, @Nullable Player lastMoveBy) {
         if (annotations.isEmpty()) {
@@ -224,7 +224,7 @@ public class AnnotationConverter {
      * This method can be used as a method reference for {@link se.yarin.chess.annotations.AnnotationTransformer}.
      *
      * @param annotations the annotations collection to convert
-     * @param lastMoveBy the player who made the last move (not used for encoding, but required by interface)
+     * @param lastMoveBy  the player who made the last move (not used for encoding, but required by interface)
      */
     public static void convertToPgnAnnotations(@NotNull Annotations annotations, @Nullable Player lastMoveBy) {
         if (annotations.isEmpty()) {
@@ -246,16 +246,14 @@ public class AnnotationConverter {
                 afterMoveAnnotations.add(a);
             } else if (annotation instanceof TextBeforeMoveAnnotation a) {
                 beforeMoveAnnotations.add(a);
-            } else if (isEncodableAnnotation(annotation)) {
+            } else if (PgnCodecRegistry.getInstance().getCodec(annotation.getClass()) != null) {
                 encodedAnnotations.add(annotation);
+            } else {
+                log.warn("Unsupported annotation of type {} will be removed during conversion", annotation.getClass());
             }
         }
 
-        // Remove all annotations we're going to convert
-        for (SymbolAnnotation a : symbolAnnotations) annotations.remove(a);
-        for (TextAfterMoveAnnotation a : afterMoveAnnotations) annotations.remove(a);
-        for (TextBeforeMoveAnnotation a : beforeMoveAnnotations) annotations.remove(a);
-        for (Annotation a : encodedAnnotations) annotations.remove(a);
+        annotations.clear();
 
         // Convert SymbolAnnotation to NAGAnnotations
         for (SymbolAnnotation symbolAnnotation : symbolAnnotations) {
@@ -266,40 +264,18 @@ public class AnnotationConverter {
         StringBuilder textAfterBuilder = new StringBuilder();
         PgnCodecRegistry registry = PgnCodecRegistry.getInstance();
 
-        // Process annotations in spec order: graphical < clock < eval < metadata < binary
-        // Mix codec-based and legacy encoding to maintain proper ordering
-
-        // 1. Graphical annotations (codec-based)
-        encodeWithCodec(registry, encodedAnnotations, textAfterBuilder, ImmutableGraphicalSquaresAnnotation.class);
-        encodeWithCodec(registry, encodedAnnotations, textAfterBuilder, ImmutableGraphicalArrowsAnnotation.class);
-
-        // 2. Clock/time annotations (codec-based)
-        encodeWithCodec(registry, encodedAnnotations, textAfterBuilder, ImmutableWhiteClockAnnotation.class);
-        encodeWithCodec(registry, encodedAnnotations, textAfterBuilder, ImmutableBlackClockAnnotation.class);
-        encodeWithCodec(registry, encodedAnnotations, textAfterBuilder, ImmutableTimeSpentAnnotation.class);
-        encodeWithCodec(registry, encodedAnnotations, textAfterBuilder, ImmutableTimeControlAnnotation.class);
-
-        // 3. Computer evaluation (codec-based)
-        encodeWithCodec(registry, encodedAnnotations, textAfterBuilder, ImmutableComputerEvaluationAnnotation.class);
-
-        // 4. Metadata annotations (codec-based)
-        encodeWithCodec(registry, encodedAnnotations, textAfterBuilder, ImmutableCriticalPositionAnnotation.class);
-        encodeWithCodec(registry, encodedAnnotations, textAfterBuilder, ImmutableMedalAnnotation.class);
-        encodeWithCodec(registry, encodedAnnotations, textAfterBuilder, ImmutableVariationColorAnnotation.class);
-        encodeWithCodec(registry, encodedAnnotations, textAfterBuilder, ImmutablePiecePathAnnotation.class);
-        encodeWithCodec(registry, encodedAnnotations, textAfterBuilder, ImmutablePawnStructureAnnotation.class);
-        encodeWithCodec(registry, encodedAnnotations, textAfterBuilder, ImmutableVideoStreamTimeAnnotation.class);
-        encodeWithCodec(registry, encodedAnnotations, textAfterBuilder, ImmutableWebLinkAnnotation.class);
-
-        // 5. Binary annotations (codec-based)
-        encodeWithCodec(registry, encodedAnnotations, textAfterBuilder, ImmutableTrainingAnnotation.class);
-        encodeWithCodec(registry, encodedAnnotations, textAfterBuilder, ImmutableCorrespondenceMoveAnnotation.class);
-        encodeWithCodec(registry, encodedAnnotations, textAfterBuilder, ImmutableSoundAnnotation.class);
-        encodeWithCodec(registry, encodedAnnotations, textAfterBuilder, ImmutableVideoAnnotation.class);
-        encodeWithCodec(registry, encodedAnnotations, textAfterBuilder, ImmutablePictureAnnotation.class);
-
-        // 6. Complex annotations (codec-based)
-        encodeWithCodec(registry, encodedAnnotations, textAfterBuilder, GameQuotationAnnotation.class);
+        // Process annotations in spec order using registry (codecs registered in correct order)
+        // Order: graphical < clock < eval < metadata < binary < complex
+        for (AnnotationPgnCodec codec : registry.getAllCodecs()) {
+            for (Annotation annotation : encodedAnnotations) {
+                if (annotation.getClass().equals(codec.getAnnotationClass())) {
+                    String encoded = codec.encode(annotation);
+                    if (encoded != null && !encoded.isEmpty()) {
+                        appendWithSpace(textAfterBuilder, encoded);
+                    }
+                }
+            }
+        }
 
         // Add existing text after move
         for (TextAfterMoveAnnotation afterMove : afterMoveAnnotations) {
@@ -330,62 +306,16 @@ public class AnnotationConverter {
         }
     }
 
-    // ========== Helper methods ==========
-
-    /**
-     * Encodes annotations of a specific class using the registered codec.
-     */
-    private static void encodeWithCodec(
-            PgnCodecRegistry registry,
-            List<Annotation> annotations,
-            StringBuilder output,
-            Class<? extends Annotation> annotationClass) {
-        AnnotationPgnCodec codec = registry.getCodec(annotationClass);
-        if (codec != null) {
-            for (Annotation annotation : annotations) {
-                if (annotation.getClass().equals(annotationClass)) {
-                    String encoded = codec.encode(annotation);
-                    if (encoded != null && !encoded.isEmpty()) {
-                        appendWithSpace(output, encoded);
-                    }
-                }
-            }
-        }
-    }
-
-    private static boolean isEncodableAnnotation(Annotation annotation) {
-        return annotation instanceof GraphicalSquaresAnnotation
-                || annotation instanceof GraphicalArrowsAnnotation
-                || annotation instanceof WhiteClockAnnotation
-                || annotation instanceof BlackClockAnnotation
-                || annotation instanceof ComputerEvaluationAnnotation
-                || annotation instanceof TimeSpentAnnotation
-                || annotation instanceof TimeControlAnnotation
-                || annotation instanceof CriticalPositionAnnotation
-                || annotation instanceof MedalAnnotation
-                || annotation instanceof VariationColorAnnotation
-                || annotation instanceof PiecePathAnnotation
-                || annotation instanceof PawnStructureAnnotation
-                || annotation instanceof WebLinkAnnotation
-                || annotation instanceof VideoStreamTimeAnnotation
-                || annotation instanceof GameQuotationAnnotation
-                || annotation instanceof TrainingAnnotation
-                || annotation instanceof CorrespondenceMoveAnnotation
-                || annotation instanceof SoundAnnotation
-                || annotation instanceof VideoAnnotation
-                || annotation instanceof PictureAnnotation;
-    }
-
     // ========== Decoding methods (PGN → ChessBase) ==========
 
     /**
      * Parses annotations that are encoded in commentary text as [%...] and
      * adds them to the annotations collection. Removes the square bracket notation from the text.
      *
-     * @param annotations the annotations collection to add the decoded annotations to
-     * @param commentary the commentary text that may contain square bracket notation
+     * @param annotations  the annotations collection to add the decoded annotations to
+     * @param commentary   the commentary text that may contain square bracket notation
      * @param isBeforeMove whether to create TextBeforeMoveAnnotation (true) or TextAfterMoveAnnotation (false)
-     * @param lastMoveBy the player who made the last move (for %clk decoding), or null if unknown
+     * @param lastMoveBy   the player who made the last move (for %clk decoding), or null if unknown
      * @return the commentary text with square bracket notation removed
      */
     private static String parseAndExtractDecodedAnnotations(
