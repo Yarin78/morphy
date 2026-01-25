@@ -10,6 +10,7 @@ import se.yarin.morphy.DatabaseReadTransaction;
 import se.yarin.morphy.Game;
 import se.yarin.morphy.cli.games.*;
 import se.yarin.morphy.cli.columns.*;
+import se.yarin.morphy.entities.Nation;
 import se.yarin.morphy.entities.Player;
 import se.yarin.morphy.entities.Tournament;
 import se.yarin.morphy.games.filters.*;
@@ -21,7 +22,9 @@ import java.io.IOException;
 import java.nio.file.FileAlreadyExistsException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
@@ -112,6 +115,24 @@ public class Games extends BaseCommand implements Callable<Integer> {
       names = {"-o", "--output"},
       description = "Output database (.cbh or .pgn)")
   private String output;
+
+  @CommandLine.Option(
+      names = "--pgn-headers",
+      description =
+          "PGN header mode: 'all' (default) includes optional headers, 'seven-tag-roster' exports only mandatory headers")
+  private String pgnHeaders = "all";
+
+  @CommandLine.Option(
+      names = "--pgn-annotations",
+      description =
+          "PGN annotation mode: 'all' (default) exports all ChessBase annotations, 'standard' exports only standard PGN annotations")
+  private String pgnAnnotations = "all";
+
+  @CommandLine.Option(
+      names = "--pgn-comment-language",
+      description =
+          "Filter text comments by language. Comma-separated IOC codes (e.g., ENG,GER,FRA). Use 'ALL' for language-neutral comments. Omit to include all.")
+  private String pgnCommentLanguage;
 
   @CommandLine.Option(names = "--stats", description = "Show statistics about all matching games")
   private boolean stats;
@@ -411,7 +432,47 @@ public class Games extends BaseCommand implements Callable<Integer> {
         // TODO: A pgn database may have additional index files that should be deleted as well
         file.delete();
       }
-      gameConsumer = new PgnDatabaseBuilder(file);
+
+      // Validate and parse --pgn-headers
+      boolean includeOptionalHeaders = pgnHeaders.equalsIgnoreCase("all");
+      if (!pgnHeaders.equalsIgnoreCase("all")
+          && !pgnHeaders.equalsIgnoreCase("seven-tag-roster")) {
+        throw new IllegalArgumentException("--pgn-headers must be 'all' or 'seven-tag-roster'");
+      }
+
+      // Validate and parse --pgn-annotations
+      boolean standardAnnotationsOnly = pgnAnnotations.equalsIgnoreCase("standard");
+      if (!pgnAnnotations.equalsIgnoreCase("all")
+          && !pgnAnnotations.equalsIgnoreCase("standard")) {
+        throw new IllegalArgumentException("--pgn-annotations must be 'all' or 'standard'");
+      }
+
+      // Validate and parse --pgn-comment-language
+      Set<Nation> commentLanguageFilter = null;
+      if (pgnCommentLanguage != null && !pgnCommentLanguage.isEmpty()) {
+        commentLanguageFilter = new HashSet<>();
+        String[] languageCodes = pgnCommentLanguage.split(",");
+        for (String code : languageCodes) {
+          String trimmedCode = code.trim().toUpperCase();
+          Nation nation;
+          if (trimmedCode.equals("ALL")) {
+            nation = Nation.NONE;
+          } else {
+            nation = Nation.fromIOC(trimmedCode);
+            if (nation == Nation.NONE) {
+              throw new IllegalArgumentException(
+                  "Invalid IOC language code: "
+                      + code.trim()
+                      + ". Examples: ENG, GER, FRA, or ALL for language-neutral");
+            }
+          }
+          commentLanguageFilter.add(nation);
+        }
+      }
+
+      gameConsumer =
+          new PgnDatabaseBuilder(
+              file, includeOptionalHeaders, standardAnnotationsOnly, commentLanguageFilter);
     } else {
       throw new IllegalArgumentException("Unknown output format: " + output);
     }
