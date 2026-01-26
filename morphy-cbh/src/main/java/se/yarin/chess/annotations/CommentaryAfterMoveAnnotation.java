@@ -14,20 +14,6 @@ public class CommentaryAfterMoveAnnotation extends Annotation {
   }
 
   @Override
-  public int priority() {
-    return 0;
-  }
-
-  @Override
-  public String format(@NotNull String text, boolean ascii) {
-    String s = this.commentary;
-    if (ascii) {
-      s = s.replaceAll("[^\\x20-\\x7E]", "?");
-    }
-    return text + " { " + s + " }";
-  }
-
-  @Override
   public boolean equals(Object obj) {
     return obj instanceof CommentaryAfterMoveAnnotation other &&
            this.commentary.equals(other.commentary);

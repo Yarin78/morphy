@@ -38,11 +38,6 @@ public abstract class GraphicalSquaresAnnotation extends Annotation
   @Value.Parameter
   public abstract List<Square> squares();
 
-  @Override
-  public int priority() {
-    return 6;
-  }
-
   public static class Serializer implements AnnotationSerializer {
     @Override
     public void serialize(ByteBuffer buf, Annotation annotation) {

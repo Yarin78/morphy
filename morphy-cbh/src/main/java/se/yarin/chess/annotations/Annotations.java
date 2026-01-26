@@ -54,20 +54,18 @@ public class Annotations extends ArrayList<Annotation> {
   }
 
   /**
-   * Decorates a move with annotations.
+   * Gets all annotations of the specified class.
    *
-   * @param moveText the move to decorate with annotations, typically in SAN or LAN
-   * @param ascii if true, only ASCII characters will be outputted
-   * @return the move decorated with annotations
+   * @param clazz the annotation class to get
+   * @return a list of annotations of the specified class
    */
-  public String format(@NotNull String moveText, boolean ascii) {
-    List<Annotation> sortedAnnotations =
-        this.stream()
-            .sorted((o1, o2) -> o2.priority() - o1.priority())
-            .toList();
-    for (Annotation annotation : sortedAnnotations) {
-      moveText = annotation.format(moveText, ascii);
+  public <T extends Annotation> List<T> getAllByClass(Class<T> clazz) {
+    ArrayList<T> classAnnotations = new ArrayList<>();
+    for (Annotation annotation : this) {
+      if (annotation.getClass() == clazz || clazz.isInstance(annotation)) {
+        classAnnotations.add((T) annotation);
+      }
     }
-    return moveText;
+    return classAnnotations;
   }
 }

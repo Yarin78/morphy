@@ -41,11 +41,6 @@ public abstract class GraphicalArrowsAnnotation extends Annotation
   @Value.Parameter
   public abstract List<Arrow> arrows();
 
-  @Override
-  public int priority() {
-    return 5;
-  }
-
   public static class Serializer implements AnnotationSerializer {
     @Override
     public void serialize(ByteBuffer buf, Annotation annotation) {

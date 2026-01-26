@@ -3,6 +3,7 @@ package se.yarin.chess;
 import org.jetbrains.annotations.NotNull;
 import se.yarin.chess.annotations.Annotation;
 import se.yarin.chess.annotations.Annotations;
+import se.yarin.chess.pgn.PgnExporter;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -702,17 +703,6 @@ public class GameMovesModel {
     }
 
     /**
-     * Converts the game tree from this node downwards to SAN, including variations and annotations.
-     *
-     * @return the SAN of this node
-     */
-    public String toSAN() {
-      StringBuilder sb = new StringBuilder();
-      buildSAN(sb, true);
-      return sb.toString();
-    }
-
-    /**
      * Adds an annotation to the position.
      *
      * @param annotation the annotation to add
@@ -758,40 +748,18 @@ public class GameMovesModel {
       children.forEach(node -> node.traverseDepthFirst(listener));
     }
 
-    // PRIVATE HELPERS
-
-    private void buildSAN(StringBuilder sb, boolean start) {
-      if (hasMoves()) {
-        if (!start) sb.append(' ');
-
-        String moveText;
-        if (position.playerToMove() == Player.WHITE
-            || start
-            || (isMainMove() && parent.hasVariations())) {
-          moveText = mainMove().toSAN(ply);
-        } else {
-          moveText = mainMove().toSAN();
-        }
-        moveText = mainNode().annotations.format(moveText, true);
-        sb.append(moveText);
-
-        if (hasVariations()) {
-          sb.append(" (");
-          for (int i = 1; i < children.size(); i++) {
-            if (i > 1) {
-              sb.append("; ");
-            }
-            Node variation = children.get(i);
-            String varText = variation.lastMove().toSAN(ply);
-            varText = variation.annotations.format(varText, true);
-            sb.append(varText);
-            variation.buildSAN(sb, false);
-          }
-          sb.append(")");
-        }
-        children.get(0).buildSAN(sb, false);
-      }
+    /**
+     * Gets a string representing the game from this node onwards,
+     * including variations and annotations using the PgnExporter.
+     *
+     * @return a single line with the game from this node onwards
+     */
+    @Override
+    public String toString() {
+      return new PgnExporter().exportMovesOnly(this);
     }
+
+    // PRIVATE HELPERS
 
     private int countPly(boolean includeVariations) {
       int sum = 0;
@@ -821,8 +789,14 @@ public class GameMovesModel {
     }
   }
 
+  /**
+   * Gets a string representing the game
+   * including variations and annotations using the PgnExporter.
+   *
+   * @return a single line with the game
+   */
   @Override
   public String toString() {
-    return root().toSAN();
+      return new PgnExporter().exportMovesOnly(this);
   }
 }

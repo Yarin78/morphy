@@ -578,7 +578,7 @@ public class DatabaseWriteTransactionTest extends DatabaseTestSetup {
     assertEquals(new Date(2021, 5, 10), game16.tournamentExtra().endDate());
     assertEquals(7, game16.round());
     assertEquals(GameResult.WHITE_WINS, game16.result());
-    assertEquals("1.e4 e5", game16.getModel().moves().root().toSAN());
+    assertEquals("1. e4 e5", game16.getModel().moves().root().toString());
     assertEquals(TopGamesStorage.TopGameStatus.IS_TOP_GAME, game16.topGameStatus());
     assertEquals(srcEvents, game16.gameEvents());
   }

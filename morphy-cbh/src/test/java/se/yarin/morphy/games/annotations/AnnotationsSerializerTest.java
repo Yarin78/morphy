@@ -1,9 +1,15 @@
 package se.yarin.morphy.games.annotations;
 
+import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
 import se.yarin.chess.GameMovesModel;
+import se.yarin.chess.NAG;
 import se.yarin.chess.annotations.Annotation;
 
+import se.yarin.chess.annotations.CommentaryAfterMoveAnnotation;
+import se.yarin.chess.annotations.NAGAnnotation;
+import se.yarin.chess.pgn.PgnExporter;
+import se.yarin.chess.pgn.PgnFormatOptions;
 import se.yarin.morphy.GameGenerator;
 import se.yarin.morphy.ResourceLoader;
 import se.yarin.morphy.exceptions.MorphyInvalidDataException;
@@ -20,7 +26,12 @@ import static org.junit.Assert.assertTrue;
 import static se.yarin.chess.Chess.*;
 
 public class AnnotationsSerializerTest {
-  private AnnotationsSerializer annotationsSerializer = new AnnotationsSerializer();
+  private final AnnotationsSerializer annotationsSerializer = new AnnotationsSerializer();
+
+  private void pgnAnnotations(@NotNull GameMovesModel model) {
+    AnnotationConverter converter = AnnotationConverter.getSimplifiedPgnConverter();
+    model.root().traverseDepthFirst(node -> converter.convertToPgn(node.getAnnotations()));
+  }
 
   @Test
   public void serializeSimpleAnnotations() throws IOException, MorphyInvalidDataException {
@@ -43,15 +54,17 @@ public class AnnotationsSerializerTest {
 
     ByteBuffer buf = ResourceLoader.loadResource(getClass(), "simpleannotations.annotations.bin");
     annotationsSerializer.deserializeAnnotations(buf, model);
-    assertEquals(0, nodes.get(0).getAnnotations().size());
-    assertEquals("m!", nodes.get(1).getAnnotations().format("m", true));
-    assertEquals("m?", nodes.get(2).getAnnotations().format("m", true));
-    assertEquals("m { Capture }", nodes.get(7).getAnnotations().format("m", true));
 
     ByteBuffer after = annotationsSerializer.serializeAnnotations(3, model);
     buf.position(0);
     after.position(0);
-    assertTrue(buf.equals(after));
+    assertEquals(buf, after);
+
+    pgnAnnotations(model);
+    assertEquals(0, nodes.get(0).getAnnotations().size());
+    assertEquals(new NAGAnnotation(NAG.GOOD_MOVE), nodes.get(1).getAnnotations().get(0));
+    assertEquals(new NAGAnnotation(NAG.BAD_MOVE), nodes.get(2).getAnnotations().get(0));
+    assertEquals(new CommentaryAfterMoveAnnotation("Capture"), nodes.get(7).getAnnotations().get(0));
   }
 
   @Test
@@ -61,14 +74,16 @@ public class AnnotationsSerializerTest {
     ByteBuffer movesBuf = ResourceLoader.loadResource(getClass(), "simpleannotations.moves.bin");
     GameMovesModel model = new MoveSerializer().deserializeMoves(movesBuf);
     annotationsSerializer.deserializeAnnotations(annoBuf, model);
-    assertEquals(
-        "1.e4! c5? 2.Nf3 zugzwang d6 only move 3.d4 unclear cxd4 w/ initiative 4.Nxd4 { Capture } Nf6 5.Nc3 { Fianchetto } g6 6.Be3 +- Better is... Bg7 7.f3 O-O 8.Qd2 Nc6 9.O-O-O d5",
-        model.toString());
 
     ByteBuffer after = annotationsSerializer.serializeAnnotations(3, model);
     annoBuf.position(0);
     after.position(0);
-    assertTrue(annoBuf.equals(after));
+    assertEquals(annoBuf, after);
+
+    pgnAnnotations(model);
+    assertEquals(
+            "1. e4! c5? 2. Nf3 zugzwang d6 only move 3. d4 unclear cxd4 w/ initiative 4. Nxd4 { Capture } Nf6 5. Nc3 { Fianchetto } g6 6. Be3 +- Better is... Bg7 7. f3 O-O 8. Qd2 Nc6 9. O-O-O d5",
+            model.toString());
   }
 
   @Test
@@ -78,14 +93,16 @@ public class AnnotationsSerializerTest {
     ByteBuffer movesBuf = ResourceLoader.loadResource(getClass(), "commentsinvariations.moves.bin");
     GameMovesModel model = new MoveSerializer().deserializeMoves(movesBuf);
     annotationsSerializer.deserializeAnnotations(annoBuf, model);
-    assertEquals(
-        "{ Pre-game comment } 1.e4 { After first move comment } e5 2.Nf3 Nc6 3.Bb5 ({ Pre-variant comment } 3.Bc4 d6 4.O-O Nf6 { bla bla } 5.Ng5!) 3...a6 4.Ba4 Nf6 5.O-O Be7 (5...Nxe4!? { may lead to open spanish }) 6.Re1 O-O { This is a really long comment that should cause multiple line overflows to be necessary. This is only to test the robustness of the move generator in opencbm. But it should handle it very easily. Otherwise I'm not much of a programmer! } 7.d3 { Game is over }",
-        model.toString());
 
     ByteBuffer after = annotationsSerializer.serializeAnnotations(9, model);
     annoBuf.position(0);
     after.position(0);
-    assertTrue(annoBuf.equals(after));
+    assertEquals(annoBuf, after);
+
+    pgnAnnotations(model);
+    assertEquals(
+            "{ Pre-game comment } 1. e4 { After first move comment } e5 2. Nf3 Nc6 3. Bb5 ({ Pre-variant comment } 3. Bc4 d6 4. O-O Nf6 { bla bla } 5. Ng5!) 3... a6 4. Ba4 Nf6 5. O-O Be7 (5... Nxe4!? { may lead to open spanish }) 6. Re1 O-O { This is a really long comment that should cause multiple line overflows to be necessary. This is only to test the robustness of the move generator in opencbm. But it should handle it very easily. Otherwise I'm not much of a programmer! } 7. d3 { Game is over }",
+            model.toString());
   }
 
   @Test
@@ -133,7 +150,7 @@ public class AnnotationsSerializerTest {
     ByteBuffer after = annotationsSerializer.serializeAnnotations(13, model);
     buf.position(0);
     after.position(0);
-    assertTrue(buf.equals(after));
+    assertEquals(buf, after);
   }
 
   @Test

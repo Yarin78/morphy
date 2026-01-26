@@ -102,6 +102,49 @@ public class PgnExporter {
         }
     }
 
+    /**
+     * Exports only the moves as a single-line string without headers or result suffix.
+     * Useful for debugging and toString() implementations.
+     *
+     * @param moves the moves to export
+     * @return a single-line string of moves with variations and annotations
+     */
+    @NotNull
+    public String exportMovesOnly(@NotNull GameMovesModel moves) {
+        return exportMovesOnly(moves.root());
+    }
+
+    /**
+     * Exports only the moves as a single-line string without headers or result suffix.
+     * Useful for debugging and toString() implementations.
+     *
+     * @param node the game node to start export from
+     * @return a single-line string of moves with variations and annotations
+     */
+    @NotNull
+    public String exportMovesOnly(@NotNull GameMovesModel.Node node) {
+        try {
+            StringWriter writer = new StringWriter();
+            // Single-line options: unlimited line length, no line endings
+            PgnFormatOptions singleLineOpts = new PgnFormatOptions(
+                Integer.MAX_VALUE,              // no line wrapping
+                false,                           // includeOptionalHeaders (unused here)
+                false,                           // includePlyCount (unused here)
+                options.exportVariations(),      // preserve setting
+                options.exportComments(),        // preserve setting
+                options.exportNAGs(),            // preserve setting
+                true,                            // useSymbolsForNAGs - use symbols for better readability
+                ""                               // no line ending
+            );
+            PgnExporter exporter = new PgnExporter(singleLineOpts, this.annotationTransformer);
+            MoveTextWriter moveWriter = exporter.new MoveTextWriter(writer);
+            exporter.exportNode(node, true, moveWriter);
+            return writer.toString().trim();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     private void exportHeaders(GameHeaderModel header, GameMovesModel moves, Writer writer) throws IOException {
         // Seven Tag Roster (in order)
         writeTag(writer, "Event", header.getEvent(), "?");
@@ -240,13 +283,13 @@ public class PgnExporter {
 
     private void exportMoves(GameMovesModel moves, @Nullable GameResult result, Writer writer) throws IOException {
         MoveTextWriter moveWriter = new MoveTextWriter(writer);
-        exportNode(moves.root(), moveWriter);
+        exportNode(moves.root(), true, moveWriter);
 
         moveWriter.ensureSpace();
         moveWriter.write((result == null ? GameResult.NOT_FINISHED : result).toString());
     }
 
-    private void exportNode(GameMovesModel.Node node, MoveTextWriter writer) throws IOException {
+    void exportNode(GameMovesModel.Node node, boolean firstMoveInLine, MoveTextWriter writer) throws IOException {
         if (!node.hasMoves()) {
             return;
         }
@@ -255,7 +298,7 @@ public class PgnExporter {
         GameMovesModel.Node mainChild = node.children().getFirst();
 
         // Export the main line move
-        exportSingleMove(mainChild, node, writer, true);
+        exportSingleMove(mainChild, node, writer, firstMoveInLine);
 
         // Export variations (children 1+)
         if (options.exportVariations()) {
@@ -263,11 +306,11 @@ public class PgnExporter {
                 GameMovesModel.Node varChild = node.children().get(i);
                 writer.ensureSpace();
                 writer.write("(");
-                exportSingleMove(varChild, node, writer, false);
+                exportSingleMove(varChild, node, writer, true);
                 // Recursively export the variation's continuation
                 if (varChild.hasMoves()) {
                     writer.ensureSpace();
-                    exportNode(varChild, writer);
+                    exportNode(varChild, false, writer);
                 }
                 writer.write(")");
             }
@@ -276,12 +319,12 @@ public class PgnExporter {
         // Continue with main line recursively
         if (mainChild.hasMoves()) {
             writer.ensureSpace();
-            exportNode(mainChild, writer);
+            exportNode(mainChild, options.exportVariations() && node.numMoves() > 1, writer);
         }
     }
 
     private void exportSingleMove(GameMovesModel.Node child, GameMovesModel.Node parent,
-                                   MoveTextWriter writer, boolean isMainLine) throws IOException {
+                                   MoveTextWriter writer, boolean firstMoveInLine) throws IOException {
         // Create a copy of annotations to avoid modifying the original game model
         Annotations annotations = new Annotations(child.getAnnotations());
 
@@ -297,48 +340,16 @@ public class PgnExporter {
             CommentaryBeforeMoveAnnotation beforeComment =
                     annotations.getByClass(CommentaryBeforeMoveAnnotation.class);
             if (beforeComment != null) {
-                writer.write("{" + beforeComment.getCommentary() + "}");
+                writer.write("{ " + beforeComment.getCommentary() + " }");
             }
         }
 
         // Write move number if needed
-        int ply = child.ply();
         Player movingPlayer = parent.position().playerToMove();
         boolean isWhiteMove = (movingPlayer == Player.WHITE);
-        boolean needMoveNumber = isWhiteMove || !isMainLine || writer.wasNewline;
+        boolean needMoveNumber = isWhiteMove || firstMoveInLine || writer.wasNewline;
 
-        String moveStr = "";
-        if (needMoveNumber) {
-            moveStr = formatMoveNumber(ply) + " ";
-        }
-
-        // Write the move
-        Move move = child.lastMove();
-        moveStr += move.toSAN();
-        writer.write(moveStr);
-
-        // Export NAG annotations
-        if (options.exportNAGs()) {
-            List<NAGAnnotation> nags = new ArrayList<>();
-            for (var annotation : annotations) {
-                if (annotation instanceof NAGAnnotation) {
-                    nags.add((NAGAnnotation) annotation);
-                }
-            }
-            for (NAGAnnotation nag : nags) {
-                writer.ensureSpace();
-                if (options.useSymbolsForNAGs()) {
-                    String symbol = nag.getNag().toASCIIString();
-                    if (!symbol.isEmpty()) {
-                        writer.write(symbol);
-                    } else {
-                        writer.write("$" + nag.getNag().ordinal());
-                    }
-                } else {
-                    writer.write("$" + nag.getNag().ordinal());
-                }
-            }
-        }
+        writer.write(getMoveStr(needMoveNumber, child, annotations));
 
         // Export comments after the move
         if (options.exportComments()) {
@@ -346,9 +357,63 @@ public class PgnExporter {
                     annotations.getByClass(CommentaryAfterMoveAnnotation.class);
             if (afterComment != null) {
                 writer.ensureSpace();
-                writer.write("{" + afterComment.getCommentary() + "}");
+                writer.write("{ " + afterComment.getCommentary() + " }");
             }
         }
+    }
+
+    private String getMoveStr(boolean needMoveNumber, GameMovesModel.Node node, Annotations transformedAnnotations) {
+        StringBuilder moveStr = new StringBuilder();
+
+        if (needMoveNumber) {
+            moveStr.append(formatMoveNumber(node.ply())).append(' ');
+        }
+
+        List<NAGAnnotation> nags = transformedAnnotations.getAllByClass(NAGAnnotation.class);
+
+        if (options.exportNAGs() && options.useSymbolsForNAGs()) {
+            for (NAGAnnotation nag : nags) {
+                if (nag.getNag().getType() == NAGType.MOVE_PREFIX) {
+                    String symbol = nag.getNag().toASCIIString();
+                    if (!symbol.isEmpty()) {
+                        moveStr.append(symbol);
+                        char ch = symbol.charAt(symbol.length() - 1);
+                        if (Character.isLetter(ch) || ch == '.') {
+                            moveStr.append(' ');
+                        }
+                    }
+                }
+            }
+        }
+
+        moveStr.append(node.lastMove().toSAN());
+
+        // Export NAG annotations
+        if (options.exportNAGs()) {
+            for (NAGAnnotation nag : nags) {
+                if (options.useSymbolsForNAGs()) {
+                    if (nag.getNag().getType() == NAGType.MOVE_PREFIX) {
+                        // Already handled
+                        continue;
+                    }
+                    String symbol = nag.getNag().toASCIIString();
+                    if (!symbol.isEmpty()) {
+                        // Symbols related to the move itself appear immediately after the move,
+                        // like !, ?, !?, ?! etc, and should thus have no space separator
+                        if (nag.getNag().getType() != NAGType.MOVE_COMMENT || Character.isLetter(symbol.charAt(0))) {
+                            moveStr.append(' ');
+                        }
+                        moveStr.append(symbol);
+                    } else {
+                        moveStr.append(" $").append(nag.getNag().ordinal());
+                    }
+                } else {
+                    moveStr.append(" $").append(nag.getNag().ordinal());
+                }
+            }
+        }
+
+        return moveStr.toString();
     }
 
     private String formatMoveNumber(int ply) {

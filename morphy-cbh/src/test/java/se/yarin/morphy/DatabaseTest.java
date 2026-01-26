@@ -6,9 +6,12 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import se.yarin.chess.GameModel;
 import se.yarin.chess.GameMovesModel;
+import se.yarin.chess.pgn.PgnExporter;
+import se.yarin.chess.pgn.PgnFormatOptions;
 import se.yarin.morphy.entities.Player;
 import se.yarin.morphy.entities.Tournament;
 import se.yarin.morphy.exceptions.MorphyInvalidDataException;
+import se.yarin.morphy.games.annotations.AnnotationConverter;
 import se.yarin.morphy.games.annotations.ImmutableTextAfterMoveAnnotation;
 import se.yarin.morphy.util.CBUtil;
 import se.yarin.morphy.validation.EntityStatsValidator;
@@ -345,8 +348,11 @@ public class DatabaseTest {
     Game game2New = db.getGame(2);
     long newMovesOffset = game2New.getMovesOffset();
 
+    PgnExporter exporter = new PgnExporter(PgnFormatOptions.DEFAULT, (AnnotationConverter.getRoundTripConverter())::convertToPgn);
+
+
     assertEquals(oldMovesOffset + 3, newMovesOffset);
-    assertEquals(gameModel2.moves().root().toSAN(), game2New.getModel().moves().root().toSAN());
+    assertEquals(exporter.exportMovesOnly(gameModel2.moves()), exporter.exportMovesOnly(game2New.getModel().moves()));
 
     db.close();
   }
@@ -373,7 +379,6 @@ public class DatabaseTest {
     long newAnnotationOffset = game2New.getAnnotationOffset();
 
     assertEquals(oldAnnotationOffset + 3, newAnnotationOffset);
-    System.out.println(gameModel2.moves().root().toSAN());
 
     // Make sure we can still read the annotation after the game has been moved
     String annotationText =
@@ -468,8 +473,8 @@ public class DatabaseTest {
     int id = db.addGame(simpleGame);
 
     Game game = db.getGame(id);
-    String movesText = game.getModel().moves().root().toSAN();
-    assertEquals("1.e4 c5", movesText);
+    String movesText = game.getModel().moves().toString();
+    assertEquals("1. e4 c5", movesText);
   }
 
   // TODO: Some tests when opening a database where the filenames have different casing

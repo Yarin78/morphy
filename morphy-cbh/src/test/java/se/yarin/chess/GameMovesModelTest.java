@@ -4,7 +4,6 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import se.yarin.morphy.games.annotations.ImmutableTextAfterMoveAnnotation;
 import se.yarin.chess.annotations.*;
 
 import java.util.EnumSet;
@@ -172,7 +171,7 @@ public class GameMovesModelTest {
     node2.addMove(C1, F4).addMove(F8, D6);
 
     assertEquals(
-        "1.d4 d5 2.c4 e6 3.Nc3 Be7 (3...c6; 3...Nf6 4.Bg5 (4.Bf4 Bd6) 4...Be7)", moves.toString());
+        "1. d4 d5 2. c4 e6 3. Nc3 Be7 (3... c6) (3... Nf6 4. Bg5 (4. Bf4 Bd6) 4... Be7)", moves.toString());
   }
 
   @Test
@@ -258,11 +257,11 @@ public class GameMovesModelTest {
 
     numFiredChanges = 0;
     assertEquals(
-        "3...Bc5 4.O-O (4.Nc3 Bb6 5.d3 unclear) 4...Nf6 Directed against... 5.d3 Bb6?? 6.c3",
-        node.toSAN());
+        "3... Bc5 4. O-O (4. Nc3 Bb6 5. d3 unclear) 4... Nf6 5. Directed against... d3 Bb6?? 6. c3",
+        node.toString());
     assertEquals(3, moves.countAnnotations());
     node.insertMove(F8, E7);
-    assertEquals("3...Be7 4.O-O (4.Nc3) 4...Nf6 Directed against... 5.d3", node.toSAN());
+    assertEquals("3... Be7 4. O-O (4. Nc3) 4... Nf6 5. Directed against... d3", node.toString());
     assertFalse(a.isValid());
     assertFalse(b.isValid());
     assertEquals(1, numFiredChanges);
@@ -302,17 +301,17 @@ public class GameMovesModelTest {
     GameMovesModel.Node node3 = node2.addMove(G8, F6).addMove(E1, G1);
 
     Assert.assertEquals(
-        "1.e4 e5 2.Nf3 Nc6 3.Bc4 a6 (3...Bc5 4.Nc3 d6 (4...Nf6 5.O-O) 5.O-O)", moves.toString());
+        "1. e4 e5 2. Nf3 Nc6 3. Bc4 a6 (3... Bc5 4. Nc3 d6 (4... Nf6 5. O-O) 5. O-O)", moves.toString());
     Assert.assertEquals(2, node3.getVariationDepth());
     Assert.assertFalse(node3.isMainLine());
     node3.promoteVariation();
     Assert.assertEquals(
-        "1.e4 e5 2.Nf3 Nc6 3.Bc4 a6 (3...Bc5 4.Nc3 Nf6 (4...d6 5.O-O) 5.O-O)", moves.toString());
+        "1. e4 e5 2. Nf3 Nc6 3. Bc4 a6 (3... Bc5 4. Nc3 Nf6 (4... d6 5. O-O) 5. O-O)", moves.toString());
     Assert.assertEquals(1, node3.getVariationDepth());
     Assert.assertFalse(node3.isMainLine());
     node3.promoteVariation();
     Assert.assertEquals(
-        "1.e4 e5 2.Nf3 Nc6 3.Bc4 Bc5 (3...a6) 4.Nc3 Nf6 (4...d6 5.O-O) 5.O-O", moves.toString());
+        "1. e4 e5 2. Nf3 Nc6 3. Bc4 Bc5 (3... a6) 4. Nc3 Nf6 (4... d6 5. O-O) 5. O-O", moves.toString());
     Assert.assertEquals(0, node3.getVariationDepth());
     Assert.assertTrue(node3.isMainLine());
     node3.promoteVariation();
@@ -390,11 +389,11 @@ public class GameMovesModelTest {
         .addAnnotation(new NAGAnnotation(NAG.WHITE_SLIGHT_ADVANTAGE));
 
     assertEquals(3, moves.countAnnotations());
-    assertEquals("1.e4 { Good start! } a6? +/=", moves.toString());
+    assertEquals("1. e4 { Good start! } a6? +/=", moves.toString());
 
     moves.root().mainNode().deleteAnnotations();
     assertEquals(2, moves.countAnnotations());
-    assertEquals("1.e4 a6? +/=", moves.toString());
+    assertEquals("1. e4 a6? +/=", moves.toString());
   }
 
   @Test
@@ -466,7 +465,7 @@ public class GameMovesModelTest {
 
     moves.replaceAll(newModel);
 
-    assertEquals("1.e4 d6 { Pirc } 2.d4", moves.toString());
+    assertEquals("1. e4 d6 { Pirc } 2. d4", moves.toString());
     assertEquals(1, numFiredChanges);
   }
 
@@ -504,7 +503,7 @@ public class GameMovesModelTest {
         .mainNode()
         .children()
         .get(1)
-        .addAnnotation(ImmutableTextAfterMoveAnnotation.of("variant"));
+        .addAnnotation(new CommentaryAfterMoveAnnotation("variant"));
     assertNotEquals(moves.toString(), clone.toString());
   }
 }

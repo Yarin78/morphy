@@ -62,21 +62,6 @@ public class AnnotationTest {
     assertEquals("new", annotation.getCommentary());
   }
 
-  @Test
-  public void testFormatAnnotations() {
-    Annotations annotations = new Annotations();
-
-    annotations.add(new CommentaryAfterMoveAnnotation("after move"));
-    annotations.add(new CommentaryBeforeMoveAnnotation("before move"));
-    annotations.add(new NAGAnnotation(NAG.WHITE_DECISIVE_ADVANTAGE));
-    annotations.add(new NAGAnnotation(NAG.EDITORIAL_COMMENT));
-    annotations.add(new NAGAnnotation(NAG.GOOD_MOVE));
-
-    assertEquals(5, annotations.size());
-    assertEquals(
-        "{ before move } RR 10.Bc4! +- { after move }", annotations.format("10.Bc4", true));
-  }
-
   private static class DummyAnnotation1 extends Annotation {}
 
   private static class DummyAnnotation2 extends Annotation {}

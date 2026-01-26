@@ -3,7 +3,10 @@ package se.yarin.morphy.games;
 import org.junit.Test;
 import se.yarin.chess.GameMovesModel;
 import se.yarin.chess.NAG;
+import se.yarin.chess.pgn.PgnExporter;
+import se.yarin.chess.pgn.PgnFormatOptions;
 import se.yarin.morphy.exceptions.MorphyInvalidDataException;
+import se.yarin.morphy.games.annotations.AnnotationConverter;
 import se.yarin.morphy.games.annotations.ImmutableTextAfterMoveAnnotation;
 import se.yarin.morphy.games.annotations.ImmutableTextBeforeMoveAnnotation;
 import se.yarin.morphy.games.annotations.SymbolAnnotation;
@@ -18,6 +21,10 @@ public class AnnotationRepositoryTest {
     GameMovesModel model = new GameMovesModel();
     model.root().addMove(E2, E4).addMove(E7, E5).addMove(G1, F3).addMove(B8, C6);
     return model;
+  }
+
+  private String gameString(GameMovesModel game) {
+    return new PgnExporter(PgnFormatOptions.DEFAULT, (AnnotationConverter.getRoundTripConverter())::convertToPgn).exportMovesOnly(game);
   }
 
   private GameMovesModel testGameWithAnnotations() {
@@ -41,7 +48,7 @@ public class AnnotationRepositoryTest {
 
     GameMovesModel game = testGame();
     repo.getAnnotations(game, offset);
-    assertEquals(testGameWithAnnotations().root().toSAN(), game.root().toSAN());
+    assertEquals(gameString(testGameWithAnnotations()), gameString(game));
   }
 
   @Test(expected = MorphyInvalidDataException.class)
@@ -63,11 +70,11 @@ public class AnnotationRepositoryTest {
 
     GameMovesModel firstGame = testGame();
     repo.getAnnotations(firstGame, ofs1);
-    assertEquals(testGameWithMoreAnnotations().root().toSAN(), firstGame.root().toSAN());
+    assertEquals(gameString(testGameWithMoreAnnotations()), gameString(firstGame));
 
     GameMovesModel movedGame = testGame();
     repo.getAnnotations(movedGame, ofs2 + delta);
-    assertEquals(testGameWithAnnotations().root().toSAN(), movedGame.root().toSAN());
+    assertEquals(gameString(testGameWithAnnotations()), gameString(movedGame));
   }
 
   @Test
@@ -88,10 +95,10 @@ public class AnnotationRepositoryTest {
 
     GameMovesModel firstGame = testGame();
     repo.getAnnotations(firstGame, ofs1);
-    assertEquals(testGameWithMoreAnnotations().root().toSAN(), firstGame.root().toSAN());
+    assertEquals(gameString(testGameWithMoreAnnotations()), gameString(firstGame));
 
     GameMovesModel movedGame = testGame();
     repo.getAnnotations(movedGame, ofs2 + delta);
-    assertEquals(testGameWithAnnotations().root().toSAN(), movedGame.root().toSAN());
+    assertEquals(gameString(testGameWithAnnotations()), gameString(movedGame));
   }
 }

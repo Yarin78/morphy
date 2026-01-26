@@ -44,36 +44,6 @@ public abstract class SymbolAnnotation extends Annotation implements Statistical
   }
 
   @Override
-  public int priority() {
-    return 100;
-  }
-
-  @Override
-  public String format(@NotNull String text, boolean ascii) {
-    // First add move comment
-    String symbol = ascii ? moveComment().toASCIIString() : moveComment().toUnicodeString();
-    if (symbol.length() <= 2) {
-      text += symbol;
-    } else {
-      text += " " + symbol;
-    }
-
-    // Then move prefix
-    String pre = ascii ? movePrefix().toASCIIString() : movePrefix().toUnicodeString();
-    if (pre.length() > 0) {
-      text = pre + " " + text;
-    }
-
-    // Then line evaluation
-    String eval = ascii ? lineEvaluation().toASCIIString() : lineEvaluation().toUnicodeString();
-    if (eval.length() > 0) {
-      text += " " + eval;
-    }
-
-    return text;
-  }
-
-  @Override
   public void updateStatistics(AnnotationStatistics stats) {
     stats.noSymbols++;
     stats.flags.add(GameHeaderFlags.SYMBOLS);

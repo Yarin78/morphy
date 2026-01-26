@@ -38,7 +38,7 @@ public class GameQuotationAnnotationTest {
 
     GameModel model = q.getGameModel();
 
-    assertEquals("1.e4 e5 2.Nf3 Nc6 3.Bc4 Nf6 4.d3 Be7 5.O-O O-O", model.moves().toString());
+    assertEquals("1. e4 e5 2. Nf3 Nc6 3. Bc4 Nf6 4. d3 Be7 5. O-O O-O", model.moves().toString());
 
     GameHeaderModel header = model.header();
 
@@ -89,7 +89,7 @@ public class GameQuotationAnnotationTest {
 
     GameModel modelAfter = after.getGameModel();
 
-    assertEquals("1.e4 e6 2.d4 d5", modelAfter.moves().toString());
+    assertEquals("1. e4 e6 2. d4 d5", modelAfter.moves().toString());
 
     assertEquals("Mårdell, Jimmy", modelAfter.header().getWhite());
     assertEquals("Carlsen, Magnus", modelAfter.header().getBlack());

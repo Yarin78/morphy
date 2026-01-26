@@ -34,15 +34,6 @@ public abstract class TextAfterMoveAnnotation extends Annotation implements Stat
     stats.flags.add(GameHeaderFlags.COMMENTARY);
   }
 
-  @Override
-  public String format(@NotNull String text, boolean ascii) {
-    String s = this.text();
-    if (ascii) {
-      s = s.replaceAll("[^\\x20-\\x7E]", "?");
-    }
-    return text + " { " + s + " }";
-  }
-
   public static class Serializer implements AnnotationSerializer {
     @Override
     public void serialize(ByteBuffer buf, Annotation annotation) {

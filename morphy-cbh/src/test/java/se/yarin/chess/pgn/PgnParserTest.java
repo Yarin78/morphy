@@ -56,7 +56,7 @@ public class PgnParserTest {
                 [Black "Player 2"]
                 [Result "1-0"]
 
-                1. e4 $1 e5 (1... c5) 2. Nf3 (2. Nc3 $3) Nc6 {Black forfeited} 1-0
+                1. e4 $1 e5 (1... c5) 2. Nf3 (2. Nc3 $3) 2... Nc6 { Black forfeited } 1-0
                 """;
 
         GameModel game = new PgnParser().parseGame(pgn);
@@ -76,7 +76,7 @@ public class PgnParserTest {
                 [Black "Player 2"]
                 [Result "1-0"]
 
-                1. e4 $1 e5 (1... c5) 2. Nf3 (2. Nc3 $3) Nc6 {Black forfeited} 1-0
+                1. e4 $1 e5 (1... c5) 2. Nf3 (2. Nc3 $3) Nc6 { Black forfeited } 1-0
                 
                 [Event "WorldCh"]
                 [Site "Somewhere"]

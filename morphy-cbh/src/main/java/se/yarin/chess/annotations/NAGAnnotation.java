@@ -17,44 +17,6 @@ public class NAGAnnotation extends Annotation {
   }
 
   @Override
-  public int priority() {
-    return switch (nag.getType()) {
-      case MOVE_COMMENT -> 100;
-      case LINE_EVALUATION -> 98;
-      case MOVE_PREFIX -> 99;
-      default -> 0;
-    };
-  }
-
-  @Override
-  public String format(@NotNull String text, boolean ascii) {
-    switch (nag.getType()) {
-      case MOVE_COMMENT:
-        String symbol = ascii ? nag.toASCIIString() : nag.toUnicodeString();
-        if (symbol.length() <= 2) {
-          text += symbol;
-        } else {
-          text += " " + symbol;
-        }
-        return text;
-      case LINE_EVALUATION:
-        String eval = ascii ? nag.toASCIIString() : nag.toUnicodeString();
-        if (eval.length() > 0) {
-          text += " " + eval;
-        }
-        return text;
-      case MOVE_PREFIX:
-        String pre = ascii ? nag.toASCIIString() : nag.toUnicodeString();
-        if (pre.length() > 0) {
-          text = pre + " " + text;
-        }
-        return text;
-    }
-
-    return text;
-  }
-
-  @Override
   public boolean equals(Object obj) {
     return obj instanceof NAGAnnotation otherNag && this.getNag().equals(otherNag.getNag());
   }

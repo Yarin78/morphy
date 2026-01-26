@@ -20,7 +20,7 @@ public class MoveRepositoryTest {
     assertEquals(BlobStorageHeader.DEFAULT_SERIALIZED_HEADER_SIZE, offset);
 
     GameMovesModel moves = repo.getMoves(offset, 1);
-    assertEquals(TestGames.getVariationGame().root().toSAN(), moves.root().toSAN());
+    assertEquals(TestGames.getVariationGame().root().toString(), moves.root().toString());
   }
 
   @Test(expected = MorphyInvalidDataException.class)
@@ -52,6 +52,6 @@ public class MoveRepositoryTest {
     repo.putMoves(ofs1, longerGame);
 
     GameMovesModel movedGame = repo.getMoves(ofs2 + delta, 2);
-    assertEquals(TestGames.getVariationGame().root().toSAN(), movedGame.root().toSAN());
+    assertEquals(TestGames.getVariationGame().root().toString(), movedGame.root().toString());
   }
 }

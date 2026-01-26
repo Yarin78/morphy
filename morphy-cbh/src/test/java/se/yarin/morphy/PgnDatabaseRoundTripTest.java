@@ -101,7 +101,7 @@ public class PgnDatabaseRoundTripTest {
 
         // Export to PGN
         String pgn = exporter.exportGame(original);
-        assertTrue("PGN should contain comment", pgn.contains("{Best move}"));
+        assertTrue("PGN should contain comment", pgn.contains("{ Best move }"));
 
         // Parse back
         GameModel roundTripped = parser.parseGame(pgn);

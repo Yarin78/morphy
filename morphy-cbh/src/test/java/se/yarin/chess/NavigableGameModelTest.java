@@ -62,12 +62,12 @@ public class NavigableGameModelTest {
     model2.setCursor(node2);
     assertTrue(model2.cursor().isValid());
 
-    assertEquals("1.d4 d5", model1.moves().toString());
+    assertEquals("1. d4 d5", model1.moves().toString());
     assertTrue(new ShortMove(D7, D5).moveEquals(model1.cursor().lastMove()));
 
     model1.replaceAll(model2);
 
-    assertEquals("1.e4 e5 2.Nf3", model1.moves().toString());
+    assertEquals("1. e4 e5 2. Nf3", model1.moves().toString());
 
     // Test that the cursor has been replaced correctly
     assertNotSame(model1.cursor(), model2.cursor());
