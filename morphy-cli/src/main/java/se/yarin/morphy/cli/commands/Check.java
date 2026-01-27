@@ -126,14 +126,14 @@ public class Check extends BaseCommand implements Callable<Integer> {
     getDatabaseStream()
         .forEach(
             file -> {
-              log.info("Opening " + file);
+              log.info("Opening {}", file);
 
               try (Database db = Database.open(file, DatabaseMode.READ_ONLY)) {
                 try {
                   Validator validator = new Validator();
                   db.moveRepository().moveSerializer().setLogDetailedErrors(true);
                   validator.validate(db, checks, true, false, showProgressBar);
-                  log.info("Database OK: " + file);
+                  log.info("Database OK: {}", file);
 
                   if (showInstrumentation()) {
                     db.context().instrumentation().show();
@@ -145,14 +145,14 @@ public class Check extends BaseCommand implements Callable<Integer> {
                   if (verboseLevel() > 0) {
                     log.error(e.getMessage());
                   }
-                  log.error("Database ERROR: " + file);
+                  log.error("Database ERROR: {}", file);
 
                 } catch (Exception | AssertionError e) {
                   // Something was not caught properly
-                  log.error("Database CRITICAL ERROR: " + file, e);
+                  log.error("Database CRITICAL ERROR: {}", file, e);
                 }
               } catch (MorphyException | IOException e) {
-                log.error("Error opening the database: " + e.getMessage());
+                log.error("Error opening the database: {}", e.getMessage());
               }
             });
 

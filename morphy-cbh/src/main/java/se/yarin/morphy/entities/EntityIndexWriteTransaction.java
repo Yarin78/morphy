@@ -331,7 +331,7 @@ public class EntityIndexWriteTransaction<T extends Entity & Comparable<T>>
 
     EntityNode node = getNode(entityId);
     if (node.isDeleted()) {
-      log.debug("Deleted entity with id " + entityId + " that was already deleted");
+      log.debug("Deleted entity with id {} that was already deleted", entityId);
       return false;
     }
 

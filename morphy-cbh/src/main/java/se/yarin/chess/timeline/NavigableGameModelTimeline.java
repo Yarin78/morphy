@@ -121,7 +121,7 @@ public class NavigableGameModelTimeline {
     } else {
       TimestampedGameEvent event = events.get(ix);
       try {
-        log.debug("Applying event " + event.event());
+        log.debug("Applying event {}", event.event());
         event.event().apply(model);
       } catch (GameEventException e) {
         // This is bad; if a full replace fails there's not much we can do.
@@ -189,7 +189,7 @@ public class NavigableGameModelTimeline {
     while (getNextEventTimestamp() <= timestamp) {
       TimestampedGameEvent event = events.get(++indexOfLastAppliedEvent);
       try {
-        log.debug("Applying event " + event.event());
+        log.debug("Applying event {}", event.event());
         event.event().apply(model);
         numEventsApplied++;
       } catch (GameEventException e) {

@@ -30,7 +30,7 @@ public class Players extends BaseCommand implements Callable<Integer> {
     getDatabaseStream()
         .forEach(
             file -> {
-              log.info("Opening " + file);
+              log.info("Opening {}", file);
               try (Database db = Database.open(file, DatabaseMode.READ_ONLY)) {
                 try (var txn = new DatabaseReadTransaction(db)) {
                   int count = 0;

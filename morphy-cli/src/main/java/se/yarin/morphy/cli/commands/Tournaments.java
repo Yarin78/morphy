@@ -95,7 +95,7 @@ public class Tournaments extends BaseCommand implements Callable<Integer> {
     getDatabaseStream()
         .forEach(
             file -> {
-              log.info("Opening " + file);
+              log.info("Opening {}", file);
               try (Database db = Database.open(file, DatabaseMode.READ_ONLY)) {
                 tournamentConsumer.setCurrentDatabase(db);
                 ItemQuery<Tournament> tournamentQuery = null;

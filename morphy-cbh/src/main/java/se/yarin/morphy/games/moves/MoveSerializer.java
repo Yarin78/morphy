@@ -153,7 +153,7 @@ public final class MoveSerializer {
       // INFO  CheckMoveEncodingFlags - Flag 80: 1 games: 6161154
       // INFO  CheckMoveEncodingFlags - Flag 85: 1 games: 2017673
 
-      log.warn("Bit 7 set in first byte in move data in game " + gameId);
+      log.warn("Bit 7 set in first byte in move data in game {}", gameId);
     }
     boolean setupPosition = (flags & 0x40) > 0;
 
@@ -267,7 +267,7 @@ public final class MoveSerializer {
     int epFile = (b & 15) - 1;
     Player sideToMove = (b & 16) == 0 ? Player.WHITE : Player.BLACK;
     if ((b & ~31) != 0) {
-      log.warn("Unknown bits set in second byte in setup position in game " + gameId + ": " + b);
+      log.warn("Unknown bits set in second byte in setup position in game {}: {}", gameId, b);
     }
     b = ByteBufferUtil.getUnsignedByte(buf);
     EnumSet<Castles> castles = EnumSet.noneOf(Castles.class);
@@ -276,7 +276,7 @@ public final class MoveSerializer {
     if ((b & 4) > 0) castles.add(Castles.BLACK_LONG_CASTLE);
     if ((b & 8) > 0) castles.add(Castles.BLACK_SHORT_CASTLE);
     if ((b & ~15) != 0) {
-      log.warn("Unknown bits set in third byte in setup position in game " + gameId + ": " + b);
+      log.warn("Unknown bits set in third byte in setup position in game {}: {}", gameId, b);
     }
     int moveNumber = ByteBufferUtil.getUnsignedByte(buf);
     if (moveNumber == 0) {
@@ -350,7 +350,7 @@ public final class MoveSerializer {
 
     if (spNo < 0 || spNo >= 960) {
       // TODO: Is this still wrong if only the lower 10 bits are considered?
-      log.warn("Invalid Chess960 start position in game " + gameId + ": " + spNo);
+      log.warn("Invalid Chess960 start position in game {}: {}", gameId, spNo);
     } else {
       Position sp = Chess960.getStartPosition(spNo);
 
@@ -389,7 +389,7 @@ public final class MoveSerializer {
       for (int i = 0; i < 960; i++) {
         Position sp = Chess960.getStartPosition(i);
         if (chess960Matches(sp, wkSqi, bkSqi, wkrSqi, wqrSqi, bkrSqi, bqrSqi)) {
-          log.debug("Using Chess960 starting position number " + i + " in game " + gameId);
+          log.debug("Using Chess960 starting position number {} in game {}", i, gameId);
           return i;
         }
       }

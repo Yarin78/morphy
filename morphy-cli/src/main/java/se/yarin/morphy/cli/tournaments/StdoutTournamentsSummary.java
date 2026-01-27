@@ -77,8 +77,8 @@ public class StdoutTournamentsSummary implements TournamentConsumer {
 
     for (String col : specColumns.keySet()) {
       if (!usedCols.contains(col)) {
-        log.warn("Unknown column: " + col);
-        log.warn("Available columns: " + TournamentColumn.allColumnsString());
+        log.warn("Unknown column: {}", col);
+        log.warn("Available columns: {}", TournamentColumn.allColumnsString());
       }
     }
 

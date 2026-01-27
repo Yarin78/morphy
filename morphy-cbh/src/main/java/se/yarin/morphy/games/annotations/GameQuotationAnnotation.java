@@ -233,7 +233,7 @@ public class GameQuotationAnnotation extends Annotation implements StatisticalAn
 
       int type = ByteBufferUtil.getUnsignedShortB(buf);
       if (type != 1 && type != 2) {
-        log.warn("Unknown game quotation type: " + type);
+        log.warn("Unknown game quotation type: {}", type);
       }
 
       byte[] setupPositionData = null;
@@ -245,7 +245,7 @@ public class GameQuotationAnnotation extends Annotation implements StatisticalAn
         flags -= 64;
       }
       if (flags != 0) {
-        log.warn("Unknown flag value parsing game quotation: " + flags);
+        log.warn("Unknown flag value parsing game quotation: {}", flags);
       }
 
       GameHeaderModel header = new GameHeaderModel();

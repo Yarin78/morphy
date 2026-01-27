@@ -164,7 +164,7 @@ public abstract class Tournament extends Entity implements Comparable<Tournament
       return "";
     }
     if (cat > 39) {
-      log.warn("Unexpected tournament category: " + cat);
+      log.warn("Unexpected tournament category: {}", cat);
       return Integer.toString(cat);
     }
     return "X".repeat(cat / 10) + roman[cat % 10];

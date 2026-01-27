@@ -185,7 +185,7 @@ public class Games extends BaseCommand implements Callable<Integer> {
     getDatabaseStream()
         .forEach(
             file -> {
-              log.info("Opening " + file);
+              log.info("Opening {}", file);
               try (Database db = Database.open(file, DatabaseMode.READ_ONLY)) {
                 // Speeds up performance quite a lot, and we should be fairly certain that the moves
                 // in the CBH databases are valid

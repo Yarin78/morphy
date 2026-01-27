@@ -2,4 +2,5 @@
 target/
 bases/
 mediafiles/
+analysis/
 .DS_Store

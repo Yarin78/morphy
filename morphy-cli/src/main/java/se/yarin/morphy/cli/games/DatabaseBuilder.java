@@ -61,7 +61,7 @@ public class DatabaseBuilder extends GameConsumerBase {
       try {
         addedGame = transaction.addGame(game);
       } catch (MorphyException e) {
-        log.warn("Failed to add game " + game.id() + " in the searched database");
+        log.warn("Failed to add game {} in the searched database", game.id());
         return;
       }
     } else {
@@ -72,13 +72,13 @@ public class DatabaseBuilder extends GameConsumerBase {
         try {
           model = game.getTextModel();
         } catch (MorphyException e) {
-          log.warn("Failed to get text " + game.id() + " in the searched database");
+          log.warn("Failed to get text {} in the searched database", game.id());
           return;
         }
         try {
           addedGame = transaction.addText(model);
         } catch (MorphyException e) {
-          log.warn("Failed to add text " + game.id() + " in the searched database");
+          log.warn("Failed to add text {} in the searched database", game.id());
           return;
         }
       } else {
@@ -86,7 +86,7 @@ public class DatabaseBuilder extends GameConsumerBase {
         try {
           model = game.getModel();
         } catch (MorphyException e) {
-          log.warn("Failed to get game " + game.id() + " in the searched database");
+          log.warn("Failed to get game {} in the searched database", game.id());
           return;
         }
 

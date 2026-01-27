@@ -59,9 +59,9 @@ public class Parser {
 
   private ParseError error(Token token, String message) {
     if (token.type() == TokenType.EOF) {
-      log.error("at end: " + message);
+      log.error("at end: {}", message);
     } else {
-      log.error(" at '" + token.lexeme() + "': " + message);
+      log.error(" at '{}': {}", token.lexeme(), message);
     }
     return new ParseError();
   }

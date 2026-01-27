@@ -91,8 +91,8 @@ public final class AnnotationsSerializer {
         AnnotationSerializer serializer = annotationSerializersByClass.get(annotation.getClass());
         if (serializer == null) {
           log.warn(
-              "No annotation serializer found for annotation class "
-                  + annotation.getClass().getSimpleName());
+              "No annotation serializer found for annotation class {}",
+              annotation.getClass().getSimpleName());
           continue;
         }
         int annotationStart = buf.position();
@@ -128,21 +128,13 @@ public final class AnnotationsSerializer {
     int unknown = ByteBufferUtil.getIntB(buf);
     if (unknown != 0x01000E0E) {
       // The 0E is probably the length of the annotation header
-      log.warn(
-          String.format(
-              "Unknown bytes in annotation header for game " + gameId + ": %08X", unknown));
+      log.warn(String.format("Unknown bytes in annotation header for game %d: %08X", gameId, unknown));
     }
     int noAnnotations = ByteBufferUtil.getUnsigned24BitB(buf) - 1;
     int size = ByteBufferUtil.getIntB(buf);
     if (log.isDebugEnabled()) {
       log.debug(
-          "Parsing "
-              + noAnnotations
-              + " annotations for game "
-              + gameId
-              + " occupying "
-              + size
-              + " bytes");
+          "Parsing {} annotations for game {} occupying {} bytes", noAnnotations, gameId, size);
     }
     List<GameMovesModel.Node> allNodes = model.getAllNodes();
     int expectedEnd = buf.position() - 14 + size;
@@ -153,26 +145,22 @@ public final class AnnotationsSerializer {
         annotation = deserializeAnnotation(buf);
       } catch (MorphyFatalAnnotationDecodingException e) {
         log.warn(
-            "Invalid annotation data at position "
-                + buf.position()
-                + ", no more annotations in this game parsed");
+            "Invalid annotation data at position {}, no more annotations in this game parsed",
+            buf.position());
         break;
       }
       if (log.isDebugEnabled()) {
-        log.debug("Parsed annotation " + annotation + " for move position " + posNo);
+        log.debug("Parsed annotation {} for move position {}", annotation, posNo);
       }
       if (posNo < 0 || posNo >= allNodes.size()) {
-        log.warn("Invalid move position for an annotation in game " + gameId + ": " + (posNo - 1));
+        log.warn("Invalid move position for an annotation in game {}: {}", gameId, posNo - 1);
       } else {
         allNodes.get(posNo).getAnnotations().add(annotation);
       }
     }
     if (buf.position() != expectedEnd) {
       log.warn(
-          "Annotation parser ended at position "
-              + buf.position()
-              + " but expected to end at "
-              + expectedEnd);
+          "Annotation parser ended at position {} but expected to end at {}", buf.position(), expectedEnd);
     }
   }
 

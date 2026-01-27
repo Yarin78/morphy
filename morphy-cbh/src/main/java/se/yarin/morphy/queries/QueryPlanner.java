@@ -110,7 +110,7 @@ public class QueryPlanner {
               2100, tournaments.stream().map(tournament -> tournament.date().year()));
     }
     long elapsed = System.currentTimeMillis() - start;
-    log.info("Database statistics updated in " + elapsed + " ms");
+    log.info("Database statistics updated in {} ms", elapsed);
   }
 
   /**

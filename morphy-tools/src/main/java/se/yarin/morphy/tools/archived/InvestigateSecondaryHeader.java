@@ -35,9 +35,9 @@ public class InvestigateSecondaryHeader {
                   ExtendedGameHeaderBase xbase = ExtendedGameHeaderBase.open(filePath.toFile());
                   GameHeaderBase base =
                       GameHeaderBase.open(new File(filePath.toString().replace(".cbj", ".cbh")));
-                  log.info("Reading " + filePath.toFile() + " " + xbase.version());
+                  log.info("Reading {} {}", filePath.toFile(), xbase.version());
                   if (base.size() != xbase.size() && xbase.size() != 0) {
-                    log.info("Size mismatch: " + base.size() + " != " + xbase.size());
+                    log.info("Size mismatch: {} != {}", base.size(), xbase.size());
                   }
 
                   /*

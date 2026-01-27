@@ -177,7 +177,7 @@ public class TournamentIndex extends EntityIndex<Tournament> {
     builder.teamTournament((teamByte & 1) == 1);
     if ((teamByte & ~1) > 0) {
       // Never seen in the wild
-      log.debug("Unused bits set in team byte when deserializing tournament with id " + entityId);
+      log.debug("Unused bits set in team byte when deserializing tournament with id {}", entityId);
     }
     builder.nation(CBUtil.decodeNation(ByteBufferUtil.getUnsignedByte(buf)));
     int unusedByte1 = ByteBufferUtil.getUnsignedByte(buf);

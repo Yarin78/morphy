@@ -399,10 +399,10 @@ public class GameHeaderIndex
             .build();
 
     if (prolog.unknownFlags() != 0x24 && prolog.unknownFlags() != 0x2C) {
-      log.warn("Prolog unknown flags = " + prolog.unknownFlags());
+      log.warn("Prolog unknown flags = {}", prolog.unknownFlags());
     }
     if (prolog.serializedItemSize() != Prolog.DEFAULT_SERIALIZED_ITEM_SIZE) {
-      log.warn("Invalid serialized size in chb prolog = " + prolog.serializedItemSize());
+      log.warn("Invalid serialized size in chb prolog = {}", prolog.serializedItemSize());
     }
     if (prolog.unknownByte1() != 0
         || prolog.unknownByte2() != 1
@@ -463,24 +463,24 @@ public class GameHeaderIndex
     builder.id(gameHeaderId);
     int type = ByteBufferUtil.getUnsignedByte(buf);
     if ((type & 1) == 0) {
-      log.warn("Game Header type bit 0 was not set in game " + gameHeaderId);
+      log.warn("Game Header type bit 0 was not set in game {}", gameHeaderId);
     }
     builder.deleted((type & 128) > 0);
     boolean guidingText = (type & 2) > 0;
     builder.guidingText(guidingText);
 
     if ((type & 3) != 1 && (type & 3) != 3) {
-      log.warn("Unknown game type for game id " + gameHeaderId + ": " + type);
+      log.warn("Unknown game type for game id {}: {}", gameHeaderId, type);
     }
     if ((type & ~131) != 0) {
-      log.warn("Game header type for game id " + gameHeaderId + " is " + type);
+      log.warn("Game header type for game id {} is {}", gameHeaderId, type);
     }
     int movesOffset = ByteBufferUtil.getIntB(buf), annotationOffset = 0;
     builder.movesOffset(movesOffset);
     if (guidingText) {
       int unknownShort = ByteBufferUtil.getUnsignedShortB(buf);
       if (unknownShort != 0) {
-        log.warn("Unknown short in guiding text: " + unknownShort);
+        log.warn("Unknown short in guiding text: {}", unknownShort);
       }
       builder.whitePlayerId(-1);
       builder.blackPlayerId(-1);
@@ -510,7 +510,7 @@ public class GameHeaderIndex
       for (int i = 0; i < 24; i++) {
         byte b = buf.get();
         if (b != 0) {
-          log.warn("Trailing bytes in guiding text are not 0: byte " + i + " is " + b);
+          log.warn("Trailing bytes in guiding text are not 0: byte {} is {}", i, b);
         }
       }
     } else {
@@ -541,7 +541,7 @@ public class GameHeaderIndex
         try {
           builder.eco(CBUtil.decodeEco(ecoValue));
         } catch (IllegalArgumentException e) {
-          log.error("Error parsing ECO in game " + gameHeaderId + ": " + ecoValue);
+          log.error("Error parsing ECO in game {}: {}", gameHeaderId, ecoValue);
           builder.eco(Eco.unset());
         }
         builder.chess960StartPosition(-1);

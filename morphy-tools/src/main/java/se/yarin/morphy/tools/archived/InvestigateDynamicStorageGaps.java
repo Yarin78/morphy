@@ -24,7 +24,7 @@ public class InvestigateDynamicStorageGaps {
               // ChessBase/Тимощенко_Дебютный репартуар/Тимощенко_Дебютный
               // репартуар.cbh")).forEach(filePath -> {
               if (Files.isRegularFile(filePath) && filePath.toString().endsWith(".cbh")) {
-                log.info("Reading " + filePath);
+                log.info("Reading {}", filePath);
                 Database base = null;
                 try {
                   base = Database.open(filePath.toFile());
@@ -34,9 +34,9 @@ public class InvestigateDynamicStorageGaps {
                   checkAnnos(base);
 
                 } catch (NoSuchFileException e) {
-                  log.error("File missing " + filePath);
+                  log.error("File missing {}", filePath);
                 } catch (IOException e) {
-                  log.error("IO error reading " + filePath, e);
+                  log.error("IO error reading {}", filePath, e);
                 } finally {
                   if (base != null) {
                     try {
@@ -81,7 +81,7 @@ public class InvestigateDynamicStorageGaps {
                 i, movesOffset, movesOffset + movesLen, movesLen));
         lastMoves = movesOffset + movesLen;
       } catch (RuntimeException e) {
-        log.error("Error reading game " + i, e);
+        log.error("Error reading game {}", i, e);
         break;
       }
     }
@@ -125,7 +125,7 @@ public class InvestigateDynamicStorageGaps {
                 i, annosOffset, annosOffset + movesLen, movesLen));
         lastAnnos = annosOffset + movesLen;
       } catch (RuntimeException e) {
-        log.error("Error reading game " + i, e);
+        log.error("Error reading game {}", i, e);
         break;
       }
     }

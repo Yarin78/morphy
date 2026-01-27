@@ -207,7 +207,7 @@ public class Validator {
           }
         } catch (Exception e) {
           // This shouldn't really happen
-          log.error("Critical error processing games: " + e.getMessage());
+          log.error("Critical error processing games: {}", e.getMessage());
           hasCriticalErrors = true;
         }
       }

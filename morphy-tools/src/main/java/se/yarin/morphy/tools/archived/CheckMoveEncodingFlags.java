@@ -110,14 +110,14 @@ public class CheckMoveEncodingFlags {
           map.get(flags).add(gameId);
 
           if (gameId % 100000 == 0) {
-            log.info("Read " + gameId + " games");
+            log.info("Read {} games", gameId);
           }
         } catch (Exception e) {
-          log.error("Error parsing data in game " + gameId, e);
+          log.error("Error parsing data in game {}", gameId, e);
         }
       }
     } catch (IOException e) {
-      log.error("IO error reading " + headerFile, e);
+      log.error("IO error reading {}", headerFile, e);
     } finally {
       if (base != null) {
         try {

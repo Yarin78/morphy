@@ -68,7 +68,7 @@ public class TextContentsModel {
 
       int textFormat = ByteBufferUtil.getSignedShortL(buf);
       if (textFormat != 1 && textFormat != 2 && textFormat != 3) {
-        log.warn("Unknown text format " + textFormat + " in text with id " + gameId);
+        log.warn("Unknown text format {} in text with id {}", textFormat, gameId);
       }
 
       HashMap<TextLanguage, String> titles = new HashMap<>();
@@ -122,7 +122,7 @@ public class TextContentsModel {
           contents.put(TextLanguage.values()[languageId], htmlText);
           int unknownInt = ByteBufferUtil.getIntL(buf);
           if (unknownInt != 0) {
-            log.warn("Unknown trailing value " + unknownInt + " in text with id " + gameId);
+            log.warn("Unknown trailing value {} in text with id {}", unknownInt, gameId);
           }
         }
       }
@@ -138,7 +138,7 @@ public class TextContentsModel {
 
       return new TextContentsModel(textFormat, titles, contents, formatting, unknown);
     } catch (BufferUnderflowException e) {
-      log.warn("Move data ended abruptly in text " + gameId + ".");
+      log.warn("Move data ended abruptly in text {}.", gameId);
       throw new MorphyMoveDecodingException(
           "Moves data header ended abruptly in text " + gameId, e);
     }

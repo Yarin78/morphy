@@ -63,8 +63,8 @@ public class ASFScriptCommandReader {
     int objectsInHeader = pFile.readInt();
     pFile.skip(2);
 
-    log.debug("ASF header length " + headerLength);
-    log.debug("ASF objects in header " + objectsInHeader);
+    log.debug("ASF header length {}", headerLength);
+    log.debug("ASF objects in header {}", objectsInHeader);
 
     noScriptCommands = 0;
     curScriptCommand = 0;
@@ -77,7 +77,7 @@ public class ASFScriptCommandReader {
       }
       long objLength = pFile.readLong();
       if (isScriptCommand) {
-        log.debug("Found script command block with length " + objLength);
+        log.debug("Found script command block with length {}", objLength);
         pFile.skip(16);
         noScriptCommands = pFile.readUnsignedShort();
 
@@ -95,7 +95,7 @@ public class ASFScriptCommandReader {
 
     init = true;
 
-    log.debug(noScriptCommands + " script commands found");
+    log.debug("{} script commands found", noScriptCommands);
 
     return noScriptCommands;
   }

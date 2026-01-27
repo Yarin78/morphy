@@ -30,7 +30,7 @@ public class ScanAllGameHeaders {
             filePath -> {
               //        Files.walk(Paths.get("testbases/Mega Database 2016")).forEach(filePath -> {
               if (Files.isRegularFile(filePath) && filePath.toString().endsWith(".cbh")) {
-                log.info("Reading " + filePath);
+                log.info("Reading {}", filePath);
                 Database base = null;
                 try {
                   base = Database.open(filePath.toFile());
@@ -50,27 +50,27 @@ public class ScanAllGameHeaders {
                       GameHeader gameHeader = headerBase.getGameHeader(i);
                       int movesOffset = gameHeader.getMovesOffset();
                       if (movesOffset <= lastMoves) {
-                        log.warn("Move offsets out of order in game " + i);
+                        log.warn("Move offsets out of order in game {}", i);
                       }
                       lastMoves = movesOffset;
 
                       int annoOffset = gameHeader.getAnnotationOffset();
                       if (annoOffset != 0) {
                         if (annoOffset <= lastAnno) {
-                          log.warn("Annotation offsets out of order in game " + i);
+                          log.warn("Annotation offsets out of order in game {}", i);
                         }
                         lastAnno = annoOffset;
                       }
                     } catch (RuntimeException e) {
-                      log.error("Error reading game " + i, e);
+                      log.error("Error reading game {}", i, e);
                       break;
                     }
                   }
 
                 } catch (NoSuchFileException e) {
-                  log.error("File missing " + filePath);
+                  log.error("File missing {}", filePath);
                 } catch (IOException e) {
-                  log.error("IO error reading " + filePath, e);
+                  log.error("IO error reading {}", filePath, e);
                 } finally {
                   if (base != null) {
                     try {

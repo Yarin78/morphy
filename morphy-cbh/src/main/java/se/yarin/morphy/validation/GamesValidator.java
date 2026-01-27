@@ -218,18 +218,18 @@ public class GamesValidator {
           }
         } catch (MorphyMoveDecodingException e) {
           if (numMoveDecodingErrors < 5) {
-            log.error("Move decoding error in game " + game.id() + ": " + e.getMessage());
+            log.error("Move decoding error in game {}: {}", game.id(), e.getMessage());
           }
           numMoveDecodingErrors += 1;
           numErrors += 1;
         } catch (MorphyInvalidDataException e) {
           if (numInvalidEntityReferences < 5) {
-            log.error("Invalid data in game " + game.id() + ": " + e.getMessage());
+            log.error("Invalid data in game {}: {}", game.id(), e.getMessage());
           }
           numInvalidEntityReferences += 1;
           numErrors += 1;
         } catch (MorphyIOException | AssertionError e) {
-          log.error("Critical error in game " + game.id() + ": " + e.getMessage());
+          log.error("Critical error in game {}: {}", game.id(), e.getMessage());
           numErrors += 1;
         } finally {
           progressCallback.run();

@@ -43,7 +43,7 @@ public class LoadAllGames {
         if (gameHeader.isGuidingText()) continue;
         GameMovesModel moves = movesBase.getMoves(gameHeader.getMovesOffset(), i);
 
-        log.info("Game #" + i);
+        log.info("Game #{}", i);
         int ofs = gameHeader.getAnnotationOffset();
         if (ofs != 0) {
           annotationBase.getAnnotations(moves, ofs);
@@ -137,7 +137,7 @@ public class LoadAllGames {
       //                }
       //            }
     } catch (IOException e) {
-      log.error("IO error reading " + headerFile, e);
+      log.error("IO error reading {}", headerFile, e);
     } finally {
       if (base != null) {
         try {

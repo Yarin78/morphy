@@ -176,7 +176,7 @@ public class MoveRepository implements BlobSizeRetriever {
       return moveSerializer.deserializeMoves(blob, validateDecodedMoves, gameId);
     } catch (MorphyMoveDecodingException e) {
       // If there was an error parsing the moves, returned what we got so far
-      log.warn("Error decoding moves in game " + gameId + ": " + e.getMessage());
+      log.warn("Error decoding moves in game {}: {}", gameId, e.getMessage());
       return e.getModel();
     }
   }

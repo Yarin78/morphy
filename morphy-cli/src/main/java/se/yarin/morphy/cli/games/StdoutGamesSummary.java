@@ -75,8 +75,8 @@ public class StdoutGamesSummary extends GameConsumerBase {
 
     for (String col : specColumns.keySet()) {
       if (!usedCols.contains(col)) {
-        log.warn("Unknown column: " + col);
-        log.warn("Available columns: " + GameColumn.allColumnsString());
+        log.warn("Unknown column: {}", col);
+        log.warn("Available columns: {}", GameColumn.allColumnsString());
       }
     }
 

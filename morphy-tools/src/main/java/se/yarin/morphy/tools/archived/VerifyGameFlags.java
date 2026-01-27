@@ -290,18 +290,18 @@ public class VerifyGameFlags {
           verifyHeader(gameHeader, model);
           cnt++;
           if (cnt % 10000 == 0) {
-            log.info("Parsed " + cnt + " games");
+            log.info("Parsed {} games", cnt);
           }
         } catch (ChessBaseUnsupportedException e) {
           noUnsupported++;
           continue;
         } catch (Exception e) {
-          log.error("Error parsing data in game " + gameId, e);
+          log.error("Error parsing data in game {}", gameId, e);
           noErrors++;
         }
       }
     } catch (IOException e) {
-      log.error("IO error reading " + headerFile, e);
+      log.error("IO error reading {}", headerFile, e);
     } finally {
       if (base != null) {
         try {

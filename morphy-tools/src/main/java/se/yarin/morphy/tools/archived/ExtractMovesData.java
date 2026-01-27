@@ -54,7 +54,7 @@ public class ExtractMovesData {
           stream.write(buf.array());
           stream.close();
         } catch (Exception e) {
-          log.error("Error extracting move data from game " + gameId, e);
+          log.error("Error extracting move data from game {}", gameId, e);
         }
       }
     } catch (IOException e) {

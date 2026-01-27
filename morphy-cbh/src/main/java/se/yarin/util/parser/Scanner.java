@@ -131,7 +131,7 @@ public class Scanner {
         } else if (isAlpha(c)) {
           identifier();
         } else {
-          log.error("Unexpected character " + c + " on line " + line);
+          log.error("Unexpected character {} on line {}", c, line);
         }
         break;
     }
@@ -170,7 +170,7 @@ public class Scanner {
     }
 
     if (isAtEnd()) {
-      log.error("Unterminated string on line " + line);
+      log.error("Unterminated string on line {}", line);
       return;
     }
 
