@@ -13,8 +13,7 @@ import se.yarin.morphy.games.annotations.*;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.ArrayList;
 
 /**
  * Throw-away tool to test PGN round-tripping.
@@ -22,13 +21,6 @@ import java.util.Set;
  * and compares the original with the round-tripped version.
  */
 public class TestPgnRoundTrip {
-
-    static Set<Class<?>> supportedAnnotationClasses = Set.of(
-            ImmutableTextAfterMoveAnnotation.class,
-            ImmutableTextBeforeMoveAnnotation.class,
-            ImmutableGraphicalSquaresAnnotation.class,
-            ImmutableGraphicalArrowsAnnotation.class,
-            ImmutableSymbolAnnotation.class);
 
     /**
      * Statistics for the round-trip test.
@@ -38,7 +30,6 @@ public class TestPgnRoundTrip {
         int identicalGames = 0;
         int gamesWithDifferences = 0;
         int failedGames = 0;
-        int skippedGames = 0;
     }
 
     /**
@@ -58,13 +49,18 @@ public class TestPgnRoundTrip {
                 AnnotationConverter.trimAnnotations(node.getAnnotations()));
 
             // Check if all annotations are supported
-            Set<Class<?>> annos = new HashSet<>();
+            ArrayList<GameQuotationAnnotation> quotes = new ArrayList<>();
             original.moves().root().traverseDepthFirst(node ->
-                node.getAnnotations().forEach(a -> annos.add(a.getClass())));
-            if (!supportedAnnotationClasses.containsAll(annos)) {
-  //              stats.skippedGames++;
-//                return;
+                quotes.addAll(node.getAnnotations().getAllByClass(GameQuotationAnnotation.class)));
+
+            /*
+            if (quotes.size() > 0) {
+                System.out.println("Game #" + game.id());
+                for (GameQuotationAnnotation quote : quotes) {
+                    System.out.println("unknown = " + quote.unknown() + ",  hasGame = " + quote.hasGame() + ", plyCount = " + quote.getGameModel().moves().countPly(false));
+                }
             }
+             */
 
             // Export to PGN
             String pgn = exporter.exportGame(original);
@@ -195,7 +191,6 @@ public class TestPgnRoundTrip {
         System.out.println("SUMMARY");
         System.out.println("========================================");
         System.out.println("Total games processed: " + stats.totalGames);
-        System.out.println("Skipped games: " + stats.skippedGames);
         System.out.println("Identical after round-trip: " + stats.identicalGames +
                 " (" + String.format("%.2f%%", 100.0 * stats.identicalGames / stats.totalGames) + ")");
         System.out.println("Games with differences: " + stats.gamesWithDifferences +

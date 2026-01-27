@@ -159,7 +159,13 @@ public class PgnExporter {
             return;
         }
 
-        // Optional headers
+        // The order of the optional headers is based on how ChessBase exports it
+        if (header.getAnnotator() != null) {
+            writeTag(writer, "Annotator", header.getAnnotator(), null);
+        }
+        if (header.getEco() != null && header.getEco().isSet()) {
+            writeTag(writer, "ECO", header.getEco().toString(), null);
+        }
         if (header.getWhiteElo() != null) {
             writeTag(writer, "WhiteElo", header.getWhiteElo().toString(), null);
         }
@@ -167,54 +173,58 @@ public class PgnExporter {
             writeTag(writer, "BlackElo", header.getBlackElo().toString(), null);
         }
 
-        if (header.getWhiteTeam() != null) {
-            writeTag(writer, "WhiteTeam", header.getWhiteTeam(), null);
+        // TODO: WhiteFideId
+        // TODO: BlackFideId
+        if (options.includePlyCount()) {
+            writeTag(writer, "PlyCount", String.valueOf(moves.countPly(false)), null);
         }
-        if (header.getBlackTeam() != null) {
-            writeTag(writer, "BlackTeam", header.getBlackTeam(), null);
-        }
+        // TODO: GameId - this is the long game id, not the order in the database
 
-        if (header.getEco() != null && header.getEco().isSet()) {
-            writeTag(writer, "ECO", header.getEco().toString(), null);
-        }
-        if (header.getEventTimeControl() != null) {
-            writeTag(writer, "TimeControl", header.getEventTimeControl(), null);
-        }
-
-        if (header.getAnnotator() != null) {
-            writeTag(writer, "Annotator", header.getAnnotator(), null);
-        }
+        // Event stuff
         if (header.getEventDate() != null && !header.getEventDate().isUnset()) {
             writeTag(writer, "EventDate", header.getEventDate().toString(), null);
         }
         if (header.getEventType() != null) {
             writeTag(writer, "EventType", header.getEventType(), null);
         }
-        if (header.getEventCategory() != null) {
-            writeTag(writer, "EventCategory", header.getEventCategory().toString(), null);
+        if (header.getEventRounds() != null) {
+            writeTag(writer, "EventRounds", header.getEventRounds().toString(), null);
         }
         if (header.getEventCountry() != null) {
             writeTag(writer, "EventCountry", header.getEventCountry(), null);
         }
-        if (header.getEventRounds() != null) {
-            writeTag(writer, "EventRounds", header.getEventRounds().toString(), null);
+        if (header.getEventCategory() != null) {
+            writeTag(writer, "EventCategory", header.getEventCategory().toString(), null);
         }
         if (header.getEventTimeControl() != null) {
             writeTag(writer, "EventTimeControl", header.getEventTimeControl(), null);
         }
 
+        // Source stuff
+        if (header.getSourceTitle() != null) {
+            writeTag(writer, "SourceTitle", header.getSourceTitle(), null);
+        }
         if (header.getSource() != null) {
             writeTag(writer, "Source", header.getSource(), null);
         }
         if (header.getSourceDate() != null && !header.getSourceDate().isUnset()) {
             writeTag(writer, "SourceDate", header.getSourceDate().toString(), null);
         }
-        if (header.getSourceTitle() != null) {
-            writeTag(writer, "SourceTitle", header.getSourceTitle(), null);
+        // TODO: SourceVersion
+        // TODO: SourceVersionDate
+        // TODO: SourceQuality
+
+
+        if (header.getEventTimeControl() != null) {
+            writeTag(writer, "TimeControl", header.getEventTimeControl(), null);
         }
 
-        if (options.includePlyCount()) {
-            writeTag(writer, "PlyCount", String.valueOf(moves.countPly(false)), null);
+
+        if (header.getWhiteTeam() != null) {
+            writeTag(writer, "WhiteTeam", header.getWhiteTeam(), null);
+        }
+        if (header.getBlackTeam() != null) {
+            writeTag(writer, "BlackTeam", header.getBlackTeam(), null);
         }
 
         // SetUp and FEN for setup positions
@@ -227,11 +237,11 @@ public class PgnExporter {
             writeTag(writer, "FEN", fen, null);
         }
 
-        // Custom fields (excluding SetUp and FEN)
+        // Custom fields (must start with upper-case letter, excluding SetUp and FEN)
         Map<String, Object> allFields = header.getAllFields();
         List<String> customFields = new ArrayList<>();
         for (String field : allFields.keySet()) {
-            if (!isStandardField(field) && !field.equals("SetUp") && !field.equals("FEN")) {
+            if (!isStandardField(field) && !field.equals("SetUp") && !field.equals("FEN") && !field.isEmpty() && Character.isUpperCase(field.charAt(0))) {
                 customFields.add(field);
             }
         }

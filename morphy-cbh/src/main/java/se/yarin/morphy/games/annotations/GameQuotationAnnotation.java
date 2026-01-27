@@ -39,7 +39,6 @@ public class GameQuotationAnnotation extends Annotation implements StatisticalAn
   private byte[] setupPositionData;
   private byte[] gameData;
 
-  // TODO: Is set in some games that have no moves. References to a game ID in the same database perhaps?
   private int unknown;
 
   public int unknown() {
