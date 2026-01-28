@@ -481,8 +481,11 @@ public class Database implements EntityRetriever, AutoCloseable {
       File citFile = CBUtil.fileWithExtension(file, ".cit2");
       File cibFile = CBUtil.fileWithExtension(file, ".cib2");
       gameEntityIndexSecondary = GameEntityIndex.open(citFile, cibFile, mode, context);
-    } catch (NoSuchFileException | MorphyInvalidDataException e) {
-      log.warn("Secondary GameEntityIndex missing or corrupt");
+    } catch (NoSuchFileException e) {
+      gameEntityIndexSecondary = null;
+    } catch (MorphyInvalidDataException e) {
+      // Typically the case if the database has no Game Tags
+      log.warn("Secondary GameEntityIndex corrupt");
       gameEntityIndexSecondary = null;
     }
 
@@ -496,10 +499,11 @@ public class Database implements EntityRetriever, AutoCloseable {
 
     // TODO: Move this to constructor, add mode to DatabaseContext
     int headerCount = gameHeaderIndex.count(), extHeaderCount = extendedGameHeaderStorage.count();
+    // Note: It seems like the extended header file may have more records
     boolean mismatch =
         switch (mode) {
           case READ_WRITE -> headerCount != extHeaderCount;
-          case READ_ONLY, IN_MEMORY -> headerCount != extHeaderCount && extHeaderCount > 0;
+          case READ_ONLY, IN_MEMORY -> headerCount > extHeaderCount && extHeaderCount > 0;
           case READ_REPAIR -> false;
         };
     if (mismatch) {

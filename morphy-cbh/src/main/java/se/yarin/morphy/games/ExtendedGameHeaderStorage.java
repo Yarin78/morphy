@@ -172,9 +172,14 @@ public class ExtendedGameHeaderStorage
   }
 
   /**
-   * Attempts to repair/upgrade an extended game header storage by - create a new storage (if
-   * missing entirely) - upgrade an old version of the storage to a new one - pad missing entries
-   * The cbh file is needed for the upgrade since empty items need offset data from the cbh file
+   * Upgrades the extended game header storage if necessary.
+   * <p>Attempts to repair/upgrade an extended game header storage, which means
+   * <ul>
+   *   <li>create a new storage (if missing entirely)</li>
+   *   <li>upgrade an old version of the storage to a new one</li>
+   *   <li>pad missing entries</li>
+   * </ul>
+   * <p>The cbh file is needed for the upgrade since empty items need offset data from the cbh file
    */
   public static void upgrade(@NotNull File cbhFile) throws IOException {
     if (!CBUtil.extension(cbhFile).equals(".cbh")) {

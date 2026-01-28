@@ -48,7 +48,7 @@ public interface ItemStorage<THeader, TItem> {
   int count();
 
   /**
-   * Gets an item from the storage If the index is invalid, {@link IllegalArgumentException} should
+   * Gets an item from the storage. If the index is invalid, {@link IllegalArgumentException} should
    * be thrown, unless the storage is opened in non-strict (safe) mode, in which case empty items
    * can be returned. It's up to the implementation of the storage to support this.
    *
