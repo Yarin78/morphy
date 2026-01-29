@@ -22,21 +22,34 @@ public final class CBUtil {
 
   private CBUtil() {}
 
-  // This is the character set that CB uses
-  public static Charset cbCharSet = StandardCharsets.ISO_8859_1;
+  /**
+   * <h1>Character sets used</h1>
+   * <p>ChessBase mixes 1 byte fixed-width charsets (like ISO_8859_1 aka ISO-LATIN)
+   * and variable-width charsets (UTF-8) depending on where the string is stored.
+   *
+   * <p>In general, if there's a fixed-size slot to store a string in some record (e.g. 40 bytes),
+   * UTF-8 seems to be used. The only exception is Player names that are always fixed-width.
+   *
+   * <p>Otherwise, 1 byte fixed-width charset are used. Which one probably depends
+   * on the string. Morphy currently always uses ISO_8859_1.
+   *
+   * <p>A strange exception seem to be Annotators where the same name can either be UTF-8
+   * or ISO_8859_1 in the same database, depending on how it got created.</p>
+   */
+  public static Charset cbDefaultSingleByteCharset = StandardCharsets.ISO_8859_1; // WINDOWS-1252
 
   public static int compareString(String s1, String s2) {
     // Ordering is done on byte level
-    ByteBuffer b1 = cbCharSet.encode(s1 + "\0");
-    ByteBuffer b2 = cbCharSet.encode(s2 + "\0");
+    ByteBuffer b1 = cbDefaultSingleByteCharset.encode(s1 + "\0");
+    ByteBuffer b2 = cbDefaultSingleByteCharset.encode(s2 + "\0");
 
     return b1.compareTo(b2);
   }
 
   public static int compareStringUnsigned(String s1, String s2) {
     // Same as compareString but treat each byte as unsigned instead of signed
-    ByteBuffer b1 = cbCharSet.encode(s1 + "\0");
-    ByteBuffer b2 = cbCharSet.encode(s2 + "\0");
+    ByteBuffer b1 = cbDefaultSingleByteCharset.encode(s1 + "\0");
+    ByteBuffer b2 = cbDefaultSingleByteCharset.encode(s2 + "\0");
 
     int thisPos = b1.position();
     int thisRem = b1.limit() - thisPos;

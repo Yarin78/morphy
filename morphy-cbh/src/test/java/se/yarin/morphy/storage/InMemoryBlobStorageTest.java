@@ -15,7 +15,7 @@ public class InMemoryBlobStorageTest {
   private ByteBuffer createBlob(String value) {
     ByteBuffer blob = ByteBuffer.allocate(value.length() + 2);
     blob.putShort((short) (value.length() + 2));
-    blob.put(value.getBytes(CBUtil.cbCharSet));
+    blob.put(value.getBytes(CBUtil.cbDefaultSingleByteCharset));
     blob.flip();
     return blob;
   }
@@ -23,7 +23,7 @@ public class InMemoryBlobStorageTest {
   private String parseBlob(ByteBuffer blob) {
     short length = blob.getShort();
     Assert.assertEquals(length - 2, blob.remaining());
-    return new String(blob.array(), 2, length - 2, CBUtil.cbCharSet);
+    return new String(blob.array(), 2, length - 2, CBUtil.cbDefaultSingleByteCharset);
   }
 
   static class StringBlobSizeRetriever implements BlobSizeRetriever {

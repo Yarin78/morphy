@@ -154,16 +154,16 @@ public class PlayerIndex extends EntityIndex<Player> {
         .id(entityId)
         .count(count)
         .firstGameId(firstGameId)
-        .lastName(ByteBufferUtil.getFixedSizeByteString(buf, 30))
-        .firstName(ByteBufferUtil.getFixedSizeByteString(buf, 20))
+        .lastName(ByteBufferUtil.getFixedSizeByteString(buf, 30, true))
+        .firstName(ByteBufferUtil.getFixedSizeByteString(buf, 20, true))
         .build();
   }
 
   @Override
   protected void serialize(@NotNull Player player, @NotNull ByteBuffer buf) {
     itemMetricsRef().update(metrics -> metrics.addSerialization(1));
-    ByteBufferUtil.putFixedSizeByteString(buf, player.lastName(), 30);
-    ByteBufferUtil.putFixedSizeByteString(buf, player.firstName(), 20);
+    ByteBufferUtil.putFixedSizeByteString(buf, player.lastName(), 30, true);
+    ByteBufferUtil.putFixedSizeByteString(buf, player.firstName(), 20, true);
   }
 
   public static void upgrade(@NotNull File file) throws IOException {

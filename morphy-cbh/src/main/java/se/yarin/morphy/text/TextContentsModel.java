@@ -76,7 +76,7 @@ public class TextContentsModel {
       for (int i = 0; i < numTitles; i++) {
         int languageId = ByteBufferUtil.getSignedShortL(buf);
         int titleLength = ByteBufferUtil.getUnsignedShortL(buf);
-        String title = ByteBufferUtil.getFixedSizeByteString(buf, titleLength);
+        String title = ByteBufferUtil.getFixedSizeByteString(buf, titleLength, true);
         titles.put(TextLanguage.values()[languageId], title);
       }
 
@@ -103,7 +103,7 @@ public class TextContentsModel {
           int languageId = ByteBufferUtil.getSignedShortL(buf);
           int txtLength =
               textFormat == 1 ? ByteBufferUtil.getUnsignedShortL(buf) : ByteBufferUtil.getIntL(buf);
-          String txt = ByteBufferUtil.getFixedSizeByteString(buf, txtLength);
+          String txt = ByteBufferUtil.getFixedSizeByteString(buf, txtLength, true);
           contents.put(TextLanguage.values()[languageId], txt);
 
           int formattingSize =
@@ -118,7 +118,7 @@ public class TextContentsModel {
         for (int i = 0; i < numHtml; i++) {
           int languageId = ByteBufferUtil.getSignedShortL(buf);
           int htmlLength = ByteBufferUtil.getIntL(buf);
-          String htmlText = ByteBufferUtil.getFixedSizeByteString(buf, htmlLength);
+          String htmlText = ByteBufferUtil.getFixedSizeByteString(buf, htmlLength, true);
           contents.put(TextLanguage.values()[languageId], htmlText);
           int unknownInt = ByteBufferUtil.getIntL(buf);
           if (unknownInt != 0) {
@@ -148,7 +148,7 @@ public class TextContentsModel {
     // Quick deserialize the first available title
     buf.position(buf.position() + 10);
     int titleLength = ByteBufferUtil.getSignedShortL(buf);
-    return ByteBufferUtil.getFixedSizeByteString(buf, titleLength);
+    return ByteBufferUtil.getFixedSizeByteString(buf, titleLength, true);
   }
 
   public String getTitle() {

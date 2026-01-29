@@ -1,16 +1,73 @@
 package se.yarin.util;
 
+import org.jetbrains.annotations.NotNull;
+import org.mozilla.universalchardet.UniversalDetector;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import se.yarin.morphy.util.CBUtil;
 
 import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 
 /**
  * Class containing static methods for getting data from a ByteBuffer by explicitly telling if it is
  * stored as little endian or big endian.
  */
 public final class ByteBufferUtil {
+  private static final Logger log = LoggerFactory.getLogger(ByteBufferUtil.class);
+
   // TODO: Might be clean to create a custom ByteBuffer implementation
   private ByteBufferUtil() {}
+
+  /**
+   * Resolves the charset to use in a byte array.
+   *
+   * @param bytes the byte array to analyze
+   * @param singleByteOnly limit the detected charset to single byte encoded charsets
+   * @return the detected charset, never null
+   */
+  private static @NotNull Charset resolveCharset(byte[] bytes, int len, boolean singleByteOnly) {
+    boolean allAscii = true;
+    for(int i = 0; i < len; i++) {
+      if ((bytes[i] & 0x80) != 0) {
+        allAscii = false;
+        break;
+      }
+    }
+
+    // Optimize for the by far most common case; all characters is ASCII
+    if (allAscii) {
+      return StandardCharsets.UTF_8;
+    }
+
+    // ChessBase probably uses ISO-8859-1, ..., ISO-8859-9 based on strings in the .exe file
+    // TODO: Make it possible to disable this, or enforce it to a specific charset
+    // Either using environment variables or some database config
+    UniversalDetector detector = new UniversalDetector(null);
+    detector.handleData(bytes, 0, bytes.length);
+    detector.dataEnd();
+    String detectedCharset = detector.getDetectedCharset();
+    detector.reset();
+
+    Charset charset = null;
+    if (detectedCharset != null) {
+      try {
+        charset = Charset.forName(detectedCharset);
+      } catch (Exception e) {
+        // Probably shouldn't happen
+        log.warn("Detector returned invalid charset!? {}", detectedCharset);
+      }
+    }
+    if (charset == null)  {
+      return singleByteOnly ? CBUtil.cbDefaultSingleByteCharset : StandardCharsets.UTF_8;
+    }
+    if (charset == StandardCharsets.UTF_8 && singleByteOnly) {
+      charset = CBUtil.cbDefaultSingleByteCharset;
+    }
+
+    return charset;
+  }
 
   public static ByteBuffer clone(final ByteBuffer original) {
     // Create clone with same capacity as original.
@@ -38,7 +95,7 @@ public final class ByteBufferUtil {
     byte[] bytes = new byte[len];
     buf.get(bytes, 0, len);
     if (len > 0 && bytes[len - 1] == 0) len--;
-    return new String(bytes, 0, len, CBUtil.cbCharSet);
+    return new String(bytes, 0, len, resolveCharset(bytes, len, true));
   }
 
   /**
@@ -54,7 +111,7 @@ public final class ByteBufferUtil {
     int bytesToRead = hasNullTerminator ? len + 1 : len;
     byte[] bytes = new byte[bytesToRead];
     buf.get(bytes, 0, bytesToRead);
-    return new String(bytes, 0, len, CBUtil.cbCharSet);
+    return new String(bytes, 0, len, resolveCharset(bytes, len, true));
   }
 
   /**
@@ -67,11 +124,25 @@ public final class ByteBufferUtil {
    * @return the read string
    */
   public static String getFixedSizeByteString(ByteBuffer buf, int maxLength) {
+    return getFixedSizeByteString(buf, maxLength, false);
+  }
+
+  /**
+   * Gets a byte encoded string with a given max length from a {@link ByteBuffer}. Exactly maxLength
+   * bytes will be read from the buffer, even if the actual string is shorter (the string stops at
+   * the first 0)
+   *
+   * @param buf the buffer to read from
+   * @param maxLength the maximum length of the string
+   * @param fixedWidth the charset used to decode the string must be a 1 byte fixed-width charset
+   * @return the read string
+   */
+  public static String getFixedSizeByteString(ByteBuffer buf, int maxLength, boolean fixedWidth) {
     byte[] bytes = new byte[maxLength];
     buf.get(bytes);
     int len = 0;
     while (len < maxLength && bytes[len] != 0) len++;
-    return new String(bytes, 0, len, CBUtil.cbCharSet);
+    return new String(bytes, 0, len, resolveCharset(bytes, len, fixedWidth));
   }
 
   /**
@@ -82,14 +153,14 @@ public final class ByteBufferUtil {
    * @return the read string
    */
   public static String getByteStringLine(ByteBuffer buf) {
-    StringBuilder sb = new StringBuilder();
     int start = buf.position();
     while (buf.hasRemaining() && buf.get() != 10)
       ;
     byte[] bytes = new byte[buf.position() - start];
     buf.position(start);
     buf.get(bytes);
-    return new String(bytes, 0, bytes.length, CBUtil.cbCharSet);
+
+    return new String(bytes, resolveCharset(bytes, bytes.length, true));
   }
 
   /**
@@ -99,7 +170,7 @@ public final class ByteBufferUtil {
    * @param s the string to put
    */
   public static void putByteString(ByteBuffer buf, String s) {
-    ByteBuffer sbuf = CBUtil.cbCharSet.encode(s);
+    ByteBuffer sbuf = CBUtil.cbDefaultSingleByteCharset.encode(s);
     putByte(buf, s.length());
     buf.put(sbuf);
   }
@@ -111,8 +182,8 @@ public final class ByteBufferUtil {
    * @param s the string to put
    */
   public static void putRawByteString(ByteBuffer buf, String s) {
-    ByteBuffer sbuf = CBUtil.cbCharSet.encode(s);
-    buf.put(sbuf);
+    Charset charset = CBUtil.cbDefaultSingleByteCharset;
+    buf.put(charset.encode(s));
   }
 
   /**
@@ -124,7 +195,21 @@ public final class ByteBufferUtil {
    * @param length the length of the string
    */
   public static void putFixedSizeByteString(ByteBuffer buf, String s, int length) {
-    ByteBuffer sbuf = CBUtil.cbCharSet.encode(s);
+    putFixedSizeByteString(buf, s, length, false);
+  }
+
+  /**
+   * Puts a fixed-width string to a {@link ByteBuffer}. If the length of the string is longer than
+   * the max length, it will get truncated. If it's shorter, it will be padded with zeros.
+   *
+   * @param buf the buffer to write to
+   * @param s the string to put
+   * @param length the length of the string
+   * @param fixedWidth if true, the encoding used must be 1 byte per character
+   */
+  public static void putFixedSizeByteString(ByteBuffer buf, String s, int length, boolean fixedWidth) {
+    Charset charset = fixedWidth ? StandardCharsets.UTF_8 : CBUtil.cbDefaultSingleByteCharset;
+    ByteBuffer sbuf = charset.encode(s);
     sbuf.position(0);
     if (sbuf.limit() > length) {
       sbuf.limit(length);

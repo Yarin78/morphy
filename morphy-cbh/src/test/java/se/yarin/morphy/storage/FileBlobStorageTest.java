@@ -38,7 +38,7 @@ public class FileBlobStorageTest {
   static ByteBuffer createBlob(String value) {
     ByteBuffer blob = ByteBuffer.allocate(value.length() + 4);
     blob.putInt(value.length() + 4);
-    blob.put(value.getBytes(CBUtil.cbCharSet));
+    blob.put(value.getBytes(CBUtil.cbDefaultSingleByteCharset));
     blob.flip();
     return blob;
   }
@@ -46,7 +46,7 @@ public class FileBlobStorageTest {
   static String parseBlob(ByteBuffer blob) {
     int length = blob.getInt();
     assertEquals(length - 4, blob.remaining());
-    return new String(blob.array(), 4, length - 4, CBUtil.cbCharSet);
+    return new String(blob.array(), 4, length - 4, CBUtil.cbDefaultSingleByteCharset);
   }
 
   static class StringBlobSizeRetriever implements BlobSizeRetriever {

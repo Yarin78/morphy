@@ -5,8 +5,10 @@ module se.yarin.morphy.cbh {
   requires java.compiler;
   requires org.jetbrains.annotations;
   requires concurrent.locks;
+  requires com.github.albfernandez.juniversalchardet;
+    requires org.jline.terminal;
 
-  exports se.yarin.chess;
+    exports se.yarin.chess;
   exports se.yarin.chess.annotations;
   exports se.yarin.chess.timeline;
   exports se.yarin.util.parser to
