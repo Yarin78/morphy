@@ -42,7 +42,7 @@ public abstract class ExtendedGameHeader {
 
   @Value.Default
   public boolean finalMaterial() {
-    // If true, the FinalMaterial values below are set
+    // If true, the FinalMaterial values below are set and non-empty
     return false;
   }
 

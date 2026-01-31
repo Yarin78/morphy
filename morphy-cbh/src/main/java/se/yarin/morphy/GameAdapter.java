@@ -255,9 +255,7 @@ public class GameAdapter {
 
     extendedGameHeader
         .whiteRatingType(RatingType.international(TournamentTimeControl.NORMAL))
-        .blackRatingType(RatingType.international(TournamentTimeControl.NORMAL))
-        .creationTimestamp(0) // TODO
-        .lastChangedTimestamp(0); // TODO
+        .blackRatingType(RatingType.international(TournamentTimeControl.NORMAL));
   }
 
   private void setMovesGameData(
@@ -298,8 +296,13 @@ public class GameAdapter {
         .trainingMagnitude(stats.getTrainingMagnitude())
         .timeSpentMagnitude(stats.getTimeSpentMagnitude());
 
+    FinalMaterial.Result finalMaterial = FinalMaterial.calculate(model);
+    FinalMaterial total = FinalMaterial.sum(finalMaterial.player1(), finalMaterial.player2());
     extendedGameHeader
-        .finalMaterial(false) // TODO
+        .finalMaterial(!total.isEmpty())
+        .materialPlayer1(finalMaterial.player1())
+        .materialPlayer2(finalMaterial.player2())
+        .materialTotal(total)
         .endgameInfo(EndgameInfo.empty()); // TODO
   }
 

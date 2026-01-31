@@ -446,9 +446,13 @@ public class ExtendedGameHeaderStorage
           builder.finalMaterial(false);
         } else {
           builder.finalMaterial(true);
-          builder.materialPlayer1(FinalMaterial.decode(s3));
-          builder.materialPlayer2(FinalMaterial.decode(s4));
-          builder.materialTotal(FinalMaterial.decode(s5));
+          FinalMaterial p1 = FinalMaterial.decode(s3);
+          FinalMaterial p2 = FinalMaterial.decode(s4);
+          builder.materialPlayer1(p1);
+          builder.materialPlayer2(p2);
+          // For some reason this can sometimes be wrong
+          // builder.materialTotal(FinalMaterial.decode(s5));
+          builder.materialTotal(FinalMaterial.sum(p1, p2));
         }
       }
       if (itemSize >= 38) {
