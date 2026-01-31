@@ -15,7 +15,7 @@ import se.yarin.morphy.text.TextContentsModel;
 import se.yarin.morphy.text.TextModel;
 
 import java.nio.ByteBuffer;
-import java.util.Calendar;
+import java.time.Instant;
 
 /** Class that represents a game that is bound to a {@link Database}. */
 public class Game implements IdObject {
@@ -189,7 +189,7 @@ public class Game implements IdObject {
     return header.playedDate();
   }
 
-  public @NotNull Calendar creationTime() {
+  public @NotNull Instant creationTime() {
     return extendedHeader.creationTime();
   }
 
@@ -201,7 +201,7 @@ public class Game implements IdObject {
     return extendedHeader.lastChangedTimestamp();
   }
 
-  public @NotNull Calendar lastChangedTime() {
+  public @NotNull Instant lastChangedTime() {
     return extendedHeader.lastChangedTime();
   }
 

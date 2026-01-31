@@ -3,11 +3,20 @@ package se.yarin.morphy.games;
 import org.immutables.value.Value;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.Calendar;
-import java.util.TimeZone;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 
 @Value.Immutable
 public abstract class ExtendedGameHeader {
+
+  /** Base date for creation timestamps: December 1st 2008 in Europe/Berlin timezone */
+  private static final Instant CREATION_BASE_DATE =
+      ZonedDateTime.of(2008, 12, 1, 0, 0, 0, 0, ZoneId.of("Europe/Berlin")).toInstant();
+
+  /** Base date for last-changed timestamps: October 15th 1582 in UTC */
+  private static final Instant LAST_CHANGED_BASE_DATE =
+      ZonedDateTime.of(1582, 10, 15, 0, 0, 0, 0, ZoneId.of("UTC")).toInstant();
 
   @Value.Default
   public int whiteTeamId() {
@@ -123,34 +132,20 @@ public abstract class ExtendedGameHeader {
   /**
    * Gets the date and time when this game was first created.
    *
-   * @return a date and time in the default TimeZone
+   * @return an Instant representing when the game was created
    */
-  public @NotNull Calendar creationTime() {
-    // Creation time is based on a ChessBase specific date
-    Calendar creationTime = Calendar.getInstance(TimeZone.getTimeZone("Europe/Berlin"));
-    creationTime.set(2008, 11, 1, 0, 0, 0);
-    long seconds = creationTimestamp() / 1024;
-    creationTime.add(Calendar.MINUTE, (int) (seconds / 60));
-    creationTime.add(Calendar.SECOND, (int) (seconds % 60));
-    creationTime.setTimeZone(TimeZone.getDefault());
-    return creationTime;
+  public @NotNull Instant creationTime() {
+      return CREATION_BASE_DATE.plusSeconds(creationTimestamp() / 1024);
   }
 
   /**
    * Gets the date and time when this game was last changed. If the game has never changed since it
    * was created, the value is undefined.
    *
-   * @return a date and time in the default TimeZone
+   * @return an Instant representing when the game was last changed
    */
-  public @NotNull Calendar lastChangedTime() {
-    // Last changed time is based on the start of the Gregorian Calendar in UTC
-    Calendar lastChangedTime = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
-    lastChangedTime.set(1582, 9, 15, 0, 0, 0);
-    long seconds = lastChangedTimestamp() / 10000000L;
-    lastChangedTime.add(Calendar.MINUTE, (int) (seconds / 60));
-    lastChangedTime.add(Calendar.SECOND, (int) (seconds % 60));
-    lastChangedTime.setTimeZone(TimeZone.getDefault());
-    return lastChangedTime;
+  public @NotNull Instant lastChangedTime() {
+      return LAST_CHANGED_BASE_DATE.plusSeconds(lastChangedTimestamp() / 10000000L);
   }
 
   /**
@@ -160,12 +155,7 @@ public abstract class ExtendedGameHeader {
    * @return the current time as a creation timestamp
    */
   public static long currentCreationTimestamp() {
-    Calendar now = Calendar.getInstance(TimeZone.getTimeZone("Europe/Berlin"));
-    Calendar baseDate = Calendar.getInstance(TimeZone.getTimeZone("Europe/Berlin"));
-    baseDate.set(2008, Calendar.DECEMBER, 1, 0, 0, 0);
-    baseDate.set(Calendar.MILLISECOND, 0);
-
-    long secondsSinceBase = (now.getTimeInMillis() - baseDate.getTimeInMillis()) / 1000;
+    long secondsSinceBase = Instant.now().getEpochSecond() - CREATION_BASE_DATE.getEpochSecond();
     return secondsSinceBase * 1024;
   }
 
@@ -176,12 +166,7 @@ public abstract class ExtendedGameHeader {
    * @return the current time as a last-changed timestamp
    */
   public static long currentLastChangedTimestamp() {
-    Calendar now = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
-    Calendar baseDate = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
-    baseDate.set(1582, Calendar.OCTOBER, 15, 0, 0, 0);
-    baseDate.set(Calendar.MILLISECOND, 0);
-
-    long secondsSinceBase = (now.getTimeInMillis() - baseDate.getTimeInMillis()) / 1000;
+    long secondsSinceBase = Instant.now().getEpochSecond() - LAST_CHANGED_BASE_DATE.getEpochSecond();
     return secondsSinceBase * 10000000L;
   }
 }

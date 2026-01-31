@@ -2,9 +2,13 @@ package se.yarin.morphy.cli.columns;
 
 import se.yarin.morphy.Game;
 
-import java.text.SimpleDateFormat;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 
 public class CreationTimestampColumn implements GameColumn {
+
+  private static final DateTimeFormatter FORMATTER =
+      DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").withZone(ZoneId.systemDefault());
 
   @Override
   public String getHeader() {
@@ -16,8 +20,7 @@ public class CreationTimestampColumn implements GameColumn {
     if (game.creationTimestamp() == 0) {
       return "";
     }
-    SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-    return df.format(game.creationTime().getTime());
+    return FORMATTER.format(game.creationTime());
   }
 
   @Override
