@@ -34,7 +34,7 @@ public class DatabaseTransactionTest {
 
       Game game4 = txn.getGame(4);
       assertEquals(-1, game4.whiteTeamId());
-      assertEquals(Nation.NONE, game4.whiteRatingType().nation());
+      assertNull(game4.whiteRatingType().nation());
     }
   }
 

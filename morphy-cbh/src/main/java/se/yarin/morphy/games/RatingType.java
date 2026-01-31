@@ -69,7 +69,7 @@ public abstract class RatingType {
     if (b == 0 && type == 1 && nation == Nation.NONE) {
       if (internationalTC >= 0 && internationalTC < TournamentTimeControl.values().length) {
         TournamentTimeControl timeControl = TournamentTimeControl.values()[internationalTC];
-        return ImmutableRatingType.of(timeControl, null, Nation.NONE, name);
+        return ImmutableRatingType.of(timeControl, null, null, name);
       }
     }
     if (b == 0 && type == 2 && nation != Nation.NONE) {
