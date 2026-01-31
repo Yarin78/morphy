@@ -81,13 +81,13 @@ public abstract class ExtendedGameHeader {
 
   @Value.Default
   public int unknown1() {
-    // Quite often set, no idea for what. Probably something encoded.
+    // Quite often set, no idea for what. Probably something encoded. Is reset to 0 when game is copied to another db.
     return 0;
   }
 
   @Value.Default
   public int unknown2() {
-    // Quite often set, no idea for what. Probably something encoded.
+    // Quite often set, no idea for what. Probably something encoded. Is reset to 0 when game is copied to another db.
     return 0;
   }
 
