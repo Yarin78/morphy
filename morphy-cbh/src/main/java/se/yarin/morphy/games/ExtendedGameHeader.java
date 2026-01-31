@@ -152,4 +152,36 @@ public abstract class ExtendedGameHeader {
     lastChangedTime.setTimeZone(TimeZone.getDefault());
     return lastChangedTime;
   }
+
+  /**
+   * Calculates the current time as a creation timestamp.
+   * Creation timestamp is 1/1024th seconds since December 1st 2008 in Europe/Berlin timezone.
+   *
+   * @return the current time as a creation timestamp
+   */
+  public static long currentCreationTimestamp() {
+    Calendar now = Calendar.getInstance(TimeZone.getTimeZone("Europe/Berlin"));
+    Calendar baseDate = Calendar.getInstance(TimeZone.getTimeZone("Europe/Berlin"));
+    baseDate.set(2008, Calendar.DECEMBER, 1, 0, 0, 0);
+    baseDate.set(Calendar.MILLISECOND, 0);
+
+    long secondsSinceBase = (now.getTimeInMillis() - baseDate.getTimeInMillis()) / 1000;
+    return secondsSinceBase * 1024;
+  }
+
+  /**
+   * Calculates the current time as a last-changed timestamp.
+   * Last changed timestamp is 1/10,000,000th seconds since October 15th 1582 in UTC.
+   *
+   * @return the current time as a last-changed timestamp
+   */
+  public static long currentLastChangedTimestamp() {
+    Calendar now = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
+    Calendar baseDate = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
+    baseDate.set(1582, Calendar.OCTOBER, 15, 0, 0, 0);
+    baseDate.set(Calendar.MILLISECOND, 0);
+
+    long secondsSinceBase = (now.getTimeInMillis() - baseDate.getTimeInMillis()) / 1000;
+    return secondsSinceBase * 10000000L;
+  }
 }

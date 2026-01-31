@@ -34,6 +34,9 @@ import java.util.function.BiPredicate;
 public class DatabaseWriteTransaction extends DatabaseTransaction {
   private static final Logger log = LoggerFactory.getLogger(DatabaseWriteTransaction.class);
 
+  // Track last used creation timestamp to ensure uniqueness across all transactions
+  private static long lastCreationTimestamp = 0;
+
   class GameData {
     public ImmutableGameHeader.@NotNull Builder gameHeader;
     public ImmutableExtendedGameHeader.@NotNull Builder extendedGameHeader;
@@ -119,6 +122,24 @@ public class DatabaseWriteTransaction extends DatabaseTransaction {
 
   private boolean createGameEvents() {
     return database().gameEventStorage() != null;
+  }
+
+  /**
+   * Generates the next unique creation timestamp.
+   * Ensures no two games have the same creation timestamp by incrementing if necessary.
+   *
+   * @return a unique creation timestamp
+   */
+  private static synchronized long getNextCreationTimestamp() {
+    long timestamp = ExtendedGameHeader.currentCreationTimestamp();
+
+    // Ensure uniqueness - if calculated timestamp is not greater than last, increment
+    if (timestamp <= lastCreationTimestamp) {
+      timestamp = lastCreationTimestamp + 1;
+    }
+    lastCreationTimestamp = timestamp;
+
+    return timestamp;
   }
 
   /**
@@ -440,13 +461,21 @@ public class DatabaseWriteTransaction extends DatabaseTransaction {
       currentGameCount += 1;
       gameId = currentGameCount;
 
+      extendedGameHeaderBuilder.gameVersion(1);
+      extendedGameHeaderBuilder.creationTimestamp(getNextCreationTimestamp());
+
       // These will be set later during the commit phase
       gameHeaderBuilder.annotationOffset(0);
       extendedGameHeaderBuilder.annotationOffset(0);
     } else {
+      // Replacing an existing game
       // But entity statistics are updated based on the last version in this transaction
       previousGame = getGame(gameId);
+
+      extendedGameHeaderBuilder.gameVersion(previousGame.gameVersion() + 1);
+      extendedGameHeaderBuilder.creationTimestamp(previousGame.creationTimestamp());
     }
+    extendedGameHeaderBuilder.lastChangedTimestamp(ExtendedGameHeader.currentLastChangedTimestamp());
 
     gameHeaderBuilder.id(gameId);
     updatedGames.put(

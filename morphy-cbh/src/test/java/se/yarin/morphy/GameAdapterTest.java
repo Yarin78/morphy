@@ -54,7 +54,7 @@ public class GameAdapterTest {
         ImmutableExtendedGameHeader newExtendedHeader = newExtendedHeaderBuilder.build();
 
         // Compare headers, excluding storage-layer fields that GameAdapter doesn't set
-        // (id, movesOffset, annotationOffset)
+        // (id, movesOffset, annotationOffset, lastChangedTimestamp, creationTimestamp, gameVersion)
         GameHeader normalizedNew = ImmutableGameHeader.builder()
             .from(newHeader)
             .id(originalHeader.id())
@@ -62,11 +62,15 @@ public class GameAdapterTest {
             .annotationOffset(originalHeader.annotationOffset())
             .build();
 
-        ExtendedGameHeader normalizedNewExtended = ImmutableExtendedGameHeader.builder()
-            .from(newExtendedHeader)
-            .movesOffset(originalExtendedHeader.movesOffset())
-            .annotationOffset(originalExtendedHeader.annotationOffset())
-            .build();
+        ExtendedGameHeader normalizedNewExtended =
+            ImmutableExtendedGameHeader.builder()
+                .from(newExtendedHeader)
+                .movesOffset(originalExtendedHeader.movesOffset())
+                .annotationOffset(originalExtendedHeader.annotationOffset())
+                .lastChangedTimestamp(originalExtendedHeader.lastChangedTimestamp())
+                .creationTimestamp(originalExtendedHeader.creationTimestamp())
+                .gameVersion(originalExtendedHeader.gameVersion())
+                .build();
 
         try {
           assertEquals(
@@ -82,6 +86,7 @@ public class GameAdapterTest {
           passedGames++;
         } catch (AssertionError e) {
           failures.add("Game " + gameId + ": " + e.getMessage());
+          break;
         }
 
       } catch (Exception e) {
