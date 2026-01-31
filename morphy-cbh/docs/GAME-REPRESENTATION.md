@@ -207,11 +207,16 @@ String value = headerModel.getField("CustomTag");
 This mechanism also stores internal IDs for database operations:
 
 ```java
-// Internal field names (not user-visible)
-"DATABASE_ID", "WHITE_ID", "BLACK_ID", "EVENT_ID",
-"ANNOTATOR_ID", "SOURCE_ID", "WHITE_TEAM_ID",
-"BLACK_TEAM_ID", "GAME_TAG_ID"
+headerModel.setField("_whiteId", 123);
+headerModel.setField("_blackId", 456);
+headerModel.setField("_eventId", 7);
 ```
+
+When converting a GameModel back to the Storage Layer, these id's (if available)
+are used as entity references instead of looking up the entity with the full name.
+That is, if `_eventId` is set, and that id doesn't correspond with the tournament in the `Event`
+field, the tournament associated with the game will be based on `_eventId` field, without
+updating any other metadata about the tournament.
 
 ### GameMovesModel: The Move Tree
 

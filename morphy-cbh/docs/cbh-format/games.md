@@ -27,7 +27,7 @@ All integers are stored in Big Endian (most significant byte first) unless other
 | 0   | 1    | Unknown. Always `0`?
 | 1   | 2    | Unknown. `36` in really old databases (created by CB6), `44` in CB9 or later. Might be number of bytes of this header that is actually used. 
 | 3   | 2    | Unknown. Always `46`. Presumably the size of both the header and the records.
-| 5   | 1    | Unknown. Always `1`?
+| 5   | 1    | Unknown. Always `1`? Is `5` in databases created in CB26
 | 6   | 4    | The id of the next game to be added.
 | 10  | 2    | Unknown. Always `0`?
 | 12  | 4    | The id of the next embedded sound clip (deprecated feature)
@@ -107,13 +107,13 @@ The version of the .cbj file loosely correspond to the ChessBase version. The .c
 (the .cbh file format was introduced in ChessBase 6.0).
 
 | ChessBase version | .cbj file version | Game record size
-| --- | --- | ---
-| 8? | 1 | 8
-| 9? | 5 | 30
-| 10? | 6 | 38
-| 11? | 7 | 74
-| 12 | 8 | 78
-| 13-16 | 11 | 120
+|-------------------| --- | ---
+| 8?                | 1 | 8
+| 9?                | 5 | 30
+| 10?               | 6 | 38
+| 11?               | 7 | 74
+| 12                | 8 | 78
+| 13+               | 11 | 120
 
 If a database has an old version of the extended header and a game is saved to the database, the entire .cbj file is upgraded to the latest version and the additional fields are assigned default values.
 

@@ -24,30 +24,33 @@ public class GameAdapter {
 
   private static final Logger log = LoggerFactory.getLogger(GameAdapter.class);
 
-  public static final String DATABASE_ID = "databaseId";
-  public static final String WHITE_ID = "whiteId";
-  public static final String BLACK_ID = "blackId";
-  public static final String EVENT_ID = "eventId";
-  public static final String ANNOTATOR_ID = "annotatorId";
-  public static final String SOURCE_ID = "sourceId";
-  public static final String WHITE_TEAM_ID = "whiteTeamId";
-  public static final String BLACK_TEAM_ID = "blackTeamId";
-  public static final String GAME_TAG_ID = "gameTagId";
+  public static final String WHITE_ID = "_whiteId";
+  public static final String BLACK_ID = "_blackId";
+  public static final String EVENT_ID = "_eventId";
+  public static final String ANNOTATOR_ID = "_annotatorId";
+  public static final String SOURCE_ID = "_sourceId";
+  public static final String WHITE_TEAM_ID = "_whiteTeamId";
+  public static final String BLACK_TEAM_ID = "_blackTeamId";
+  public static final String GAME_TAG_ID = "_gameTagId";
+
+  // ==========================================================
+  // Functions for converting a Game into a GameModel/TextModel
+  // ==========================================================
 
   /**
    * Creates a mutable model of the game, header and moves
    *
    * @param game the game to get the model for
    * @return a mutable game model
-   * @throws MorphyInvalidDataException if the model couldn't be created due to broken references If
-   *     the move data is broken, a model is still returned with as many moves as could be decoded
+   * @throws MorphyInvalidDataException if the model couldn't be created due to broken references. If
+   *     the move data is broken, a model is still returned with as many moves as could be decoded.
    */
   public @NotNull GameModel getGameModel(@NotNull Game game) throws MorphyInvalidDataException {
     GameHeaderModel headerModel = getGameHeaderModel(game);
 
-    GameMovesModel moves =
-        game.database().moveRepository().getMoves(game.getMovesOffset(), game.id());
-    game.database().annotationRepository().getAnnotations(moves, game.getAnnotationOffset());
+    Database database = game.database();
+    GameMovesModel moves = database.moveRepository().getMoves(game.getMovesOffset(), game.id());
+    database.annotationRepository().getAnnotations(moves, game.getAnnotationOffset());
 
     return new GameModel(headerModel, moves);
   }
@@ -81,7 +84,7 @@ public class GameAdapter {
   }
 
   /**
-   * Creates a mutable model of the game header
+   * Creates a mutable model of the game header.
    *
    * @param game the game to get the header model for
    * @return a mutable game header model
@@ -103,18 +106,6 @@ public class GameAdapter {
     Team whiteTeam = game.whiteTeam();
     Team blackTeam = game.blackTeam();
     GameTag gameTag = game.gameTag();
-
-    // TODO: Instead of duplicating each CBH specific field, it's probably better to keep a
-    // reference
-    // to the raw header data. The GameHeaderModel should probably just contain the most generic
-    // fields,
-    // while ID's and internal CBH stuff like "last updated", "version" etc should not be there,
-    // but an opaque blob/reference to the CBH/CBJ data should be kept instead.
-    // For data that can be deduced from the game moves (like eco, final material, endgame etc),
-    // perhaps
-    // the version of the game can be used to deduce if it needs to be recalculated?
-
-    model.setField(DATABASE_ID, game.database());
 
     model.setWhite(whitePlayer.getFullName());
     model.setField(WHITE_ID, whitePlayer.id());
@@ -179,11 +170,17 @@ public class GameAdapter {
     return model;
   }
 
+  // ==========================================================
+  // Functions for converting a GameModel/TextModel into a Game
+  // (including any dependent entities)
+  // ==========================================================
+
   public void setGameData(
       @NotNull ImmutableGameHeader.Builder gameHeader,
       @NotNull ImmutableExtendedGameHeader.Builder extendedGameHeader,
       @NotNull GameModel model) {
     setHeaderGameData(gameHeader, extendedGameHeader, model.header());
+    setEntityIds(gameHeader, extendedGameHeader, model.header());
     setMovesGameData(gameHeader, extendedGameHeader, model.moves());
   }
 
@@ -191,14 +188,51 @@ public class GameAdapter {
       @NotNull ImmutableGameHeader.Builder gameHeader,
       @NotNull ImmutableExtendedGameHeader.Builder extendedGameHeader,
       @NotNull TextModel model) {
+    // Text entries don't have players, and entity IDs default to -1 for resolution
+    gameHeader.whitePlayerId(-1);
+    gameHeader.blackPlayerId(-1);
+    gameHeader.tournamentId(-1);
+    gameHeader.annotatorId(-1);
+    gameHeader.sourceId(-1);
+
     setHeaderTextData(gameHeader, extendedGameHeader, model.header());
+  }
+
+  /**
+   * Extracts an entity ID from the model's internal fields.
+   * Returns -1 if the field is not present or not an Integer, which indicates
+   * that the entity needs to be resolved from the model data.
+   */
+  private int getEntityId(@NotNull GameHeaderModel headerModel, @NotNull String fieldName) {
+    try {
+      Object value = headerModel.getField(fieldName);
+      return value instanceof Integer id ? id : -1;
+    } catch (ClassCastException e) {
+      log.warn("Internal id field {} was not an integer: {}", fieldName, e.getMessage());
+      return -1;
+    }
+  }
+
+  public void setEntityIds(
+      @NotNull ImmutableGameHeader.Builder gameHeader,
+      @NotNull ImmutableExtendedGameHeader.Builder extendedGameHeader,
+      @NotNull GameHeaderModel headerModel) {
+    // Extract entity IDs from internal fields if present, otherwise set to -1
+    // -1 indicates that the entity needs to be resolved from the model data
+    gameHeader.whitePlayerId(getEntityId(headerModel, WHITE_ID));
+    gameHeader.blackPlayerId(getEntityId(headerModel, BLACK_ID));
+    gameHeader.tournamentId(getEntityId(headerModel, EVENT_ID));
+    gameHeader.annotatorId(getEntityId(headerModel, ANNOTATOR_ID));
+    gameHeader.sourceId(getEntityId(headerModel, SOURCE_ID));
+    extendedGameHeader.whiteTeamId(getEntityId(headerModel, WHITE_TEAM_ID));
+    extendedGameHeader.blackTeamId(getEntityId(headerModel, BLACK_TEAM_ID));
+    extendedGameHeader.gameTagId(getEntityId(headerModel, GAME_TAG_ID));
   }
 
   public void setHeaderGameData(
       @NotNull ImmutableGameHeader.Builder gameHeader,
       @NotNull ImmutableExtendedGameHeader.Builder extendedGameHeader,
       @NotNull GameHeaderModel headerModel) {
-
     gameHeader.playedDate(headerModel.getDate() == null ? Date.today() : headerModel.getDate());
     gameHeader.result(
         headerModel.getResult() == null ? GameResult.NOT_FINISHED : headerModel.getResult());
@@ -284,8 +318,7 @@ public class GameAdapter {
 
     extendedGameHeader
         .creationTimestamp(0) // TODO
-        .lastChangedTimestamp(0) // TODO
-        .build();
+        .lastChangedTimestamp(0); // TODO
   }
 
   private void collectStats(

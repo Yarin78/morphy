@@ -21,7 +21,7 @@ import java.util.function.BiPredicate;
 /**
  * Represents an in-memory transaction of operations done on a {@link Database}.
  *
- * <p>Changes made in a transaction is not visible outside the transaction until they've been
+ * <p>Changes made in a transaction are not visible outside the transaction until they've been
  * committed. A transaction commit will be rejected if the database was changed after the
  * transaction was opened. It's the responsibility of the caller to ensure only one transaction of
  * changes is in progress at the same time.
@@ -163,84 +163,50 @@ public class DatabaseWriteTransaction extends DatabaseTransaction {
         new EntityDelta<>(EntityType.GAME_TAG, (game, gameTagId) -> game.gameTagId() == gameTagId);
   }
 
-  // TODO: could this be made nicer?!
+  /**
+   * Generic helper to update an entity while preserving count and firstGameId.
+   * We must not update the count and firstGameId as it would get incorrect when committing the
+   * transaction.
+   */
+  private <T extends Entity & Comparable<T>> void updateEntityById(
+      @NotNull EntityIndexWriteTransaction<T> transaction,
+      int id,
+      @NotNull T entity) {
+    T oldEntity = transaction.get(id);
+    @SuppressWarnings("unchecked")
+    T preservedEntity = (T) entity.withCountAndFirstGameId(
+        oldEntity.count(),
+        oldEntity.firstGameId());
+    transaction.putEntityById(id, preservedEntity);
+  }
+
   public void updatePlayerById(int id, @NotNull Player player) {
-    Player oldPlayer = playerTransaction.get(id);
-    // We must not update the count and firstGameId as it would get incorrect when committing the
-    // transaction
-    player =
-        ImmutablePlayer.builder()
-            .from(player)
-            .count(oldPlayer.count())
-            .firstGameId(oldPlayer.firstGameId())
-            .build();
-    playerTransaction.putEntityById(id, player);
+    updateEntityById(playerTransaction, id, player);
+  }
+
+  public void updateAnnotatorById(int id, @NotNull Annotator annotator) {
+    updateEntityById(annotatorTransaction, id, annotator);
+  }
+
+  public void updateSourceById(int id, @NotNull Source source) {
+    updateEntityById(sourceTransaction, id, source);
+  }
+
+  public void updateTeamById(int id, @NotNull Team team) {
+    updateEntityById(teamTransaction, id, team);
+  }
+
+  public void updateGameTagById(int id, @NotNull GameTag gameTag) {
+    updateEntityById(gameTagTransaction, id, gameTag);
   }
 
   public void updateTournamentById(
       int id, @NotNull Tournament tournament, @NotNull TournamentExtra tournamentExtra) {
     Tournament oldTournament = tournamentTransaction.get(id);
-    // We must not update the count and firstGameId as it would get incorrect when committing the
-    // transaction
-    tournament =
-        ImmutableTournament.builder()
-            .from(tournament)
-            .count(oldTournament.count())
-            .firstGameId(oldTournament.firstGameId())
-            .build();
-    tournamentTransaction.putEntityById(id, tournament, tournamentExtra);
-  }
-
-  public void updateAnnotatorById(int id, @NotNull Annotator annotator) {
-    Annotator oldAnnotator = annotatorTransaction.get(id);
-    // We must not update the count and firstGameId as it would get incorrect when committing the
-    // transaction
-    annotator =
-        ImmutableAnnotator.builder()
-            .from(annotator)
-            .count(oldAnnotator.count())
-            .firstGameId(oldAnnotator.firstGameId())
-            .build();
-    annotatorTransaction.putEntityById(id, annotator);
-  }
-
-  public void updateSourceById(int id, @NotNull Source source) {
-    Source oldSource = sourceTransaction.get(id);
-    // We must not update the count and firstGameId as it would get incorrect when committing the
-    // transaction
-    source =
-        ImmutableSource.builder()
-            .from(source)
-            .count(oldSource.count())
-            .firstGameId(oldSource.firstGameId())
-            .build();
-    sourceTransaction.putEntityById(id, source);
-  }
-
-  public void updateTeamById(int id, @NotNull Team team) {
-    Team oldTeam = teamTransaction.get(id);
-    // We must not update the count and firstGameId as it would get incorrect when committing the
-    // transaction
-    team =
-        ImmutableTeam.builder()
-            .from(team)
-            .count(oldTeam.count())
-            .firstGameId(oldTeam.firstGameId())
-            .build();
-    teamTransaction.putEntityById(id, team);
-  }
-
-  public void updateGameTagById(int id, @NotNull GameTag gameTag) {
-    GameTag oldGameTag = gameTagTransaction.get(id);
-    // We must not update the count and firstGameId as it would get incorrect when committing the
-    // transaction
-    gameTag =
-        ImmutableGameTag.builder()
-            .from(gameTag)
-            .count(oldGameTag.count())
-            .firstGameId(oldGameTag.firstGameId())
-            .build();
-    gameTagTransaction.putEntityById(id, gameTag);
+    Tournament preservedTournament = (Tournament) tournament.withCountAndFirstGameId(
+        oldTournament.count(),
+        oldTournament.firstGameId());
+    tournamentTransaction.putEntityById(id, preservedTournament, tournamentExtra);
   }
 
   public @NotNull Game getGame(int id) {
@@ -284,7 +250,7 @@ public class DatabaseWriteTransaction extends DatabaseTransaction {
 
     // But all entity references may need to be updated, if we're copying the game from another
     // database
-    buildEntities(header, extendedHeader, game);
+    resolveEntities(header, extendedHeader, game);
 
     GameEvents gameEvents = game.gameEvents();
     if ((gameEvents == null || gameEvents.isEmpty()) && createGameEvents()) {
@@ -333,7 +299,7 @@ public class DatabaseWriteTransaction extends DatabaseTransaction {
     ImmutableExtendedGameHeader.Builder extendedHeader = ImmutableExtendedGameHeader.builder();
 
     gameAdapter().setGameData(header, extendedHeader, model);
-    buildEntities(header, extendedHeader, model.header());
+    resolveEntities(header, extendedHeader, model.header());
 
     return putGame(
         gameId,
@@ -346,10 +312,89 @@ public class DatabaseWriteTransaction extends DatabaseTransaction {
                 .annotationSerializer()
                 .serializeAnnotations(gameId, model.moves())
             : null,
-        TopGamesStorage.TopGameStatus.UNKNOWN,
+        TopGamesStorage.TopGameStatus.UNKNOWN, // TODO: Not sure how this works
         createGameEvents() ? new GameEvents(model.moves()) : null);
   }
 
+  /**
+   * Resolves an entity ID from the GameModel. If the ID is set (not -1) and valid in the current
+   * database, uses it. Otherwise creates/looks up the entity from model data.
+   *
+   * @param headerModel the game header model
+   * @param currentId the entity ID from the model's internal fields (-1 if not set)
+   * @param entityBuilder function to build entity from model data
+   * @param transaction the entity transaction to validate/create in
+   * @param idSetter consumer to set the resolved ID
+   * @throws MorphyInvalidDataException if currentId is set but references a non-existent entity
+   */
+  private <T extends Entity & Comparable<T>> void doEntity(
+      @NotNull GameHeaderModel headerModel,
+      int currentId,
+      @NotNull java.util.function.Function<GameHeaderModel, T> entityBuilder,
+      @NotNull EntityIndexWriteTransaction<T> transaction,
+      @NotNull java.util.function.Consumer<Integer> idSetter) {
+
+    int resolvedId;
+
+    if (currentId == -1) {
+      // ID not set, create/lookup from model data
+      T entity = entityBuilder.apply(headerModel);
+      resolvedId = transaction.getOrCreate(entity);
+    } else {
+      // ID is set, validate it exists in current database
+      try {
+        transaction.get(currentId); // Throws IllegalArgumentException if doesn't exist
+        // ID is valid, use it as-is
+        resolvedId = currentId;
+      } catch (IllegalArgumentException e) {
+        // Invalid ID reference
+        throw new MorphyInvalidDataException(
+            String.format("Game model contains invalid entity reference id %d which doesn't exist", currentId));
+      }
+    }
+
+    idSetter.accept(resolvedId);
+  }
+
+  /**
+   * Resolves a tournament ID (special case with TournamentExtra).
+   *
+   * @param model the game model
+   * @param currentId the tournament ID from the model's internal fields (-1 if not set)
+   * @param tournamentBuilder function to build Tournament from model data
+   * @param extraBuilder function to build TournamentExtra from model data
+   * @param idSetter consumer to set the resolved ID
+   * @throws MorphyInvalidDataException if currentId is set but references a non-existent tournament
+   */
+  private void doTournament(
+      @NotNull GameHeaderModel model,
+      int currentId,
+      @NotNull java.util.function.BiFunction<GameHeaderModel, GameAdapter, Tournament> tournamentBuilder,
+      @NotNull java.util.function.BiFunction<GameHeaderModel, GameAdapter, TournamentExtra> extraBuilder,
+      @NotNull java.util.function.Consumer<Integer> idSetter) {
+
+    int resolvedId;
+
+    if (currentId == -1) {
+      // ID not set, create/lookup from model data
+      Tournament tournament = tournamentBuilder.apply(model, gameAdapter());
+      TournamentExtra extra = extraBuilder.apply(model, gameAdapter());
+      resolvedId = tournamentTransaction().getOrCreate(tournament, extra);
+    } else {
+      // ID is set, validate it exists in current database
+      try {
+        tournamentTransaction().get(currentId); // Throws IllegalArgumentException if doesn't exist
+        // ID is valid, use it as-is
+        resolvedId = currentId;
+      } catch (IllegalArgumentException e) {
+        // Invalid ID reference
+        throw new MorphyInvalidDataException(
+            String.format("Game model contains invalid tournament reference id %d which doesn't exist", currentId));
+      }
+    }
+
+    idSetter.accept(resolvedId);
+  }
   /**
    * Replaces a text in the transaction
    *
@@ -362,7 +407,7 @@ public class DatabaseWriteTransaction extends DatabaseTransaction {
     ImmutableExtendedGameHeader.Builder extendedHeader = ImmutableExtendedGameHeader.builder();
 
     gameAdapter().setTextData(header, extendedHeader, model);
-    buildEntities(header, model.header());
+    resolveEntities(header, model.header());
 
     return putGame(
         gameId,
@@ -701,73 +746,79 @@ public class DatabaseWriteTransaction extends DatabaseTransaction {
   }
 
   /**
-   * Assigns entity id's to the game header builds based on data in the model. References to new
-   * entities will be created in their respective entity index transaction.
+   * Validates entity references and/or creates new entities base on the model data.
    *
-   * @param header the game header being created
-   * @param extendedHeader the extended header being created
+   * @param headerBuilder the game header being created
+   * @param extendedHeaderBuilder the extended header being created
    * @param headerModel the source data for the entities in the game being created
    */
-  void buildEntities(
-      @NotNull ImmutableGameHeader.Builder header,
-      @NotNull ImmutableExtendedGameHeader.Builder extendedHeader,
+  void resolveEntities(
+      @NotNull ImmutableGameHeader.Builder headerBuilder,
+      @NotNull ImmutableExtendedGameHeader.Builder extendedHeaderBuilder,
       @NotNull GameHeaderModel headerModel) {
-    int whitePlayerId = -1, blackPlayerId = -1, tournamentId = -1, annotatorId = -1, sourceId = -1;
-    int whiteTeamId = -1, blackTeamId = -1, gameTagId = -1;
 
-    if (headerModel.getField(GameAdapter.DATABASE_ID) == this.database()) {
-      // If the game model contains references within the same database, then prefer those
-      whitePlayerId = validIdReference(playerTransaction, headerModel, GameAdapter.WHITE_ID);
-      blackPlayerId = validIdReference(playerTransaction, headerModel, GameAdapter.BLACK_ID);
-      tournamentId = validIdReference(tournamentTransaction, headerModel, GameAdapter.EVENT_ID);
-      annotatorId = validIdReference(annotatorTransaction, headerModel, GameAdapter.ANNOTATOR_ID);
-      sourceId = validIdReference(sourceTransaction, headerModel, GameAdapter.SOURCE_ID);
-      whiteTeamId = validIdReference(teamTransaction, headerModel, GameAdapter.WHITE_TEAM_ID);
-      blackTeamId = validIdReference(teamTransaction, headerModel, GameAdapter.BLACK_TEAM_ID);
-      gameTagId = validIdReference(gameTagTransaction, headerModel, GameAdapter.GAME_TAG_ID);
+    // Resolve entity IDs: use existing ID if valid, otherwise create/lookup from header model
+    ImmutableGameHeader build = headerBuilder.build();
+    doEntity(
+            headerModel,
+            build.whitePlayerId(),
+            m -> Player.ofFullName(m.getWhite()),
+            playerTransaction(),
+            headerBuilder::whitePlayerId);
+
+    doEntity(
+            headerModel,
+            build.blackPlayerId(),
+            m -> Player.ofFullName(m.getBlack()),
+            playerTransaction(),
+            headerBuilder::blackPlayerId);
+
+    doTournament(
+            headerModel,
+            build.tournamentId(),
+            (m, adapter) -> adapter.toTournament(m),
+            (m, adapter) -> adapter.toTournamentExtra(m),
+            headerBuilder::tournamentId);
+
+    doEntity(
+            headerModel,
+            build.annotatorId(),
+            m -> Annotator.of(m.getAnnotator()),
+            annotatorTransaction(),
+            headerBuilder::annotatorId);
+
+    doEntity(
+            headerModel,
+            build.sourceId(),
+            m -> gameAdapter().toSource(m),
+            sourceTransaction(),
+            headerBuilder::sourceId);
+
+    if (headerModel.getWhiteTeam() != null) {
+      doEntity(
+              headerModel,
+              extendedHeaderBuilder.build().whiteTeamId(),
+              m -> Team.of(m.getWhiteTeam()),
+              teamTransaction(),
+              extendedHeaderBuilder::whiteTeamId);
     }
 
-    header
-        .whitePlayerId(
-            whitePlayerId >= 0
-                ? whitePlayerId
-                : playerTransaction.getOrCreate(Player.ofFullName(headerModel.getWhite())))
-        .blackPlayerId(
-            blackPlayerId >= 0
-                ? blackPlayerId
-                : playerTransaction.getOrCreate(Player.ofFullName(headerModel.getBlack())))
-        .tournamentId(
-            tournamentId >= 0
-                ? tournamentId
-                : tournamentTransaction.getOrCreate(
-                    gameAdapter().toTournament(headerModel),
-                    gameAdapter().toTournamentExtra(headerModel)))
-        .annotatorId(
-            annotatorId >= 0
-                ? annotatorId
-                : annotatorTransaction.getOrCreate(Annotator.of(headerModel.getAnnotator())))
-        .sourceId(
-            sourceId >= 0
-                ? sourceId
-                : sourceTransaction.getOrCreate(gameAdapter().toSource(headerModel)));
+    if (headerModel.getBlackTeam() != null) {
+      doEntity(
+              headerModel,
+              extendedHeaderBuilder.build().blackTeamId(),
+              m -> Team.of(m.getBlackTeam()),
+              teamTransaction(),
+              extendedHeaderBuilder::blackTeamId);
+    }
 
-    if (whiteTeamId >= 0 || headerModel.getWhiteTeam() != null) {
-      extendedHeader.whiteTeamId(
-          whiteTeamId >= 0
-              ? whiteTeamId
-              : teamTransaction.getOrCreate(Team.of(headerModel.getWhiteTeam())));
-    }
-    if (blackTeamId >= 0 || headerModel.getBlackTeam() != null) {
-      extendedHeader.blackTeamId(
-          blackTeamId >= 0
-              ? blackTeamId
-              : teamTransaction.getOrCreate(Team.of(headerModel.getBlackTeam())));
-    }
-    if (gameTagId >= 0 || headerModel.getGameTag() != null) {
-      extendedHeader.gameTagId(
-          gameTagId >= 0
-              ? gameTagId
-              : gameTagTransaction.getOrCreate(GameTag.of(headerModel.getGameTag())));
+    if (headerModel.getGameTag() != null) {
+      doEntity(
+              headerModel,
+              extendedHeaderBuilder.build().gameTagId(),
+              m -> GameTag.of(m.getGameTag()),
+              gameTagTransaction(),
+              extendedHeaderBuilder::gameTagId);
     }
   }
 
@@ -778,7 +829,7 @@ public class DatabaseWriteTransaction extends DatabaseTransaction {
    * @param header the game header being created
    * @param headerModel the source data for the entities in the game being created
    */
-  void buildEntities(
+  void resolveEntities(
       @NotNull ImmutableGameHeader.Builder header, @NotNull TextHeaderModel headerModel) {
     header
         .whitePlayerId(-1)
@@ -790,7 +841,7 @@ public class DatabaseWriteTransaction extends DatabaseTransaction {
         .sourceId(sourceTransaction.getOrCreate(Source.of(headerModel.source())));
   }
 
-  public void buildEntities(
+  public void resolveEntities(
       @NotNull ImmutableGameHeader.Builder header,
       @NotNull ImmutableExtendedGameHeader.Builder extendedHeader,
       @NotNull Game game) {
@@ -826,28 +877,6 @@ public class DatabaseWriteTransaction extends DatabaseTransaction {
             game.gameTag() == null ? -1 : gameTagTransaction.getOrCreate(game.gameTag()));
       }
     }
-  }
-
-  private <T extends Entity & Comparable<T>> int validIdReference(
-      @NotNull EntityIndexWriteTransaction<T> entityIndexWriteTransaction,
-      @NotNull GameHeaderModel headerModel,
-      @NotNull String fieldName) {
-    Object idRef = headerModel.getField(fieldName);
-    if (!(idRef instanceof Integer)) {
-      return -1;
-    }
-    int id = (int) idRef;
-    T entity = null;
-    try {
-      entity = entityIndexWriteTransaction.get(id);
-    } catch (IllegalArgumentException e) {
-      // Ignore, exception will be thrown below
-    }
-    if (entity == null) {
-      throw new MorphyInvalidDataException(
-          String.format("Game model contains reference %s %d which doesn't exist", fieldName, id));
-    }
-    return id;
   }
 
   /**
