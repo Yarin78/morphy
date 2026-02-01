@@ -262,10 +262,7 @@ public class GameAdapter {
       @NotNull ImmutableGameHeader.Builder gameHeader,
       @NotNull ImmutableExtendedGameHeader.Builder extendedGameHeader,
       @NotNull GameMovesModel model) {
-    // TODO: Add tests!!
-
     AnnotationStatistics stats = new AnnotationStatistics();
-
     collectStats(model.root(), stats);
 
     EnumSet<GameHeaderFlags> gameFlags = stats.getFlags();
@@ -303,7 +300,7 @@ public class GameAdapter {
         .materialPlayer1(finalMaterial.player1())
         .materialPlayer2(finalMaterial.player2())
         .materialTotal(total)
-        .endgameInfo(EndgameInfo.empty()); // TODO
+        .endgameInfo(EndgameInfo.empty()); // This is seemingly not used any longer
   }
 
   public void setHeaderTextData(
@@ -318,10 +315,6 @@ public class GameAdapter {
     if (headerModel.subRound() != 0) {
       gameHeader.subRound(headerModel.subRound());
     }
-
-    extendedGameHeader
-        .creationTimestamp(0) // TODO
-        .lastChangedTimestamp(0); // TODO
   }
 
   private void collectStats(
