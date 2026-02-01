@@ -6,6 +6,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import se.yarin.chess.GameHeaderModel;
 import se.yarin.chess.GameModel;
+import se.yarin.chess.pgn.PgnExporter;
 import se.yarin.morphy.Game;
 import se.yarin.morphy.games.filters.GameFilter;
 import se.yarin.morphy.service.MorphyServiceException;
@@ -23,6 +24,49 @@ public class GamesService {
 
     public GamesService(DatabaseService databaseService) {
         this.databaseService = databaseService;
+    }
+
+    /**
+     * Get game headers starting from a specific game ID (cursor-based pagination).
+     *
+     * @param databaseId The database ID to search in
+     * @param cursor     The cursor (game ID) to start from, null for beginning
+     * @param limit      Maximum number of games to return (max 1000)
+     * @return Paginated response with games and pagination info
+     */
+    public GameHeaderListResponse getGameHeadersPaginated(@NotNull String databaseId, Integer cursor, int limit) {
+        if (limit <= 0) {
+            log.warn("Limit must be positive, got: {}", limit);
+            return new GameHeaderListResponse(new ArrayList<>(), 0, null, false);
+        }
+        if (limit > 1000) {
+            log.warn("Too high limit provided ({}), reduced to 1000", limit);
+            limit = 1000;
+        }
+
+        final int finalLimit = limit;
+        // Fetch limit+1 to determine if there are more results
+        List<GameHeaderResponse> allGames =
+                databaseService.withReadTransaction(
+                        databaseId,
+                        txn ->
+                                txn.stream(cursor, null)
+                                        .filter(morphyGame -> !morphyGame.guidingText())
+                                        .limit(finalLimit + 1L)
+                                        .map(game -> new GameHeaderResponse(game.id(), game.getGameHeaderModel()))
+                                        .collect(Collectors.toList()));
+
+        boolean hasMore = allGames.size() > limit;
+        List<GameHeaderResponse> games = hasMore ? allGames.subList(0, limit) : allGames;
+
+        String nextCursor = null;
+        if (hasMore && !games.isEmpty()) {
+            // The next cursor is the ID of the last game we're returning + 1
+            int lastGameId = games.get(games.size() - 1).gameId();
+            nextCursor = String.valueOf(lastGameId + 1);
+        }
+
+        return new GameHeaderListResponse(games, games.size(), nextCursor, hasMore);
     }
 
     public List<GameHeaderModel> getGameHeaders(@NotNull String databaseId, int firstGameId, int limit) {
@@ -67,6 +111,31 @@ public class GamesService {
                 .limit(finalLimit)
                 .map(Game::getGameHeaderModel)
                 .collect(Collectors.toList()));
+    }
+
+    /**
+     * Get a game with moves in the specified format.
+     *
+     * @param databaseId The database ID
+     * @param gameId     The game ID
+     * @param format     The format for the moves (currently only "pgn" is supported)
+     * @return GameResponse with header and moves in the requested format
+     * @throws MorphyServiceException if the game cannot be retrieved or format is unsupported
+     */
+    public GameResponse getGameInFormat(@NotNull String databaseId, int gameId, @NotNull String format) {
+        if (!"pgn".equalsIgnoreCase(format)) {
+            throw new MorphyServiceException("Unsupported format: " + format + ". Only 'pgn' is currently supported.");
+        }
+
+        return databaseService.withReadTransaction(databaseId, txn -> {
+            Game game = txn.getGame(gameId);
+            GameModel model = game.getModel();
+
+            PgnExporter exporter = new PgnExporter();
+            String movesPgn = exporter.exportMovesOnly(model.moves());
+
+            return new GameResponse(gameId, model.header(), movesPgn, "pgn");
+        });
     }
 
     public GameModel getGame(@NotNull String databaseId, int gameId) {
