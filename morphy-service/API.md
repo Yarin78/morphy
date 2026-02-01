@@ -3,6 +3,32 @@
 ## Base URL
 `http://localhost:8080/api`
 
+## Getting Started
+
+When running the service locally, a test database is automatically available:
+
+**world-ch** - World Chess Championships database with historical championship games
+- Database ID: `world-ch`
+- Location: `test-databases/world-ch/`
+- Content: ~500 World Championship games
+
+Try it:
+```bash
+# Get database info
+curl http://localhost:8080/api/databases/world-ch
+
+# Get first 10 games
+curl http://localhost:8080/api/databases/world-ch/games?limit=10
+
+# Get total game count
+curl http://localhost:8080/api/databases/world-ch/games/count
+
+# Get a specific game (with moves)
+curl http://localhost:8080/api/databases/world-ch/games/1
+```
+
+---
+
 ## Database Management API
 
 ### List all databases
