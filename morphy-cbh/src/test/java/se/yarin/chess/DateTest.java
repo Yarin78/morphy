@@ -2,7 +2,7 @@ package se.yarin.chess;
 
 import org.junit.Test;
 
-import java.util.Calendar;
+import java.time.LocalDate;
 
 import static org.junit.Assert.assertEquals;
 
@@ -27,8 +27,9 @@ public class DateTest {
   public void testToday() {
     // Technically this test could fail if very unfortunate...
     Date today = Date.today();
-    assertEquals(Calendar.getInstance().get(Calendar.YEAR), today.year());
-    assertEquals(Calendar.getInstance().get(Calendar.MONTH) + 1, today.month());
-    assertEquals(Calendar.getInstance().get(Calendar.DAY_OF_MONTH), today.day());
+    LocalDate now = LocalDate.now();
+    assertEquals(now.getYear(), today.year());
+    assertEquals(now.getMonthValue(), today.month());
+    assertEquals(now.getDayOfMonth(), today.day());
   }
 }
