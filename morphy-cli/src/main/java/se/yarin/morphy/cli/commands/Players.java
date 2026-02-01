@@ -1,7 +1,7 @@
 package se.yarin.morphy.cli.commands;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
 import se.yarin.morphy.util.CBUtil;
 import se.yarin.morphy.Database;
@@ -15,7 +15,7 @@ import java.util.concurrent.Callable;
 @CommandLine.Command(name = "players", mixinStandardHelpOptions = true)
 public class Players extends BaseCommand implements Callable<Integer> {
 
-  private static final Logger log = LogManager.getLogger();
+  private static final Logger log = LoggerFactory.getLogger(Players.class);
 
   @CommandLine.Option(names = "--count", description = "Max number of players to list")
   int maxPlayers = 20;

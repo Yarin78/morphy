@@ -1,14 +1,14 @@
 package se.yarin.morphy.cli.games;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import se.yarin.morphy.Game;
 import se.yarin.morphy.cli.columns.GameColumn;
 
 import java.util.*;
 
 public class StdoutGamesSummary extends GameConsumerBase {
-  private static final Logger log = LogManager.getLogger();
+  private static final Logger log = LoggerFactory.getLogger(StdoutGamesSummary.class);
 
   private final boolean showTotal;
   private final Collection<GameColumn> columns;

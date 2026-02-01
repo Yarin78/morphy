@@ -1,9 +1,9 @@
 package se.yarin.morphy.cli.commands;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.core.config.Configuration;
-import org.apache.logging.log4j.core.config.ConfigurationFactory;
-import org.apache.logging.log4j.core.config.ConfigurationSource;
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.LoggerContext;
+import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
 
 import java.io.BufferedReader;
@@ -38,14 +38,10 @@ public abstract class BaseCommand {
 
   protected void setupGlobalOptions() {
     if (verbose != null) {
-      String level = verbose.length == 1 ? "info" : "debug";
-      org.apache.logging.log4j.core.LoggerContext context =
-          ((org.apache.logging.log4j.core.LoggerContext) LogManager.getContext(false));
-      ConfigurationSource configurationSource =
-          ConfigurationSource.fromResource("log4j2-" + level + ".xml", null);
-      Configuration configuration =
-          ConfigurationFactory.getInstance().getConfiguration(context, configurationSource);
-      context.reconfigure(configuration);
+      Level level = verbose.length == 1 ? Level.INFO : Level.DEBUG;
+      LoggerContext loggerContext = (LoggerContext) LoggerFactory.getILoggerFactory();
+      Logger logger = loggerContext.getLogger("se.yarin.morphy");
+      logger.setLevel(level);
     }
     Locale.setDefault(Locale.US);
   }

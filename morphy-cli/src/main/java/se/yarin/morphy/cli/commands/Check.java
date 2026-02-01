@@ -1,7 +1,7 @@
 package se.yarin.morphy.cli.commands;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
 import se.yarin.morphy.Database;
 import se.yarin.morphy.DatabaseMode;
@@ -16,7 +16,7 @@ import java.util.concurrent.Callable;
 @CommandLine.Command(name = "check", mixinStandardHelpOptions = true)
 public class Check extends BaseCommand implements Callable<Integer> {
 
-  private static final Logger log = LogManager.getLogger();
+  private static final Logger log = LoggerFactory.getLogger(Check.class);
 
   @CommandLine.Option(
       names = "--no-progress-bar",

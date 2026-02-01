@@ -1,7 +1,7 @@
 package se.yarin.morphy.cli.games;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import se.yarin.chess.GameModel;
 import se.yarin.morphy.Database;
 import se.yarin.morphy.DatabaseWriteTransaction;
@@ -14,7 +14,7 @@ import java.io.File;
 import java.io.IOException;
 
 public class DatabaseBuilder extends GameConsumerBase {
-  private static final Logger log = LogManager.getLogger();
+  private static final Logger log = LoggerFactory.getLogger(DatabaseBuilder.class);
 
   // If true, moves and annotations are added without parsing
   private static final boolean QUICK_ADD = true;

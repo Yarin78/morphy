@@ -1,7 +1,7 @@
 package se.yarin.morphy.cli.tournaments;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import se.yarin.morphy.Database;
 import se.yarin.morphy.cli.columns.GameColumn;
 import se.yarin.morphy.cli.columns.TournamentColumn;
@@ -11,7 +11,7 @@ import se.yarin.morphy.qqueries.QueryResult;
 import java.util.*;
 
 public class StdoutTournamentsSummary implements TournamentConsumer {
-  private static final Logger log = LogManager.getLogger();
+  private static final Logger log = LoggerFactory.getLogger(StdoutTournamentsSummary.class);
 
   private Database currentDatabase; // Ugly hack, remove when the raw columns have been removed
 

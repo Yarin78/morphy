@@ -1,7 +1,7 @@
 package se.yarin.morphy.cli.games;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import se.yarin.chess.annotations.AnnotationTransformer;
 import se.yarin.chess.pgn.PgnExporter;
 import se.yarin.chess.pgn.PgnFormatOptions;
@@ -15,7 +15,7 @@ import java.io.IOException;
 import java.util.Set;
 
 public class PgnDatabaseBuilder extends GameConsumerBase {
-  private static final Logger log = LogManager.getLogger();
+  private static final Logger log = LoggerFactory.getLogger(PgnDatabaseBuilder.class);
 
   private final FileWriter pgnFileWriter;
   private final PgnExporter exporter;
