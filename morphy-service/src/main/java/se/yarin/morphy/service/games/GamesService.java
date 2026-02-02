@@ -6,11 +6,12 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import se.yarin.chess.GameHeaderModel;
 import se.yarin.chess.GameModel;
-import se.yarin.chess.pgn.PgnExporter;
 import se.yarin.morphy.Game;
 import se.yarin.morphy.games.filters.GameFilter;
 import se.yarin.morphy.service.MorphyServiceException;
 import se.yarin.morphy.service.databases.DatabaseService;
+import se.yarin.morphy.service.games.dto.GameDto;
+import se.yarin.morphy.service.games.dto.GameDtoConverter;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -21,9 +22,11 @@ public class GamesService {
     private static final Logger log = LoggerFactory.getLogger(GamesService.class);
 
     private final DatabaseService databaseService;
+    private final GameDtoConverter gameDtoConverter;
 
-    public GamesService(DatabaseService databaseService) {
+    public GamesService(DatabaseService databaseService, GameDtoConverter gameDtoConverter) {
         this.databaseService = databaseService;
+        this.gameDtoConverter = gameDtoConverter;
     }
 
     /**
@@ -32,9 +35,12 @@ public class GamesService {
      * @param databaseId The database ID to search in
      * @param cursor     The cursor (game ID) to start from, null for beginning
      * @param limit      Maximum number of games to return (max 1000)
+     * @param includeMoves Whether to include game moves in the response
+     * @param includeText Whether to include game text/commentary in the response
      * @return Paginated response with games and pagination info
      */
-    public GameHeaderListResponse getGameHeadersPaginated(@NotNull String databaseId, Integer cursor, int limit) {
+    public GameHeaderListResponse getGameHeadersPaginated(
+            @NotNull String databaseId, Integer cursor, int limit, boolean includeMoves, boolean includeText) {
         if (limit <= 0) {
             log.warn("Limit must be positive, got: {}", limit);
             return new GameHeaderListResponse(new ArrayList<>(), 0, null, false);
@@ -46,95 +52,44 @@ public class GamesService {
 
         final int finalLimit = limit;
         // Fetch limit+1 to determine if there are more results
-        List<GameHeaderResponse> allGames =
+        // For list queries, use minimal event/source/team details for better performance
+        List<GameDto> allGames =
                 databaseService.withReadTransaction(
                         databaseId,
                         txn ->
                                 txn.stream(cursor, null)
                                         .filter(morphyGame -> !morphyGame.guidingText())
                                         .limit(finalLimit + 1L)
-                                        .map(game -> new GameHeaderResponse(game.id(), game.getGameHeaderModel()))
+                                        .map(game -> gameDtoConverter.toDto(game, includeMoves, includeText, false, false, false))
                                         .collect(Collectors.toList()));
 
         boolean hasMore = allGames.size() > limit;
-        List<GameHeaderResponse> games = hasMore ? allGames.subList(0, limit) : allGames;
+        List<GameDto> games = hasMore ? allGames.subList(0, limit) : allGames;
 
         String nextCursor = null;
         if (hasMore && !games.isEmpty()) {
             // The next cursor is the ID of the last game we're returning + 1
-            int lastGameId = games.get(games.size() - 1).gameId();
+            long lastGameId = games.get(games.size() - 1).id();
             nextCursor = String.valueOf(lastGameId + 1);
         }
 
         return new GameHeaderListResponse(games, games.size(), nextCursor, hasMore);
     }
 
-    public List<GameHeaderModel> getGameHeaders(@NotNull String databaseId, int firstGameId, int limit) {
-        return getGameHeaders(databaseId, firstGameId, null, null, limit);
-    }
-
     /**
-     * Get games matching the specified filter.
-     *
-     * @param databaseId The database ID to search in
-     * @param filter     The game filter to apply (null returns all games)
-     * @param limit      Maximum number of games to return (max 1000)
-     * @return List of game headers matching the filter
-     */
-    public List<GameHeaderModel> getGameHeaders(@NotNull String databaseId, GameFilter filter, int limit) {
-        return getGameHeaders(databaseId, null, null, filter, limit);
-    }
-
-    /**
-     * Get games with optional filtering and range selection.
-     *
-     * @param databaseId The database ID to search in
-     * @param startId    The first game ID (inclusive), null for start of database
-     * @param endId      The last game ID (exclusive), null for end of database
-     * @param filter     The game filter to apply, null returns all games
-     * @param limit      Maximum number of games to return (max 1000)
-     * @return List of game headers matching the criteria
-     */
-    public List<GameHeaderModel> getGameHeaders(@NotNull String databaseId, Integer startId, Integer endId, GameFilter filter, int limit) {
-        if (limit <= 0) {
-            log.warn("Limit must be positive, got: {}", limit);
-            return new ArrayList<>();
-        }
-        if (limit > 1000) {
-            log.warn("Too high limit provided ({}), reduced to 1000", limit);
-            limit = 1000;
-        }
-
-        final int finalLimit = limit;
-        return databaseService.withReadTransaction(databaseId, txn -> txn.stream(startId, endId, filter)
-                .filter(morphyGame -> !morphyGame.guidingText())
-                .limit(finalLimit)
-                .map(Game::getGameHeaderModel)
-                .collect(Collectors.toList()));
-    }
-
-    /**
-     * Get a game with moves in the specified format.
+     * Get a game as a DTO with optional moves and text.
      *
      * @param databaseId The database ID
      * @param gameId     The game ID
-     * @param format     The format for the moves (currently only "pgn" is supported)
-     * @return GameResponse with header and moves in the requested format
-     * @throws MorphyServiceException if the game cannot be retrieved or format is unsupported
+     * @param includeMoves Whether to include game moves in the response
+     * @param includeText Whether to include game text/commentary in the response
+     * @return GameDto with the requested information (includes full event/source/team details)
      */
-    public GameResponse getGameInFormat(@NotNull String databaseId, int gameId, @NotNull String format) {
-        if (!"pgn".equalsIgnoreCase(format)) {
-            throw new MorphyServiceException("Unsupported format: " + format + ". Only 'pgn' is currently supported.");
-        }
-
+    public GameDto getGameDto(@NotNull String databaseId, int gameId, boolean includeMoves, boolean includeText) {
         return databaseService.withReadTransaction(databaseId, txn -> {
             Game game = txn.getGame(gameId);
-            GameModel model = game.getModel();
-
-            PgnExporter exporter = new PgnExporter();
-            String movesPgn = exporter.exportMovesOnly(model.moves());
-
-            return new GameResponse(gameId, model.header(), movesPgn, "pgn");
+            // For single game queries, include full event/source/team details
+            return gameDtoConverter.toDto(game, includeMoves, includeText, true, true, true);
         });
     }
 
