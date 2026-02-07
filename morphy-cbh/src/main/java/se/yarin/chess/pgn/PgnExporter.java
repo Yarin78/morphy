@@ -184,8 +184,23 @@ public class PgnExporter {
         if (header.getEventDate() != null && !header.getEventDate().isUnset()) {
             writeTag(writer, "EventDate", header.getEventDate().toString(), null);
         }
-        if (header.getEventType() != null) {
-            writeTag(writer, "EventType", header.getEventType(), null);
+        if (header.getEventType() != null || header.getEventTimeControl() != null) {
+            String eventType = header.getEventType();
+            String timeControl = header.getEventTimeControl();
+
+            if (eventType != null) {
+                // EventType is set
+                if (timeControl != null && !timeControl.equalsIgnoreCase("normal")) {
+                    // Combine: "<type> (<timeControl>)"
+                    writeTag(writer, "EventType", eventType + " (" + timeControl + ")", null);
+                } else {
+                    // Just the type
+                    writeTag(writer, "EventType", eventType, null);
+                }
+            } else if (timeControl != null) {
+                // Only timeControl is set
+                writeTag(writer, "EventType", timeControl, null);
+            }
         }
         if (header.getEventRounds() != null) {
             writeTag(writer, "EventRounds", header.getEventRounds().toString(), null);
@@ -195,9 +210,6 @@ public class PgnExporter {
         }
         if (header.getEventCategory() != null) {
             writeTag(writer, "EventCategory", header.getEventCategory().toString(), null);
-        }
-        if (header.getEventTimeControl() != null) {
-            writeTag(writer, "EventTimeControl", header.getEventTimeControl(), null);
         }
 
         // Source stuff
@@ -213,12 +225,6 @@ public class PgnExporter {
         // TODO: SourceVersion
         // TODO: SourceVersionDate
         // TODO: SourceQuality
-
-
-        if (header.getEventTimeControl() != null) {
-            writeTag(writer, "TimeControl", header.getEventTimeControl(), null);
-        }
-
 
         if (header.getWhiteTeam() != null) {
             writeTag(writer, "WhiteTeam", header.getWhiteTeam(), null);

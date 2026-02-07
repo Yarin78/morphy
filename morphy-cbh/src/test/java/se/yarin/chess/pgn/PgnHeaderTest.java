@@ -55,7 +55,7 @@ public class PgnHeaderTest {
                 [ECO "C42"]
                 [Annotator "Test Annotator"]
                 [EventCountry "USA"]
-                [TimeControl "40/7200:3600"]
+                [EventType "blitz"]
 
                 1. e4 e5 *
                 """;
@@ -68,7 +68,8 @@ public class PgnHeaderTest {
         assertEquals(new Eco("C42"), header.getEco());
         assertEquals("Test Annotator", header.getAnnotator());
         assertEquals("USA", header.getEventCountry());
-        assertEquals("40/7200:3600", header.getEventTimeControl());
+        assertNull(header.getEventType());
+        assertEquals("blitz", header.getEventTimeControl());
     }
 
     @Test
@@ -167,6 +168,167 @@ public class PgnHeaderTest {
             
              1-0
             """, pgn);
+    }
+
+    @Test
+    public void testEventTypeWithTimeControl() throws PgnFormatException {
+        // Test parsing of combined EventType with TimeControl
+        String pgn = """
+                [Event "Test"]
+                [Site "?"]
+                [Date "????.??.??"]
+                [Round "?"]
+                [White "?"]
+                [Black "?"]
+                [Result "*"]
+                [EventType "swiss (blitz)"]
+
+                1. e4 *
+                """;
+
+        GameModel game = new PgnParser().parseGame(pgn);
+        GameHeaderModel header = game.header();
+
+        assertEquals("swiss", header.getEventType());
+        assertEquals("blitz", header.getEventTimeControl());
+    }
+
+    @Test
+    public void testEventTypeWithoutTimeControl() throws PgnFormatException {
+        // Test parsing of EventType without TimeControl
+        String pgn = """
+                [Event "Test"]
+                [Site "?"]
+                [Date "????.??.??"]
+                [Round "?"]
+                [White "?"]
+                [Black "?"]
+                [Result "*"]
+                [EventType "swiss"]
+
+                1. e4 *
+                """;
+
+        GameModel game = new PgnParser().parseGame(pgn);
+        GameHeaderModel header = game.header();
+
+        assertEquals("swiss", header.getEventType());
+        assertNull(header.getEventTimeControl());
+    }
+
+    @Test
+    public void testEventTypeExportWithTimeControl() throws PgnFormatException {
+        // Test export of combined EventType with TimeControl
+        GameModel game = new GameModel();
+        game.header().setEvent("Test");
+        game.header().setEventSite("?");
+        game.header().setDate(Date.unset());
+        game.header().setRound(1);
+        game.header().setWhite("?");
+        game.header().setBlack("?");
+        game.header().setResult(GameResult.NOT_FINISHED);
+        game.header().setEventType("swiss");
+        game.header().setEventTimeControl("blitz");
+
+        PgnExporter exporter = new PgnExporter();
+        String pgn = exporter.exportGame(game);
+
+        assertTrue(pgn.contains("[EventType \"swiss (blitz)\"]"));
+        assertFalse(pgn.contains("[EventTimeControl"));
+        assertFalse(pgn.contains("[TimeControl"));
+    }
+
+    @Test
+    public void testEventTypeExportWithNormalTimeControl() throws PgnFormatException {
+        // Test export where TimeControl is "normal" (should be omitted)
+        GameModel game = new GameModel();
+        game.header().setEvent("Test");
+        game.header().setEventSite("?");
+        game.header().setDate(Date.unset());
+        game.header().setRound(1);
+        game.header().setWhite("?");
+        game.header().setBlack("?");
+        game.header().setResult(GameResult.NOT_FINISHED);
+        game.header().setEventType("swiss");
+        game.header().setEventTimeControl("normal");
+
+        PgnExporter exporter = new PgnExporter();
+        String pgn = exporter.exportGame(game);
+
+        assertTrue(pgn.contains("[EventType \"swiss\"]"));
+        assertFalse(pgn.contains("(normal)"));
+    }
+
+    @Test
+    public void testEventTimeControlOnly() throws PgnFormatException {
+        // Test export where only TimeControl is set (no EventType)
+        GameModel game = new GameModel();
+        game.header().setEvent("Test");
+        game.header().setEventSite("?");
+        game.header().setDate(Date.unset());
+        game.header().setRound(1);
+        game.header().setWhite("?");
+        game.header().setBlack("?");
+        game.header().setResult(GameResult.NOT_FINISHED);
+        game.header().setEventTimeControl("blitz");
+
+        PgnExporter exporter = new PgnExporter();
+        String pgn = exporter.exportGame(game);
+
+        assertTrue(pgn.contains("[EventType \"blitz\"]"));
+        assertFalse(pgn.contains("(blitz)"));
+
+        // Parse back and verify
+        GameModel game2 = new PgnParser().parseGame(pgn);
+        assertNull(game2.header().getEventType());
+        assertEquals("blitz", game2.header().getEventTimeControl());
+    }
+
+    @Test
+    public void testEventTypeUnknownValue() throws PgnFormatException {
+        // Test parsing where EventType contains an unknown value (not a time control)
+        String pgn = """
+                [Event "Test"]
+                [Site "?"]
+                [Date "????.??.??"]
+                [Round "?"]
+                [White "?"]
+                [Black "?"]
+                [Result "*"]
+                [EventType "knockout"]
+
+                1. e4 *
+                """;
+
+        GameModel game = new PgnParser().parseGame(pgn);
+        GameHeaderModel header = game.header();
+
+        assertEquals("knockout", header.getEventType());
+        assertNull(header.getEventTimeControl());
+    }
+
+    @Test
+    public void testEventTypeRoundTrip() throws PgnFormatException {
+        // Test round-trip with EventType and TimeControl
+        GameModel game = new GameModel();
+        game.header().setEvent("Test");
+        game.header().setEventSite("?");
+        game.header().setDate(Date.unset());
+        game.header().setRound(1);
+        game.header().setWhite("?");
+        game.header().setBlack("?");
+        game.header().setResult(GameResult.NOT_FINISHED);
+        game.header().setEventType("swiss");
+        game.header().setEventTimeControl("rapid");
+
+        PgnExporter exporter = new PgnExporter();
+        String exportedPgn = exporter.exportGame(game);
+
+        // Parse back
+        GameModel game2 = new PgnParser().parseGame(exportedPgn);
+
+        assertEquals("swiss", game2.header().getEventType());
+        assertEquals("rapid", game2.header().getEventTimeControl());
     }
 
     @Test

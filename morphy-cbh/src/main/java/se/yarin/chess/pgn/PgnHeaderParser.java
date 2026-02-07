@@ -5,6 +5,7 @@ import se.yarin.chess.Date;
 import se.yarin.chess.Eco;
 import se.yarin.chess.GameHeaderModel;
 import se.yarin.chess.GameResult;
+import se.yarin.morphy.entities.TournamentTimeControl;
 
 /**
  * Parser for PGN tag pairs (header section).
@@ -37,13 +38,29 @@ public class PgnHeaderParser {
             case "Annotator" -> header.setAnnotator(tagValue);
             case "EventDate" -> header.setEventDate(parseDate(tagValue));
             case "EventCountry" -> header.setEventCountry(tagValue);
-            case "TimeControl" -> header.setEventTimeControl(tagValue);
             case "WhiteTeam" -> header.setWhiteTeam(tagValue);
             case "BlackTeam" -> header.setBlackTeam(tagValue);
             case "Source" -> header.setSource(tagValue);
             case "SourceTitle" -> header.setSourceTitle(tagValue);
             case "SourceDate" -> header.setSourceDate(parseDate(tagValue));
-            case "EventType" -> header.setEventType(tagValue);
+            case "EventType" -> {
+                // EventType can be in format "<type> (<timeControl>)" or just "<type>" or just "<timeControl>"
+                int parenIndex = tagValue.indexOf(" (");
+                if (parenIndex > 0 && tagValue.endsWith(")")) {
+                    // Format: "<type> (<timeControl>)"
+                    String eventType = tagValue.substring(0, parenIndex);
+                    String timeControl = tagValue.substring(parenIndex + 2, tagValue.length() - 1);
+                    header.setEventType(eventType);
+                    header.setEventTimeControl(timeControl);
+                } else {
+                    // Single value - check if it's a known time control
+                    if (isKnownTimeControl(tagValue)) {
+                        header.setEventTimeControl(tagValue);
+                    } else {
+                        header.setEventType(tagValue);
+                    }
+                }
+            }
             case "EventRounds" -> header.setEventRounds(parseInteger(tagValue, tagName));
             case "EventCategory" -> header.setEventCategory(parseInteger(tagValue, tagName));
 
@@ -138,6 +155,18 @@ public class PgnHeaderParser {
             // Invalid ECO code, return unset
             return Eco.unset();
         }
+    }
+
+    /**
+     * Checks if a value is a known time control.
+     */
+    private boolean isKnownTimeControl(String value) {
+        for (TournamentTimeControl ttc : TournamentTimeControl.values()) {
+            if (ttc.getName().equalsIgnoreCase(value)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
