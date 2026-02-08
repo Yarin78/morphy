@@ -39,7 +39,7 @@ public class GamesController {
             @RequestParam(defaultValue = "false") boolean includeMoves,
             @RequestParam(defaultValue = "false") boolean includeText) {
         GameHeaderListResponse response =
-                gamesService.getGameHeadersPaginated(databaseId, cursor, limit, includeMoves, includeText);
+                gamesService.getGames(databaseId, cursor, limit, includeMoves, includeText);
         return ResponseEntity.ok(response);
     }
 
@@ -59,7 +59,7 @@ public class GamesController {
             @RequestParam(defaultValue = "true") boolean includeMoves,
             @RequestParam(defaultValue = "false") boolean includeText) {
         try {
-            GameDto game = gamesService.getGameDto(databaseId, gameId, includeMoves, includeText);
+            GameDto game = gamesService.getGame(databaseId, gameId, includeMoves, includeText);
             return ResponseEntity.ok(game);
         } catch (MorphyServiceException e) {
             log.error("Error retrieving game {} from database '{}': {}", gameId, databaseId, e.getMessage());
@@ -80,5 +80,59 @@ public class GamesController {
     public ResponseEntity<GameCountResponse> getGameCount(@PathVariable String databaseId) {
         int count = gamesService.getGameCount(databaseId);
         return ResponseEntity.ok(new GameCountResponse(count));
+    }
+
+    /**
+     * Add a new game to the database.
+     *
+     * @param databaseId The database ID
+     * @param gameDto    The game data to add
+     * @return The created game with its assigned ID
+     */
+    @PostMapping
+    public ResponseEntity<GameDto> addGame(
+            @PathVariable String databaseId,
+            @RequestBody GameDto gameDto) {
+        try {
+            GameDto createdGame = gamesService.addGame(databaseId, gameDto);
+            return ResponseEntity.status(201).body(createdGame);
+        } catch (IllegalArgumentException e) {
+            log.error("Invalid game data: {}", e.getMessage());
+            return ResponseEntity.badRequest().build();
+        } catch (MorphyServiceException e) {
+            log.error("Error adding game to database '{}': {}", databaseId, e.getMessage());
+            return ResponseEntity.internalServerError().build();
+        } catch (Exception e) {
+            log.error("Unexpected error adding game to database '{}'", databaseId, e);
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    /**
+     * Replace an existing game in the database.
+     *
+     * @param databaseId The database ID
+     * @param gameId     The ID of the game to replace
+     * @param gameDto    The new game data
+     * @return The updated game
+     */
+    @PutMapping("/{gameId}")
+    public ResponseEntity<GameDto> replaceGame(
+            @PathVariable String databaseId,
+            @PathVariable int gameId,
+            @RequestBody GameDto gameDto) {
+        try {
+            GameDto updatedGame = gamesService.replaceGame(databaseId, gameId, gameDto);
+            return ResponseEntity.ok(updatedGame);
+        } catch (IllegalArgumentException e) {
+            log.error("Invalid game data: {}", e.getMessage());
+            return ResponseEntity.badRequest().build();
+        } catch (MorphyServiceException e) {
+            log.error("Error replacing game {} in database '{}': {}", gameId, databaseId, e.getMessage());
+            return ResponseEntity.internalServerError().build();
+        } catch (Exception e) {
+            log.error("Unexpected error replacing game {} in database '{}'", gameId, databaseId, e);
+            return ResponseEntity.notFound().build();
+        }
     }
 }

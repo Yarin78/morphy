@@ -4,14 +4,13 @@ import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-import se.yarin.chess.GameHeaderModel;
 import se.yarin.chess.GameModel;
 import se.yarin.morphy.Game;
-import se.yarin.morphy.games.filters.GameFilter;
 import se.yarin.morphy.service.MorphyServiceException;
 import se.yarin.morphy.service.databases.DatabaseService;
 import se.yarin.morphy.service.games.dto.GameDto;
 import se.yarin.morphy.service.games.dto.GameDtoConverter;
+import se.yarin.morphy.service.games.dto.GameDtoImporter;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -23,24 +22,30 @@ public class GamesService {
 
     private final DatabaseService databaseService;
     private final GameDtoConverter gameDtoConverter;
+    private final GameDtoImporter gameDtoImporter;
 
-    public GamesService(DatabaseService databaseService, GameDtoConverter gameDtoConverter) {
+    public GamesService(DatabaseService databaseService, GameDtoConverter gameDtoConverter, GameDtoImporter gameDtoImporter) {
         this.databaseService = databaseService;
         this.gameDtoConverter = gameDtoConverter;
+        this.gameDtoImporter = gameDtoImporter;
     }
 
     /**
      * Get game headers starting from a specific game ID (cursor-based pagination).
      *
-     * @param databaseId The database ID to search in
-     * @param cursor     The cursor (game ID) to start from, null for beginning
-     * @param limit      Maximum number of games to return (max 1000)
+     * @param databaseId   The database ID to search in
+     * @param cursor       The cursor (game ID) to start from, null for beginning
+     * @param limit        Maximum number of games to return (max 1000)
      * @param includeMoves Whether to include game moves in the response
-     * @param includeText Whether to include game text/commentary in the response
+     * @param includeText  Whether to include game text/commentary in the response
      * @return Paginated response with games and pagination info
      */
-    public GameHeaderListResponse getGameHeadersPaginated(
-            @NotNull String databaseId, Integer cursor, int limit, boolean includeMoves, boolean includeText) {
+    public GameHeaderListResponse getGames(
+            @NotNull String databaseId,
+            Integer cursor,
+            int limit,
+            boolean includeMoves,
+            boolean includeText) {
         if (limit <= 0) {
             log.warn("Limit must be positive, got: {}", limit);
             return new GameHeaderListResponse(new ArrayList<>(), 0, null, false);
@@ -79,66 +84,18 @@ public class GamesService {
     /**
      * Get a game as a DTO with optional moves and text.
      *
-     * @param databaseId The database ID
-     * @param gameId     The game ID
+     * @param databaseId   The database ID
+     * @param gameId       The game ID
      * @param includeMoves Whether to include game moves in the response
-     * @param includeText Whether to include game text/commentary in the response
+     * @param includeText  Whether to include game text/commentary in the response
      * @return GameDto with the requested information (includes full event/source/team details)
      */
-    public GameDto getGameDto(@NotNull String databaseId, int gameId, boolean includeMoves, boolean includeText) {
+    public GameDto getGame(@NotNull String databaseId, int gameId, boolean includeMoves, boolean includeText) {
         return databaseService.withReadTransaction(databaseId, txn -> {
             Game game = txn.getGame(gameId);
             // For single game queries, include full event/source/team details
             return gameDtoConverter.toDto(game, includeMoves, includeText, true, true, true);
         });
-    }
-
-    public GameModel getGame(@NotNull String databaseId, int gameId) {
-        return databaseService.withReadTransaction(databaseId, txn -> {
-            Game game = txn.getGame(gameId);
-            return game.getModel();
-        });
-    }
-
-    /**
-     * Add a game to the specified database.
-     *
-     * @param databaseId The database ID to add the game to
-     * @param gameModel  The game model to add
-     * @return The ID of the newly added game
-     * @throws MorphyServiceException if the game cannot be added
-     */
-    public int addGameToDatabase(@NotNull String databaseId, @NotNull GameModel gameModel) {
-        try {
-            return databaseService.withWriteTransaction(databaseId, txn -> {
-                Game game = txn.addGame(gameModel);
-                log.info("Successfully added game {} to database '{}'", game.id(), databaseId);
-                return game.id();
-            });
-        } catch (Exception e) {
-            throw new MorphyServiceException("Failed to add game to database '" + databaseId + "'", e);
-        }
-    }
-
-    /**
-     * Replace an existing game in the specified database.
-     *
-     * @param databaseId The database ID to replace the game in
-     * @param gameId     The game ID to replace
-     * @param gameModel  The new game model to replace with
-     * @return The ID of the replaced game
-     * @throws MorphyServiceException if the game cannot be replaced
-     */
-    public int replaceGameInDatabase(@NotNull String databaseId, int gameId, @NotNull GameModel gameModel) {
-        try {
-            return databaseService.withWriteTransaction(databaseId, txn -> {
-                Game game = txn.replaceGame(gameId, gameModel);
-                log.info("Successfully replaced game {} in database '{}'", game.id(), databaseId);
-                return game.id();
-            });
-        } catch (Exception e) {
-            throw new MorphyServiceException("Failed to replace game " + gameId + " in database '" + databaseId + "'", e);
-        }
     }
 
     /**
@@ -152,31 +109,57 @@ public class GamesService {
     }
 
     /**
-     * Add multiple games to the specified database in a single transaction.
+     * Add a game from a DTO to the specified database.
      *
-     * @param databaseId The database ID to add games to
-     * @param gameModels The list of game models to add
-     * @return List of game IDs of the added games
-     * @throws MorphyServiceException if any game cannot be added
+     * @param databaseId The database ID to add the game to
+     * @param gameDto    The game DTO to add
+     * @return The complete GameDto of the added game (includes full event/source/team details)
+     * @throws MorphyServiceException   if the game cannot be added
+     * @throws IllegalArgumentException if the DTO is invalid or represents guiding text
      */
-    public List<Integer> addGamesToDatabase(@NotNull String databaseId, @NotNull List<GameModel> gameModels) {
-        if (gameModels.isEmpty()) {
-            log.warn("No games provided to add");
-            return new ArrayList<>();
-        }
-
+    public GameDto addGame(@NotNull String databaseId, @NotNull GameDto gameDto) {
         try {
-            return databaseService.withWriteTransaction(databaseId, txn -> {
-                List<Integer> gameIds = new ArrayList<>();
-                for (GameModel gameModel : gameModels) {
-                    Game game = txn.addGame(gameModel);
-                    gameIds.add(game.id());
-                }
-                log.info("Successfully added {} game(s) to database '{}'", gameIds.size(), databaseId);
-                return gameIds;
+            GameModel gameModel = gameDtoImporter.toGameModel(gameDto);
+            int gameId = databaseService.withWriteTransaction(databaseId, txn -> {
+                Game game = txn.addGame(gameModel);
+                log.info("Successfully added game {} to database '{}'", game.id(), databaseId);
+                return game.id();
             });
+            return getGame(databaseId, gameId, true, true);
+        } catch (IllegalArgumentException e) {
+            throw e;  // Rethrow validation errors
+        } catch (MorphyServiceException e) {
+            throw e;  // Rethrow service errors
         } catch (Exception e) {
-            throw new MorphyServiceException("Failed to add games to database '" + databaseId + "'", e);
+            throw new MorphyServiceException("Failed to add game to database '" + databaseId + "'", e);
+        }
+    }
+
+    /**
+     * Replace a game from a DTO in the specified database.
+     *
+     * @param databaseId The database ID to replace the game in
+     * @param gameId     The game ID to replace
+     * @param gameDto    The game DTO to replace with
+     * @return The complete GameDto of the replaced game (includes full event/source/team details)
+     * @throws MorphyServiceException   if the game cannot be replaced
+     * @throws IllegalArgumentException if the DTO is invalid or represents guiding text
+     */
+    public GameDto replaceGame(@NotNull String databaseId, int gameId, @NotNull GameDto gameDto) {
+        try {
+            GameModel gameModel = gameDtoImporter.toGameModel(gameDto);
+            databaseService.withWriteTransaction(databaseId, txn -> {
+                Game game = txn.replaceGame(gameId, gameModel);
+                log.info("Successfully replaced game {} in database '{}'", game.id(), databaseId);
+                return game.id();
+            });
+            return getGame(databaseId, gameId, true, true);
+        } catch (IllegalArgumentException e) {
+            throw e;  // Rethrow validation errors
+        } catch (MorphyServiceException e) {
+            throw e;  // Rethrow service errors
+        } catch (Exception e) {
+            throw new MorphyServiceException("Failed to replace game " + gameId + " in database '" + databaseId + "'", e);
         }
     }
 }
