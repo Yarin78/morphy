@@ -11,29 +11,45 @@ import se.yarin.morphy.service.tournaments.dto.TournamentDto;
 /**
  * Data Transfer Object for a chess game.
  *
- * <p>This DTO contains all game information including metadata, player details, tournament information,
- * and optionally the game moves and text commentary.
+ * <p>This DTO contains all game information including metadata, player details, tournament
+ * information, and optionally the game moves and text commentary.
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonPropertyOrder({
-    "id", "type",
-    "whiteId", "white", "whiteElo", "blackId", "black", "blackElo",
-    "whiteTeam", "blackTeam",
-    "result", "date", "eco", "round", "subRound", "lineEvaluation",
-    "tournament", "source", "annotator", "gameTag",
-    "moves", "text"
+  "id",
+  "type",
+  "whiteId",
+  "white",
+  "whiteElo",
+  "blackId",
+  "black",
+  "blackElo",
+  "whiteTeam",
+  "blackTeam",
+  "result",
+  "date",
+  "eco",
+  "round",
+  "subRound",
+  "lineEvaluation",
+  "tournament",
+  "source",
+  "annotator",
+  "gameTag",
+  "moves",
+  "text"
 })
 public record GameDto(
     // Game identity
     Long id,
-    String type,  // "game" for regular chess game, "text" for guiding text
+    String type, // "game" for regular chess game, "text" for guiding text
 
     // Player information (white and black are mandatory PGN fields)
     @Nullable Long whiteId,
-    String white,  // Mandatory PGN field - empty string if not set
+    String white, // Mandatory PGN field - empty string if not set
     @Nullable Integer whiteElo,
     @Nullable Long blackId,
-    String black,  // Mandatory PGN field - empty string if not set
+    String black, // Mandatory PGN field - empty string if not set
     @Nullable Integer blackElo,
 
     // Team information
@@ -41,8 +57,8 @@ public record GameDto(
     @Nullable TeamDetailsDto blackTeam,
 
     // Game metadata (result and date are mandatory PGN fields)
-    GameResult result,  // Mandatory PGN field
-    Date date,  // Mandatory PGN field (Date class handles unset dates as ????.??.??)
+    GameResult result, // Mandatory PGN field
+    Date date, // Mandatory PGN field (Date class handles unset dates as ????.??.??)
     @Nullable String eco,
     @Nullable Integer round,
     @Nullable Integer subRound,

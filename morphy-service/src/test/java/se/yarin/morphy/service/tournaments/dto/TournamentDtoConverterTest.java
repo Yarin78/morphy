@@ -8,8 +8,8 @@ import se.yarin.morphy.entities.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Roundtrip test for TournamentDtoConverter. Validates that Tournament entities can be converted
- * to DTOs and back without losing data.
+ * Roundtrip test for TournamentDtoConverter. Validates that Tournament entities can be converted to
+ * DTOs and back without losing data.
  */
 class TournamentDtoConverterTest {
 
@@ -160,15 +160,13 @@ class TournamentDtoConverterTest {
 
     TournamentDto rapidDto = converter.toDto(rapidTournament, TournamentExtra.empty());
     assertEquals("rapid", rapidDto.timeControl());
-    assertEquals(
-        TournamentTimeControl.RAPID, converter.toTournament(rapidDto).timeControl());
+    assertEquals(TournamentTimeControl.RAPID, converter.toTournament(rapidDto).timeControl());
   }
 
   @Test
   void testEmptyStringsHandling() {
     // Test that empty strings in DTO become null in DTO output
-    Tournament tournament =
-        ImmutableTournament.builder().title("").place("").build();
+    Tournament tournament = ImmutableTournament.builder().title("").place("").build();
 
     TournamentDto dto = converter.toDto(tournament, TournamentExtra.empty());
 
@@ -198,11 +196,9 @@ class TournamentDtoConverterTest {
   @Test
   void testUnsetDatesHandling() {
     // Test that unset dates are handled correctly
-    Tournament tournament =
-        ImmutableTournament.builder().title("Test").date(Date.unset()).build();
+    Tournament tournament = ImmutableTournament.builder().title("Test").date(Date.unset()).build();
 
-    TournamentExtra extra =
-        ImmutableTournamentExtra.builder().endDate(Date.unset()).build();
+    TournamentExtra extra = ImmutableTournamentExtra.builder().endDate(Date.unset()).build();
 
     TournamentDto dto = converter.toDto(tournament, extra);
 
@@ -237,8 +233,7 @@ class TournamentDtoConverterTest {
   }
 
   /** Compares tournament extra fields. */
-  private void assertTournamentExtraFieldsEqual(
-      TournamentExtra expected, TournamentExtra actual) {
+  private void assertTournamentExtraFieldsEqual(TournamentExtra expected, TournamentExtra actual) {
     assertEquals(expected.endDate(), actual.endDate(), "End date mismatch");
   }
 }

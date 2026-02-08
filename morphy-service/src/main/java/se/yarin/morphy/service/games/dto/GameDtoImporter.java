@@ -34,7 +34,8 @@ public class GameDtoImporter {
    */
   public GameModel toGameModel(@NotNull GameDto dto) {
     if ("text".equals(dto.type())) {
-      throw new IllegalArgumentException("Cannot convert guiding text to GameModel. Use toTextModel() instead.");
+      throw new IllegalArgumentException(
+          "Cannot convert guiding text to GameModel. Use toTextModel() instead.");
     }
 
     GameHeaderModel headerModel = buildGameHeaderModel(dto);
@@ -50,7 +51,8 @@ public class GameDtoImporter {
    */
   public TextModel toTextModel(@NotNull GameDto dto) {
     if (!"text".equals(dto.type())) {
-      throw new IllegalArgumentException("Cannot convert regular game to TextModel. Use toGameModel() instead.");
+      throw new IllegalArgumentException(
+          "Cannot convert regular game to TextModel. Use toGameModel() instead.");
     }
 
     GameHeaderModel headerModel = buildGameHeaderModel(dto);
@@ -58,8 +60,7 @@ public class GameDtoImporter {
   }
 
   /**
-   * Builds a GameHeaderModel from a GameDto.
-   * Stores entity IDs in internal fields when present.
+   * Builds a GameHeaderModel from a GameDto. Stores entity IDs in internal fields when present.
    *
    * @param dto the GameDto
    * @return the GameHeaderModel
@@ -97,13 +98,15 @@ public class GameDtoImporter {
       if (dto.whiteTeam() != null && dto.whiteTeam().title() != null) {
         headerModel.setWhiteTeam(dto.whiteTeam().title());
         if (dto.whiteTeam().id() != null) {
-          headerModel.setField(se.yarin.morphy.GameAdapter.WHITE_TEAM_ID, dto.whiteTeam().id().intValue());
+          headerModel.setField(
+              se.yarin.morphy.GameAdapter.WHITE_TEAM_ID, dto.whiteTeam().id().intValue());
         }
       }
       if (dto.blackTeam() != null && dto.blackTeam().title() != null) {
         headerModel.setBlackTeam(dto.blackTeam().title());
         if (dto.blackTeam().id() != null) {
-          headerModel.setField(se.yarin.morphy.GameAdapter.BLACK_TEAM_ID, dto.blackTeam().id().intValue());
+          headerModel.setField(
+              se.yarin.morphy.GameAdapter.BLACK_TEAM_ID, dto.blackTeam().id().intValue());
         }
       }
     }
@@ -139,7 +142,8 @@ public class GameDtoImporter {
         headerModel.setEvent(dto.tournament().name());
       }
       if (dto.tournament().id() != null) {
-        headerModel.setField(se.yarin.morphy.GameAdapter.EVENT_ID, dto.tournament().id().intValue());
+        headerModel.setField(
+            se.yarin.morphy.GameAdapter.EVENT_ID, dto.tournament().id().intValue());
       }
       if (dto.tournament().startDate() != null) {
         headerModel.setEventDate(dto.tournament().startDate());
@@ -186,7 +190,8 @@ public class GameDtoImporter {
     // Set annotator information
     if (dto.annotator() != null) {
       if (dto.annotator().id() != null) {
-        headerModel.setField(se.yarin.morphy.GameAdapter.ANNOTATOR_ID, dto.annotator().id().intValue());
+        headerModel.setField(
+            se.yarin.morphy.GameAdapter.ANNOTATOR_ID, dto.annotator().id().intValue());
       }
       if (dto.annotator().name() != null) {
         headerModel.setAnnotator(dto.annotator().name());
@@ -196,7 +201,8 @@ public class GameDtoImporter {
     // Set game tag information
     if (dto.gameTag() != null) {
       if (dto.gameTag().id() != null) {
-        headerModel.setField(se.yarin.morphy.GameAdapter.GAME_TAG_ID, dto.gameTag().id().intValue());
+        headerModel.setField(
+            se.yarin.morphy.GameAdapter.GAME_TAG_ID, dto.gameTag().id().intValue());
       }
       if (dto.gameTag().title() != null) {
         headerModel.setGameTag(dto.gameTag().title());
@@ -213,9 +219,7 @@ public class GameDtoImporter {
    * @param dto the GameDto
    * @return the GameModel
    */
-  private GameModel buildGameModel(
-      @NotNull GameHeaderModel headerModel,
-      @NotNull GameDto dto) {
+  private GameModel buildGameModel(@NotNull GameHeaderModel headerModel, @NotNull GameDto dto) {
 
     GameMovesModel movesModel;
 
@@ -223,7 +227,8 @@ public class GameDtoImporter {
     if (dto.moves() != null && dto.moves().pgn() != null && !dto.moves().pgn().isEmpty()) {
       try {
         // Parse the moves-only PGN directly
-        PgnParser parser = new PgnParser((AnnotationConverter.getRoundTripConverter())::convertToChessBase);
+        PgnParser parser =
+            new PgnParser((AnnotationConverter.getRoundTripConverter())::convertToChessBase);
         movesModel = parser.parseMoves(dto.moves().pgn());
 
       } catch (PgnFormatException e) {
@@ -247,9 +252,7 @@ public class GameDtoImporter {
    * @param dto the GameDto
    * @return the TextModel
    */
-  private TextModel buildTextModel(
-      @NotNull GameHeaderModel headerModel,
-      @NotNull GameDto dto) {
+  private TextModel buildTextModel(@NotNull GameHeaderModel headerModel, @NotNull GameDto dto) {
 
     // Build TextHeaderModel from the GameHeaderModel data
     ImmutableTextHeaderModel.Builder textHeaderBuilder = ImmutableTextHeaderModel.builder();
@@ -284,10 +287,6 @@ public class GameDtoImporter {
     }
 
     // Build and return TextModel
-    return ImmutableTextModel.builder()
-        .header(textHeader)
-        .contents(textContents)
-        .build();
+    return ImmutableTextModel.builder().header(textHeader).contents(textContents).build();
   }
-
 }

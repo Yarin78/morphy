@@ -27,11 +27,11 @@ import java.io.IOException;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Roundtrip test for GameDto conversion. This is a bit messy
- * since the GameDtoConverter and GameDtoImporter are asymmetric.
+ * Roundtrip test for GameDto conversion. This is a bit messy since the GameDtoConverter and
+ * GameDtoImporter are asymmetric.
  *
- * <p>We actually do PGN -> GameModel -> Game (db store) → GameDto → GameModel
- * and compare the two GameModels.
+ * <p>We actually do PGN -> GameModel -> Game (db store) → GameDto → GameModel and compare the two
+ * GameModels.
  */
 class GameDtoRoundtripTest {
 
@@ -256,7 +256,8 @@ class GameDtoRoundtripTest {
     assertEquals(expectedHeader.getRound(), actualHeader.getRound(), "Round");
     assertEquals(expectedHeader.getSubRound(), actualHeader.getSubRound(), "SubRound");
 
-    assertEquals(expectedHeader.getLineEvaluation(), actualHeader.getLineEvaluation(), "Line evaluation");
+    assertEquals(
+        expectedHeader.getLineEvaluation(), actualHeader.getLineEvaluation(), "Line evaluation");
 
     // Event information
     assertEquals(expectedHeader.getEvent(), actualHeader.getEvent(), "Event name");
@@ -269,11 +270,13 @@ class GameDtoRoundtripTest {
         expectedHeader.getEventCategory(), actualHeader.getEventCategory(), "Event category");
     assertEquals(expectedHeader.getEventRounds(), actualHeader.getEventRounds(), "Event rounds");
     assertEquals(expectedHeader.getEventType(), actualHeader.getEventType(), "Event type");
-    assertEquals(expectedHeader.getEventTimeControl(), actualHeader.getEventTimeControl(), "Event time control");
+    assertEquals(
+        expectedHeader.getEventTimeControl(),
+        actualHeader.getEventTimeControl(),
+        "Event time control");
 
     // Source information
-    assertEquals(
-        expectedHeader.getSourceTitle(), actualHeader.getSourceTitle(), "Source title");
+    assertEquals(expectedHeader.getSourceTitle(), actualHeader.getSourceTitle(), "Source title");
     assertEquals(expectedHeader.getSource(), actualHeader.getSource(), "Source publisher");
     assertEquals(expectedHeader.getSourceDate(), actualHeader.getSourceDate(), "Source date");
 
@@ -299,12 +302,9 @@ class GameDtoRoundtripTest {
    */
   private void assertTextModelsEqual(TextModel expected, TextModel actual) {
     // Compare headers
+    assertEquals(expected.header().tournament(), actual.header().tournament(), "Tournament name");
     assertEquals(
-        expected.header().tournament(), actual.header().tournament(), "Tournament name");
-    assertEquals(
-        expected.header().tournamentDate(),
-        actual.header().tournamentDate(),
-        "Tournament date");
+        expected.header().tournamentDate(), actual.header().tournamentDate(), "Tournament date");
     assertEquals(expected.header().annotator(), actual.header().annotator(), "Annotator");
     assertEquals(expected.header().source(), actual.header().source(), "Source");
     assertEquals(expected.header().round(), actual.header().round(), "Round");

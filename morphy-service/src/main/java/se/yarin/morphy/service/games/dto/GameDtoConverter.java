@@ -45,9 +45,11 @@ public class GameDtoConverter {
    * @param game the game to convert
    * @param includeMoves whether to include the game moves (as PGN)
    * @param includeText whether to include the game text commentary
-   * @param includeTournamentDetails whether to include full tournament details (dates, location, etc.)
+   * @param includeTournamentDetails whether to include full tournament details (dates, location,
+   *     etc.)
    * @param includeSourceDetails whether to include full source details (publisher, date)
-   * @param includeTeamDetails whether to include full team details (teamNumber, season, year, nation)
+   * @param includeTeamDetails whether to include full team details (teamNumber, season, year,
+   *     nation)
    * @return the GameDto
    */
   public GameDto toDto(
@@ -63,11 +65,11 @@ public class GameDtoConverter {
 
     // Player information
     Long whiteId = game.whitePlayerId() == -1 ? null : (long) game.whitePlayerId();
-    String white = whiteId != null ? game.white().getFullName() : "";  // Mandatory PGN field
+    String white = whiteId != null ? game.white().getFullName() : ""; // Mandatory PGN field
     Integer whiteElo = game.whiteElo() == 0 ? null : game.whiteElo();
 
     Long blackId = game.blackPlayerId() == -1 ? null : (long) game.blackPlayerId();
-    String black = blackId != null ? game.black().getFullName() : "";  // Mandatory PGN field
+    String black = blackId != null ? game.black().getFullName() : ""; // Mandatory PGN field
     Integer blackElo = game.blackElo() == 0 ? null : game.blackElo();
 
     // Team information
@@ -75,8 +77,8 @@ public class GameDtoConverter {
     TeamDetailsDto blackTeam = convertTeam(game, false, includeTeamDetails);
 
     // Game metadata
-    var result = game.result();  // Mandatory PGN field - GameResult is never null
-    var date = game.playedDate();  // Mandatory PGN field - Date class handles unset dates
+    var result = game.result(); // Mandatory PGN field - GameResult is never null
+    var date = game.playedDate(); // Mandatory PGN field - Date class handles unset dates
     String eco = !game.eco().isSet() ? null : game.eco().toString();
     Integer round = game.round() == 0 ? null : game.round();
     Integer subRound = game.subRound() == 0 ? null : game.subRound();
@@ -160,8 +162,20 @@ public class GameDtoConverter {
     Tournament tournament = game.tournament();
 
     if (!includeDetails) {
-        return new TournamentDto(
-          (long) tournamentId, tournament.title(), null, null, null, null, null, null, null, null, null, null, null);
+      return new TournamentDto(
+          (long) tournamentId,
+          tournament.title(),
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null);
     }
 
     TournamentExtra extra = game.tournamentExtra();
@@ -223,7 +237,10 @@ public class GameDtoConverter {
   private GameMovesDto convertMoves(@NotNull Game game) {
     try {
       GameModel model = game.getModel();
-      PgnExporter exporter = new PgnExporter(PgnFormatOptions.DEFAULT, (AnnotationConverter.getRoundTripConverter())::convertToPgn);
+      PgnExporter exporter =
+          new PgnExporter(
+              PgnFormatOptions.DEFAULT,
+              (AnnotationConverter.getRoundTripConverter())::convertToPgn);
       String movesPgn = exporter.exportMovesOnly(model.moves());
       return new GameMovesDto(movesPgn);
     } catch (Exception e) {

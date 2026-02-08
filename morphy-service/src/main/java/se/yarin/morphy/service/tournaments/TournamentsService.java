@@ -54,8 +54,7 @@ public class TournamentsService {
             databaseId,
             txn -> {
               // Stream tournaments from the specified start ID
-              return txn.tournamentTransaction()
-                  .stream(startId, null)
+              return txn.tournamentTransaction().stream(startId, null)
                   .limit(finalLimit + 1L)
                   .map(
                       tournament -> {
