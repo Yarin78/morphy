@@ -6,11 +6,12 @@ import org.jetbrains.annotations.Nullable;
 import se.yarin.chess.Date;
 import se.yarin.chess.GameResult;
 import se.yarin.chess.NAG;
+import se.yarin.morphy.service.tournaments.dto.TournamentDto;
 
 /**
  * Data Transfer Object for a chess game.
  *
- * <p>This DTO contains all game information including metadata, player details, event information,
+ * <p>This DTO contains all game information including metadata, player details, tournament information,
  * and optionally the game moves and text commentary.
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -19,7 +20,7 @@ import se.yarin.chess.NAG;
     "whiteId", "white", "whiteElo", "blackId", "black", "blackElo",
     "whiteTeam", "blackTeam",
     "result", "date", "eco", "round", "subRound", "lineEvaluation",
-    "event", "source", "annotator", "gameTag",
+    "tournament", "source", "annotator", "gameTag",
     "moves", "text"
 })
 public record GameDto(
@@ -47,8 +48,8 @@ public record GameDto(
     @Nullable Integer subRound,
     @Nullable NAG lineEvaluation,
 
-    // Event information
-    @Nullable EventDetailsDto event,
+    // Tournament information
+    @Nullable TournamentDto tournament,
 
     // Source information
     @Nullable SourceDetailsDto source,

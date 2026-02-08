@@ -1,7 +1,6 @@
 package se.yarin.morphy.service.games.dto;
 
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -134,37 +133,37 @@ public class GameDtoImporter {
       headerModel.setLineEvaluation(dto.lineEvaluation());
     }
 
-    // Set event information
-    if (dto.event() != null) {
-      if (dto.event().name() != null) {
-        headerModel.setEvent(dto.event().name());
+    // Set tournament information
+    if (dto.tournament() != null) {
+      if (dto.tournament().name() != null) {
+        headerModel.setEvent(dto.tournament().name());
       }
-      if (dto.event().id() != null) {
-        headerModel.setField(se.yarin.morphy.GameAdapter.EVENT_ID, dto.event().id().intValue());
+      if (dto.tournament().id() != null) {
+        headerModel.setField(se.yarin.morphy.GameAdapter.EVENT_ID, dto.tournament().id().intValue());
       }
-      if (dto.event().startDate() != null) {
-        headerModel.setEventDate(dto.event().startDate());
+      if (dto.tournament().startDate() != null) {
+        headerModel.setEventDate(dto.tournament().startDate());
       }
-      if (dto.event().endDate() != null) {
-        headerModel.setEventEndDate(dto.event().endDate());
+      if (dto.tournament().endDate() != null) {
+        headerModel.setEventEndDate(dto.tournament().endDate());
       }
-      if (dto.event().site() != null) {
-        headerModel.setEventSite(dto.event().site());
+      if (dto.tournament().site() != null) {
+        headerModel.setEventSite(dto.tournament().site());
       }
-      if (dto.event().country() != null) {
-        headerModel.setEventCountry(dto.event().country());
+      if (dto.tournament().country() != null) {
+        headerModel.setEventCountry(dto.tournament().country());
       }
-      if (dto.event().category() != null) {
-        headerModel.setEventCategory(dto.event().category());
+      if (dto.tournament().category() != null) {
+        headerModel.setEventCategory(dto.tournament().category());
       }
-      if (dto.event().rounds() != null) {
-        headerModel.setEventRounds(dto.event().rounds());
+      if (dto.tournament().rounds() != null) {
+        headerModel.setEventRounds(dto.tournament().rounds());
       }
-      if (dto.event().type() != null) {
-        headerModel.setEventType(dto.event().type());
+      if (dto.tournament().type() != null) {
+        headerModel.setEventType(dto.tournament().type());
       }
-      if (dto.event().timeControl() != null) {
-        headerModel.setEventTimeControl(dto.event().timeControl());
+      if (dto.tournament().timeControl() != null) {
+        headerModel.setEventTimeControl(dto.tournament().timeControl());
       }
     }
 
@@ -244,7 +243,7 @@ public class GameDtoImporter {
   /**
    * Builds a TextModel from a GameHeaderModel and GameDto.
    *
-   * @param headerModel the header model (contains event/source/annotator info)
+   * @param headerModel the header model (contains tournament/source/annotator info)
    * @param dto the GameDto
    * @return the TextModel
    */

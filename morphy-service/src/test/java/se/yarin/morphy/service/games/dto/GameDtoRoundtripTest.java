@@ -15,6 +15,7 @@ import se.yarin.morphy.GameAdapter;
 import se.yarin.morphy.entities.Tournament;
 import se.yarin.morphy.entities.TournamentType;
 import se.yarin.morphy.games.annotations.AnnotationConverter;
+import se.yarin.morphy.service.tournaments.dto.TournamentDtoConverter;
 import se.yarin.morphy.text.ImmutableTextHeaderModel;
 import se.yarin.morphy.text.ImmutableTextModel;
 import se.yarin.morphy.text.TextContentsModel;
@@ -45,7 +46,7 @@ class GameDtoRoundtripTest {
   void setUp() throws IOException {
     File dbPath = new File(tempDir, "test.cbh");
     database = Database.create(dbPath);
-    converter = new GameDtoConverter();
+    converter = new GameDtoConverter(new TournamentDtoConverter());
     importer = new GameDtoImporter();
     pgnParser = new PgnParser((AnnotationConverter.getRoundTripConverter())::convertToChessBase);
   }

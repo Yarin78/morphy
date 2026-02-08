@@ -57,7 +57,7 @@ public class GamesService {
 
         final int finalLimit = limit;
         // Fetch limit+1 to determine if there are more results
-        // For list queries, use minimal event/source/team details for better performance
+        // For list queries, use minimal tournament/source/team details for better performance
         List<GameDto> allGames =
                 databaseService.withReadTransaction(
                         databaseId,
@@ -88,12 +88,12 @@ public class GamesService {
      * @param gameId       The game ID
      * @param includeMoves Whether to include game moves in the response
      * @param includeText  Whether to include game text/commentary in the response
-     * @return GameDto with the requested information (includes full event/source/team details)
+     * @return GameDto with the requested information (includes full tournament/source/team details)
      */
     public GameDto getGame(@NotNull String databaseId, int gameId, boolean includeMoves, boolean includeText) {
         return databaseService.withReadTransaction(databaseId, txn -> {
             Game game = txn.getGame(gameId);
-            // For single game queries, include full event/source/team details
+            // For single game queries, include full tournament/source/team details
             return gameDtoConverter.toDto(game, includeMoves, includeText, true, true, true);
         });
     }
@@ -113,7 +113,7 @@ public class GamesService {
      *
      * @param databaseId The database ID to add the game to
      * @param gameDto    The game DTO to add
-     * @return The complete GameDto of the added game (includes full event/source/team details)
+     * @return The complete GameDto of the added game (includes full tournament/source/team details)
      * @throws MorphyServiceException   if the game cannot be added
      * @throws IllegalArgumentException if the DTO is invalid or represents guiding text
      */
@@ -141,7 +141,7 @@ public class GamesService {
      * @param databaseId The database ID to replace the game in
      * @param gameId     The game ID to replace
      * @param gameDto    The game DTO to replace with
-     * @return The complete GameDto of the replaced game (includes full event/source/team details)
+     * @return The complete GameDto of the replaced game (includes full tournament/source/team details)
      * @throws MorphyServiceException   if the game cannot be replaced
      * @throws IllegalArgumentException if the DTO is invalid or represents guiding text
      */

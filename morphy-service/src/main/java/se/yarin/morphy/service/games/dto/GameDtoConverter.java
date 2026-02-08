@@ -6,12 +6,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import se.yarin.chess.GameModel;
-import se.yarin.chess.annotations.AnnotationTransformer;
 import se.yarin.chess.pgn.PgnExporter;
 import se.yarin.chess.pgn.PgnFormatOptions;
 import se.yarin.morphy.Game;
 import se.yarin.morphy.entities.*;
 import se.yarin.morphy.games.annotations.AnnotationConverter;
+import se.yarin.morphy.service.tournaments.dto.TournamentDto;
+import se.yarin.morphy.service.tournaments.dto.TournamentDtoConverter;
 import se.yarin.morphy.text.TextModel;
 
 /**
@@ -21,6 +22,12 @@ import se.yarin.morphy.text.TextModel;
 @Component
 public class GameDtoConverter {
   private static final Logger log = LoggerFactory.getLogger(GameDtoConverter.class);
+
+  private final TournamentDtoConverter tournamentDtoConverter;
+
+  public GameDtoConverter(TournamentDtoConverter tournamentDtoConverter) {
+    this.tournamentDtoConverter = tournamentDtoConverter;
+  }
 
   /**
    * Converts a Game to a GameDto without moves or text.
@@ -38,7 +45,7 @@ public class GameDtoConverter {
    * @param game the game to convert
    * @param includeMoves whether to include the game moves (as PGN)
    * @param includeText whether to include the game text commentary
-   * @param includeEventDetails whether to include full event details (dates, location, etc.)
+   * @param includeTournamentDetails whether to include full tournament details (dates, location, etc.)
    * @param includeSourceDetails whether to include full source details (publisher, date)
    * @param includeTeamDetails whether to include full team details (teamNumber, season, year, nation)
    * @return the GameDto
@@ -47,7 +54,7 @@ public class GameDtoConverter {
       @NotNull Game game,
       boolean includeMoves,
       boolean includeText,
-      boolean includeEventDetails,
+      boolean includeTournamentDetails,
       boolean includeSourceDetails,
       boolean includeTeamDetails) {
     // Basic game information
@@ -75,8 +82,8 @@ public class GameDtoConverter {
     Integer subRound = game.subRound() == 0 ? null : game.subRound();
     var lineEvaluation = game.lineEvaluation();
 
-    // Event information
-    EventDetailsDto event = convertEvent(game, includeEventDetails);
+    // Tournament information
+    TournamentDto tournament = convertTournament(game, includeTournamentDetails);
 
     // Source information
     SourceDetailsDto source = convertSource(game, includeSourceDetails);
@@ -110,7 +117,7 @@ public class GameDtoConverter {
         round,
         subRound,
         lineEvaluation,
-        event,
+        tournament,
         source,
         annotator,
         gameTag,
@@ -144,32 +151,23 @@ public class GameDtoConverter {
   }
 
   @Nullable
-  private EventDetailsDto convertEvent(@NotNull Game game, boolean includeDetails) {
+  private TournamentDto convertTournament(@NotNull Game game, boolean includeDetails) {
     int tournamentId = game.tournamentId();
     if (tournamentId == -1) {
       return null;
     }
 
     Tournament tournament = game.tournament();
-    String name = tournament.title().isEmpty() ? "" : tournament.title();
 
     if (!includeDetails) {
-      return new EventDetailsDto((long) tournamentId, name, null, null, null, null, null, null, null, null);
+        return new TournamentDto(
+          (long) tournamentId, tournament.title(), null, null, null, null, null, null, null, null, null, null, null);
     }
 
     TournamentExtra extra = game.tournamentExtra();
 
-    return new EventDetailsDto(
-        (long) tournamentId,
-        name,
-        tournament.date().isUnset() ? null : tournament.date(),
-        extra.endDate().isUnset() ? null : extra.endDate(),
-        tournament.place().isEmpty() ? null : tournament.place(),
-        tournament.nation() != Nation.NONE ? tournament.nation().getIocCode() : null,
-        tournament.category() == 0 ? null : tournament.category(),
-        tournament.rounds() == 0 ? null : tournament.rounds(),
-        tournament.type() == TournamentType.NONE ? null : tournament.type().getName(),
-        tournament.timeControl() == TournamentTimeControl.NORMAL ? null : tournament.timeControl().getName());
+    // Return full tournament details but without gameCount (not needed in game context)
+    return tournamentDtoConverter.toDto(tournament, extra);
   }
 
   @Nullable
