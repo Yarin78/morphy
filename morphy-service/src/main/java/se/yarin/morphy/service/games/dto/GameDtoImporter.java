@@ -223,17 +223,9 @@ public class GameDtoImporter {
     // Parse moves if present
     if (dto.moves() != null && dto.moves().pgn() != null && !dto.moves().pgn().isEmpty()) {
       try {
-        // The DTO contains moves-only PGN, but the parser requires full PGN with headers
-        // Reconstruct a complete PGN by combining header data with the moves
-        // TODO: This shouldn't be necessary, parser should be able to parse just the moves
-        String completePgn = buildCompletePgn(headerModel, dto.moves().pgn());
-
-        // Parse the PGN to get the moves
+        // Parse the moves-only PGN directly
         PgnParser parser = new PgnParser((AnnotationConverter.getRoundTripConverter())::convertToChessBase);
-        GameModel parsedGame = parser.parseGame(completePgn);
-
-        // Use the moves from the parsed game
-        movesModel = parsedGame.moves();
+        movesModel = parser.parseMoves(dto.moves().pgn());
 
       } catch (PgnFormatException e) {
         log.error("Failed to parse PGN from DTO: {}", e.getMessage());
@@ -247,57 +239,6 @@ public class GameDtoImporter {
 
     // Build and return the complete GameModel
     return new GameModel(headerModel, movesModel);
-  }
-
-  /**
-   * Builds a complete PGN string from header data and moves-only PGN.
-   *
-   * <p>The PGN parser requires the seven tag roster (Event, Site, Date, Round, White, Black,
-   * Result), but the GameMovesDto only contains moves. This method reconstructs a complete PGN.
-   *
-   * @param headerModel the header model with game data
-   * @param movesPgn the moves-only PGN string
-   * @return a complete PGN string with headers and moves
-   */
-  private String buildCompletePgn(@NotNull GameHeaderModel headerModel, @NotNull String movesPgn) {
-    StringBuilder pgn = new StringBuilder();
-
-    // Seven tag roster (required by PGN standard)
-    pgn.append("[Event \"")
-        .append(headerModel.getEvent() != null ? headerModel.getEvent() : "?")
-        .append("\"]\n");
-    pgn.append("[Site \"")
-        .append(headerModel.getEventSite() != null ? headerModel.getEventSite() : "?")
-        .append("\"]\n");
-    pgn.append("[Date \"")
-        .append(headerModel.getDate() != null ? headerModel.getDate().toString() : "????.??.??")
-        .append("\"]\n");
-    pgn.append("[Round \"")
-        .append(
-            headerModel.getRound() != null && headerModel.getRound() > 0
-                ? String.valueOf(headerModel.getRound())
-                : "?")
-        .append("\"]\n");
-    pgn.append("[White \"")
-        .append(headerModel.getWhite() != null ? headerModel.getWhite() : "?")
-        .append("\"]\n");
-    pgn.append("[Black \"")
-        .append(headerModel.getBlack() != null ? headerModel.getBlack() : "?")
-        .append("\"]\n");
-    pgn.append("[Result \"")
-        .append(
-            headerModel.getResult() != null
-                ? headerModel.getResult().toString()
-                : "*")
-        .append("\"]\n");
-
-    // Blank line before moves
-    pgn.append("\n");
-
-    // Append the moves
-    pgn.append(movesPgn);
-
-    return pgn.toString();
   }
 
   /**

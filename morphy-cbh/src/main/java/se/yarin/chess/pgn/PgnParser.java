@@ -86,6 +86,48 @@ public class PgnParser {
     }
 
     /**
+     * Parses moves-only PGN text and returns a GameMovesModel.
+     * This method does not require the seven tag roster headers.
+     * Assumes the standard chess starting position.
+     *
+     * @param movesPgn the moves-only PGN text to parse
+     * @return the parsed moves model
+     * @throws PgnFormatException if the PGN is invalid
+     */
+    @NotNull
+    public GameMovesModel parseMoves(@NotNull String movesPgn) throws PgnFormatException {
+        return parseMoves(movesPgn, null, 0);
+    }
+
+    /**
+     * Parses moves-only PGN text and returns a GameMovesModel.
+     * This method does not require the seven tag roster headers.
+     *
+     * @param movesPgn the moves-only PGN text to parse
+     * @param startPosition the starting position (null for standard starting position)
+     * @param startPly the ply number of the starting position (0 for standard start)
+     * @return the parsed moves model
+     * @throws PgnFormatException if the PGN is invalid
+     */
+    @NotNull
+    public GameMovesModel parseMoves(@NotNull String movesPgn, @Nullable Position startPosition, int startPly) throws PgnFormatException {
+        // Create the moves model with the starting position
+        GameMovesModel moves;
+        if (startPosition != null) {
+            moves = new GameMovesModel(startPosition, Chess.plyToMoveNumber(startPly));
+        } else {
+            moves = new GameMovesModel();
+        }
+
+        // Parse the move text
+        PgnLexer lexer = new PgnLexer(new StringReader(movesPgn));
+        PgnToken firstToken = lexer.nextToken();
+        parseMoveText(lexer, moves, firstToken);
+
+        return moves;
+    }
+
+    /**
      * Parses the next game from a PGN lexer.
      * Returns null when no more games are available (EOF).
      *
