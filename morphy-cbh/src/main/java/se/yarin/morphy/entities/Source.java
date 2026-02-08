@@ -18,12 +18,12 @@ public abstract class Source extends Entity implements Comparable<Source> {
 
   @Value.Default
   public Date publication() {
-    return Date.today();
+    return Date.unset();
   }
 
   @Value.Default
   public Date date() {
-    return Date.today();
+    return Date.unset();
   }
 
   @Value.Default

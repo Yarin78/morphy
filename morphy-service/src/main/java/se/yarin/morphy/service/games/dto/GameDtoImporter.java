@@ -8,6 +8,7 @@ import org.springframework.stereotype.Component;
 import se.yarin.chess.*;
 import se.yarin.chess.pgn.PgnFormatException;
 import se.yarin.chess.pgn.PgnParser;
+import se.yarin.morphy.games.annotations.AnnotationConverter;
 import se.yarin.morphy.text.ImmutableTextHeaderModel;
 import se.yarin.morphy.text.ImmutableTextModel;
 import se.yarin.morphy.text.TextContentsModel;
@@ -224,10 +225,11 @@ public class GameDtoImporter {
       try {
         // The DTO contains moves-only PGN, but the parser requires full PGN with headers
         // Reconstruct a complete PGN by combining header data with the moves
+        // TODO: This shouldn't be necessary, parser should be able to parse just the moves
         String completePgn = buildCompletePgn(headerModel, dto.moves().pgn());
 
         // Parse the PGN to get the moves
-        PgnParser parser = new PgnParser();
+        PgnParser parser = new PgnParser((AnnotationConverter.getRoundTripConverter())::convertToChessBase);
         GameModel parsedGame = parser.parseGame(completePgn);
 
         // Use the moves from the parsed game
@@ -321,9 +323,11 @@ public class GameDtoImporter {
     if (headerModel.getAnnotator() != null) {
       textHeaderBuilder.annotator(headerModel.getAnnotator());
     }
-    if (headerModel.getSource() != null) {
-      textHeaderBuilder.source(headerModel.getSource());
+
+    if (headerModel.getSourceTitle() != null) {
+      textHeaderBuilder.source(headerModel.getSourceTitle());
     }
+
     if (headerModel.getRound() != null) {
       textHeaderBuilder.round(headerModel.getRound());
     }

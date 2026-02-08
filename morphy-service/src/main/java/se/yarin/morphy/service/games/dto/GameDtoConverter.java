@@ -6,9 +6,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import se.yarin.chess.GameModel;
+import se.yarin.chess.annotations.AnnotationTransformer;
 import se.yarin.chess.pgn.PgnExporter;
+import se.yarin.chess.pgn.PgnFormatOptions;
 import se.yarin.morphy.Game;
 import se.yarin.morphy.entities.*;
+import se.yarin.morphy.games.annotations.AnnotationConverter;
 import se.yarin.morphy.text.TextModel;
 
 /**
@@ -150,19 +153,11 @@ public class GameDtoConverter {
     Tournament tournament = game.tournament();
     String name = tournament.title().isEmpty() ? "" : tournament.title();
 
-    // If details not requested, return minimal information
     if (!includeDetails) {
       return new EventDetailsDto((long) tournamentId, name, null, null, null, null, null, null, null, null);
     }
 
-    // Include full details
     TournamentExtra extra = game.tournamentExtra();
-
-    String timeControl = null;
-    if (tournament.timeControl() != null
-        && tournament.timeControl() != TournamentTimeControl.NORMAL) {
-      timeControl = tournament.timeControl().getLongName();
-    }
 
     return new EventDetailsDto(
         (long) tournamentId,
@@ -173,8 +168,8 @@ public class GameDtoConverter {
         tournament.nation() != Nation.NONE ? tournament.nation().getIocCode() : null,
         tournament.category() == 0 ? null : tournament.category(),
         tournament.rounds() == 0 ? null : tournament.rounds(),
-        tournament.getPrettyTypeName().isEmpty() ? null : tournament.getPrettyTypeName(),
-        timeControl);
+        tournament.type() == TournamentType.NONE ? null : tournament.type().getName(),
+        tournament.timeControl() == TournamentTimeControl.NORMAL ? null : tournament.timeControl().getName());
   }
 
   @Nullable
@@ -230,7 +225,7 @@ public class GameDtoConverter {
   private GameMovesDto convertMoves(@NotNull Game game) {
     try {
       GameModel model = game.getModel();
-      PgnExporter exporter = new PgnExporter();
+      PgnExporter exporter = new PgnExporter(PgnFormatOptions.DEFAULT, (AnnotationConverter.getRoundTripConverter())::convertToPgn);
       String movesPgn = exporter.exportMovesOnly(model.moves());
       return new GameMovesDto(movesPgn);
     } catch (Exception e) {

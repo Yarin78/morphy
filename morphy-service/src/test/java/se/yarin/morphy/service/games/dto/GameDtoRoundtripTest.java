@@ -12,6 +12,9 @@ import se.yarin.morphy.Database;
 import se.yarin.morphy.DatabaseWriteTransaction;
 import se.yarin.morphy.Game;
 import se.yarin.morphy.GameAdapter;
+import se.yarin.morphy.entities.Tournament;
+import se.yarin.morphy.entities.TournamentType;
+import se.yarin.morphy.games.annotations.AnnotationConverter;
 import se.yarin.morphy.text.ImmutableTextHeaderModel;
 import se.yarin.morphy.text.ImmutableTextModel;
 import se.yarin.morphy.text.TextContentsModel;
@@ -23,9 +26,11 @@ import java.io.IOException;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Roundtrip test for GameDto conversion.
+ * Roundtrip test for GameDto conversion. This is a bit messy
+ * since the GameDtoConverter and GameDtoImporter are asymmetric.
  *
- * <p>Tests that Game → GameDto → GameModel preserves all data correctly.
+ * <p>We actually do PGN -> GameModel -> Game (db store) → GameDto → GameModel
+ * and compare the two GameModels.
  */
 class GameDtoRoundtripTest {
 
@@ -42,7 +47,7 @@ class GameDtoRoundtripTest {
     database = Database.create(dbPath);
     converter = new GameDtoConverter();
     importer = new GameDtoImporter();
-    pgnParser = new PgnParser();
+    pgnParser = new PgnParser((AnnotationConverter.getRoundTripConverter())::convertToChessBase);
   }
 
   @AfterEach
@@ -126,7 +131,7 @@ class GameDtoRoundtripTest {
 
     Game originalGame = database.getGame(gameId);
 
-    GameDto dto = converter.toDto(originalGame, true, false, false, false, false);
+    GameDto dto = converter.toDto(originalGame, true, false, true, true, false);
     GameModel recreatedModel = importer.toGameModel(dto);
 
     assertGameModelsEqual(originalModel, recreatedModel);
@@ -158,8 +163,7 @@ class GameDtoRoundtripTest {
         [Source "chess.com"]
         [SourceTitle "FIDE Live Games"]
         [SourceDate "2024.03.15"]
-        [EventType "Swiss"]
-        [EventTimeControl "Classical"]
+        [EventType "swiss (blitz)"]
         [EventCategory "22"]
         [EventRounds "14"]
         [EventEndDate "2024.03.25"]
@@ -251,28 +255,20 @@ class GameDtoRoundtripTest {
     assertEquals(expectedHeader.getRound(), actualHeader.getRound(), "Round");
     assertEquals(expectedHeader.getSubRound(), actualHeader.getSubRound(), "SubRound");
 
-    // Line evaluation: treat null and NONE as equivalent
-    NAG expectedEval = expectedHeader.getLineEvaluation();
-    NAG actualEval = actualHeader.getLineEvaluation();
-    if (expectedEval == null || expectedEval == NAG.NONE) {
-      assertTrue(actualEval == null || actualEval == NAG.NONE, "Line evaluation (null/NONE)");
-    } else {
-      assertEquals(expectedEval, actualEval, "Line evaluation");
-    }
+    assertEquals(expectedHeader.getLineEvaluation(), actualHeader.getLineEvaluation(), "Line evaluation");
 
     // Event information
-    assertStringEqualsOrBothEmpty(expectedHeader.getEvent(), actualHeader.getEvent(), "Event name");
+    assertEquals(expectedHeader.getEvent(), actualHeader.getEvent(), "Event name");
     assertEquals(expectedHeader.getEventDate(), actualHeader.getEventDate(), "Event date");
     assertEquals(
         expectedHeader.getEventEndDate(), actualHeader.getEventEndDate(), "Event end date");
-    assertStringEqualsOrBothEmpty(expectedHeader.getEventSite(), actualHeader.getEventSite(), "Event site");
-    assertStringEqualsOrBothEmpty(expectedHeader.getEventCountry(), actualHeader.getEventCountry(), "Event country");
+    assertEquals(expectedHeader.getEventSite(), actualHeader.getEventSite(), "Event site");
+    assertEquals(expectedHeader.getEventCountry(), actualHeader.getEventCountry(), "Event country");
     assertEquals(
         expectedHeader.getEventCategory(), actualHeader.getEventCategory(), "Event category");
     assertEquals(expectedHeader.getEventRounds(), actualHeader.getEventRounds(), "Event rounds");
-    // Note: EventType and EventTimeControl are custom PGN tags that may not be preserved
-    // assertEquals(expectedHeader.getEventType(), actualHeader.getEventType(), "Event type");
-    // assertEquals(expectedHeader.getEventTimeControl(), actualHeader.getEventTimeControl(), "Event time control");
+    assertEquals(expectedHeader.getEventType(), actualHeader.getEventType(), "Event type");
+    assertEquals(expectedHeader.getEventTimeControl(), actualHeader.getEventTimeControl(), "Event time control");
 
     // Source information
     assertEquals(
@@ -287,31 +283,11 @@ class GameDtoRoundtripTest {
     assertEquals(expectedHeader.getGameTag(), actualHeader.getGameTag(), "Game tag");
 
     // Compare moves using PGN export
-    // Note: Annotations/comments may be lost during roundtrip, so we only check the move structure
     PgnExporter exporter = new PgnExporter();
     String expectedPgn = exporter.exportMovesOnly(expected.moves());
     String actualPgn = exporter.exportMovesOnly(actual.moves());
 
-    // Remove comments from both PGNs before comparing (comments in braces)
-    // Also normalize whitespace for consistent comparison
-    String expectedPgnNoComments = expectedPgn
-        .replaceAll("\\{[^}]*\\}", "")  // Remove comments
-        .replaceAll("\\s+", " ")         // Normalize whitespace
-        .replaceAll("\\( ", "(")         // Remove space after opening paren
-        .replaceAll(" \\)", ")")         // Remove space before closing paren
-        .trim();
-    String actualPgnNoComments = actualPgn
-        .replaceAll("\\{[^}]*\\}", "")
-        .replaceAll("\\s+", " ")
-        .replaceAll("\\( ", "(")
-        .replaceAll(" \\)", ")")
-        .trim();
-    assertEquals(expectedPgnNoComments, actualPgnNoComments, "Moves (PGN without comments)");
-
-    // Annotations may not be fully preserved in roundtrip, so we don't strictly require them to match
-    // int expectedAnnotations = countAnnotations(expected.moves().root());
-    // int actualAnnotations = countAnnotations(actual.moves().root());
-    // assertEquals(expectedAnnotations, actualAnnotations, "Number of annotations");
+    assertEquals(expectedPgn, actualPgn, "PGN differs");
   }
 
   /**
@@ -329,49 +305,12 @@ class GameDtoRoundtripTest {
         actual.header().tournamentDate(),
         "Tournament date");
     assertEquals(expected.header().annotator(), actual.header().annotator(), "Annotator");
-    // Note: Source mapping between GameHeaderModel and TextHeaderModel may not be perfect
-    // assertEquals(expected.header().source(), actual.header().source(), "Source");
+    assertEquals(expected.header().source(), actual.header().source(), "Source");
     assertEquals(expected.header().round(), actual.header().round(), "Round");
     assertEquals(expected.header().subRound(), actual.header().subRound(), "SubRound");
 
     // Compare contents
     assertEquals(
         expected.contents().getContents(), actual.contents().getContents(), "Text contents");
-  }
-
-  /**
-   * Counts the total number of annotations in a move tree.
-   *
-   * @param node the root node
-   * @return the total count of annotations
-   */
-  private int countAnnotations(GameMovesModel.Node node) {
-    int count = 0;
-    for (Annotation annotation : node.getAnnotations()) {
-      count++;
-    }
-    for (GameMovesModel.Node child : node.children()) {
-      count += countAnnotations(child);
-    }
-    return count;
-  }
-
-  /**
-   * Asserts that two strings are equal, treating null, empty string, and "?" as equivalent.
-   * This is needed because PGN uses "?" for unknown values which gets converted to null/empty.
-   *
-   * @param expected the expected string
-   * @param actual the actual string
-   * @param message the assertion message
-   */
-  private void assertStringEqualsOrBothEmpty(String expected, String actual, String message) {
-    boolean expectedEmpty = expected == null || expected.isEmpty() || expected.equals("?");
-    boolean actualEmpty = actual == null || actual.isEmpty() || actual.equals("?");
-
-    if (expectedEmpty && actualEmpty) {
-      return; // Both are "empty", consider them equal
-    }
-
-    assertEquals(expected, actual, message);
   }
 }

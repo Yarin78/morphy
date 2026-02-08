@@ -250,8 +250,7 @@ public class GameAdapter {
     }
     gameHeader.eco(headerModel.getEco() == null ? Eco.unset() : headerModel.getEco());
 
-    NAG eval = headerModel.getLineEvaluation();
-    gameHeader.lineEvaluation(eval == null ? NAG.NONE : eval);
+    gameHeader.lineEvaluation(headerModel.getLineEvaluation());
 
     extendedGameHeader
         .whiteRatingType(RatingType.international(TournamentTimeControl.NORMAL))

@@ -109,8 +109,8 @@ public class GameHeaderModel {
     return result;
   }
 
-  public NAG getLineEvaluation() {
-    return lineEvaluation;
+  public @NotNull NAG getLineEvaluation() {
+    return lineEvaluation == null ? NAG.NONE : lineEvaluation;
   }
 
   public Date getDate() {
@@ -213,7 +213,7 @@ public class GameHeaderModel {
     setField(FIELD_RESULT, result);
   }
 
-  public void setLineEvaluation(NAG evaluation) {
+  public void setLineEvaluation(@NotNull NAG evaluation) {
     setField(FIELD_LINE_EVALUATION, evaluation);
   }
 
