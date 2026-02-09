@@ -2,22 +2,8 @@ package se.yarin.morphy.service.databases;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
-import se.yarin.morphy.service.config.DatabaseConfig;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.ResourceLoader;
-import org.springframework.stereotype.Service;
-import se.yarin.morphy.Database;
-import se.yarin.morphy.DatabaseMode;
-import se.yarin.morphy.DatabaseReadTransaction;
-import se.yarin.morphy.DatabaseWriteTransaction;
-
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -31,6 +17,19 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.ResourceLoader;
+import org.springframework.stereotype.Service;
+import se.yarin.morphy.Database;
+import se.yarin.morphy.DatabaseMode;
+import se.yarin.morphy.DatabaseReadTransaction;
+import se.yarin.morphy.DatabaseWriteTransaction;
+import se.yarin.morphy.service.config.DatabaseConfig;
 
 @Service
 public class DatabaseService {

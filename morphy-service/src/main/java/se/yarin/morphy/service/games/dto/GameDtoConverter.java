@@ -11,6 +11,16 @@ import se.yarin.chess.pgn.PgnFormatOptions;
 import se.yarin.morphy.Game;
 import se.yarin.morphy.entities.*;
 import se.yarin.morphy.games.annotations.AnnotationConverter;
+import se.yarin.morphy.service.annotators.dto.AnnotatorDto;
+import se.yarin.morphy.service.annotators.dto.AnnotatorDtoConverter;
+import se.yarin.morphy.service.gametags.dto.GameTagDto;
+import se.yarin.morphy.service.gametags.dto.GameTagDtoConverter;
+import se.yarin.morphy.service.players.dto.PlayerDto;
+import se.yarin.morphy.service.players.dto.PlayerDtoConverter;
+import se.yarin.morphy.service.sources.dto.SourceDto;
+import se.yarin.morphy.service.sources.dto.SourceDtoConverter;
+import se.yarin.morphy.service.teams.dto.TeamDto;
+import se.yarin.morphy.service.teams.dto.TeamDtoConverter;
 import se.yarin.morphy.service.tournaments.dto.TournamentDto;
 import se.yarin.morphy.service.tournaments.dto.TournamentDtoConverter;
 import se.yarin.morphy.text.TextModel;
@@ -24,9 +34,25 @@ public class GameDtoConverter {
   private static final Logger log = LoggerFactory.getLogger(GameDtoConverter.class);
 
   private final TournamentDtoConverter tournamentDtoConverter;
+  private final PlayerDtoConverter playerDtoConverter;
+  private final AnnotatorDtoConverter annotatorDtoConverter;
+  private final SourceDtoConverter sourceDtoConverter;
+  private final TeamDtoConverter teamDtoConverter;
+  private final GameTagDtoConverter gameTagDtoConverter;
 
-  public GameDtoConverter(TournamentDtoConverter tournamentDtoConverter) {
+  public GameDtoConverter(
+      PlayerDtoConverter playerDtoConverter,
+      TournamentDtoConverter tournamentDtoConverter,
+      AnnotatorDtoConverter annotatorDtoConverter,
+      SourceDtoConverter sourceDtoConverter,
+      TeamDtoConverter teamDtoConverter,
+      GameTagDtoConverter gameTagDtoConverter) {
+    this.playerDtoConverter = playerDtoConverter;
     this.tournamentDtoConverter = tournamentDtoConverter;
+    this.annotatorDtoConverter = annotatorDtoConverter;
+    this.sourceDtoConverter = sourceDtoConverter;
+    this.teamDtoConverter = teamDtoConverter;
+    this.gameTagDtoConverter = gameTagDtoConverter;
   }
 
   /**
@@ -63,18 +89,22 @@ public class GameDtoConverter {
     Long id = (long) game.id();
     String type = game.guidingText() ? "text" : "game";
 
-    // Player information
-    Long whiteId = game.whitePlayerId() == -1 ? null : (long) game.whitePlayerId();
-    String white = whiteId != null ? game.white().getFullName() : ""; // Mandatory PGN field
-    Integer whiteElo = game.whiteElo() == 0 ? null : game.whiteElo();
+    // Player information (only for games, not guiding text)
+    PlayerDto whitePlayer = null;
+    Integer whiteElo = null;
+    PlayerDto blackPlayer = null;
+    Integer blackElo = null;
 
-    Long blackId = game.blackPlayerId() == -1 ? null : (long) game.blackPlayerId();
-    String black = blackId != null ? game.black().getFullName() : ""; // Mandatory PGN field
-    Integer blackElo = game.blackElo() == 0 ? null : game.blackElo();
+    if (!game.guidingText()) {
+      whitePlayer = convertPlayer(game.white());
+      whiteElo = game.whiteElo() == 0 ? null : game.whiteElo();
+      blackPlayer = convertPlayer(game.black());
+      blackElo = game.blackElo() == 0 ? null : game.blackElo();
+    }
 
     // Team information
-    TeamDetailsDto whiteTeam = convertTeam(game, true, includeTeamDetails);
-    TeamDetailsDto blackTeam = convertTeam(game, false, includeTeamDetails);
+    TeamDto whiteTeam = convertTeam(game, true, includeTeamDetails);
+    TeamDto blackTeam = convertTeam(game, false, includeTeamDetails);
 
     // Game metadata
     var result = game.result(); // Mandatory PGN field - GameResult is never null
@@ -88,13 +118,13 @@ public class GameDtoConverter {
     TournamentDto tournament = convertTournament(game, includeTournamentDetails);
 
     // Source information
-    SourceDetailsDto source = convertSource(game, includeSourceDetails);
+    SourceDto source = convertSource(game, includeSourceDetails);
 
     // Annotator
-    AnnotatorDetailsDto annotator = convertAnnotator(game);
+    AnnotatorDto annotator = convertAnnotator(game);
 
     // Game tag
-    GameTagDetailsDto gameTag = convertGameTag(game);
+    GameTagDto gameTag = convertGameTag(game);
 
     // Moves (optional)
     GameMovesDto moves = includeMoves ? convertMoves(game) : null;
@@ -105,11 +135,9 @@ public class GameDtoConverter {
     return new GameDto(
         id,
         type,
-        whiteId,
-        white,
+        whitePlayer,
         whiteElo,
-        blackId,
-        black,
+        blackPlayer,
         blackElo,
         whiteTeam,
         blackTeam,
@@ -128,7 +156,16 @@ public class GameDtoConverter {
   }
 
   @Nullable
-  private TeamDetailsDto convertTeam(@NotNull Game game, boolean isWhite, boolean includeDetails) {
+  private PlayerDto convertPlayer(@NotNull Player player) {
+    // Return null if player is not set (id == -1)
+    if (player.id() == -1) {
+      return null;
+    }
+    return playerDtoConverter.toDto(player);
+  }
+
+  @Nullable
+  private TeamDto convertTeam(@NotNull Game game, boolean isWhite, boolean includeDetails) {
     int teamId = isWhite ? game.whiteTeamId() : game.blackTeamId();
 
     if (teamId == -1) {
@@ -136,20 +173,21 @@ public class GameDtoConverter {
     }
 
     Team team = isWhite ? game.whiteTeam() : game.blackTeam();
-    String title = team.title().isEmpty() ? null : team.title();
 
-    // If details not requested, return minimal information
+    // If details not requested, return minimal information (just id and title)
     if (!includeDetails) {
-      return new TeamDetailsDto((long) teamId, title, null, null, null, null);
+      return new TeamDto(
+          (long) teamId,
+          team.title().isEmpty() ? null : team.title(),
+          null,
+          null,
+          null,
+          null,
+          null);
     }
 
-    // Include full details
-    Integer teamNumber = team.teamNumber() == 0 ? null : team.teamNumber();
-    Boolean season = team.season() ? true : null;
-    Integer year = team.year() == 0 ? null : team.year();
-    String nation = team.nation() != Nation.NONE ? team.nation().getIocCode() : null;
-
-    return new TeamDetailsDto((long) teamId, title, teamNumber, season, year, nation);
+    // Include full details (using the converter)
+    return teamDtoConverter.toDto(team);
   }
 
   @Nullable
@@ -185,52 +223,51 @@ public class GameDtoConverter {
   }
 
   @Nullable
-  private SourceDetailsDto convertSource(@NotNull Game game, boolean includeDetails) {
+  private SourceDto convertSource(@NotNull Game game, boolean includeDetails) {
     int sourceId = game.sourceId();
     if (sourceId == -1) {
       return null;
     }
 
     Source source = game.source();
-    String title = source.title().isEmpty() ? null : source.title();
 
     // If details not requested, return minimal information (just id and title)
     if (!includeDetails) {
-      return new SourceDetailsDto((long) sourceId, null, title, null);
+      return new SourceDto(
+          (long) sourceId,
+          source.title().isEmpty() ? null : source.title(),
+          null,
+          null,
+          null,
+          null,
+          null,
+          null);
     }
 
-    // Include full details
-    return new SourceDetailsDto(
-        (long) sourceId,
-        source.publisher().isEmpty() ? null : source.publisher(),
-        title,
-        source.date().isUnset() ? null : source.date());
+    // Include full details (using the converter)
+    return sourceDtoConverter.toDto(source);
   }
 
   @Nullable
-  private AnnotatorDetailsDto convertAnnotator(@NotNull Game game) {
+  private AnnotatorDto convertAnnotator(@NotNull Game game) {
     int annotatorId = game.annotatorId();
     if (annotatorId == -1) {
       return null;
     }
 
     Annotator annotator = game.annotator();
-
-    return new AnnotatorDetailsDto(
-        (long) annotatorId, annotator.name().isEmpty() ? null : annotator.name());
+    return annotatorDtoConverter.toDto(annotator);
   }
 
   @Nullable
-  private GameTagDetailsDto convertGameTag(@NotNull Game game) {
+  private GameTagDto convertGameTag(@NotNull Game game) {
     int gameTagId = game.gameTagId();
     if (gameTagId == -1) {
       return null;
     }
 
     GameTag gameTag = game.gameTag();
-
-    return new GameTagDetailsDto(
-        (long) gameTagId, gameTag.englishTitle().isEmpty() ? null : gameTag.englishTitle());
+    return gameTagDtoConverter.toDto(gameTag);
   }
 
   @Nullable

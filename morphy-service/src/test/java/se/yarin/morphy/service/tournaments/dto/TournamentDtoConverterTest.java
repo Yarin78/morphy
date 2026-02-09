@@ -1,11 +1,11 @@
 package se.yarin.morphy.service.tournaments.dto;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import se.yarin.chess.Date;
 import se.yarin.morphy.entities.*;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Roundtrip test for TournamentDtoConverter. Validates that Tournament entities can be converted to

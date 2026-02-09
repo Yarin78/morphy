@@ -73,17 +73,32 @@ public class GameDtoImporter {
 
     if (!isText) {
       // Set player information
-      String whiteName = dto.white() != null && !dto.white().isEmpty() ? dto.white() : "?";
-      String blackName = dto.black() != null && !dto.black().isEmpty() ? dto.black() : "?";
+      String whiteName = "?";
+      if (dto.whitePlayer() != null && dto.whitePlayer().lastName() != null) {
+        whiteName = dto.whitePlayer().lastName();
+        if (dto.whitePlayer().firstName() != null && !dto.whitePlayer().firstName().isEmpty()) {
+          whiteName += ", " + dto.whitePlayer().firstName();
+        }
+      }
       headerModel.setWhite(whiteName);
+
+      String blackName = "?";
+      if (dto.blackPlayer() != null && dto.blackPlayer().lastName() != null) {
+        blackName = dto.blackPlayer().lastName();
+        if (dto.blackPlayer().firstName() != null && !dto.blackPlayer().firstName().isEmpty()) {
+          blackName += ", " + dto.blackPlayer().firstName();
+        }
+      }
       headerModel.setBlack(blackName);
 
       // Store entity IDs if present
-      if (dto.whiteId() != null) {
-        headerModel.setField(se.yarin.morphy.GameAdapter.WHITE_ID, dto.whiteId().intValue());
+      if (dto.whitePlayer() != null && dto.whitePlayer().id() != null) {
+        headerModel.setField(
+            se.yarin.morphy.GameAdapter.WHITE_ID, dto.whitePlayer().id().intValue());
       }
-      if (dto.blackId() != null) {
-        headerModel.setField(se.yarin.morphy.GameAdapter.BLACK_ID, dto.blackId().intValue());
+      if (dto.blackPlayer() != null && dto.blackPlayer().id() != null) {
+        headerModel.setField(
+            se.yarin.morphy.GameAdapter.BLACK_ID, dto.blackPlayer().id().intValue());
       }
 
       // Set ELO ratings
@@ -179,8 +194,8 @@ public class GameDtoImporter {
       if (dto.source().title() != null) {
         headerModel.setSourceTitle(dto.source().title());
       }
-      if (dto.source().name() != null) {
-        headerModel.setSource(dto.source().name());
+      if (dto.source().publisher() != null) {
+        headerModel.setSource(dto.source().publisher());
       }
       if (dto.source().date() != null) {
         headerModel.setSourceDate(dto.source().date());
@@ -204,8 +219,8 @@ public class GameDtoImporter {
         headerModel.setField(
             se.yarin.morphy.GameAdapter.GAME_TAG_ID, dto.gameTag().id().intValue());
       }
-      if (dto.gameTag().title() != null) {
-        headerModel.setGameTag(dto.gameTag().title());
+      if (dto.gameTag().englishTitle() != null) {
+        headerModel.setGameTag(dto.gameTag().englishTitle());
       }
     }
 

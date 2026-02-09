@@ -1,5 +1,8 @@
 package se.yarin.morphy.service.games;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -11,10 +14,6 @@ import se.yarin.morphy.service.databases.DatabaseService;
 import se.yarin.morphy.service.games.dto.GameDto;
 import se.yarin.morphy.service.games.dto.GameDtoConverter;
 import se.yarin.morphy.service.games.dto.GameDtoImporter;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 public class GamesService {

@@ -10,13 +10,16 @@ The Game Dto structure provides a clean, structured way to represent chess games
 - **GameDto**: The primary Dto containing all game information
 
 ### Supporting Dtos
-- **EventDetailsDto**: Tournament/event details (name, site, dates, category, etc.)
-- **SourceDetailsDto**: Source information (publisher, title, date)
-- **AnnotatorDetailsDto**: Annotator information
-- **GameTagDetailsDto**: Game tag information
-- **TeamDetailsDto**: Team information for both white and black
+- **PlayerDto** (from `se.yarin.morphy.service.players.dto`): Player information (lastName, firstName)
+- **TournamentDto** (from `se.yarin.morphy.service.tournaments.dto`): Tournament/event details (name, site, dates, category, etc.)
+- **SourceDto** (from `se.yarin.morphy.service.sources.dto`): Source information (title, publisher, publication, date, version, quality)
+- **AnnotatorDto** (from `se.yarin.morphy.service.annotators.dto`): Annotator information (name)
+- **GameTagDto** (from `se.yarin.morphy.service.gametags.dto`): Game tag information (titles in multiple languages)
+- **TeamDto** (from `se.yarin.morphy.service.teams.dto`): Team information for both white and black (title, teamNumber, season, year, nation)
 - **GameMovesDto**: Game moves (currently PGN format, extensible for future formats)
 - **GameTextDto**: Text commentary associated with the game
+
+Note: All entity DTOs (Player, Tournament, Source, Annotator, GameTag, Team) are full-featured DTOs from their respective service packages, supporting both standalone API usage and embedding within GameDto.
 
 ## Usage Example
 
@@ -82,11 +85,17 @@ public List<GameDto> getGameHeaders(String databaseId, int limit) {
 ```json
 {
   "id": 123,
-  "whiteId": 456,
-  "white": "Kasparov, Garry",
+  "whitePlayer": {
+    "id": 456,
+    "lastName": "Kasparov",
+    "firstName": "Garry"
+  },
   "whiteElo": 2851,
-  "blackId": 789,
-  "black": "Karpov, Anatoly",
+  "blackPlayer": {
+    "id": 789,
+    "lastName": "Karpov",
+    "firstName": "Anatoly"
+  },
   "blackElo": 2750,
   "result": "WIN_WHITE",
   "date": {
@@ -96,7 +105,7 @@ public List<GameDto> getGameHeaders(String databaseId, int limit) {
   },
   "eco": "E97",
   "round": 24,
-  "event": {
+  "tournament": {
     "id": 101,
     "name": "World Championship"
   }
@@ -108,17 +117,25 @@ public List<GameDto> getGameHeaders(String databaseId, int limit) {
 ```json
 {
   "id": 123,
-  "whiteId": 456,
-  "white": "Kasparov, Garry",
+  "whitePlayer": {
+    "id": 456,
+    "lastName": "Kasparov",
+    "firstName": "Garry"
+  },
   "whiteElo": 2851,
-  "blackId": 789,
-  "black": "Karpov, Anatoly",
+  "blackPlayer": {
+    "id": 789,
+    "lastName": "Karpov",
+    "firstName": "Anatoly"
+  },
   "blackElo": 2750,
-  "teams": {
-    "whiteTeamId": 10,
-    "whiteTeam": "Team USSR",
-    "blackTeamId": 10,
-    "blackTeam": "Team USSR"
+  "whiteTeam": {
+    "id": 10,
+    "title": "Team USSR"
+  },
+  "blackTeam": {
+    "id": 10,
+    "title": "Team USSR"
   },
   "result": "WIN_WHITE",
   "date": {
@@ -129,7 +146,7 @@ public List<GameDto> getGameHeaders(String databaseId, int limit) {
   "eco": "E97",
   "round": 24,
   "lineEvaluation": "GOOD_MOVE",
-  "event": {
+  "tournament": {
     "id": 101,
     "name": "World Championship",
     "site": "Moscow",
@@ -149,8 +166,8 @@ public List<GameDto> getGameHeaders(String databaseId, int limit) {
   },
   "source": {
     "id": 50,
-    "name": "ChessBase",
-    "title": "World Championship Database"
+    "title": "World Championship Database",
+    "publisher": "ChessBase"
   },
   "annotator": {
     "id": 42,
@@ -169,14 +186,21 @@ When only partial date information is available:
 ```json
 {
   "id": 456,
-  "white": "Morphy, Paul",
-  "black": "Amateur",
+  "whitePlayer": {
+    "id": 100,
+    "lastName": "Morphy",
+    "firstName": "Paul"
+  },
+  "blackPlayer": {
+    "id": 101,
+    "lastName": "Amateur"
+  },
   "date": {
     "year": 1858,
     "month": 0,
     "day": 0
   },
-  "event": {
+  "tournament": {
     "id": 200,
     "name": "Paris Blindfold Exhibition"
   }
@@ -189,16 +213,16 @@ When only partial date information is available:
 All fields except `id` are nullable, allowing for sparse data representation.
 
 ### Entity IDs
-Entity IDs (whiteId, blackId, etc.) are included both in the main Dto and within nested detail Dtos:
-- Top-level IDs for players (whiteId, blackId) for convenience
-- IDs within nested Dtos (event.id, source.id, annotator.id, gameTag.id)
+Entity IDs are included within their respective DTOs:
+- Player IDs within PlayerDto (whitePlayer.id, blackPlayer.id)
+- IDs within other nested DTOs (tournament.id, source.id, annotator.id, gameTag.id, whiteTeam.id, blackTeam.id)
 
 ### Partial Dates
 Uses `se.yarin.chess.Date` which supports partial dates (year-only, year-month-only).
 
 ### Extensibility
 - GameMovesDto can be extended to support other formats (JSON, algebraic notation, etc.)
-- GameTagDetailsDto can be extended to include other language titles
+- GameTagDto already includes titles in multiple languages (English, German, French, Spanish, Italian, Dutch, Slovenian)
 
 ## Integration Points
 
