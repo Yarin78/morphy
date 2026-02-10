@@ -231,16 +231,23 @@ class ServicesIntegrationTest {
     assertEquals(2700, retrievedGame2.whiteElo());
     assertEquals(2680, retrievedGame2.blackElo());
 
-    // Step 11: Get the updated player from game 1 and verify it has gameCount=1
-    PlayerDto removedPlayerFromGame1 = playersService.getPlayer(databaseId, game1WhitePlayerId);
-    //assertNull(removedPlayerFromGame1);
-    PlayerDto missingPlayer = playersService.getPlayer(databaseId, 100);
-
-    PlayerDto updatedPlayerFromGame1 = playersService.getPlayer(databaseId, game1UpdatedWhitePlayerId);
+    // Step 11: Get the updated player from game 1 and verify it has gameCount=2
+    PlayerDto updatedPlayerFromGame1 =
+        playersService.getPlayer(databaseId, game1UpdatedWhitePlayerId);
     assertNotNull(updatedPlayerFromGame1);
     assertEquals("Kasparov", updatedPlayerFromGame1.lastName());
     assertEquals("Garry", updatedPlayerFromGame1.firstName());
     assertEquals(2, updatedPlayerFromGame1.gameCount(), "Updated player should have gameCount=2");
+
+    // Step 12: Verify that getting a missing player (out of range) returns null
+    PlayerDto missingPlayer = playersService.getPlayer(databaseId, 100);
+    assertNull(missingPlayer, "Getting a missing player should return null");
+
+    // Step 13: Verify that an "unused" player id also returns null
+    PlayerDto unusedPlayer = playersService.getPlayer(databaseId, game1WhitePlayerId);
+    assertNull(
+        unusedPlayer,
+        "Getting an unused player should return null");
   }
 
   /**

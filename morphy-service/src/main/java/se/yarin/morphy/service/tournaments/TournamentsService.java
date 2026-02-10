@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -81,15 +82,25 @@ public class TournamentsService {
    *
    * @param databaseId The database ID
    * @param tournamentId The tournament ID
-   * @return TournamentDto with the tournament information
+   * @return TournamentDto with the tournament information, or null if the tournament doesn't exist,
+   *     is deleted, or is unused (has no games)
    */
-  public TournamentDto getTournament(@NotNull String databaseId, int tournamentId) {
+  public @Nullable TournamentDto getTournament(@NotNull String databaseId, int tournamentId) {
     return databaseService.withReadTransaction(
         databaseId,
         txn -> {
-          Tournament tournament = txn.getTournament(tournamentId);
-          TournamentExtra extra = txn.getTournamentExtra(tournamentId);
-          return tournamentDtoConverter.toDto(tournament, extra);
+          try {
+            Tournament tournament = txn.getTournament(tournamentId);
+            TournamentExtra extra = txn.getTournamentExtra(tournamentId);
+            // Return null if tournament is unused (has no games)
+            if (tournament.count() == 0) {
+              return null;
+            }
+            return tournamentDtoConverter.toDto(tournament, extra);
+          } catch (IllegalArgumentException e) {
+            // Tournament doesn't exist or is deleted
+            return null;
+          }
         });
   }
 

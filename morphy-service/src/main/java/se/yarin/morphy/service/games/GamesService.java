@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -93,16 +94,22 @@ public class GamesService {
    * @param gameId The game ID
    * @param includeMoves Whether to include game moves in the response
    * @param includeText Whether to include game text/commentary in the response
-   * @return GameDto with the requested information (includes full tournament/source/team details)
+   * @return GameDto with the requested information (includes full tournament/source/team details),
+   *     or null if the game doesn't exist or is deleted
    */
-  public GameDto getGame(
+  public @Nullable GameDto getGame(
       @NotNull String databaseId, int gameId, boolean includeMoves, boolean includeText) {
     return databaseService.withReadTransaction(
         databaseId,
         txn -> {
-          Game game = txn.getGame(gameId);
-          // For single game queries, include full tournament/source/team details
-          return gameDtoConverter.toDto(game, includeMoves, includeText, true, true, true);
+          try {
+            Game game = txn.getGame(gameId);
+            // For single game queries, include full tournament/source/team details
+            return gameDtoConverter.toDto(game, includeMoves, includeText, true, true, true);
+          } catch (IllegalArgumentException e) {
+            // Game doesn't exist or is deleted
+            return null;
+          }
         });
   }
 

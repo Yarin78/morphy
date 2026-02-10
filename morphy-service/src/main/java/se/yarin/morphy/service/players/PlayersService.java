@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -74,14 +75,24 @@ public class PlayersService {
    *
    * @param databaseId The database ID
    * @param playerId The player ID
-   * @return PlayerDto with the player information
+   * @return PlayerDto with the player information, or null if the player doesn't exist, is
+   *     deleted, or is unused (has no games)
    */
-  public PlayerDto getPlayer(@NotNull String databaseId, int playerId) {
+  public @Nullable PlayerDto getPlayer(@NotNull String databaseId, int playerId) {
     return databaseService.withReadTransaction(
         databaseId,
         txn -> {
-          Player player = txn.playerTransaction().get(playerId);
-          return playerDtoConverter.toDto(player);
+          try {
+            Player player = txn.playerTransaction().get(playerId);
+            // Return null if player is unused (has no games)
+            if (player.count() == 0) {
+              return null;
+            }
+            return playerDtoConverter.toDto(player);
+          } catch (IllegalArgumentException e) {
+            // Player doesn't exist or is deleted
+            return null;
+          }
         });
   }
 

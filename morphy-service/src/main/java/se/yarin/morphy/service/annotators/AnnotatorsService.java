@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -76,14 +77,24 @@ public class AnnotatorsService {
    *
    * @param databaseId The database ID
    * @param annotatorId The annotator ID
-   * @return AnnotatorDto with the annotator information
+   * @return AnnotatorDto with the annotator information, or null if the annotator doesn't exist,
+   *     is deleted, or is unused (has no games)
    */
-  public AnnotatorDto getAnnotator(@NotNull String databaseId, int annotatorId) {
+  public @Nullable AnnotatorDto getAnnotator(@NotNull String databaseId, int annotatorId) {
     return databaseService.withReadTransaction(
         databaseId,
         txn -> {
-          Annotator annotator = txn.annotatorTransaction().get(annotatorId);
-          return annotatorDtoConverter.toDto(annotator);
+          try {
+            Annotator annotator = txn.annotatorTransaction().get(annotatorId);
+            // Return null if annotator is unused (has no games)
+            if (annotator.count() == 0) {
+              return null;
+            }
+            return annotatorDtoConverter.toDto(annotator);
+          } catch (IllegalArgumentException e) {
+            // Annotator doesn't exist or is deleted
+            return null;
+          }
         });
   }
 

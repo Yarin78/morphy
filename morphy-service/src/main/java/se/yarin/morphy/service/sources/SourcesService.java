@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -74,14 +75,24 @@ public class SourcesService {
    *
    * @param databaseId The database ID
    * @param sourceId The source ID
-   * @return SourceDto with the source information
+   * @return SourceDto with the source information, or null if the source doesn't exist, is
+   *     deleted, or is unused (has no games)
    */
-  public SourceDto getSource(@NotNull String databaseId, int sourceId) {
+  public @Nullable SourceDto getSource(@NotNull String databaseId, int sourceId) {
     return databaseService.withReadTransaction(
         databaseId,
         txn -> {
-          Source source = txn.sourceTransaction().get(sourceId);
-          return sourceDtoConverter.toDto(source);
+          try {
+            Source source = txn.sourceTransaction().get(sourceId);
+            // Return null if source is unused (has no games)
+            if (source.count() == 0) {
+              return null;
+            }
+            return sourceDtoConverter.toDto(source);
+          } catch (IllegalArgumentException e) {
+            // Source doesn't exist or is deleted
+            return null;
+          }
         });
   }
 

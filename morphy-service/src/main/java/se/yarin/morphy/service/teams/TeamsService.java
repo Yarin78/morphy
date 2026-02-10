@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -74,14 +75,24 @@ public class TeamsService {
    *
    * @param databaseId The database ID
    * @param teamId The team ID
-   * @return TeamDto with the team information
+   * @return TeamDto with the team information, or null if the team doesn't exist, is deleted, or
+   *     is unused (has no games)
    */
-  public TeamDto getTeam(@NotNull String databaseId, int teamId) {
+  public @Nullable TeamDto getTeam(@NotNull String databaseId, int teamId) {
     return databaseService.withReadTransaction(
         databaseId,
         txn -> {
-          Team team = txn.teamTransaction().get(teamId);
-          return teamDtoConverter.toDto(team);
+          try {
+            Team team = txn.teamTransaction().get(teamId);
+            // Return null if team is unused (has no games)
+            if (team.count() == 0) {
+              return null;
+            }
+            return teamDtoConverter.toDto(team);
+          } catch (IllegalArgumentException e) {
+            // Team doesn't exist or is deleted
+            return null;
+          }
         });
   }
 

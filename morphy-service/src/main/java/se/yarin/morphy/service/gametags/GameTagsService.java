@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -74,14 +75,24 @@ public class GameTagsService {
    *
    * @param databaseId The database ID
    * @param gameTagId The game tag ID
-   * @return GameTagDto with the game tag information
+   * @return GameTagDto with the game tag information, or null if the game tag doesn't exist, is
+   *     deleted, or is unused (has no games)
    */
-  public GameTagDto getGameTag(@NotNull String databaseId, int gameTagId) {
+  public @Nullable GameTagDto getGameTag(@NotNull String databaseId, int gameTagId) {
     return databaseService.withReadTransaction(
         databaseId,
         txn -> {
-          GameTag gameTag = txn.gameTagTransaction().get(gameTagId);
-          return gameTagDtoConverter.toDto(gameTag);
+          try {
+            GameTag gameTag = txn.gameTagTransaction().get(gameTagId);
+            // Return null if game tag is unused (has no games)
+            if (gameTag.count() == 0) {
+              return null;
+            }
+            return gameTagDtoConverter.toDto(gameTag);
+          } catch (IllegalArgumentException e) {
+            // Game tag doesn't exist or is deleted
+            return null;
+          }
         });
   }
 
