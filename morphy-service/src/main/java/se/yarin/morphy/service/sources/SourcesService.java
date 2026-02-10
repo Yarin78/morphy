@@ -128,6 +128,13 @@ public class SourcesService {
       databaseService.withWriteTransaction(
           databaseId,
           txn -> {
+            // Check if another source with the same key exists
+            Source existing = txn.sourceTransaction().get(source);
+            if (existing != null && existing.id() != sourceId) {
+              throw new IllegalArgumentException(
+                  "Cannot update source: another source with the same key already exists");
+            }
+
             txn.updateSourceById(sourceId, source);
             log.info("Successfully updated source {} in database '{}'", sourceId, databaseId);
           });

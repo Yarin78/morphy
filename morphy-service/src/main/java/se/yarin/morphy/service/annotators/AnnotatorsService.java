@@ -130,6 +130,13 @@ public class AnnotatorsService {
       databaseService.withWriteTransaction(
           databaseId,
           txn -> {
+            // Check if another annotator with the same key exists
+            Annotator existing = txn.annotatorTransaction().get(annotator);
+            if (existing != null && existing.id() != annotatorId) {
+              throw new IllegalArgumentException(
+                  "Cannot update annotator: another annotator with the same key already exists");
+            }
+
             txn.updateAnnotatorById(annotatorId, annotator);
             log.info("Successfully updated annotator {} in database '{}'", annotatorId, databaseId);
           });

@@ -128,6 +128,13 @@ public class GameTagsService {
       databaseService.withWriteTransaction(
           databaseId,
           txn -> {
+            // Check if another game tag with the same key exists
+            GameTag existing = txn.gameTagTransaction().get(gameTag);
+            if (existing != null && existing.id() != gameTagId) {
+              throw new IllegalArgumentException(
+                  "Cannot update game tag: another game tag with the same key already exists");
+            }
+
             txn.updateGameTagById(gameTagId, gameTag);
             log.info("Successfully updated game tag {} in database '{}'", gameTagId, databaseId);
           });

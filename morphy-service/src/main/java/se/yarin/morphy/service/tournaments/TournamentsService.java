@@ -137,6 +137,13 @@ public class TournamentsService {
       databaseService.withWriteTransaction(
           databaseId,
           txn -> {
+            // Check if another tournament with the same key exists
+            Tournament existing = txn.tournamentTransaction().get(tournament);
+            if (existing != null && existing.id() != tournamentId) {
+              throw new IllegalArgumentException(
+                  "Cannot update tournament: another tournament with the same key already exists");
+            }
+
             txn.updateTournamentById(tournamentId, tournament, extra);
             log.info(
                 "Successfully updated tournament {} in database '{}'", tournamentId, databaseId);

@@ -250,6 +250,217 @@ class ServicesIntegrationTest {
         "Getting an unused player should return null");
   }
 
+  @Test
+  void testUpdateTournamentWithDuplicateKey() {
+    // Create two tournaments with different keys
+    TournamentDto tournament1 =
+        new TournamentDto(
+            null,
+            "World Cup",
+            new Date(2021, 1, 1),
+            new Date(2021, 1, 31),
+            "Berlin",
+            "GER",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null);
+
+    TournamentDto tournament2 =
+        new TournamentDto(
+            null,
+            "World Cup",
+            new Date(2021, 1, 1),
+            new Date(2021, 1, 31),
+            "Moscow",
+            "RUS",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null);
+
+    // Create games with these tournaments to make them persist
+    GameDto game1 = createMinimalGameWithTournament(tournament1);
+    game1 = gamesService.addGame(databaseId, game1);
+    int tournament1Id = game1.tournament().id().intValue();
+
+    GameDto game2 = createMinimalGameWithTournament(tournament2);
+    game2 = gamesService.addGame(databaseId, game2);
+    int tournament2Id = game2.tournament().id().intValue();
+
+    // Try to update tournament2's place to match tournament1's place
+    // This should fail because tournament1 already has year=2021, title="World Cup", place="Berlin"
+    TournamentDto duplicateUpdate =
+        new TournamentDto(
+            (long) tournament2Id,
+            "World Cup",
+            new Date(2021, 1, 1),
+            new Date(2021, 1, 31),
+            "Berlin", // Same as tournament1
+            "RUS",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null);
+
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> tournamentsService.updateTournament(databaseId, tournament2Id, duplicateUpdate),
+        "Should throw IllegalArgumentException when updating to a duplicate key");
+  }
+
+  @Test
+  void testUpdateTournamentWithUniqueKey() {
+    // Create a tournament
+    TournamentDto tournament =
+        new TournamentDto(
+            null,
+            "World Cup",
+            new Date(2021, 1, 1),
+            new Date(2021, 1, 31),
+            "Berlin",
+            "GER",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null);
+
+    // Create game with this tournament
+    GameDto game = createMinimalGameWithTournament(tournament);
+    game = gamesService.addGame(databaseId, game);
+    int tournamentId = game.tournament().id().intValue();
+
+    // Update to a different unique key - should succeed
+    TournamentDto uniqueUpdate =
+        new TournamentDto(
+            (long) tournamentId,
+            "World Cup",
+            new Date(2021, 1, 1),
+            new Date(2021, 1, 31),
+            "Paris", // Different place
+            "FRA",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null);
+
+    // Should not throw
+    assertDoesNotThrow(
+        () -> tournamentsService.updateTournament(databaseId, tournamentId, uniqueUpdate));
+
+    // Verify the update was successful
+    TournamentDto retrieved = tournamentsService.getTournament(databaseId, tournamentId);
+    assertNotNull(retrieved);
+    assertEquals("Paris", retrieved.site());
+  }
+
+  @Test
+  void testUpdateTournamentSameKey() {
+    // Create a tournament
+    TournamentDto tournament =
+        new TournamentDto(
+            null,
+            "World Cup",
+            new Date(2021, 1, 1),
+            new Date(2021, 1, 31),
+            "Berlin",
+            "GER",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null);
+
+    // Create game with this tournament
+    GameDto game = createMinimalGameWithTournament(tournament);
+    game = gamesService.addGame(databaseId, game);
+    int tournamentId = game.tournament().id().intValue();
+
+    // Update without changing the key (only change non-key fields)
+    TournamentDto sameKeyUpdate =
+        new TournamentDto(
+            (long) tournamentId,
+            "World Cup", // Same key fields
+            new Date(2021, 1, 1),
+            new Date(2021, 1, 31),
+            "Berlin",
+            "GER",
+            20, // Changed non-key field
+            10, // Changed non-key field
+            "swiss",
+            "classical",
+            true,
+            false,
+            null);
+
+    // Should not throw
+    assertDoesNotThrow(
+        () -> tournamentsService.updateTournament(databaseId, tournamentId, sameKeyUpdate));
+
+    // Verify the update was successful
+    TournamentDto retrieved = tournamentsService.getTournament(databaseId, tournamentId);
+    assertNotNull(retrieved);
+    assertEquals(20, retrieved.category());
+    assertEquals(10, retrieved.rounds());
+  }
+
+  @Test
+  void testUpdatePlayerWithDuplicateKey() {
+    // Create two games with different players
+    GameDto game1 = createMinimalGameWithPlayer("Carlsen", "Magnus");
+    game1 = gamesService.addGame(databaseId, game1);
+    int player1Id = game1.whitePlayer().id().intValue();
+
+    GameDto game2 = createMinimalGameWithPlayer("Kasparov", "Garry");
+    game2 = gamesService.addGame(databaseId, game2);
+    int player2Id = game2.whitePlayer().id().intValue();
+
+    // Try to update player2 to match player1's name
+    PlayerDto duplicateUpdate = new PlayerDto((long) player2Id, "Carlsen", "Magnus", null);
+
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> playersService.updatePlayer(databaseId, player2Id, duplicateUpdate),
+        "Should throw IllegalArgumentException when updating to a duplicate key");
+  }
+
+  @Test
+  void testUpdateAnnotatorWithDuplicateKey() {
+    // Create two games with different annotators
+    GameDto game1 = createMinimalGameWithAnnotator("GM Hikaru Nakamura");
+    game1 = gamesService.addGame(databaseId, game1);
+    int annotator1Id = game1.annotator().id().intValue();
+
+    GameDto game2 = createMinimalGameWithAnnotator("GM Bobby Fischer");
+    game2 = gamesService.addGame(databaseId, game2);
+    int annotator2Id = game2.annotator().id().intValue();
+
+    // Try to update annotator2 to match annotator1's name
+    AnnotatorDto duplicateUpdate = new AnnotatorDto((long) annotator2Id, "GM Hikaru Nakamura", null);
+
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> annotatorsService.updateAnnotator(databaseId, annotator2Id, duplicateUpdate),
+        "Should throw IllegalArgumentException when updating to a duplicate key");
+  }
+
   /**
    * Creates a comprehensive game with all fields set, including moves, variations, and
    * annotations.
@@ -340,6 +551,81 @@ class ServicesIntegrationTest {
         null,
         null,
         new GameMovesDto("1. e4 c5 2. Nf3 d6 3. d4 cxd4 4. Nxd4 Nf6 *"),
+        null);
+  }
+
+  /** Creates a minimal game with a specific tournament. */
+  private GameDto createMinimalGameWithTournament(TournamentDto tournament) {
+    return new GameDto(
+        null,
+        "game",
+        new PlayerDto(null, "Doe", "John", null),
+        null,
+        new PlayerDto(null, "Doe", "Jane", null),
+        null,
+        null,
+        null,
+        GameResult.DRAW,
+        new Date(2024, 1, 1),
+        null,
+        null,
+        null,
+        null,
+        tournament,
+        new SourceDto(null, "Test Source", "Test", null, null, null, null, null),
+        null,
+        null,
+        new GameMovesDto("1. e4 e5 *"),
+        null);
+  }
+
+  /** Creates a minimal game with a specific white player. */
+  private GameDto createMinimalGameWithPlayer(String lastName, String firstName) {
+    return new GameDto(
+        null,
+        "game",
+        new PlayerDto(null, lastName, firstName, null),
+        null,
+        new PlayerDto(null, "Opponent", "Test", null),
+        null,
+        null,
+        null,
+        GameResult.DRAW,
+        new Date(2024, 1, 1),
+        null,
+        null,
+        null,
+        null,
+        new TournamentDto(null, "Test Event", new Date(2024, 1, 1), null, "Test City", null, null, null, null, null, null, null, null),
+        new SourceDto(null, "Test Source", "Test", null, null, null, null, null),
+        null,
+        null,
+        new GameMovesDto("1. e4 e5 *"),
+        null);
+  }
+
+  /** Creates a minimal game with a specific annotator. */
+  private GameDto createMinimalGameWithAnnotator(String annotatorName) {
+    return new GameDto(
+        null,
+        "game",
+        new PlayerDto(null, "Player", "Test", null),
+        null,
+        new PlayerDto(null, "Opponent", "Test", null),
+        null,
+        null,
+        null,
+        GameResult.DRAW,
+        new Date(2024, 1, 1),
+        null,
+        null,
+        null,
+        null,
+        new TournamentDto(null, "Test Event", new Date(2024, 1, 1), null, "Test City", null, null, null, null, null, null, null, null),
+        new SourceDto(null, "Test Source", "Test", null, null, null, null, null),
+        new AnnotatorDto(null, annotatorName, null),
+        null,
+        new GameMovesDto("1. e4 e5 *"),
         null);
   }
 }

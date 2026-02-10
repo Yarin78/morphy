@@ -127,6 +127,13 @@ public class TeamsService {
       databaseService.withWriteTransaction(
           databaseId,
           txn -> {
+            // Check if another team with the same key exists
+            Team existing = txn.teamTransaction().get(team);
+            if (existing != null && existing.id() != teamId) {
+              throw new IllegalArgumentException(
+                  "Cannot update team: another team with the same key already exists");
+            }
+
             txn.updateTeamById(teamId, team);
             log.info("Successfully updated team {} in database '{}'", teamId, databaseId);
           });

@@ -128,6 +128,13 @@ public class PlayersService {
       databaseService.withWriteTransaction(
           databaseId,
           txn -> {
+            // Check if another player with the same key exists
+            Player existing = txn.playerTransaction().get(player);
+            if (existing != null && existing.id() != playerId) {
+              throw new IllegalArgumentException(
+                  "Cannot update player: another player with the same key already exists");
+            }
+
             txn.updatePlayerById(playerId, player);
             log.info("Successfully updated player {} in database '{}'", playerId, databaseId);
           });
