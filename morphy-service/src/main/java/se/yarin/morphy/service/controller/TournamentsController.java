@@ -44,13 +44,16 @@ public class TournamentsController {
    *
    * @param databaseId The database ID
    * @param tournamentId The tournament ID
-   * @return The tournament information
+   * @return The tournament information, or 404 if not found
    */
   @GetMapping("/{tournamentId}")
   public ResponseEntity<TournamentDto> getTournament(
       @PathVariable String databaseId, @PathVariable int tournamentId) {
     try {
       TournamentDto tournament = tournamentsService.getTournament(databaseId, tournamentId);
+      if (tournament == null) {
+        return ResponseEntity.notFound().build();
+      }
       return ResponseEntity.ok(tournament);
     } catch (MorphyServiceException e) {
       log.error(
@@ -58,10 +61,7 @@ public class TournamentsController {
           tournamentId,
           databaseId,
           e.getMessage());
-      return ResponseEntity.badRequest().build();
-    } catch (Exception e) {
-      log.error("Error retrieving tournament {} from database '{}'", tournamentId, databaseId, e);
-      return ResponseEntity.notFound().build();
+      return ResponseEntity.internalServerError().build();
     }
   }
 

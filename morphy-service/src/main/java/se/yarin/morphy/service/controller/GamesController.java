@@ -50,7 +50,7 @@ public class GamesController {
    * @param gameId The game ID
    * @param includeMoves Whether to include game moves (default true)
    * @param includeText Whether to include game text/commentary (default false)
-   * @return The game with the requested information
+   * @return The game with the requested information, or 404 if not found
    */
   @GetMapping("/{gameId}")
   public ResponseEntity<GameDto> getGame(
@@ -60,14 +60,14 @@ public class GamesController {
       @RequestParam(defaultValue = "false") boolean includeText) {
     try {
       GameDto game = gamesService.getGame(databaseId, gameId, includeMoves, includeText);
+      if (game == null) {
+        return ResponseEntity.notFound().build();
+      }
       return ResponseEntity.ok(game);
     } catch (MorphyServiceException e) {
       log.error(
           "Error retrieving game {} from database '{}': {}", gameId, databaseId, e.getMessage());
-      return ResponseEntity.badRequest().build();
-    } catch (Exception e) {
-      log.error("Error retrieving game {} from database '{}'", gameId, databaseId, e);
-      return ResponseEntity.notFound().build();
+      return ResponseEntity.internalServerError().build();
     }
   }
 
