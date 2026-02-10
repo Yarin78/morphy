@@ -46,6 +46,12 @@ public class DatabaseService {
   @Value("${app.databases.freshness-check-interval:600000}") // 10 minutes in milliseconds
   private long freshnessCheckInterval;
 
+  @Value("${app.databases.allowed-paths:}")
+  private List<String> allowedPaths;
+
+  @Value("${app.databases.allowed-create-paths:}")
+  private List<String> allowedCreatePaths;
+
   public DatabaseService(@NotNull ResourceLoader resourceLoader) {
     this.resourceLoader = resourceLoader;
     this.objectMapper = new ObjectMapper();
@@ -367,13 +373,15 @@ public class DatabaseService {
    * @param databaseId Unique identifier for the database
    * @param displayName Human-readable name for the database
    * @param path File system path where the database should be created
-   * @throws IllegalArgumentException if databaseId already exists or is invalid
+   * @throws IllegalArgumentException if databaseId already exists, path is not allowed, or is
+   *     invalid
    * @throws IOException if database creation or config file update fails
    */
   public void createDatabase(
       @NotNull String databaseId, @NotNull String displayName, @NotNull String path)
       throws IOException {
     validateDatabaseId(databaseId);
+    validateCreatePath(path);
 
     File dbFile = new File(path);
 
@@ -405,14 +413,15 @@ public class DatabaseService {
    * @param databaseId Unique identifier for the database
    * @param displayName Human-readable name for the database
    * @param path File system path to the existing database
-   * @throws IllegalArgumentException if databaseId already exists, database file doesn't exist, or
-   *     is invalid
+   * @throws IllegalArgumentException if databaseId already exists, database file doesn't exist,
+   *     path is not allowed, or is invalid
    * @throws IOException if config file update fails
    */
   public void registerDatabase(
       @NotNull String databaseId, @NotNull String displayName, @NotNull String path)
       throws IOException {
     validateDatabaseId(databaseId);
+    validateRegisterPath(path);
 
     File dbFile = new File(path);
     if (!dbFile.exists()) {
@@ -429,6 +438,83 @@ public class DatabaseService {
     }
     if (databaseStates.containsKey(databaseId)) {
       throw new IllegalArgumentException("Database ID already exists: " + databaseId);
+    }
+  }
+
+  /**
+   * Validates that a path is allowed for creating new databases. Path must be exactly one of the
+   * configured allowed create paths (not a subdirectory).
+   *
+   * @param path The path to validate
+   * @throws IllegalArgumentException if path is not allowed
+   */
+  private void validateCreatePath(@NotNull String path) {
+    if (allowedCreatePaths == null || allowedCreatePaths.isEmpty()) {
+      log.warn("No allowed create paths configured - allowing all paths");
+      return;
+    }
+
+    try {
+      File dbFile = new File(path);
+      File parentDir = dbFile.getParentFile();
+      if (parentDir == null) {
+        throw new IllegalArgumentException("Invalid database path: " + path);
+      }
+
+      String canonicalParentPath = parentDir.getCanonicalPath();
+
+      for (String allowedPath : allowedCreatePaths) {
+        File allowedDir = new File(allowedPath);
+        String canonicalAllowedPath = allowedDir.getCanonicalPath();
+
+        if (canonicalParentPath.equals(canonicalAllowedPath)) {
+          return; // Path is valid
+        }
+      }
+
+      throw new IllegalArgumentException(
+          "Database creation not allowed in path: "
+              + path
+              + ". Must be in one of the configured allowed create paths.");
+    } catch (IOException e) {
+      throw new IllegalArgumentException("Failed to validate path: " + path, e);
+    }
+  }
+
+  /**
+   * Validates that a path is allowed for registering existing databases. Path must be within (or
+   * be) one of the configured allowed paths or any subdirectory.
+   *
+   * @param path The path to validate
+   * @throws IllegalArgumentException if path is not allowed
+   */
+  private void validateRegisterPath(@NotNull String path) {
+    if (allowedPaths == null || allowedPaths.isEmpty()) {
+      log.warn("No allowed paths configured - allowing all paths");
+      return;
+    }
+
+    try {
+      File dbFile = new File(path);
+      String canonicalDbPath = dbFile.getCanonicalPath();
+
+      for (String allowedPath : allowedPaths) {
+        File allowedDir = new File(allowedPath);
+        String canonicalAllowedPath = allowedDir.getCanonicalPath();
+
+        // Check if the database path is within the allowed path or any subdirectory
+        if (canonicalDbPath.startsWith(canonicalAllowedPath + File.separator)
+            || canonicalDbPath.equals(canonicalAllowedPath)) {
+          return; // Path is valid
+        }
+      }
+
+      throw new IllegalArgumentException(
+          "Database registration not allowed for path: "
+              + path
+              + ". Must be within one of the configured allowed paths.");
+    } catch (IOException e) {
+      throw new IllegalArgumentException("Failed to validate path: " + path, e);
     }
   }
 
