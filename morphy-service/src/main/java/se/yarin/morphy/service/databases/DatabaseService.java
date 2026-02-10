@@ -360,4 +360,181 @@ public class DatabaseService {
     DatabaseState state = databaseStates.get(databaseId);
     return state != null ? state.config : null;
   }
+
+  /**
+   * Creates a new database at the specified path and registers it in the configuration.
+   *
+   * @param databaseId Unique identifier for the database
+   * @param displayName Human-readable name for the database
+   * @param path File system path where the database should be created
+   * @throws IllegalArgumentException if databaseId already exists or is invalid
+   * @throws IOException if database creation or config file update fails
+   */
+  public void createDatabase(
+      @NotNull String databaseId, @NotNull String displayName, @NotNull String path)
+      throws IOException {
+    validateDatabaseId(databaseId);
+
+    File dbFile = new File(path);
+
+    // Create the database file
+    try {
+      log.info("Creating new database '{}' at: {}", databaseId, path);
+      File parentDir = dbFile.getParentFile();
+      if (parentDir != null && !parentDir.exists()) {
+        if (!parentDir.mkdirs()) {
+          throw new IOException("Failed to create parent directories for " + path);
+        }
+      }
+
+      Database newDb = Database.create(dbFile, false);
+      newDb.close();
+      log.info("Successfully created new database '{}'", databaseId);
+    } catch (IOException e) {
+      log.error("Failed to create database '{}' at {}", databaseId, path, e);
+      throw new IOException("Failed to create database: " + e.getMessage(), e);
+    }
+
+    // Register the database in config and memory
+    registerDatabaseInternal(databaseId, displayName, path);
+  }
+
+  /**
+   * Registers an existing database and adds it to the configuration.
+   *
+   * @param databaseId Unique identifier for the database
+   * @param displayName Human-readable name for the database
+   * @param path File system path to the existing database
+   * @throws IllegalArgumentException if databaseId already exists, database file doesn't exist, or
+   *     is invalid
+   * @throws IOException if config file update fails
+   */
+  public void registerDatabase(
+      @NotNull String databaseId, @NotNull String displayName, @NotNull String path)
+      throws IOException {
+    validateDatabaseId(databaseId);
+
+    File dbFile = new File(path);
+    if (!dbFile.exists()) {
+      throw new IllegalArgumentException("Database file does not exist: " + path);
+    }
+
+    log.info("Registering existing database '{}' at: {}", databaseId, path);
+    registerDatabaseInternal(databaseId, displayName, path);
+  }
+
+  private void validateDatabaseId(@NotNull String databaseId) {
+    if (databaseId.trim().isEmpty()) {
+      throw new IllegalArgumentException("Database ID cannot be empty");
+    }
+    if (databaseStates.containsKey(databaseId)) {
+      throw new IllegalArgumentException("Database ID already exists: " + databaseId);
+    }
+  }
+
+  private void registerDatabaseInternal(
+      @NotNull String databaseId, @NotNull String displayName, @NotNull String path)
+      throws IOException {
+    // Create config
+    DatabaseConfig config = new DatabaseConfig(databaseId, displayName, path);
+
+    // Add to in-memory state
+    DatabaseState state = new DatabaseState(config);
+    databaseStates.put(databaseId, state);
+
+    // Update config file
+    saveDatabaseConfiguration(databaseId, config);
+
+    log.info(
+        "Successfully registered database '{}' ({}) at: {}",
+        databaseId,
+        displayName,
+        path);
+  }
+
+  /**
+   * Unregisters a database by removing it from the configuration and closing it if open. The
+   * database files are not deleted from disk.
+   *
+   * @param databaseId The database ID to unregister
+   * @throws IllegalArgumentException if the database ID is unknown
+   * @throws IOException if config file update fails
+   */
+  public void unregisterDatabase(@NotNull String databaseId) throws IOException {
+    DatabaseState state = databaseStates.get(databaseId);
+    if (state == null) {
+      throw new IllegalArgumentException("Unknown database ID: " + databaseId);
+    }
+
+    log.info("Unregistering database '{}'", databaseId);
+
+    // Close the database if it's open
+    if (state.database != null) {
+      try {
+        state.database.close();
+        log.info("Closed database '{}' before unregistering", databaseId);
+      } catch (Exception e) {
+        log.warn("Error closing database '{}' during unregister", databaseId, e);
+      }
+    }
+
+    // Remove from in-memory state
+    databaseStates.remove(databaseId);
+
+    // Remove from config file
+    removeDatabaseConfiguration(databaseId);
+
+    log.info("Successfully unregistered database '{}'", databaseId);
+  }
+
+  private void saveDatabaseConfiguration(
+      @NotNull String databaseId, @NotNull DatabaseConfig config) throws IOException {
+    if (databasesConfigPath == null || databasesConfigPath.isEmpty()) {
+      throw new IOException("No database configuration path specified");
+    }
+
+    // Load existing configs
+    Map<String, DatabaseConfig> configs = loadDatabaseConfigurations();
+
+    // Add or update the new config
+    configs.put(databaseId, config);
+
+    // Write back to file
+    Resource resource = resourceLoader.getResource(databasesConfigPath);
+    File configFile = resource.getFile();
+
+    try {
+      objectMapper.writerWithDefaultPrettyPrinter().writeValue(configFile, configs);
+      log.info("Updated database configuration file: {}", databasesConfigPath);
+    } catch (IOException e) {
+      log.error("Failed to write database configuration to {}", databasesConfigPath, e);
+      throw new IOException("Failed to save database configuration: " + e.getMessage(), e);
+    }
+  }
+
+  private void removeDatabaseConfiguration(@NotNull String databaseId) throws IOException {
+    if (databasesConfigPath == null || databasesConfigPath.isEmpty()) {
+      throw new IOException("No database configuration path specified");
+    }
+
+    // Load existing configs
+    Map<String, DatabaseConfig> configs = loadDatabaseConfigurations();
+
+    // Remove the config
+    if (configs.remove(databaseId) == null) {
+      log.warn("Database '{}' was not found in configuration file", databaseId);
+    }
+
+    // Write back to file
+    Resource resource = resourceLoader.getResource(databasesConfigPath);
+    File configFile = resource.getFile();
+
+    try {
+      objectMapper.writerWithDefaultPrettyPrinter().writeValue(configFile, configs);
+      log.info("Removed database '{}' from configuration file", databaseId);
+    } catch (IOException e) {
+      log.error("Failed to write database configuration to {}", databasesConfigPath, e);
+      throw new IOException("Failed to update database configuration: " + e.getMessage(), e);
+    }
+  }
 }
