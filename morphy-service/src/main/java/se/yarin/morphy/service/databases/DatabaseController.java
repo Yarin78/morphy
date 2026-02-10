@@ -1,4 +1,4 @@
-package se.yarin.morphy.service.controller;
+package se.yarin.morphy.service.databases;
 
 import java.util.List;
 import org.slf4j.Logger;

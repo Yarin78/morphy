@@ -1,4 +1,4 @@
-package se.yarin.morphy.service.controller;
+package se.yarin.morphy.service.tournaments;
 
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
