@@ -6,7 +6,6 @@ import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -14,7 +13,6 @@ import java.time.format.DateTimeFormatter;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import org.jetbrains.annotations.NotNull;
@@ -22,8 +20,6 @@ import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.ResourceLoader;
 import org.springframework.stereotype.Service;
 import se.yarin.morphy.Database;
 import se.yarin.morphy.DatabaseMode;
@@ -36,7 +32,6 @@ public class DatabaseService {
   private static final Logger log = LoggerFactory.getLogger(DatabaseService.class);
   private static final DateTimeFormatter ISO_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
 
-  private final ResourceLoader resourceLoader;
   private final ObjectMapper objectMapper;
   private final Map<String, DatabaseState> databaseStates = new LinkedHashMap<>();
 
@@ -52,8 +47,7 @@ public class DatabaseService {
   @Value("${app.databases.allowed-create-paths:}")
   private List<String> allowedCreatePaths;
 
-  public DatabaseService(@NotNull ResourceLoader resourceLoader) {
-    this.resourceLoader = resourceLoader;
+  public DatabaseService() {
     this.objectMapper = new ObjectMapper();
   }
 
@@ -199,9 +193,21 @@ public class DatabaseService {
   @PostConstruct
   public void init() {
     if (databasesConfigPath == null || databasesConfigPath.isEmpty()) {
-      log.warn(
-          "No database configuration path specified. Set app.databases.config in application.properties");
+      log.info(
+          "No database configuration path specified. Database config changes will not be persisted.");
       return;
+    }
+
+    // Validate that config file exists
+    File configFile = new File(databasesConfigPath);
+    if (!configFile.exists()) {
+      throw new IllegalStateException(
+          "Database configuration file does not exist: " + databasesConfigPath
+          + ". Create the file or set app.databases.config to empty string for in-memory only mode.");
+    }
+    if (!configFile.isFile()) {
+      throw new IllegalStateException(
+          "Database configuration path is not a file: " + databasesConfigPath);
     }
 
     try {
@@ -225,6 +231,7 @@ public class DatabaseService {
           databaseStates.size());
     } catch (Exception e) {
       log.error("Failed to load database configurations from {}", databasesConfigPath, e);
+      throw new IllegalStateException("Failed to initialize database configurations", e);
     }
   }
 
@@ -233,21 +240,19 @@ public class DatabaseService {
       return new LinkedHashMap<>();
     }
 
-    Resource resource = resourceLoader.getResource(Objects.requireNonNull(databasesConfigPath));
+    File configFile = new File(databasesConfigPath);
 
-    if (!resource.exists()) {
+    if (!configFile.exists()) {
       log.error("Database configuration file not found: {}", databasesConfigPath);
       return new LinkedHashMap<>();
     }
 
-    try (InputStream inputStream = resource.getInputStream()) {
-      // Use LinkedHashMap to preserve insertion order from JSON
-      Map<String, DatabaseConfig> configs =
-          objectMapper.readValue(
-              inputStream, new TypeReference<LinkedHashMap<String, DatabaseConfig>>() {});
-      log.info("Loaded {} database configuration(s) from {}", configs.size(), databasesConfigPath);
-      return configs;
-    }
+    // Use LinkedHashMap to preserve insertion order from JSON
+    Map<String, DatabaseConfig> configs =
+        objectMapper.readValue(
+            configFile, new TypeReference<LinkedHashMap<String, DatabaseConfig>>() {});
+    log.info("Loaded {} database configuration(s) from {}", configs.size(), databasesConfigPath);
+    return configs;
   }
 
   private void openDatabaseFile(@NotNull String databaseId, @NotNull DatabaseState state) {
@@ -575,8 +580,10 @@ public class DatabaseService {
 
   private void saveDatabaseConfiguration(
       @NotNull String databaseId, @NotNull DatabaseConfig config) throws IOException {
+    // If no config path specified, skip persisting (in-memory only mode)
     if (databasesConfigPath == null || databasesConfigPath.isEmpty()) {
-      throw new IOException("No database configuration path specified");
+      log.debug("Skipping database configuration persistence (in-memory only mode)");
+      return;
     }
 
     // Load existing configs
@@ -585,9 +592,8 @@ public class DatabaseService {
     // Add or update the new config
     configs.put(databaseId, config);
 
-    // Write back to file
-    Resource resource = resourceLoader.getResource(databasesConfigPath);
-    File configFile = resource.getFile();
+    // Write back to file (file existence was validated at startup)
+    File configFile = new File(databasesConfigPath);
 
     try {
       objectMapper.writerWithDefaultPrettyPrinter().writeValue(configFile, configs);
@@ -599,8 +605,10 @@ public class DatabaseService {
   }
 
   private void removeDatabaseConfiguration(@NotNull String databaseId) throws IOException {
+    // If no config path specified, skip persisting (in-memory only mode)
     if (databasesConfigPath == null || databasesConfigPath.isEmpty()) {
-      throw new IOException("No database configuration path specified");
+      log.debug("Skipping database configuration persistence (in-memory only mode)");
+      return;
     }
 
     // Load existing configs
@@ -611,9 +619,8 @@ public class DatabaseService {
       log.warn("Database '{}' was not found in configuration file", databaseId);
     }
 
-    // Write back to file
-    Resource resource = resourceLoader.getResource(databasesConfigPath);
-    File configFile = resource.getFile();
+    // Write back to file (file existence was validated at startup)
+    File configFile = new File(databasesConfigPath);
 
     try {
       objectMapper.writerWithDefaultPrettyPrinter().writeValue(configFile, configs);

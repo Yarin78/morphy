@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.File;
 import java.io.IOException;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -20,7 +21,6 @@ import se.yarin.morphy.service.databases.DatabaseService;
 import se.yarin.morphy.service.games.GamesService;
 import se.yarin.morphy.service.games.dto.GameDto;
 import se.yarin.morphy.service.games.dto.GameMovesDto;
-import se.yarin.morphy.service.players.PlayerListResponse;
 import se.yarin.morphy.service.players.PlayersService;
 import se.yarin.morphy.service.players.dto.PlayerDto;
 import se.yarin.morphy.service.sources.SourcesService;
@@ -54,35 +54,20 @@ class ServicesIntegrationTest {
 
   @BeforeEach
   void setUp() throws IOException {
-    // Create new in-memory database for each test
+    // Create new database for each test
     File dbFile = new File(tempDir, "test.cbh");
     Database.create(dbFile, false).close();
 
-    // Register the database with DatabaseService using reflection
-    // Since DatabaseService uses Spring config, we'll access it directly
+    // Register the database with DatabaseService
     databaseId = "test-db";
-    var config = new se.yarin.morphy.service.config.DatabaseConfig();
-    config.setId(databaseId);
-    config.setDisplayName("Test Database");
-    config.setPath(dbFile.getAbsolutePath());
+    databaseService.registerDatabase(databaseId, "Test Database", dbFile.getAbsolutePath());
+  }
 
-    // Use reflection to add the database to the service
-    try {
-      var databaseStatesField = DatabaseService.class.getDeclaredField("databaseStates");
-      databaseStatesField.setAccessible(true);
-      @SuppressWarnings("unchecked")
-      var databaseStates = (java.util.Map<String, Object>) databaseStatesField.get(databaseService);
-
-      var stateClass =
-          Class.forName("se.yarin.morphy.service.databases.DatabaseService$DatabaseState");
-      var stateConstructor = stateClass.getDeclaredConstructor(
-          se.yarin.morphy.service.config.DatabaseConfig.class);
-      stateConstructor.setAccessible(true);
-      var state = stateConstructor.newInstance(config);
-
-      databaseStates.put(databaseId, state);
-    } catch (Exception e) {
-      throw new RuntimeException("Failed to register test database", e);
+  @AfterEach
+  void tearDown() throws IOException {
+    // Unregister the database after each test
+    if (databaseId != null) {
+      databaseService.unregisterDatabase(databaseId);
     }
   }
 
