@@ -52,6 +52,22 @@ public class DatabaseService {
   }
 
   /**
+   * Package-private constructor for testing. Allows direct configuration of service properties
+   * without needing Spring property injection.
+   */
+  DatabaseService(
+      String configPath,
+      long freshnessInterval,
+      List<String> allowedPaths,
+      List<String> allowedCreatePaths) {
+    this.objectMapper = new ObjectMapper();
+    this.databasesConfigPath = configPath;
+    this.freshnessCheckInterval = freshnessInterval;
+    this.allowedPaths = allowedPaths != null ? allowedPaths : List.of();
+    this.allowedCreatePaths = allowedCreatePaths != null ? allowedCreatePaths : List.of();
+  }
+
+  /**
    * Execute a read-only operation within a database transaction. The transaction is automatically
    * managed and closed.
    *
