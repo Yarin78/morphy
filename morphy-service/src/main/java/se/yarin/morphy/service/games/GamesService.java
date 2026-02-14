@@ -1,7 +1,9 @@
 package se.yarin.morphy.service.games;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -10,11 +12,14 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import se.yarin.chess.GameModel;
 import se.yarin.morphy.Game;
+import se.yarin.morphy.queries.GameQuery;
+import se.yarin.morphy.queries.QueryContext;
+import se.yarin.morphy.queries.operations.QueryData;
+import se.yarin.morphy.queries.operations.QueryOperator;
 import se.yarin.morphy.service.MorphyServiceException;
 import se.yarin.morphy.service.databases.DatabaseService;
-import se.yarin.morphy.service.games.dto.GameDto;
-import se.yarin.morphy.service.games.dto.GameDtoConverter;
-import se.yarin.morphy.service.games.dto.GameDtoImporter;
+import se.yarin.morphy.service.games.dto.*;
+import se.yarin.morphy.service.games.search.GameQueryBuilder;
 
 @Service
 public class GamesService {
@@ -23,14 +28,17 @@ public class GamesService {
   private final DatabaseService databaseService;
   private final GameDtoConverter gameDtoConverter;
   private final GameDtoImporter gameDtoImporter;
+  private final GameQueryBuilder gameQueryBuilder;
 
   public GamesService(
       DatabaseService databaseService,
       GameDtoConverter gameDtoConverter,
-      GameDtoImporter gameDtoImporter) {
+      GameDtoImporter gameDtoImporter,
+      GameQueryBuilder gameQueryBuilder) {
     this.databaseService = databaseService;
     this.gameDtoConverter = gameDtoConverter;
     this.gameDtoImporter = gameDtoImporter;
+    this.gameQueryBuilder = gameQueryBuilder;
   }
 
   /**
@@ -183,5 +191,127 @@ public class GamesService {
       throw new MorphyServiceException(
           "Failed to replace game " + gameId + " in database '" + databaseId + "'", e);
     }
+  }
+
+  /**
+   * Searches for games matching the given criteria.
+   *
+   * @param databaseId The database ID to search in
+   * @param request The search request with filter criteria, sorting, and pagination
+   * @return Search response with matching games and metadata
+   */
+  public GameSearchResponse searchGames(
+      @NotNull String databaseId, @NotNull GameSearchRequest request) {
+    long startTime = System.currentTimeMillis();
+
+    // Validate and apply limits
+    int offset = Math.max(0, request.offset());
+    int limit = Math.min(1000, Math.max(1, request.limit()));
+
+    return databaseService.withReadTransaction(
+        databaseId,
+        txn -> {
+          // 1. Build GameQuery from request
+          GameQuery gameQuery = gameQueryBuilder.buildQuery(txn.database(), request);
+
+          // 2. Create query context
+          QueryContext context = new QueryContext(txn, true);
+
+          // 3. Generate query plans using existing QueryPlanner
+          List<QueryOperator<Game>> plans =
+              txn.database().queryPlanner().getGameQueryPlans(context, gameQuery, true);
+
+          // 4. Select best plan
+          QueryOperator<Game> bestPlan = txn.database().queryPlanner().selectBestQueryPlan(plans);
+
+          log.debug(
+              "Selected query plan: {} (cost: {})",
+              bestPlan.getClass().getSimpleName(),
+              bestPlan.getQueryCost().estimatedTotalCost());
+
+          // 5. Execute query - get QueryData<Game> stream
+          List<QueryData<Game>> queryResults = bestPlan.executeProfiled();
+
+          // 6. Extract Game objects and filter out guiding text
+          List<Game> games =
+              queryResults.stream()
+                  .map(QueryData::data)
+                  .filter(game -> !game.guidingText())
+                  .collect(Collectors.toList());
+
+          // 7. Apply sorting (if needed - ID order is already sorted, date is handled by QuerySortOrder)
+          if (needsSorting(request)) {
+            games = sortGames(games, request.sortBy(), request.order());
+          }
+
+          // 8. Apply pagination
+          int totalCount = games.size();
+          int fromIndex = Math.min(offset, totalCount);
+          int toIndex = Math.min(offset + limit, totalCount);
+          List<Game> paginatedGames = games.subList(fromIndex, toIndex);
+
+          // 9. Convert to DTOs
+          List<GameDto> gameDtos =
+              paginatedGames.stream()
+                  .map(
+                      game ->
+                          gameDtoConverter.toDto(
+                              game,
+                              request.includeMoves(),
+                              request.includeText(),
+                              false,
+                              false,
+                              false))
+                  .collect(Collectors.toList());
+
+          long endTime = System.currentTimeMillis();
+
+          // 10. Build metadata
+          SearchMetadata metadata =
+              new SearchMetadata(
+                  gameQuery.toString(),
+                  request.sortBy(),
+                  request.order(),
+                  endTime - startTime);
+
+          return new GameSearchResponse(
+              gameDtos, gameDtos.size(), totalCount, offset, limit, metadata);
+        });
+  }
+
+  /**
+   * Checks if sorting is needed post-query. ID and date sorting are handled by QuerySortOrder, but
+   * rating-based sorting must be done here.
+   */
+  private boolean needsSorting(@NotNull GameSearchRequest request) {
+    String sortBy = request.sortBy().toLowerCase();
+    return sortBy.equals("whiteelo") || sortBy.equals("blackelo") || sortBy.equals("avgelo");
+  }
+
+  /**
+   * Sorts games by the specified field and order.
+   *
+   * @param games the games to sort
+   * @param sortBy the field to sort by (whiteElo, blackElo, avgElo)
+   * @param order the sort order (asc or desc)
+   * @return sorted list of games
+   */
+  private @NotNull List<Game> sortGames(
+      @NotNull List<Game> games, @NotNull String sortBy, @NotNull String order) {
+    Comparator<Game> comparator =
+        switch (sortBy.toLowerCase()) {
+          case "whiteelo" -> Comparator.comparingInt(Game::whiteElo);
+          case "blackelo" -> Comparator.comparingInt(Game::blackElo);
+          case "avgelo" ->
+              Comparator.comparingDouble(game -> (game.whiteElo() + game.blackElo()) / 2.0);
+          default ->
+              throw new IllegalArgumentException("Cannot sort by field: " + sortBy);
+        };
+
+    if ("desc".equalsIgnoreCase(order)) {
+      comparator = comparator.reversed();
+    }
+
+    return games.stream().sorted(comparator).collect(Collectors.toList());
   }
 }
