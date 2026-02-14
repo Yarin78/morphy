@@ -42,4 +42,19 @@ public class TeamTitleFilter implements EntityFilter<Team> {
   public EntityType entityType() {
     return EntityType.TEAM;
   }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+    TeamTitleFilter that = (TeamTitleFilter) o;
+    return caseSensitive == that.caseSensitive
+        && exactMatch == that.exactMatch
+        && title.equals(that.title);
+  }
+
+  @Override
+  public int hashCode() {
+    return java.util.Objects.hash(title, caseSensitive, exactMatch);
+  }
 }

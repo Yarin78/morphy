@@ -42,4 +42,17 @@ public class RawEntityFilter<T> implements EntityFilter<T> {
   public EntityType entityType() {
     return this.entityType;
   }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+    RawEntityFilter<?> that = (RawEntityFilter<?>) o;
+    return filterExpression.equals(that.filterExpression) && entityType == that.entityType;
+  }
+
+  @Override
+  public int hashCode() {
+    return java.util.Objects.hash(filterExpression, entityType);
+  }
 }

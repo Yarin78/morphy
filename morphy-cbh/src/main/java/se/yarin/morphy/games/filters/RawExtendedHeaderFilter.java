@@ -49,4 +49,17 @@ public class RawExtendedHeaderFilter implements ItemStorageFilter<ExtendedGameHe
   public String toString() {
     return "cbj_raw(" + filterExpression + ")";
   }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+    RawExtendedHeaderFilter that = (RawExtendedHeaderFilter) o;
+    return filterExpression.equals(that.filterExpression);
+  }
+
+  @Override
+  public int hashCode() {
+    return filterExpression.hashCode();
+  }
 }

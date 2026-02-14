@@ -95,4 +95,17 @@ public class CombinedGameFilter implements GameFilter {
   public String toString() {
     return gameFilters.stream().map(Object::toString).collect(Collectors.joining(" and "));
   }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+    CombinedGameFilter that = (CombinedGameFilter) o;
+    return gameFilters.equals(that.gameFilters);
+  }
+
+  @Override
+  public int hashCode() {
+    return gameFilters.hashCode();
+  }
 }

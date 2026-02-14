@@ -106,4 +106,17 @@ public class RatingRangeFilter extends IsGameFilter {
       return "rating >= " + minRating + " and rating <= " + maxRating;
     }
   }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+    RatingRangeFilter that = (RatingRangeFilter) o;
+    return minRating == that.minRating && maxRating == that.maxRating && color == that.color;
+  }
+
+  @Override
+  public int hashCode() {
+    return java.util.Objects.hash(minRating, maxRating, color);
+  }
 }

@@ -51,4 +51,17 @@ public class ManualFilter<T extends IdObject> implements EntityFilter<T> {
     String commaList = ids.stream().map(Object::toString).collect(Collectors.joining(", "));
     return "id IN (" + commaList + ")";
   }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+    ManualFilter<?> that = (ManualFilter<?>) o;
+    return entityType == that.entityType && ids.equals(that.ids);
+  }
+
+  @Override
+  public int hashCode() {
+    return java.util.Objects.hash(entityType, ids);
+  }
 }

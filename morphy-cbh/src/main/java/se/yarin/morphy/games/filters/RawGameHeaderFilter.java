@@ -47,4 +47,17 @@ public class RawGameHeaderFilter implements ItemStorageFilter<GameHeader>, GameF
   public String toString() {
     return "cbh_raw(" + filterExpression + ")";
   }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+    RawGameHeaderFilter that = (RawGameHeaderFilter) o;
+    return filterExpression.equals(that.filterExpression);
+  }
+
+  @Override
+  public int hashCode() {
+    return filterExpression.hashCode();
+  }
 }

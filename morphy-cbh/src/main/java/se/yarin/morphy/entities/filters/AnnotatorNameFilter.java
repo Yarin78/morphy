@@ -44,4 +44,19 @@ public class AnnotatorNameFilter implements EntityFilter<Annotator> {
   public EntityType entityType() {
     return EntityType.ANNOTATOR;
   }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+    AnnotatorNameFilter that = (AnnotatorNameFilter) o;
+    return caseSensitive == that.caseSensitive
+        && exactMatch == that.exactMatch
+        && name.equals(that.name);
+  }
+
+  @Override
+  public int hashCode() {
+    return java.util.Objects.hash(name, caseSensitive, exactMatch);
+  }
 }

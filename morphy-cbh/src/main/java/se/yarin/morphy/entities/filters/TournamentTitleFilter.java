@@ -56,4 +56,19 @@ public class TournamentTitleFilter implements EntityFilter<Tournament> {
   public EntityType entityType() {
     return EntityType.TOURNAMENT;
   }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+    TournamentTitleFilter that = (TournamentTitleFilter) o;
+    return caseSensitive == that.caseSensitive
+        && exactMatch == that.exactMatch
+        && title.equals(that.title);
+  }
+
+  @Override
+  public int hashCode() {
+    return java.util.Objects.hash(title, caseSensitive, exactMatch);
+  }
 }

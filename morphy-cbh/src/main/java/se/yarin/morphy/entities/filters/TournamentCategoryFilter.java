@@ -43,4 +43,17 @@ public class TournamentCategoryFilter implements EntityFilter<Tournament> {
   public EntityType entityType() {
     return EntityType.TOURNAMENT;
   }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+    TournamentCategoryFilter that = (TournamentCategoryFilter) o;
+    return minCategory == that.minCategory && maxCategory == that.maxCategory;
+  }
+
+  @Override
+  public int hashCode() {
+    return java.util.Objects.hash(minCategory, maxCategory);
+  }
 }

@@ -75,4 +75,20 @@ public class TournamentYearTitleFilter implements EntityIndexFilter<Tournament> 
   public Tournament end() {
     return Tournament.of((caseSensitive ? title : "") + "zzz", new Date(year));
   }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+    TournamentYearTitleFilter that = (TournamentYearTitleFilter) o;
+    return year == that.year
+        && caseSensitive == that.caseSensitive
+        && exactMatch == that.exactMatch
+        && title.equals(that.title);
+  }
+
+  @Override
+  public int hashCode() {
+    return java.util.Objects.hash(year, title, caseSensitive, exactMatch);
+  }
 }

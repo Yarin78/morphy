@@ -73,4 +73,17 @@ public class SourceFilter
           + ")";
     }
   }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+    SourceFilter that = (SourceFilter) o;
+    return sourceIds.equals(that.sourceIds);
+  }
+
+  @Override
+  public int hashCode() {
+    return sourceIds.hashCode();
+  }
 }

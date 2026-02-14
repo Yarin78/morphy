@@ -54,4 +54,17 @@ public class TournamentTimeControlFilter implements EntityFilter<Tournament> {
   public EntityType entityType() {
     return EntityType.TOURNAMENT;
   }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+    TournamentTimeControlFilter that = (TournamentTimeControlFilter) o;
+    return timeControls.equals(that.timeControls);
+  }
+
+  @Override
+  public int hashCode() {
+    return timeControls.hashCode();
+  }
 }

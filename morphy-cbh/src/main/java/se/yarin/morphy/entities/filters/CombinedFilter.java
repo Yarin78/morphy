@@ -63,4 +63,17 @@ public class CombinedFilter<T> implements EntityFilter<T> {
   public EntityType entityType() {
     return this.entityType;
   }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+    CombinedFilter<?> that = (CombinedFilter<?>) o;
+    return filters.equals(that.filters) && entityType == that.entityType;
+  }
+
+  @Override
+  public int hashCode() {
+    return java.util.Objects.hash(filters, entityType);
+  }
 }

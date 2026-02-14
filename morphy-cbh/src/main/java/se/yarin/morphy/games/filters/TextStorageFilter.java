@@ -21,4 +21,15 @@ public class TextStorageFilter implements ItemStorageFilter<GameHeader>, GameFil
   public String toString() {
     return "isText";
   }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    return o != null && getClass() == o.getClass();
+  }
+
+  @Override
+  public int hashCode() {
+    return getClass().hashCode();
+  }
 }

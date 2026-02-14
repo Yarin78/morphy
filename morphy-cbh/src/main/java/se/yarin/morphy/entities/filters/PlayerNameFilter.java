@@ -118,4 +118,20 @@ public class PlayerNameFilter implements EntityIndexFilter<Player> {
   public @Nullable Player end() {
     return caseSensitive ? Player.of(lastName() + "zzz", "") : null;
   }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+    PlayerNameFilter that = (PlayerNameFilter) o;
+    return caseSensitive == that.caseSensitive
+        && exactMatch == that.exactMatch
+        && lastName.equals(that.lastName)
+        && firstName.equals(that.firstName);
+  }
+
+  @Override
+  public int hashCode() {
+    return java.util.Objects.hash(lastName, firstName, caseSensitive, exactMatch);
+  }
 }

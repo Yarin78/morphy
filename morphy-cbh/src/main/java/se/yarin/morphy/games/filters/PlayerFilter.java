@@ -89,4 +89,17 @@ public class PlayerFilter extends IsGameFilter implements GameEntityFilter<Playe
     }
     return s + ", condition=" + matchCondition;
   }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+    PlayerFilter that = (PlayerFilter) o;
+    return playerIds.equals(that.playerIds) && matchCondition == that.matchCondition;
+  }
+
+  @Override
+  public int hashCode() {
+    return java.util.Objects.hash(playerIds, matchCondition);
+  }
 }

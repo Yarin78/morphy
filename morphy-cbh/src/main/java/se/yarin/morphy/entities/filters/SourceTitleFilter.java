@@ -44,4 +44,19 @@ public class SourceTitleFilter implements EntityFilter<Source> {
   public EntityType entityType() {
     return EntityType.SOURCE;
   }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+    SourceTitleFilter that = (SourceTitleFilter) o;
+    return caseSensitive == that.caseSensitive
+        && exactMatch == that.exactMatch
+        && title.equals(that.title);
+  }
+
+  @Override
+  public int hashCode() {
+    return java.util.Objects.hash(title, caseSensitive, exactMatch);
+  }
 }

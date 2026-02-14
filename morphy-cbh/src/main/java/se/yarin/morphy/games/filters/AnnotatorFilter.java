@@ -73,4 +73,17 @@ public class AnnotatorFilter
           + ")";
     }
   }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+    AnnotatorFilter that = (AnnotatorFilter) o;
+    return annotatorIds.equals(that.annotatorIds);
+  }
+
+  @Override
+  public int hashCode() {
+    return annotatorIds.hashCode();
+  }
 }

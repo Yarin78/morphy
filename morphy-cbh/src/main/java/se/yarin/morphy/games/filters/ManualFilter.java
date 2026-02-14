@@ -41,4 +41,17 @@ public class ManualFilter implements ItemStorageFilter<GameHeader>, GameFilter {
           + ")";
     }
   }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+    ManualFilter that = (ManualFilter) o;
+    return gameHeaderIds.equals(that.gameHeaderIds);
+  }
+
+  @Override
+  public int hashCode() {
+    return gameHeaderIds.hashCode();
+  }
 }

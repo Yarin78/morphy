@@ -24,4 +24,15 @@ public class TournamentTeamFilter implements EntityFilter<Tournament> {
   public EntityType entityType() {
     return EntityType.TOURNAMENT;
   }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    return o != null && getClass() == o.getClass();
+  }
+
+  @Override
+  public int hashCode() {
+    return getClass().hashCode();
+  }
 }

@@ -47,4 +47,19 @@ public class GameTagTitleFilter implements EntityFilter<GameTag> {
   public EntityType entityType() {
     return EntityType.GAME_TAG;
   }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+    GameTagTitleFilter that = (GameTagTitleFilter) o;
+    return caseSensitive == that.caseSensitive
+        && exactMatch == that.exactMatch
+        && englishTitle.equals(that.englishTitle);
+  }
+
+  @Override
+  public int hashCode() {
+    return java.util.Objects.hash(englishTitle, caseSensitive, exactMatch);
+  }
 }

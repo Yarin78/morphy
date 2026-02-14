@@ -85,4 +85,17 @@ public class TournamentStartDateFilter implements EntityIndexFilter<Tournament> 
   public @Nullable Tournament end() {
     return fromDate.isUnset() ? null : Tournament.of("", new Date(fromDate.year(), 1, 1));
   }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+    TournamentStartDateFilter that = (TournamentStartDateFilter) o;
+    return fromDate.equals(that.fromDate) && toDate.equals(that.toDate);
+  }
+
+  @Override
+  public int hashCode() {
+    return java.util.Objects.hash(fromDate, toDate);
+  }
 }

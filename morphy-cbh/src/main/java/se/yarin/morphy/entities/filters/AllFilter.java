@@ -25,4 +25,17 @@ public class AllFilter<T> implements EntityFilter<T> {
   public String toString() {
     return "All";
   }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+    AllFilter<?> allFilter = (AllFilter<?>) o;
+    return entityType == allFilter.entityType;
+  }
+
+  @Override
+  public int hashCode() {
+    return entityType.hashCode();
+  }
 }

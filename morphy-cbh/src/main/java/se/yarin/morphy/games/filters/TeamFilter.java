@@ -97,4 +97,17 @@ public class TeamFilter
     }
     return s + ", condition=" + matchCondition;
   }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+    TeamFilter that = (TeamFilter) o;
+    return teamIds.equals(that.teamIds) && matchCondition == that.matchCondition;
+  }
+
+  @Override
+  public int hashCode() {
+    return java.util.Objects.hash(teamIds, matchCondition);
+  }
 }

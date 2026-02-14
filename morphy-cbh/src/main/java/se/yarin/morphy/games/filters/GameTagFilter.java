@@ -67,4 +67,17 @@ public class GameTagFilter
           + ")";
     }
   }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+    GameTagFilter that = (GameTagFilter) o;
+    return gameTagIds.equals(that.gameTagIds);
+  }
+
+  @Override
+  public int hashCode() {
+    return gameTagIds.hashCode();
+  }
 }

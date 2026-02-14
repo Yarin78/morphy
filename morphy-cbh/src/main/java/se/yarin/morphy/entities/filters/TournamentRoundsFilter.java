@@ -52,4 +52,17 @@ public class TournamentRoundsFilter implements EntityFilter<Tournament> {
   public EntityType entityType() {
     return EntityType.TOURNAMENT;
   }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+    TournamentRoundsFilter that = (TournamentRoundsFilter) o;
+    return minRounds == that.minRounds && maxRounds == that.maxRounds;
+  }
+
+  @Override
+  public int hashCode() {
+    return java.util.Objects.hash(minRounds, maxRounds);
+  }
 }

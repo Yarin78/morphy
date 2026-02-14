@@ -38,4 +38,17 @@ public class ResultsFilter extends IsGameFilter {
   public String toString() {
     return "result = '" + result + "'";
   }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+    ResultsFilter that = (ResultsFilter) o;
+    return result == that.result;
+  }
+
+  @Override
+  public int hashCode() {
+    return result.hashCode();
+  }
 }

@@ -104,4 +104,17 @@ public class DateRangeFilter extends IsGameFilter {
       return toDateStr;
     }
   }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+    DateRangeFilter that = (DateRangeFilter) o;
+    return fromDate.equals(that.fromDate) && toDate.equals(that.toDate);
+  }
+
+  @Override
+  public int hashCode() {
+    return java.util.Objects.hash(fromDate, toDate);
+  }
 }

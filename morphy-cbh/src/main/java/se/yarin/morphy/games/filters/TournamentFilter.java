@@ -71,4 +71,17 @@ public class TournamentFilter
           + ")";
     }
   }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+    TournamentFilter that = (TournamentFilter) o;
+    return tournamentIds.equals(that.tournamentIds);
+  }
+
+  @Override
+  public int hashCode() {
+    return tournamentIds.hashCode();
+  }
 }

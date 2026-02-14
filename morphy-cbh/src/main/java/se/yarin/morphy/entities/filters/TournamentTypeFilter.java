@@ -56,4 +56,17 @@ public class TournamentTypeFilter implements EntityFilter<Tournament> {
   public EntityType entityType() {
     return EntityType.TOURNAMENT;
   }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+    TournamentTypeFilter that = (TournamentTypeFilter) o;
+    return types.equals(that.types);
+  }
+
+  @Override
+  public int hashCode() {
+    return types.hashCode();
+  }
 }
