@@ -140,6 +140,15 @@ public class EntityIndexWriteTransaction<T extends Entity & Comparable<T>>
     this.changes.clear();
   }
 
+  /**
+   * Checks whether the transaction has uncommitted changes.
+   *
+   * @return true if there are uncommitted changes; false otherwise
+   */
+  public boolean hasUncommittedChanges() {
+    return !changes.isEmpty();
+  }
+
   public void rollback() {
     ensureTransactionIsOpen();
     clearChanges();

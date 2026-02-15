@@ -1285,4 +1285,43 @@ public class DatabaseWriteTransactionTest extends DatabaseTestSetup {
       assertEquals(0, putsAfter);
     }
   }
+
+  @Test
+  public void testHasUncommittedChanges() {
+    // Test with a new empty transaction
+    try (var txn = new DatabaseWriteTransaction(testBase)) {
+      assertFalse("New transaction should have no uncommitted changes", txn.hasUncommittedChanges());
+
+      // Add a game
+      putTestGame(txn, 0, "Carlsen - Nepo", "tour1", null, null, null, null, 10, 0, 1, 1);
+      assertTrue("Transaction should have uncommitted changes after adding a game", txn.hasUncommittedChanges());
+
+      // Commit the changes
+      txn.commit();
+      assertFalse("Transaction should have no uncommitted changes after commit", txn.hasUncommittedChanges());
+
+      // Replace an existing game
+      putTestGame(txn, 1, "Giri - Ding", "tour2", null, null, null, null, 20, 0, 2, 2);
+      assertTrue("Transaction should have uncommitted changes after replacing a game", txn.hasUncommittedChanges());
+
+      // Rollback the changes
+      txn.rollback();
+      assertFalse("Transaction should have no uncommitted changes after rollback", txn.hasUncommittedChanges());
+    }
+  }
+
+  @Test
+  public void testHasUncommittedChangesWithEntityUpdates() {
+    try (var txn = new DatabaseWriteTransaction(testBase)) {
+      assertFalse("New transaction should have no uncommitted changes", txn.hasUncommittedChanges());
+
+      // Update a player entity
+      Player player = testBase.playerIndex().get(0);
+      txn.updatePlayerById(player.id(), Player.of("Carlsen", "Magnus"));
+      assertTrue("Transaction should have uncommitted changes after updating an entity", txn.hasUncommittedChanges());
+
+      txn.rollback();
+      assertFalse("Transaction should have no uncommitted changes after rollback", txn.hasUncommittedChanges());
+    }
+  }
 }

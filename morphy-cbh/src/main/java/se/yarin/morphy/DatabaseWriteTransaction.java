@@ -66,7 +66,6 @@ public class DatabaseWriteTransaction extends DatabaseTransaction {
     }
   }
 
-  // TODO: Create hasUncommitedChanges
   private int currentGameCount;
   private int version; // The version of the database the transaction starts from
 
@@ -81,6 +80,33 @@ public class DatabaseWriteTransaction extends DatabaseTransaction {
 
   public int version() {
     return version;
+  }
+
+  /**
+   * Checks whether the transaction has uncommitted changes.
+   *
+   * <p>Returns true if there are any pending changes that haven't been committed to the database,
+   * including:
+   * <ul>
+   *   <li>Modified, added, or replaced games</li>
+   *   <li>Changes to player entities</li>
+   *   <li>Changes to tournament entities</li>
+   *   <li>Changes to annotator entities</li>
+   *   <li>Changes to source entities</li>
+   *   <li>Changes to team entities</li>
+   *   <li>Changes to game tag entities</li>
+   * </ul>
+   *
+   * @return true if there are uncommitted changes; false otherwise
+   */
+  public boolean hasUncommittedChanges() {
+    return !updatedGames.isEmpty()
+        || playerTransaction.hasUncommittedChanges()
+        || tournamentTransaction.hasUncommittedChanges()
+        || annotatorTransaction.hasUncommittedChanges()
+        || sourceTransaction.hasUncommittedChanges()
+        || teamTransaction.hasUncommittedChanges()
+        || gameTagTransaction.hasUncommittedChanges();
   }
 
   @Override
@@ -934,6 +960,10 @@ public class DatabaseWriteTransaction extends DatabaseTransaction {
     private void clear() {
       newEntityGameCount.clear();
       newEntityGameDelta.clear();
+    }
+
+    private boolean isEmpty() {
+      return newEntityGameCount.isEmpty() && newEntityGameDelta.isEmpty();
     }
 
     private void update(int gameId, int addEntityId, int removeEntityId) {
