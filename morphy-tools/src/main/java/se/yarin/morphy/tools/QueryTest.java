@@ -14,12 +14,15 @@ import se.yarin.morphy.queries.operations.*;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
 public class QueryTest {
   private final Database db;
+
+  private static final String VIZ_PATH = "/Users/yarin/Desktop/query_viz";
 
   public QueryTest(Database db) {
     this.db = db;
@@ -33,11 +36,11 @@ public class QueryTest {
     db.queryPlanner().updateStatistics();
 
     QueryTest queryTest = new QueryTest(db);
-    // queryTest.queryCarHighCategoryGames();
+    queryTest.queryCarHighCategoryGames();
     // queryTest.compareCarHighCategoryGames();
     // queryTest.sameMetricQuery();
     // queryTest.carlsenLosesAsWhiteQuery();
-    queryTest.playersFrom18thCentury();
+    // queryTest.playersFrom18thCentury();
   }
 
   public <T extends IdObject> List<QueryOperator<T>> topQueryPlans(
@@ -240,6 +243,8 @@ public class QueryTest {
     }
   }
 
+  private int queryPlanCounter = 0;
+
   private void detailedQueryExecution(QueryOperator<?> query) {
     IOCPUPerformanceTest.clearPageCache();
     System.out.println("Running query...");
@@ -250,8 +255,15 @@ public class QueryTest {
     System.out.println();
     System.out.println("TOTAL QUERY COST");
     System.out.println(query.getQueryCost().format());
-    // txn.metrics().show();
     System.out.println();
+
+    try {
+      Path htmlPath = Path.of(VIZ_PATH, "query-plan-" + queryPlanCounter++ + ".html");
+      QueryPlanVisualizer.writeHtmlFile(query, htmlPath);
+      System.out.println("Query plan visualization: " + htmlPath);
+    } catch (IOException e) {
+      System.err.println("Failed to write query plan HTML: " + e.getMessage());
+    }
   }
 
   private QueryOperator<Game> getCarlHighCategoryGames3(DatabaseReadTransaction txn) {
