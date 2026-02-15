@@ -1,10 +1,11 @@
 package se.yarin.morphy.entities.filters;
 
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import se.yarin.morphy.entities.EntityType;
 import se.yarin.morphy.entities.Team;
 
-public class TeamTitleFilter implements EntityFilter<Team> {
+public class TeamTitleFilter implements EntityIndexFilter<Team> {
   private final @NotNull String title;
   private final boolean caseSensitive;
   private final boolean exactMatch;
@@ -41,6 +42,16 @@ public class TeamTitleFilter implements EntityFilter<Team> {
   @Override
   public EntityType entityType() {
     return EntityType.TEAM;
+  }
+
+  @Override
+  public @Nullable Team start() {
+    return caseSensitive ? Team.of(title) : null;
+  }
+
+  @Override
+  public @Nullable Team end() {
+    return caseSensitive ? Team.of(title + "zzz") : null;
   }
 
   @Override

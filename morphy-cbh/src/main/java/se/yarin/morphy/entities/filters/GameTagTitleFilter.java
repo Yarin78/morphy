@@ -1,10 +1,11 @@
 package se.yarin.morphy.entities.filters;
 
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import se.yarin.morphy.entities.EntityType;
 import se.yarin.morphy.entities.GameTag;
 
-public class GameTagTitleFilter implements EntityFilter<GameTag> {
+public class GameTagTitleFilter implements EntityIndexFilter<GameTag> {
   private final @NotNull String englishTitle;
   private final boolean caseSensitive;
   private final boolean exactMatch;
@@ -46,6 +47,16 @@ public class GameTagTitleFilter implements EntityFilter<GameTag> {
   @Override
   public EntityType entityType() {
     return EntityType.GAME_TAG;
+  }
+
+  @Override
+  public @Nullable GameTag start() {
+    return caseSensitive ? GameTag.of(englishTitle) : null;
+  }
+
+  @Override
+  public @Nullable GameTag end() {
+    return caseSensitive ? GameTag.of(englishTitle + "zzz") : null;
   }
 
   @Override

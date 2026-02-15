@@ -6,6 +6,8 @@ import se.yarin.morphy.*;
 import se.yarin.morphy.entities.*;
 import se.yarin.morphy.entities.filters.AnnotatorNameFilter;
 import se.yarin.morphy.entities.filters.PlayerNameFilter;
+import se.yarin.morphy.entities.filters.SourceTitleFilter;
+import se.yarin.morphy.entities.filters.TeamTitleFilter;
 import se.yarin.morphy.games.filters.*;
 import se.yarin.morphy.queries.operations.*;
 
@@ -329,6 +331,73 @@ public class GameQueryPlanGeneratorTests {
                           EntityType.TOURNAMENT,
                           new GameTableScan(qc, new ResultsFilter("0-0")),
                           null))),
+              null));
+    }
+  }
+
+  @Test
+  public void gamesBySimpleSourceJoin() {
+    doReturn(mockOperator).when(spyPlanner).selectBestQueryPlan(anyList());
+
+    SourceTitleFilter sourceFilter = new SourceTitleFilter("Chess", true, false);
+    GameEntityJoin<Source> join =
+        new GameEntityJoin<>(
+            new EntityQuery<Source>(db, EntityType.SOURCE, List.of(sourceFilter)), null);
+    GameQuery gameQuery = new GameQuery(db, null, List.of(join));
+
+    try (var txn = new DatabaseReadTransaction(db)) {
+      QueryContext qc = new QueryContext(txn, false);
+      List<QueryOperator<Game>> plans = db.queryPlanner().getGameQueryPlans(qc, gameQuery, true);
+
+      this.assertPlanExists(
+          plans,
+          new GameEntityLoopJoin<>(
+              qc,
+              new GameTableScan(qc, null),
+              EntityType.SOURCE,
+              sourceFilter,
+              null));
+      this.assertPlanExists(
+          plans,
+          new GameLookup(
+              qc,
+              new Distinct<>(
+                  qc,
+                  new Sort<>(qc, new GameIdsByEntities<>(qc, mockOperator, EntityType.SOURCE))),
+              null));
+    }
+  }
+
+  @Test
+  public void gamesBySimpleTeamJoin() {
+    doReturn(mockOperator).when(spyPlanner).selectBestQueryPlan(anyList());
+
+    TeamTitleFilter teamFilter = new TeamTitleFilter("Rus", true, false);
+    GameEntityJoin<Team> join =
+        new GameEntityJoin<>(
+            new EntityQuery<Team>(db, EntityType.TEAM, List.of(teamFilter)),
+            GameEntityJoinCondition.ANY);
+    GameQuery gameQuery = new GameQuery(db, null, List.of(join));
+
+    try (var txn = new DatabaseReadTransaction(db)) {
+      QueryContext qc = new QueryContext(txn, false);
+      List<QueryOperator<Game>> plans = db.queryPlanner().getGameQueryPlans(qc, gameQuery, true);
+
+      this.assertPlanExists(
+          plans,
+          new GameEntityLoopJoin<>(
+              qc,
+              new GameTableScan(qc, null),
+              EntityType.TEAM,
+              teamFilter,
+              GameEntityJoinCondition.ANY));
+      this.assertPlanExists(
+          plans,
+          new GameLookup(
+              qc,
+              new Distinct<>(
+                  qc,
+                  new Sort<>(qc, new GameIdsByEntities<>(qc, mockOperator, EntityType.TEAM))),
               null));
     }
   }

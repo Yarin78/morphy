@@ -4,8 +4,10 @@ import org.junit.Before;
 import org.junit.Test;
 import se.yarin.chess.Date;
 import se.yarin.morphy.*;
+import se.yarin.morphy.entities.Annotator;
 import se.yarin.morphy.entities.EntityType;
 import se.yarin.morphy.entities.Player;
+import se.yarin.morphy.entities.Source;
 import se.yarin.morphy.entities.Tournament;
 import se.yarin.morphy.entities.filters.*;
 import se.yarin.morphy.games.filters.DateRangeFilter;
@@ -267,6 +269,96 @@ public class QueryPlanComparisonTests {
       assertTrue(plans.size() >= 2);
       assertTrue(operatorExists(plans, List.of(EntityTableScan.class)));
       assertTrue(operatorExists(plans, List.of(EntityIndexRangeScan.class)));
+
+      verifyQueryPlans(plans, false);
+    }
+  }
+
+  @Test
+  public void annotatorsByName() {
+    EntityQuery<Annotator> annotatorQuery =
+        new EntityQuery<Annotator>(
+            db,
+            EntityType.ANNOTATOR,
+            List.of(new AnnotatorNameFilter("", true, false)));
+
+    try (var txn = new DatabaseReadTransaction(db)) {
+      QueryContext queryContext = new QueryContext(txn, false);
+      List<QueryOperator<Annotator>> plans =
+          db.queryPlanner().getEntityQueryPlans(queryContext, annotatorQuery, true);
+
+      assertTrue(plans.size() >= 2);
+      assertTrue(operatorExists(plans, List.of(EntityTableScan.class)));
+      assertTrue(operatorExists(plans, List.of(EntityIndexRangeScan.class)));
+
+      verifyQueryPlans(plans, false);
+    }
+  }
+
+  @Test
+  public void sourcesByTitle() {
+    EntityQuery<Source> sourceQuery =
+        new EntityQuery<Source>(
+            db,
+            EntityType.SOURCE,
+            List.of(new SourceTitleFilter("", true, false)));
+
+    try (var txn = new DatabaseReadTransaction(db)) {
+      QueryContext queryContext = new QueryContext(txn, false);
+      List<QueryOperator<Source>> plans =
+          db.queryPlanner().getEntityQueryPlans(queryContext, sourceQuery, true);
+
+      assertTrue(plans.size() >= 2);
+      assertTrue(operatorExists(plans, List.of(EntityTableScan.class)));
+      assertTrue(operatorExists(plans, List.of(EntityIndexRangeScan.class)));
+
+      verifyQueryPlans(plans, false);
+    }
+  }
+
+  @Test
+  public void annotatorsByGames() {
+    GameQuery games =
+        new GameQuery(db, List.of(new DateRangeFilter(new Date(1900), new Date(2000))));
+    EntityQuery<Annotator> annotatorQuery =
+        new EntityQuery<Annotator>(
+            db,
+            EntityType.ANNOTATOR,
+            List.of(new AnnotatorNameFilter("", true, false)),
+            games,
+            null);
+
+    try (var txn = new DatabaseReadTransaction(db)) {
+      QueryContext queryContext = new QueryContext(txn, false);
+      List<QueryOperator<Annotator>> plans =
+          db.queryPlanner().getEntityQueryPlans(queryContext, annotatorQuery, true);
+
+      assertTrue(plans.size() >= 2);
+      assertTrue(operatorExists(plans, List.of(EntityTableScan.class)));
+
+      verifyQueryPlans(plans, false);
+    }
+  }
+
+  @Test
+  public void sourcesByGames() {
+    GameQuery games =
+        new GameQuery(db, List.of(new DateRangeFilter(new Date(1900), new Date(2000))));
+    EntityQuery<Source> sourceQuery =
+        new EntityQuery<Source>(
+            db,
+            EntityType.SOURCE,
+            List.of(new SourceTitleFilter("", true, false)),
+            games,
+            null);
+
+    try (var txn = new DatabaseReadTransaction(db)) {
+      QueryContext queryContext = new QueryContext(txn, false);
+      List<QueryOperator<Source>> plans =
+          db.queryPlanner().getEntityQueryPlans(queryContext, sourceQuery, true);
+
+      assertTrue(plans.size() >= 2);
+      assertTrue(operatorExists(plans, List.of(EntityTableScan.class)));
 
       verifyQueryPlans(plans, false);
     }

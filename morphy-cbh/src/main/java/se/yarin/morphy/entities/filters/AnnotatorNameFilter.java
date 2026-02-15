@@ -1,10 +1,11 @@
 package se.yarin.morphy.entities.filters;
 
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import se.yarin.morphy.entities.Annotator;
 import se.yarin.morphy.entities.EntityType;
 
-public class AnnotatorNameFilter implements EntityFilter<Annotator> {
+public class AnnotatorNameFilter implements EntityIndexFilter<Annotator> {
   private final @NotNull String name;
   private final boolean caseSensitive;
   private final boolean exactMatch;
@@ -43,6 +44,16 @@ public class AnnotatorNameFilter implements EntityFilter<Annotator> {
   @Override
   public EntityType entityType() {
     return EntityType.ANNOTATOR;
+  }
+
+  @Override
+  public @Nullable Annotator start() {
+    return caseSensitive ? Annotator.of(name) : null;
+  }
+
+  @Override
+  public @Nullable Annotator end() {
+    return caseSensitive ? Annotator.of(name + "zzz") : null;
   }
 
   @Override
