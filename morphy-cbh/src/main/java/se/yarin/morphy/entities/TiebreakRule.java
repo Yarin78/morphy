@@ -1,5 +1,8 @@
 package se.yarin.morphy.entities;
 
+import java.util.HashMap;
+import java.util.Map;
+
 public enum TiebreakRule {
   UNSPECIFIED(1, "Unspecified"),
   NOT_SET(2, "Not set"),
@@ -18,6 +21,15 @@ public enum TiebreakRule {
   RR_POINT_GROUP(204, "Point group"),
   RR_KOYA(206, "Koya");
 
+  private static final Map<Integer, TiebreakRule> ID_MAP;
+
+  static {
+    ID_MAP = new HashMap<>();
+    for (TiebreakRule rule : TiebreakRule.values()) {
+      ID_MAP.put(rule.id, rule);
+    }
+  }
+
   private final int id;
 
   private final String name;
@@ -31,13 +43,7 @@ public enum TiebreakRule {
   }
 
   public static TiebreakRule fromId(int id) {
-    // TODO: Hashmap
-    for (TiebreakRule rule : TiebreakRule.values()) {
-      if (rule.id() == id) {
-        return rule;
-      }
-    }
-    return TiebreakRule.UNSPECIFIED;
+    return ID_MAP.getOrDefault(id, TiebreakRule.UNSPECIFIED);
   }
 
   TiebreakRule(int id, String name) {
