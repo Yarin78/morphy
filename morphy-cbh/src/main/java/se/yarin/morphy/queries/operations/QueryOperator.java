@@ -6,6 +6,7 @@ import se.yarin.morphy.Database;
 import se.yarin.morphy.DatabaseReadTransaction;
 import se.yarin.morphy.IdObject;
 import se.yarin.morphy.Instrumentation;
+import se.yarin.morphy.exceptions.MorphyInternalException;
 import se.yarin.morphy.metrics.*;
 import se.yarin.morphy.queries.QueryContext;
 import se.yarin.morphy.queries.QuerySortOrder;
@@ -75,6 +76,9 @@ public abstract class QueryOperator<T extends IdObject> {
   }
 
   public final List<QueryData<T>> executeProfiled() {
+    if (!context().traceCost()) {
+      throw new MorphyInternalException("Profiled execution can only be used when traceCost has been enabled");
+    }
     Instrumentation instrumentation = context().databaseContext().instrumentation();
     var queryMetrics = instrumentation.pushContext("query", true);
     try {

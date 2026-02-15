@@ -5,6 +5,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -215,7 +216,7 @@ public class GamesService {
           GameQuery gameQuery = gameQueryBuilder.buildQuery(txn.database(), request);
 
           // 2. Create query context
-          QueryContext context = new QueryContext(txn, true);
+          QueryContext context = new QueryContext(txn, false);
 
           // 3. Generate query plans using existing QueryPlanner
           List<QueryOperator<Game>> plans =
@@ -230,11 +231,11 @@ public class GamesService {
               bestPlan.getQueryCost().estimatedTotalCost());
 
           // 5. Execute query - get QueryData<Game> stream
-          List<QueryData<Game>> queryResults = bestPlan.executeProfiled();
+          Stream<QueryData<Game>> queryResults = bestPlan.stream();
 
           // 6. Extract Game objects and filter out guiding text
           List<Game> games =
-              queryResults.stream()
+              queryResults
                   .map(QueryData::data)
                   .filter(game -> !game.guidingText())
                   .collect(Collectors.toList());

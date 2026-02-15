@@ -2,7 +2,6 @@ package se.yarin.morphy.queries.operations;
 
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import se.yarin.chess.GameResult;
 import se.yarin.morphy.Game;
 import se.yarin.morphy.entities.Entity;
 import se.yarin.morphy.entities.EntityIndexReadTransaction;
@@ -19,6 +18,7 @@ import java.util.stream.Stream;
 
 public class GameEntityLoopJoin<T extends Entity & Comparable<T>> extends QueryOperator<Game> {
   private final @NotNull QueryOperator<Game> source;
+  private final @NotNull EntityIndexReadTransaction<T> entityTxn;
   private final @NotNull EntityFilter<T> entityFilter;
   private final @NotNull EntityType entityType;
   private final @NotNull GameEntityJoinCondition joinCondition;
@@ -37,6 +37,7 @@ public class GameEntityLoopJoin<T extends Entity & Comparable<T>> extends QueryO
     this.entityType = entityType;
     this.entityFilter = entityFilter;
     this.joinCondition = joinCondition != null ? joinCondition : GameEntityJoinCondition.ANY;
+    this.entityTxn = (EntityIndexReadTransaction<T>) transaction().entityTransaction(entityType);
   }
 
   @Override
@@ -54,9 +55,6 @@ public class GameEntityLoopJoin<T extends Entity & Comparable<T>> extends QueryO
 
   @Override
   public Stream<QueryData<Game>> operatorStream() {
-    final EntityIndexReadTransaction<T> entityTransaction =
-        (EntityIndexReadTransaction<T>) transaction().entityTransaction(entityType);
-
     return this.source.stream()
         .filter(
             game -> {
@@ -65,7 +63,7 @@ public class GameEntityLoopJoin<T extends Entity & Comparable<T>> extends QueryO
               for (int[] joinIds : joinIdGroups) {
                 int matchCnt = 0;
                 for (int joinId : joinIds) {
-                  T entity = joinId < 0 ? null : entityTransaction.get(joinId, this.entityFilter);
+                  T entity = joinId < 0 ? null : this.entityTxn.get(joinId, this.entityFilter);
                   if (entity != null) {
                     matchCnt++;
                   }
@@ -112,5 +110,10 @@ public class GameEntityLoopJoin<T extends Entity & Comparable<T>> extends QueryO
         + "LoopJoin("
         + String.join(", ", params)
         + ")";
+  }
+
+  @Override
+  protected List<MetricsProvider> metricProviders() {
+    return this.entityTxn.metricsProviders();
   }
 }
