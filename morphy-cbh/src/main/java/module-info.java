@@ -24,6 +24,7 @@ module se.yarin.morphy.cbh {
     exports se.yarin.morphy.queries;
     exports se.yarin.morphy.queries.operations;
     exports se.yarin.morphy.queries.joins;
+    exports se.yarin.morphy.queries.visualisation;
     exports se.yarin.morphy.boosters;
     exports se.yarin.morphy.storage;
     exports se.yarin.morphy.validation;

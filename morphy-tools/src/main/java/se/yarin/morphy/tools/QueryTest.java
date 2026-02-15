@@ -1,5 +1,11 @@
 package se.yarin.morphy.tools;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Path;
+import java.util.Comparator;
+import java.util.List;
+import java.util.stream.Collectors;
 import se.yarin.chess.Date;
 import se.yarin.morphy.*;
 import se.yarin.morphy.entities.*;
@@ -8,21 +14,14 @@ import se.yarin.morphy.games.filters.DateRangeFilter;
 import se.yarin.morphy.games.filters.IsGameFilter;
 import se.yarin.morphy.queries.*;
 import se.yarin.morphy.queries.GameEntityJoin;
-import se.yarin.morphy.queries.joins.GamePlayerFilterJoin;
-import se.yarin.morphy.queries.joins.GameTournamentFilterJoin;
 import se.yarin.morphy.queries.operations.*;
-
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.Path;
-import java.util.Comparator;
-import java.util.List;
-import java.util.stream.Collectors;
+import se.yarin.morphy.queries.visualisation.QueryVisualiser;
 
 public class QueryTest {
   private final Database db;
 
   private static final String VIZ_PATH = "/Users/yarin/Desktop/query_viz";
+  private static final long MAX_COST = 100000;
 
   public QueryTest(Database db) {
     this.db = db;
@@ -43,17 +42,10 @@ public class QueryTest {
     // queryTest.playersFrom18thCentury();
   }
 
-  public <T extends IdObject> List<QueryOperator<T>> topQueryPlans(
-      List<QueryOperator<T>> queryPlans, int limit) {
-    return topQueryPlans(queryPlans, limit, 100000);
-  }
-
-  public <T extends IdObject> List<QueryOperator<T>> topQueryPlans(
-      List<QueryOperator<T>> queryPlans, int limit, int maxCost) {
+  public <T extends IdObject> List<QueryOperator<T>> sortQueryPlans(
+      List<QueryOperator<T>> queryPlans) {
     return queryPlans.stream()
         .sorted(Comparator.comparingLong(o -> (long) o.getQueryCost().estimatedTotalCost()))
-        .filter(o -> (long) o.getQueryCost().estimatedTotalCost() < maxCost)
-        .limit(limit)
         .collect(Collectors.toList());
   }
 
@@ -83,15 +75,7 @@ public class QueryTest {
       System.out.println(queryPlans.size() + " query plans");
       System.out.println();
 
-      for (QueryOperator<Game> queryPlan : topQueryPlans(queryPlans, 3)) {
-        /*
-        System.out.println(queryPlan.debugString(false));
-        System.out.println(queryPlan.getQueryCost().format());
-        System.out.println();
-         */
-
-        detailedQueryExecution(queryPlan);
-      }
+      visualizeGameQueryPlans(gameQuery, sortQueryPlans(queryPlans));
     }
   }
 
@@ -100,7 +84,8 @@ public class QueryTest {
       GameQuery games =
           new GameQuery(db, List.of(new DateRangeFilter(Date.unset(), new Date(1900, 1, 1))));
       EntityQuery<Player> players =
-          new EntityQuery<Player>(db, EntityType.PLAYER, null, games, GameEntityJoinCondition.ANY);
+          new EntityQuery<Player>(
+              db, EntityType.PLAYER, null, games, GameEntityJoinCondition.ANY);
       QueryContext context = new QueryContext(txn, true);
 
       List<QueryOperator<Player>> queryPlans =
@@ -108,9 +93,7 @@ public class QueryTest {
       System.out.println(queryPlans.size() + " query plans");
       System.out.println();
 
-      for (QueryOperator<Player> queryPlan : topQueryPlans(queryPlans, 3)) {
-        detailedQueryExecution(queryPlan);
-      }
+      visualizeEntityQueryPlans(players, sortQueryPlans(queryPlans), EntityType.PLAYER);
     }
   }
 
@@ -139,22 +122,7 @@ public class QueryTest {
 
       List<QueryOperator<Game>> queryPlans =
           context.queryPlanner().getGameQueryPlans(context, gameQuery, true);
-      for (QueryOperator<Game> queryPlan : topQueryPlans(queryPlans, 3)) {
-        /*
-        System.out.println(queryPlan.getQueryCost().estimatedTotalCost());
-        System.out.println(queryPlan.debugString(true));
-
-         */
-        detailedQueryExecution(queryPlan);
-        /*
-        long numHits = queryPlan.executeProfiled() .stream().count();
-        System.out.println("MATCHES " + numHits);
-
-        System.out.println(queryPlan.debugString(true));
-
-        System.out.println();
-         */
-      }
+      visualizeGameQueryPlans(gameQuery, sortQueryPlans(queryPlans));
     }
   }
 
@@ -187,7 +155,8 @@ public class QueryTest {
     CombinedFilter<Tournament> tournamentFilter =
         new CombinedFilter<>(
             List.of(
-                new TournamentStartDateFilter(new Date(startYear, 1, 1), new Date(endYear, 1, 1)),
+                new TournamentStartDateFilter(
+                    new Date(startYear, 1, 1), new Date(endYear, 1, 1)),
                 new TournamentTitleFilter("World-ch", true, false)));
 
     try (var txn = new DatabaseReadTransaction(db)) {
@@ -215,7 +184,8 @@ public class QueryTest {
           new Distinct<>(
               context,
               new Sort<>(
-                  context, new GameIdsByEntities<Player>(context, playerIds, EntityType.PLAYER)));
+                  context,
+                      new GameIdsByEntities<Player>(context, playerIds, EntityType.PLAYER)));
       GameLookup allGames = new GameLookup(context, allGameIds, new IsGameFilter());
 
       System.out.println(allGames.stream().limit(200).count());
@@ -231,35 +201,116 @@ public class QueryTest {
 
   public void compareCarHighCategoryGames() {
     try (var txn = new DatabaseReadTransaction(db)) {
-      List<QueryOperator<Game>> queries =
+      visualizeGameQueryPlans(
+          "Compare manual query plans",
           List.of(
               getCarlHighCategoryGames1(txn),
               getCarlHighCategoryGames2(txn),
-              getCarlHighCategoryGames3(txn));
-
-      for (QueryOperator<Game> query : queries) {
-        detailedQueryExecution(query);
-      }
+              getCarlHighCategoryGames3(txn)));
     }
   }
 
   private int queryPlanCounter = 0;
 
-  private void detailedQueryExecution(QueryOperator<?> query) {
-    IOCPUPerformanceTest.clearPageCache();
-    System.out.println("Running query...");
-    long numGames = query.executeProfiled().size();
-    System.out.println("Query answer: " + numGames);
+  private void visualizeGameQueryPlans(GameQuery gameQuery, List<QueryOperator<Game>> plans) {
+    var builder = QueryVisualiser.builder().addLogicalQuery(gameQuery);
+    List<QueryData<Game>> firstResults = null;
 
-    System.out.println(query.debugString(true));
-    System.out.println();
-    System.out.println("TOTAL QUERY COST");
-    System.out.println(query.getQueryCost().format());
-    System.out.println();
+    for (int i = 0; i < plans.size(); i++) {
+      QueryOperator<Game> plan = plans.get(i);
+      long estCost = (long) plan.getQueryCost().estimatedTotalCost();
+      builder.addPlan("Plan " + (i + 1), plan);
 
+      if (estCost >= MAX_COST) {
+        System.out.println("Skipping plan " + (i + 1) + "/" + plans.size() + " (est cost " + estCost + ")");
+        continue;
+      }
+
+      IOCPUPerformanceTest.clearPageCache();
+      System.out.println("Running plan " + (i + 1) + "/" + plans.size() + "...");
+
+      List<QueryData<Game>> results = plan.executeProfiled();
+      if (firstResults == null) firstResults = results;
+
+      System.out.println("  Results: " + results.size());
+      System.out.println("  " + plan.getQueryCost().format().lines().findFirst().orElse(""));
+    }
+
+    if (firstResults != null && !firstResults.isEmpty()) {
+      builder.addGameResults(firstResults);
+    }
+
+    writeVisualization(builder);
+  }
+
+  private void visualizeGameQueryPlans(
+      String queryDescription, List<QueryOperator<Game>> plans) {
+    var builder = QueryVisualiser.builder().queryDescription(queryDescription);
+    List<QueryData<Game>> firstResults = null;
+
+    for (int i = 0; i < plans.size(); i++) {
+      QueryOperator<Game> plan = plans.get(i);
+      long estCost = (long) plan.getQueryCost().estimatedTotalCost();
+      builder.addPlan("Plan " + (i + 1), plan);
+
+      if (estCost >= MAX_COST) {
+        System.out.println("Skipping plan " + (i + 1) + "/" + plans.size() + " (est cost " + estCost + ")");
+        continue;
+      }
+
+      IOCPUPerformanceTest.clearPageCache();
+      System.out.println("Running plan " + (i + 1) + "/" + plans.size() + "...");
+
+      List<QueryData<Game>> results = plan.executeProfiled();
+      if (firstResults == null) firstResults = results;
+
+      System.out.println("  Results: " + results.size());
+      System.out.println("  " + plan.getQueryCost().format().lines().findFirst().orElse(""));
+    }
+
+    if (firstResults != null && !firstResults.isEmpty()) {
+      builder.addGameResults(firstResults);
+    }
+
+    writeVisualization(builder);
+  }
+
+  private <T extends IdObject> void visualizeEntityQueryPlans(
+      EntityQuery<T> query, List<QueryOperator<T>> plans, EntityType entityType) {
+    var builder = QueryVisualiser.builder().addLogicalQuery(query);
+    List<QueryData<T>> firstResults = null;
+
+    for (int i = 0; i < plans.size(); i++) {
+      QueryOperator<T> plan = plans.get(i);
+      long estCost = (long) plan.getQueryCost().estimatedTotalCost();
+      builder.addPlan("Plan " + (i + 1), plan);
+
+      if (estCost >= MAX_COST) {
+        System.out.println("Skipping plan " + (i + 1) + "/" + plans.size() + " (est cost " + estCost + ")");
+        continue;
+      }
+
+      IOCPUPerformanceTest.clearPageCache();
+      System.out.println("Running plan " + (i + 1) + "/" + plans.size() + "...");
+
+      List<QueryData<T>> results = plan.executeProfiled();
+      if (firstResults == null) firstResults = results;
+
+      System.out.println("  Results: " + results.size());
+      System.out.println("  " + plan.getQueryCost().format().lines().findFirst().orElse(""));
+    }
+
+    if (firstResults != null && !firstResults.isEmpty()) {
+      builder.addEntityResults(firstResults, entityType);
+    }
+
+    writeVisualization(builder);
+  }
+
+  private void writeVisualization(QueryVisualiser.Builder builder) {
     try {
       Path htmlPath = Path.of(VIZ_PATH, "query-plan-" + queryPlanCounter++ + ".html");
-      QueryPlanVisualizer.writeHtmlFile(query, htmlPath);
+      builder.writeHtmlFile(htmlPath);
       System.out.println("Query plan visualization: " + htmlPath);
     } catch (IOException e) {
       System.err.println("Failed to write query plan HTML: " + e.getMessage());
