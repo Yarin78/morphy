@@ -8,13 +8,15 @@ import se.yarin.morphy.DatabaseMode;
 import se.yarin.morphy.DatabaseReadTransaction;
 import se.yarin.morphy.entities.EntityType;
 import se.yarin.morphy.entities.Tournament;
-import se.yarin.morphy.entities.filters.RawEntityFilter;
-import se.yarin.morphy.qqueries.*;
+import se.yarin.morphy.entities.filters.*;
+import se.yarin.morphy.queries.*;
+import se.yarin.morphy.queries.operations.QueryOperator;
+import se.yarin.morphy.cli.queries.QueryAdapter;
+import se.yarin.morphy.cli.queries.QueryResult;
 import se.yarin.morphy.cli.columns.RawTournamentColumn;
 import se.yarin.morphy.cli.columns.TournamentColumn;
 import se.yarin.morphy.cli.tournaments.StdoutTournamentsSummary;
 import se.yarin.morphy.cli.tournaments.TournamentConsumer;
-import se.yarin.morphy.qqueries.QueryResult;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -98,20 +100,24 @@ public class Tournaments extends BaseCommand implements Callable<Integer> {
               log.info("Opening {}", file);
               try (Database db = Database.open(file, DatabaseMode.READ_ONLY)) {
                 tournamentConsumer.setCurrentDatabase(db);
-                ItemQuery<Tournament> tournamentQuery = null;
-                try {
-                  tournamentQuery = createTournamentQuery();
-                } catch (IllegalArgumentException e) {
-                  System.err.println(e.getMessage());
-                  System.exit(1);
-                }
-                assert tournamentQuery != null;
 
                 try (var txn = new DatabaseReadTransaction(db)) {
-                  QueryExecutor<Tournament> executor = new QueryExecutor<>(txn);
+                  EntityQuery<Tournament> tournamentQuery = null;
+                  try {
+                    tournamentQuery = createTournamentQuery(db);
+                  } catch (IllegalArgumentException e) {
+                    System.err.println(e.getMessage());
+                    System.exit(1);
+                  }
+                  assert tournamentQuery != null;
+
+                  QueryContext qc = new QueryContext(txn, false);
+                  List<QueryOperator<Tournament>> plans = db.queryPlanner().getEntityQueryPlans(qc, tournamentQuery, true);
+                  QueryOperator<Tournament> bestPlan = db.queryPlanner().selectBestQueryPlan(plans);
+
                   // TODO: support sorted
                   QueryResult<Tournament> result =
-                      executor.execute(tournamentQuery, limit, countAll, tournamentConsumer);
+                      QueryAdapter.execute(bestPlan, limit, countAll, tournamentConsumer, null);
 
                   tournamentConsumer.searchDone(result);
                 }
@@ -137,45 +143,43 @@ public class Tournaments extends BaseCommand implements Callable<Integer> {
     return 0;
   }
 
-  public ItemQuery<Tournament> createTournamentQuery() {
-    ArrayList<ItemQuery<Tournament>> tournamentQueries = new ArrayList<>();
-    tournamentQueries.add(new QTournamentsAll()); // Ensure we have at least one query
+  public EntityQuery<Tournament> createTournamentQuery(Database db) {
+    ArrayList<EntityFilter<Tournament>> tournamentFilters = new ArrayList<>();
 
     if (name != null) {
-      tournamentQueries.add(new QTournamentsSearch(name, true, false));
+      tournamentFilters.add(new TournamentTitleFilter(name, true, false));
     }
     if (dateRange != null) {
-      tournamentQueries.add(new QTournamentsWithStartDate(dateRange));
+      tournamentFilters.add(new TournamentStartDateFilter(dateRange));
     }
     if (type != null) {
-      tournamentQueries.add(new QTournamentsWithType(type));
+      tournamentFilters.add(new TournamentTypeFilter(type));
     }
     if (timeControl != null) {
-      tournamentQueries.add(new QTournamentsWithTimeControl(timeControl));
+      tournamentFilters.add(new TournamentTimeControlFilter(timeControl));
     }
     if (place != null) {
-      tournamentQueries.add(new QTournamentsWithPlace(place));
+      tournamentFilters.add(new TournamentPlaceFilter(place, true, false));
     }
     if (nation != null) {
-      tournamentQueries.add(new QTournamentsWithNation(nation));
+      tournamentFilters.add(new TournamentNationFilter(nation));
     }
     if (teams) {
-      tournamentQueries.add(new QTournamentsIsTeam());
+      tournamentFilters.add(new TournamentTeamFilter());
     }
     if (rounds != null) {
-      tournamentQueries.add(new QTournamentsWithRounds(rounds));
+      tournamentFilters.add(new TournamentRoundsFilter(rounds));
     }
     if (minCategory > 0) {
-      tournamentQueries.add(new QTournamentsWithCategory(minCategory, 100));
+      tournamentFilters.add(new TournamentCategoryFilter(minCategory, 100));
     }
     if (rawFilter != null) {
       for (String expression : rawFilter) {
-        tournamentQueries.add(
-            new QTournamentsWithRaw(new RawEntityFilter<>(expression, EntityType.TOURNAMENT)));
+        tournamentFilters.add(new RawEntityFilter<>(expression, EntityType.TOURNAMENT));
       }
     }
 
-    return new QAnd<>(tournamentQueries);
+    return new EntityQuery<>(db, EntityType.TOURNAMENT, List.<EntityFilter<Tournament>>copyOf(tournamentFilters));
   }
 
   public TournamentConsumer createTournamentConsumer() {

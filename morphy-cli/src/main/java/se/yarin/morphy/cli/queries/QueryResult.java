@@ -1,4 +1,4 @@
-package se.yarin.morphy.qqueries;
+package se.yarin.morphy.cli.queries;
 
 import org.jetbrains.annotations.NotNull;
 
