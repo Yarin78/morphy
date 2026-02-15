@@ -243,4 +243,48 @@ public class InstrumentationTest {
     assertEquals(5, foo.get().reads);
     assertEquals(5, fooAgain.get().reads);
   }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void getMetricsWithWrongTypeFails() {
+    Instrumentation i = new Instrumentation();
+    MetricsRef<TestMetric> testMetric = TestMetric.register(i, "test metric");
+    testMetric.update(metric -> metric.addReads(5));
+
+    // Try to get TestMetric as ItemMetrics - should fail with type mismatch
+    i.getMetrics("test", "test metric", ItemMetrics.class);
+  }
+
+  @Test
+  public void getMetricsWithCorrectTypeSucceeds() {
+    Instrumentation i = new Instrumentation();
+    MetricsRef<TestMetric> testMetric = TestMetric.register(i, "test metric");
+    testMetric.update(metric -> metric.addReads(5));
+
+    // Get with correct type should work
+    TestMetric retrieved = i.getMetrics("test", "test metric", TestMetric.class);
+    assertEquals(5, retrieved.reads);
+  }
+
+  @Test
+  public void getMetricsWithCorrectTypeByKey() {
+    Instrumentation i = new Instrumentation();
+    MetricsRef<ItemMetrics> itemMetric = ItemMetrics.register(i, "items");
+    itemMetric.update(metric -> metric.addGet(10));
+
+    // Get with correct type using MetricsKey should work
+    MetricsKey key = new MetricsKey("items", "items");
+    ItemMetrics retrieved = i.getMetrics(key, ItemMetrics.class);
+    assertEquals(10, retrieved.gets());
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void getMetricsWithWrongTypeByKeyFails() {
+    Instrumentation i = new Instrumentation();
+    MetricsRef<ItemMetrics> itemMetric = ItemMetrics.register(i, "items");
+    itemMetric.update(metric -> metric.addGet(10));
+
+    // Try to get ItemMetrics as TestMetric - should fail
+    MetricsKey key = new MetricsKey("items", "items");
+    i.getMetrics(key, TestMetric.class);
+  }
 }

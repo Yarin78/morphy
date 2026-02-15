@@ -73,12 +73,37 @@ public class MetricsRepository implements AutoCloseable {
     return getMetrics(new MetricsKey(group, name));
   }
 
+  public @NotNull <T extends Metrics> T getMetrics(
+      @NotNull String group, @NotNull String name, @NotNull Class<T> clazz) {
+    return getMetrics(new MetricsKey(group, name), clazz);
+  }
+
   public @NotNull <T extends Metrics> T getMetrics(@NotNull MetricsKey metricsKey) {
     Metrics metrics = this.metrics.get(metricsKey);
     if (metrics == null) {
       throw new IllegalArgumentException("No such metrics: " + metricsKey);
     }
-    return (T) metrics; // TODO: test when using wrong type
+    @SuppressWarnings("unchecked")
+    T result = (T) metrics;
+    return result;
+  }
+
+  public @NotNull <T extends Metrics> T getMetrics(
+      @NotNull MetricsKey metricsKey, @NotNull Class<T> clazz) {
+    Metrics metrics = this.metrics.get(metricsKey);
+    if (metrics == null) {
+      throw new IllegalArgumentException("No such metrics: " + metricsKey);
+    }
+    if (!clazz.isInstance(metrics)) {
+      throw new IllegalArgumentException(
+          "Metrics "
+              + metricsKey
+              + " has type "
+              + metrics.getClass().getName()
+              + ", expected "
+              + clazz.getName());
+    }
+    return clazz.cast(metrics);
   }
 
   public <T extends Metrics> Map<MetricsKey, T> getMetricsByType(@NotNull Class<T> clazz) {
