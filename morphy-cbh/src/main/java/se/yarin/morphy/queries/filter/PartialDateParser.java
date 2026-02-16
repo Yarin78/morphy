@@ -1,4 +1,4 @@
-package se.yarin.morphy.service.games.search;
+package se.yarin.morphy.queries.filter;
 
 import java.time.YearMonth;
 import org.jetbrains.annotations.NotNull;
@@ -10,9 +10,9 @@ import se.yarin.chess.Date;
  * <p>Supports:
  *
  * <ul>
- *   <li>"2020" → entire year (2020-01-01 to 2020-12-31)
- *   <li>"2020-03" → entire month (2020-03-01 to 2020-03-31)
- *   <li>"2020-03-15" → exact date (2020-03-15)
+ *   <li>"2020" -> entire year (2020-01-01 to 2020-12-31)
+ *   <li>"2020-03" -> entire month (2020-03-01 to 2020-03-31)
+ *   <li>"2020-03-15" -> exact date (2020-03-15)
  * </ul>
  */
 public class PartialDateParser {
@@ -38,12 +38,12 @@ public class PartialDateParser {
 
     try {
       if (parts.length == 1) {
-        // Year only: "2020" → 2020-01-01 to 2020-12-31
+        // Year only: "2020" -> 2020-01-01 to 2020-12-31
         int year = Integer.parseInt(parts[0]);
         validateYear(year);
         return new DateRange(new Date(year, 1, 1), new Date(year, 12, 31));
       } else if (parts.length == 2) {
-        // Year and month: "2020-03" → 2020-03-01 to 2020-03-31
+        // Year and month: "2020-03" -> 2020-03-01 to 2020-03-31
         int year = Integer.parseInt(parts[0]);
         int month = Integer.parseInt(parts[1]);
         validateYear(year);
@@ -52,7 +52,7 @@ public class PartialDateParser {
         int lastDay = YearMonth.of(year, month).lengthOfMonth();
         return new DateRange(new Date(year, month, 1), new Date(year, month, lastDay));
       } else if (parts.length == 3) {
-        // Full date: "2020-03-15" → exact date
+        // Full date: "2020-03-15" -> exact date
         int year = Integer.parseInt(parts[0]);
         int month = Integer.parseInt(parts[1]);
         int day = Integer.parseInt(parts[2]);
@@ -69,7 +69,8 @@ public class PartialDateParser {
                 + "'. Expected YYYY, YYYY-MM, or YYYY-MM-DD");
       }
     } catch (NumberFormatException e) {
-      throw new IllegalArgumentException("Invalid date: '" + dateStr + "'. Must contain numbers", e);
+      throw new IllegalArgumentException(
+          "Invalid date: '" + dateStr + "'. Must contain numbers", e);
     }
   }
 
@@ -84,13 +85,15 @@ public class PartialDateParser {
 
   private static void validateMonth(int month) {
     if (month < 1 || month > 12) {
-      throw new IllegalArgumentException("Invalid month: " + month + ". Must be between 1 and 12");
+      throw new IllegalArgumentException(
+          "Invalid month: " + month + ". Must be between 1 and 12");
     }
   }
 
   private static void validateDay(int day, int year, int month) {
     if (day < 1 || day > 31) {
-      throw new IllegalArgumentException("Invalid day: " + day + ". Must be between 1 and 31");
+      throw new IllegalArgumentException(
+          "Invalid day: " + day + ". Must be between 1 and 31");
     }
     int maxDay = YearMonth.of(year, month).lengthOfMonth();
     if (day > maxDay) {

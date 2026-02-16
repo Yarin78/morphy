@@ -1,4 +1,4 @@
-package se.yarin.morphy.service.games.search;
+package se.yarin.morphy.queries.filter;
 
 import java.util.Map;
 import org.jetbrains.annotations.NotNull;
@@ -9,11 +9,11 @@ import org.jetbrains.annotations.NotNull;
  * <p>Examples:
  *
  * <ul>
- *   <li>"result:1-0" → FilterCondition("result", ":", "1-0", {})
- *   <li>"rating:2600.." → FilterCondition("rating", "..", "2600", {})
- *   <li>"player.name:Carlsen,position=white" → FilterCondition("player.name", ":", "Carlsen",
+ *   <li>"result:1-0" -> FilterCondition("result", ":", "1-0", {})
+ *   <li>"rating:2600.." -> FilterCondition("rating", "..", "2600", {})
+ *   <li>"player.name:Carlsen,position=white" -> FilterCondition("player.name", ":", "Carlsen",
  *       {position: "white"})
- *   <li>"eco:B9*" → FilterCondition("eco", ":", "B9*", {})
+ *   <li>"eco:B9*" -> FilterCondition("eco", ":", "B9*", {})
  * </ul>
  */
 public record FilterCondition(

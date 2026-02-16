@@ -3,13 +3,18 @@ package se.yarin.morphy.cli.commands;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
-import se.yarin.morphy.util.CBUtil;
 import se.yarin.morphy.Database;
 import se.yarin.morphy.DatabaseMode;
 import se.yarin.morphy.DatabaseReadTransaction;
 import se.yarin.morphy.entities.Player;
+import se.yarin.morphy.queries.*;
+import se.yarin.morphy.util.CBUtil;
+import se.yarin.morphy.queries.filter.PlayerQueryBuilder;
+import se.yarin.morphy.queries.operations.QueryData;
+import se.yarin.morphy.queries.operations.QueryOperator;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.concurrent.Callable;
 
 @CommandLine.Command(name = "players", mixinStandardHelpOptions = true)
@@ -17,11 +22,24 @@ public class Players extends BaseCommand implements Callable<Integer> {
 
   private static final Logger log = LoggerFactory.getLogger(Players.class);
 
-  @CommandLine.Option(names = "--count", description = "Max number of players to list")
-  int maxPlayers = 20;
+  @CommandLine.Parameters(
+      index = "1",
+      arity = "0..1",
+      description = "Filter expression (e.g., \"name:Carlsen\")")
+  private String filterExpression;
+
+  @CommandLine.Option(names = "--limit", description = "Max number of players to list")
+  int limit = 20;
+
+  @CommandLine.Option(
+      names = "--count-all",
+      description = "Count all hits, even beyond the limit (if specified)")
+  private boolean countAll = false;
 
   @CommandLine.Option(names = "--hex", description = "Show player key in hexadecimal")
   boolean hex = false;
+
+  private final PlayerQueryBuilder playerQueryBuilder = new PlayerQueryBuilder();
 
   @Override
   public Integer call() throws IOException {
@@ -33,9 +51,33 @@ public class Players extends BaseCommand implements Callable<Integer> {
               log.info("Opening {}", file);
               try (Database db = Database.open(file, DatabaseMode.READ_ONLY)) {
                 try (var txn = new DatabaseReadTransaction(db)) {
-                  int count = 0;
-                  for (Player player : txn.playerTransaction().iterable()) {
-                    if (count >= maxPlayers) break;
+                  EntityQuery<Player> playerQuery = null;
+                  try {
+                    playerQuery = playerQueryBuilder.buildQuery(db, filterExpression);
+                  } catch (IllegalArgumentException e) {
+                    System.err.println(e.getMessage());
+                    System.exit(1);
+                  }
+                  assert playerQuery != null;
+
+                  QueryContext qc = new QueryContext(txn, false);
+                  List<QueryOperator<Player>> plans =
+                      db.queryPlanner().getEntityQueryPlans(qc, playerQuery, true);
+                  QueryOperator<Player> bestPlan = db.queryPlanner().selectBestQueryPlan(plans);
+
+                  int consumed = 0;
+                  int total = 0;
+                  for (var qd : (Iterable<QueryData<Player>>) bestPlan.stream()::iterator) {
+                    Player player = qd.data();
+                    if (player == null) continue;
+                    total++;
+
+                    if (limit > 0 && consumed >= limit) {
+                      if (!countAll) break;
+                      continue;
+                    }
+
+                    consumed++;
                     String line;
                     if (hex) {
                       byte[] raw = db.playerIndex().getRaw(player.id());
@@ -49,12 +91,22 @@ public class Players extends BaseCommand implements Callable<Integer> {
                     } else {
                       line =
                           String.format(
-                              "%7d:  %-30s %6d", player.id(), player.getFullName(), player.count());
+                              "%7d:  %-30s %6d",
+                              player.id(), player.getFullName(), player.count());
                     }
                     System.out.println(line);
                   }
+
                   System.out.println();
-                  System.out.println("Total: " + db.playerIndex().count());
+                  if (countAll) {
+                    if (consumed < total) {
+                      System.out.printf("%d out of %d hits%n", consumed, total);
+                    } else {
+                      System.out.printf("%d hits%n", total);
+                    }
+                  } else {
+                    System.out.println("Total: " + db.playerIndex().count());
+                  }
                 }
 
                 if (showInstrumentation()) {

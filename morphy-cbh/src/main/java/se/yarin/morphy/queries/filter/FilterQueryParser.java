@@ -1,4 +1,4 @@
-package se.yarin.morphy.service.games.search;
+package se.yarin.morphy.queries.filter;
 
 import java.util.*;
 import java.util.regex.Matcher;
@@ -6,7 +6,6 @@ import java.util.regex.Pattern;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Component;
 
 /**
  * Parses filter query strings into structured FilterCondition objects.
@@ -29,7 +28,6 @@ import org.springframework.stereotype.Component;
  *   <li>"eco:B9* AND tournament.name:Candidates"
  * </ul>
  */
-@Component
 public class FilterQueryParser {
   private static final Logger log = LoggerFactory.getLogger(FilterQueryParser.class);
 

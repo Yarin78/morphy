@@ -20,7 +20,7 @@ import se.yarin.morphy.queries.operations.QueryOperator;
 import se.yarin.morphy.service.MorphyServiceException;
 import se.yarin.morphy.service.databases.DatabaseService;
 import se.yarin.morphy.service.games.dto.*;
-import se.yarin.morphy.service.games.search.GameQueryBuilder;
+import se.yarin.morphy.service.games.search.GameSearchRequestConverter;
 
 @Service
 public class GamesService {
@@ -29,13 +29,13 @@ public class GamesService {
   private final DatabaseService databaseService;
   private final GameDtoConverter gameDtoConverter;
   private final GameDtoImporter gameDtoImporter;
-  private final GameQueryBuilder gameQueryBuilder;
+  private final GameSearchRequestConverter gameQueryBuilder;
 
   public GamesService(
       DatabaseService databaseService,
       GameDtoConverter gameDtoConverter,
       GameDtoImporter gameDtoImporter,
-      GameQueryBuilder gameQueryBuilder) {
+      GameSearchRequestConverter gameQueryBuilder) {
     this.databaseService = databaseService;
     this.gameDtoConverter = gameDtoConverter;
     this.gameDtoImporter = gameDtoImporter;

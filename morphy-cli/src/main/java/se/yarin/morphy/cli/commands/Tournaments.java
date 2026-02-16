@@ -10,6 +10,7 @@ import se.yarin.morphy.entities.EntityType;
 import se.yarin.morphy.entities.Tournament;
 import se.yarin.morphy.entities.filters.*;
 import se.yarin.morphy.queries.*;
+import se.yarin.morphy.queries.filter.TournamentQueryBuilder;
 import se.yarin.morphy.queries.operations.QueryOperator;
 import se.yarin.morphy.cli.queries.QueryAdapter;
 import se.yarin.morphy.cli.queries.QueryResult;
@@ -28,6 +29,13 @@ public class Tournaments extends BaseCommand implements Callable<Integer> {
 
   private static final Logger log = LoggerFactory.getLogger(Tournaments.class);
 
+  @CommandLine.Parameters(
+      index = "1",
+      arity = "0..1",
+      description =
+          "Filter expression (e.g., \"name:Candidates AND type:swiss AND date:2020..\")")
+  private String filterExpression;
+
   @CommandLine.Option(names = "--limit", description = "Max number of tournaments to list")
   int limit = 20;
 
@@ -41,40 +49,6 @@ public class Tournaments extends BaseCommand implements Callable<Integer> {
       description = "Count all hits, even beyond the limit (if specified)")
   private boolean countAll = false;
 
-  @CommandLine.Option(
-      names = "--name",
-      description = "Show only tournaments matching this search string")
-  private String name;
-
-  @CommandLine.Option(names = "--date", description = "Date range, e.g. '2015-10-' or '1960-1970'")
-  private String dateRange;
-
-  @CommandLine.Option(
-      names = "--time",
-      description =
-          "Show only tournaments with this type of time control (normal, rapid, blitz, corr)")
-  private String timeControl;
-
-  @CommandLine.Option(
-      names = "--type",
-      description = "Show only this type of tournaments (tourn, swiss, match etc)")
-  private String type;
-
-  @CommandLine.Option(names = "--place", description = "Show only tournaments from this place")
-  private String place;
-
-  @CommandLine.Option(names = "--category", description = "Minimum category")
-  private int minCategory;
-
-  @CommandLine.Option(names = "--rounds", description = "Round range, e.g. '5-' or '11-13'")
-  private String rounds;
-
-  @CommandLine.Option(names = "--nation", description = "Show only tournaments from this nation")
-  private String nation;
-
-  @CommandLine.Option(names = "--teams", description = "Show only team tournaments")
-  private boolean teams;
-
   @CommandLine.Option(names = "--raw", description = "Raw filter expression in CBT data (debug)")
   private String[] rawFilter;
 
@@ -86,6 +60,8 @@ public class Tournaments extends BaseCommand implements Callable<Integer> {
 
   @CommandLine.Option(names = "--raw-col", description = "Show binary CBT data (debug)")
   private String[] rawColumns;
+
+  private final TournamentQueryBuilder tournamentQueryBuilder = new TournamentQueryBuilder();
 
   @Override
   public Integer call() throws IOException {
@@ -144,42 +120,20 @@ public class Tournaments extends BaseCommand implements Callable<Integer> {
   }
 
   public EntityQuery<Tournament> createTournamentQuery(Database db) {
-    ArrayList<EntityFilter<Tournament>> tournamentFilters = new ArrayList<>();
+    // Build query from filter expression
+    EntityQuery<Tournament> baseQuery = tournamentQueryBuilder.buildQuery(db, filterExpression);
 
-    if (name != null) {
-      tournamentFilters.add(new TournamentTitleFilter(name, true, false));
-    }
-    if (dateRange != null) {
-      tournamentFilters.add(new TournamentStartDateFilter(dateRange));
-    }
-    if (type != null) {
-      tournamentFilters.add(new TournamentTypeFilter(type));
-    }
-    if (timeControl != null) {
-      tournamentFilters.add(new TournamentTimeControlFilter(timeControl));
-    }
-    if (place != null) {
-      tournamentFilters.add(new TournamentPlaceFilter(place, true, false));
-    }
-    if (nation != null) {
-      tournamentFilters.add(new TournamentNationFilter(nation));
-    }
-    if (teams) {
-      tournamentFilters.add(new TournamentTeamFilter());
-    }
-    if (rounds != null) {
-      tournamentFilters.add(new TournamentRoundsFilter(rounds));
-    }
-    if (minCategory > 0) {
-      tournamentFilters.add(new TournamentCategoryFilter(minCategory, 100));
-    }
-    if (rawFilter != null) {
-      for (String expression : rawFilter) {
-        tournamentFilters.add(new RawEntityFilter<>(expression, EntityType.TOURNAMENT));
-      }
+    // Add raw debug filters on top of the parsed query
+    if (rawFilter == null) {
+      return baseQuery;
     }
 
-    return new EntityQuery<>(db, EntityType.TOURNAMENT, List.<EntityFilter<Tournament>>copyOf(tournamentFilters));
+    ArrayList<EntityFilter<Tournament>> filters = new ArrayList<>(baseQuery.filters());
+    for (String expression : rawFilter) {
+      filters.add(new RawEntityFilter<>(expression, EntityType.TOURNAMENT));
+    }
+
+    return new EntityQuery<>(db, EntityType.TOURNAMENT, List.<EntityFilter<Tournament>>copyOf(filters));
   }
 
   public TournamentConsumer createTournamentConsumer() {

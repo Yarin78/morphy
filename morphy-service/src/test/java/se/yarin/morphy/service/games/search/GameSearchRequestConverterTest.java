@@ -22,15 +22,15 @@ import se.yarin.morphy.queries.GameEntityJoinCondition;
 import se.yarin.morphy.queries.GameQuery;
 import se.yarin.morphy.service.games.dto.GameSearchRequest;
 
-class GameQueryBuilderTest {
+class GameSearchRequestConverterTest {
 
   private Database database;
-  private GameQueryBuilder queryBuilder;
+  private GameSearchRequestConverter queryBuilder;
 
   @BeforeEach
   void setUp() throws IOException {
     database = new Database();
-    queryBuilder = new GameQueryBuilder(new FilterQueryParser());
+    queryBuilder = new GameSearchRequestConverter();
   }
 
   @AfterEach
