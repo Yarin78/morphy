@@ -128,7 +128,8 @@ function getGameTagTitle(gt: GameDto['gameTag']): string {
     (gt as Record<string, unknown>).slovenianTitle,
     (gt as Record<string, unknown>).resTitle,
   ];
-  return titles.find(Boolean) ?? '—';
+  const found = titles.find((t): t is string => typeof t === 'string');
+  return found ?? '—';
 }
 
 export const GAME_COLUMNS: Column<GameDto>[] = [

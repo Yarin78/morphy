@@ -464,19 +464,31 @@
   font-size: 13px;
 }
 
-/* Request – Response panel */
-.debug-panel {
+/* Query Plan pane */
+.query-plan-panel {
   background: #fff;
   border: 1px solid #e0e0e0;
-  border-radius: 0 0 8px 8px;
+  border-radius: 8px;
   margin-top: 16px;
 }
 
-.debug-panel h2 {
+.query-plan-panel h2 {
   margin-bottom: 12px;
 }
 
-.debug-panel .toggle-debug {
+/* Request – Response pane */
+.request-response-panel {
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  margin-top: 16px;
+}
+
+.request-response-panel h2 {
+  margin-bottom: 12px;
+}
+
+.panel-toggle {
   background: none;
   border: none;
   color: #888;
@@ -487,24 +499,24 @@
   transition: color 0.15s;
 }
 
-.debug-panel .toggle-debug:hover {
+.panel-toggle:hover {
   color: #333;
 }
 
-.debug-content {
+.request-response-content {
   display: flex;
   flex-direction: column;
   gap: 16px;
 }
 
-.debug-content strong {
+.request-response-content strong {
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   color: #888;
 }
 
-.debug-content pre {
+.request-response-content pre {
   margin: 8px 0 0;
   padding: 16px;
   background: #f5f6f8;
@@ -519,7 +531,7 @@
   overflow-y: auto;
 }
 
-.show-debug-btn {
+.show-panel-btn {
   background: #fff;
   color: #555;
   border: 1px solid #e0e0e0;
@@ -529,7 +541,7 @@
   margin-top: 16px;
 }
 
-.show-debug-btn:hover {
+.show-panel-btn:hover {
   background: #f5f6f8;
   border-color: #4a90d9;
   color: #4a90d9;

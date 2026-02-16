@@ -20,6 +20,7 @@ import {
   fetchTournaments,
   searchGames,
 } from './api/client';
+import { QueryPlanVisualiser } from './QueryPlanVisualiser';
 import type {
   AnnotatorListResponse,
   DatabaseResponse,
@@ -34,7 +35,8 @@ import type {
 import './App.css';
 
 const COLUMN_VISIBILITY_KEY = 'search-tester-hidden-columns';
-const DEBUG_PANEL_KEY = 'search-tester-show-request-response';
+const QUERY_PLAN_PANEL_KEY = 'search-tester-show-query-plan';
+const REQUEST_RESPONSE_PANEL_KEY = 'search-tester-show-request-response';
 
 function loadHiddenColumns(): Record<string, string[]> {
   try {
@@ -85,18 +87,35 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [response, setResponse] = useState<SearchResponse | null>(null);
-  const [showDebug, setShowDebug] = useState(() => {
+  const [showQueryPlan, setShowQueryPlan] = useState(() => {
     try {
-      return localStorage.getItem(DEBUG_PANEL_KEY) === 'true';
+      return localStorage.getItem(QUERY_PLAN_PANEL_KEY) === 'true';
     } catch {
       return false;
     }
   });
 
-  const setShowDebugWithStorage = useCallback((value: boolean) => {
-    setShowDebug(value);
+  const [showRequestResponse, setShowRequestResponse] = useState(() => {
     try {
-      localStorage.setItem(DEBUG_PANEL_KEY, String(value));
+      return localStorage.getItem(REQUEST_RESPONSE_PANEL_KEY) === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const setShowQueryPlanWithStorage = useCallback((value: boolean) => {
+    setShowQueryPlan(value);
+    try {
+      localStorage.setItem(QUERY_PLAN_PANEL_KEY, String(value));
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  const setShowRequestResponseWithStorage = useCallback((value: boolean) => {
+    setShowRequestResponse(value);
+    try {
+      localStorage.setItem(REQUEST_RESPONSE_PANEL_KEY, String(value));
     } catch {
       // ignore
     }
@@ -139,6 +158,7 @@ function App() {
   const [sortBy, setSortBy] = useState('id');
   const [order, setOrder] = useState<'asc' | 'desc'>('asc');
   const [includeMoves, setIncludeMoves] = useState(false);
+  const [debugExecuteAllPlans, setDebugExecuteAllPlans] = useState(false);
   const [result, setResult] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
@@ -165,6 +185,7 @@ function App() {
       sortBy,
       order,
       includeMoves,
+      debugQueryPlans: true, // Always request query plans for Games search
     };
     if (filter.trim()) req.filter = filter.trim();
     if (result) req.result = result;
@@ -174,6 +195,7 @@ function App() {
     if (ratingMin) req.ratingMin = parseInt(ratingMin, 10);
     if (ratingMax) req.ratingMax = parseInt(ratingMax, 10);
     if (ratingMode) req.ratingMode = ratingMode;
+    if (debugExecuteAllPlans) req.debugExecuteAllPlans = true;
     return req;
   };
 
@@ -455,6 +477,18 @@ function App() {
                         Include moves
                       </label>
                     </div>
+                    <div className="field checkbox-field">
+                      <label>
+                        <input
+                          type="checkbox"
+                          checked={debugExecuteAllPlans}
+                          onChange={(e) =>
+                            setDebugExecuteAllPlans(e.target.checked)
+                          }
+                        />
+                        Execute all plans
+                      </label>
+                    </div>
                   </div>
                 </>
               )}
@@ -636,19 +670,48 @@ function App() {
           )}
         </section>
 
-        {showDebug && (
-          <section className="panel debug-panel">
+        {showQueryPlan &&
+          response?.type === 'games' &&
+          response.data.debugInfo &&
+          response.data.debugInfo.plans.length > 0 && (
+            <section className="panel query-plan-panel">
+              <h2>
+                Query Plan
+                <button
+                  className="panel-toggle"
+                  onClick={() => setShowQueryPlanWithStorage(false)}
+                  aria-label="Hide Query Plan pane"
+                >
+                  −
+                </button>
+              </h2>
+              <QueryPlanVisualiser debugInfo={response.data.debugInfo} />
+            </section>
+          )}
+        {!showQueryPlan &&
+          response?.type === 'games' &&
+          response.data.debugInfo &&
+          response.data.debugInfo.plans.length > 0 && (
+            <button
+              className="show-panel-btn"
+              onClick={() => setShowQueryPlanWithStorage(true)}
+            >
+              Show Query Plan
+            </button>
+          )}
+        {showRequestResponse && (
+          <section className="panel request-response-panel">
             <h2>
               Request – Response
               <button
-                className="toggle-debug"
-                onClick={() => setShowDebugWithStorage(false)}
-                aria-label="Hide Request – Response panel"
+                className="panel-toggle"
+                onClick={() => setShowRequestResponseWithStorage(false)}
+                aria-label="Hide Request – Response pane"
               >
                 −
               </button>
             </h2>
-            <div className="debug-content">
+            <div className="request-response-content">
               <div>
                 <strong>Request (GET params):</strong>
                 <pre>
@@ -676,10 +739,10 @@ function App() {
             </div>
           </section>
         )}
-        {!showDebug && (
+        {!showRequestResponse && (
           <button
-            className="show-debug-btn"
-            onClick={() => setShowDebugWithStorage(true)}
+            className="show-panel-btn"
+            onClick={() => setShowRequestResponseWithStorage(true)}
           >
             Show Request – Response
           </button>

@@ -36,6 +36,8 @@ export interface GameSearchRequest {
   teamId?: number;
   teamPosition?: string;
   gameTagId?: number;
+  debugQueryPlans?: boolean;
+  debugExecuteAllPlans?: boolean;
 }
 
 export interface SearchMetadata {
@@ -69,6 +71,71 @@ export interface GameDto {
   text?: unknown;
 }
 
+/** Operator-level cost (estimates and optionally actuals). */
+export interface OperatorCostDto {
+  estimatedRows: number;
+  estimatedDeserializations: number;
+  estimatedPageReads: number;
+  actualRows?: number | null;
+  actualDeserializations?: number | null;
+  actualPhysicalPageReads?: number | null;
+  actualLogicalPageReads?: number | null;
+  actualIsDuplicate?: boolean | null;
+}
+
+/** Node in a query plan graph. */
+export interface QueryOperatorNodeDto {
+  id: number;
+  name: string;
+  params: string;
+  type: string;
+  hasFullData: boolean;
+  sorted: boolean;
+  sortOrder: string;
+  mayContainDuplicates: boolean;
+  cost: OperatorCostDto;
+}
+
+/** Edge in a query plan graph. */
+export interface QueryPlanEdgeDto {
+  from: number;
+  to: number;
+}
+
+/** Total cost for a query plan. */
+export interface QueryCostDto {
+  estimatedRows: number;
+  estimatedPageReads: number;
+  estimatedDeserializations: number;
+  estimatedCpuCost: number;
+  estimatedIOCost: number;
+  estimatedTotalCost: number;
+  actualRows?: number | null;
+  actualPhysicalPageReads?: number | null;
+  actualLogicalPageReads?: number | null;
+  actualDeserializations?: number | null;
+  actualWallClockTimeMs?: number | null;
+}
+
+/** Single query execution plan. */
+export interface QueryPlanDto {
+  label: string;
+  nodes: QueryOperatorNodeDto[];
+  edges: QueryPlanEdgeDto[];
+  totalCost: QueryCostDto;
+  executed: boolean;
+  resultCount?: number | null;
+  resultsDifferFromSelected?: boolean | null;
+}
+
+/** Debug info returned when debugQueryPlans is true. */
+export interface QueryPlanDebugInfo {
+  queryDescription: string;
+  selectedPlanIndex: number;
+  allPlansAgree?: boolean | null;
+  plans: QueryPlanDto[];
+}
+
 export interface GameSearchResponse {
   games: GameDto[];
   count: number;
@@ -76,6 +143,7 @@ export interface GameSearchResponse {
   offset: number;
   limit: number;
   metadata: SearchMetadata;
+  debugInfo?: QueryPlanDebugInfo | null;
 }
 
 export interface PlayerDto {
