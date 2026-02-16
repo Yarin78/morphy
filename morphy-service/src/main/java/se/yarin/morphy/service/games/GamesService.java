@@ -3,7 +3,6 @@ package se.yarin.morphy.service.games;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.jetbrains.annotations.NotNull;
@@ -17,29 +16,37 @@ import se.yarin.morphy.queries.GameQuery;
 import se.yarin.morphy.queries.QueryContext;
 import se.yarin.morphy.queries.operations.QueryData;
 import se.yarin.morphy.queries.operations.QueryOperator;
+import se.yarin.morphy.queries.visualisation.QueryDescriptionFormatter;
 import se.yarin.morphy.service.MorphyServiceException;
 import se.yarin.morphy.service.databases.DatabaseService;
 import se.yarin.morphy.service.games.dto.*;
 import se.yarin.morphy.service.games.search.GameSearchRequestConverter;
+import se.yarin.morphy.service.queryplans.QueryPlanDebugInfo;
+import se.yarin.morphy.service.queryplans.QueryPlanDto;
+import se.yarin.morphy.service.queryplans.QueryPlanDtoConverter;
 
 @Service
 public class GamesService {
   private static final Logger log = LoggerFactory.getLogger(GamesService.class);
+  private static final long MAX_PLAN_COST = 100_000;
 
   private final DatabaseService databaseService;
   private final GameDtoConverter gameDtoConverter;
   private final GameDtoImporter gameDtoImporter;
   private final GameSearchRequestConverter gameQueryBuilder;
+  private final QueryPlanDtoConverter queryPlanDtoConverter;
 
   public GamesService(
       DatabaseService databaseService,
       GameDtoConverter gameDtoConverter,
       GameDtoImporter gameDtoImporter,
-      GameSearchRequestConverter gameQueryBuilder) {
+      GameSearchRequestConverter gameQueryBuilder,
+      QueryPlanDtoConverter queryPlanDtoConverter) {
     this.databaseService = databaseService;
     this.gameDtoConverter = gameDtoConverter;
     this.gameDtoImporter = gameDtoImporter;
     this.gameQueryBuilder = gameQueryBuilder;
+    this.queryPlanDtoConverter = queryPlanDtoConverter;
   }
 
   /**
@@ -208,6 +215,8 @@ public class GamesService {
     // Validate and apply limits
     int offset = Math.max(0, request.offset());
     int limit = Math.min(1000, Math.max(1, request.limit()));
+    boolean debugPlans = request.debugQueryPlans();
+    boolean executeAll = request.debugExecuteAllPlans();
 
     return databaseService.withReadTransaction(
         databaseId,
@@ -215,8 +224,8 @@ public class GamesService {
           // 1. Build GameQuery from request
           GameQuery gameQuery = gameQueryBuilder.buildQuery(txn.database(), request);
 
-          // 2. Create query context
-          QueryContext context = new QueryContext(txn, false);
+          // 2. Create query context (enable traceCost when debug is on)
+          QueryContext context = new QueryContext(txn, debugPlans);
 
           // 3. Generate query plans using existing QueryPlanner
           List<QueryOperator<Game>> plans =
@@ -224,23 +233,41 @@ public class GamesService {
 
           // 4. Select best plan
           QueryOperator<Game> bestPlan = txn.database().queryPlanner().selectBestQueryPlan(plans);
+          int selectedPlanIndex = plans.indexOf(bestPlan);
 
           log.debug(
               "Selected query plan: {} (cost: {})",
               bestPlan.getClass().getSimpleName(),
               bestPlan.getQueryCost().estimatedTotalCost());
 
-          // 5. Execute query - get QueryData<Game> stream
-          Stream<QueryData<Game>> queryResults = bestPlan.stream();
+          // 5. Execute query
+          List<Game> games;
+          List<QueryData<Game>> profiledResults = null;
+          if (debugPlans) {
+            // Use executeProfiled to capture actual costs
+            profiledResults = bestPlan.executeProfiled();
+            games =
+                profiledResults.stream()
+                    .map(QueryData::data)
+                    .filter(game -> !game.guidingText())
+                    .collect(Collectors.toList());
+          } else {
+            Stream<QueryData<Game>> queryResults = bestPlan.stream();
+            games =
+                queryResults
+                    .map(QueryData::data)
+                    .filter(game -> !game.guidingText())
+                    .collect(Collectors.toList());
+          }
 
-          // 6. Extract Game objects and filter out guiding text
-          List<Game> games =
-              queryResults
-                  .map(QueryData::data)
-                  .filter(game -> !game.guidingText())
-                  .collect(Collectors.toList());
+          // 6. Build debug info if requested
+          QueryPlanDebugInfo debugInfo = null;
+          if (debugPlans) {
+            debugInfo = buildDebugInfo(txn, gameQuery, plans, selectedPlanIndex,
+                profiledResults, executeAll);
+          }
 
-          // 7. Apply sorting (if needed - ID order is already sorted, date is handled by QuerySortOrder)
+          // 7. Apply sorting (if needed)
           if (needsSorting(request)) {
             games = sortGames(games, request.sortBy(), request.order());
           }
@@ -276,8 +303,74 @@ public class GamesService {
                   endTime - startTime);
 
           return new GameSearchResponse(
-              gameDtos, gameDtos.size(), totalCount, offset, limit, metadata);
+              gameDtos, gameDtos.size(), totalCount, offset, limit, metadata, debugInfo);
         });
+  }
+
+  private @NotNull QueryPlanDebugInfo buildDebugInfo(
+      @NotNull se.yarin.morphy.DatabaseReadTransaction txn,
+      @NotNull GameQuery gameQuery,
+      @NotNull List<QueryOperator<Game>> plans,
+      int selectedPlanIndex,
+      @NotNull List<QueryData<Game>> bestPlanResults,
+      boolean executeAll) {
+    String queryDescription = QueryDescriptionFormatter.format(gameQuery);
+
+    // Collect result IDs from the best plan for comparison
+    List<Integer> bestPlanResultIds = null;
+    if (executeAll) {
+      bestPlanResultIds = bestPlanResults.stream()
+          .map(QueryData::id)
+          .sorted()
+          .collect(Collectors.toList());
+    }
+
+    List<QueryPlanDto> planDtos = new ArrayList<>();
+    Boolean allPlansAgree = executeAll ? true : null;
+
+    for (int i = 0; i < plans.size(); i++) {
+      QueryOperator<Game> plan = plans.get(i);
+      String label = "Plan " + (i + 1);
+      boolean isSelected = (i == selectedPlanIndex);
+
+      if (isSelected) {
+        // Best plan was already executed via executeProfiled in searchGames
+        int resultCount = bestPlanResults.size();
+        planDtos.add(queryPlanDtoConverter.convertPlan(label, plan, true, resultCount, null));
+      } else if (executeAll) {
+        long estCost = (long) plan.getQueryCost().estimatedTotalCost();
+        if (estCost >= MAX_PLAN_COST) {
+          // Too expensive to execute — include with estimates only
+          log.debug("Skipping plan {} (estimated cost {})", i + 1, estCost);
+          planDtos.add(queryPlanDtoConverter.convertPlan(label, plan, false, null, null));
+        } else {
+          // Execute alternative plan with a fresh context to avoid shared state issues
+          QueryContext freshContext = new QueryContext(txn, true);
+          List<QueryOperator<Game>> freshPlans =
+              txn.database().queryPlanner().getGameQueryPlans(freshContext, gameQuery, true);
+          QueryOperator<Game> freshPlan = freshPlans.get(i);
+          List<QueryData<Game>> altResults = freshPlan.executeProfiled();
+          int resultCount = altResults.size();
+
+          List<Integer> altResultIds = altResults.stream()
+              .map(QueryData::id)
+              .sorted()
+              .collect(Collectors.toList());
+          boolean differs = !altResultIds.equals(bestPlanResultIds);
+          if (differs) {
+            allPlansAgree = false;
+          }
+
+          planDtos.add(queryPlanDtoConverter.convertPlan(label, freshPlan, true, resultCount,
+              differs));
+        }
+      } else {
+        // Not executed — estimates only
+        planDtos.add(queryPlanDtoConverter.convertPlan(label, plan, false, null, null));
+      }
+    }
+
+    return new QueryPlanDebugInfo(queryDescription, selectedPlanIndex, allPlansAgree, planDtos);
   }
 
   /**

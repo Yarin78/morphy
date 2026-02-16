@@ -172,6 +172,8 @@ public class GamesController {
    * @param teamId Team ID filter
    * @param teamPosition Team position: "white", "black", "any", "winner", "loser"
    * @param gameTagId Game tag ID filter
+   * @param debugQueryPlans Include query plan debug info (default false)
+   * @param debugExecuteAllPlans Execute all candidate plans for comparison (default false)
    * @return Search results with matching games and metadata
    */
   @GetMapping("/search")
@@ -199,7 +201,9 @@ public class GamesController {
       @RequestParam(required = false) Integer sourceId,
       @RequestParam(required = false) Integer teamId,
       @RequestParam(required = false) String teamPosition,
-      @RequestParam(required = false) Integer gameTagId) {
+      @RequestParam(required = false) Integer gameTagId,
+      @RequestParam(required = false) Boolean debugQueryPlans,
+      @RequestParam(required = false) Boolean debugExecuteAllPlans) {
 
     try {
       GameSearchRequest request =
@@ -226,7 +230,9 @@ public class GamesController {
               sourceId,
               teamId,
               teamPosition,
-              gameTagId);
+              gameTagId,
+              debugQueryPlans,
+              debugExecuteAllPlans);
 
       GameSearchResponse response = gamesService.searchGames(databaseId, request);
       return ResponseEntity.ok(response);

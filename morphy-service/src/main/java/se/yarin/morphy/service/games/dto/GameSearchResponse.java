@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import java.util.List;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import se.yarin.morphy.service.queryplans.QueryPlanDebugInfo;
 
 /**
  * Response model for game search queries.
@@ -23,4 +24,5 @@ public record GameSearchResponse(
     @Nullable Integer totalCount,
     int offset,
     int limit,
-    @NotNull SearchMetadata metadata) {}
+    @NotNull SearchMetadata metadata,
+    @Nullable QueryPlanDebugInfo debugInfo) {}
