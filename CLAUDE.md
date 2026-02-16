@@ -48,6 +48,7 @@ Key patterns:
 - **Java 21 features**: records, switch expressions, pattern matching
 - **Null safety**: Use `@NotNull`/`@Nullable` from JetBrains Annotations
 - **Resource management**: Always use try-with-resources for AutoCloseable
+- **Imports**: Always use import statements for classes rather than fully-qualified names in code (e.g., write `GameQueryBuilder` with an import, not `se.yarin.morphy.queries.filter.GameQueryBuilder` inline)
 
 ## ChessBase File Format
 
