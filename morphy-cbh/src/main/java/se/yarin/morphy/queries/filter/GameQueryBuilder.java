@@ -2,15 +2,12 @@ package se.yarin.morphy.queries.filter;
 
 import java.util.*;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.chess.Date;
 import se.yarin.morphy.Database;
-import se.yarin.morphy.entities.*;
-import se.yarin.morphy.entities.filters.*;
 import se.yarin.morphy.games.filters.*;
 import se.yarin.morphy.queries.*;
 
@@ -45,19 +42,14 @@ public class GameQueryBuilder {
           "teamid", "team",
           "gametagid", "gametag");
 
-  private static final Set<String> ENTITY_TYPES =
-      Set.of("player", "tournament", "annotator", "source", "team", "gametag");
-
-  private static final Map<String, Set<String>> ENTITY_PROPERTY_FIELDS =
+  private static final Map<String, AbstractEntityQueryBuilder<?>> ENTITY_BUILDERS =
       Map.of(
-          "player", Set.of("name"),
-          "tournament",
-              Set.of("title", "name", "place", "type", "time", "nation", "date", "year", "category",
-                  "rounds", "teams"),
-          "annotator", Set.of("name"),
-          "source", Set.of("title", "name"),
-          "team", Set.of("title", "name"),
-          "gametag", Set.of("title", "name"));
+          "player", new PlayerQueryBuilder(),
+          "tournament", new TournamentQueryBuilder(),
+          "annotator", new AnnotatorQueryBuilder(),
+          "source", new SourceQueryBuilder(),
+          "team", new TeamQueryBuilder(),
+          "gametag", new GameTagQueryBuilder());
 
   private final FilterQueryParser filterQueryParser = new FilterQueryParser("player.name");
 
@@ -133,8 +125,8 @@ public class GameQueryBuilder {
   private static String availableFieldsSummary() {
     List<String> fields = new ArrayList<>(new TreeSet<>(GAME_FILTERS.keySet()));
     fields.addAll(new TreeSet<>(ENTITY_ID_FIELDS));
-    for (var entry : new TreeMap<>(ENTITY_PROPERTY_FIELDS).entrySet()) {
-      for (String prop : new TreeSet<>(entry.getValue())) {
+    for (var entry : new TreeMap<>(ENTITY_BUILDERS).entrySet()) {
+      for (String prop : new TreeSet<>(entry.getValue().availableFields())) {
         fields.add(entry.getKey() + "." + prop);
       }
     }
@@ -176,249 +168,54 @@ public class GameQueryBuilder {
   }
 
   /**
-   * Builds a combined GameEntityJoin for all conditions targeting the same entity type. This fixes
-   * the bug where separate joins on the same entity type could match different entities.
+   * Builds a combined GameEntityJoin for all conditions targeting the same entity type. Delegates
+   * filter building to the corresponding entity query builder, avoiding code duplication.
    */
+  @SuppressWarnings({"unchecked", "rawtypes"})
   private @NotNull GameEntityJoin<?> buildCombinedEntityJoin(
       @NotNull Database database,
       @NotNull String entityType,
       @NotNull List<FilterCondition> conditions) {
-    return switch (entityType) {
-      case "player" -> buildPlayerJoin(database, conditions);
-      case "tournament" -> buildTournamentJoin(database, conditions);
-      case "annotator" -> buildAnnotatorJoin(database, conditions);
-      case "source" -> buildSourceJoin(database, conditions);
-      case "team" -> buildTeamJoin(database, conditions);
-      case "gametag" -> buildGameTagJoin(database, conditions);
-      default ->
-          throw new IllegalArgumentException(
-              "Unknown entity type: '"
-                  + entityType
-                  + "'. Available entity types: "
-                  + String.join(", ", new TreeSet<>(ENTITY_TYPES)));
-    };
-  }
-
-  private @NotNull GameEntityJoin<Player> buildPlayerJoin(
-      @NotNull Database database, @NotNull List<FilterCondition> conditions) {
-    List<EntityFilter<Player>> filters = new ArrayList<>();
-    GameEntityJoinCondition joinCondition = GameEntityJoinCondition.ANY;
-
-    for (FilterCondition condition : conditions) {
-      String property = condition.field().split("\\.", 2)[1].toLowerCase();
-      if (!"name".equals(property)) {
-        throw new IllegalArgumentException(
-            "Unknown player property: '"
-                + property
-                + "'. Available properties: "
-                + String.join(", ", new TreeSet<>(ENTITY_PROPERTY_FIELDS.get("player"))));
-      }
-
-      String value = condition.value();
-      if (value.contains("|")) {
-        // Pipe syntax: player.name:Carlsen|Caruana -> MultiPlayerNameFilter
-        List<String> names =
-            Arrays.stream(value.split("\\|")).map(String::trim).collect(Collectors.toList());
-        filters.add(new MultiPlayerNameFilter(names, false, false));
-      } else {
-        filters.add(new PlayerNameFilter(value, false, false));
-      }
-
-      String position = condition.modifiers().getOrDefault("position", null);
-      if (position != null) {
-        joinCondition = parsePlayerPosition(position);
-      }
+    AbstractEntityQueryBuilder builder = ENTITY_BUILDERS.get(entityType);
+    if (builder == null) {
+      throw new IllegalArgumentException(
+          "Unknown entity type: '"
+              + entityType
+              + "'. Available entity types: "
+              + String.join(", ", new TreeSet<>(ENTITY_BUILDERS.keySet())));
     }
 
-    EntityQuery<Player> entityQuery =
-        new EntityQuery<>(database, EntityType.PLAYER, List.copyOf(filters));
+    // Strip entity prefix from conditions (e.g., "tournament.title" -> "title")
+    List<FilterCondition> strippedConditions =
+        conditions.stream()
+            .map(
+                c ->
+                    new FilterCondition(
+                        c.field().split("\\.", 2)[1], c.operator(), c.value(), c.modifiers()))
+            .toList();
+
+    GameEntityJoinCondition joinCondition = extractJoinCondition(entityType, conditions);
+
+    EntityQuery entityQuery = builder.buildQuery(database, strippedConditions);
     return new GameEntityJoin<>(entityQuery, joinCondition);
   }
 
-  private @NotNull GameEntityJoin<Tournament> buildTournamentJoin(
-      @NotNull Database database, @NotNull List<FilterCondition> conditions) {
-    List<EntityFilter<Tournament>> filters = new ArrayList<>();
-
+  private @Nullable GameEntityJoinCondition extractJoinCondition(
+      @NotNull String entityType, @NotNull List<FilterCondition> conditions) {
+    if (!"player".equals(entityType) && !"team".equals(entityType)) {
+      return null;
+    }
+    GameEntityJoinCondition joinCondition = null;
     for (FilterCondition condition : conditions) {
-      String property = condition.field().split("\\.", 2)[1].toLowerCase();
-      filters.add(buildTournamentFilter(condition, property));
-    }
-
-    EntityQuery<Tournament> entityQuery =
-        new EntityQuery<>(database, EntityType.TOURNAMENT, List.copyOf(filters));
-    return new GameEntityJoin<>(entityQuery, null);
-  }
-
-  private @NotNull EntityFilter<Tournament> buildTournamentFilter(
-      @NotNull FilterCondition condition, @NotNull String property) {
-    return switch (property) {
-      case "title", "name" -> new TournamentTitleFilter(condition.value(), false, false);
-      case "place" -> new TournamentPlaceFilter(condition.value(), false, false);
-      case "type" -> new TournamentTypeFilter(condition.value());
-      case "time" -> new TournamentTimeControlFilter(condition.value());
-      case "nation" -> new TournamentNationFilter(condition.value());
-      case "date" -> buildTournamentDateFilter(condition);
-      case "year" -> {
-        // "year" is an alias: tournament.year:2024 -> date range for that year
-        int year = Integer.parseInt(condition.value());
-        yield new TournamentStartDateFilter(new Date(year, 1, 1), new Date(year, 12, 31));
-      }
-      case "category" -> buildTournamentCategoryFilter(condition);
-      case "rounds" -> buildTournamentRoundsFilter(condition);
-      case "teams" -> new TournamentTeamFilter();
-      default ->
-          throw new IllegalArgumentException(
-              "Unknown tournament property: '"
-                  + property
-                  + "'. Available properties: "
-                  + String.join(
-                      ", ", new TreeSet<>(ENTITY_PROPERTY_FIELDS.get("tournament"))));
-    };
-  }
-
-  private @NotNull EntityFilter<Tournament> buildTournamentDateFilter(
-      @NotNull FilterCondition condition) {
-    if ("..".equals(condition.operator())) {
-      String[] parts = condition.value().split("\\.\\.", 2);
-      Date from = parts[0].isEmpty() ? Date.unset() : parseDateStart(parts[0]);
-      Date to = parts.length > 1 && !parts[1].isEmpty() ? parseDateEnd(parts[1]) : Date.unset();
-      return new TournamentStartDateFilter(from, to);
-    } else {
-      PartialDateParser.DateRange range = PartialDateParser.parse(condition.value());
-      return new TournamentStartDateFilter(range.from(), range.to());
-    }
-  }
-
-  private @NotNull EntityFilter<Tournament> buildTournamentCategoryFilter(
-      @NotNull FilterCondition condition) {
-    if ("..".equals(condition.operator())) {
-      String[] parts = condition.value().split("\\.\\.", 2);
-      int min = parts[0].isEmpty() ? 0 : Integer.parseInt(parts[0]);
-      int max = parts.length > 1 && !parts[1].isEmpty() ? Integer.parseInt(parts[1]) : 100;
-      return new TournamentCategoryFilter(min, max);
-    } else {
-      String value = condition.value();
-      if (value.endsWith("..")) {
-        // "20.." syntax via colon operator
-        int min = Integer.parseInt(value.substring(0, value.length() - 2));
-        return new TournamentCategoryFilter(min, 100);
-      }
-      int cat = Integer.parseInt(value);
-      return new TournamentCategoryFilter(cat, cat);
-    }
-  }
-
-  private @NotNull EntityFilter<Tournament> buildTournamentRoundsFilter(
-      @NotNull FilterCondition condition) {
-    if ("..".equals(condition.operator())) {
-      String[] parts = condition.value().split("\\.\\.", 2);
-      int min = parts[0].isEmpty() ? 0 : Integer.parseInt(parts[0]);
-      int max = parts.length > 1 && !parts[1].isEmpty() ? Integer.parseInt(parts[1]) : 999;
-      return new TournamentRoundsFilter(min, max);
-    } else {
-      String value = condition.value();
-      if (value.contains("..")) {
-        // "5..13" via colon operator
-        String[] parts = value.split("\\.\\.", 2);
-        int min = parts[0].isEmpty() ? 0 : Integer.parseInt(parts[0]);
-        int max = parts.length > 1 && !parts[1].isEmpty() ? Integer.parseInt(parts[1]) : 999;
-        return new TournamentRoundsFilter(min, max);
-      }
-      int rounds = Integer.parseInt(value);
-      return new TournamentRoundsFilter(rounds, rounds);
-    }
-  }
-
-  private @NotNull GameEntityJoin<Annotator> buildAnnotatorJoin(
-      @NotNull Database database, @NotNull List<FilterCondition> conditions) {
-    List<EntityFilter<Annotator>> filters = new ArrayList<>();
-
-    for (FilterCondition condition : conditions) {
-      String property = condition.field().split("\\.", 2)[1].toLowerCase();
-      if (!"name".equals(property)) {
-        throw new IllegalArgumentException(
-            "Unknown annotator property: '"
-                + property
-                + "'. Available properties: "
-                + String.join(
-                    ", ", new TreeSet<>(ENTITY_PROPERTY_FIELDS.get("annotator"))));
-      }
-      filters.add(new AnnotatorNameFilter(condition.value(), false, false));
-    }
-
-    EntityQuery<Annotator> entityQuery =
-        new EntityQuery<>(database, EntityType.ANNOTATOR, List.copyOf(filters));
-    return new GameEntityJoin<>(entityQuery, null);
-  }
-
-  private @NotNull GameEntityJoin<Source> buildSourceJoin(
-      @NotNull Database database, @NotNull List<FilterCondition> conditions) {
-    List<EntityFilter<Source>> filters = new ArrayList<>();
-
-    for (FilterCondition condition : conditions) {
-      String property = condition.field().split("\\.", 2)[1].toLowerCase();
-      if (!"title".equals(property) && !"name".equals(property)) {
-        throw new IllegalArgumentException(
-            "Unknown source property: '"
-                + property
-                + "'. Available properties: "
-                + String.join(", ", new TreeSet<>(ENTITY_PROPERTY_FIELDS.get("source"))));
-      }
-      filters.add(new SourceTitleFilter(condition.value(), false, false));
-    }
-
-    EntityQuery<Source> entityQuery =
-        new EntityQuery<>(database, EntityType.SOURCE, List.copyOf(filters));
-    return new GameEntityJoin<>(entityQuery, null);
-  }
-
-  private @NotNull GameEntityJoin<Team> buildTeamJoin(
-      @NotNull Database database, @NotNull List<FilterCondition> conditions) {
-    List<EntityFilter<Team>> filters = new ArrayList<>();
-    GameEntityJoinCondition joinCondition = GameEntityJoinCondition.ANY;
-
-    for (FilterCondition condition : conditions) {
-      String property = condition.field().split("\\.", 2)[1].toLowerCase();
-      if (!"title".equals(property) && !"name".equals(property)) {
-        throw new IllegalArgumentException(
-            "Unknown team property: '"
-                + property
-                + "'. Available properties: "
-                + String.join(", ", new TreeSet<>(ENTITY_PROPERTY_FIELDS.get("team"))));
-      }
-      filters.add(new TeamTitleFilter(condition.value(), false, false));
-
       String position = condition.modifiers().getOrDefault("position", null);
       if (position != null) {
-        joinCondition = parseTeamPosition(position);
+        joinCondition =
+            "player".equals(entityType)
+                ? parsePlayerPosition(position)
+                : parseTeamPosition(position);
       }
     }
-
-    EntityQuery<Team> entityQuery =
-        new EntityQuery<>(database, EntityType.TEAM, List.copyOf(filters));
-    return new GameEntityJoin<>(entityQuery, joinCondition);
-  }
-
-  private @NotNull GameEntityJoin<GameTag> buildGameTagJoin(
-      @NotNull Database database, @NotNull List<FilterCondition> conditions) {
-    List<EntityFilter<GameTag>> filters = new ArrayList<>();
-
-    for (FilterCondition condition : conditions) {
-      String property = condition.field().split("\\.", 2)[1].toLowerCase();
-      if (!"title".equals(property) && !"name".equals(property)) {
-        throw new IllegalArgumentException(
-            "Unknown game tag property: '"
-                + property
-                + "'. Available properties: "
-                + String.join(
-                    ", ", new TreeSet<>(ENTITY_PROPERTY_FIELDS.get("gametag"))));
-      }
-      filters.add(new GameTagTitleFilter(condition.value(), false, false));
-    }
-
-    EntityQuery<GameTag> entityQuery =
-        new EntityQuery<>(database, EntityType.GAME_TAG, List.copyOf(filters));
-    return new GameEntityJoin<>(entityQuery, null);
+    return joinCondition;
   }
 
   private static @NotNull GameFilter buildDateFilter(@NotNull FilterCondition condition) {

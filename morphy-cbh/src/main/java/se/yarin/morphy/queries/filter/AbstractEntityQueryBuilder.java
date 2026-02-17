@@ -3,6 +3,7 @@ package se.yarin.morphy.queries.filter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeSet;
 import java.util.function.Function;
 import org.jetbrains.annotations.NotNull;
@@ -53,6 +54,11 @@ public abstract class AbstractEntityQueryBuilder<T extends Entity> {
       filters.add(buildFilter(condition));
     }
     return new EntityQuery<>(database, entityType, List.copyOf(filters));
+  }
+
+  /** Returns the set of field names supported by this entity query builder. */
+  public @NotNull Set<String> availableFields() {
+    return filters().keySet();
   }
 
   private @NotNull EntityFilter<T> buildFilter(@NotNull FilterCondition condition) {
