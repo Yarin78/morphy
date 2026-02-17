@@ -48,13 +48,8 @@ public class DatabaseController {
   /** Refresh a database by forcing it to reload from disk. */
   @PostMapping("/{databaseId}/refresh")
   public ResponseEntity<Void> refreshDatabase(@PathVariable String databaseId) {
-    try {
-      databaseService.refreshDatabase(databaseId);
-      return ResponseEntity.noContent().build();
-    } catch (IllegalArgumentException e) {
-      log.warn("Database not found: {}", databaseId);
-      return ResponseEntity.notFound().build();
-    }
+    databaseService.refreshDatabase(databaseId);
+    return ResponseEntity.noContent().build();
   }
 
   /**
@@ -70,9 +65,6 @@ public class DatabaseController {
       var config = databaseService.getDatabaseConfig(request.id());
       return ResponseEntity.status(HttpStatus.CREATED)
           .body(new DatabaseResponse(config.getId(), config.getDisplayName(), config.getPath()));
-    } catch (IllegalArgumentException e) {
-      log.warn("Invalid request to create database: {}", e.getMessage());
-      return ResponseEntity.badRequest().build();
     } catch (IOException e) {
       log.error("Failed to create database: {}", e.getMessage(), e);
       return ResponseEntity.internalServerError().build();
@@ -92,9 +84,6 @@ public class DatabaseController {
       var config = databaseService.getDatabaseConfig(request.id());
       return ResponseEntity.status(HttpStatus.CREATED)
           .body(new DatabaseResponse(config.getId(), config.getDisplayName(), config.getPath()));
-    } catch (IllegalArgumentException e) {
-      log.warn("Invalid request to register database: {}", e.getMessage());
-      return ResponseEntity.badRequest().build();
     } catch (IOException e) {
       log.error("Failed to register database: {}", e.getMessage(), e);
       return ResponseEntity.internalServerError().build();
@@ -113,9 +102,6 @@ public class DatabaseController {
     try {
       databaseService.unregisterDatabase(databaseId);
       return ResponseEntity.noContent().build();
-    } catch (IllegalArgumentException e) {
-      log.warn("Database not found: {}", databaseId);
-      return ResponseEntity.notFound().build();
     } catch (IOException e) {
       log.error("Failed to unregister database: {}", e.getMessage(), e);
       return ResponseEntity.internalServerError().build();

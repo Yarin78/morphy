@@ -94,9 +94,6 @@ public class AnnotatorsController {
       AnnotatorDto updatedAnnotator =
           annotatorsService.updateAnnotator(databaseId, annotatorId, annotatorDto);
       return ResponseEntity.ok(updatedAnnotator);
-    } catch (IllegalArgumentException e) {
-      log.error("Invalid annotator data: {}", e.getMessage());
-      return ResponseEntity.badRequest().build();
     } catch (MorphyServiceException e) {
       log.error(
           "Error updating annotator {} in database '{}': {}",
@@ -119,17 +116,9 @@ public class AnnotatorsController {
       @RequestParam(required = false) Integer limit,
       @RequestParam(required = false) String sortBy,
       @RequestParam(required = false) String order) {
-    try {
-      EntitySearchRequest request = new EntitySearchRequest(filter, offset, limit, sortBy, order);
-      EntitySearchResponse<AnnotatorDto> response =
-          annotatorsService.searchAnnotators(databaseId, request);
-      return ResponseEntity.ok(response);
-    } catch (IllegalArgumentException e) {
-      log.error("Invalid search parameters: {}", e.getMessage());
-      return ResponseEntity.badRequest().build();
-    } catch (MorphyServiceException e) {
-      log.error("Error searching annotators in database '{}': {}", databaseId, e.getMessage());
-      return ResponseEntity.internalServerError().build();
-    }
+    EntitySearchRequest request = new EntitySearchRequest(filter, offset, limit, sortBy, order);
+    EntitySearchResponse<AnnotatorDto> response =
+        annotatorsService.searchAnnotators(databaseId, request);
+    return ResponseEntity.ok(response);
   }
 }

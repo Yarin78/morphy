@@ -99,9 +99,6 @@ public class GamesController {
     try {
       GameDto createdGame = gamesService.addGame(databaseId, gameDto);
       return ResponseEntity.status(201).body(createdGame);
-    } catch (IllegalArgumentException e) {
-      log.error("Invalid game data: {}", e.getMessage());
-      return ResponseEntity.badRequest().build();
     } catch (MorphyServiceException e) {
       log.error("Error adding game to database '{}': {}", databaseId, e.getMessage());
       return ResponseEntity.internalServerError().build();
@@ -125,9 +122,6 @@ public class GamesController {
     try {
       GameDto updatedGame = gamesService.replaceGame(databaseId, gameId, gameDto);
       return ResponseEntity.ok(updatedGame);
-    } catch (IllegalArgumentException e) {
-      log.error("Invalid game data: {}", e.getMessage());
-      return ResponseEntity.badRequest().build();
     } catch (MorphyServiceException e) {
       log.error("Error replacing game {} in database '{}': {}", gameId, databaseId, e.getMessage());
       return ResponseEntity.internalServerError().build();
@@ -205,47 +199,36 @@ public class GamesController {
       @RequestParam(required = false) Boolean debugQueryPlans,
       @RequestParam(required = false) Boolean debugExecuteAllPlans) {
 
-    try {
-      GameSearchRequest request =
-          new GameSearchRequest(
-              offset,
-              limit,
-              sortBy,
-              order,
-              includeMoves,
-              includeText,
-              filter,
-              result,
-              dateFrom,
-              dateTo,
-              ecoCode,
-              round,
-              ratingMin,
-              ratingMax,
-              ratingMode,
-              playerId,
-              playerPosition,
-              tournamentId,
-              annotatorId,
-              sourceId,
-              teamId,
-              teamPosition,
-              gameTagId,
-              debugQueryPlans,
-              debugExecuteAllPlans);
+    GameSearchRequest request =
+        new GameSearchRequest(
+            offset,
+            limit,
+            sortBy,
+            order,
+            includeMoves,
+            includeText,
+            filter,
+            result,
+            dateFrom,
+            dateTo,
+            ecoCode,
+            round,
+            ratingMin,
+            ratingMax,
+            ratingMode,
+            playerId,
+            playerPosition,
+            tournamentId,
+            annotatorId,
+            sourceId,
+            teamId,
+            teamPosition,
+            gameTagId,
+            debugQueryPlans,
+            debugExecuteAllPlans);
 
-      GameSearchResponse response = gamesService.searchGames(databaseId, request);
-      return ResponseEntity.ok(response);
-    } catch (IllegalArgumentException e) {
-      log.error("Invalid search parameters: {}", e.getMessage());
-      return ResponseEntity.badRequest().build();
-    } catch (MorphyServiceException e) {
-      log.error("Error searching games in database '{}': {}", databaseId, e.getMessage());
-      return ResponseEntity.internalServerError().build();
-    } catch (Exception e) {
-      log.error("Unexpected error searching games in database '{}'", databaseId, e);
-      return ResponseEntity.internalServerError().build();
-    }
+    GameSearchResponse response = gamesService.searchGames(databaseId, request);
+    return ResponseEntity.ok(response);
   }
 
   /**
@@ -260,18 +243,7 @@ public class GamesController {
   @PostMapping("/search")
   public ResponseEntity<GameSearchResponse> searchGamesPost(
       @PathVariable String databaseId, @RequestBody GameSearchRequest request) {
-    try {
-      GameSearchResponse response = gamesService.searchGames(databaseId, request);
-      return ResponseEntity.ok(response);
-    } catch (IllegalArgumentException e) {
-      log.error("Invalid search parameters: {}", e.getMessage());
-      return ResponseEntity.badRequest().build();
-    } catch (MorphyServiceException e) {
-      log.error("Error searching games in database '{}': {}", databaseId, e.getMessage());
-      return ResponseEntity.internalServerError().build();
-    } catch (Exception e) {
-      log.error("Unexpected error searching games in database '{}'", databaseId, e);
-      return ResponseEntity.internalServerError().build();
-    }
+    GameSearchResponse response = gamesService.searchGames(databaseId, request);
+    return ResponseEntity.ok(response);
   }
 }

@@ -1,52 +1,31 @@
 package se.yarin.morphy.queries.filter;
 
-import java.util.ArrayList;
-import java.util.List;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
-import se.yarin.morphy.Database;
+import java.util.Map;
+import java.util.function.Function;
 import se.yarin.morphy.entities.EntityType;
 import se.yarin.morphy.entities.Source;
 import se.yarin.morphy.entities.filters.EntityFilter;
 import se.yarin.morphy.entities.filters.SourceTitleFilter;
-import se.yarin.morphy.queries.EntityQuery;
 
 /**
- * Builds an {@link EntityQuery} for {@link Source} from a filter expression string.
+ * Builds an {@link se.yarin.morphy.queries.EntityQuery} for {@link Source} from a filter expression
+ * string.
  *
  * <p>Supported fields: title/name (default field: title).
  */
-public class SourceQueryBuilder {
+public class SourceQueryBuilder extends AbstractEntityQueryBuilder<Source> {
 
-  private final FilterQueryParser filterQueryParser = new FilterQueryParser("title");
+  private static final Map<String, Function<FilterCondition, EntityFilter<Source>>> FILTERS =
+      Map.ofEntries(
+          Map.entry("title", c -> new SourceTitleFilter(c.value(), false, false)),
+          Map.entry("name", c -> new SourceTitleFilter(c.value(), false, false)));
 
-  public @NotNull EntityQuery<Source> buildQuery(
-      @NotNull Database database, @Nullable String filterExpression) {
-    if (filterExpression == null || filterExpression.isBlank()) {
-      return new EntityQuery<>(database, EntityType.SOURCE, List.of());
-    }
-    List<FilterCondition> conditions = filterQueryParser.parse(filterExpression);
-    return buildQuery(database, conditions);
+  public SourceQueryBuilder() {
+    super(EntityType.SOURCE, "source", "title");
   }
 
-  public @NotNull EntityQuery<Source> buildQuery(
-      @NotNull Database database, @NotNull List<FilterCondition> conditions) {
-    List<EntityFilter<Source>> filters = new ArrayList<>();
-
-    for (FilterCondition condition : conditions) {
-      filters.add(buildFilter(condition));
-    }
-
-    return new EntityQuery<>(
-        database, EntityType.SOURCE, List.<EntityFilter<Source>>copyOf(filters));
-  }
-
-  private @NotNull EntityFilter<Source> buildFilter(@NotNull FilterCondition condition) {
-    return switch (condition.field().toLowerCase()) {
-      case "title", "name" -> new SourceTitleFilter(condition.value(), false, false);
-      default ->
-          throw new IllegalArgumentException(
-              "Unknown source filter field: " + condition.field());
-    };
+  @Override
+  protected Map<String, Function<FilterCondition, EntityFilter<Source>>> filters() {
+    return FILTERS;
   }
 }

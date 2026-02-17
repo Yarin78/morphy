@@ -92,9 +92,6 @@ public class SourcesController {
     try {
       SourceDto updatedSource = sourcesService.updateSource(databaseId, sourceId, sourceDto);
       return ResponseEntity.ok(updatedSource);
-    } catch (IllegalArgumentException e) {
-      log.error("Invalid source data: {}", e.getMessage());
-      return ResponseEntity.badRequest().build();
     } catch (MorphyServiceException e) {
       log.error(
           "Error updating source {} in database '{}': {}", sourceId, databaseId, e.getMessage());
@@ -113,17 +110,9 @@ public class SourcesController {
       @RequestParam(required = false) Integer limit,
       @RequestParam(required = false) String sortBy,
       @RequestParam(required = false) String order) {
-    try {
-      EntitySearchRequest request = new EntitySearchRequest(filter, offset, limit, sortBy, order);
-      EntitySearchResponse<SourceDto> response =
-          sourcesService.searchSources(databaseId, request);
-      return ResponseEntity.ok(response);
-    } catch (IllegalArgumentException e) {
-      log.error("Invalid search parameters: {}", e.getMessage());
-      return ResponseEntity.badRequest().build();
-    } catch (MorphyServiceException e) {
-      log.error("Error searching sources in database '{}': {}", databaseId, e.getMessage());
-      return ResponseEntity.internalServerError().build();
-    }
+    EntitySearchRequest request = new EntitySearchRequest(filter, offset, limit, sortBy, order);
+    EntitySearchResponse<SourceDto> response =
+        sourcesService.searchSources(databaseId, request);
+    return ResponseEntity.ok(response);
   }
 }

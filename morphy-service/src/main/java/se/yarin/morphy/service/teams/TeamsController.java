@@ -87,9 +87,6 @@ public class TeamsController {
     try {
       TeamDto updatedTeam = teamsService.updateTeam(databaseId, teamId, teamDto);
       return ResponseEntity.ok(updatedTeam);
-    } catch (IllegalArgumentException e) {
-      log.error("Invalid team data: {}", e.getMessage());
-      return ResponseEntity.badRequest().build();
     } catch (MorphyServiceException e) {
       log.error(
           "Error updating team {} in database '{}': {}", teamId, databaseId, e.getMessage());
@@ -108,16 +105,8 @@ public class TeamsController {
       @RequestParam(required = false) Integer limit,
       @RequestParam(required = false) String sortBy,
       @RequestParam(required = false) String order) {
-    try {
-      EntitySearchRequest request = new EntitySearchRequest(filter, offset, limit, sortBy, order);
-      EntitySearchResponse<TeamDto> response = teamsService.searchTeams(databaseId, request);
-      return ResponseEntity.ok(response);
-    } catch (IllegalArgumentException e) {
-      log.error("Invalid search parameters: {}", e.getMessage());
-      return ResponseEntity.badRequest().build();
-    } catch (MorphyServiceException e) {
-      log.error("Error searching teams in database '{}': {}", databaseId, e.getMessage());
-      return ResponseEntity.internalServerError().build();
-    }
+    EntitySearchRequest request = new EntitySearchRequest(filter, offset, limit, sortBy, order);
+    EntitySearchResponse<TeamDto> response = teamsService.searchTeams(databaseId, request);
+    return ResponseEntity.ok(response);
   }
 }

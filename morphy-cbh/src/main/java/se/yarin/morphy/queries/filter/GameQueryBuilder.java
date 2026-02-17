@@ -1,6 +1,7 @@
 package se.yarin.morphy.queries.filter;
 
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -25,6 +26,38 @@ import se.yarin.morphy.queries.*;
  */
 public class GameQueryBuilder {
   private static final Logger log = LoggerFactory.getLogger(GameQueryBuilder.class);
+
+  private static final Map<String, Function<FilterCondition, GameFilter>> GAME_FILTERS =
+      Map.ofEntries(
+          Map.entry("result", c -> new ResultsFilter(c.value())),
+          Map.entry("date", GameQueryBuilder::buildDateFilter),
+          Map.entry("rating", GameQueryBuilder::buildRatingFilter),
+          Map.entry("eco", c -> new EcoFilter(c.value())),
+          Map.entry("round", GameQueryBuilder::buildRoundFilter),
+          Map.entry("type", GameQueryBuilder::buildTypeFilter));
+
+  private static final Set<String> ENTITY_ID_FIELDS =
+      Set.of(
+          "playerid", "player",
+          "tournamentid", "tournament",
+          "annotatorid", "annotator",
+          "sourceid", "source",
+          "teamid", "team",
+          "gametagid", "gametag");
+
+  private static final Set<String> ENTITY_TYPES =
+      Set.of("player", "tournament", "annotator", "source", "team", "gametag");
+
+  private static final Map<String, Set<String>> ENTITY_PROPERTY_FIELDS =
+      Map.of(
+          "player", Set.of("name"),
+          "tournament",
+              Set.of("title", "name", "place", "type", "time", "nation", "date", "year", "category",
+                  "rounds", "teams"),
+          "annotator", Set.of("name"),
+          "source", Set.of("title", "name"),
+          "team", Set.of("title", "name"),
+          "gametag", Set.of("title", "name"));
 
   private final FilterQueryParser filterQueryParser = new FilterQueryParser("player.name");
 
@@ -67,7 +100,11 @@ public class GameQueryBuilder {
         String entityType = condition.field().split("\\.", 2)[0].toLowerCase();
         entityConditions.computeIfAbsent(entityType, k -> new ArrayList<>()).add(condition);
       } else {
-        throw new IllegalArgumentException("Unknown filter field: " + condition.field());
+        throw new IllegalArgumentException(
+            "Unknown filter field: '"
+                + condition.field()
+                + "'. Available fields: "
+                + availableFieldsSummary());
       }
     }
 
@@ -81,47 +118,39 @@ public class GameQueryBuilder {
   }
 
   private boolean isGamePropertyFilter(@NotNull FilterCondition condition) {
-    String field = condition.field().toLowerCase();
-    return field.equals("result")
-        || field.equals("date")
-        || field.equals("rating")
-        || field.equals("eco")
-        || field.equals("round")
-        || field.equals("type");
+    return GAME_FILTERS.containsKey(condition.field().toLowerCase());
   }
 
   private boolean isEntityIdFilter(@NotNull FilterCondition condition) {
     if (condition.field().contains(".")) return false;
-    String field = condition.field().toLowerCase();
-    return field.equals("playerid")
-        || field.equals("player")
-        || field.equals("tournamentid")
-        || field.equals("tournament")
-        || field.equals("annotatorid")
-        || field.equals("annotator")
-        || field.equals("sourceid")
-        || field.equals("source")
-        || field.equals("teamid")
-        || field.equals("team")
-        || field.equals("gametagid")
-        || field.equals("gametag");
+    return ENTITY_ID_FIELDS.contains(condition.field().toLowerCase());
   }
 
   private boolean isEntityPropertyFilter(@NotNull FilterCondition condition) {
     return condition.field().contains(".");
   }
 
+  private static String availableFieldsSummary() {
+    List<String> fields = new ArrayList<>(new TreeSet<>(GAME_FILTERS.keySet()));
+    fields.addAll(new TreeSet<>(ENTITY_ID_FIELDS));
+    for (var entry : new TreeMap<>(ENTITY_PROPERTY_FIELDS).entrySet()) {
+      for (String prop : new TreeSet<>(entry.getValue())) {
+        fields.add(entry.getKey() + "." + prop);
+      }
+    }
+    return String.join(", ", fields);
+  }
+
   private @NotNull GameFilter buildGameFilter(@NotNull FilterCondition condition) {
-    return switch (condition.field().toLowerCase()) {
-      case "result" -> new ResultsFilter(condition.value());
-      case "date" -> buildDateFilter(condition);
-      case "rating" -> buildRatingFilter(condition);
-      case "eco" -> new EcoFilter(condition.value());
-      case "round" -> buildRoundFilter(condition);
-      case "type" -> buildTypeFilter(condition);
-      default ->
-          throw new IllegalArgumentException("Unknown game filter: " + condition.field());
-    };
+    var builder = GAME_FILTERS.get(condition.field().toLowerCase());
+    if (builder == null) {
+      throw new IllegalArgumentException(
+          "Unknown game filter field: '"
+              + condition.field()
+              + "'. Available fields: "
+              + String.join(", ", new TreeSet<>(GAME_FILTERS.keySet())));
+    }
+    return builder.apply(condition);
   }
 
   private @NotNull GameFilter buildEntityIdFilter(@NotNull FilterCondition condition) {
@@ -161,7 +190,12 @@ public class GameQueryBuilder {
       case "source" -> buildSourceJoin(database, conditions);
       case "team" -> buildTeamJoin(database, conditions);
       case "gametag" -> buildGameTagJoin(database, conditions);
-      default -> throw new IllegalArgumentException("Unknown entity type: " + entityType);
+      default ->
+          throw new IllegalArgumentException(
+              "Unknown entity type: '"
+                  + entityType
+                  + "'. Available entity types: "
+                  + String.join(", ", new TreeSet<>(ENTITY_TYPES)));
     };
   }
 
@@ -173,7 +207,11 @@ public class GameQueryBuilder {
     for (FilterCondition condition : conditions) {
       String property = condition.field().split("\\.", 2)[1].toLowerCase();
       if (!"name".equals(property)) {
-        throw new IllegalArgumentException("Unknown player property: " + property);
+        throw new IllegalArgumentException(
+            "Unknown player property: '"
+                + property
+                + "'. Available properties: "
+                + String.join(", ", new TreeSet<>(ENTITY_PROPERTY_FIELDS.get("player"))));
       }
 
       String value = condition.value();
@@ -229,7 +267,12 @@ public class GameQueryBuilder {
       case "rounds" -> buildTournamentRoundsFilter(condition);
       case "teams" -> new TournamentTeamFilter();
       default ->
-          throw new IllegalArgumentException("Unknown tournament property: " + property);
+          throw new IllegalArgumentException(
+              "Unknown tournament property: '"
+                  + property
+                  + "'. Available properties: "
+                  + String.join(
+                      ", ", new TreeSet<>(ENTITY_PROPERTY_FIELDS.get("tournament"))));
     };
   }
 
@@ -293,7 +336,12 @@ public class GameQueryBuilder {
     for (FilterCondition condition : conditions) {
       String property = condition.field().split("\\.", 2)[1].toLowerCase();
       if (!"name".equals(property)) {
-        throw new IllegalArgumentException("Unknown annotator property: " + property);
+        throw new IllegalArgumentException(
+            "Unknown annotator property: '"
+                + property
+                + "'. Available properties: "
+                + String.join(
+                    ", ", new TreeSet<>(ENTITY_PROPERTY_FIELDS.get("annotator"))));
       }
       filters.add(new AnnotatorNameFilter(condition.value(), false, false));
     }
@@ -310,7 +358,11 @@ public class GameQueryBuilder {
     for (FilterCondition condition : conditions) {
       String property = condition.field().split("\\.", 2)[1].toLowerCase();
       if (!"title".equals(property) && !"name".equals(property)) {
-        throw new IllegalArgumentException("Unknown source property: " + property);
+        throw new IllegalArgumentException(
+            "Unknown source property: '"
+                + property
+                + "'. Available properties: "
+                + String.join(", ", new TreeSet<>(ENTITY_PROPERTY_FIELDS.get("source"))));
       }
       filters.add(new SourceTitleFilter(condition.value(), false, false));
     }
@@ -328,7 +380,11 @@ public class GameQueryBuilder {
     for (FilterCondition condition : conditions) {
       String property = condition.field().split("\\.", 2)[1].toLowerCase();
       if (!"title".equals(property) && !"name".equals(property)) {
-        throw new IllegalArgumentException("Unknown team property: " + property);
+        throw new IllegalArgumentException(
+            "Unknown team property: '"
+                + property
+                + "'. Available properties: "
+                + String.join(", ", new TreeSet<>(ENTITY_PROPERTY_FIELDS.get("team"))));
       }
       filters.add(new TeamTitleFilter(condition.value(), false, false));
 
@@ -350,7 +406,12 @@ public class GameQueryBuilder {
     for (FilterCondition condition : conditions) {
       String property = condition.field().split("\\.", 2)[1].toLowerCase();
       if (!"title".equals(property) && !"name".equals(property)) {
-        throw new IllegalArgumentException("Unknown game tag property: " + property);
+        throw new IllegalArgumentException(
+            "Unknown game tag property: '"
+                + property
+                + "'. Available properties: "
+                + String.join(
+                    ", ", new TreeSet<>(ENTITY_PROPERTY_FIELDS.get("gametag"))));
       }
       filters.add(new GameTagTitleFilter(condition.value(), false, false));
     }
@@ -360,7 +421,7 @@ public class GameQueryBuilder {
     return new GameEntityJoin<>(entityQuery, null);
   }
 
-  private @NotNull GameFilter buildDateFilter(@NotNull FilterCondition condition) {
+  private static @NotNull GameFilter buildDateFilter(@NotNull FilterCondition condition) {
     if ("..".equals(condition.operator())) {
       // Range operator: date..2020..2025
       String[] parts = condition.value().split("\\.\\.", 2);
@@ -383,7 +444,7 @@ public class GameQueryBuilder {
     }
   }
 
-  private @NotNull GameFilter buildRatingFilter(@NotNull FilterCondition condition) {
+  private static @NotNull GameFilter buildRatingFilter(@NotNull FilterCondition condition) {
     String mode = condition.modifiers().getOrDefault("mode", "any");
     RatingRangeFilter.RatingColor ratingColor = parseRatingMode(mode);
 
@@ -405,7 +466,7 @@ public class GameQueryBuilder {
     }
   }
 
-  private @NotNull GameFilter buildRoundFilter(@NotNull FilterCondition condition) {
+  private static @NotNull GameFilter buildRoundFilter(@NotNull FilterCondition condition) {
     String value = condition.value();
 
     String subRoundStr = condition.modifiers().get("subround");
@@ -426,7 +487,7 @@ public class GameQueryBuilder {
     return new RoundFilter(round);
   }
 
-  private @NotNull GameFilter buildTypeFilter(@NotNull FilterCondition condition) {
+  private static @NotNull GameFilter buildTypeFilter(@NotNull FilterCondition condition) {
     return switch (condition.value().toLowerCase()) {
       case "game" -> new IsGameFilter();
       case "text" -> new TextStorageFilter();
@@ -436,7 +497,7 @@ public class GameQueryBuilder {
     };
   }
 
-  private @NotNull GameEntityJoinCondition parsePlayerPosition(@NotNull String position) {
+  private static @NotNull GameEntityJoinCondition parsePlayerPosition(@NotNull String position) {
     return switch (position.toLowerCase()) {
       case "any" -> GameEntityJoinCondition.ANY;
       case "both" -> GameEntityJoinCondition.BOTH;
@@ -448,7 +509,7 @@ public class GameQueryBuilder {
     };
   }
 
-  private @NotNull GameEntityJoinCondition parseTeamPosition(@NotNull String position) {
+  private static @NotNull GameEntityJoinCondition parseTeamPosition(@NotNull String position) {
     return switch (position.toLowerCase()) {
       case "any" -> GameEntityJoinCondition.ANY;
       case "white" -> GameEntityJoinCondition.WHITE;
@@ -459,7 +520,7 @@ public class GameQueryBuilder {
     };
   }
 
-  private @NotNull RatingRangeFilter.RatingColor parseRatingMode(@NotNull String mode) {
+  private static @NotNull RatingRangeFilter.RatingColor parseRatingMode(@NotNull String mode) {
     return switch (mode.toLowerCase()) {
       case "any" -> RatingRangeFilter.RatingColor.ANY;
       case "both" -> RatingRangeFilter.RatingColor.BOTH;
@@ -472,12 +533,12 @@ public class GameQueryBuilder {
   }
 
   /** Parses a date string and returns the start of the range. */
-  private @NotNull Date parseDateStart(@NotNull String dateStr) {
+  private static @NotNull Date parseDateStart(@NotNull String dateStr) {
     return PartialDateParser.parse(dateStr).from();
   }
 
   /** Parses a date string and returns the end of the range. */
-  private @NotNull Date parseDateEnd(@NotNull String dateStr) {
+  private static @NotNull Date parseDateEnd(@NotNull String dateStr) {
     return PartialDateParser.parse(dateStr).to();
   }
 }

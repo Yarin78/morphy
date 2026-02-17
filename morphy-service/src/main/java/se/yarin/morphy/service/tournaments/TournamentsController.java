@@ -94,9 +94,6 @@ public class TournamentsController {
       TournamentDto updatedTournament =
           tournamentsService.updateTournament(databaseId, tournamentId, tournamentDto);
       return ResponseEntity.ok(updatedTournament);
-    } catch (IllegalArgumentException e) {
-      log.error("Invalid tournament data: {}", e.getMessage());
-      return ResponseEntity.badRequest().build();
     } catch (MorphyServiceException e) {
       log.error(
           "Error updating tournament {} in database '{}': {}",
@@ -119,17 +116,9 @@ public class TournamentsController {
       @RequestParam(required = false) Integer limit,
       @RequestParam(required = false) String sortBy,
       @RequestParam(required = false) String order) {
-    try {
-      EntitySearchRequest request = new EntitySearchRequest(filter, offset, limit, sortBy, order);
-      EntitySearchResponse<TournamentDto> response =
-          tournamentsService.searchTournaments(databaseId, request);
-      return ResponseEntity.ok(response);
-    } catch (IllegalArgumentException e) {
-      log.error("Invalid search parameters: {}", e.getMessage());
-      return ResponseEntity.badRequest().build();
-    } catch (MorphyServiceException e) {
-      log.error("Error searching tournaments in database '{}': {}", databaseId, e.getMessage());
-      return ResponseEntity.internalServerError().build();
-    }
+    EntitySearchRequest request = new EntitySearchRequest(filter, offset, limit, sortBy, order);
+    EntitySearchResponse<TournamentDto> response =
+        tournamentsService.searchTournaments(databaseId, request);
+    return ResponseEntity.ok(response);
   }
 }
