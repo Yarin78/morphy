@@ -8,11 +8,18 @@ import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import se.yarin.morphy.entities.EntityType;
 import se.yarin.morphy.entities.Player;
+import se.yarin.morphy.queries.QuerySortField;
+import se.yarin.morphy.queries.QuerySortOrder;
+import se.yarin.morphy.queries.filter.PlayerQueryBuilder;
 import se.yarin.morphy.service.MorphyServiceException;
 import se.yarin.morphy.service.databases.DatabaseService;
 import se.yarin.morphy.service.players.dto.PlayerDto;
 import se.yarin.morphy.service.players.dto.PlayerDtoConverter;
+import se.yarin.morphy.service.search.EntitySearchExecutor;
+import se.yarin.morphy.service.search.EntitySearchRequest;
+import se.yarin.morphy.service.search.EntitySearchResponse;
 
 @Service
 public class PlayersService {
@@ -20,10 +27,15 @@ public class PlayersService {
 
   private final DatabaseService databaseService;
   private final PlayerDtoConverter playerDtoConverter;
+  private final EntitySearchExecutor entitySearchExecutor;
 
-  public PlayersService(DatabaseService databaseService, PlayerDtoConverter playerDtoConverter) {
+  public PlayersService(
+      DatabaseService databaseService,
+      PlayerDtoConverter playerDtoConverter,
+      EntitySearchExecutor entitySearchExecutor) {
     this.databaseService = databaseService;
     this.playerDtoConverter = playerDtoConverter;
+    this.entitySearchExecutor = entitySearchExecutor;
   }
 
   /**
@@ -149,5 +161,30 @@ public class PlayersService {
       throw new MorphyServiceException(
           "Failed to update player " + playerId + " in database '" + databaseId + "'", e);
     }
+  }
+
+  public EntitySearchResponse<PlayerDto> searchPlayers(
+      @NotNull String databaseId, @NotNull EntitySearchRequest request) {
+    PlayerQueryBuilder queryBuilder = new PlayerQueryBuilder();
+    return databaseService.withReadTransaction(
+        databaseId,
+        txn ->
+            entitySearchExecutor.executeSearch(
+                txn,
+                EntityType.PLAYER,
+                queryBuilder::buildQuery,
+                PlayersService::buildPlayerSortOrder,
+                playerDtoConverter::toDto,
+                request));
+  }
+
+  private static QuerySortOrder<Player> buildPlayerSortOrder(String sortBy, boolean reverse) {
+    QuerySortOrder.Direction dir =
+        reverse ? QuerySortOrder.Direction.DESCENDING : QuerySortOrder.Direction.ASCENDING;
+    return switch (sortBy.toLowerCase()) {
+      case "id" -> new QuerySortOrder<>(QuerySortField.id(), dir);
+      case "name" -> new QuerySortOrder<>(QuerySortField.playerName(), dir);
+      default -> QuerySortOrder.byPlayerDefaultIndex(reverse);
+    };
   }
 }

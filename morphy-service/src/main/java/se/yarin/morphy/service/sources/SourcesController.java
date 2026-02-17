@@ -6,6 +6,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import se.yarin.morphy.service.MorphyServiceException;
+import se.yarin.morphy.service.search.EntitySearchRequest;
+import se.yarin.morphy.service.search.EntitySearchResponse;
 import se.yarin.morphy.service.sources.dto.SourceDto;
 
 @RestController
@@ -100,6 +102,28 @@ public class SourcesController {
     } catch (Exception e) {
       log.error("Unexpected error updating source {} in database '{}'", sourceId, databaseId, e);
       return ResponseEntity.notFound().build();
+    }
+  }
+
+  @GetMapping("/search")
+  public ResponseEntity<EntitySearchResponse<SourceDto>> searchSources(
+      @PathVariable String databaseId,
+      @RequestParam(required = false) String filter,
+      @RequestParam(required = false) Integer offset,
+      @RequestParam(required = false) Integer limit,
+      @RequestParam(required = false) String sortBy,
+      @RequestParam(required = false) String order) {
+    try {
+      EntitySearchRequest request = new EntitySearchRequest(filter, offset, limit, sortBy, order);
+      EntitySearchResponse<SourceDto> response =
+          sourcesService.searchSources(databaseId, request);
+      return ResponseEntity.ok(response);
+    } catch (IllegalArgumentException e) {
+      log.error("Invalid search parameters: {}", e.getMessage());
+      return ResponseEntity.badRequest().build();
+    } catch (MorphyServiceException e) {
+      log.error("Error searching sources in database '{}': {}", databaseId, e.getMessage());
+      return ResponseEntity.internalServerError().build();
     }
   }
 }

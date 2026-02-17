@@ -8,9 +8,16 @@ import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import se.yarin.morphy.entities.EntityType;
 import se.yarin.morphy.entities.Team;
+import se.yarin.morphy.queries.QuerySortField;
+import se.yarin.morphy.queries.QuerySortOrder;
+import se.yarin.morphy.queries.filter.TeamQueryBuilder;
 import se.yarin.morphy.service.MorphyServiceException;
 import se.yarin.morphy.service.databases.DatabaseService;
+import se.yarin.morphy.service.search.EntitySearchExecutor;
+import se.yarin.morphy.service.search.EntitySearchRequest;
+import se.yarin.morphy.service.search.EntitySearchResponse;
 import se.yarin.morphy.service.teams.dto.TeamDto;
 import se.yarin.morphy.service.teams.dto.TeamDtoConverter;
 
@@ -20,10 +27,15 @@ public class TeamsService {
 
   private final DatabaseService databaseService;
   private final TeamDtoConverter teamDtoConverter;
+  private final EntitySearchExecutor entitySearchExecutor;
 
-  public TeamsService(DatabaseService databaseService, TeamDtoConverter teamDtoConverter) {
+  public TeamsService(
+      DatabaseService databaseService,
+      TeamDtoConverter teamDtoConverter,
+      EntitySearchExecutor entitySearchExecutor) {
     this.databaseService = databaseService;
     this.teamDtoConverter = teamDtoConverter;
+    this.entitySearchExecutor = entitySearchExecutor;
   }
 
   /**
@@ -148,5 +160,30 @@ public class TeamsService {
       throw new MorphyServiceException(
           "Failed to update team " + teamId + " in database '" + databaseId + "'", e);
     }
+  }
+
+  public EntitySearchResponse<TeamDto> searchTeams(
+      @NotNull String databaseId, @NotNull EntitySearchRequest request) {
+    TeamQueryBuilder queryBuilder = new TeamQueryBuilder();
+    return databaseService.withReadTransaction(
+        databaseId,
+        txn ->
+            entitySearchExecutor.executeSearch(
+                txn,
+                EntityType.TEAM,
+                queryBuilder::buildQuery,
+                TeamsService::buildTeamSortOrder,
+                teamDtoConverter::toDto,
+                request));
+  }
+
+  private static QuerySortOrder<Team> buildTeamSortOrder(String sortBy, boolean reverse) {
+    QuerySortOrder.Direction dir =
+        reverse ? QuerySortOrder.Direction.DESCENDING : QuerySortOrder.Direction.ASCENDING;
+    return switch (sortBy.toLowerCase()) {
+      case "id" -> new QuerySortOrder<>(QuerySortField.id(), dir);
+      case "name", "title" -> new QuerySortOrder<>(QuerySortField.teamTitle(), dir);
+      default -> QuerySortOrder.byTeamDefaultIndex(reverse);
+    };
   }
 }

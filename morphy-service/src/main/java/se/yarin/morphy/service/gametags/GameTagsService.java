@@ -8,11 +8,18 @@ import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import se.yarin.morphy.entities.EntityType;
 import se.yarin.morphy.entities.GameTag;
+import se.yarin.morphy.queries.QuerySortField;
+import se.yarin.morphy.queries.QuerySortOrder;
+import se.yarin.morphy.queries.filter.GameTagQueryBuilder;
 import se.yarin.morphy.service.MorphyServiceException;
 import se.yarin.morphy.service.databases.DatabaseService;
 import se.yarin.morphy.service.gametags.dto.GameTagDto;
 import se.yarin.morphy.service.gametags.dto.GameTagDtoConverter;
+import se.yarin.morphy.service.search.EntitySearchExecutor;
+import se.yarin.morphy.service.search.EntitySearchRequest;
+import se.yarin.morphy.service.search.EntitySearchResponse;
 
 @Service
 public class GameTagsService {
@@ -20,10 +27,15 @@ public class GameTagsService {
 
   private final DatabaseService databaseService;
   private final GameTagDtoConverter gameTagDtoConverter;
+  private final EntitySearchExecutor entitySearchExecutor;
 
-  public GameTagsService(DatabaseService databaseService, GameTagDtoConverter gameTagDtoConverter) {
+  public GameTagsService(
+      DatabaseService databaseService,
+      GameTagDtoConverter gameTagDtoConverter,
+      EntitySearchExecutor entitySearchExecutor) {
     this.databaseService = databaseService;
     this.gameTagDtoConverter = gameTagDtoConverter;
+    this.entitySearchExecutor = entitySearchExecutor;
   }
 
   /**
@@ -149,5 +161,30 @@ public class GameTagsService {
       throw new MorphyServiceException(
           "Failed to update game tag " + gameTagId + " in database '" + databaseId + "'", e);
     }
+  }
+
+  public EntitySearchResponse<GameTagDto> searchGameTags(
+      @NotNull String databaseId, @NotNull EntitySearchRequest request) {
+    GameTagQueryBuilder queryBuilder = new GameTagQueryBuilder();
+    return databaseService.withReadTransaction(
+        databaseId,
+        txn ->
+            entitySearchExecutor.executeSearch(
+                txn,
+                EntityType.GAME_TAG,
+                queryBuilder::buildQuery,
+                GameTagsService::buildGameTagSortOrder,
+                gameTagDtoConverter::toDto,
+                request));
+  }
+
+  private static QuerySortOrder<GameTag> buildGameTagSortOrder(String sortBy, boolean reverse) {
+    QuerySortOrder.Direction dir =
+        reverse ? QuerySortOrder.Direction.DESCENDING : QuerySortOrder.Direction.ASCENDING;
+    return switch (sortBy.toLowerCase()) {
+      case "id" -> new QuerySortOrder<>(QuerySortField.id(), dir);
+      case "name" -> new QuerySortOrder<>(QuerySortField.gameTagEnglishTitle(), dir);
+      default -> QuerySortOrder.byGameTagDefaultIndex(reverse);
+    };
   }
 }

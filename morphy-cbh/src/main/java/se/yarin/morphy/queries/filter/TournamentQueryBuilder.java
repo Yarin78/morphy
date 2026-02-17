@@ -66,6 +66,10 @@ public class TournamentQueryBuilder {
       case "category" -> buildCategoryFilter(condition);
       case "rounds" -> buildRoundsFilter(condition);
       case "teams" -> new TournamentTeamFilter();
+      case "year" -> {
+        int year = Integer.parseInt(condition.value());
+        yield new TournamentStartDateFilter(new Date(year, 1, 1), new Date(year, 12, 31));
+      }
       default ->
           throw new IllegalArgumentException("Unknown tournament filter field: " + condition.field());
     };

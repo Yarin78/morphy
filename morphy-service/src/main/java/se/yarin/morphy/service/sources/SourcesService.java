@@ -8,9 +8,16 @@ import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import se.yarin.morphy.entities.EntityType;
 import se.yarin.morphy.entities.Source;
+import se.yarin.morphy.queries.QuerySortField;
+import se.yarin.morphy.queries.QuerySortOrder;
+import se.yarin.morphy.queries.filter.SourceQueryBuilder;
 import se.yarin.morphy.service.MorphyServiceException;
 import se.yarin.morphy.service.databases.DatabaseService;
+import se.yarin.morphy.service.search.EntitySearchExecutor;
+import se.yarin.morphy.service.search.EntitySearchRequest;
+import se.yarin.morphy.service.search.EntitySearchResponse;
 import se.yarin.morphy.service.sources.dto.SourceDto;
 import se.yarin.morphy.service.sources.dto.SourceDtoConverter;
 
@@ -20,10 +27,15 @@ public class SourcesService {
 
   private final DatabaseService databaseService;
   private final SourceDtoConverter sourceDtoConverter;
+  private final EntitySearchExecutor entitySearchExecutor;
 
-  public SourcesService(DatabaseService databaseService, SourceDtoConverter sourceDtoConverter) {
+  public SourcesService(
+      DatabaseService databaseService,
+      SourceDtoConverter sourceDtoConverter,
+      EntitySearchExecutor entitySearchExecutor) {
     this.databaseService = databaseService;
     this.sourceDtoConverter = sourceDtoConverter;
+    this.entitySearchExecutor = entitySearchExecutor;
   }
 
   /**
@@ -149,5 +161,30 @@ public class SourcesService {
       throw new MorphyServiceException(
           "Failed to update source " + sourceId + " in database '" + databaseId + "'", e);
     }
+  }
+
+  public EntitySearchResponse<SourceDto> searchSources(
+      @NotNull String databaseId, @NotNull EntitySearchRequest request) {
+    SourceQueryBuilder queryBuilder = new SourceQueryBuilder();
+    return databaseService.withReadTransaction(
+        databaseId,
+        txn ->
+            entitySearchExecutor.executeSearch(
+                txn,
+                EntityType.SOURCE,
+                queryBuilder::buildQuery,
+                SourcesService::buildSourceSortOrder,
+                sourceDtoConverter::toDto,
+                request));
+  }
+
+  private static QuerySortOrder<Source> buildSourceSortOrder(String sortBy, boolean reverse) {
+    QuerySortOrder.Direction dir =
+        reverse ? QuerySortOrder.Direction.DESCENDING : QuerySortOrder.Direction.ASCENDING;
+    return switch (sortBy.toLowerCase()) {
+      case "id" -> new QuerySortOrder<>(QuerySortField.id(), dir);
+      case "name", "title" -> new QuerySortOrder<>(QuerySortField.sourceTitle(), dir);
+      default -> QuerySortOrder.bySourceDefaultIndex(reverse);
+    };
   }
 }

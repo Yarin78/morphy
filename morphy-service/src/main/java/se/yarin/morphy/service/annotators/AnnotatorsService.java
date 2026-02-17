@@ -9,10 +9,17 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import se.yarin.morphy.entities.Annotator;
+import se.yarin.morphy.entities.EntityType;
+import se.yarin.morphy.queries.QuerySortField;
+import se.yarin.morphy.queries.QuerySortOrder;
+import se.yarin.morphy.queries.filter.AnnotatorQueryBuilder;
 import se.yarin.morphy.service.MorphyServiceException;
 import se.yarin.morphy.service.annotators.dto.AnnotatorDto;
 import se.yarin.morphy.service.annotators.dto.AnnotatorDtoConverter;
 import se.yarin.morphy.service.databases.DatabaseService;
+import se.yarin.morphy.service.search.EntitySearchExecutor;
+import se.yarin.morphy.service.search.EntitySearchRequest;
+import se.yarin.morphy.service.search.EntitySearchResponse;
 
 @Service
 public class AnnotatorsService {
@@ -20,11 +27,15 @@ public class AnnotatorsService {
 
   private final DatabaseService databaseService;
   private final AnnotatorDtoConverter annotatorDtoConverter;
+  private final EntitySearchExecutor entitySearchExecutor;
 
   public AnnotatorsService(
-      DatabaseService databaseService, AnnotatorDtoConverter annotatorDtoConverter) {
+      DatabaseService databaseService,
+      AnnotatorDtoConverter annotatorDtoConverter,
+      EntitySearchExecutor entitySearchExecutor) {
     this.databaseService = databaseService;
     this.annotatorDtoConverter = annotatorDtoConverter;
+    this.entitySearchExecutor = entitySearchExecutor;
   }
 
   /**
@@ -151,5 +162,31 @@ public class AnnotatorsService {
       throw new MorphyServiceException(
           "Failed to update annotator " + annotatorId + " in database '" + databaseId + "'", e);
     }
+  }
+
+  public EntitySearchResponse<AnnotatorDto> searchAnnotators(
+      @NotNull String databaseId, @NotNull EntitySearchRequest request) {
+    AnnotatorQueryBuilder queryBuilder = new AnnotatorQueryBuilder();
+    return databaseService.withReadTransaction(
+        databaseId,
+        txn ->
+            entitySearchExecutor.executeSearch(
+                txn,
+                EntityType.ANNOTATOR,
+                queryBuilder::buildQuery,
+                AnnotatorsService::buildAnnotatorSortOrder,
+                annotatorDtoConverter::toDto,
+                request));
+  }
+
+  private static QuerySortOrder<Annotator> buildAnnotatorSortOrder(
+      String sortBy, boolean reverse) {
+    QuerySortOrder.Direction dir =
+        reverse ? QuerySortOrder.Direction.DESCENDING : QuerySortOrder.Direction.ASCENDING;
+    return switch (sortBy.toLowerCase()) {
+      case "id" -> new QuerySortOrder<>(QuerySortField.id(), dir);
+      case "name" -> new QuerySortOrder<>(QuerySortField.annotatorName(), dir);
+      default -> QuerySortOrder.byAnnotatorDefaultIndex(reverse);
+    };
   }
 }

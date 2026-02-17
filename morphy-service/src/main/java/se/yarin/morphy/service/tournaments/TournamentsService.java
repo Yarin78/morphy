@@ -10,8 +10,14 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import se.yarin.morphy.entities.Tournament;
 import se.yarin.morphy.entities.TournamentExtra;
+import se.yarin.morphy.queries.QuerySortField;
+import se.yarin.morphy.queries.QuerySortOrder;
+import se.yarin.morphy.queries.filter.TournamentQueryBuilder;
 import se.yarin.morphy.service.MorphyServiceException;
 import se.yarin.morphy.service.databases.DatabaseService;
+import se.yarin.morphy.service.search.EntitySearchExecutor;
+import se.yarin.morphy.service.search.EntitySearchRequest;
+import se.yarin.morphy.service.search.EntitySearchResponse;
 import se.yarin.morphy.service.tournaments.dto.TournamentDto;
 import se.yarin.morphy.service.tournaments.dto.TournamentDtoConverter;
 
@@ -21,11 +27,15 @@ public class TournamentsService {
 
   private final DatabaseService databaseService;
   private final TournamentDtoConverter tournamentDtoConverter;
+  private final EntitySearchExecutor entitySearchExecutor;
 
   public TournamentsService(
-      DatabaseService databaseService, TournamentDtoConverter tournamentDtoConverter) {
+      DatabaseService databaseService,
+      TournamentDtoConverter tournamentDtoConverter,
+      EntitySearchExecutor entitySearchExecutor) {
     this.databaseService = databaseService;
     this.tournamentDtoConverter = tournamentDtoConverter;
+    this.entitySearchExecutor = entitySearchExecutor;
   }
 
   /**
@@ -159,5 +169,42 @@ public class TournamentsService {
       throw new MorphyServiceException(
           "Failed to update tournament " + tournamentId + " in database '" + databaseId + "'", e);
     }
+  }
+
+  /**
+   * Searches for tournaments matching the given criteria.
+   *
+   * @param databaseId The database ID to search in
+   * @param request The search request with filter criteria, sorting, and pagination
+   * @return Search response with matching tournaments and metadata
+   */
+  public EntitySearchResponse<TournamentDto> searchTournaments(
+      @NotNull String databaseId, @NotNull EntitySearchRequest request) {
+    TournamentQueryBuilder queryBuilder = new TournamentQueryBuilder();
+    return databaseService.withReadTransaction(
+        databaseId,
+        txn ->
+            entitySearchExecutor.executeSearch(
+                txn,
+                se.yarin.morphy.entities.EntityType.TOURNAMENT,
+                queryBuilder::buildQuery,
+                TournamentsService::buildTournamentSortOrder,
+                tournament -> {
+                  TournamentExtra extra = txn.getTournamentExtra(tournament.id());
+                  return tournamentDtoConverter.toDto(tournament, extra);
+                },
+                request));
+  }
+
+  private static QuerySortOrder<Tournament> buildTournamentSortOrder(
+      String sortBy, boolean reverse) {
+    QuerySortOrder.Direction dir =
+        reverse ? QuerySortOrder.Direction.DESCENDING : QuerySortOrder.Direction.ASCENDING;
+    return switch (sortBy.toLowerCase()) {
+      case "id" -> new QuerySortOrder<>(QuerySortField.id(), dir);
+      case "name", "title" -> new QuerySortOrder<>(QuerySortField.tournamentTitle(), dir);
+      case "date" -> new QuerySortOrder<>(QuerySortField.tournamentStartDate(), dir);
+      default -> QuerySortOrder.byTournamentDefaultIndex(reverse);
+    };
   }
 }

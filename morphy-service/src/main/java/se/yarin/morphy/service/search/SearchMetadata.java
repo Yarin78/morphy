@@ -1,10 +1,10 @@
-package se.yarin.morphy.service.games.dto;
+package se.yarin.morphy.service.search;
 
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Metadata about a game search query execution.
+ * Metadata about a search query execution.
  *
  * @param appliedFilter canonical representation of the filter that was applied
  * @param sortBy the field used for sorting

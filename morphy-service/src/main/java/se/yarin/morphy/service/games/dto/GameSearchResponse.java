@@ -5,6 +5,7 @@ import java.util.List;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import se.yarin.morphy.service.queryplans.QueryPlanDebugInfo;
+import se.yarin.morphy.service.search.SearchMetadata;
 
 /**
  * Response model for game search queries.

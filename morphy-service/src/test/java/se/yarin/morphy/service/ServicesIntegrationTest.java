@@ -23,6 +23,8 @@ import se.yarin.morphy.service.games.dto.GameDto;
 import se.yarin.morphy.service.games.dto.GameMovesDto;
 import se.yarin.morphy.service.players.PlayersService;
 import se.yarin.morphy.service.players.dto.PlayerDto;
+import se.yarin.morphy.service.search.EntitySearchRequest;
+import se.yarin.morphy.service.search.EntitySearchResponse;
 import se.yarin.morphy.service.sources.SourcesService;
 import se.yarin.morphy.service.sources.dto.SourceDto;
 import se.yarin.morphy.service.teams.TeamsService;
@@ -444,6 +446,109 @@ class ServicesIntegrationTest {
         IllegalArgumentException.class,
         () -> annotatorsService.updateAnnotator(databaseId, annotator2Id, duplicateUpdate),
         "Should throw IllegalArgumentException when updating to a duplicate key");
+  }
+
+  @Test
+  void testSearchTournamentsByName() {
+    // Add two games with different tournaments
+    gamesService.addGame(databaseId, createComprehensiveGame("Carlsen", "Magnus"));
+    gamesService.addGame(databaseId, createMinimalGame());
+
+    // Search for "Candidates" - should match "Candidates Tournament 2024"
+    EntitySearchResponse<TournamentDto> response =
+        tournamentsService.searchTournaments(
+            databaseId, new EntitySearchRequest("Candidates", null, null, null, null));
+
+    assertEquals(1, response.count());
+    assertTrue(response.items().get(0).name().contains("Candidates"));
+    assertEquals(1, response.totalCount().intValue());
+    assertNotNull(response.metadata());
+  }
+
+  @Test
+  void testSearchTournamentsEmptyFilter() {
+    // Add two games to create two tournaments
+    gamesService.addGame(databaseId, createComprehensiveGame("Carlsen", "Magnus"));
+    gamesService.addGame(databaseId, createMinimalGame());
+
+    // Empty filter should return all tournaments with games
+    EntitySearchResponse<TournamentDto> response =
+        tournamentsService.searchTournaments(
+            databaseId, new EntitySearchRequest(null, null, null, null, null));
+
+    assertEquals(2, response.count());
+  }
+
+  @Test
+  void testSearchTournamentsPagination() {
+    gamesService.addGame(databaseId, createComprehensiveGame("Carlsen", "Magnus"));
+    gamesService.addGame(databaseId, createMinimalGame());
+
+    // Get first page (limit=1)
+    EntitySearchResponse<TournamentDto> page1 =
+        tournamentsService.searchTournaments(
+            databaseId, new EntitySearchRequest(null, 0, 1, null, null));
+    assertEquals(1, page1.count());
+    assertEquals(2, page1.totalCount().intValue());
+
+    // Get second page
+    EntitySearchResponse<TournamentDto> page2 =
+        tournamentsService.searchTournaments(
+            databaseId, new EntitySearchRequest(null, 1, 1, null, null));
+    assertEquals(1, page2.count());
+
+    // Different tournaments on each page
+    assertNotEquals(page1.items().get(0).id(), page2.items().get(0).id());
+  }
+
+  @Test
+  void testSearchPlayersByName() {
+    gamesService.addGame(databaseId, createComprehensiveGame("Carlsen", "Magnus"));
+    gamesService.addGame(databaseId, createMinimalGame());
+
+    // Search for "Car" prefix - should match Carlsen and Caruana
+    EntitySearchResponse<PlayerDto> response =
+        playersService.searchPlayers(
+            databaseId, new EntitySearchRequest("Car", null, null, null, null));
+
+    assertEquals(2, response.count());
+  }
+
+  @Test
+  void testSearchPlayersSorted() {
+    gamesService.addGame(databaseId, createComprehensiveGame("Carlsen", "Magnus"));
+    gamesService.addGame(databaseId, createMinimalGame());
+
+    // Search all players sorted by name ascending
+    EntitySearchResponse<PlayerDto> ascResponse =
+        playersService.searchPlayers(
+            databaseId, new EntitySearchRequest(null, null, null, "name", "asc"));
+
+    // Search all players sorted by name descending
+    EntitySearchResponse<PlayerDto> descResponse =
+        playersService.searchPlayers(
+            databaseId, new EntitySearchRequest(null, null, null, "name", "desc"));
+
+    assertTrue(ascResponse.count() > 1);
+    assertEquals(ascResponse.count(), descResponse.count());
+
+    // First item in ascending should be last in descending
+    assertEquals(
+        ascResponse.items().get(0).lastName(),
+        descResponse.items().get(descResponse.count() - 1).lastName());
+  }
+
+  @Test
+  void testSearchPlayersNoResults() {
+    gamesService.addGame(databaseId, createComprehensiveGame("Carlsen", "Magnus"));
+
+    // Search for non-existent player
+    EntitySearchResponse<PlayerDto> response =
+        playersService.searchPlayers(
+            databaseId, new EntitySearchRequest("Zzzzz", null, null, null, null));
+
+    assertEquals(0, response.count());
+    assertEquals(0, response.totalCount().intValue());
   }
 
   /**

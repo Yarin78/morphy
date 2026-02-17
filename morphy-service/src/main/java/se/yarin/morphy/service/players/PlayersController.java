@@ -7,6 +7,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import se.yarin.morphy.service.MorphyServiceException;
 import se.yarin.morphy.service.players.dto.PlayerDto;
+import se.yarin.morphy.service.search.EntitySearchRequest;
+import se.yarin.morphy.service.search.EntitySearchResponse;
 
 @RestController
 @RequestMapping("/api/databases/{databaseId}/players")
@@ -100,6 +102,28 @@ public class PlayersController {
     } catch (Exception e) {
       log.error("Unexpected error updating player {} in database '{}'", playerId, databaseId, e);
       return ResponseEntity.notFound().build();
+    }
+  }
+
+  @GetMapping("/search")
+  public ResponseEntity<EntitySearchResponse<PlayerDto>> searchPlayers(
+      @PathVariable String databaseId,
+      @RequestParam(required = false) String filter,
+      @RequestParam(required = false) Integer offset,
+      @RequestParam(required = false) Integer limit,
+      @RequestParam(required = false) String sortBy,
+      @RequestParam(required = false) String order) {
+    try {
+      EntitySearchRequest request = new EntitySearchRequest(filter, offset, limit, sortBy, order);
+      EntitySearchResponse<PlayerDto> response =
+          playersService.searchPlayers(databaseId, request);
+      return ResponseEntity.ok(response);
+    } catch (IllegalArgumentException e) {
+      log.error("Invalid search parameters: {}", e.getMessage());
+      return ResponseEntity.badRequest().build();
+    } catch (MorphyServiceException e) {
+      log.error("Error searching players in database '{}': {}", databaseId, e.getMessage());
+      return ResponseEntity.internalServerError().build();
     }
   }
 }

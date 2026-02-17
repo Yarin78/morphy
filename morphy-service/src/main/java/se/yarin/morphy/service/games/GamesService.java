@@ -20,6 +20,7 @@ import se.yarin.morphy.queries.visualisation.QueryDescriptionFormatter;
 import se.yarin.morphy.service.MorphyServiceException;
 import se.yarin.morphy.service.databases.DatabaseService;
 import se.yarin.morphy.service.games.dto.*;
+import se.yarin.morphy.service.search.SearchMetadata;
 import se.yarin.morphy.service.games.search.GameSearchRequestConverter;
 import se.yarin.morphy.service.queryplans.QueryPlanDebugInfo;
 import se.yarin.morphy.service.queryplans.QueryPlanDto;
