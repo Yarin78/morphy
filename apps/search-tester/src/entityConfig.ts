@@ -101,11 +101,14 @@ export const ENTITY_CONFIG: Record<EntityType, EntityConfig> = {
         limit: req.limit ?? opts.limit,
         sortBy: req.sortBy ?? 'id',
         order: req.order ?? 'asc',
+        debugQueryPlans: req.debugQueryPlans,
+        debugExecuteAllPlans: req.debugExecuteAllPlans,
       });
       return {
         data: res.items,
         count: res.count,
         metadata: { executionTimeMs: res.metadata.executionTimeMs },
+        debugInfo: res.debugInfo,
         rawResponse: res,
       };
     },
@@ -124,11 +127,14 @@ export const ENTITY_CONFIG: Record<EntityType, EntityConfig> = {
         limit: req.limit ?? opts.limit,
         sortBy: req.sortBy ?? 'id',
         order: req.order ?? 'asc',
+        debugQueryPlans: req.debugQueryPlans,
+        debugExecuteAllPlans: req.debugExecuteAllPlans,
       });
       return {
         data: res.items,
         count: res.count,
         metadata: { executionTimeMs: res.metadata.executionTimeMs },
+        debugInfo: res.debugInfo,
         rawResponse: res,
       };
     },
@@ -147,11 +153,14 @@ export const ENTITY_CONFIG: Record<EntityType, EntityConfig> = {
         limit: req.limit ?? opts.limit,
         sortBy: req.sortBy ?? 'id',
         order: req.order ?? 'asc',
+        debugQueryPlans: req.debugQueryPlans,
+        debugExecuteAllPlans: req.debugExecuteAllPlans,
       });
       return {
         data: res.items,
         count: res.count,
         metadata: { executionTimeMs: res.metadata.executionTimeMs },
+        debugInfo: res.debugInfo,
         rawResponse: res,
       };
     },
@@ -170,11 +179,14 @@ export const ENTITY_CONFIG: Record<EntityType, EntityConfig> = {
         limit: req.limit ?? opts.limit,
         sortBy: req.sortBy ?? 'id',
         order: req.order ?? 'asc',
+        debugQueryPlans: req.debugQueryPlans,
+        debugExecuteAllPlans: req.debugExecuteAllPlans,
       });
       return {
         data: res.items,
         count: res.count,
         metadata: { executionTimeMs: res.metadata.executionTimeMs },
+        debugInfo: res.debugInfo,
         rawResponse: res,
       };
     },
@@ -193,11 +205,14 @@ export const ENTITY_CONFIG: Record<EntityType, EntityConfig> = {
         limit: req.limit ?? opts.limit,
         sortBy: req.sortBy ?? 'id',
         order: req.order ?? 'asc',
+        debugQueryPlans: req.debugQueryPlans,
+        debugExecuteAllPlans: req.debugExecuteAllPlans,
       });
       return {
         data: res.items,
         count: res.count,
         metadata: { executionTimeMs: res.metadata.executionTimeMs },
+        debugInfo: res.debugInfo,
         rawResponse: res,
       };
     },
@@ -216,11 +231,14 @@ export const ENTITY_CONFIG: Record<EntityType, EntityConfig> = {
         limit: req.limit ?? opts.limit,
         sortBy: req.sortBy ?? 'id',
         order: req.order ?? 'asc',
+        debugQueryPlans: req.debugQueryPlans,
+        debugExecuteAllPlans: req.debugExecuteAllPlans,
       });
       return {
         data: res.items,
         count: res.count,
         metadata: { executionTimeMs: res.metadata.executionTimeMs },
+        debugInfo: res.debugInfo,
         rawResponse: res,
       };
     },

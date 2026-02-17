@@ -258,6 +258,8 @@ export interface EntitySearchRequest {
   limit?: number | null;
   sortBy?: string | null;
   order?: string | null;
+  debugQueryPlans?: boolean;
+  debugExecuteAllPlans?: boolean;
 }
 
 /** Response from entity search endpoints. */
@@ -273,4 +275,5 @@ export interface EntitySearchResponse<T> {
     order: string;
     executionTimeMs: number;
   };
+  debugInfo?: QueryPlanDebugInfo | null;
 }

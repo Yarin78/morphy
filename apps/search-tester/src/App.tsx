@@ -269,6 +269,8 @@ function App() {
                 limit,
                 sortBy: sortBy || 'id',
                 order,
+                debugQueryPlans: true,
+                debugExecuteAllPlans: effective,
               }
             : undefined,
       };
@@ -321,8 +323,7 @@ function App() {
   }, []);
 
   const hasQueryPlan = Boolean(
-    result?.entityType === 'Games' &&
-      result.debugInfo &&
+    result?.debugInfo &&
       Array.isArray((result.debugInfo as { plans?: unknown[] }).plans) &&
       (result.debugInfo as { plans: unknown[] }).plans.length > 0
   );
@@ -337,6 +338,8 @@ function App() {
             limit,
             sortBy: sortBy || 'id',
             order,
+            debugQueryPlans: true,
+            debugExecuteAllPlans: executeAllPlansDefault,
           },
           null,
           2

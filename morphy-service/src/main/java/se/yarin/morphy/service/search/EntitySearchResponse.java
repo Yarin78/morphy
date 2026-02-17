@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import java.util.List;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import se.yarin.morphy.service.queryplans.QueryPlanDebugInfo;
 
 /**
  * Generic response model for entity search queries.
@@ -14,6 +15,7 @@ import org.jetbrains.annotations.Nullable;
  * @param offset current offset
  * @param limit current limit
  * @param metadata query execution metadata
+ * @param debugInfo query plan debug info (null if not requested)
  * @param <T> the DTO type
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -23,4 +25,5 @@ public record EntitySearchResponse<T>(
     @Nullable Integer totalCount,
     int offset,
     int limit,
-    @NotNull SearchMetadata metadata) {}
+    @NotNull SearchMetadata metadata,
+    @Nullable QueryPlanDebugInfo debugInfo) {}

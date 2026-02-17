@@ -10,13 +10,17 @@ import org.jetbrains.annotations.Nullable;
  * @param limit maximum number of items to return (default 50)
  * @param sortBy sort field name (default "default")
  * @param order sort order: "asc" or "desc" (default "asc")
+ * @param debugQueryPlans include query plan debug info (default false)
+ * @param debugExecuteAllPlans execute all candidate plans for comparison (default false)
  */
 public record EntitySearchRequest(
     @Nullable String filter,
     @Nullable Integer offset,
     @Nullable Integer limit,
     @Nullable String sortBy,
-    @Nullable String order) {
+    @Nullable String order,
+    @Nullable Boolean debugQueryPlans,
+    @Nullable Boolean debugExecuteAllPlans) {
 
   public EntitySearchRequest {
     if (offset == null) {
@@ -30,6 +34,12 @@ public record EntitySearchRequest(
     }
     if (order == null || order.isBlank()) {
       order = "asc";
+    }
+    if (debugQueryPlans == null) {
+      debugQueryPlans = false;
+    }
+    if (debugExecuteAllPlans == null) {
+      debugExecuteAllPlans = false;
     }
   }
 }

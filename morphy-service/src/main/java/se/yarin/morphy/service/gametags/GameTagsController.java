@@ -114,8 +114,12 @@ public class GameTagsController {
       @RequestParam(required = false) Integer offset,
       @RequestParam(required = false) Integer limit,
       @RequestParam(required = false) String sortBy,
-      @RequestParam(required = false) String order) {
-    EntitySearchRequest request = new EntitySearchRequest(filter, offset, limit, sortBy, order);
+      @RequestParam(required = false) String order,
+      @RequestParam(required = false) Boolean debugQueryPlans,
+      @RequestParam(required = false) Boolean debugExecuteAllPlans) {
+    EntitySearchRequest request =
+        new EntitySearchRequest(filter, offset, limit, sortBy, order, debugQueryPlans,
+            debugExecuteAllPlans);
     EntitySearchResponse<GameTagDto> response =
         gameTagsService.searchGameTags(databaseId, request);
     return ResponseEntity.ok(response);
