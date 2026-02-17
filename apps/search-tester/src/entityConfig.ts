@@ -1,13 +1,13 @@
 import {
-  fetchAnnotators,
-  fetchGameTags,
-  fetchPlayers,
-  fetchSources,
-  fetchTeams,
-  fetchTournaments,
+  searchAnnotators,
+  searchGameTags,
   searchGames,
+  searchPlayers,
+  searchSources,
+  searchTeams,
+  searchTournaments,
 } from './api/client';
-import type { GameSearchRequest } from './api/types';
+import type { EntitySearchRequest, GameSearchRequest } from './api/types';
 import {
   ANNOTATOR_COLUMNS,
   GAME_COLUMNS,
@@ -35,7 +35,21 @@ export const SORT_OPTIONS = ['id', 'date', 'whiteElo', 'blackElo', 'avgElo'] as 
 export const ORDER_OPTIONS = ['asc', 'desc'] as const;
 export const RATING_MODES = ['any', 'both', 'white', 'black', 'average', 'difference'] as const;
 
-type FetchOpts = { limit: number; gameRequest?: GameSearchRequest };
+/** Sort options per entity type (id, name/title, date where applicable). */
+export const ENTITY_SORT_OPTIONS: Record<Exclude<EntityType, 'Games'>, readonly string[]> = {
+  Players: ['id', 'name'],
+  Tournaments: ['id', 'name', 'date'],
+  Annotators: ['id', 'name'],
+  Sources: ['id', 'name'],
+  Teams: ['id', 'name'],
+  GameTags: ['id', 'name'],
+};
+
+type FetchOpts = {
+  limit: number;
+  gameRequest?: GameSearchRequest;
+  entitySearchRequest?: EntitySearchRequest;
+};
 
 export interface EntityConfig {
   entityKey: string;
@@ -80,8 +94,20 @@ export const ENTITY_CONFIG: Record<EntityType, EntityConfig> = {
     emptyMessage: 'No players found.',
     keyExtractor: (p) => p.id,
     fetch: async (db, opts) => {
-      const res = await fetchPlayers(db, undefined, opts.limit);
-      return { data: res.players, count: res.count, rawResponse: res };
+      const req = opts.entitySearchRequest ?? {};
+      const res = await searchPlayers(db, {
+        filter: req.filter,
+        offset: req.offset ?? 0,
+        limit: req.limit ?? opts.limit,
+        sortBy: req.sortBy ?? 'id',
+        order: req.order ?? 'asc',
+      });
+      return {
+        data: res.items,
+        count: res.count,
+        metadata: { executionTimeMs: res.metadata.executionTimeMs },
+        rawResponse: res,
+      };
     },
   },
   Tournaments: {
@@ -91,8 +117,20 @@ export const ENTITY_CONFIG: Record<EntityType, EntityConfig> = {
     emptyMessage: 'No tournaments found.',
     keyExtractor: (t) => t.id,
     fetch: async (db, opts) => {
-      const res = await fetchTournaments(db, undefined, opts.limit);
-      return { data: res.tournaments, count: res.count, rawResponse: res };
+      const req = opts.entitySearchRequest ?? {};
+      const res = await searchTournaments(db, {
+        filter: req.filter,
+        offset: req.offset ?? 0,
+        limit: req.limit ?? opts.limit,
+        sortBy: req.sortBy ?? 'id',
+        order: req.order ?? 'asc',
+      });
+      return {
+        data: res.items,
+        count: res.count,
+        metadata: { executionTimeMs: res.metadata.executionTimeMs },
+        rawResponse: res,
+      };
     },
   },
   Annotators: {
@@ -102,8 +140,20 @@ export const ENTITY_CONFIG: Record<EntityType, EntityConfig> = {
     emptyMessage: 'No annotators found.',
     keyExtractor: (a) => a.id,
     fetch: async (db, opts) => {
-      const res = await fetchAnnotators(db, undefined, opts.limit);
-      return { data: res.annotators, count: res.count, rawResponse: res };
+      const req = opts.entitySearchRequest ?? {};
+      const res = await searchAnnotators(db, {
+        filter: req.filter,
+        offset: req.offset ?? 0,
+        limit: req.limit ?? opts.limit,
+        sortBy: req.sortBy ?? 'id',
+        order: req.order ?? 'asc',
+      });
+      return {
+        data: res.items,
+        count: res.count,
+        metadata: { executionTimeMs: res.metadata.executionTimeMs },
+        rawResponse: res,
+      };
     },
   },
   Sources: {
@@ -113,8 +163,20 @@ export const ENTITY_CONFIG: Record<EntityType, EntityConfig> = {
     emptyMessage: 'No sources found.',
     keyExtractor: (s) => s.id,
     fetch: async (db, opts) => {
-      const res = await fetchSources(db, undefined, opts.limit);
-      return { data: res.sources, count: res.count, rawResponse: res };
+      const req = opts.entitySearchRequest ?? {};
+      const res = await searchSources(db, {
+        filter: req.filter,
+        offset: req.offset ?? 0,
+        limit: req.limit ?? opts.limit,
+        sortBy: req.sortBy ?? 'id',
+        order: req.order ?? 'asc',
+      });
+      return {
+        data: res.items,
+        count: res.count,
+        metadata: { executionTimeMs: res.metadata.executionTimeMs },
+        rawResponse: res,
+      };
     },
   },
   Teams: {
@@ -124,8 +186,20 @@ export const ENTITY_CONFIG: Record<EntityType, EntityConfig> = {
     emptyMessage: 'No teams found.',
     keyExtractor: (t) => t.id,
     fetch: async (db, opts) => {
-      const res = await fetchTeams(db, undefined, opts.limit);
-      return { data: res.teams, count: res.count, rawResponse: res };
+      const req = opts.entitySearchRequest ?? {};
+      const res = await searchTeams(db, {
+        filter: req.filter,
+        offset: req.offset ?? 0,
+        limit: req.limit ?? opts.limit,
+        sortBy: req.sortBy ?? 'id',
+        order: req.order ?? 'asc',
+      });
+      return {
+        data: res.items,
+        count: res.count,
+        metadata: { executionTimeMs: res.metadata.executionTimeMs },
+        rawResponse: res,
+      };
     },
   },
   GameTags: {
@@ -135,8 +209,20 @@ export const ENTITY_CONFIG: Record<EntityType, EntityConfig> = {
     emptyMessage: 'No game tags found.',
     keyExtractor: (g) => g.id,
     fetch: async (db, opts) => {
-      const res = await fetchGameTags(db, undefined, opts.limit);
-      return { data: res.gameTags, count: res.count, rawResponse: res };
+      const req = opts.entitySearchRequest ?? {};
+      const res = await searchGameTags(db, {
+        filter: req.filter,
+        offset: req.offset ?? 0,
+        limit: req.limit ?? opts.limit,
+        sortBy: req.sortBy ?? 'id',
+        order: req.order ?? 'asc',
+      });
+      return {
+        data: res.items,
+        count: res.count,
+        metadata: { executionTimeMs: res.metadata.executionTimeMs },
+        rawResponse: res,
+      };
     },
   },
 };

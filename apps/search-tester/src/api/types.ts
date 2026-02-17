@@ -250,3 +250,27 @@ export interface GameTagListResponse {
   nextCursor: string | null;
   hasMore: boolean;
 }
+
+/** Request for entity search (Players, Tournaments, etc.). */
+export interface EntitySearchRequest {
+  filter?: string | null;
+  offset?: number | null;
+  limit?: number | null;
+  sortBy?: string | null;
+  order?: string | null;
+}
+
+/** Response from entity search endpoints. */
+export interface EntitySearchResponse<T> {
+  items: T[];
+  count: number;
+  totalCount: number | null;
+  offset: number;
+  limit: number;
+  metadata: {
+    appliedFilter?: string | null;
+    sortBy: string;
+    order: string;
+    executionTimeMs: number;
+  };
+}

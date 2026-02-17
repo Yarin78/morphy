@@ -1,12 +1,20 @@
 import type {
+  AnnotatorDto,
   AnnotatorListResponse,
   DatabaseListResponse,
+  EntitySearchRequest,
+  EntitySearchResponse,
   GameSearchRequest,
   GameSearchResponse,
+  GameTagDto,
   GameTagListResponse,
+  PlayerDto,
   PlayerListResponse,
+  SourceDto,
   SourceListResponse,
+  TeamDto,
   TeamListResponse,
+  TournamentDto,
   TournamentListResponse,
 } from './types';
 
@@ -156,6 +164,100 @@ export async function fetchGameTags(
   if (!res.ok) {
     const text = await res.text();
     throw new Error(`Failed to fetch game tags: ${res.status} - ${text}`);
+  }
+  return res.json();
+}
+
+function buildEntitySearchParams(request: EntitySearchRequest): URLSearchParams {
+  const params = new URLSearchParams();
+  Object.entries(request).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== '') {
+      params.append(key, String(value));
+    }
+  });
+  return params;
+}
+
+export async function searchPlayers(
+  databaseId: string,
+  request: EntitySearchRequest
+): Promise<EntitySearchResponse<PlayerDto>> {
+  const params = buildEntitySearchParams(request);
+  const url = `${API_BASE}/databases/${encodeURIComponent(databaseId)}/players/search?${params}`;
+  const res = await fetch(url);
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Search players failed: ${res.status} - ${text}`);
+  }
+  return res.json();
+}
+
+export async function searchTournaments(
+  databaseId: string,
+  request: EntitySearchRequest
+): Promise<EntitySearchResponse<TournamentDto>> {
+  const params = buildEntitySearchParams(request);
+  const url = `${API_BASE}/databases/${encodeURIComponent(databaseId)}/tournaments/search?${params}`;
+  const res = await fetch(url);
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Search tournaments failed: ${res.status} - ${text}`);
+  }
+  return res.json();
+}
+
+export async function searchAnnotators(
+  databaseId: string,
+  request: EntitySearchRequest
+): Promise<EntitySearchResponse<AnnotatorDto>> {
+  const params = buildEntitySearchParams(request);
+  const url = `${API_BASE}/databases/${encodeURIComponent(databaseId)}/annotators/search?${params}`;
+  const res = await fetch(url);
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Search annotators failed: ${res.status} - ${text}`);
+  }
+  return res.json();
+}
+
+export async function searchSources(
+  databaseId: string,
+  request: EntitySearchRequest
+): Promise<EntitySearchResponse<SourceDto>> {
+  const params = buildEntitySearchParams(request);
+  const url = `${API_BASE}/databases/${encodeURIComponent(databaseId)}/sources/search?${params}`;
+  const res = await fetch(url);
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Search sources failed: ${res.status} - ${text}`);
+  }
+  return res.json();
+}
+
+export async function searchTeams(
+  databaseId: string,
+  request: EntitySearchRequest
+): Promise<EntitySearchResponse<TeamDto>> {
+  const params = buildEntitySearchParams(request);
+  const url = `${API_BASE}/databases/${encodeURIComponent(databaseId)}/teams/search?${params}`;
+  const res = await fetch(url);
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Search teams failed: ${res.status} - ${text}`);
+  }
+  return res.json();
+}
+
+export async function searchGameTags(
+  databaseId: string,
+  request: EntitySearchRequest
+): Promise<EntitySearchResponse<GameTagDto>> {
+  const params = buildEntitySearchParams(request);
+  const url = `${API_BASE}/databases/${encodeURIComponent(databaseId)}/gametags/search?${params}`;
+  const res = await fetch(url);
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Search game tags failed: ${res.status} - ${text}`);
   }
   return res.json();
 }

@@ -7,7 +7,7 @@ import { fetchDatabases } from './api/client';
 import type { GameSearchRequest, QueryPlanDebugInfo } from './api/types';
 import type { EntityType } from './entityConfig';
 import type { SavedSearch } from './savedSearchTypes';
-import { ENTITY_CONFIG } from './entityConfig';
+import { ENTITY_CONFIG, ENTITY_SORT_OPTIONS, SORT_OPTIONS } from './entityConfig';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import './App.css';
 
@@ -197,6 +197,14 @@ function App() {
       .catch((err: Error) => setError(err.message));
   }, []);
 
+  // Reset sortBy when entity type changes so it stays valid for the new entity
+  useEffect(() => {
+    const options =
+      entityType === 'Games' ? SORT_OPTIONS : ENTITY_SORT_OPTIONS[entityType];
+    const valid = options.includes(sortBy);
+    if (!valid) setSortBy(options[0]);
+  }, [entityType, sortBy]);
+
   const buildRequest = useCallback(
     (executeAllPlans: boolean): GameSearchRequest => {
       const req: GameSearchRequest = {
@@ -253,6 +261,16 @@ function App() {
       const opts = {
         limit,
         gameRequest: entityType === 'Games' ? buildRequest(effective) : undefined,
+        entitySearchRequest:
+          entityType !== 'Games'
+            ? {
+                filter: filter.trim() || undefined,
+                offset,
+                limit,
+                sortBy: sortBy || 'id',
+                order,
+              }
+            : undefined,
       };
 
       try {
@@ -271,7 +289,17 @@ function App() {
         setLoading(false);
       }
     },
-    [selectedDb, entityType, limit, buildRequest, executeAllPlansDefault]
+    [
+      selectedDb,
+      entityType,
+      limit,
+      offset,
+      filter,
+      sortBy,
+      order,
+      buildRequest,
+      executeAllPlansDefault,
+    ]
   );
 
   const paginatedData = useMemo(() => {
@@ -302,7 +330,17 @@ function App() {
   const requestJson =
     entityType === 'Games'
       ? JSON.stringify(buildRequest(executeAllPlansDefault), null, 2)
-      : JSON.stringify({ limit }, null, 2);
+      : JSON.stringify(
+          {
+            filter: filter.trim() || undefined,
+            offset,
+            limit,
+            sortBy: sortBy || 'id',
+            order,
+          },
+          null,
+          2
+        );
 
   return (
     <div className="app">

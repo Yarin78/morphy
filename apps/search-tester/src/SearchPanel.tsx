@@ -3,6 +3,7 @@ import type { DatabaseResponse } from './api/types';
 import type { EntityType } from './entityConfig';
 import type { SavedSearch } from './savedSearchTypes';
 import {
+  ENTITY_SORT_OPTIONS,
   ENTITY_TYPES,
   ORDER_OPTIONS,
   RATING_MODES,
@@ -54,10 +55,26 @@ interface SearchPanelProps {
 }
 
 function getFilterPlaceholder(entityType: EntityType): string {
-  if (entityType === 'Games') {
-    return 'e.g. result:1-0 AND rating:2600.. AND player.name:Carlsen';
+  switch (entityType) {
+    case 'Games':
+      return 'e.g. result:1-0 AND rating:2600.. AND player.name:Carlsen';
+    case 'Players':
+      return 'e.g. Carlsen or Carl';
+    case 'Tournaments':
+      return 'e.g. Candidates or World';
+    case 'Annotators':
+    case 'Sources':
+    case 'Teams':
+    case 'GameTags':
+      return 'e.g. partial name to search';
+    default:
+      return 'Search filter';
   }
-  return 'Filter not yet supported for this entity type';
+}
+
+function getSortOptions(entityType: EntityType): readonly string[] {
+  if (entityType === 'Games') return SORT_OPTIONS;
+  return ENTITY_SORT_OPTIONS[entityType] ?? ['id'];
 }
 
 export function SearchPanel({
@@ -222,7 +239,6 @@ export function SearchPanel({
             value={filter}
             onChange={(e) => onFilterChange(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && onSearch()}
-            disabled={entityType !== 'Games'}
           />
         </div>
         <div className="search-btn-split" ref={searchDropdownRef}>
@@ -311,30 +327,26 @@ export function SearchPanel({
                 onChange={(e) => onLimitChange(parseInt(e.target.value, 10) || 100)}
               />
             </div>
-            {entityType === 'Games' && (
-              <>
-                <div className="field">
-                  <label>Sort by</label>
-                  <select value={sortBy} onChange={(e) => onSortByChange(e.target.value)}>
-                    {SORT_OPTIONS.map((s) => (
-                      <option key={s} value={s}>
-                        {s}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="field">
-                  <label>Order</label>
-                  <select value={order} onChange={(e) => onOrderChange(e.target.value as 'asc' | 'desc')}>
-                    {ORDER_OPTIONS.map((o) => (
-                      <option key={o} value={o}>
-                        {o}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </>
-            )}
+            <div className="field">
+              <label>Sort by</label>
+              <select value={sortBy} onChange={(e) => onSortByChange(e.target.value)}>
+                {getSortOptions(entityType).map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="field">
+              <label>Order</label>
+              <select value={order} onChange={(e) => onOrderChange(e.target.value as 'asc' | 'desc')}>
+                {ORDER_OPTIONS.map((o) => (
+                  <option key={o} value={o}>
+                    {o}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           {entityType === 'Games' && (
