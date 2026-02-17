@@ -20,7 +20,7 @@ import se.yarin.morphy.service.games.dto.GameSearchRequest;
 public class GameSearchRequestConverter {
 
   private final GameQueryBuilder coreBuilder = new GameQueryBuilder();
-  private final FilterQueryParser filterQueryParser = new FilterQueryParser();
+  private final FilterQueryParser filterQueryParser = new FilterQueryParser("player.name");
 
   /**
    * Builds a GameQuery from a GameSearchRequest.

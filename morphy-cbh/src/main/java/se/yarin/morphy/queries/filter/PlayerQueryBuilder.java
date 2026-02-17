@@ -21,7 +21,7 @@ import se.yarin.morphy.queries.EntityQuery;
  */
 public class PlayerQueryBuilder {
 
-  private final FilterQueryParser filterQueryParser = new FilterQueryParser();
+  private final FilterQueryParser filterQueryParser = new FilterQueryParser("name");
 
   /**
    * Builds a PlayerQuery from a filter expression string.

@@ -26,7 +26,7 @@ import se.yarin.morphy.queries.*;
 public class GameQueryBuilder {
   private static final Logger log = LoggerFactory.getLogger(GameQueryBuilder.class);
 
-  private final FilterQueryParser filterQueryParser = new FilterQueryParser();
+  private final FilterQueryParser filterQueryParser = new FilterQueryParser("player.name");
 
   /**
    * Builds a GameQuery from a filter expression string.

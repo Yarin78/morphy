@@ -4,6 +4,7 @@ import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -13,8 +14,9 @@ import org.slf4j.LoggerFactory;
  * <p>Query syntax:
  *
  * <ul>
- *   <li>AND-only boolean logic: conditions separated by "AND" (case-insensitive)
- *   <li>Operators: ":" (equals), ".." (range)
+ *   <li>Conditions are separated by whitespace; "AND" (case-insensitive) is optional
+ *   <li>Structured conditions: {@code field:value} or {@code field..value}
+ *   <li>Bare search terms (no {@code field:}) use the configured default field
  *   <li>Modifiers: comma-separated key=value pairs after the value (e.g.,
  *       "player.name:Carlsen,position=white")
  *   <li>Wildcards: "*" for ECO codes (e.g., "eco:B9*")
@@ -23,27 +25,45 @@ import org.slf4j.LoggerFactory;
  * <p>Example queries:
  *
  * <ul>
- *   <li>"result:1-0 AND rating:2600.."
+ *   <li>"result:1-0 rating:2600.."
+ *   <li>"Carlsen date:2024" (bare term mapped to default field)
+ *   <li>"result:1-0 AND player.name:Carlsen" (explicit AND also works)
  *   <li>"player.name:Carlsen,position=white AND date:2024"
- *   <li>"eco:B9* AND tournament.name:Candidates"
  * </ul>
  */
 public class FilterQueryParser {
   private static final Logger log = LoggerFactory.getLogger(FilterQueryParser.class);
 
-  // Pattern for parsing a single condition: field:value or field..value
+  // Pattern for parsing a single condition token: field:value or field..value
   // with optional modifiers like ,position=white,mode=average
   private static final Pattern CONDITION_PATTERN =
       Pattern.compile(
-          "^\\s*([a-zA-Z][a-zA-Z0-9.]*)"
+          "^([a-zA-Z][a-zA-Z0-9.]*)"
               + // field name (e.g., "result", "player.name")
-              "\\s*(:|\\.\\.)"
+              "(:|\\.\\.)"
               + // operator (: or ..)
-              "\\s*([^,\\s]+)"
+              "([^,\\s]+)"
               + // value (non-comma, non-space characters)
-              "((?:\\s*,\\s*[a-zA-Z][a-zA-Z0-9]*\\s*=\\s*[^,\\s]+)*)"
+              "((?:,[a-zA-Z][a-zA-Z0-9]*=[^,\\s]+)*)"
               + // optional modifiers
-              "\\s*$");
+              "$");
+
+  private final @Nullable String defaultField;
+
+  /** Creates a parser that requires explicit {@code field:value} syntax for all conditions. */
+  public FilterQueryParser() {
+    this(null);
+  }
+
+  /**
+   * Creates a parser with a default field for bare search terms.
+   *
+   * @param defaultField the field to use when a token has no {@code field:} prefix (e.g.,
+   *     "player.name"), or null to disallow bare terms
+   */
+  public FilterQueryParser(@Nullable String defaultField) {
+    this.defaultField = defaultField;
+  }
 
   /**
    * Parses a filter query string into a list of FilterCondition objects.
@@ -59,17 +79,16 @@ public class FilterQueryParser {
 
     List<FilterCondition> conditions = new ArrayList<>();
 
-    // Split on AND (case-insensitive)
-    String[] parts = query.split("\\s+AND\\s+", -1);
+    // Split on whitespace
+    String[] tokens = query.trim().split("\\s+");
 
-    for (String part : parts) {
-      String trimmed = part.trim();
-      if (trimmed.isEmpty()) {
-        throw new IllegalArgumentException(
-            "Empty condition in query (check for consecutive ANDs or leading/trailing ANDs)");
+    for (String token : tokens) {
+      // Skip "AND" tokens (case-insensitive) — they are optional noise words
+      if (token.equalsIgnoreCase("AND")) {
+        continue;
       }
 
-      FilterCondition condition = parseCondition(trimmed);
+      FilterCondition condition = parseToken(token);
       conditions.add(condition);
     }
 
@@ -77,38 +96,46 @@ public class FilterQueryParser {
   }
 
   /**
-   * Parses a single condition string.
+   * Parses a single token into a FilterCondition.
    *
-   * @param conditionStr the condition string (e.g., "result:1-0" or
-   *     "player.name:Carlsen,position=white")
+   * <p>If the token matches {@code field:value} or {@code field..value}, it is parsed as a
+   * structured condition. Otherwise, it is treated as a bare search term using the configured
+   * default field.
+   *
+   * @param token a whitespace-free token (e.g., "result:1-0", "Carlsen")
    * @return the parsed FilterCondition
-   * @throws IllegalArgumentException if the condition is invalid
+   * @throws IllegalArgumentException if the token is invalid and no default field is configured
    */
-  private @NotNull FilterCondition parseCondition(@NotNull String conditionStr) {
-    Matcher matcher = CONDITION_PATTERN.matcher(conditionStr);
-    if (!matcher.matches()) {
-      throw new IllegalArgumentException(
-          "Invalid filter condition: '"
-              + conditionStr
-              + "'. Expected format: field:value or field..value with optional modifiers like"
-              + " ,key=value");
+  private @NotNull FilterCondition parseToken(@NotNull String token) {
+    Matcher matcher = CONDITION_PATTERN.matcher(token);
+    if (matcher.matches()) {
+      String field = matcher.group(1);
+      String operator = matcher.group(2);
+      String value = matcher.group(3);
+      String modifiersStr = matcher.group(4);
+
+      Map<String, String> modifiers = parseModifiers(modifiersStr);
+
+      log.debug(
+          "Parsed condition: field={}, operator={}, value={}, modifiers={}",
+          field,
+          operator,
+          value,
+          modifiers);
+
+      return new FilterCondition(field, operator, value, modifiers);
     }
 
-    String field = matcher.group(1);
-    String operator = matcher.group(2);
-    String value = matcher.group(3);
-    String modifiersStr = matcher.group(4);
+    // Bare search term — use default field
+    if (defaultField == null) {
+      throw new IllegalArgumentException(
+          "Invalid filter condition: '"
+              + token
+              + "'. Expected format: field:value or field..value");
+    }
 
-    Map<String, String> modifiers = parseModifiers(modifiersStr);
-
-    log.debug(
-        "Parsed condition: field={}, operator={}, value={}, modifiers={}",
-        field,
-        operator,
-        value,
-        modifiers);
-
-    return new FilterCondition(field, operator, value, modifiers);
+    log.debug("Bare search term '{}' mapped to default field '{}'", token, defaultField);
+    return new FilterCondition(defaultField, ":", token);
   }
 
   /**

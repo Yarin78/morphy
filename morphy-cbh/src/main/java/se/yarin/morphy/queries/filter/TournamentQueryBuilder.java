@@ -18,7 +18,7 @@ import se.yarin.morphy.queries.EntityQuery;
  */
 public class TournamentQueryBuilder {
 
-  private final FilterQueryParser filterQueryParser = new FilterQueryParser();
+  private final FilterQueryParser filterQueryParser = new FilterQueryParser("name");
 
   /**
    * Builds a TournamentQuery from a filter expression string.
