@@ -417,6 +417,60 @@
   color: #4a90d9;
 }
 
+/* Search split button with dropdown */
+.search-btn-split {
+  position: relative;
+  display: flex;
+  flex-shrink: 0;
+}
+
+.search-btn-split .search-btn-main {
+  margin-top: 0;
+  border-radius: 4px 0 0 4px;
+  padding-right: 12px;
+}
+
+.search-btn-split .search-btn-dropdown {
+  margin-top: 0;
+  padding: 10px 6px;
+  border-radius: 0 4px 4px 0;
+  border-left: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.search-btn-split .search-btn-dropdown:hover:not(:disabled) {
+  background: #3a7bc8;
+}
+
+.search-dropdown-popover {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 4px;
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  min-width: 200px;
+  z-index: 100;
+  overflow: hidden;
+}
+
+.search-dropdown-item {
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
+  text-align: left;
+  background: none;
+  border: none;
+  font-size: 13px;
+  color: #333;
+  cursor: pointer;
+}
+
+.search-dropdown-item:hover {
+  background: #f5f6f8;
+}
+
 /* Saved searches dropdown */
 .search-panel .database-row {
   display: flex;

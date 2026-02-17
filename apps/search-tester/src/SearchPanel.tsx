@@ -17,7 +17,6 @@ interface SearchPanelProps {
   onEntityTypeChange: (t: EntityType) => void;
   filter: string;
   onFilterChange: (v: string) => void;
-  onSearch: () => void;
   loading: boolean;
   showOptions: boolean;
   onShowOptionsChange: (v: boolean) => void;
@@ -50,8 +49,8 @@ interface SearchPanelProps {
   onRatingModeChange: (v: string) => void;
   includeMoves: boolean;
   onIncludeMovesChange: (v: boolean) => void;
-  debugExecuteAllPlans: boolean;
-  onDebugExecuteAllPlansChange: (v: boolean) => void;
+  executeAllPlansDefault: boolean;
+  onSearch: (executeAllPlans?: boolean) => void;
 }
 
 function getFilterPlaceholder(entityType: EntityType): string {
@@ -69,7 +68,6 @@ export function SearchPanel({
   onEntityTypeChange,
   filter,
   onFilterChange,
-  onSearch,
   loading,
   showOptions,
   onShowOptionsChange,
@@ -101,11 +99,13 @@ export function SearchPanel({
   onRatingModeChange,
   includeMoves,
   onIncludeMovesChange,
-  debugExecuteAllPlans,
-  onDebugExecuteAllPlansChange,
+  executeAllPlansDefault,
+  onSearch,
 }: SearchPanelProps) {
   const [savedSearchOpen, setSavedSearchOpen] = useState(false);
+  const [searchDropdownOpen, setSearchDropdownOpen] = useState(false);
   const savedSearchRef = useRef<HTMLDivElement>(null);
+  const searchDropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!savedSearchOpen) return;
@@ -117,6 +117,17 @@ export function SearchPanel({
     document.addEventListener('click', handleClick);
     return () => document.removeEventListener('click', handleClick);
   }, [savedSearchOpen]);
+
+  useEffect(() => {
+    if (!searchDropdownOpen) return;
+    const handleClick = (e: MouseEvent) => {
+      if (searchDropdownRef.current && !searchDropdownRef.current.contains(e.target as Node)) {
+        setSearchDropdownOpen(false);
+      }
+    };
+    document.addEventListener('click', handleClick);
+    return () => document.removeEventListener('click', handleClick);
+  }, [searchDropdownOpen]);
 
   return (
     <section className="panel search-panel">
@@ -214,13 +225,49 @@ export function SearchPanel({
             disabled={entityType !== 'Games'}
           />
         </div>
-        <button
-          className="search-btn search-btn-inline"
-          onClick={onSearch}
-          disabled={loading}
-        >
-          {loading ? 'Searching...' : 'Search'}
-        </button>
+        <div className="search-btn-split" ref={searchDropdownRef}>
+          <button
+            className="search-btn search-btn-inline search-btn-main"
+            onClick={() => onSearch()}
+            disabled={loading}
+          >
+            {loading ? 'Searching...' : executeAllPlansDefault ? 'Search (all plans)' : 'Search'}
+          </button>
+          <button
+            type="button"
+            className="search-btn search-btn-inline search-btn-dropdown"
+            onClick={() => setSearchDropdownOpen((o) => !o)}
+            disabled={loading}
+            aria-expanded={searchDropdownOpen}
+            aria-haspopup="true"
+          >
+            ▾
+          </button>
+          {searchDropdownOpen && (
+            <div className="search-dropdown-popover">
+              <button
+                type="button"
+                className="search-dropdown-item"
+                onClick={() => {
+                  onSearch(false);
+                  setSearchDropdownOpen(false);
+                }}
+              >
+                Search {!executeAllPlansDefault && '✓'}
+              </button>
+              <button
+                type="button"
+                className="search-dropdown-item"
+                onClick={() => {
+                  onSearch(true);
+                  setSearchDropdownOpen(false);
+                }}
+              >
+                Search (all plans) {executeAllPlansDefault && '✓'}
+              </button>
+            </div>
+          )}
+        </div>
         <button
           type="button"
           className="search-btn search-btn-inline search-btn-save"
@@ -360,16 +407,6 @@ export function SearchPanel({
                       onChange={(e) => onIncludeMovesChange(e.target.checked)}
                     />
                     Include moves
-                  </label>
-                </div>
-                <div className="field checkbox-field">
-                  <label>
-                    <input
-                      type="checkbox"
-                      checked={debugExecuteAllPlans}
-                      onChange={(e) => onDebugExecuteAllPlansChange(e.target.checked)}
-                    />
-                    Execute all plans
                   </label>
                 </div>
               </div>

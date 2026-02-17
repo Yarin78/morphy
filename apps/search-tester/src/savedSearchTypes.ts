@@ -19,5 +19,4 @@ export interface SavedSearch {
   ratingMax: string;
   ratingMode: string;
   includeMoves: boolean;
-  debugExecuteAllPlans: boolean;
 }

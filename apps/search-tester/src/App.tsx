@@ -102,7 +102,7 @@ function App() {
   const [sortBy, setSortBy] = useState('id');
   const [order, setOrder] = useState<'asc' | 'desc'>('asc');
   const [includeMoves, setIncludeMoves] = useState(false);
-  const [debugExecuteAllPlans, setDebugExecuteAllPlans] = useState(false);
+  const [executeAllPlansDefault, setExecuteAllPlansDefault] = useState(false);
   const [filter, setFilter] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
@@ -128,7 +128,6 @@ function App() {
     setRatingMax(saved.ratingMax);
     setRatingMode(saved.ratingMode);
     setIncludeMoves(saved.includeMoves);
-    setDebugExecuteAllPlans(saved.debugExecuteAllPlans);
   }, []);
 
   const saveCurrentSearch = useCallback(() => {
@@ -154,7 +153,6 @@ function App() {
       ratingMax,
       ratingMode,
       includeMoves,
-      debugExecuteAllPlans,
     };
     setSavedSearches((prev) => {
       const next = [...prev, saved];
@@ -177,8 +175,8 @@ function App() {
     ratingMax,
     ratingMode,
     includeMoves,
-    debugExecuteAllPlans,
-  ]);
+  ]
+  );
 
   const removeSavedSearch = useCallback((id: string) => {
     setSavedSearches((prev) => {
@@ -199,26 +197,28 @@ function App() {
       .catch((err: Error) => setError(err.message));
   }, []);
 
-  const buildRequest = useCallback((): GameSearchRequest => {
-    const req: GameSearchRequest = {
-      offset,
-      limit,
-      sortBy,
-      order,
-      includeMoves,
-      debugQueryPlans: true,
-    };
-    if (filter.trim()) req.filter = filter.trim();
-    if (resultFilter) req.result = resultFilter;
-    if (dateFrom) req.dateFrom = dateFrom;
-    if (dateTo) req.dateTo = dateTo;
-    if (ecoCode) req.ecoCode = ecoCode;
-    if (ratingMin) req.ratingMin = parseInt(ratingMin, 10);
-    if (ratingMax) req.ratingMax = parseInt(ratingMax, 10);
-    if (ratingMode) req.ratingMode = ratingMode;
-    if (debugExecuteAllPlans) req.debugExecuteAllPlans = true;
-    return req;
-  }, [
+  const buildRequest = useCallback(
+    (executeAllPlans: boolean): GameSearchRequest => {
+      const req: GameSearchRequest = {
+        offset,
+        limit,
+        sortBy,
+        order,
+        includeMoves,
+        debugQueryPlans: true,
+      };
+      if (filter.trim()) req.filter = filter.trim();
+      if (resultFilter) req.result = resultFilter;
+      if (dateFrom) req.dateFrom = dateFrom;
+      if (dateTo) req.dateTo = dateTo;
+      if (ecoCode) req.ecoCode = ecoCode;
+      if (ratingMin) req.ratingMin = parseInt(ratingMin, 10);
+      if (ratingMax) req.ratingMax = parseInt(ratingMax, 10);
+      if (ratingMode) req.ratingMode = ratingMode;
+      if (executeAllPlans) req.debugExecuteAllPlans = true;
+      return req;
+    },
+    [
     offset,
     limit,
     sortBy,
@@ -232,27 +232,31 @@ function App() {
     ratingMin,
     ratingMax,
     ratingMode,
-    debugExecuteAllPlans,
   ]);
 
-  const handleSearch = useCallback(async () => {
-    if (!selectedDb) {
-      setError('Select a database first');
-      return;
-    }
-    setError(null);
-    setLoading(true);
-    setResult(null);
-    setCurrentPage(0);
+  const handleSearch = useCallback(
+    async (executeAllPlans?: boolean) => {
+      if (!selectedDb) {
+        setError('Select a database first');
+        return;
+      }
+      const effective = executeAllPlans ?? executeAllPlansDefault;
+      if (executeAllPlans !== undefined) {
+        setExecuteAllPlansDefault(executeAllPlans);
+      }
+      setError(null);
+      setLoading(true);
+      setResult(null);
+      setCurrentPage(0);
 
-    const config = ENTITY_CONFIG[entityType];
-    const opts = {
-      limit,
-      gameRequest: entityType === 'Games' ? buildRequest() : undefined,
-    };
+      const config = ENTITY_CONFIG[entityType];
+      const opts = {
+        limit,
+        gameRequest: entityType === 'Games' ? buildRequest(effective) : undefined,
+      };
 
-    try {
-      const res = await config.fetch(selectedDb, opts);
+      try {
+        const res = await config.fetch(selectedDb, opts);
       setResult({
         entityType,
         data: res.data,
@@ -261,12 +265,14 @@ function App() {
         debugInfo: res.debugInfo,
         rawResponse: res.rawResponse,
       });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Search failed');
-    } finally {
-      setLoading(false);
-    }
-  }, [selectedDb, entityType, limit, buildRequest]);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Search failed');
+      } finally {
+        setLoading(false);
+      }
+    },
+    [selectedDb, entityType, limit, buildRequest, executeAllPlansDefault]
+  );
 
   const paginatedData = useMemo(() => {
     if (!result || result.data.length === 0) {
@@ -294,7 +300,9 @@ function App() {
   );
 
   const requestJson =
-    entityType === 'Games' ? JSON.stringify(buildRequest(), null, 2) : JSON.stringify({ limit }, null, 2);
+    entityType === 'Games'
+      ? JSON.stringify(buildRequest(executeAllPlansDefault), null, 2)
+      : JSON.stringify({ limit }, null, 2);
 
   return (
     <div className="app">
@@ -314,7 +322,6 @@ function App() {
           onEntityTypeChange={setEntityType}
           filter={filter}
           onFilterChange={setFilter}
-          onSearch={handleSearch}
           loading={loading}
           showOptions={showOptions}
           onShowOptionsChange={setShowOptions}
@@ -346,8 +353,8 @@ function App() {
           onRatingModeChange={setRatingMode}
           includeMoves={includeMoves}
           onIncludeMovesChange={setIncludeMoves}
-          debugExecuteAllPlans={debugExecuteAllPlans}
-          onDebugExecuteAllPlansChange={setDebugExecuteAllPlans}
+          executeAllPlansDefault={executeAllPlansDefault}
+          onSearch={handleSearch}
         />
 
         <ResultsSection
