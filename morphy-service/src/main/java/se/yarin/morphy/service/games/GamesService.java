@@ -227,13 +227,13 @@ public class GamesService {
           // 2. Create query context (enable traceCost when debug is on)
           QueryContext context = new QueryContext(txn, debugPlans);
 
-          // 3. Generate query plans using existing QueryPlanner
+          // 3. Generate query plans sorted by estimated cost (cheapest first)
           List<QueryOperator<Game>> plans =
-              txn.database().queryPlanner().getGameQueryPlans(context, gameQuery, true);
+              txn.database().queryPlanner().sortQueryPlansByCost(
+                  txn.database().queryPlanner().getGameQueryPlans(context, gameQuery, true));
 
-          // 4. Select best plan
-          QueryOperator<Game> bestPlan = txn.database().queryPlanner().selectBestQueryPlan(plans);
-          int selectedPlanIndex = plans.indexOf(bestPlan);
+          // 4. Best plan is the first one (cheapest)
+          QueryOperator<Game> bestPlan = plans.getFirst();
 
           log.debug(
               "Selected query plan: {} (cost: {})",
@@ -263,8 +263,7 @@ public class GamesService {
           // 6. Build debug info if requested
           QueryPlanDebugInfo debugInfo = null;
           if (debugPlans) {
-            debugInfo = buildDebugInfo(txn, gameQuery, plans, selectedPlanIndex,
-                profiledResults, executeAll);
+            debugInfo = buildDebugInfo(txn, gameQuery, plans, profiledResults, executeAll);
           }
 
           // 7. Apply sorting (if needed)
@@ -311,7 +310,6 @@ public class GamesService {
       @NotNull se.yarin.morphy.DatabaseReadTransaction txn,
       @NotNull GameQuery gameQuery,
       @NotNull List<QueryOperator<Game>> plans,
-      int selectedPlanIndex,
       @NotNull List<QueryData<Game>> bestPlanResults,
       boolean executeAll) {
     String queryDescription = QueryDescriptionFormatter.format(gameQuery);
@@ -331,10 +329,9 @@ public class GamesService {
     for (int i = 0; i < plans.size(); i++) {
       QueryOperator<Game> plan = plans.get(i);
       String label = "Plan " + (i + 1);
-      boolean isSelected = (i == selectedPlanIndex);
 
-      if (isSelected) {
-        // Best plan was already executed via executeProfiled in searchGames
+      if (i == 0) {
+        // Best plan (cheapest) was already executed via executeProfiled in searchGames
         int resultCount = bestPlanResults.size();
         planDtos.add(queryPlanDtoConverter.convertPlan(label, plan, true, resultCount, null));
       } else if (executeAll) {
@@ -344,10 +341,12 @@ public class GamesService {
           log.debug("Skipping plan {} (estimated cost {})", i + 1, estCost);
           planDtos.add(queryPlanDtoConverter.convertPlan(label, plan, false, null, null));
         } else {
-          // Execute alternative plan with a fresh context to avoid shared state issues
+          // Execute alternative plan with a fresh context to avoid shared operator state.
+          // Sort the fresh plans the same way so indices correspond to the original plans.
           QueryContext freshContext = new QueryContext(txn, true);
-          List<QueryOperator<Game>> freshPlans =
-              txn.database().queryPlanner().getGameQueryPlans(freshContext, gameQuery, true);
+          var planner = txn.database().queryPlanner();
+          List<QueryOperator<Game>> freshPlans = planner.sortQueryPlansByCost(
+              planner.getGameQueryPlans(freshContext, gameQuery, true));
           QueryOperator<Game> freshPlan = freshPlans.get(i);
           List<QueryData<Game>> altResults = freshPlan.executeProfiled();
           int resultCount = altResults.size();
@@ -370,7 +369,7 @@ public class GamesService {
       }
     }
 
-    return new QueryPlanDebugInfo(queryDescription, selectedPlanIndex, allPlansAgree, planDtos);
+    return new QueryPlanDebugInfo(queryDescription, 0, allPlansAgree, planDtos);
   }
 
   /**

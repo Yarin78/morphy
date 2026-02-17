@@ -503,8 +503,7 @@ interface QueryPlanVisualiserProps {
 
 export function QueryPlanVisualiser({ debugInfo }: QueryPlanVisualiserProps) {
   const [activePlanIdx, setActivePlanIdx] = useState(0);
-  const { queryDescription, plans, selectedPlanIndex, allPlansAgree } =
-    debugInfo;
+  const { queryDescription, plans, allPlansAgree } = debugInfo;
 
   return (
     <div className="qp-visualiser">
@@ -521,7 +520,6 @@ export function QueryPlanVisualiser({ debugInfo }: QueryPlanVisualiserProps) {
               (plan.totalCost.actualWallClockTimeMs ?? 0) > 0
                 ? `${plan.totalCost.actualWallClockTimeMs} ms`
                 : `est ${Math.round(plan.totalCost.estimatedTotalCost)}`;
-            const isSelected = idx === selectedPlanIndex;
             const differs = plan.resultsDifferFromSelected;
             return (
               <button
@@ -532,7 +530,7 @@ export function QueryPlanVisualiser({ debugInfo }: QueryPlanVisualiserProps) {
               >
                 {plan.label}
                 <span className="qp-tab-cost">{costStr}</span>
-                {isSelected && <span className="qp-tab-badge">selected</span>}
+                {plan.executed && <span className="qp-tab-badge">executed</span>}
                 {differs && (
                   <span className="qp-tab-badge qp-tab-badge-warn">
                     differs

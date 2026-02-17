@@ -254,6 +254,13 @@ public class QueryPlanner {
     return bestPlan;
   }
 
+  public @NotNull <T extends IdObject> List<QueryOperator<T>> sortQueryPlansByCost(
+      @NotNull List<QueryOperator<T>> queryPlans) {
+    return queryPlans.stream()
+        .sorted(Comparator.comparingDouble(plan -> plan.getQueryCost().estimatedTotalCost()))
+        .toList();
+  }
+
   public List<QueryOperator<Game>> getGameQueryPlans(
       @NotNull QueryContext context, @NotNull GameQuery gameQuery, boolean fullData) {
     // The anatomy of a GameQuery is like this:
