@@ -1,5 +1,7 @@
+import { useEffect, useRef, useState } from 'react';
 import type { DatabaseResponse } from './api/types';
 import type { EntityType } from './entityConfig';
+import type { SavedSearch } from './savedSearchTypes';
 import {
   ENTITY_TYPES,
   ORDER_OPTIONS,
@@ -19,6 +21,10 @@ interface SearchPanelProps {
   loading: boolean;
   showOptions: boolean;
   onShowOptionsChange: (v: boolean) => void;
+  savedSearches: SavedSearch[];
+  onLoadSavedSearch: (saved: SavedSearch) => void;
+  onSaveSearch: () => void;
+  onRemoveSavedSearch: (id: string) => void;
   // Options panel state
   offset: number;
   onOffsetChange: (v: number) => void;
@@ -67,6 +73,10 @@ export function SearchPanel({
   loading,
   showOptions,
   onShowOptionsChange,
+  savedSearches,
+  onLoadSavedSearch,
+  onSaveSearch,
+  onRemoveSavedSearch,
   offset,
   onOffsetChange,
   limit,
@@ -94,22 +104,89 @@ export function SearchPanel({
   debugExecuteAllPlans,
   onDebugExecuteAllPlansChange,
 }: SearchPanelProps) {
+  const [savedSearchOpen, setSavedSearchOpen] = useState(false);
+  const savedSearchRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!savedSearchOpen) return;
+    const handleClick = (e: MouseEvent) => {
+      if (savedSearchRef.current && !savedSearchRef.current.contains(e.target as Node)) {
+        setSavedSearchOpen(false);
+      }
+    };
+    document.addEventListener('click', handleClick);
+    return () => document.removeEventListener('click', handleClick);
+  }, [savedSearchOpen]);
+
   return (
     <section className="panel search-panel">
-      <div className="field">
-        <label>Database</label>
-        <select
-          value={selectedDb}
-          onChange={(e) => onDbChange(e.target.value)}
-          disabled={!databases.length}
-        >
-          {!databases.length && <option value="">Loading...</option>}
-          {databases.map((db) => (
-            <option key={db.id} value={db.id}>
-              {db.displayName} ({db.id})
-            </option>
-          ))}
-        </select>
+      <div className="database-row">
+        <div className="field">
+          <label>Database</label>
+          <select
+            value={selectedDb}
+            onChange={(e) => onDbChange(e.target.value)}
+            disabled={!databases.length}
+          >
+            {!databases.length && <option value="">Loading...</option>}
+            {databases.map((db) => (
+              <option key={db.id} value={db.id}>
+                {db.displayName} ({db.id})
+              </option>
+            ))}
+          </select>
+        </div>
+        {savedSearches.length > 0 && (
+          <div className="field saved-searches-field">
+            <label>Saved searches</label>
+            <div className="saved-searches-dropdown" ref={savedSearchRef}>
+              <button
+                type="button"
+                className="saved-searches-btn"
+                onClick={() => setSavedSearchOpen((o) => !o)}
+                aria-expanded={savedSearchOpen}
+              >
+                Load saved search...
+              </button>
+              {savedSearchOpen && (
+                <div className="saved-searches-popover">
+                  {savedSearches.map((s) => (
+                    <div
+                      key={s.id}
+                      className="saved-search-item"
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => {
+                        onLoadSavedSearch(s);
+                        setSavedSearchOpen(false);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          onLoadSavedSearch(s);
+                          setSavedSearchOpen(false);
+                        }
+                      }}
+                    >
+                      <span className="saved-search-name">{s.name}</span>
+                      <button
+                        type="button"
+                        className="saved-search-delete"
+                        aria-label={`Remove ${s.name}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onRemoveSavedSearch(s.id);
+                        }}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="search-row">
@@ -143,6 +220,14 @@ export function SearchPanel({
           disabled={loading}
         >
           {loading ? 'Searching...' : 'Search'}
+        </button>
+        <button
+          type="button"
+          className="search-btn search-btn-inline search-btn-save"
+          onClick={onSaveSearch}
+          title="Save current search"
+        >
+          Save
         </button>
       </div>
 

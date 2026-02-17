@@ -6,6 +6,7 @@ import { SearchPanel } from './SearchPanel';
 import { fetchDatabases } from './api/client';
 import type { GameSearchRequest, QueryPlanDebugInfo } from './api/types';
 import type { EntityType } from './entityConfig';
+import type { SavedSearch } from './savedSearchTypes';
 import { ENTITY_CONFIG } from './entityConfig';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import './App.css';
@@ -13,6 +14,26 @@ import './App.css';
 const COLUMN_VISIBILITY_KEY = 'search-tester-hidden-columns';
 const QUERY_PLAN_PANEL_KEY = 'search-tester-show-query-plan';
 const REQUEST_RESPONSE_PANEL_KEY = 'search-tester-show-request-response';
+const SAVED_SEARCHES_KEY = 'search-tester-saved-searches';
+
+function loadSavedSearches(): SavedSearch[] {
+  try {
+    const raw = localStorage.getItem(SAVED_SEARCHES_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function persistSavedSearches(searches: SavedSearch[]) {
+  try {
+    localStorage.setItem(SAVED_SEARCHES_KEY, JSON.stringify(searches));
+  } catch {
+    // ignore
+  }
+}
 
 function loadHiddenColumns(): Record<string, string[]> {
   try {
@@ -59,6 +80,8 @@ function App() {
     loadHiddenColumns()
   );
 
+  const [savedSearches, setSavedSearches] = useState<SavedSearch[]>(loadSavedSearches);
+
   const toggleColumn = useCallback((entityKey: string, columnKey: string) => {
     setHiddenColumns((prev) => {
       const arr = prev[entityKey] ?? [];
@@ -88,6 +111,82 @@ function App() {
   const [ratingMax, setRatingMax] = useState('');
   const [ratingMode, setRatingMode] = useState('any');
   const [resultFilter, setResultFilter] = useState('');
+
+  const loadSavedSearch = useCallback((saved: SavedSearch) => {
+    setSelectedDb(saved.selectedDb);
+    setEntityType(saved.entityType);
+    setFilter(saved.filter);
+    setOffset(saved.offset);
+    setLimit(saved.limit);
+    setSortBy(saved.sortBy);
+    setOrder(saved.order);
+    setResultFilter(saved.resultFilter);
+    setDateFrom(saved.dateFrom);
+    setDateTo(saved.dateTo);
+    setEcoCode(saved.ecoCode);
+    setRatingMin(saved.ratingMin);
+    setRatingMax(saved.ratingMax);
+    setRatingMode(saved.ratingMode);
+    setIncludeMoves(saved.includeMoves);
+    setDebugExecuteAllPlans(saved.debugExecuteAllPlans);
+  }, []);
+
+  const saveCurrentSearch = useCallback(() => {
+    const name =
+      window.prompt('Name for this search', filter.slice(0, 40) || 'Untitled search')?.trim();
+    if (!name) return;
+    const saved: SavedSearch = {
+      id: crypto.randomUUID(),
+      name,
+      savedAt: Date.now(),
+      entityType,
+      selectedDb,
+      filter,
+      offset,
+      limit,
+      sortBy,
+      order,
+      resultFilter,
+      dateFrom,
+      dateTo,
+      ecoCode,
+      ratingMin,
+      ratingMax,
+      ratingMode,
+      includeMoves,
+      debugExecuteAllPlans,
+    };
+    setSavedSearches((prev) => {
+      const next = [...prev, saved];
+      persistSavedSearches(next);
+      return next;
+    });
+  }, [
+    entityType,
+    selectedDb,
+    filter,
+    offset,
+    limit,
+    sortBy,
+    order,
+    resultFilter,
+    dateFrom,
+    dateTo,
+    ecoCode,
+    ratingMin,
+    ratingMax,
+    ratingMode,
+    includeMoves,
+    debugExecuteAllPlans,
+  ]);
+
+  const removeSavedSearch = useCallback((id: string) => {
+    setSavedSearches((prev) => {
+      const next = prev.filter((s) => s.id !== id);
+      persistSavedSearches(next);
+      return next;
+    });
+  }, []);
 
   useEffect(() => {
     fetchDatabases()
@@ -219,6 +318,10 @@ function App() {
           loading={loading}
           showOptions={showOptions}
           onShowOptionsChange={setShowOptions}
+          savedSearches={savedSearches}
+          onLoadSavedSearch={loadSavedSearch}
+          onSaveSearch={saveCurrentSearch}
+          onRemoveSavedSearch={removeSavedSearch}
           offset={offset}
           onOffsetChange={setOffset}
           limit={limit}
