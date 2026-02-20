@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import type { DatabaseResponse } from './api/types';
+import type { DatabaseResponse, FilterOptionsResponse } from './api/types';
 import type { EntityType } from './entityConfig';
 import type { SavedSearch } from './savedSearchTypes';
 import {
@@ -18,6 +18,7 @@ interface SearchPanelProps {
   onEntityTypeChange: (t: EntityType) => void;
   filter: string;
   onFilterChange: (v: string) => void;
+  filterOptions: FilterOptionsResponse | null;
   loading: boolean;
   showOptions: boolean;
   onShowOptionsChange: (v: boolean) => void;
@@ -85,6 +86,7 @@ export function SearchPanel({
   onEntityTypeChange,
   filter,
   onFilterChange,
+  filterOptions,
   loading,
   showOptions,
   onShowOptionsChange,
@@ -241,6 +243,14 @@ export function SearchPanel({
             onChange={(e) => onFilterChange(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && onSearch()}
           />
+          {filterOptions && (
+            <p className="filter-help">
+              {filterOptions.defaultField !== 'id' && (
+                <>Default: <code>{filterOptions.defaultField}</code>. </>
+              )}
+              Fields: {filterOptions.fields.join(', ')}
+            </p>
+          )}
         </div>
         <div className="search-btn-split" ref={searchDropdownRef}>
           <button

@@ -3,8 +3,12 @@ import { CollapsiblePanel, ShowPanelButton } from './CollapsiblePanel';
 import { QueryPlanVisualiser } from './QueryPlanVisualiser';
 import { ResultsSection } from './ResultsSection';
 import { SearchPanel } from './SearchPanel';
-import { fetchDatabases } from './api/client';
-import type { GameSearchRequest, QueryPlanDebugInfo } from './api/types';
+import { fetchDatabases, fetchFilterOptions } from './api/client';
+import type {
+  FilterOptionsResponse,
+  GameSearchRequest,
+  QueryPlanDebugInfo,
+} from './api/types';
 import type { EntityType } from './entityConfig';
 import type { SavedSearch } from './savedSearchTypes';
 import { ENTITY_CONFIG, ENTITY_SORT_OPTIONS, SORT_OPTIONS } from './entityConfig';
@@ -81,6 +85,27 @@ function App() {
   );
 
   const [savedSearches, setSavedSearches] = useState<SavedSearch[]>(loadSavedSearches);
+
+  // Session cache for filter options (static per entity type)
+  const [filterOptionsCache, setFilterOptionsCache] = useState<
+    Partial<Record<EntityType, FilterOptionsResponse>>
+  >({});
+  useEffect(() => {
+    if (filterOptionsCache[entityType]) return;
+    let cancelled = false;
+    fetchFilterOptions(entityType)
+      .then((data) => {
+        if (!cancelled) {
+          setFilterOptionsCache((prev) => ({ ...prev, [entityType]: data }));
+        }
+      })
+      .catch(() => {
+        // Leave cache empty so we can retry when switching entity type again
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [entityType]);
 
   const toggleColumn = useCallback((entityKey: string, columnKey: string) => {
     setHiddenColumns((prev) => {
@@ -388,6 +413,7 @@ function App() {
           onEntityTypeChange={handleEntityTypeChange}
           filter={filter}
           onFilterChange={setFilter}
+          filterOptions={filterOptionsCache[entityType] ?? null}
           loading={loading}
           showOptions={showOptions}
           onShowOptionsChange={setShowOptions}

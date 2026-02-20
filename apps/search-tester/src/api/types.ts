@@ -12,6 +12,11 @@ export interface DatabaseListResponse {
   databases: DatabaseResponse[];
 }
 
+export interface FilterOptionsResponse {
+  defaultField: string;
+  fields: string[];
+}
+
 export interface GameSearchRequest {
   offset?: number;
   limit?: number;

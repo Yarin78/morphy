@@ -4,6 +4,7 @@ import type {
   DatabaseListResponse,
   EntitySearchRequest,
   EntitySearchResponse,
+  FilterOptionsResponse,
   GameSearchRequest,
   GameSearchResponse,
   GameTagDto,
@@ -24,6 +25,28 @@ export async function fetchDatabases(): Promise<DatabaseListResponse> {
   const res = await fetch(`${API_BASE}/databases`);
   if (!res.ok) {
     throw new Error(`Failed to fetch databases: ${res.status} ${res.statusText}`);
+  }
+  return res.json();
+}
+
+const FILTER_API_PATH: Record<string, string> = {
+  Games: 'games',
+  Players: 'players',
+  Tournaments: 'tournaments',
+  Annotators: 'annotators',
+  Sources: 'sources',
+  Teams: 'teams',
+  GameTags: 'gametags',
+};
+
+export async function fetchFilterOptions(entityType: string): Promise<FilterOptionsResponse> {
+  const path = FILTER_API_PATH[entityType];
+  if (!path) {
+    return { defaultField: 'id', fields: ['id'] };
+  }
+  const res = await fetch(`${API_BASE}/filters/${path}`);
+  if (!res.ok) {
+    throw new Error(`Failed to fetch filter options: ${res.status} ${res.statusText}`);
   }
   return res.json();
 }

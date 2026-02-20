@@ -310,7 +310,7 @@
 
 .search-panel .search-row {
   display: flex;
-  align-items: flex-end;
+  align-items: flex-start;
   gap: 12px;
   flex-wrap: wrap;
 }
@@ -337,7 +337,26 @@
 .search-panel .search-row .field-filter {
   flex: 1 1 200px;
   min-width: 180px;
-  margin-bottom: 0;
+}
+
+/* Align buttons with input/select (same offset as label height) */
+.search-panel .search-row .search-btn-split,
+.search-panel .search-row .search-btn-save {
+  margin-top: 18px;
+}
+
+.search-panel .filter-help {
+  margin: 6px 0 0;
+  font-size: 11px;
+  color: #666;
+  line-height: 1.35;
+}
+
+.search-panel .filter-help code {
+  font-size: 10px;
+  background: #eee;
+  padding: 1px 4px;
+  border-radius: 2px;
 }
 
 .search-panel .search-btn-inline {

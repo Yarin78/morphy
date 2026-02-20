@@ -122,6 +122,31 @@ public class GameQueryBuilder {
     return condition.field().contains(".");
   }
 
+  /** Returns the default field used when no field name is specified in a filter expression. */
+  public @NotNull String defaultField() {
+    return "player.name";
+  }
+
+  private static final Set<String> HIDDEN_FIELDS =
+      Set.of("playerid", "tournamentid", "annotatorid", "sourceid", "teamid", "gametagid");
+
+  /** Returns fields that are valid for filtering but should be hidden from the UI by default. */
+  public @NotNull Set<String> hiddenFields() {
+    return HIDDEN_FIELDS;
+  }
+
+  /** Returns a sorted list of all available field names, including entity sub-fields. */
+  public @NotNull List<String> availableFields() {
+    Set<String> fields = new TreeSet<>(GAME_FILTERS.keySet());
+    fields.addAll(ENTITY_ID_FIELDS);
+    for (var entry : ENTITY_BUILDERS.entrySet()) {
+      for (String prop : entry.getValue().availableFields()) {
+        fields.add(entry.getKey() + "." + prop);
+      }
+    }
+    return List.copyOf(fields);
+  }
+
   private static String availableFieldsSummary() {
     List<String> fields = new ArrayList<>(new TreeSet<>(GAME_FILTERS.keySet()));
     fields.addAll(new TreeSet<>(ENTITY_ID_FIELDS));

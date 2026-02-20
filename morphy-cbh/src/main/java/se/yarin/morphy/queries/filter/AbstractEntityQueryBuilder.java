@@ -25,6 +25,7 @@ public abstract class AbstractEntityQueryBuilder<T extends Entity> {
 
   private final EntityType entityType;
   private final String entityLabel;
+  private final String defaultField;
   private final FilterQueryParser filterQueryParser;
 
   protected AbstractEntityQueryBuilder(
@@ -33,7 +34,13 @@ public abstract class AbstractEntityQueryBuilder<T extends Entity> {
       @NotNull String defaultField) {
     this.entityType = entityType;
     this.entityLabel = entityLabel;
+    this.defaultField = defaultField;
     this.filterQueryParser = new FilterQueryParser(defaultField);
+  }
+
+  /** Returns the default field used when no field name is specified in a filter expression. */
+  public @NotNull String defaultField() {
+    return defaultField;
   }
 
   protected abstract Map<String, Function<FilterCondition, EntityFilter<T>>> filters();
