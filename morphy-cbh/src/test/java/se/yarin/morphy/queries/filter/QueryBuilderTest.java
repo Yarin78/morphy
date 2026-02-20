@@ -191,6 +191,52 @@ public class QueryBuilderTest {
     assertEquals("", filter.lastName());
   }
 
+  // --- GameQueryBuilder: entity name shorthand ---
+
+  @Test
+  public void gameByPlayerNameShorthand() {
+    GameQueryBuilder builder = new GameQueryBuilder();
+    GameQuery query = builder.buildQuery(db, "player:Carlsen");
+
+    assertEquals(0, query.gameFilters().size());
+    assertEquals(1, query.entityJoins().size());
+    GameEntityJoin<?> join = query.entityJoins().get(0);
+    assertEquals(EntityType.PLAYER, join.getEntityType());
+    assertTrue(join.entityQuery().filters().get(0) instanceof PlayerNameFilter);
+  }
+
+  @Test
+  public void gameByTournamentNameShorthand() {
+    GameQueryBuilder builder = new GameQueryBuilder();
+    GameQuery query = builder.buildQuery(db, "tournament:World");
+
+    assertEquals(0, query.gameFilters().size());
+    assertEquals(1, query.entityJoins().size());
+    assertEquals(EntityType.TOURNAMENT, query.entityJoins().get(0).getEntityType());
+  }
+
+  @Test
+  public void gameByWhiteNameShorthand() {
+    GameQueryBuilder builder = new GameQueryBuilder();
+    GameQuery query = builder.buildQuery(db, "white:Carlsen");
+
+    assertEquals(0, query.gameFilters().size());
+    assertEquals(1, query.entityJoins().size());
+    GameEntityJoin<?> join = query.entityJoins().get(0);
+    assertEquals(EntityType.PLAYER, join.getEntityType());
+    assertEquals(GameEntityJoinCondition.WHITE, join.joinCondition());
+  }
+
+  @Test
+  public void gameByPlayerIdStillWorks() {
+    GameQueryBuilder builder = new GameQueryBuilder();
+    GameQuery query = builder.buildQuery(db, "player:42");
+
+    assertEquals(1, query.gameFilters().size());
+    assertTrue(query.gameFilters().get(0) instanceof PlayerFilter);
+    assertEquals(0, query.entityJoins().size());
+  }
+
   // --- AnnotatorQueryBuilder ---
 
   @Test

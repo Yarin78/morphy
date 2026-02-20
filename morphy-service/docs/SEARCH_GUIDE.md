@@ -112,7 +112,7 @@ type:text
 
 These fields work in both search modes:
 
-- **Game Search**: Use dot notation (`player.name:Carlsen`). Games are joined to matching entities. Multiple filters on the same entity type are combined into a single join, so `player.name:Carl player.name:son` matches players whose name contains both substrings, not two different players.
+- **Game Search**: Use dot notation (`player.name:Carlsen`). Games are joined to matching entities. Multiple filters on the same entity type are combined into a single join, so `player.name:Carl player.name:son` matches players whose name contains both substrings, not two different players. You can also use the entity prefix without a field to search by the entity's default field: `player:Carlsen` is equivalent to `player.name:Carlsen`, and `tournament:World` is equivalent to `tournament.name:World`. Numeric values are still treated as entity ID filters.
 - **Entity Search**: Use the field name directly (`name:Carlsen`), without the entity prefix.
 
 ### Player
@@ -134,7 +134,8 @@ player.name:Carlsen,position=white
 **Position aliases**: `white`, `black`, `winner`, `loser` can be used as shorthand for `player` with the corresponding position. These work with all player fields.
 
 ```
-white.name:Carlsen              # same as player.name:Carlsen,position=white
+white:Carlsen                   # same as player.name:Carlsen,position=white
+white.name:Carlsen              # explicit field, same result
 black.firstname:Magnus          # first name of the black player
 winner.lastname:Carlsen         # last name of the winner
 loser:42                        # player ID 42 as loser
@@ -196,7 +197,7 @@ Default field: `name`.
 
 ## Entity ID Filters
 
-For direct lookup by internal database ID. These are mainly used programmatically rather than typed by users.
+For direct lookup by internal database ID. These are mainly used programmatically rather than typed by users. When the value is non-numeric, it is treated as a search on the entity's default field instead (e.g., `player:Carlsen` becomes `player.name:Carlsen`).
 
 ```
 player:123

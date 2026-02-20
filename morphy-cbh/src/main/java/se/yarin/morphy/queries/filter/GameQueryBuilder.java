@@ -60,6 +60,26 @@ public class GameQueryBuilder {
           "team", new TeamQueryBuilder(),
           "gametag", new GameTagQueryBuilder());
 
+  /** Maps entity ID field names (and aliases) to the corresponding entity builder key. */
+  private static final Map<String, String> ENTITY_ID_TO_BUILDER_KEY =
+      Map.ofEntries(
+          Map.entry("player", "player"),
+          Map.entry("playerid", "player"),
+          Map.entry("white", "player"),
+          Map.entry("black", "player"),
+          Map.entry("winner", "player"),
+          Map.entry("loser", "player"),
+          Map.entry("tournament", "tournament"),
+          Map.entry("tournamentid", "tournament"),
+          Map.entry("annotator", "annotator"),
+          Map.entry("annotatorid", "annotator"),
+          Map.entry("source", "source"),
+          Map.entry("sourceid", "source"),
+          Map.entry("team", "team"),
+          Map.entry("teamid", "team"),
+          Map.entry("gametag", "gametag"),
+          Map.entry("gametagid", "gametag"));
+
   private final FilterQueryParser filterQueryParser = new FilterQueryParser("player.name");
 
   /**
@@ -96,7 +116,14 @@ public class GameQueryBuilder {
       if (isGamePropertyFilter(condition)) {
         gameFilters.add(buildGameFilter(condition));
       } else if (isEntityIdFilter(condition)) {
-        gameFilters.add(buildEntityIdFilter(condition));
+        FilterCondition rewritten = rewriteEntityNameShorthand(condition);
+        if (rewritten != null) {
+          // Non-numeric value: treat as entity property filter (e.g., player:Carlsen -> player.name)
+          String entityType = rewritten.field().split("\\.", 2)[0].toLowerCase();
+          entityConditions.computeIfAbsent(entityType, k -> new ArrayList<>()).add(rewritten);
+        } else {
+          gameFilters.add(buildEntityIdFilter(condition));
+        }
       } else if (isEntityPropertyFilter(condition)) {
         String entityType = condition.field().split("\\.", 2)[0].toLowerCase();
         entityConditions.computeIfAbsent(entityType, k -> new ArrayList<>()).add(condition);
@@ -129,6 +156,30 @@ public class GameQueryBuilder {
 
   private boolean isEntityPropertyFilter(@NotNull FilterCondition condition) {
     return condition.field().contains(".");
+  }
+
+  /**
+   * If the condition targets an entity ID field but the value is not numeric, rewrites it as an
+   * entity property condition using the default field. For example, "player:Carlsen" becomes
+   * "player.name:Carlsen". Returns null if the value is numeric (i.e., a real entity ID filter).
+   */
+  private @Nullable FilterCondition rewriteEntityNameShorthand(
+      @NotNull FilterCondition condition) {
+    try {
+      Integer.parseInt(condition.value());
+      return null; // Numeric value: treat as entity ID
+    } catch (NumberFormatException e) {
+      // Non-numeric: rewrite to entity property filter
+    }
+    String field = condition.field().toLowerCase();
+    String builderKey = ENTITY_ID_TO_BUILDER_KEY.get(field);
+    if (builderKey == null) {
+      return null;
+    }
+    String defaultProp = ENTITY_BUILDERS.get(builderKey).defaultField();
+    // Use the original field name (which may be an alias like "white") as the entity prefix
+    return new FilterCondition(
+        field + "." + defaultProp, condition.operator(), condition.value(), condition.modifiers());
   }
 
   /** Returns the default field used when no field name is specified in a filter expression. */
