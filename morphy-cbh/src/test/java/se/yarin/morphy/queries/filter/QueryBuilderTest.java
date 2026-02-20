@@ -169,12 +169,14 @@ public class QueryBuilderTest {
   }
 
   @Test
-  public void gameByWhitePlayerId() {
+  public void gameByWhiteNumericValue() {
     GameQueryBuilder builder = new GameQueryBuilder();
     GameQuery query = builder.buildQuery(db, "white:42");
 
-    assertEquals(1, query.gameFilters().size());
-    assertTrue(query.gameFilters().get(0) instanceof PlayerFilter);
+    // Numeric value is treated as a name search, not an ID lookup
+    assertEquals(0, query.gameFilters().size());
+    assertEquals(1, query.entityJoins().size());
+    assertEquals(GameEntityJoinCondition.WHITE, query.entityJoins().get(0).joinCondition());
   }
 
   @Test
@@ -228,9 +230,9 @@ public class QueryBuilderTest {
   }
 
   @Test
-  public void gameByPlayerIdStillWorks() {
+  public void gameByPlayerIdWithExplicitField() {
     GameQueryBuilder builder = new GameQueryBuilder();
-    GameQuery query = builder.buildQuery(db, "player:42");
+    GameQuery query = builder.buildQuery(db, "playerid:42");
 
     assertEquals(1, query.gameFilters().size());
     assertTrue(query.gameFilters().get(0) instanceof PlayerFilter);

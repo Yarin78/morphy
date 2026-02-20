@@ -33,15 +33,26 @@ public class GameQueryBuilder {
           Map.entry("round", GameQueryBuilder::buildRoundFilter),
           Map.entry("type", GameQueryBuilder::buildTypeFilter));
 
+  /** Fields that require a numeric entity ID and produce a direct game filter. */
   private static final Set<String> ENTITY_ID_FIELDS =
-      Set.of(
-          "playerid", "player",
-          "white", "black", "winner", "loser",
-          "tournamentid", "tournament",
-          "annotatorid", "annotator",
-          "sourceid", "source",
-          "teamid", "team",
-          "gametagid", "gametag");
+      Set.of("playerid", "tournamentid", "annotatorid", "sourceid", "teamid", "gametagid");
+
+  /**
+   * Fields that act as shorthand for entity property filters using the entity's default field. For
+   * example, "player:Carlsen" is rewritten to "player.name:Carlsen".
+   */
+  private static final Map<String, String> ENTITY_SHORTHAND_FIELDS =
+      Map.ofEntries(
+          Map.entry("player", "player"),
+          Map.entry("white", "player"),
+          Map.entry("black", "player"),
+          Map.entry("winner", "player"),
+          Map.entry("loser", "player"),
+          Map.entry("tournament", "tournament"),
+          Map.entry("annotator", "annotator"),
+          Map.entry("source", "source"),
+          Map.entry("team", "team"),
+          Map.entry("gametag", "gametag"));
 
   /** Aliases that map to "player" with a fixed position. */
   private static final Map<String, GameEntityJoinCondition> PLAYER_POSITION_ALIASES =
@@ -59,26 +70,6 @@ public class GameQueryBuilder {
           "source", new SourceQueryBuilder(),
           "team", new TeamQueryBuilder(),
           "gametag", new GameTagQueryBuilder());
-
-  /** Maps entity ID field names (and aliases) to the corresponding entity builder key. */
-  private static final Map<String, String> ENTITY_ID_TO_BUILDER_KEY =
-      Map.ofEntries(
-          Map.entry("player", "player"),
-          Map.entry("playerid", "player"),
-          Map.entry("white", "player"),
-          Map.entry("black", "player"),
-          Map.entry("winner", "player"),
-          Map.entry("loser", "player"),
-          Map.entry("tournament", "tournament"),
-          Map.entry("tournamentid", "tournament"),
-          Map.entry("annotator", "annotator"),
-          Map.entry("annotatorid", "annotator"),
-          Map.entry("source", "source"),
-          Map.entry("sourceid", "source"),
-          Map.entry("team", "team"),
-          Map.entry("teamid", "team"),
-          Map.entry("gametag", "gametag"),
-          Map.entry("gametagid", "gametag"));
 
   private final FilterQueryParser filterQueryParser = new FilterQueryParser("player.name");
 
@@ -115,15 +106,12 @@ public class GameQueryBuilder {
     for (FilterCondition condition : conditions) {
       if (isGamePropertyFilter(condition)) {
         gameFilters.add(buildGameFilter(condition));
-      } else if (isEntityIdFilter(condition)) {
+      } else if (isEntityShorthandFilter(condition)) {
         FilterCondition rewritten = rewriteEntityNameShorthand(condition);
-        if (rewritten != null) {
-          // Non-numeric value: treat as entity property filter (e.g., player:Carlsen -> player.name)
-          String entityType = rewritten.field().split("\\.", 2)[0].toLowerCase();
-          entityConditions.computeIfAbsent(entityType, k -> new ArrayList<>()).add(rewritten);
-        } else {
-          gameFilters.add(buildEntityIdFilter(condition));
-        }
+        String entityType = rewritten.field().split("\\.", 2)[0].toLowerCase();
+        entityConditions.computeIfAbsent(entityType, k -> new ArrayList<>()).add(rewritten);
+      } else if (isEntityIdFilter(condition)) {
+        gameFilters.add(buildEntityIdFilter(condition));
       } else if (isEntityPropertyFilter(condition)) {
         String entityType = condition.field().split("\\.", 2)[0].toLowerCase();
         entityConditions.computeIfAbsent(entityType, k -> new ArrayList<>()).add(condition);
@@ -149,6 +137,11 @@ public class GameQueryBuilder {
     return GAME_FILTERS.containsKey(condition.field().toLowerCase());
   }
 
+  private boolean isEntityShorthandFilter(@NotNull FilterCondition condition) {
+    if (condition.field().contains(".")) return false;
+    return ENTITY_SHORTHAND_FIELDS.containsKey(condition.field().toLowerCase());
+  }
+
   private boolean isEntityIdFilter(@NotNull FilterCondition condition) {
     if (condition.field().contains(".")) return false;
     return ENTITY_ID_FIELDS.contains(condition.field().toLowerCase());
@@ -159,25 +152,14 @@ public class GameQueryBuilder {
   }
 
   /**
-   * If the condition targets an entity ID field but the value is not numeric, rewrites it as an
-   * entity property condition using the default field. For example, "player:Carlsen" becomes
-   * "player.name:Carlsen". Returns null if the value is numeric (i.e., a real entity ID filter).
+   * Rewrites an entity shorthand condition to an entity property condition using the entity's
+   * default field. For example, "player:Carlsen" becomes "player.name:Carlsen".
    */
-  private @Nullable FilterCondition rewriteEntityNameShorthand(
+  private @NotNull FilterCondition rewriteEntityNameShorthand(
       @NotNull FilterCondition condition) {
-    try {
-      Integer.parseInt(condition.value());
-      return null; // Numeric value: treat as entity ID
-    } catch (NumberFormatException e) {
-      // Non-numeric: rewrite to entity property filter
-    }
     String field = condition.field().toLowerCase();
-    String builderKey = ENTITY_ID_TO_BUILDER_KEY.get(field);
-    if (builderKey == null) {
-      return null;
-    }
+    String builderKey = ENTITY_SHORTHAND_FIELDS.get(field);
     String defaultProp = ENTITY_BUILDERS.get(builderKey).defaultField();
-    // Use the original field name (which may be an alias like "white") as the entity prefix
     return new FilterCondition(
         field + "." + defaultProp, condition.operator(), condition.value(), condition.modifiers());
   }
@@ -199,6 +181,7 @@ public class GameQueryBuilder {
   public @NotNull List<String> availableFields() {
     Set<String> fields = new TreeSet<>(GAME_FILTERS.keySet());
     fields.addAll(ENTITY_ID_FIELDS);
+    fields.addAll(ENTITY_SHORTHAND_FIELDS.keySet());
     for (var entry : ENTITY_BUILDERS.entrySet()) {
       for (String prop : entry.getValue().availableFields()) {
         fields.add(entry.getKey() + "." + prop);
@@ -217,6 +200,7 @@ public class GameQueryBuilder {
   private static String availableFieldsSummary() {
     List<String> fields = new ArrayList<>(new TreeSet<>(GAME_FILTERS.keySet()));
     fields.addAll(new TreeSet<>(ENTITY_ID_FIELDS));
+    fields.addAll(new TreeSet<>(ENTITY_SHORTHAND_FIELDS.keySet()));
     for (var entry : new TreeMap<>(ENTITY_BUILDERS).entrySet()) {
       for (String prop : new TreeSet<>(entry.getValue().availableFields())) {
         fields.add(entry.getKey() + "." + prop);
@@ -242,22 +226,18 @@ public class GameQueryBuilder {
     String field = condition.field().toLowerCase();
 
     return switch (field) {
-      case "playerid", "player", "white", "black", "winner", "loser" -> {
-        GameEntityJoinCondition pos = PLAYER_POSITION_ALIASES.get(field);
-        if (pos == null) {
-          String position = condition.modifiers().getOrDefault("position", "any");
-          pos = parsePlayerPosition(position);
-        }
-        yield new PlayerFilter(entityId, pos);
+      case "playerid" -> {
+        String position = condition.modifiers().getOrDefault("position", "any");
+        yield new PlayerFilter(entityId, parsePlayerPosition(position));
       }
-      case "tournamentid", "tournament" -> new TournamentFilter(entityId);
-      case "annotatorid", "annotator" -> new AnnotatorFilter(entityId);
-      case "sourceid", "source" -> new SourceFilter(entityId);
-      case "teamid", "team" -> {
+      case "tournamentid" -> new TournamentFilter(entityId);
+      case "annotatorid" -> new AnnotatorFilter(entityId);
+      case "sourceid" -> new SourceFilter(entityId);
+      case "teamid" -> {
         String position = condition.modifiers().getOrDefault("position", "any");
         yield new TeamFilter(entityId, parseTeamPosition(position));
       }
-      case "gametagid", "gametag" -> new GameTagFilter(entityId);
+      case "gametagid" -> new GameTagFilter(entityId);
       default ->
           throw new IllegalArgumentException("Unknown entity ID filter: " + condition.field());
     };

@@ -559,15 +559,16 @@ class GameSearchRequestConverterTest {
     }
 
     @Test
-    @DisplayName("should parse player filter as alias for playerId")
-    void testQueryLanguagePlayerAlias() {
+    @DisplayName("should parse player shorthand as name search, not ID lookup")
+    void testQueryLanguagePlayerShorthand() {
       GameSearchRequest request = request().filter("player:123").build();
 
       GameQuery query = queryBuilder.buildQuery(database, request);
 
-      assertEquals(1, query.gameFilters().size());
-      assertEquals(
-          new PlayerFilter(123, GameEntityJoinCondition.ANY), query.gameFilters().get(0));
+      // player:123 is rewritten to player.name:123 (name search, not ID lookup)
+      assertEquals(0, query.gameFilters().size());
+      assertEquals(1, query.entityJoins().size());
+      assertEquals(EntityType.PLAYER, query.entityJoins().get(0).getEntityType());
     }
   }
 

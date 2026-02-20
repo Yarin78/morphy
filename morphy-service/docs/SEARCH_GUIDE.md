@@ -197,15 +197,15 @@ Default field: `name`.
 
 ## Entity ID Filters
 
-For direct lookup by internal database ID. These are mainly used programmatically rather than typed by users. When the value is non-numeric, it is treated as a search on the entity's default field instead (e.g., `player:Carlsen` becomes `player.name:Carlsen`).
+For direct lookup by internal database ID. Use the explicit `*id` fields. These are mainly used programmatically rather than typed by users.
 
 ```
-player:123
-tournament:456
-annotator:789
-source:321
-team:654
-gametag:987
+playerid:123
+tournamentid:456
+annotatorid:789
+sourceid:321
+teamid:654
+gametagid:987
 ```
 
-Player and team ID filters also support the `position=` modifier.
+`playerid` and `teamid` also support the `position=` modifier.
