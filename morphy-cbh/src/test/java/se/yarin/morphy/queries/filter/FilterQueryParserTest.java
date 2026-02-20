@@ -179,4 +179,61 @@ public class FilterQueryParserTest {
         new FilterQueryParser().parse("result:1-0 AND AND eco:B90");
     assertEquals(2, result.size());
   }
+
+  // --- Quoted values ---
+
+  @Test
+  public void quotedValueWithSpaces() {
+    List<FilterCondition> result =
+        new FilterQueryParser().parse("player.name:\"Carlsen, Magnus\"");
+    assertEquals(1, result.size());
+    assertEquals("player.name", result.get(0).field());
+    assertEquals("Carlsen, Magnus", result.get(0).value());
+  }
+
+  @Test
+  public void quotedValueWithModifiers() {
+    List<FilterCondition> result =
+        new FilterQueryParser().parse("player.name:\"Carlsen, Magnus\",position=white");
+    assertEquals(1, result.size());
+    assertEquals("Carlsen, Magnus", result.get(0).value());
+    assertEquals("white", result.get(0).modifiers().get("position"));
+  }
+
+  @Test
+  public void quotedValueMixedWithOtherConditions() {
+    List<FilterCondition> result =
+        new FilterQueryParser().parse("player.name:\"Carlsen, Magnus\" result:1-0 date:2024");
+    assertEquals(3, result.size());
+    assertEquals("Carlsen, Magnus", result.get(0).value());
+    assertEquals("1-0", result.get(1).value());
+    assertEquals("2024", result.get(2).value());
+  }
+
+  @Test
+  public void quotedBareTermWithSpaces() {
+    List<FilterCondition> result =
+        new FilterQueryParser("player.name").parse("\"Carlsen, Magnus\"");
+    assertEquals(1, result.size());
+    assertEquals("player.name", result.get(0).field());
+    assertEquals("Carlsen, Magnus", result.get(0).value());
+  }
+
+  @Test
+  public void quotedBareMixedWithStructured() {
+    List<FilterCondition> result =
+        new FilterQueryParser("player.name").parse("\"Carlsen, Magnus\" date:2024");
+    assertEquals(2, result.size());
+    assertEquals("player.name", result.get(0).field());
+    assertEquals("Carlsen, Magnus", result.get(0).value());
+    assertEquals("date", result.get(1).field());
+  }
+
+  @Test
+  public void quotedValueWithRangeOperator() {
+    List<FilterCondition> result =
+        new FilterQueryParser().parse("tournament.name:\"Wijk aan Zee\"");
+    assertEquals(1, result.size());
+    assertEquals("Wijk aan Zee", result.get(0).value());
+  }
 }

@@ -20,10 +20,19 @@ Carlsen                → player.name:Carlsen  (in Game Search)
 Carlsen                → name:Carlsen          (in Player Search)
 ```
 
+**Quoted values** allow spaces and commas inside a value:
+
+```
+player.name:"Carlsen, Magnus"
+tournament.name:"Wijk aan Zee"
+"Carlsen, Magnus" date:2024        # bare quoted term
+```
+
 **Modifiers** are comma-separated `key=value` pairs appended to the value:
 
 ```
 player.name:Carlsen,position=white
+player.name:"Carlsen, Magnus",position=white
 rating:2600..,mode=both
 ```
 

@@ -36,14 +36,15 @@ public class FilterQueryParser {
 
   // Pattern for parsing a single condition token: field:value or field..value
   // with optional modifiers like ,position=white,mode=average
+  // Values can be quoted to include spaces/commas: field:"value with spaces"
   private static final Pattern CONDITION_PATTERN =
       Pattern.compile(
           "^([a-zA-Z][a-zA-Z0-9.]*)"
               + // field name (e.g., "result", "player.name")
               "(:|\\.\\.)"
               + // operator (: or ..)
-              "([^,\\s]+)"
-              + // value (non-comma, non-space characters)
+              "(\"[^\"]*\"|[^,\\s]+)"
+              + // value: quoted string or unquoted (non-comma, non-space)
               "((?:,[a-zA-Z][a-zA-Z0-9]*=[^,\\s]+)*)"
               + // optional modifiers
               "$");
@@ -79,8 +80,7 @@ public class FilterQueryParser {
 
     List<FilterCondition> conditions = new ArrayList<>();
 
-    // Split on whitespace
-    String[] tokens = query.trim().split("\\s+");
+    List<String> tokens = tokenize(query.trim());
 
     for (String token : tokens) {
       // Skip "AND" tokens (case-insensitive) — they are optional noise words
@@ -114,6 +114,7 @@ public class FilterQueryParser {
       String value = matcher.group(3);
       String modifiersStr = matcher.group(4);
 
+      value = stripQuotes(value);
       Map<String, String> modifiers = parseModifiers(modifiersStr);
 
       log.debug(
@@ -135,7 +136,46 @@ public class FilterQueryParser {
     }
 
     log.debug("Bare search term '{}' mapped to default field '{}'", token, defaultField);
-    return new FilterCondition(defaultField, ":", token);
+    return new FilterCondition(defaultField, ":", stripQuotes(token));
+  }
+
+  /**
+   * Splits a query string into tokens, keeping quoted sections (including surrounding context)
+   * together.
+   */
+  private @NotNull List<String> tokenize(@NotNull String query) {
+    List<String> tokens = new ArrayList<>();
+    StringBuilder current = new StringBuilder();
+    boolean inQuotes = false;
+
+    for (int i = 0; i < query.length(); i++) {
+      char c = query.charAt(i);
+      if (c == '"') {
+        inQuotes = !inQuotes;
+        current.append(c);
+      } else if (Character.isWhitespace(c) && !inQuotes) {
+        if (!current.isEmpty()) {
+          tokens.add(current.toString());
+          current.setLength(0);
+        }
+      } else {
+        current.append(c);
+      }
+    }
+
+    if (!current.isEmpty()) {
+      tokens.add(current.toString());
+    }
+
+    return tokens;
+  }
+
+  /** Strips surrounding double quotes from a value, if present. */
+  private static @NotNull String stripQuotes(@NotNull String value) {
+    if (value.length() >= 2 && value.startsWith("\"") && value.endsWith("\"")) {
+      return value.substring(1, value.length() - 1);
+    }
+    return value;
   }
 
   /**
