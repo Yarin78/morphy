@@ -320,6 +320,20 @@
   margin-bottom: 0;
 }
 
+.search-panel .entity-type-select {
+  background: #e8f0fa;
+  border-color: #b8d4ed;
+}
+
+.search-panel .entity-type-select:hover {
+  border-color: #4a90d9;
+}
+
+.search-panel .entity-type-select:focus {
+  border-color: #4a90d9;
+  background: #fff;
+}
+
 .search-panel .search-row .field-filter {
   flex: 1 1 200px;
   min-width: 180px;

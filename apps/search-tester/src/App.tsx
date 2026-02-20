@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { CollapsiblePanel, ShowPanelButton } from './CollapsiblePanel';
 import { QueryPlanVisualiser } from './QueryPlanVisualiser';
 import { ResultsSection } from './ResultsSection';
@@ -205,6 +205,14 @@ function App() {
     if (!valid) setSortBy(options[0]);
   }, [entityType, sortBy]);
 
+  const entityTypeChangedByUser = useRef(false);
+
+  const handleEntityTypeChange = useCallback((newType: EntityType) => {
+    entityTypeChangedByUser.current = true;
+    setEntityType(newType);
+    setFilter('');
+  }, []);
+
   const buildRequest = useCallback(
     (executeAllPlans: boolean): GameSearchRequest => {
       const req: GameSearchRequest = {
@@ -304,6 +312,23 @@ function App() {
     ]
   );
 
+  // When user changes entity type from dropdown: filter is cleared, trigger search
+  useEffect(() => {
+    if (entityTypeChangedByUser.current && selectedDb) {
+      entityTypeChangedByUser.current = false;
+      handleSearch();
+    }
+  }, [entityType, selectedDb, handleSearch]);
+
+  // Trigger empty search on initial page load when database is available
+  const hasRunInitialSearch = useRef(false);
+  useEffect(() => {
+    if (selectedDb && !hasRunInitialSearch.current) {
+      hasRunInitialSearch.current = true;
+      handleSearch();
+    }
+  }, [selectedDb, handleSearch]);
+
   const paginatedData = useMemo(() => {
     if (!result || result.data.length === 0) {
       return { data: [], total: 0, from: 0, to: 0, totalPages: 0, page: 0 };
@@ -360,7 +385,7 @@ function App() {
           selectedDb={selectedDb}
           onDbChange={setSelectedDb}
           entityType={entityType}
-          onEntityTypeChange={setEntityType}
+          onEntityTypeChange={handleEntityTypeChange}
           filter={filter}
           onFilterChange={setFilter}
           loading={loading}

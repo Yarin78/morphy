@@ -221,6 +221,7 @@ export function SearchPanel({
         <div className="field field-entity-type">
           <label>Type</label>
           <select
+            className="entity-type-select"
             value={entityType}
             onChange={(e) => onEntityTypeChange(e.target.value as EntityType)}
           >
