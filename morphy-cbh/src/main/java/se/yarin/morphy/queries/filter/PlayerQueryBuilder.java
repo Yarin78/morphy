@@ -15,7 +15,7 @@ import se.yarin.morphy.entities.filters.PlayerNameFilter;
  * Builds an {@link se.yarin.morphy.queries.EntityQuery} for {@link Player} from a filter expression
  * string.
  *
- * <p>Supported fields: name (with pipe syntax for OR matching).
+ * <p>Supported fields: name, firstname, lastname (name supports pipe syntax for OR matching).
  */
 public class PlayerQueryBuilder extends AbstractEntityQueryBuilder<Player> {
 
@@ -33,7 +33,11 @@ public class PlayerQueryBuilder extends AbstractEntityQueryBuilder<Player> {
                   return new MultiPlayerNameFilter(names, false, false);
                 }
                 return new PlayerNameFilter(value, false, false);
-              }));
+              }),
+          Map.entry(
+              "firstname", c -> new PlayerNameFilter("", c.value(), false, false)),
+          Map.entry(
+              "lastname", c -> new PlayerNameFilter(c.value(), "", false, false)));
 
   public PlayerQueryBuilder() {
     super(EntityType.PLAYER, "player", "name");
