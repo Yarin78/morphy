@@ -36,11 +36,20 @@ public class GameQueryBuilder {
   private static final Set<String> ENTITY_ID_FIELDS =
       Set.of(
           "playerid", "player",
+          "white", "black", "winner", "loser",
           "tournamentid", "tournament",
           "annotatorid", "annotator",
           "sourceid", "source",
           "teamid", "team",
           "gametagid", "gametag");
+
+  /** Aliases that map to "player" with a fixed position. */
+  private static final Map<String, GameEntityJoinCondition> PLAYER_POSITION_ALIASES =
+      Map.of(
+          "white", GameEntityJoinCondition.WHITE,
+          "black", GameEntityJoinCondition.BLACK,
+          "winner", GameEntityJoinCondition.WINNER,
+          "loser", GameEntityJoinCondition.LOSER);
 
   private static final Map<String, AbstractEntityQueryBuilder<?>> ENTITY_BUILDERS =
       Map.of(
@@ -144,6 +153,13 @@ public class GameQueryBuilder {
         fields.add(entry.getKey() + "." + prop);
       }
     }
+    // Add alias sub-fields (e.g., white.name, black.firstname)
+    AbstractEntityQueryBuilder<?> playerBuilder = ENTITY_BUILDERS.get("player");
+    for (String alias : PLAYER_POSITION_ALIASES.keySet()) {
+      for (String prop : playerBuilder.availableFields()) {
+        fields.add(alias + "." + prop);
+      }
+    }
     return List.copyOf(fields);
   }
 
@@ -175,9 +191,13 @@ public class GameQueryBuilder {
     String field = condition.field().toLowerCase();
 
     return switch (field) {
-      case "playerid", "player" -> {
-        String position = condition.modifiers().getOrDefault("position", "any");
-        yield new PlayerFilter(entityId, parsePlayerPosition(position));
+      case "playerid", "player", "white", "black", "winner", "loser" -> {
+        GameEntityJoinCondition pos = PLAYER_POSITION_ALIASES.get(field);
+        if (pos == null) {
+          String position = condition.modifiers().getOrDefault("position", "any");
+          pos = parsePlayerPosition(position);
+        }
+        yield new PlayerFilter(entityId, pos);
       }
       case "tournamentid", "tournament" -> new TournamentFilter(entityId);
       case "annotatorid", "annotator" -> new AnnotatorFilter(entityId);
@@ -201,7 +221,11 @@ public class GameQueryBuilder {
       @NotNull Database database,
       @NotNull String entityType,
       @NotNull List<FilterCondition> conditions) {
-    AbstractEntityQueryBuilder builder = ENTITY_BUILDERS.get(entityType);
+    // Resolve player position aliases (white, black, winner, loser -> player)
+    String resolvedEntityType =
+        PLAYER_POSITION_ALIASES.containsKey(entityType) ? "player" : entityType;
+
+    AbstractEntityQueryBuilder builder = ENTITY_BUILDERS.get(resolvedEntityType);
     if (builder == null) {
       throw new IllegalArgumentException(
           "Unknown entity type: '"
@@ -219,15 +243,23 @@ public class GameQueryBuilder {
                         c.field().split("\\.", 2)[1], c.operator(), c.value(), c.modifiers()))
             .toList();
 
-    GameEntityJoinCondition joinCondition = extractJoinCondition(entityType, conditions);
+    GameEntityJoinCondition joinCondition =
+        extractJoinCondition(entityType, resolvedEntityType, conditions);
 
     EntityQuery entityQuery = builder.buildQuery(database, strippedConditions);
     return new GameEntityJoin<>(entityQuery, joinCondition);
   }
 
   private @Nullable GameEntityJoinCondition extractJoinCondition(
-      @NotNull String entityType, @NotNull List<FilterCondition> conditions) {
-    if (!"player".equals(entityType) && !"team".equals(entityType)) {
+      @NotNull String entityType,
+      @NotNull String resolvedEntityType,
+      @NotNull List<FilterCondition> conditions) {
+    // Check for alias-based position first (e.g., "white" -> WHITE)
+    GameEntityJoinCondition aliasPosition = PLAYER_POSITION_ALIASES.get(entityType);
+    if (aliasPosition != null) {
+      return aliasPosition;
+    }
+    if (!"player".equals(resolvedEntityType) && !"team".equals(resolvedEntityType)) {
       return null;
     }
     GameEntityJoinCondition joinCondition = null;
@@ -235,7 +267,7 @@ public class GameQueryBuilder {
       String position = condition.modifiers().getOrDefault("position", null);
       if (position != null) {
         joinCondition =
-            "player".equals(entityType)
+            "player".equals(resolvedEntityType)
                 ? parsePlayerPosition(position)
                 : parseTeamPosition(position);
       }

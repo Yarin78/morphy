@@ -122,11 +122,22 @@ Default field: `name`.
 | Field | Description |
 |-------|-------------|
 | `player.name` | Case-insensitive name match. Supports `\|` for OR: `Carlsen\|Fischer` |
+| `player.firstname` | Match first name only |
+| `player.lastname` | Match last name only |
 
 **Position modifier** (`position=`): `any` (default), `both`, `white`, `black`, `winner`, `loser`.
 
 ```
 player.name:Carlsen,position=white
+```
+
+**Position aliases**: `white`, `black`, `winner`, `loser` can be used as shorthand for `player` with the corresponding position. These work with all player fields.
+
+```
+white.name:Carlsen              # same as player.name:Carlsen,position=white
+black.firstname:Magnus          # first name of the black player
+winner.lastname:Carlsen         # last name of the winner
+loser:42                        # player ID 42 as loser
 ```
 
 ### Tournament

@@ -6,7 +6,11 @@ import org.junit.Test;
 import se.yarin.morphy.Database;
 import se.yarin.morphy.entities.*;
 import se.yarin.morphy.entities.filters.*;
+import se.yarin.morphy.games.filters.PlayerFilter;
 import se.yarin.morphy.queries.EntityQuery;
+import se.yarin.morphy.queries.GameEntityJoin;
+import se.yarin.morphy.queries.GameEntityJoinCondition;
+import se.yarin.morphy.queries.GameQuery;
 
 public class QueryBuilderTest {
 
@@ -87,6 +91,104 @@ public class QueryBuilderTest {
 
     assertEquals(1, query.filters().size());
     assertTrue(query.filters().get(0) instanceof MultiPlayerNameFilter);
+  }
+
+  @Test
+  public void playerByFirstName() {
+    EntityQuery<Player> query = new PlayerQueryBuilder().buildQuery(db, "firstname:Magnus");
+
+    assertEquals(1, query.filters().size());
+    assertTrue(query.filters().get(0) instanceof PlayerNameFilter);
+    PlayerNameFilter filter = (PlayerNameFilter) query.filters().get(0);
+    assertEquals("magnus", filter.firstName());
+    assertEquals("", filter.lastName());
+  }
+
+  @Test
+  public void playerByLastName() {
+    EntityQuery<Player> query = new PlayerQueryBuilder().buildQuery(db, "lastname:Carlsen");
+
+    assertEquals(1, query.filters().size());
+    assertTrue(query.filters().get(0) instanceof PlayerNameFilter);
+    PlayerNameFilter filter = (PlayerNameFilter) query.filters().get(0);
+    assertEquals("", filter.firstName());
+    assertEquals("carlsen", filter.lastName());
+  }
+
+  @Test
+  public void playerByFirstAndLastName() {
+    EntityQuery<Player> query =
+        new PlayerQueryBuilder().buildQuery(db, "firstname:Magnus lastname:Carlsen");
+
+    assertEquals(2, query.filters().size());
+    assertTrue(query.filters().get(0) instanceof PlayerNameFilter);
+    assertTrue(query.filters().get(1) instanceof PlayerNameFilter);
+  }
+
+  // --- GameQueryBuilder: player position aliases ---
+
+  @Test
+  public void gameByWhitePlayerName() {
+    GameQueryBuilder builder = new GameQueryBuilder();
+    GameQuery query = builder.buildQuery(db, "white.name:Carlsen");
+
+    assertEquals(0, query.gameFilters().size());
+    assertEquals(1, query.entityJoins().size());
+    GameEntityJoin<?> join = query.entityJoins().get(0);
+    assertEquals(EntityType.PLAYER, join.getEntityType());
+    assertEquals(GameEntityJoinCondition.WHITE, join.joinCondition());
+    assertEquals(1, join.entityQuery().filters().size());
+    assertTrue(join.entityQuery().filters().get(0) instanceof PlayerNameFilter);
+  }
+
+  @Test
+  public void gameByBlackPlayerName() {
+    GameQueryBuilder builder = new GameQueryBuilder();
+    GameQuery query = builder.buildQuery(db, "black.name:Carlsen");
+
+    assertEquals(1, query.entityJoins().size());
+    assertEquals(GameEntityJoinCondition.BLACK, query.entityJoins().get(0).joinCondition());
+  }
+
+  @Test
+  public void gameByWinnerName() {
+    GameQueryBuilder builder = new GameQueryBuilder();
+    GameQuery query = builder.buildQuery(db, "winner.name:Carlsen");
+
+    assertEquals(1, query.entityJoins().size());
+    assertEquals(GameEntityJoinCondition.WINNER, query.entityJoins().get(0).joinCondition());
+  }
+
+  @Test
+  public void gameByLoserName() {
+    GameQueryBuilder builder = new GameQueryBuilder();
+    GameQuery query = builder.buildQuery(db, "loser.name:Carlsen");
+
+    assertEquals(1, query.entityJoins().size());
+    assertEquals(GameEntityJoinCondition.LOSER, query.entityJoins().get(0).joinCondition());
+  }
+
+  @Test
+  public void gameByWhitePlayerId() {
+    GameQueryBuilder builder = new GameQueryBuilder();
+    GameQuery query = builder.buildQuery(db, "white:42");
+
+    assertEquals(1, query.gameFilters().size());
+    assertTrue(query.gameFilters().get(0) instanceof PlayerFilter);
+  }
+
+  @Test
+  public void gameByWinnerFirstName() {
+    GameQueryBuilder builder = new GameQueryBuilder();
+    GameQuery query = builder.buildQuery(db, "winner.firstname:Magnus");
+
+    assertEquals(1, query.entityJoins().size());
+    GameEntityJoin<?> join = query.entityJoins().get(0);
+    assertEquals(GameEntityJoinCondition.WINNER, join.joinCondition());
+    assertTrue(join.entityQuery().filters().get(0) instanceof PlayerNameFilter);
+    PlayerNameFilter filter = (PlayerNameFilter) join.entityQuery().filters().get(0);
+    assertEquals("magnus", filter.firstName());
+    assertEquals("", filter.lastName());
   }
 
   // --- AnnotatorQueryBuilder ---
