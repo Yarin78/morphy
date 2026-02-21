@@ -8,8 +8,11 @@ import se.yarin.morphy.entities.EntityType;
 import se.yarin.morphy.entities.Source;
 import se.yarin.morphy.entities.filters.EntityFilter;
 import se.yarin.morphy.entities.filters.SourceDateFilter;
+import se.yarin.morphy.entities.filters.SourcePublicationFilter;
 import se.yarin.morphy.entities.filters.SourcePublisherFilter;
+import se.yarin.morphy.entities.filters.SourceQualityFilter;
 import se.yarin.morphy.entities.filters.SourceTitleFilter;
+import se.yarin.morphy.entities.filters.SourceVersionFilter;
 import se.yarin.morphy.queries.QuerySortField;
 import se.yarin.morphy.queries.QuerySortOrder;
 
@@ -17,7 +20,8 @@ import se.yarin.morphy.queries.QuerySortOrder;
  * Builds an {@link se.yarin.morphy.queries.EntityQuery} for {@link Source} from a filter expression
  * string.
  *
- * <p>Supported fields: title/name, publisher, date (default field: title).
+ * <p>Supported fields: title/name, publisher, date, publication, version, quality (default field:
+ * title).
  */
 public class SourceQueryBuilder extends AbstractEntityQueryBuilder<Source> {
 
@@ -26,7 +30,10 @@ public class SourceQueryBuilder extends AbstractEntityQueryBuilder<Source> {
           Map.entry("title", c -> new SourceTitleFilter(c.value(), false, false)),
           Map.entry("name", c -> new SourceTitleFilter(c.value(), false, false)),
           Map.entry("publisher", c -> new SourcePublisherFilter(c.value(), false, false)),
-          Map.entry("date", SourceQueryBuilder::buildDateFilter));
+          Map.entry("date", SourceQueryBuilder::buildDateFilter),
+          Map.entry("publication", SourceQueryBuilder::buildPublicationFilter),
+          Map.entry("version", SourceQueryBuilder::buildVersionFilter),
+          Map.entry("quality", c -> new SourceQualityFilter(c.value())));
 
   public SourceQueryBuilder() {
     super(EntityType.SOURCE, "source", "title");
@@ -37,6 +44,9 @@ public class SourceQueryBuilder extends AbstractEntityQueryBuilder<Source> {
           "title", QuerySortField.sourceTitle(),
           "publisher", QuerySortField.sourcePublisher(),
           "date", QuerySortField.sourceDate(),
+          "publication", QuerySortField.sourcePublication(),
+          "version", QuerySortField.sourceVersion(),
+          "quality", QuerySortField.sourceQuality(),
           "count", QuerySortField.entityCount());
 
   @Override
@@ -68,5 +78,37 @@ public class SourceQueryBuilder extends AbstractEntityQueryBuilder<Source> {
     }
     PartialDateParser.DateRange range = PartialDateParser.parse(value);
     return new SourceDateFilter(range.from(), range.to());
+  }
+
+  private static @NotNull EntityFilter<Source> buildPublicationFilter(
+      @NotNull FilterCondition condition) {
+    String value = condition.value();
+    if (value.contains("..")) {
+      String[] parts = value.split("\\.\\.", 2);
+      Date from = parts[0].isEmpty() ? Date.unset() : PartialDateParser.parse(parts[0]).from();
+      Date to =
+          parts.length > 1 && !parts[1].isEmpty()
+              ? PartialDateParser.parse(parts[1]).to()
+              : Date.unset();
+      return new SourcePublicationFilter(from, to);
+    }
+    PartialDateParser.DateRange range = PartialDateParser.parse(value);
+    return new SourcePublicationFilter(range.from(), range.to());
+  }
+
+  private static @NotNull EntityFilter<Source> buildVersionFilter(
+      @NotNull FilterCondition condition) {
+    String value = condition.value();
+    if (value.contains("..")) {
+      String[] parts = value.split("\\.\\.", 2);
+      int min = parts[0].isEmpty() ? 0 : Integer.parseInt(parts[0]);
+      int max =
+          parts.length > 1 && !parts[1].isEmpty()
+              ? Integer.parseInt(parts[1])
+              : Integer.MAX_VALUE;
+      return new SourceVersionFilter(min, max);
+    }
+    int version = Integer.parseInt(value);
+    return new SourceVersionFilter(version, version);
   }
 }

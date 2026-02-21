@@ -74,7 +74,7 @@ export const SORTABLE_COLUMN_MAP: Record<EntityType, Record<string, string>> = {
   Players: { id: 'id', lastName: 'name', firstName: 'firstname', gameCount: 'count' },
   Tournaments: { id: 'id', name: 'title', startDate: 'startdate', gameCount: 'count' },
   Annotators: { id: 'id', name: 'name', gameCount: 'count' },
-  Sources: { id: 'id', title: 'title', publisher: 'publisher', date: 'date', gameCount: 'count' },
+  Sources: { id: 'id', title: 'title', publisher: 'publisher', date: 'date', publication: 'publication', version: 'version', quality: 'quality', gameCount: 'count' },
   Teams: { id: 'id', title: 'title', teamNumber: 'number', year: 'year', nation: 'nation', gameCount: 'count' },
   GameTags: {
     id: 'id',

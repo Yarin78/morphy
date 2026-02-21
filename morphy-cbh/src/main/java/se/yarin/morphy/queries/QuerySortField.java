@@ -149,6 +149,24 @@ public class QuerySortField<T extends IdObject> {
         QuerySortOrder.Direction.DESCENDING);
   }
 
+  public static QuerySortField<Source> sourcePublication() {
+    return new QuerySortField<>(
+        Comparator.comparing(o -> o.data().publication()),
+        "publication",
+        true,
+        QuerySortOrder.Direction.DESCENDING);
+  }
+
+  public static QuerySortField<Source> sourceVersion() {
+    return new QuerySortField<>(
+        Comparator.comparingInt(o -> o.data().version()), "version", true);
+  }
+
+  public static QuerySortField<Source> sourceQuality() {
+    return new QuerySortField<>(
+        Comparator.comparing(o -> o.data().quality()), "quality", true);
+  }
+
   public static QuerySortField<Team> teamTitle() {
     return new QuerySortField<>(Comparator.comparing(o -> o.data().title()), "title", true);
   }
