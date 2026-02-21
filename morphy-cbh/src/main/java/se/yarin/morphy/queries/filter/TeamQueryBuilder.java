@@ -39,7 +39,8 @@ public class TeamQueryBuilder extends AbstractEntityQueryBuilder<Team> {
           "number", QuerySortField.teamNumber(),
           "season", QuerySortField.teamSeason(),
           "year", QuerySortField.teamYear(),
-          "nation", QuerySortField.teamNation());
+          "nation", QuerySortField.teamNation(),
+          "count", QuerySortField.entityCount());
 
   @Override
   protected Map<String, Function<FilterCondition, EntityFilter<Team>>> filters() {

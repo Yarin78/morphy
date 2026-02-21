@@ -36,7 +36,8 @@ public class SourceQueryBuilder extends AbstractEntityQueryBuilder<Source> {
       Map.of(
           "title", QuerySortField.sourceTitle(),
           "publisher", QuerySortField.sourcePublisher(),
-          "date", QuerySortField.sourceDate());
+          "date", QuerySortField.sourceDate(),
+          "count", QuerySortField.entityCount());
 
   @Override
   protected Map<String, Function<FilterCondition, EntityFilter<Source>>> filters() {

@@ -44,7 +44,8 @@ public class TournamentQueryBuilder extends AbstractEntityQueryBuilder<Tournamen
           "year", QuerySortField.tournamentYear(),
           "startdate", QuerySortField.tournamentStartDate(),
           "date", QuerySortField.tournamentStartDate(),
-          "place", QuerySortField.tournamentPlace());
+          "place", QuerySortField.tournamentPlace(),
+          "count", QuerySortField.entityCount());
 
   public TournamentQueryBuilder() {
     super(EntityType.TOURNAMENT, "tournament", "name");

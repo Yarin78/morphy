@@ -27,6 +27,14 @@ public class QuerySortField<T extends IdObject> {
         QuerySortOrder.Direction.DESCENDING);
   }
 
+  public static <T extends Entity> QuerySortField<T> entityCount() {
+    return new QuerySortField<>(
+        Comparator.comparingInt(o -> o.data().count()),
+        "count",
+        true,
+        QuerySortOrder.Direction.DESCENDING);
+  }
+
   public static QuerySortField<Game> playedDate() {
     return new QuerySortField<>(
         Comparator.comparing(o -> o.data().playedDate()),

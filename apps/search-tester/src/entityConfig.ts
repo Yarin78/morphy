@@ -38,25 +38,31 @@ export const RATING_MODES = ['any', 'both', 'white', 'black', 'average', 'differ
 
 /** Sort options per entity type (id, name/title, date where applicable). Fallback when API has no sortFields. */
 export const ENTITY_SORT_OPTIONS: Record<Exclude<EntityType, 'Games'>, readonly string[]> = {
-  Players: ['id', 'name', 'firstname'],
-  Tournaments: ['id', 'name', 'date'],
-  Annotators: ['id', 'name'],
-  Sources: ['id', 'name'],
-  Teams: ['id', 'name'],
-  GameTags: ['id', 'name'],
+  Players: ['id', 'name', 'firstname', 'count'],
+  Tournaments: ['id', 'name', 'date', 'count'],
+  Annotators: ['id', 'name', 'count'],
+  Sources: ['id', 'name', 'count'],
+  Teams: ['id', 'name', 'count'],
+  GameTags: ['id', 'name', 'count'],
 };
 
 /**
  * Returns sort options for the entity: from filterOptions.sortFields when present and non-empty,
  * otherwise from SORT_OPTIONS (Games) or ENTITY_SORT_OPTIONS (other entities).
+ * For non-Games entities, "default" is prepended so the UI can use the backend's default index order.
  */
 export function getSortOptions(
   entityType: EntityType,
   filterOptions: FilterOptionsResponse | null
 ): readonly string[] {
-  if (filterOptions?.sortFields?.length) return filterOptions.sortFields;
-  if (entityType === 'Games') return SORT_OPTIONS;
-  return ENTITY_SORT_OPTIONS[entityType] ?? ['id'];
+  if (entityType === 'Games') {
+    return filterOptions?.sortFields?.length ? filterOptions.sortFields : SORT_OPTIONS;
+  }
+  const base =
+    filterOptions?.sortFields?.length
+      ? filterOptions.sortFields
+      : ENTITY_SORT_OPTIONS[entityType] ?? ['id'];
+  return ['default', ...base];
 }
 
 /**
@@ -65,11 +71,11 @@ export function getSortOptions(
  */
 export const SORTABLE_COLUMN_MAP: Record<EntityType, Record<string, string>> = {
   Games: { id: 'id', white: 'whiteElo', black: 'blackElo', date: 'date' },
-  Players: { id: 'id', lastName: 'name', firstName: 'firstname' },
-  Tournaments: { id: 'id', name: 'title', startDate: 'startdate' },
-  Annotators: { id: 'id', name: 'name' },
-  Sources: { id: 'id', title: 'title', publisher: 'publisher', date: 'date' },
-  Teams: { id: 'id', title: 'title', teamNumber: 'number', year: 'year', nation: 'nation' },
+  Players: { id: 'id', lastName: 'name', firstName: 'firstname', gameCount: 'count' },
+  Tournaments: { id: 'id', name: 'title', startDate: 'startdate', gameCount: 'count' },
+  Annotators: { id: 'id', name: 'name', gameCount: 'count' },
+  Sources: { id: 'id', title: 'title', publisher: 'publisher', date: 'date', gameCount: 'count' },
+  Teams: { id: 'id', title: 'title', teamNumber: 'number', year: 'year', nation: 'nation', gameCount: 'count' },
   GameTags: {
     id: 'id',
     englishTitle: 'englishtitle',
@@ -79,6 +85,7 @@ export const SORTABLE_COLUMN_MAP: Record<EntityType, Record<string, string>> = {
     italianTitle: 'italiantitle',
     dutchTitle: 'dutchtitle',
     slovenianTitle: 'sloveniantitle',
+    gameCount: 'count',
   },
 };
 

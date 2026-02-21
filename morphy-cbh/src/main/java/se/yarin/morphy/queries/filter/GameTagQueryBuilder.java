@@ -35,7 +35,8 @@ public class GameTagQueryBuilder extends AbstractEntityQueryBuilder<GameTag> {
           Map.entry("spanishtitle", QuerySortField.gameTagSpanishTitle()),
           Map.entry("italiantitle", QuerySortField.gameTagItalianTitle()),
           Map.entry("dutchtitle", QuerySortField.gameTagDutchTitle()),
-          Map.entry("sloveniantitle", QuerySortField.gameTagSlovenianTitle()));
+          Map.entry("sloveniantitle", QuerySortField.gameTagSlovenianTitle()),
+          Map.entry("count", QuerySortField.entityCount()));
 
   @Override
   protected Map<String, Function<FilterCondition, EntityFilter<GameTag>>> filters() {

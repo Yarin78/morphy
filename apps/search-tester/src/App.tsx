@@ -127,14 +127,19 @@ function App() {
   const [executeAllPlansDefault, setExecuteAllPlansDefault] = useState(false);
   const [filter, setFilter] = useState('');
 
-  const loadSavedSearch = useCallback((saved: SavedSearch) => {
-    setSelectedDb(saved.selectedDb);
-    setEntityType(saved.entityType);
-    setFilter(saved.filter);
-    setSortBy(saved.sortBy ?? 'id');
-    setOrder(saved.order ?? 'asc');
-    setIncludeMoves(saved.includeMoves ?? false);
-  }, []);
+  const loadSavedSearch = useCallback(
+    (saved: SavedSearch) => {
+      setSelectedDb(saved.selectedDb);
+      setEntityType(saved.entityType);
+      setFilter(saved.filter);
+      const defaultForSaved =
+        getSortOptions(saved.entityType, filterOptionsCache[saved.entityType] ?? null)[0];
+      setSortBy(saved.sortBy ?? defaultForSaved);
+      setOrder(saved.order ?? 'asc');
+      setIncludeMoves(saved.includeMoves ?? false);
+    },
+    [filterOptionsCache]
+  );
 
   const saveCurrentSearch = useCallback(() => {
     const name =
@@ -201,7 +206,10 @@ function App() {
     [filterOptionsCache]
   );
 
-  const sortByParam = `${order === 'desc' ? '-' : '+'}${sortBy}`;
+  const sortByParam =
+    entityType !== 'Games' && sortBy === 'default'
+      ? 'default'
+      : `${order === 'desc' ? '-' : '+'}${sortBy}`;
 
   const buildRequest = useCallback(
     (executeAllPlans: boolean): GameSearchRequest => {
@@ -237,7 +245,10 @@ function App() {
 
       const effectiveSortBy = sortOverrides?.sortBy ?? sortBy;
       const effectiveOrder = sortOverrides?.order ?? order;
-      const effectiveSortByParam = `${effectiveOrder === 'desc' ? '-' : '+'}${effectiveSortBy}`;
+      const effectiveSortByParam =
+        entityType !== 'Games' && effectiveSortBy === 'default'
+          ? 'default'
+          : `${effectiveOrder === 'desc' ? '-' : '+'}${effectiveSortBy}`;
 
       const config = ENTITY_CONFIG[entityType];
       const opts = {
