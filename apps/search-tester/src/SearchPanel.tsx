@@ -210,7 +210,7 @@ export function SearchPanel({
             onClick={() => onSearch()}
             disabled={loading}
           >
-            {loading ? 'Searching...' : executeAllPlansDefault ? 'Search (all plans)' : 'Search'}
+            {executeAllPlansDefault ? 'Search (all plans)' : 'Search'}
           </button>
           <button
             type="button"

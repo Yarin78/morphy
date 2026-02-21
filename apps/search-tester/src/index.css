@@ -16,6 +16,12 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+html {
+  /* Always show vertical scrollbar so layout never shifts. */
+  overflow-y: scroll;
+  background: #f5f6f8;
+}
+
 body {
   min-width: 320px;
   min-height: 100vh;

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 
-const ROWS_OPTIONS = [10, 25, 50, 100] as const;
+const ROWS_OPTIONS = [5, 10, 25, 50, 100] as const;
 
 interface RowsPerPageSelectorProps {
   value: number;

@@ -399,6 +399,7 @@ function App() {
           currentPage={currentPage}
           onPageChange={setCurrentPage}
           error={error}
+          loading={loading}
           sortBy={sortBy}
           order={order}
           onColumnSort={handleColumnSort}

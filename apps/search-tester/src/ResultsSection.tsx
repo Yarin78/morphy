@@ -32,6 +32,8 @@ interface ResultsSectionProps {
   currentPage: number;
   onPageChange: (page: number) => void;
   error: string | null;
+  /** True while a search request is in progress. */
+  loading?: boolean;
   /** Current sort field (API name). Used to show sort indicator on the matching column. */
   sortBy?: string;
   /** Current sort direction. */
@@ -50,6 +52,7 @@ export function ResultsSection({
   currentPage,
   onPageChange,
   error,
+  loading,
   sortBy,
   order,
   onColumnSort,
@@ -57,7 +60,11 @@ export function ResultsSection({
   if (!result) {
     return (
       <section className="panel results-panel">
-        <h2>Results</h2>
+        <h2>
+          Results
+          <span className="results-header-actions" aria-hidden="true" />
+        </h2>
+        {loading && <p className="results-loading">Searching…</p>}
         {error && <div className="error">{error}</div>}
       </section>
     );

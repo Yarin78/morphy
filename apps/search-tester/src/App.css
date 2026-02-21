@@ -55,6 +55,10 @@
   justify-content: space-between;
 }
 
+.results-panel h2 {
+  min-height: 32px;
+}
+
 .panel h2 .meta {
   font-weight: 500;
   font-size: 13px;
@@ -294,6 +298,10 @@
   color: #333;
   font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
   font-size: 13px;
+}
+
+.search-panel input::placeholder {
+  color: #aaa;
 }
 
 .search-panel input:focus,
@@ -626,6 +634,12 @@
   font-size: 13px;
 }
 
+.results-panel .results-loading {
+  color: #666;
+  margin: 12px 0;
+  font-size: 13px;
+}
+
 .results-panel .results-table-wrapper {
   overflow-x: auto;
   margin: 0 -24px;
@@ -635,6 +649,7 @@
   width: 100%;
   border-collapse: collapse;
   font-size: 12px;
+  border: 1px solid #e0e0e0;
 }
 
 .results-panel .results-table th,
