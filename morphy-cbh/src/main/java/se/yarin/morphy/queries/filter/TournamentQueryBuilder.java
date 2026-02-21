@@ -19,7 +19,7 @@ import se.yarin.morphy.queries.QuerySortOrder;
 public class TournamentQueryBuilder extends AbstractEntityQueryBuilder<Tournament> {
 
   private static final Map<String, Function<FilterCondition, EntityFilter<Tournament>>> FILTERS =
-      Map.ofEntries(
+      orderedMap(
           Map.entry("name", c -> new TournamentTitleFilter(c.value(), false, false)),
           Map.entry("title", c -> new TournamentTitleFilter(c.value(), false, false)),
           Map.entry("date", TournamentQueryBuilder::buildDateFilter),
@@ -39,13 +39,12 @@ public class TournamentQueryBuilder extends AbstractEntityQueryBuilder<Tournamen
               }));
 
   private static final Map<String, QuerySortField<Tournament>> SORT_FIELDS =
-      Map.of(
-          "title", QuerySortField.tournamentTitle(),
-          "year", QuerySortField.tournamentYear(),
-          "startdate", QuerySortField.tournamentStartDate(),
-          "date", QuerySortField.tournamentStartDate(),
-          "place", QuerySortField.tournamentPlace(),
-          "count", QuerySortField.entityCount());
+      orderedMap(
+          Map.entry("title", QuerySortField.tournamentTitle()),
+          Map.entry("year", QuerySortField.tournamentYear()),
+          Map.entry("startdate", QuerySortField.tournamentStartDate()),
+          Map.entry("date", QuerySortField.tournamentStartDate()),
+          Map.entry("place", QuerySortField.tournamentPlace()));
 
   public TournamentQueryBuilder() {
     super(EntityType.TOURNAMENT, "tournament", "name");

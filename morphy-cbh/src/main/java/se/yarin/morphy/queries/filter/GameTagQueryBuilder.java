@@ -21,7 +21,7 @@ import se.yarin.morphy.queries.QuerySortOrder;
 public class GameTagQueryBuilder extends AbstractEntityQueryBuilder<GameTag> {
 
   private static final Map<String, Function<FilterCondition, EntityFilter<GameTag>>> FILTERS =
-      Map.ofEntries(
+      orderedMap(
           Map.entry("title", c -> new GameTagTitleFilter(c.value(), false, false, true)),
           Map.entry("languages", c -> new GameTagLanguagesFilter(c.value())),
           Map.entry(
@@ -32,7 +32,7 @@ public class GameTagQueryBuilder extends AbstractEntityQueryBuilder<GameTag> {
   }
 
   private static final Map<String, QuerySortField<GameTag>> SORT_FIELDS =
-      Map.ofEntries(
+      orderedMap(
           Map.entry("title", QuerySortField.gameTagTitle()),
           Map.entry("languages", QuerySortField.gameTagLanguages()),
           Map.entry("languagecount", QuerySortField.gameTagLanguageCount()),
@@ -42,8 +42,7 @@ public class GameTagQueryBuilder extends AbstractEntityQueryBuilder<GameTag> {
           Map.entry("spanishtitle", QuerySortField.gameTagSpanishTitle()),
           Map.entry("italiantitle", QuerySortField.gameTagItalianTitle()),
           Map.entry("dutchtitle", QuerySortField.gameTagDutchTitle()),
-          Map.entry("sloveniantitle", QuerySortField.gameTagSlovenianTitle()),
-          Map.entry("count", QuerySortField.entityCount()));
+          Map.entry("sloveniantitle", QuerySortField.gameTagSlovenianTitle()));
 
   @Override
   protected Map<String, Function<FilterCondition, EntityFilter<GameTag>>> filters() {

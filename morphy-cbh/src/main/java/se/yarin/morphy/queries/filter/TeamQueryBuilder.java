@@ -22,7 +22,7 @@ import se.yarin.morphy.queries.QuerySortOrder;
 public class TeamQueryBuilder extends AbstractEntityQueryBuilder<Team> {
 
   private static final Map<String, Function<FilterCondition, EntityFilter<Team>>> FILTERS =
-      Map.ofEntries(
+      orderedMap(
           Map.entry("title", c -> new TeamTitleFilter(c.value(), false, false)),
           Map.entry("name", c -> new TeamTitleFilter(c.value(), false, false)),
           Map.entry("number", TeamQueryBuilder::buildNumberFilter),
@@ -34,13 +34,12 @@ public class TeamQueryBuilder extends AbstractEntityQueryBuilder<Team> {
   }
 
   private static final Map<String, QuerySortField<Team>> SORT_FIELDS =
-      Map.of(
-          "title", QuerySortField.teamTitle(),
-          "number", QuerySortField.teamNumber(),
-          "season", QuerySortField.teamSeason(),
-          "year", QuerySortField.teamYear(),
-          "nation", QuerySortField.teamNation(),
-          "count", QuerySortField.entityCount());
+      orderedMap(
+          Map.entry("title", QuerySortField.teamTitle()),
+          Map.entry("number", QuerySortField.teamNumber()),
+          Map.entry("season", QuerySortField.teamSeason()),
+          Map.entry("year", QuerySortField.teamYear()),
+          Map.entry("nation", QuerySortField.teamNation()));
 
   @Override
   protected Map<String, Function<FilterCondition, EntityFilter<Team>>> filters() {

@@ -3,7 +3,6 @@ package se.yarin.morphy.service.search;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeSet;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -71,10 +70,8 @@ public class FiltersController {
 
   private FilterOptionsResponse entityFilterOptions(String entityType) {
     AbstractEntityQueryBuilder<?> builder = ENTITY_BUILDERS.get(entityType);
-    List<String> fields = List.copyOf(new TreeSet<>(builder.availableFields()));
-    List<String> sortFields = new java.util.ArrayList<>();
-    sortFields.add("id");
-    sortFields.addAll(new TreeSet<>(builder.availableSortFields()));
+    List<String> fields = builder.availableFields();
+    List<String> sortFields = builder.availableSortFields();
     return new FilterOptionsResponse(builder.defaultField(), fields, sortFields);
   }
 }

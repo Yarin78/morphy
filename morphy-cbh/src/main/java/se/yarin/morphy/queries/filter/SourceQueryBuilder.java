@@ -26,7 +26,7 @@ import se.yarin.morphy.queries.QuerySortOrder;
 public class SourceQueryBuilder extends AbstractEntityQueryBuilder<Source> {
 
   private static final Map<String, Function<FilterCondition, EntityFilter<Source>>> FILTERS =
-      Map.ofEntries(
+      orderedMap(
           Map.entry("title", c -> new SourceTitleFilter(c.value(), false, false)),
           Map.entry("publisher", c -> new SourcePublisherFilter(c.value(), false, false)),
           Map.entry("date", SourceQueryBuilder::buildDateFilter),
@@ -39,14 +39,13 @@ public class SourceQueryBuilder extends AbstractEntityQueryBuilder<Source> {
   }
 
   private static final Map<String, QuerySortField<Source>> SORT_FIELDS =
-      Map.of(
-          "title", QuerySortField.sourceTitle(),
-          "publisher", QuerySortField.sourcePublisher(),
-          "date", QuerySortField.sourceDate(),
-          "publication", QuerySortField.sourcePublication(),
-          "version", QuerySortField.sourceVersion(),
-          "quality", QuerySortField.sourceQuality(),
-          "count", QuerySortField.entityCount());
+      orderedMap(
+          Map.entry("title", QuerySortField.sourceTitle()),
+          Map.entry("publisher", QuerySortField.sourcePublisher()),
+          Map.entry("date", QuerySortField.sourceDate()),
+          Map.entry("publication", QuerySortField.sourcePublication()),
+          Map.entry("version", QuerySortField.sourceVersion()),
+          Map.entry("quality", QuerySortField.sourceQuality()));
 
   @Override
   protected Map<String, Function<FilterCondition, EntityFilter<Source>>> filters() {

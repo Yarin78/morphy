@@ -22,7 +22,7 @@ import se.yarin.morphy.queries.QuerySortOrder;
 public class PlayerQueryBuilder extends AbstractEntityQueryBuilder<Player> {
 
   private static final Map<String, Function<FilterCondition, EntityFilter<Player>>> FILTERS =
-      Map.ofEntries(
+      orderedMap(
           Map.entry(
               "name",
               c -> {
@@ -42,11 +42,10 @@ public class PlayerQueryBuilder extends AbstractEntityQueryBuilder<Player> {
               "lastname", c -> new PlayerNameFilter(c.value(), "", false, false)));
 
   private static final Map<String, QuerySortField<Player>> SORT_FIELDS =
-      Map.of(
-          "name", QuerySortField.playerName(),
-          "firstname", QuerySortField.playerFirstName(),
-          "lastname", QuerySortField.playerName(),
-          "count", QuerySortField.entityCount());
+      orderedMap(
+          Map.entry("name", QuerySortField.playerName()),
+          Map.entry("firstname", QuerySortField.playerFirstName()),
+          Map.entry("lastname", QuerySortField.playerName()));
 
   public PlayerQueryBuilder() {
     super(EntityType.PLAYER, "player", "name");

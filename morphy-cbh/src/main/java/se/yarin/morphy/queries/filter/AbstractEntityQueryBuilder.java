@@ -1,17 +1,18 @@
 package se.yarin.morphy.queries.filter;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.TreeSet;
 import java.util.function.Function;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import se.yarin.morphy.Database;
 import se.yarin.morphy.entities.Entity;
 import se.yarin.morphy.entities.EntityType;
+import se.yarin.morphy.entities.filters.EntityCountFilter;
 import se.yarin.morphy.entities.filters.EntityFilter;
+import se.yarin.morphy.entities.filters.EntityIdFilter;
 import se.yarin.morphy.queries.EntityQuery;
 import se.yarin.morphy.queries.QuerySortField;
 import se.yarin.morphy.queries.QuerySortOrder;
@@ -51,8 +52,12 @@ public abstract class AbstractEntityQueryBuilder<T extends Entity> {
 
   protected abstract QuerySortOrder<T> defaultSortOrder();
 
-  public @NotNull Set<String> availableSortFields() {
-    return sortFields().keySet();
+  public @NotNull List<String> availableSortFields() {
+    var fields = new ArrayList<String>();
+    fields.add("id");
+    fields.addAll(sortFields().keySet());
+    fields.add("count");
+    return fields;
   }
 
   public @NotNull QuerySortOrder<T> buildSortOrder(@NotNull String sortSpec) {
@@ -81,14 +86,16 @@ public abstract class AbstractEntityQueryBuilder<T extends Entity> {
       QuerySortField<T> field;
       if (fieldName.equals("id")) {
         field = QuerySortField.id();
+      } else if (fieldName.equals("count")) {
+        field = QuerySortField.entityCount();
       } else {
         field = sortFields().get(fieldName);
         if (field == null) {
           throw new IllegalArgumentException(
               "Unknown sort field: '"
                   + part
-                  + "'. Available fields: id, "
-                  + String.join(", ", new TreeSet<>(sortFields().keySet())));
+                  + "'. Available fields: "
+                  + String.join(", ", availableSortFields()));
         }
       }
       fields.add(field);
@@ -120,13 +127,24 @@ public abstract class AbstractEntityQueryBuilder<T extends Entity> {
     return new EntityQuery<>(database, entityType, List.copyOf(filters));
   }
 
-  /** Returns the set of field names supported by this entity query builder. */
-  public @NotNull Set<String> availableFields() {
-    return filters().keySet();
+  /** Returns the field names supported by this entity query builder, in display order. */
+  public @NotNull List<String> availableFields() {
+    var fields = new ArrayList<String>();
+    fields.add("id");
+    fields.addAll(filters().keySet());
+    fields.add("count");
+    return fields;
   }
 
   private @NotNull EntityFilter<T> buildFilter(@NotNull FilterCondition condition) {
-    var builder = filters().get(condition.field().toLowerCase());
+    String field = condition.field().toLowerCase();
+    if (field.equals("id")) {
+      return buildIdFilter(condition);
+    }
+    if (field.equals("count")) {
+      return buildCountFilter(condition);
+    }
+    var builder = filters().get(field);
     if (builder == null) {
       throw new IllegalArgumentException(
           "Unknown "
@@ -134,8 +152,47 @@ public abstract class AbstractEntityQueryBuilder<T extends Entity> {
               + " filter field: '"
               + condition.field()
               + "'. Available fields: "
-              + String.join(", ", new TreeSet<>(filters().keySet())));
+              + String.join(", ", availableFields()));
     }
     return builder.apply(condition);
+  }
+
+  private @NotNull EntityFilter<T> buildIdFilter(@NotNull FilterCondition condition) {
+    String value = condition.value();
+    if (value.contains("..")) {
+      String[] parts = value.split("\\.\\.", 2);
+      int min = parts[0].isEmpty() ? 0 : Integer.parseInt(parts[0]);
+      int max =
+          parts.length > 1 && !parts[1].isEmpty()
+              ? Integer.parseInt(parts[1])
+              : Integer.MAX_VALUE;
+      return new EntityIdFilter<>(entityType, min, max);
+    }
+    int id = Integer.parseInt(value);
+    return new EntityIdFilter<>(entityType, id, id);
+  }
+
+  private @NotNull EntityFilter<T> buildCountFilter(@NotNull FilterCondition condition) {
+    String value = condition.value();
+    if (value.contains("..")) {
+      String[] parts = value.split("\\.\\.", 2);
+      int min = parts[0].isEmpty() ? 0 : Integer.parseInt(parts[0]);
+      int max =
+          parts.length > 1 && !parts[1].isEmpty()
+              ? Integer.parseInt(parts[1])
+              : Integer.MAX_VALUE;
+      return new EntityCountFilter<>(entityType, min, max);
+    }
+    int count = Integer.parseInt(value);
+    return new EntityCountFilter<>(entityType, count, count);
+  }
+
+  @SafeVarargs
+  protected static <V> Map<String, V> orderedMap(Map.Entry<String, V>... entries) {
+    var map = new LinkedHashMap<String, V>();
+    for (var entry : entries) {
+      map.put(entry.getKey(), entry.getValue());
+    }
+    return map;
   }
 }

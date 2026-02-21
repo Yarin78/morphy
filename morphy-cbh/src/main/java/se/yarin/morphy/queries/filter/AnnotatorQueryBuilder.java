@@ -18,7 +18,7 @@ import se.yarin.morphy.queries.QuerySortOrder;
 public class AnnotatorQueryBuilder extends AbstractEntityQueryBuilder<Annotator> {
 
   private static final Map<String, Function<FilterCondition, EntityFilter<Annotator>>> FILTERS =
-      Map.ofEntries(
+      orderedMap(
           Map.entry("name", c -> new AnnotatorNameFilter(c.value(), false, false)));
 
   public AnnotatorQueryBuilder() {
@@ -26,7 +26,7 @@ public class AnnotatorQueryBuilder extends AbstractEntityQueryBuilder<Annotator>
   }
 
   private static final Map<String, QuerySortField<Annotator>> SORT_FIELDS =
-      Map.of("name", QuerySortField.annotatorName(), "count", QuerySortField.entityCount());
+      orderedMap(Map.entry("name", QuerySortField.annotatorName()));
 
   @Override
   protected Map<String, Function<FilterCondition, EntityFilter<Annotator>>> filters() {
