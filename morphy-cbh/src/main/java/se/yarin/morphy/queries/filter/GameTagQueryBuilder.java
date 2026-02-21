@@ -29,6 +29,9 @@ public class GameTagQueryBuilder extends AbstractEntityQueryBuilder<GameTag> {
   private static final Map<String, QuerySortField<GameTag>> SORT_FIELDS =
       Map.ofEntries(
           Map.entry("name", QuerySortField.gameTagEnglishTitle()),
+          Map.entry("title", QuerySortField.gameTagTitle()),
+          Map.entry("languages", QuerySortField.gameTagLanguages()),
+          Map.entry("languagecount", QuerySortField.gameTagLanguageCount()),
           Map.entry("englishtitle", QuerySortField.gameTagEnglishTitle()),
           Map.entry("germantitle", QuerySortField.gameTagGermanTitle()),
           Map.entry("frenchtitle", QuerySortField.gameTagFrenchTitle()),

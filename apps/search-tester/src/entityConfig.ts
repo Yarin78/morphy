@@ -78,13 +78,9 @@ export const SORTABLE_COLUMN_MAP: Record<EntityType, Record<string, string>> = {
   Teams: { id: 'id', title: 'title', teamNumber: 'number', year: 'year', nation: 'nation', gameCount: 'count' },
   GameTags: {
     id: 'id',
-    englishTitle: 'englishtitle',
-    germanTitle: 'germantitle',
-    frenchTitle: 'frenchtitle',
-    spanishTitle: 'spanishtitle',
-    italianTitle: 'italiantitle',
-    dutchTitle: 'dutchtitle',
-    slovenianTitle: 'sloveniantitle',
+    title: 'title',
+    languages: 'languages',
+    languageCount: 'languagecount',
     gameCount: 'count',
   },
 };

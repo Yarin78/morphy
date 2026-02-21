@@ -273,14 +273,9 @@ export const TEAM_COLUMNS: Column<TeamDto>[] = [
 
 export const GAMETAG_COLUMNS: Column<GameTagDto>[] = [
   { key: 'id', label: 'ID', render: (g) => formatValue(g.id) },
-  { key: 'englishTitle', label: 'English', render: (g) => formatValue(g.englishTitle) },
-  { key: 'germanTitle', label: 'German', render: (g) => formatValue(g.germanTitle) },
-  { key: 'frenchTitle', label: 'French', render: (g) => formatValue(g.frenchTitle) },
-  { key: 'spanishTitle', label: 'Spanish', render: (g) => formatValue(g.spanishTitle) },
-  { key: 'italianTitle', label: 'Italian', render: (g) => formatValue(g.italianTitle) },
-  { key: 'dutchTitle', label: 'Dutch', render: (g) => formatValue(g.dutchTitle) },
-  { key: 'slovenianTitle', label: 'Slovenian', render: (g) => formatValue(g.slovenianTitle) },
-  { key: 'resTitle', label: 'Res Title', render: (g) => formatValue(g.resTitle) },
+  { key: 'title', label: 'Title', render: (g) => formatValue(g.title) },
+  { key: 'languages', label: 'Languages', render: (g) => formatValue(g.languages) },
+  { key: 'languageCount', label: 'Lang Count', render: (g) => formatValue(g.languageCount) },
   { key: 'gameCount', label: 'Game Count', render: (g) => formatValue(g.gameCount) },
 ];
 

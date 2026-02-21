@@ -52,6 +52,45 @@ public abstract class GameTag extends Entity implements Comparable<GameTag> {
   }
   ;
 
+  /** Returns a space-separated list of ISO 639-2 three-letter codes for languages that have a title set. */
+  public String languages() {
+    var sb = new StringBuilder();
+    if (!englishTitle().isEmpty()) sb.append("ENG");
+    if (!germanTitle().isEmpty()) { if (!sb.isEmpty()) sb.append(' '); sb.append("GER"); }
+    if (!frenchTitle().isEmpty()) { if (!sb.isEmpty()) sb.append(' '); sb.append("FRE"); }
+    if (!spanishTitle().isEmpty()) { if (!sb.isEmpty()) sb.append(' '); sb.append("SPA"); }
+    if (!italianTitle().isEmpty()) { if (!sb.isEmpty()) sb.append(' '); sb.append("ITA"); }
+    if (!dutchTitle().isEmpty()) { if (!sb.isEmpty()) sb.append(' '); sb.append("DUT"); }
+    if (!slovenianTitle().isEmpty()) { if (!sb.isEmpty()) sb.append(' '); sb.append("SLV"); }
+    return sb.toString();
+  }
+
+  /** Returns the number of languages that have a title set. */
+  public int languageCount() {
+    int count = 0;
+    if (!englishTitle().isEmpty()) count++;
+    if (!germanTitle().isEmpty()) count++;
+    if (!frenchTitle().isEmpty()) count++;
+    if (!spanishTitle().isEmpty()) count++;
+    if (!italianTitle().isEmpty()) count++;
+    if (!dutchTitle().isEmpty()) count++;
+    if (!slovenianTitle().isEmpty()) count++;
+    return count;
+  }
+
+  /** Returns the first non-empty language-specific title, or empty string if all are empty. */
+  public String title() {
+    if (!englishTitle().isEmpty()) return englishTitle();
+    if (!germanTitle().isEmpty()) return germanTitle();
+    if (!frenchTitle().isEmpty()) return frenchTitle();
+    if (!spanishTitle().isEmpty()) return spanishTitle();
+    if (!italianTitle().isEmpty()) return italianTitle();
+    if (!dutchTitle().isEmpty()) return dutchTitle();
+    if (!slovenianTitle().isEmpty()) return slovenianTitle();
+    if (!resTitle().isEmpty()) return resTitle();
+    return "";
+  }
+
   @Override
   public Entity withCountAndFirstGameId(int count, int firstGameId) {
     return ImmutableGameTag.builder().from(this).count(count).firstGameId(firstGameId).build();

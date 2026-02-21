@@ -13,6 +13,9 @@ import org.jetbrains.annotations.Nullable;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonPropertyOrder({
   "id",
+  "title",
+  "languages",
+  "languageCount",
   "englishTitle",
   "germanTitle",
   "frenchTitle",
@@ -25,6 +28,9 @@ import org.jetbrains.annotations.Nullable;
 })
 public record GameTagDto(
     Long id,
+    @Nullable String title,
+    @Nullable String languages,
+    @Nullable Integer languageCount,
     @Nullable String englishTitle,
     @Nullable String germanTitle,
     @Nullable String frenchTitle,

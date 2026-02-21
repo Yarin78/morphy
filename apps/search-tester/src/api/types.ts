@@ -238,6 +238,9 @@ export interface TeamListResponse {
 
 export interface GameTagDto {
   id: number;
+  title?: string;
+  languages?: string;
+  languageCount?: number;
   englishTitle?: string;
   germanTitle?: string;
   frenchTitle?: string;

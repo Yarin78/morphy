@@ -18,6 +18,9 @@ public class GameTagDtoConverter {
   public GameTagDto toDto(@NotNull GameTag gameTag) {
     return new GameTagDto(
         (long) gameTag.id(),
+        gameTag.title().isEmpty() ? null : gameTag.title(),
+        gameTag.languages().isEmpty() ? null : gameTag.languages(),
+        gameTag.languageCount(),
         gameTag.englishTitle().isEmpty() ? null : gameTag.englishTitle(),
         gameTag.germanTitle().isEmpty() ? null : gameTag.germanTitle(),
         gameTag.frenchTitle().isEmpty() ? null : gameTag.frenchTitle(),

@@ -80,6 +80,24 @@ public class QuerySortField<T extends IdObject> {
     return new QuerySortField<>(Comparator.comparing(o -> o.data().name()), "name", true);
   }
 
+  public static QuerySortField<GameTag> gameTagTitle() {
+    return new QuerySortField<>(
+        Comparator.comparing(o -> o.data().title()), "title", true);
+  }
+
+  public static QuerySortField<GameTag> gameTagLanguages() {
+    return new QuerySortField<>(
+        Comparator.comparing(o -> o.data().languages()), "languages", true);
+  }
+
+  public static QuerySortField<GameTag> gameTagLanguageCount() {
+    return new QuerySortField<>(
+        Comparator.comparingInt(o -> o.data().languageCount()),
+        "languageCount",
+        true,
+        QuerySortOrder.Direction.DESCENDING);
+  }
+
   public static QuerySortField<GameTag> gameTagEnglishTitle() {
     return new QuerySortField<>(
         Comparator.comparing(o -> o.data().englishTitle()), "englishTitle", true);
