@@ -11,7 +11,7 @@ import type {
 } from './api/types';
 import type { EntityType } from './entityConfig';
 import type { SavedSearch } from './savedSearchTypes';
-import { ENTITY_CONFIG, ENTITY_SORT_OPTIONS, SORT_OPTIONS } from './entityConfig';
+import { ENTITY_CONFIG, getSortOptions, SORTABLE_COLUMN_MAP } from './entityConfig';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import './App.css';
 
@@ -69,7 +69,6 @@ function App() {
   const [databases, setDatabases] = useState<Awaited<ReturnType<typeof fetchDatabases>>['databases']>([]);
   const [selectedDb, setSelectedDb] = useState('');
   const [entityType, setEntityType] = useState<EntityType>('Games');
-  const [showOptions, setShowOptions] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<SearchResult | null>(null);
@@ -120,8 +119,6 @@ function App() {
   }, []);
 
   // Form state
-  const [offset, setOffset] = useState(0);
-  const [limit, setLimit] = useState(100);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(0);
   const [sortBy, setSortBy] = useState('id');
@@ -129,30 +126,14 @@ function App() {
   const [includeMoves, setIncludeMoves] = useState(false);
   const [executeAllPlansDefault, setExecuteAllPlansDefault] = useState(false);
   const [filter, setFilter] = useState('');
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
-  const [ecoCode, setEcoCode] = useState('');
-  const [ratingMin, setRatingMin] = useState('');
-  const [ratingMax, setRatingMax] = useState('');
-  const [ratingMode, setRatingMode] = useState('any');
-  const [resultFilter, setResultFilter] = useState('');
 
   const loadSavedSearch = useCallback((saved: SavedSearch) => {
     setSelectedDb(saved.selectedDb);
     setEntityType(saved.entityType);
     setFilter(saved.filter);
-    setOffset(saved.offset);
-    setLimit(saved.limit);
-    setSortBy(saved.sortBy);
-    setOrder(saved.order);
-    setResultFilter(saved.resultFilter);
-    setDateFrom(saved.dateFrom);
-    setDateTo(saved.dateTo);
-    setEcoCode(saved.ecoCode);
-    setRatingMin(saved.ratingMin);
-    setRatingMax(saved.ratingMax);
-    setRatingMode(saved.ratingMode);
-    setIncludeMoves(saved.includeMoves);
+    setSortBy(saved.sortBy ?? 'id');
+    setOrder(saved.order ?? 'asc');
+    setIncludeMoves(saved.includeMoves ?? false);
   }, []);
 
   const saveCurrentSearch = useCallback(() => {
@@ -166,17 +147,8 @@ function App() {
       entityType,
       selectedDb,
       filter,
-      offset,
-      limit,
       sortBy,
       order,
-      resultFilter,
-      dateFrom,
-      dateTo,
-      ecoCode,
-      ratingMin,
-      ratingMax,
-      ratingMode,
       includeMoves,
     };
     setSavedSearches((prev) => {
@@ -184,24 +156,7 @@ function App() {
       persistSavedSearches(next);
       return next;
     });
-  }, [
-    entityType,
-    selectedDb,
-    filter,
-    offset,
-    limit,
-    sortBy,
-    order,
-    resultFilter,
-    dateFrom,
-    dateTo,
-    ecoCode,
-    ratingMin,
-    ratingMax,
-    ratingMode,
-    includeMoves,
-  ]
-  );
+  }, [entityType, selectedDb, filter, sortBy, order, includeMoves]);
 
   const removeSavedSearch = useCallback((id: string) => {
     setSavedSearches((prev) => {
@@ -222,61 +177,51 @@ function App() {
       .catch((err: Error) => setError(err.message));
   }, []);
 
-  // Reset sortBy when entity type changes so it stays valid for the new entity
+  // Reset sortBy when entity type or filter options change so it stays valid
+  const sortOptions = getSortOptions(entityType, filterOptionsCache[entityType] ?? null);
   useEffect(() => {
-    const options =
-      entityType === 'Games' ? SORT_OPTIONS : ENTITY_SORT_OPTIONS[entityType];
-    const valid = options.includes(sortBy);
-    if (!valid) setSortBy(options[0]);
-  }, [entityType, sortBy]);
+    const valid = sortOptions.includes(sortBy);
+    if (!valid) setSortBy(sortOptions[0]);
+  }, [entityType, sortBy, sortOptions]);
 
   const entityTypeChangedByUser = useRef(false);
 
-  const handleEntityTypeChange = useCallback((newType: EntityType) => {
-    entityTypeChangedByUser.current = true;
-    setEntityType(newType);
-    setFilter('');
-  }, []);
+  const handleEntityTypeChange = useCallback(
+    (newType: EntityType) => {
+      entityTypeChangedByUser.current = true;
+      setEntityType(newType);
+      setFilter('');
+      const defaultSortOptions = getSortOptions(
+        newType,
+        filterOptionsCache[newType] ?? null
+      );
+      setSortBy(defaultSortOptions[0]);
+      setOrder('asc');
+    },
+    [filterOptionsCache]
+  );
+
+  const sortByParam = `${order === 'desc' ? '-' : '+'}${sortBy}`;
 
   const buildRequest = useCallback(
     (executeAllPlans: boolean): GameSearchRequest => {
       const req: GameSearchRequest = {
-        offset,
-        limit,
-        sortBy,
-        order,
+        sortBy: sortByParam,
         includeMoves,
         debugQueryPlans: true,
       };
       if (filter.trim()) req.filter = filter.trim();
-      if (resultFilter) req.result = resultFilter;
-      if (dateFrom) req.dateFrom = dateFrom;
-      if (dateTo) req.dateTo = dateTo;
-      if (ecoCode) req.ecoCode = ecoCode;
-      if (ratingMin) req.ratingMin = parseInt(ratingMin, 10);
-      if (ratingMax) req.ratingMax = parseInt(ratingMax, 10);
-      if (ratingMode) req.ratingMode = ratingMode;
       if (executeAllPlans) req.debugExecuteAllPlans = true;
       return req;
     },
-    [
-    offset,
-    limit,
-    sortBy,
-    order,
-    includeMoves,
-    filter,
-    resultFilter,
-    dateFrom,
-    dateTo,
-    ecoCode,
-    ratingMin,
-    ratingMax,
-    ratingMode,
-  ]);
+    [sortByParam, includeMoves, filter]
+  );
 
   const handleSearch = useCallback(
-    async (executeAllPlans?: boolean) => {
+    async (
+      executeAllPlans?: boolean,
+      sortOverrides?: { sortBy: string; order: 'asc' | 'desc' }
+    ) => {
       if (!selectedDb) {
         setError('Select a database first');
         return;
@@ -290,18 +235,24 @@ function App() {
       setResult(null);
       setCurrentPage(0);
 
+      const effectiveSortBy = sortOverrides?.sortBy ?? sortBy;
+      const effectiveOrder = sortOverrides?.order ?? order;
+      const effectiveSortByParam = `${effectiveOrder === 'desc' ? '-' : '+'}${effectiveSortBy}`;
+
       const config = ENTITY_CONFIG[entityType];
       const opts = {
-        limit,
-        gameRequest: entityType === 'Games' ? buildRequest(effective) : undefined,
+        gameRequest:
+          entityType === 'Games'
+            ? {
+                ...buildRequest(effective),
+                sortBy: effectiveSortByParam,
+              }
+            : undefined,
         entitySearchRequest:
           entityType !== 'Games'
             ? {
                 filter: filter.trim() || undefined,
-                offset,
-                limit,
-                sortBy: sortBy || 'id',
-                order,
+                sortBy: effectiveSortByParam,
                 debugQueryPlans: true,
                 debugExecuteAllPlans: effective,
               }
@@ -324,17 +275,7 @@ function App() {
         setLoading(false);
       }
     },
-    [
-      selectedDb,
-      entityType,
-      limit,
-      offset,
-      filter,
-      sortBy,
-      order,
-      buildRequest,
-      executeAllPlansDefault,
-    ]
+    [selectedDb, entityType, filter, sortByParam, buildRequest, executeAllPlansDefault]
   );
 
   // When user changes entity type from dropdown: filter is cleared, trigger search
@@ -372,6 +313,22 @@ function App() {
     setCurrentPage(0);
   }, []);
 
+  const handleColumnSort = useCallback(
+    (columnKey: string) => {
+      const map = SORTABLE_COLUMN_MAP[entityType];
+      const sortField = map?.[columnKey];
+      if (!sortField) return;
+      const isCurrentSort = sortBy === sortField;
+      const newOrder = isCurrentSort
+        ? (order === 'asc' ? 'desc' : 'asc')
+        : 'asc';
+      if (!isCurrentSort) setSortBy(sortField);
+      setOrder(newOrder);
+      handleSearch(undefined, { sortBy: sortField, order: newOrder });
+    },
+    [entityType, sortBy, order, handleSearch]
+  );
+
   const hasQueryPlan = Boolean(
     result?.debugInfo &&
       Array.isArray((result.debugInfo as { plans?: unknown[] }).plans) &&
@@ -384,10 +341,7 @@ function App() {
       : JSON.stringify(
           {
             filter: filter.trim() || undefined,
-            offset,
-            limit,
-            sortBy: sortBy || 'id',
-            order,
+            sortBy: sortByParam,
             debugQueryPlans: true,
             debugExecuteAllPlans: executeAllPlansDefault,
           },
@@ -415,34 +369,10 @@ function App() {
           onFilterChange={setFilter}
           filterOptions={filterOptionsCache[entityType] ?? null}
           loading={loading}
-          showOptions={showOptions}
-          onShowOptionsChange={setShowOptions}
           savedSearches={savedSearches}
           onLoadSavedSearch={loadSavedSearch}
           onSaveSearch={saveCurrentSearch}
           onRemoveSavedSearch={removeSavedSearch}
-          offset={offset}
-          onOffsetChange={setOffset}
-          limit={limit}
-          onLimitChange={setLimit}
-          sortBy={sortBy}
-          onSortByChange={setSortBy}
-          order={order}
-          onOrderChange={setOrder}
-          result={resultFilter}
-          onResultChange={setResultFilter}
-          dateFrom={dateFrom}
-          onDateFromChange={setDateFrom}
-          dateTo={dateTo}
-          onDateToChange={setDateTo}
-          ecoCode={ecoCode}
-          onEcoCodeChange={setEcoCode}
-          ratingMin={ratingMin}
-          onRatingMinChange={setRatingMin}
-          ratingMax={ratingMax}
-          onRatingMaxChange={setRatingMax}
-          ratingMode={ratingMode}
-          onRatingModeChange={setRatingMode}
           includeMoves={includeMoves}
           onIncludeMovesChange={setIncludeMoves}
           executeAllPlansDefault={executeAllPlansDefault}
@@ -469,6 +399,9 @@ function App() {
           currentPage={currentPage}
           onPageChange={setCurrentPage}
           error={error}
+          sortBy={sortBy}
+          order={order}
+          onColumnSort={handleColumnSort}
         />
 
         {showQueryPlan && hasQueryPlan && (

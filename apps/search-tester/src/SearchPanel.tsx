@@ -2,13 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { DatabaseResponse, FilterOptionsResponse } from './api/types';
 import type { EntityType } from './entityConfig';
 import type { SavedSearch } from './savedSearchTypes';
-import {
-  ENTITY_SORT_OPTIONS,
-  ENTITY_TYPES,
-  ORDER_OPTIONS,
-  RATING_MODES,
-  SORT_OPTIONS,
-} from './entityConfig';
+import { ENTITY_TYPES } from './entityConfig';
 
 interface SearchPanelProps {
   databases: DatabaseResponse[];
@@ -20,35 +14,10 @@ interface SearchPanelProps {
   onFilterChange: (v: string) => void;
   filterOptions: FilterOptionsResponse | null;
   loading: boolean;
-  showOptions: boolean;
-  onShowOptionsChange: (v: boolean) => void;
   savedSearches: SavedSearch[];
   onLoadSavedSearch: (saved: SavedSearch) => void;
   onSaveSearch: () => void;
   onRemoveSavedSearch: (id: string) => void;
-  // Options panel state
-  offset: number;
-  onOffsetChange: (v: number) => void;
-  limit: number;
-  onLimitChange: (v: number) => void;
-  sortBy: string;
-  onSortByChange: (v: string) => void;
-  order: 'asc' | 'desc';
-  onOrderChange: (v: 'asc' | 'desc') => void;
-  result: string;
-  onResultChange: (v: string) => void;
-  dateFrom: string;
-  onDateFromChange: (v: string) => void;
-  dateTo: string;
-  onDateToChange: (v: string) => void;
-  ecoCode: string;
-  onEcoCodeChange: (v: string) => void;
-  ratingMin: string;
-  onRatingMinChange: (v: string) => void;
-  ratingMax: string;
-  onRatingMaxChange: (v: string) => void;
-  ratingMode: string;
-  onRatingModeChange: (v: string) => void;
   includeMoves: boolean;
   onIncludeMovesChange: (v: boolean) => void;
   executeAllPlansDefault: boolean;
@@ -73,11 +42,6 @@ function getFilterPlaceholder(entityType: EntityType): string {
   }
 }
 
-function getSortOptions(entityType: EntityType): readonly string[] {
-  if (entityType === 'Games') return SORT_OPTIONS;
-  return ENTITY_SORT_OPTIONS[entityType] ?? ['id'];
-}
-
 export function SearchPanel({
   databases,
   selectedDb,
@@ -88,34 +52,10 @@ export function SearchPanel({
   onFilterChange,
   filterOptions,
   loading,
-  showOptions,
-  onShowOptionsChange,
   savedSearches,
   onLoadSavedSearch,
   onSaveSearch,
   onRemoveSavedSearch,
-  offset,
-  onOffsetChange,
-  limit,
-  onLimitChange,
-  sortBy,
-  onSortByChange,
-  order,
-  onOrderChange,
-  result,
-  onResultChange,
-  dateFrom,
-  onDateFromChange,
-  dateTo,
-  onDateToChange,
-  ecoCode,
-  onEcoCodeChange,
-  ratingMin,
-  onRatingMinChange,
-  ratingMax,
-  onRatingMaxChange,
-  ratingMode,
-  onRatingModeChange,
   includeMoves,
   onIncludeMovesChange,
   executeAllPlansDefault,
@@ -251,6 +191,18 @@ export function SearchPanel({
               Fields: {filterOptions.fields.join(', ')}
             </p>
           )}
+          {entityType === 'Games' && (
+          <div className="field checkbox-field checkbox-inline">
+            <label>
+              <input
+                type="checkbox"
+                checked={includeMoves}
+                onChange={(e) => onIncludeMovesChange(e.target.checked)}
+              />
+              Include moves
+            </label>
+          </div>
+          )}
         </div>
         <div className="search-btn-split" ref={searchDropdownRef}>
           <button
@@ -304,139 +256,6 @@ export function SearchPanel({
           Save
         </button>
       </div>
-
-      <div className="options-toggle">
-        <button
-          type="button"
-          className="options-toggle-btn"
-          onClick={() => onShowOptionsChange(!showOptions)}
-          aria-expanded={showOptions}
-        >
-          {showOptions ? '−' : '+'} Optional parameters
-        </button>
-      </div>
-
-      {showOptions && (
-        <div className="options-panel">
-          <div className="row">
-            <div className="field">
-              <label>Offset</label>
-              <input
-                type="number"
-                min={0}
-                value={offset}
-                onChange={(e) => onOffsetChange(parseInt(e.target.value, 10) || 0)}
-              />
-            </div>
-            <div className="field">
-              <label>Limit</label>
-              <input
-                type="number"
-                min={1}
-                max={1000}
-                value={limit}
-                onChange={(e) => onLimitChange(parseInt(e.target.value, 10) || 100)}
-              />
-            </div>
-            <div className="field">
-              <label>Sort by</label>
-              <select value={sortBy} onChange={(e) => onSortByChange(e.target.value)}>
-                {getSortOptions(entityType).map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="field">
-              <label>Order</label>
-              <select value={order} onChange={(e) => onOrderChange(e.target.value as 'asc' | 'desc')}>
-                {ORDER_OPTIONS.map((o) => (
-                  <option key={o} value={o}>
-                    {o}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {entityType === 'Games' && (
-            <>
-              <div className="row">
-                <div className="field">
-                  <label>Result</label>
-                  <input
-                    placeholder="1-0, 0-1, 1/2-1/2"
-                    value={result}
-                    onChange={(e) => onResultChange(e.target.value)}
-                  />
-                </div>
-                <div className="field">
-                  <label>Date from</label>
-                  <input
-                    type="date"
-                    value={dateFrom}
-                    onChange={(e) => onDateFromChange(e.target.value)}
-                  />
-                </div>
-                <div className="field">
-                  <label>Date to</label>
-                  <input type="date" value={dateTo} onChange={(e) => onDateToChange(e.target.value)} />
-                </div>
-                <div className="field">
-                  <label>ECO</label>
-                  <input
-                    placeholder="B9*"
-                    value={ecoCode}
-                    onChange={(e) => onEcoCodeChange(e.target.value)}
-                  />
-                </div>
-              </div>
-
-              <div className="row">
-                <div className="field">
-                  <label>Rating min</label>
-                  <input
-                    type="number"
-                    placeholder="2600"
-                    value={ratingMin}
-                    onChange={(e) => onRatingMinChange(e.target.value)}
-                  />
-                </div>
-                <div className="field">
-                  <label>Rating max</label>
-                  <input
-                    type="number"
-                    placeholder="2800"
-                    value={ratingMax}
-                    onChange={(e) => onRatingMaxChange(e.target.value)}
-                  />
-                </div>
-                <div className="field">
-                  <label>Rating mode</label>
-                  <select value={ratingMode} onChange={(e) => onRatingModeChange(e.target.value)}>
-                    {RATING_MODES.map((m) => (
-                      <option key={m} value={m}>
-                        {m}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="field checkbox-field">
-                  <label>
-                    <input
-                      type="checkbox"
-                      checked={includeMoves}
-                      onChange={(e) => onIncludeMovesChange(e.target.checked)}
-                    />
-                    Include moves
-                  </label>
-                </div>
-              </div>
-            </>
-          )}
-        </div>
-      )}
     </section>
   );
 }

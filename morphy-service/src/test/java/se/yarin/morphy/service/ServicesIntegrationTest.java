@@ -457,7 +457,7 @@ class ServicesIntegrationTest {
     // Search for "Candidates" - should match "Candidates Tournament 2024"
     EntitySearchResponse<TournamentDto> response =
         tournamentsService.searchTournaments(
-            databaseId, new EntitySearchRequest("Candidates", null, null, null, null, null, null));
+            databaseId, new EntitySearchRequest("Candidates", null, null, null, null, null));
 
     assertEquals(1, response.count());
     assertTrue(response.items().get(0).name().contains("Candidates"));
@@ -474,7 +474,7 @@ class ServicesIntegrationTest {
     // Empty filter should return all tournaments with games
     EntitySearchResponse<TournamentDto> response =
         tournamentsService.searchTournaments(
-            databaseId, new EntitySearchRequest(null, null, null, null, null, null, null));
+            databaseId, new EntitySearchRequest(null, null, null, null, null, null));
 
     assertEquals(2, response.count());
   }
@@ -487,14 +487,14 @@ class ServicesIntegrationTest {
     // Get first page (limit=1)
     EntitySearchResponse<TournamentDto> page1 =
         tournamentsService.searchTournaments(
-            databaseId, new EntitySearchRequest(null, 0, 1, null, null, null, null));
+            databaseId, new EntitySearchRequest(null, 0, 1, null, null, null));
     assertEquals(1, page1.count());
     assertEquals(2, page1.totalCount().intValue());
 
     // Get second page
     EntitySearchResponse<TournamentDto> page2 =
         tournamentsService.searchTournaments(
-            databaseId, new EntitySearchRequest(null, 1, 1, null, null, null, null));
+            databaseId, new EntitySearchRequest(null, 1, 1, null, null, null));
     assertEquals(1, page2.count());
 
     // Different tournaments on each page
@@ -509,7 +509,7 @@ class ServicesIntegrationTest {
     // Search for "Car" prefix - should match Carlsen and Caruana
     EntitySearchResponse<PlayerDto> response =
         playersService.searchPlayers(
-            databaseId, new EntitySearchRequest("Car", null, null, null, null, null, null));
+            databaseId, new EntitySearchRequest("Car", null, null, null, null, null));
 
     assertEquals(2, response.count());
   }
@@ -522,12 +522,12 @@ class ServicesIntegrationTest {
     // Search all players sorted by name ascending
     EntitySearchResponse<PlayerDto> ascResponse =
         playersService.searchPlayers(
-            databaseId, new EntitySearchRequest(null, null, null, "name", "asc", null, null));
+            databaseId, new EntitySearchRequest(null, null, null, "name", null, null));
 
     // Search all players sorted by name descending
     EntitySearchResponse<PlayerDto> descResponse =
         playersService.searchPlayers(
-            databaseId, new EntitySearchRequest(null, null, null, "name", "desc", null, null));
+            databaseId, new EntitySearchRequest(null, null, null, "-name", null, null));
 
     assertTrue(ascResponse.count() > 1);
     assertEquals(ascResponse.count(), descResponse.count());
@@ -545,7 +545,7 @@ class ServicesIntegrationTest {
     // Search for non-existent player
     EntitySearchResponse<PlayerDto> response =
         playersService.searchPlayers(
-            databaseId, new EntitySearchRequest("Zzzzz", null, null, null, null, null, null));
+            databaseId, new EntitySearchRequest("Zzzzz", null, null, null, null, null));
 
     assertEquals(0, response.count());
     assertEquals(0, response.totalCount().intValue());

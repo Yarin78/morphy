@@ -15,13 +15,14 @@ export interface DatabaseListResponse {
 export interface FilterOptionsResponse {
   defaultField: string;
   fields: string[];
+  sortFields: string[];
 }
 
 export interface GameSearchRequest {
   offset?: number;
   limit?: number;
+  /** Sort spec: field with optional +/- prefix (e.g. "+id", "-date") */
   sortBy?: string;
-  order?: string;
   includeMoves?: boolean;
   includeText?: boolean;
   filter?: string;
@@ -48,7 +49,6 @@ export interface GameSearchRequest {
 export interface SearchMetadata {
   appliedFilter: string | null;
   sortBy: string;
-  order: string;
   executionTimeMs: number;
 }
 
@@ -256,13 +256,12 @@ export interface GameTagListResponse {
   hasMore: boolean;
 }
 
-/** Request for entity search (Players, Tournaments, etc.). */
+/** Request for entity search (Players, Tournaments, etc.). sortBy uses +/- prefix (e.g. "+id", "-name"). */
 export interface EntitySearchRequest {
   filter?: string | null;
   offset?: number | null;
   limit?: number | null;
   sortBy?: string | null;
-  order?: string | null;
   debugQueryPlans?: boolean;
   debugExecuteAllPlans?: boolean;
 }
@@ -277,7 +276,6 @@ export interface EntitySearchResponse<T> {
   metadata: {
     appliedFilter?: string | null;
     sortBy: string;
-    order: string;
     executionTimeMs: number;
   };
   debugInfo?: QueryPlanDebugInfo | null;

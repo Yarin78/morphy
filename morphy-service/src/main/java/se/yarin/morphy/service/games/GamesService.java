@@ -269,7 +269,7 @@ public class GamesService {
 
           // 7. Apply sorting (if needed)
           if (needsSorting(request)) {
-            games = sortGames(games, request.sortBy(), request.order());
+            games = sortGames(games, request.sortBy());
           }
 
           // 8. Apply pagination
@@ -297,10 +297,7 @@ public class GamesService {
           // 10. Build metadata
           SearchMetadata metadata =
               new SearchMetadata(
-                  gameQuery.toString(),
-                  request.sortBy(),
-                  request.order(),
-                  endTime - startTime);
+                  gameQuery.toString(), request.sortBy(), endTime - startTime);
 
           return new GameSearchResponse(
               gameDtos, gameDtos.size(), totalCount, offset, limit, metadata, debugInfo);
@@ -378,34 +375,41 @@ public class GamesService {
    * rating-based sorting must be done here.
    */
   private boolean needsSorting(@NotNull GameSearchRequest request) {
-    String sortBy = request.sortBy().toLowerCase();
+    String sortBy = stripSortPrefix(request.sortBy()).toLowerCase();
     return sortBy.equals("whiteelo") || sortBy.equals("blackelo") || sortBy.equals("avgelo");
   }
 
   /**
-   * Sorts games by the specified field and order.
+   * Sorts games by the sort spec (field with optional +/- prefix, e.g. "-whiteElo").
    *
    * @param games the games to sort
-   * @param sortBy the field to sort by (whiteElo, blackElo, avgElo)
-   * @param order the sort order (asc or desc)
+   * @param sortBy sort spec (whiteElo, blackElo, avgElo with optional + or - prefix)
    * @return sorted list of games
    */
-  private @NotNull List<Game> sortGames(
-      @NotNull List<Game> games, @NotNull String sortBy, @NotNull String order) {
+  private @NotNull List<Game> sortGames(@NotNull List<Game> games, @NotNull String sortBy) {
+    boolean descending = sortBy.startsWith("-");
+    String field = stripSortPrefix(sortBy).toLowerCase();
     Comparator<Game> comparator =
-        switch (sortBy.toLowerCase()) {
+        switch (field) {
           case "whiteelo" -> Comparator.comparingInt(Game::whiteElo);
           case "blackelo" -> Comparator.comparingInt(Game::blackElo);
           case "avgelo" ->
               Comparator.comparingDouble(game -> (game.whiteElo() + game.blackElo()) / 2.0);
-          default ->
-              throw new IllegalArgumentException("Cannot sort by field: " + sortBy);
+          default -> throw new IllegalArgumentException("Cannot sort by field: " + sortBy);
         };
 
-    if ("desc".equalsIgnoreCase(order)) {
+    if (descending) {
       comparator = comparator.reversed();
     }
 
     return games.stream().sorted(comparator).collect(Collectors.toList());
+  }
+
+  private static @NotNull String stripSortPrefix(@NotNull String sortBy) {
+    sortBy = sortBy.trim();
+    if (sortBy.startsWith("+") || sortBy.startsWith("-")) {
+      return sortBy.substring(1).trim();
+    }
+    return sortBy;
   }
 }

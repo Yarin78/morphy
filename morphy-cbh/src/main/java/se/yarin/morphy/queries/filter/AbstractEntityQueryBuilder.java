@@ -13,6 +13,8 @@ import se.yarin.morphy.entities.Entity;
 import se.yarin.morphy.entities.EntityType;
 import se.yarin.morphy.entities.filters.EntityFilter;
 import se.yarin.morphy.queries.EntityQuery;
+import se.yarin.morphy.queries.QuerySortField;
+import se.yarin.morphy.queries.QuerySortOrder;
 
 /**
  * Base class for entity query builders that parse filter expression strings into {@link
@@ -44,6 +46,61 @@ public abstract class AbstractEntityQueryBuilder<T extends Entity> {
   }
 
   protected abstract Map<String, Function<FilterCondition, EntityFilter<T>>> filters();
+
+  protected abstract Map<String, QuerySortField<T>> sortFields();
+
+  protected abstract QuerySortOrder<T> defaultSortOrder();
+
+  public @NotNull Set<String> availableSortFields() {
+    return sortFields().keySet();
+  }
+
+  public @NotNull QuerySortOrder<T> buildSortOrder(@NotNull String sortSpec) {
+    if (sortSpec.isBlank() || sortSpec.equalsIgnoreCase("default")) {
+      return defaultSortOrder();
+    }
+
+    String[] parts = sortSpec.split(",");
+    List<QuerySortField<T>> fields = new ArrayList<>();
+    List<QuerySortOrder.Direction> directions = new ArrayList<>();
+
+    for (String part : parts) {
+      part = part.trim();
+      if (part.isEmpty()) continue;
+
+      QuerySortOrder.Direction explicitDir = null;
+      if (part.startsWith("-")) {
+        explicitDir = QuerySortOrder.Direction.DESCENDING;
+        part = part.substring(1);
+      } else if (part.startsWith("+")) {
+        explicitDir = QuerySortOrder.Direction.ASCENDING;
+        part = part.substring(1);
+      }
+
+      String fieldName = part.toLowerCase();
+      QuerySortField<T> field;
+      if (fieldName.equals("id")) {
+        field = QuerySortField.id();
+      } else {
+        field = sortFields().get(fieldName);
+        if (field == null) {
+          throw new IllegalArgumentException(
+              "Unknown sort field: '"
+                  + part
+                  + "'. Available fields: id, "
+                  + String.join(", ", new TreeSet<>(sortFields().keySet())));
+        }
+      }
+      fields.add(field);
+      directions.add(explicitDir != null ? explicitDir : field.defaultDirection());
+    }
+
+    if (fields.isEmpty()) {
+      return defaultSortOrder();
+    }
+
+    return new QuerySortOrder<>(fields, directions);
+  }
 
   public @NotNull EntityQuery<T> buildQuery(
       @NotNull Database database, @Nullable String filterExpression) {

@@ -125,17 +125,22 @@ public class GameSearchRequestConverter {
 
   /**
    * Builds a QuerySortOrder for the query. Only ID and date sorting are supported at the query
-   * level. Rating-based sorting must be done post-query.
+   * level. Rating-based sorting must be done post-query. sortBy uses +/- prefix for direction
+   * (e.g. "+id", "-date").
    */
   private @NotNull QuerySortOrder<Game> buildSortOrder(@NotNull GameSearchRequest request) {
-    String sortBy = request.sortBy().toLowerCase();
-    boolean reverse = "desc".equalsIgnoreCase(request.order());
+    String sortBy = request.sortBy().trim();
+    boolean descending = sortBy.startsWith("-");
+    if (sortBy.startsWith("+") || sortBy.startsWith("-")) {
+      sortBy = sortBy.substring(1).trim();
+    }
+    sortBy = sortBy.toLowerCase();
 
     return switch (sortBy) {
       case "id" -> QuerySortOrder.byId();
       case "date" -> {
         QuerySortOrder.Direction direction =
-            reverse ? QuerySortOrder.Direction.DESCENDING : QuerySortOrder.Direction.ASCENDING;
+            descending ? QuerySortOrder.Direction.DESCENDING : QuerySortOrder.Direction.ASCENDING;
         yield new QuerySortOrder<>(List.of(QuerySortField.playedDate()), List.of(direction));
       }
       // whiteElo, blackElo, avgElo sorting done post-query in service layer

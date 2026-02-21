@@ -8,6 +8,7 @@ import {
   searchTournaments,
 } from './api/client';
 import type { EntitySearchRequest, GameSearchRequest } from './api/types';
+import type { FilterOptionsResponse } from './api/types';
 import {
   ANNOTATOR_COLUMNS,
   GAME_COLUMNS,
@@ -35,7 +36,7 @@ export const SORT_OPTIONS = ['id', 'date', 'whiteElo', 'blackElo', 'avgElo'] as 
 export const ORDER_OPTIONS = ['asc', 'desc'] as const;
 export const RATING_MODES = ['any', 'both', 'white', 'black', 'average', 'difference'] as const;
 
-/** Sort options per entity type (id, name/title, date where applicable). */
+/** Sort options per entity type (id, name/title, date where applicable). Fallback when API has no sortFields. */
 export const ENTITY_SORT_OPTIONS: Record<Exclude<EntityType, 'Games'>, readonly string[]> = {
   Players: ['id', 'name'],
   Tournaments: ['id', 'name', 'date'],
@@ -45,8 +46,43 @@ export const ENTITY_SORT_OPTIONS: Record<Exclude<EntityType, 'Games'>, readonly 
   GameTags: ['id', 'name'],
 };
 
+/**
+ * Returns sort options for the entity: from filterOptions.sortFields when present and non-empty,
+ * otherwise from SORT_OPTIONS (Games) or ENTITY_SORT_OPTIONS (other entities).
+ */
+export function getSortOptions(
+  entityType: EntityType,
+  filterOptions: FilterOptionsResponse | null
+): readonly string[] {
+  if (filterOptions?.sortFields?.length) return filterOptions.sortFields;
+  if (entityType === 'Games') return SORT_OPTIONS;
+  return ENTITY_SORT_OPTIONS[entityType] ?? ['id'];
+}
+
+/**
+ * Maps result table column keys to API sort field names. Columns not in the map are not sortable.
+ * Used for "sort by column header" in the results table.
+ */
+export const SORTABLE_COLUMN_MAP: Record<EntityType, Record<string, string>> = {
+  Games: { id: 'id', white: 'whiteElo', black: 'blackElo', date: 'date' },
+  Players: { id: 'id', lastName: 'name', firstName: 'name' },
+  Tournaments: { id: 'id', name: 'title', startDate: 'startdate' },
+  Annotators: { id: 'id', name: 'name' },
+  Sources: { id: 'id', title: 'title', publisher: 'publisher', date: 'date' },
+  Teams: { id: 'id', title: 'title', teamNumber: 'number', year: 'year', nation: 'nation' },
+  GameTags: {
+    id: 'id',
+    englishTitle: 'englishtitle',
+    germanTitle: 'germantitle',
+    frenchTitle: 'frenchtitle',
+    spanishTitle: 'spanishtitle',
+    italianTitle: 'italiantitle',
+    dutchTitle: 'dutchtitle',
+    slovenianTitle: 'sloveniantitle',
+  },
+};
+
 type FetchOpts = {
-  limit: number;
   gameRequest?: GameSearchRequest;
   entitySearchRequest?: EntitySearchRequest;
 };
@@ -97,10 +133,7 @@ export const ENTITY_CONFIG: Record<EntityType, EntityConfig> = {
       const req = opts.entitySearchRequest ?? {};
       const res = await searchPlayers(db, {
         filter: req.filter,
-        offset: req.offset ?? 0,
-        limit: req.limit ?? opts.limit,
-        sortBy: req.sortBy ?? 'id',
-        order: req.order ?? 'asc',
+        sortBy: req.sortBy ?? '+id',
         debugQueryPlans: req.debugQueryPlans,
         debugExecuteAllPlans: req.debugExecuteAllPlans,
       });
@@ -123,10 +156,7 @@ export const ENTITY_CONFIG: Record<EntityType, EntityConfig> = {
       const req = opts.entitySearchRequest ?? {};
       const res = await searchTournaments(db, {
         filter: req.filter,
-        offset: req.offset ?? 0,
-        limit: req.limit ?? opts.limit,
-        sortBy: req.sortBy ?? 'id',
-        order: req.order ?? 'asc',
+        sortBy: req.sortBy ?? '+id',
         debugQueryPlans: req.debugQueryPlans,
         debugExecuteAllPlans: req.debugExecuteAllPlans,
       });
@@ -149,10 +179,7 @@ export const ENTITY_CONFIG: Record<EntityType, EntityConfig> = {
       const req = opts.entitySearchRequest ?? {};
       const res = await searchAnnotators(db, {
         filter: req.filter,
-        offset: req.offset ?? 0,
-        limit: req.limit ?? opts.limit,
-        sortBy: req.sortBy ?? 'id',
-        order: req.order ?? 'asc',
+        sortBy: req.sortBy ?? '+id',
         debugQueryPlans: req.debugQueryPlans,
         debugExecuteAllPlans: req.debugExecuteAllPlans,
       });
@@ -175,10 +202,7 @@ export const ENTITY_CONFIG: Record<EntityType, EntityConfig> = {
       const req = opts.entitySearchRequest ?? {};
       const res = await searchSources(db, {
         filter: req.filter,
-        offset: req.offset ?? 0,
-        limit: req.limit ?? opts.limit,
-        sortBy: req.sortBy ?? 'id',
-        order: req.order ?? 'asc',
+        sortBy: req.sortBy ?? '+id',
         debugQueryPlans: req.debugQueryPlans,
         debugExecuteAllPlans: req.debugExecuteAllPlans,
       });
@@ -201,10 +225,7 @@ export const ENTITY_CONFIG: Record<EntityType, EntityConfig> = {
       const req = opts.entitySearchRequest ?? {};
       const res = await searchTeams(db, {
         filter: req.filter,
-        offset: req.offset ?? 0,
-        limit: req.limit ?? opts.limit,
-        sortBy: req.sortBy ?? 'id',
-        order: req.order ?? 'asc',
+        sortBy: req.sortBy ?? '+id',
         debugQueryPlans: req.debugQueryPlans,
         debugExecuteAllPlans: req.debugExecuteAllPlans,
       });
@@ -227,10 +248,7 @@ export const ENTITY_CONFIG: Record<EntityType, EntityConfig> = {
       const req = opts.entitySearchRequest ?? {};
       const res = await searchGameTags(db, {
         filter: req.filter,
-        offset: req.offset ?? 0,
-        limit: req.limit ?? opts.limit,
-        sortBy: req.sortBy ?? 'id',
-        order: req.order ?? 'asc',
+        sortBy: req.sortBy ?? '+id',
         debugQueryPlans: req.debugQueryPlans,
         debugExecuteAllPlans: req.debugExecuteAllPlans,
       });

@@ -145,8 +145,7 @@ public class GamesController {
    * @param databaseId The database ID
    * @param offset Skip N games (default 0)
    * @param limit Return max N games (default 50, max 1000)
-   * @param sortBy Sort field: "id", "date", "whiteElo", "blackElo", "avgElo" (default "id")
-   * @param order Sort order: "asc", "desc" (default "asc")
+   * @param sortBy Sort spec: field with optional +/- prefix (e.g. "+id", "-date"; default "+id")
    * @param includeMoves Whether to include game moves (default false)
    * @param includeText Whether to include game text/commentary (default false)
    * @param filter Complex filter query string (optional)
@@ -176,7 +175,6 @@ public class GamesController {
       @RequestParam(required = false) Integer offset,
       @RequestParam(required = false) Integer limit,
       @RequestParam(required = false) String sortBy,
-      @RequestParam(required = false) String order,
       @RequestParam(required = false) Boolean includeMoves,
       @RequestParam(required = false) Boolean includeText,
       @RequestParam(required = false) String filter,
@@ -204,7 +202,6 @@ public class GamesController {
             offset,
             limit,
             sortBy,
-            order,
             includeMoves,
             includeText,
             filter,

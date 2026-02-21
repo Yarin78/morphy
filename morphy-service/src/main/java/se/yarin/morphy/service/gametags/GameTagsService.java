@@ -10,8 +10,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import se.yarin.morphy.entities.EntityType;
 import se.yarin.morphy.entities.GameTag;
-import se.yarin.morphy.queries.QuerySortField;
-import se.yarin.morphy.queries.QuerySortOrder;
 import se.yarin.morphy.queries.filter.GameTagQueryBuilder;
 import se.yarin.morphy.service.MorphyServiceException;
 import se.yarin.morphy.service.databases.DatabaseService;
@@ -172,19 +170,8 @@ public class GameTagsService {
             entitySearchExecutor.executeSearch(
                 txn,
                 EntityType.GAME_TAG,
-                queryBuilder::buildQuery,
-                GameTagsService::buildGameTagSortOrder,
+                queryBuilder,
                 gameTagDtoConverter::toDto,
                 request));
-  }
-
-  private static QuerySortOrder<GameTag> buildGameTagSortOrder(String sortBy, boolean reverse) {
-    QuerySortOrder.Direction dir =
-        reverse ? QuerySortOrder.Direction.DESCENDING : QuerySortOrder.Direction.ASCENDING;
-    return switch (sortBy.toLowerCase()) {
-      case "id" -> new QuerySortOrder<>(QuerySortField.id(), dir);
-      case "name" -> new QuerySortOrder<>(QuerySortField.gameTagEnglishTitle(), dir);
-      default -> QuerySortOrder.byGameTagDefaultIndex(reverse);
-    };
   }
 }

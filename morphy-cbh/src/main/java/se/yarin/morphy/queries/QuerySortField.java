@@ -13,18 +13,26 @@ public class QuerySortField<T extends IdObject> {
   private final @NotNull Comparator<QueryData<T>> comparator;
   private final boolean requiresData;
   private final @NotNull String name; // also unique identifier (within T)
+  private final @NotNull QuerySortOrder.Direction defaultDirection;
 
   public static <T extends IdObject> QuerySortField<T> id() {
     return new QuerySortField<>(Comparator.comparingInt(QueryData::id), "id", false);
   }
 
   public static <T extends IdObject> QuerySortField<T> weight() {
-    return new QuerySortField<>(Comparator.comparingDouble(QueryData::weight), "weight", false);
+    return new QuerySortField<>(
+        Comparator.comparingDouble(QueryData::weight),
+        "weight",
+        false,
+        QuerySortOrder.Direction.DESCENDING);
   }
 
   public static QuerySortField<Game> playedDate() {
     return new QuerySortField<>(
-        Comparator.comparing(o -> o.data().playedDate()), "playedDate", true);
+        Comparator.comparing(o -> o.data().playedDate()),
+        "playedDate",
+        true,
+        QuerySortOrder.Direction.DESCENDING);
   }
 
   public static QuerySortField<Player> playerName() {
@@ -32,11 +40,19 @@ public class QuerySortField<T extends IdObject> {
   }
 
   public static QuerySortField<Tournament> tournamentYear() {
-    return new QuerySortField<>(Comparator.comparing(o -> o.data().date().year()), "year", true);
+    return new QuerySortField<>(
+        Comparator.comparing(o -> o.data().date().year()),
+        "year",
+        true,
+        QuerySortOrder.Direction.DESCENDING);
   }
 
   public static QuerySortField<Tournament> tournamentStartDate() {
-    return new QuerySortField<>(Comparator.comparing(o -> o.data().date()), "startDate", true);
+    return new QuerySortField<>(
+        Comparator.comparing(o -> o.data().date()),
+        "startDate",
+        true,
+        QuerySortOrder.Direction.DESCENDING);
   }
 
   public static QuerySortField<Tournament> tournamentTitle() {
@@ -90,6 +106,18 @@ public class QuerySortField<T extends IdObject> {
     return new QuerySortField<>(Comparator.comparing(o -> o.data().title()), "title", true);
   }
 
+  public static QuerySortField<Source> sourcePublisher() {
+    return new QuerySortField<>(Comparator.comparing(o -> o.data().publisher()), "publisher", true);
+  }
+
+  public static QuerySortField<Source> sourceDate() {
+    return new QuerySortField<>(
+        Comparator.comparing(o -> o.data().date()),
+        "date",
+        true,
+        QuerySortOrder.Direction.DESCENDING);
+  }
+
   public static QuerySortField<Team> teamTitle() {
     return new QuerySortField<>(Comparator.comparing(o -> o.data().title()), "title", true);
   }
@@ -112,9 +140,26 @@ public class QuerySortField<T extends IdObject> {
 
   private QuerySortField(
       @NotNull Comparator<QueryData<T>> comparator, String name, boolean requiresData) {
+    this(comparator, name, requiresData, QuerySortOrder.Direction.ASCENDING);
+  }
+
+  private QuerySortField(
+      @NotNull Comparator<QueryData<T>> comparator,
+      String name,
+      boolean requiresData,
+      @NotNull QuerySortOrder.Direction defaultDirection) {
     this.comparator = comparator;
     this.name = name;
     this.requiresData = requiresData;
+    this.defaultDirection = defaultDirection;
+  }
+
+  public @NotNull String name() {
+    return name;
+  }
+
+  public @NotNull QuerySortOrder.Direction defaultDirection() {
+    return defaultDirection;
   }
 
   public int compare(QueryData<T> data1, QueryData<T> data2) {

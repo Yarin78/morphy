@@ -48,7 +48,6 @@ class GameSearchRequestConverterTest {
     private Integer offset;
     private Integer limit;
     private String sortBy;
-    private String order;
     private Boolean includeMoves;
     private Boolean includeText;
     private String filter;
@@ -83,11 +82,6 @@ class GameSearchRequestConverterTest {
 
     TestRequestBuilder sortBy(String sortBy) {
       this.sortBy = sortBy;
-      return this;
-    }
-
-    TestRequestBuilder order(String order) {
-      this.order = order;
       return this;
     }
 
@@ -201,7 +195,6 @@ class GameSearchRequestConverterTest {
           offset,
           limit,
           sortBy,
-          order,
           includeMoves,
           includeText,
           filter,
@@ -930,7 +923,7 @@ class GameSearchRequestConverterTest {
     @Test
     @DisplayName("should create ID sort order ascending")
     void testSortById() {
-      GameSearchRequest request = request().sortBy("id").order("asc").build();
+      GameSearchRequest request = request().sortBy("+id").build();
 
       GameQuery query = queryBuilder.buildQuery(database, request);
 
@@ -941,7 +934,7 @@ class GameSearchRequestConverterTest {
     @Test
     @DisplayName("should create date sort order ascending")
     void testSortByDateAsc() {
-      GameSearchRequest request = request().sortBy("date").order("asc").build();
+      GameSearchRequest request = request().sortBy("+date").build();
 
       GameQuery query = queryBuilder.buildQuery(database, request);
 
@@ -952,7 +945,7 @@ class GameSearchRequestConverterTest {
     @Test
     @DisplayName("should create date sort order descending")
     void testSortByDateDesc() {
-      GameSearchRequest request = request().sortBy("date").order("desc").build();
+      GameSearchRequest request = request().sortBy("-date").build();
 
       GameQuery query = queryBuilder.buildQuery(database, request);
 
@@ -963,7 +956,7 @@ class GameSearchRequestConverterTest {
     @Test
     @DisplayName("should create no sort order for unsupported sort field")
     void testUnsupportedSortField() {
-      GameSearchRequest request = request().sortBy("whiteElo").order("desc").build();
+      GameSearchRequest request = request().sortBy("-whiteElo").build();
 
       GameQuery query = queryBuilder.buildQuery(database, request);
 

@@ -10,6 +10,8 @@ import se.yarin.morphy.entities.Player;
 import se.yarin.morphy.entities.filters.EntityFilter;
 import se.yarin.morphy.entities.filters.MultiPlayerNameFilter;
 import se.yarin.morphy.entities.filters.PlayerNameFilter;
+import se.yarin.morphy.queries.QuerySortField;
+import se.yarin.morphy.queries.QuerySortOrder;
 
 /**
  * Builds an {@link se.yarin.morphy.queries.EntityQuery} for {@link Player} from a filter expression
@@ -39,6 +41,9 @@ public class PlayerQueryBuilder extends AbstractEntityQueryBuilder<Player> {
           Map.entry(
               "lastname", c -> new PlayerNameFilter(c.value(), "", false, false)));
 
+  private static final Map<String, QuerySortField<Player>> SORT_FIELDS =
+      Map.of("name", QuerySortField.playerName());
+
   public PlayerQueryBuilder() {
     super(EntityType.PLAYER, "player", "name");
   }
@@ -46,5 +51,15 @@ public class PlayerQueryBuilder extends AbstractEntityQueryBuilder<Player> {
   @Override
   protected Map<String, Function<FilterCondition, EntityFilter<Player>>> filters() {
     return FILTERS;
+  }
+
+  @Override
+  protected Map<String, QuerySortField<Player>> sortFields() {
+    return SORT_FIELDS;
+  }
+
+  @Override
+  protected QuerySortOrder<Player> defaultSortOrder() {
+    return QuerySortOrder.byPlayerDefaultIndex();
   }
 }

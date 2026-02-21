@@ -1,8 +1,9 @@
+import { useMemo } from 'react';
 import { ColumnSelector } from './ColumnSelector';
 import { RowsPerPageSelector } from './RowsPerPageSelector';
 import ResultsTable from './ResultsTable';
 import type { EntityType } from './entityConfig';
-import { ENTITY_CONFIG } from './entityConfig';
+import { ENTITY_CONFIG, SORTABLE_COLUMN_MAP } from './entityConfig';
 
 interface PaginatedData {
   data: unknown[];
@@ -31,6 +32,12 @@ interface ResultsSectionProps {
   currentPage: number;
   onPageChange: (page: number) => void;
   error: string | null;
+  /** Current sort field (API name). Used to show sort indicator on the matching column. */
+  sortBy?: string;
+  /** Current sort direction. */
+  order?: 'asc' | 'desc';
+  /** Called when user clicks a sortable column header. */
+  onColumnSort?: (columnKey: string) => void;
 }
 
 export function ResultsSection({
@@ -43,6 +50,9 @@ export function ResultsSection({
   currentPage,
   onPageChange,
   error,
+  sortBy,
+  order,
+  onColumnSort,
 }: ResultsSectionProps) {
   if (!result) {
     return (
@@ -56,6 +66,14 @@ export function ResultsSection({
   const config = ENTITY_CONFIG[result.entityType];
   const hiddenSet = new Set(hiddenColumns[config.entityKey] ?? []);
   const visibleColumns = config.columns.filter((c) => !hiddenSet.has(c.key));
+
+  const columnSortConfig = useMemo(() => {
+    const map = SORTABLE_COLUMN_MAP[result.entityType] ?? {};
+    const sortableColumnKeys = new Set(Object.keys(map));
+    const sortColumnKey =
+      visibleColumns.find((col) => map[col.key] === sortBy)?.key ?? null;
+    return { sortableColumnKeys, sortColumnKey };
+  }, [result.entityType, sortBy, visibleColumns]);
 
   const metaText =
     paginatedData.total > 0 ? (
@@ -89,6 +107,10 @@ export function ResultsSection({
         data={paginatedData.data}
         keyExtractor={(row) => config.keyExtractor(row as { id: number })}
         emptyMessage={config.emptyMessage}
+        sortableColumnKeys={columnSortConfig.sortableColumnKeys}
+        sortColumnKey={columnSortConfig.sortColumnKey}
+        sortOrder={order ?? null}
+        onColumnSort={onColumnSort}
       />
 
       {paginatedData.totalPages > 1 && (

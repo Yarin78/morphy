@@ -10,8 +10,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import se.yarin.morphy.entities.Annotator;
 import se.yarin.morphy.entities.EntityType;
-import se.yarin.morphy.queries.QuerySortField;
-import se.yarin.morphy.queries.QuerySortOrder;
 import se.yarin.morphy.queries.filter.AnnotatorQueryBuilder;
 import se.yarin.morphy.service.MorphyServiceException;
 import se.yarin.morphy.service.annotators.dto.AnnotatorDto;
@@ -173,20 +171,8 @@ public class AnnotatorsService {
             entitySearchExecutor.executeSearch(
                 txn,
                 EntityType.ANNOTATOR,
-                queryBuilder::buildQuery,
-                AnnotatorsService::buildAnnotatorSortOrder,
+                queryBuilder,
                 annotatorDtoConverter::toDto,
                 request));
-  }
-
-  private static QuerySortOrder<Annotator> buildAnnotatorSortOrder(
-      String sortBy, boolean reverse) {
-    QuerySortOrder.Direction dir =
-        reverse ? QuerySortOrder.Direction.DESCENDING : QuerySortOrder.Direction.ASCENDING;
-    return switch (sortBy.toLowerCase()) {
-      case "id" -> new QuerySortOrder<>(QuerySortField.id(), dir);
-      case "name" -> new QuerySortOrder<>(QuerySortField.annotatorName(), dir);
-      default -> QuerySortOrder.byAnnotatorDefaultIndex(reverse);
-    };
   }
 }

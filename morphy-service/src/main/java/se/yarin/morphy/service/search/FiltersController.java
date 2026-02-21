@@ -36,7 +36,7 @@ public class FiltersController {
             .filter(f -> !hidden.contains(f))
             .filter(f -> depth > 0 || !f.contains("."))
             .toList();
-    return new FilterOptionsResponse(GAME_QUERY_BUILDER.defaultField(), fields);
+    return new FilterOptionsResponse(GAME_QUERY_BUILDER.defaultField(), fields, List.of());
   }
 
   @GetMapping("/players")
@@ -72,6 +72,9 @@ public class FiltersController {
   private FilterOptionsResponse entityFilterOptions(String entityType) {
     AbstractEntityQueryBuilder<?> builder = ENTITY_BUILDERS.get(entityType);
     List<String> fields = List.copyOf(new TreeSet<>(builder.availableFields()));
-    return new FilterOptionsResponse(builder.defaultField(), fields);
+    List<String> sortFields = new java.util.ArrayList<>();
+    sortFields.add("id");
+    sortFields.addAll(new TreeSet<>(builder.availableSortFields()));
+    return new FilterOptionsResponse(builder.defaultField(), fields, sortFields);
   }
 }

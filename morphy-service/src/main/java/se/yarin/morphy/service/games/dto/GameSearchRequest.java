@@ -23,9 +23,8 @@ public record GameSearchRequest(
     @Nullable Integer offset, // Skip N games (default 0)
     @Nullable Integer limit, // Return max N games (default 50, max 1000)
 
-    // Sorting
-    @Nullable String sortBy, // "id", "date", "whiteElo", "blackElo", "avgElo" (default "id")
-    @Nullable String order, // "asc", "desc" (default "asc")
+    // Sorting: field with optional +/- prefix (e.g. "+id", "-date", "id" = ascending)
+    @Nullable String sortBy,
 
     // Content control
     @Nullable Boolean includeMoves, // Include PGN moves (default false)
@@ -66,10 +65,9 @@ public record GameSearchRequest(
       limit = 50;
     }
     if (sortBy == null || sortBy.isBlank()) {
-      sortBy = "id";
-    }
-    if (order == null || order.isBlank()) {
-      order = "asc";
+      sortBy = "+id";
+    } else if (!sortBy.startsWith("+") && !sortBy.startsWith("-")) {
+      sortBy = "+" + sortBy;
     }
     if (includeMoves == null) {
       includeMoves = false;

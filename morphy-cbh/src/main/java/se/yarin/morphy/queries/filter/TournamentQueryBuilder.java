@@ -7,6 +7,8 @@ import se.yarin.chess.Date;
 import se.yarin.morphy.entities.EntityType;
 import se.yarin.morphy.entities.Tournament;
 import se.yarin.morphy.entities.filters.*;
+import se.yarin.morphy.queries.QuerySortField;
+import se.yarin.morphy.queries.QuerySortOrder;
 
 /**
  * Builds an {@link se.yarin.morphy.queries.EntityQuery} for {@link Tournament} from a filter
@@ -36,6 +38,14 @@ public class TournamentQueryBuilder extends AbstractEntityQueryBuilder<Tournamen
                     new Date(year, 1, 1), new Date(year, 12, 31));
               }));
 
+  private static final Map<String, QuerySortField<Tournament>> SORT_FIELDS =
+      Map.of(
+          "title", QuerySortField.tournamentTitle(),
+          "year", QuerySortField.tournamentYear(),
+          "startdate", QuerySortField.tournamentStartDate(),
+          "date", QuerySortField.tournamentStartDate(),
+          "place", QuerySortField.tournamentPlace());
+
   public TournamentQueryBuilder() {
     super(EntityType.TOURNAMENT, "tournament", "name");
   }
@@ -43,6 +53,16 @@ public class TournamentQueryBuilder extends AbstractEntityQueryBuilder<Tournamen
   @Override
   protected Map<String, Function<FilterCondition, EntityFilter<Tournament>>> filters() {
     return FILTERS;
+  }
+
+  @Override
+  protected Map<String, QuerySortField<Tournament>> sortFields() {
+    return SORT_FIELDS;
+  }
+
+  @Override
+  protected QuerySortOrder<Tournament> defaultSortOrder() {
+    return QuerySortOrder.byTournamentDefaultIndex();
   }
 
   private static @NotNull EntityFilter<Tournament> buildDateFilter(

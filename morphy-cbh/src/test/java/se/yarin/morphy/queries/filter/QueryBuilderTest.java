@@ -11,6 +11,7 @@ import se.yarin.morphy.queries.EntityQuery;
 import se.yarin.morphy.queries.GameEntityJoin;
 import se.yarin.morphy.queries.GameEntityJoinCondition;
 import se.yarin.morphy.queries.GameQuery;
+import se.yarin.morphy.queries.QuerySortOrder;
 
 public class QueryBuilderTest {
 
@@ -298,5 +299,152 @@ public class QueryBuilderTest {
 
     assertEquals(1, query.filters().size());
     assertTrue(query.filters().get(0) instanceof GameTagTitleFilter);
+  }
+
+  // --- New Team filters ---
+
+  @Test
+  public void teamByNumber() {
+    EntityQuery<Team> query = new TeamQueryBuilder().buildQuery(db, "number:5");
+
+    assertEquals(1, query.filters().size());
+    assertTrue(query.filters().get(0) instanceof TeamNumberFilter);
+  }
+
+  @Test
+  public void teamByNumberRange() {
+    EntityQuery<Team> query = new TeamQueryBuilder().buildQuery(db, "number:1..10");
+
+    assertEquals(1, query.filters().size());
+    assertTrue(query.filters().get(0) instanceof TeamNumberFilter);
+  }
+
+  @Test
+  public void teamByYear() {
+    EntityQuery<Team> query = new TeamQueryBuilder().buildQuery(db, "year:2024");
+
+    assertEquals(1, query.filters().size());
+    assertTrue(query.filters().get(0) instanceof TeamYearFilter);
+  }
+
+  @Test
+  public void teamByYearRange() {
+    EntityQuery<Team> query = new TeamQueryBuilder().buildQuery(db, "year:2020..2024");
+
+    assertEquals(1, query.filters().size());
+    assertTrue(query.filters().get(0) instanceof TeamYearFilter);
+  }
+
+  @Test
+  public void teamByNation() {
+    EntityQuery<Team> query = new TeamQueryBuilder().buildQuery(db, "nation:Sweden");
+
+    assertEquals(1, query.filters().size());
+    assertTrue(query.filters().get(0) instanceof TeamNationFilter);
+  }
+
+  // --- New Source filters ---
+
+  @Test
+  public void sourceByPublisher() {
+    EntityQuery<Source> query = new SourceQueryBuilder().buildQuery(db, "publisher:ChessBase");
+
+    assertEquals(1, query.filters().size());
+    assertTrue(query.filters().get(0) instanceof SourcePublisherFilter);
+  }
+
+  @Test
+  public void sourceByDate() {
+    EntityQuery<Source> query = new SourceQueryBuilder().buildQuery(db, "date:2024");
+
+    assertEquals(1, query.filters().size());
+    assertTrue(query.filters().get(0) instanceof SourceDateFilter);
+  }
+
+  @Test
+  public void sourceByDateRange() {
+    EntityQuery<Source> query = new SourceQueryBuilder().buildQuery(db, "date:2020..2024");
+
+    assertEquals(1, query.filters().size());
+    assertTrue(query.filters().get(0) instanceof SourceDateFilter);
+  }
+
+  // --- Sort order building ---
+
+  @Test
+  public void sortOrderDefault() {
+    PlayerQueryBuilder builder = new PlayerQueryBuilder();
+    QuerySortOrder<Player> sort = builder.buildSortOrder("default");
+
+    assertFalse(sort.isNone());
+  }
+
+  @Test
+  public void sortOrderById() {
+    PlayerQueryBuilder builder = new PlayerQueryBuilder();
+    QuerySortOrder<Player> sort = builder.buildSortOrder("id");
+
+    assertFalse(sort.isNone());
+    assertEquals("id asc", sort.toString());
+  }
+
+  @Test
+  public void sortOrderByNameDescending() {
+    PlayerQueryBuilder builder = new PlayerQueryBuilder();
+    QuerySortOrder<Player> sort = builder.buildSortOrder("-name");
+
+    assertFalse(sort.isNone());
+    assertEquals("name desc", sort.toString());
+  }
+
+  @Test
+  public void sortOrderByNameUsesFieldDefault() {
+    PlayerQueryBuilder builder = new PlayerQueryBuilder();
+    QuerySortOrder<Player> sort = builder.buildSortOrder("name");
+
+    assertEquals("name asc", sort.toString());
+  }
+
+  @Test
+  public void sortOrderByDateUsesFieldDefault() {
+    TournamentQueryBuilder builder = new TournamentQueryBuilder();
+    QuerySortOrder<Tournament> sort = builder.buildSortOrder("date");
+
+    assertEquals("startDate desc", sort.toString());
+  }
+
+  @Test
+  public void sortOrderMultiColumn() {
+    TournamentQueryBuilder builder = new TournamentQueryBuilder();
+    QuerySortOrder<Tournament> sort = builder.buildSortOrder("title,-year");
+
+    assertFalse(sort.isNone());
+    assertEquals("title asc, year desc", sort.toString());
+  }
+
+  @Test
+  public void sortOrderMultiColumnUsesFieldDefaults() {
+    TournamentQueryBuilder builder = new TournamentQueryBuilder();
+    QuerySortOrder<Tournament> sort = builder.buildSortOrder("title,year");
+
+    // title defaults to asc, year defaults to desc
+    assertEquals("title asc, year desc", sort.toString());
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void sortOrderUnknownField() {
+    new PlayerQueryBuilder().buildSortOrder("unknown");
+  }
+
+  @Test
+  public void availableSortFieldsIncludesExpectedFields() {
+    TeamQueryBuilder builder = new TeamQueryBuilder();
+    var fields = builder.availableSortFields();
+
+    assertTrue(fields.contains("title"));
+    assertTrue(fields.contains("number"));
+    assertTrue(fields.contains("year"));
+    assertTrue(fields.contains("nation"));
+    assertTrue(fields.contains("season"));
   }
 }

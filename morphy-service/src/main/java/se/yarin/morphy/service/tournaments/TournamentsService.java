@@ -8,10 +8,9 @@ import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import se.yarin.morphy.entities.EntityType;
 import se.yarin.morphy.entities.Tournament;
 import se.yarin.morphy.entities.TournamentExtra;
-import se.yarin.morphy.queries.QuerySortField;
-import se.yarin.morphy.queries.QuerySortOrder;
 import se.yarin.morphy.queries.filter.TournamentQueryBuilder;
 import se.yarin.morphy.service.MorphyServiceException;
 import se.yarin.morphy.service.databases.DatabaseService;
@@ -186,25 +185,12 @@ public class TournamentsService {
         txn ->
             entitySearchExecutor.executeSearch(
                 txn,
-                se.yarin.morphy.entities.EntityType.TOURNAMENT,
-                queryBuilder::buildQuery,
-                TournamentsService::buildTournamentSortOrder,
+                EntityType.TOURNAMENT,
+                queryBuilder,
                 tournament -> {
                   TournamentExtra extra = txn.getTournamentExtra(tournament.id());
                   return tournamentDtoConverter.toDto(tournament, extra);
                 },
                 request));
-  }
-
-  private static QuerySortOrder<Tournament> buildTournamentSortOrder(
-      String sortBy, boolean reverse) {
-    QuerySortOrder.Direction dir =
-        reverse ? QuerySortOrder.Direction.DESCENDING : QuerySortOrder.Direction.ASCENDING;
-    return switch (sortBy.toLowerCase()) {
-      case "id" -> new QuerySortOrder<>(QuerySortField.id(), dir);
-      case "name", "title" -> new QuerySortOrder<>(QuerySortField.tournamentTitle(), dir);
-      case "date" -> new QuerySortOrder<>(QuerySortField.tournamentStartDate(), dir);
-      default -> QuerySortOrder.byTournamentDefaultIndex(reverse);
-    };
   }
 }

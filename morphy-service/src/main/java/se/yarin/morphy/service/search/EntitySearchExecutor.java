@@ -2,20 +2,19 @@ package se.yarin.morphy.service.search;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
-import se.yarin.morphy.Database;
 import se.yarin.morphy.DatabaseReadTransaction;
 import se.yarin.morphy.entities.Entity;
 import se.yarin.morphy.entities.EntityType;
 import se.yarin.morphy.queries.EntityQuery;
 import se.yarin.morphy.queries.QueryContext;
 import se.yarin.morphy.queries.QuerySortOrder;
+import se.yarin.morphy.queries.filter.AbstractEntityQueryBuilder;
 import se.yarin.morphy.queries.operations.QueryData;
 import se.yarin.morphy.queries.operations.QueryOperator;
 import se.yarin.morphy.queries.visualisation.QueryDescriptionFormatter;
@@ -34,39 +33,24 @@ public class EntitySearchExecutor {
     this.queryPlanDtoConverter = queryPlanDtoConverter;
   }
 
-  /**
-   * Executes an entity search using the query planner infrastructure.
-   *
-   * @param txn the read transaction
-   * @param entityType the entity type being searched
-   * @param queryBuilder builds an EntityQuery from the filter string
-   * @param sortOrderFn maps (sortBy, reverse) to a QuerySortOrder
-   * @param toDtoFn converts an entity to a DTO
-   * @param request the search request
-   * @param <E> the entity type
-   * @param <D> the DTO type
-   * @return search response with matching entities
-   */
   public <E extends Entity & Comparable<E>, D> EntitySearchResponse<D> executeSearch(
       @NotNull DatabaseReadTransaction txn,
       @NotNull EntityType entityType,
-      @NotNull BiFunction<Database, String, EntityQuery<E>> queryBuilder,
-      @NotNull BiFunction<String, Boolean, QuerySortOrder<E>> sortOrderFn,
+      @NotNull AbstractEntityQueryBuilder<E> queryBuilder,
       @NotNull Function<E, D> toDtoFn,
       @NotNull EntitySearchRequest request) {
     long startTime = System.currentTimeMillis();
 
     int offset = Math.max(0, request.offset());
     int limit = Math.min(1000, Math.max(1, request.limit()));
-    boolean reverse = "desc".equalsIgnoreCase(request.order());
     boolean debugPlans = request.debugQueryPlans();
     boolean executeAll = request.debugExecuteAllPlans();
 
     // 1. Build EntityQuery from filter string
-    EntityQuery<E> baseQuery = queryBuilder.apply(txn.database(), request.filter());
+    EntityQuery<E> baseQuery = queryBuilder.buildQuery(txn.database(), request.filter());
 
     // 2. Apply sort order
-    QuerySortOrder<E> sortOrder = sortOrderFn.apply(request.sortBy(), reverse);
+    QuerySortOrder<E> sortOrder = queryBuilder.buildSortOrder(request.sortBy());
     EntityQuery<E> query =
         new EntityQuery<>(
             baseQuery.database(),
@@ -112,7 +96,7 @@ public class EntitySearchExecutor {
     // 5. Build debug info if requested
     QueryPlanDebugInfo debugInfo = null;
     if (debugPlans) {
-      debugInfo = buildDebugInfo(txn, query, queryBuilder, sortOrderFn, plans, profiledResults,
+      debugInfo = buildDebugInfo(txn, query, queryBuilder, plans, profiledResults,
           executeAll, request);
     }
 
@@ -129,7 +113,7 @@ public class EntitySearchExecutor {
 
     // 8. Build metadata
     SearchMetadata metadata =
-        new SearchMetadata(request.filter(), request.sortBy(), request.order(), endTime - startTime);
+        new SearchMetadata(request.filter(), request.sortBy(), endTime - startTime);
 
     return new EntitySearchResponse<>(dtos, dtos.size(), totalCount, offset, limit, metadata,
         debugInfo);
@@ -138,8 +122,7 @@ public class EntitySearchExecutor {
   private <E extends Entity & Comparable<E>> @NotNull QueryPlanDebugInfo buildDebugInfo(
       @NotNull DatabaseReadTransaction txn,
       @NotNull EntityQuery<E> query,
-      @NotNull BiFunction<Database, String, EntityQuery<E>> queryBuilder,
-      @NotNull BiFunction<String, Boolean, QuerySortOrder<E>> sortOrderFn,
+      @NotNull AbstractEntityQueryBuilder<E> queryBuilder,
       @NotNull List<QueryOperator<E>> plans,
       @NotNull List<QueryData<E>> bestPlanResults,
       boolean executeAll,
@@ -173,15 +156,14 @@ public class EntitySearchExecutor {
           planDtos.add(queryPlanDtoConverter.convertPlan(label, plan, false, null, null));
         } else {
           // Execute alternative plan with a fresh context to avoid shared operator state
-          boolean reverse = "desc".equalsIgnoreCase(request.order());
-          EntityQuery<E> baseQuery = queryBuilder.apply(txn.database(), request.filter());
-          QuerySortOrder<E> sortOrder = sortOrderFn.apply(request.sortBy(), reverse);
+          EntityQuery<E> freshBaseQuery = queryBuilder.buildQuery(txn.database(), request.filter());
+          QuerySortOrder<E> freshSortOrder = queryBuilder.buildSortOrder(request.sortBy());
           EntityQuery<E> freshQuery =
               new EntityQuery<>(
-                  baseQuery.database(),
-                  baseQuery.entityType(),
-                  baseQuery.filters(),
-                  sortOrder,
+                  freshBaseQuery.database(),
+                  freshBaseQuery.entityType(),
+                  freshBaseQuery.filters(),
+                  freshSortOrder,
                   0);
 
           QueryContext freshContext = new QueryContext(txn, true);

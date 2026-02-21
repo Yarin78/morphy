@@ -19,6 +19,14 @@ interface ResultsTableProps<T> {
   data: T[];
   keyExtractor: (row: T) => string | number;
   emptyMessage: string;
+  /** Column keys that can be clicked to sort. */
+  sortableColumnKeys?: Set<string>;
+  /** Key of the column that is currently the primary sort. */
+  sortColumnKey?: string | null;
+  /** Current sort direction for the primary sort column. */
+  sortOrder?: 'asc' | 'desc' | null;
+  /** Called when a sortable column header is clicked. */
+  onColumnSort?: (columnKey: string) => void;
 }
 
 function ResultsTable<T>({
@@ -26,6 +34,10 @@ function ResultsTable<T>({
   data,
   keyExtractor,
   emptyMessage,
+  sortableColumnKeys,
+  sortColumnKey,
+  sortOrder,
+  onColumnSort,
 }: ResultsTableProps<T>) {
   if (data.length === 0) {
     return <p className="results-empty">{emptyMessage}</p>;
@@ -37,14 +49,39 @@ function ResultsTable<T>({
       </p>
     );
   }
+  const isSortable = (key: string) =>
+    sortableColumnKeys?.has(key) && typeof onColumnSort === 'function';
+
   return (
     <div className="results-table-wrapper">
       <table className="results-table">
         <thead>
           <tr>
-            {columns.map((col) => (
-              <th key={col.key}>{col.label}</th>
-            ))}
+            {columns.map((col) => {
+              const sortable = isSortable(col.key);
+              const isSorted = sortColumnKey === col.key;
+              return (
+                <th key={col.key}>
+                  {sortable ? (
+                    <button
+                      type="button"
+                      className="results-table-sort-header"
+                      onClick={() => onColumnSort?.(col.key)}
+                      title={isSorted ? `Sorted ${sortOrder === 'desc' ? 'descending' : 'ascending'}. Click to reverse.` : `Sort by ${col.label}`}
+                    >
+                      <span className="results-table-sort-label">{col.label}</span>
+                      {isSorted && (
+                        <span className="results-table-sort-icon" aria-hidden>
+                          {sortOrder === 'desc' ? ' ↓' : ' ↑'}
+                        </span>
+                      )}
+                    </button>
+                  ) : (
+                    col.label
+                  )}
+                </th>
+              );
+            })}
           </tr>
         </thead>
         <tbody>

@@ -339,6 +339,20 @@
   min-width: 180px;
 }
 
+.search-panel .search-row .checkbox-inline {
+  flex: 0 0 auto;
+  margin-bottom: 0;
+}
+
+.search-panel .search-row .checkbox-inline label {
+  margin-top: 18px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
 /* Align buttons with input/select (same offset as label height) */
 .search-panel .search-row .search-btn-split,
 .search-panel .search-row .search-btn-save {
@@ -640,6 +654,33 @@
   letter-spacing: 0.5px;
   position: sticky;
   top: 0;
+}
+
+.results-panel .results-table-sort-header {
+  appearance: none;
+  background: none;
+  border: none;
+  padding: 8px 12px;
+  margin: -8px -12px;
+  width: calc(100% + 24px);
+  min-height: calc(100% + 16px);
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  box-sizing: border-box;
+}
+
+.results-panel .results-table-sort-header:hover {
+  color: #1a1a2e;
+}
+
+.results-panel .results-table-sort-icon {
+  font-size: 12px;
+  opacity: 0.9;
 }
 
 .results-panel .results-table tbody tr:hover {

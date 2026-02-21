@@ -6,6 +6,8 @@ import se.yarin.morphy.entities.Annotator;
 import se.yarin.morphy.entities.EntityType;
 import se.yarin.morphy.entities.filters.AnnotatorNameFilter;
 import se.yarin.morphy.entities.filters.EntityFilter;
+import se.yarin.morphy.queries.QuerySortField;
+import se.yarin.morphy.queries.QuerySortOrder;
 
 /**
  * Builds an {@link se.yarin.morphy.queries.EntityQuery} for {@link Annotator} from a filter
@@ -23,8 +25,21 @@ public class AnnotatorQueryBuilder extends AbstractEntityQueryBuilder<Annotator>
     super(EntityType.ANNOTATOR, "annotator", "name");
   }
 
+  private static final Map<String, QuerySortField<Annotator>> SORT_FIELDS =
+      Map.of("name", QuerySortField.annotatorName());
+
   @Override
   protected Map<String, Function<FilterCondition, EntityFilter<Annotator>>> filters() {
     return FILTERS;
+  }
+
+  @Override
+  protected Map<String, QuerySortField<Annotator>> sortFields() {
+    return SORT_FIELDS;
+  }
+
+  @Override
+  protected QuerySortOrder<Annotator> defaultSortOrder() {
+    return QuerySortOrder.byAnnotatorDefaultIndex();
   }
 }
