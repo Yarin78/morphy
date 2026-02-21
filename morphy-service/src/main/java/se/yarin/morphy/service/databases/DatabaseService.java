@@ -93,9 +93,11 @@ public class DatabaseService {
    */
   public void withWriteTransaction(
       @NotNull String databaseId, @NotNull Consumer<DatabaseWriteTransaction> operation) {
-    Database db = getDatabase(databaseId);
     DatabaseState state = databaseStates.get(databaseId);
-    assert state != null;
+    if (state != null && state.config.isReadOnly()) {
+      throw new IllegalStateException("Database '" + databaseId + "' is read-only");
+    }
+    Database db = getDatabase(databaseId);
 
     try (DatabaseWriteTransaction txn = new DatabaseWriteTransaction(db)) {
       operation.accept(txn);
@@ -119,9 +121,11 @@ public class DatabaseService {
    */
   public <T> T withWriteTransaction(
       @NotNull String databaseId, @NotNull Function<DatabaseWriteTransaction, T> operation) {
-    Database db = getDatabase(databaseId);
     DatabaseState state = databaseStates.get(databaseId);
-    assert state != null;
+    if (state != null && state.config.isReadOnly()) {
+      throw new IllegalStateException("Database '" + databaseId + "' is read-only");
+    }
+    Database db = getDatabase(databaseId);
 
     try (DatabaseWriteTransaction txn = new DatabaseWriteTransaction(db)) {
       T result = operation.apply(txn);
@@ -161,7 +165,7 @@ public class DatabaseService {
         .map(
             state ->
                 new DatabaseDto(
-                    state.config.getId(), state.config.getDisplayName(), state.config.getPath()))
+                    state.config.getId(), state.config.getDisplayName(), state.config.getPath(), state.config.isReadOnly()))
         .toList();
   }
 
@@ -274,8 +278,12 @@ public class DatabaseService {
   private void openDatabaseFile(@NotNull String databaseId, @NotNull DatabaseState state) {
     File dbFile = new File(state.config.getPath());
 
-    // Create database file if it doesn't exist
+    // Create database file if it doesn't exist (only for writable databases)
     if (!dbFile.exists()) {
+      if (state.config.isReadOnly()) {
+        log.error("Database file not found for read-only database '{}': {}", databaseId, state.config.getPath());
+        return;
+      }
       try {
         log.info(
             "Database file not found for '{}', creating new database at: {}",
@@ -297,7 +305,8 @@ public class DatabaseService {
     }
 
     try {
-      state.database = Database.open(dbFile, DatabaseMode.READ_WRITE);
+      DatabaseMode mode = state.config.isReadOnly() ? DatabaseMode.READ_ONLY : DatabaseMode.READ_WRITE;
+      state.database = Database.open(dbFile, mode);
       state.lastModifiedTime = dbFile.lastModified();
       log.info(
           "Successfully opened chess database '{}' ({}): {} (last modified: {})",

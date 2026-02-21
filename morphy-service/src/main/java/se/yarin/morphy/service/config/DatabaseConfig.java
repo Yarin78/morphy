@@ -1,20 +1,25 @@
 package se.yarin.morphy.service.config;
 
 /**
- * Configuration model for a ChessBase database. Loaded from JSON configuration file. All databases
- * are writable.
+ * Configuration model for a ChessBase database. Loaded from JSON configuration file.
  */
 public class DatabaseConfig {
   private String id;
   private String displayName;
   private String path;
+  private boolean readOnly;
 
   public DatabaseConfig() {}
 
   public DatabaseConfig(String id, String displayName, String path) {
+    this(id, displayName, path, false);
+  }
+
+  public DatabaseConfig(String id, String displayName, String path, boolean readOnly) {
     this.id = id;
     this.displayName = displayName;
     this.path = path;
+    this.readOnly = readOnly;
   }
 
   public String getId() {
@@ -39,6 +44,14 @@ public class DatabaseConfig {
 
   public void setPath(String path) {
     this.path = path;
+  }
+
+  public boolean isReadOnly() {
+    return readOnly;
+  }
+
+  public void setReadOnly(boolean readOnly) {
+    this.readOnly = readOnly;
   }
 
   @Override
