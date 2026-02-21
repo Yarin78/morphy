@@ -191,6 +191,11 @@ function App() {
 
   const entityTypeChangedByUser = useRef(false);
 
+  const handleDbChange = useCallback((newId: string) => {
+    setFilter('');
+    setSelectedDb(newId);
+  }, []);
+
   const handleEntityTypeChange = useCallback(
     (newType: EntityType) => {
       entityTypeChangedByUser.current = true;
@@ -297,14 +302,12 @@ function App() {
     }
   }, [entityType, selectedDb, handleSearch]);
 
-  // Trigger empty search on initial page load when database is available
-  const hasRunInitialSearch = useRef(false);
+  // When database changes: filter is already cleared by handleDbChange; run search (keeps entity type)
   useEffect(() => {
-    if (selectedDb && !hasRunInitialSearch.current) {
-      hasRunInitialSearch.current = true;
+    if (selectedDb) {
       handleSearch();
     }
-  }, [selectedDb, handleSearch]);
+  }, [selectedDb]); // eslint-disable-line react-hooks/exhaustive-deps -- only re-run search when DB changes, not when handleSearch identity changes
 
   const paginatedData = useMemo(() => {
     if (!result || result.data.length === 0) {
@@ -373,7 +376,7 @@ function App() {
         <SearchPanel
           databases={databases}
           selectedDb={selectedDb}
-          onDbChange={setSelectedDb}
+          onDbChange={handleDbChange}
           entityType={entityType}
           onEntityTypeChange={handleEntityTypeChange}
           filter={filter}
