@@ -42,7 +42,7 @@ public class PlayerQueryBuilder extends AbstractEntityQueryBuilder<Player> {
               "lastname", c -> new PlayerNameFilter(c.value(), "", false, false)));
 
   private static final Map<String, QuerySortField<Player>> SORT_FIELDS =
-      Map.of("name", QuerySortField.playerName());
+      Map.of("name", QuerySortField.playerName(), "firstname", QuerySortField.playerFirstName(), "lastname", QuerySortField.playerName());
 
   public PlayerQueryBuilder() {
     super(EntityType.PLAYER, "player", "name");

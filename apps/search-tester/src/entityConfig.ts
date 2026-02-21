@@ -38,7 +38,7 @@ export const RATING_MODES = ['any', 'both', 'white', 'black', 'average', 'differ
 
 /** Sort options per entity type (id, name/title, date where applicable). Fallback when API has no sortFields. */
 export const ENTITY_SORT_OPTIONS: Record<Exclude<EntityType, 'Games'>, readonly string[]> = {
-  Players: ['id', 'name'],
+  Players: ['id', 'name', 'firstname'],
   Tournaments: ['id', 'name', 'date'],
   Annotators: ['id', 'name'],
   Sources: ['id', 'name'],
@@ -65,7 +65,7 @@ export function getSortOptions(
  */
 export const SORTABLE_COLUMN_MAP: Record<EntityType, Record<string, string>> = {
   Games: { id: 'id', white: 'whiteElo', black: 'blackElo', date: 'date' },
-  Players: { id: 'id', lastName: 'name', firstName: 'name' },
+  Players: { id: 'id', lastName: 'name', firstName: 'firstname' },
   Tournaments: { id: 'id', name: 'title', startDate: 'startdate' },
   Annotators: { id: 'id', name: 'name' },
   Sources: { id: 'id', title: 'title', publisher: 'publisher', date: 'date' },

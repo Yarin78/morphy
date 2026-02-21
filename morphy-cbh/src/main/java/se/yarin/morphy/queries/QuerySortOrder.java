@@ -40,6 +40,17 @@ public class QuerySortOrder<T extends IdObject> implements Comparator<QueryData<
         List.of(!reverse ? Direction.ASCENDING : Direction.DESCENDING));
   }
 
+  public static QuerySortOrder<Player> byPlayerFirstName() {
+    return byPlayerFirstName(false);
+  }
+
+  public static QuerySortOrder<Player> byPlayerFirstName(boolean reverse) {
+    Direction direction = !reverse ? Direction.ASCENDING : Direction.DESCENDING;
+    return new QuerySortOrder<>(
+        List.of(QuerySortField.playerFirstName(), QuerySortField.playerName()),
+        List.of(direction, direction));
+  }
+
   public static QuerySortOrder<Tournament> byTournamentDefaultIndex() {
     return byTournamentDefaultIndex(false);
   }
