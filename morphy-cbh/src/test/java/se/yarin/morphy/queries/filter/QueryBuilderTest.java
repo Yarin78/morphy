@@ -265,14 +265,6 @@ public class QueryBuilderTest {
     assertTrue(query.filters().get(0) instanceof SourceTitleFilter);
   }
 
-  @Test
-  public void sourceByNameAlias() {
-    EntityQuery<Source> query = new SourceQueryBuilder().buildQuery(db, "name:Mega");
-
-    assertEquals(1, query.filters().size());
-    assertTrue(query.filters().get(0) instanceof SourceTitleFilter);
-  }
-
   // --- TeamQueryBuilder ---
 
   @Test

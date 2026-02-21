@@ -20,7 +20,7 @@ import se.yarin.morphy.queries.QuerySortOrder;
  * Builds an {@link se.yarin.morphy.queries.EntityQuery} for {@link Source} from a filter expression
  * string.
  *
- * <p>Supported fields: title/name, publisher, date, publication, version, quality (default field:
+ * <p>Supported fields: title, publisher, date, publication, version, quality (default field:
  * title).
  */
 public class SourceQueryBuilder extends AbstractEntityQueryBuilder<Source> {
@@ -28,7 +28,6 @@ public class SourceQueryBuilder extends AbstractEntityQueryBuilder<Source> {
   private static final Map<String, Function<FilterCondition, EntityFilter<Source>>> FILTERS =
       Map.ofEntries(
           Map.entry("title", c -> new SourceTitleFilter(c.value(), false, false)),
-          Map.entry("name", c -> new SourceTitleFilter(c.value(), false, false)),
           Map.entry("publisher", c -> new SourcePublisherFilter(c.value(), false, false)),
           Map.entry("date", SourceQueryBuilder::buildDateFilter),
           Map.entry("publication", SourceQueryBuilder::buildPublicationFilter),

@@ -2,9 +2,12 @@ package se.yarin.morphy.queries.filter;
 
 import java.util.Map;
 import java.util.function.Function;
+import org.jetbrains.annotations.NotNull;
 import se.yarin.morphy.entities.EntityType;
 import se.yarin.morphy.entities.GameTag;
 import se.yarin.morphy.entities.filters.EntityFilter;
+import se.yarin.morphy.entities.filters.GameTagLanguageCountFilter;
+import se.yarin.morphy.entities.filters.GameTagLanguagesFilter;
 import se.yarin.morphy.entities.filters.GameTagTitleFilter;
 import se.yarin.morphy.queries.QuerySortField;
 import se.yarin.morphy.queries.QuerySortOrder;
@@ -13,22 +16,23 @@ import se.yarin.morphy.queries.QuerySortOrder;
  * Builds an {@link se.yarin.morphy.queries.EntityQuery} for {@link GameTag} from a filter
  * expression string.
  *
- * <p>Supported fields: name/title (default field: name).
+ * <p>Supported fields: title, languages, languagecount (default field: title).
  */
 public class GameTagQueryBuilder extends AbstractEntityQueryBuilder<GameTag> {
 
   private static final Map<String, Function<FilterCondition, EntityFilter<GameTag>>> FILTERS =
       Map.ofEntries(
-          Map.entry("name", c -> new GameTagTitleFilter(c.value(), false, false)),
-          Map.entry("title", c -> new GameTagTitleFilter(c.value(), false, false)));
+          Map.entry("title", c -> new GameTagTitleFilter(c.value(), false, false, true)),
+          Map.entry("languages", c -> new GameTagLanguagesFilter(c.value())),
+          Map.entry(
+              "languagecount", GameTagQueryBuilder::buildLanguageCountFilter));
 
   public GameTagQueryBuilder() {
-    super(EntityType.GAME_TAG, "game tag", "name");
+    super(EntityType.GAME_TAG, "game tag", "title");
   }
 
   private static final Map<String, QuerySortField<GameTag>> SORT_FIELDS =
       Map.ofEntries(
-          Map.entry("name", QuerySortField.gameTagEnglishTitle()),
           Map.entry("title", QuerySortField.gameTagTitle()),
           Map.entry("languages", QuerySortField.gameTagLanguages()),
           Map.entry("languagecount", QuerySortField.gameTagLanguageCount()),
@@ -54,5 +58,21 @@ public class GameTagQueryBuilder extends AbstractEntityQueryBuilder<GameTag> {
   @Override
   protected QuerySortOrder<GameTag> defaultSortOrder() {
     return QuerySortOrder.byGameTagDefaultIndex();
+  }
+
+  private static @NotNull EntityFilter<GameTag> buildLanguageCountFilter(
+      @NotNull FilterCondition condition) {
+    String value = condition.value();
+    if (value.contains("..")) {
+      String[] parts = value.split("\\.\\.", 2);
+      int min = parts[0].isEmpty() ? 0 : Integer.parseInt(parts[0]);
+      int max =
+          parts.length > 1 && !parts[1].isEmpty()
+              ? Integer.parseInt(parts[1])
+              : Integer.MAX_VALUE;
+      return new GameTagLanguageCountFilter(min, max);
+    }
+    int count = Integer.parseInt(value);
+    return new GameTagLanguageCountFilter(count, count);
   }
 }

@@ -682,18 +682,6 @@ class GameSearchRequestConverterTest {
       assertEquals(1, join.entityQuery().filters().size());
     }
 
-    @Test
-    @DisplayName("should create GameEntityJoin for source.name (alias)")
-    void testSourceNameAlias() {
-      GameSearchRequest request = request().filter("source.name:ChessBase").build();
-
-      GameQuery query = queryBuilder.buildQuery(database, request);
-
-      assertEquals(0, query.gameFilters().size());
-      assertEquals(1, query.entityJoins().size());
-      GameEntityJoin<?> join = query.entityJoins().get(0);
-      assertEquals(EntityType.SOURCE, join.getEntityType());
-    }
 
     @Test
     @DisplayName("should create GameEntityJoin for team.title filter")

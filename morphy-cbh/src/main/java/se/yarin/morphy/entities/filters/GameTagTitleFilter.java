@@ -6,41 +6,50 @@ import se.yarin.morphy.entities.EntityType;
 import se.yarin.morphy.entities.GameTag;
 
 public class GameTagTitleFilter implements EntityIndexFilter<GameTag> {
-  private final @NotNull String englishTitle;
+  private final @NotNull String title;
   private final boolean caseSensitive;
   private final boolean exactMatch;
+  private final boolean useCalculatedTitle;
 
   public GameTagTitleFilter(
-      @NotNull String englishTitle, boolean caseSensitive, boolean exactMatch) {
-    this.englishTitle = caseSensitive ? englishTitle : englishTitle.toLowerCase();
-    this.caseSensitive = caseSensitive;
-    this.exactMatch = exactMatch;
+      @NotNull String title, boolean caseSensitive, boolean exactMatch) {
+    this(title, caseSensitive, exactMatch, false);
   }
 
-  private boolean matches(@NotNull String gameTagEnglishTitle) {
+  public GameTagTitleFilter(
+      @NotNull String title,
+      boolean caseSensitive,
+      boolean exactMatch,
+      boolean useCalculatedTitle) {
+    this.title = caseSensitive ? title : title.toLowerCase();
+    this.caseSensitive = caseSensitive;
+    this.exactMatch = exactMatch;
+    this.useCalculatedTitle = useCalculatedTitle;
+  }
+
+  private boolean matches(@NotNull String value) {
     if (exactMatch) {
-      return caseSensitive
-          ? gameTagEnglishTitle.equals(englishTitle)
-          : gameTagEnglishTitle.equalsIgnoreCase(englishTitle);
+      return caseSensitive ? value.equals(title) : value.equalsIgnoreCase(title);
     }
     return caseSensitive
-        ? gameTagEnglishTitle.startsWith(englishTitle)
-        : gameTagEnglishTitle.toLowerCase().startsWith(englishTitle);
+        ? value.startsWith(title)
+        : value.toLowerCase().startsWith(title);
   }
 
   @Override
   public boolean matches(@NotNull GameTag gameTag) {
-    return matches(gameTag.englishTitle());
+    return matches(useCalculatedTitle ? gameTag.title() : gameTag.englishTitle());
   }
 
   @Override
   public String toString() {
-    String titleStr = caseSensitive ? "englishTitle" : "lower(englishTitle)";
+    String field = useCalculatedTitle ? "title" : "englishTitle";
+    String titleStr = caseSensitive ? field : "lower(%s)".formatted(field);
 
     if (exactMatch) {
-      return "%s='%s'".formatted(titleStr, englishTitle);
+      return "%s='%s'".formatted(titleStr, title);
     } else {
-      return "%s like '%s%%'".formatted(titleStr, englishTitle);
+      return "%s like '%s%%'".formatted(titleStr, title);
     }
   }
 
@@ -51,12 +60,12 @@ public class GameTagTitleFilter implements EntityIndexFilter<GameTag> {
 
   @Override
   public @Nullable GameTag start() {
-    return caseSensitive ? GameTag.of(englishTitle) : null;
+    return caseSensitive && !useCalculatedTitle ? GameTag.of(title) : null;
   }
 
   @Override
   public @Nullable GameTag end() {
-    return caseSensitive ? GameTag.of(englishTitle + "zzz") : null;
+    return caseSensitive && !useCalculatedTitle ? GameTag.of(title + "zzz") : null;
   }
 
   @Override
@@ -66,11 +75,12 @@ public class GameTagTitleFilter implements EntityIndexFilter<GameTag> {
     GameTagTitleFilter that = (GameTagTitleFilter) o;
     return caseSensitive == that.caseSensitive
         && exactMatch == that.exactMatch
-        && englishTitle.equals(that.englishTitle);
+        && useCalculatedTitle == that.useCalculatedTitle
+        && title.equals(that.title);
   }
 
   @Override
   public int hashCode() {
-    return java.util.Objects.hash(englishTitle, caseSensitive, exactMatch);
+    return java.util.Objects.hash(title, caseSensitive, exactMatch, useCalculatedTitle);
   }
 }
