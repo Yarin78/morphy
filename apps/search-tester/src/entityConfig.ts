@@ -36,15 +36,9 @@ export const SORT_OPTIONS = ['id', 'date', 'whiteElo', 'blackElo', 'avgElo'] as 
 export const ORDER_OPTIONS = ['asc', 'desc'] as const;
 export const RATING_MODES = ['any', 'both', 'white', 'black', 'average', 'difference'] as const;
 
-/** Sort options per entity type (id, name/title, date where applicable). Fallback when API has no sortFields. */
-export const ENTITY_SORT_OPTIONS: Record<Exclude<EntityType, 'Games'>, readonly string[]> = {
-  Players: ['id', 'name', 'firstname', 'count'],
-  Tournaments: ['id', 'name', 'date', 'count'],
-  Annotators: ['id', 'name', 'count'],
-  Sources: ['id', 'name', 'count'],
-  Teams: ['id', 'name', 'count'],
-  GameTags: ['id', 'name', 'count'],
-};
+function sortFieldNames(sortFields: FilterOptionsResponse['sortFields']): string[] {
+  return sortFields.map((s) => s.name);
+}
 
 /**
  * Returns sort options for the entity: from filterOptions.sortFields when present and non-empty,
@@ -56,23 +50,36 @@ export function getSortOptions(
   filterOptions: FilterOptionsResponse | null
 ): readonly string[] {
   if (entityType === 'Games') {
-    return filterOptions?.sortFields?.length ? filterOptions.sortFields : SORT_OPTIONS;
+    return filterOptions?.sortFields?.length
+      ? sortFieldNames(filterOptions.sortFields)
+      : SORT_OPTIONS;
   }
-  const base =
-    filterOptions?.sortFields?.length
-      ? filterOptions.sortFields
-      : ENTITY_SORT_OPTIONS[entityType] ?? ['id'];
+  const base = filterOptions?.sortFields?.length
+    ? sortFieldNames(filterOptions.sortFields)
+    : ['id'];
   return ['default', ...base];
 }
 
 /**
- * Maps result table column keys to API sort field names. Columns not in the map are not sortable.
- * Used for "sort by column header" in the results table.
+ * Returns the default sort direction for a sort field from filter options, or 'asc' if unknown.
+ */
+export function getDefaultSortDirection(
+  filterOptions: FilterOptionsResponse | null,
+  sortFieldName: string
+): 'asc' | 'desc' {
+  const option = filterOptions?.sortFields?.find((s) => s.name === sortFieldName);
+  const d = option?.defaultDirection?.toLowerCase();
+  return d === 'desc' ? 'desc' : 'asc';
+}
+
+/**
+ * Maps result table column keys to API sort field names (must match FilterOptionsResponse.sortFields[].name).
+ * Columns not in the map are not sortable. Used for "sort by column header" in the results table.
  */
 export const SORTABLE_COLUMN_MAP: Record<EntityType, Record<string, string>> = {
   Games: { id: 'id', white: 'whiteElo', black: 'blackElo', date: 'date' },
-  Players: { id: 'id', lastName: 'name', firstName: 'firstname', gameCount: 'count' },
-  Tournaments: { id: 'id', name: 'title', startDate: 'startdate', gameCount: 'count' },
+  Players: { id: 'id', lastName: 'lastName', firstName: 'firstName', gameCount: 'count' },
+  Tournaments: { id: 'id', name: 'title', startDate: 'startDate', gameCount: 'count' },
   Annotators: { id: 'id', name: 'name', gameCount: 'count' },
   Sources: { id: 'id', title: 'title', publisher: 'publisher', date: 'date', publication: 'publication', version: 'version', quality: 'quality', gameCount: 'count' },
   Teams: { id: 'id', title: 'title', teamNumber: 'number', year: 'year', nation: 'nation', gameCount: 'count' },
@@ -80,7 +87,7 @@ export const SORTABLE_COLUMN_MAP: Record<EntityType, Record<string, string>> = {
     id: 'id',
     title: 'title',
     languages: 'languages',
-    languageCount: 'languagecount',
+    languageCount: 'languageCount',
     gameCount: 'count',
   },
 };

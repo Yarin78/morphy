@@ -12,10 +12,15 @@ export interface DatabaseListResponse {
   databases: DatabaseResponse[];
 }
 
+export interface SortFieldOption {
+  name: string;
+  defaultDirection: string;
+}
+
 export interface FilterOptionsResponse {
   defaultField: string;
   fields: string[];
-  sortFields: string[];
+  sortFields: SortFieldOption[];
 }
 
 export interface GameSearchRequest {

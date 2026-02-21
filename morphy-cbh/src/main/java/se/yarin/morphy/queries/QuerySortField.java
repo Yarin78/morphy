@@ -52,6 +52,11 @@ public class QuerySortField<T extends IdObject> {
         Comparator.comparing(o -> o.data().firstName()), "firstName", true);
   }
 
+  public static QuerySortField<Player> playerLastName() {
+    return new QuerySortField<>(
+        Comparator.comparing(o -> o.data().lastName()), "lastName", true);
+  }
+
   public static QuerySortField<Tournament> tournamentYear() {
     return new QuerySortField<>(
         Comparator.comparing(o -> o.data().date().year()),

@@ -11,7 +11,12 @@ import type {
 } from './api/types';
 import type { EntityType } from './entityConfig';
 import type { SavedSearch } from './savedSearchTypes';
-import { ENTITY_CONFIG, getSortOptions, SORTABLE_COLUMN_MAP } from './entityConfig';
+import {
+  ENTITY_CONFIG,
+  getDefaultSortDirection,
+  getSortOptions,
+  SORTABLE_COLUMN_MAP,
+} from './entityConfig';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import './App.css';
 
@@ -332,15 +337,17 @@ function App() {
       const map = SORTABLE_COLUMN_MAP[entityType];
       const sortField = map?.[columnKey];
       if (!sortField) return;
+      const filterOptions = filterOptionsCache[entityType] ?? null;
+      const defaultDirection = getDefaultSortDirection(filterOptions, sortField);
       const isCurrentSort = sortBy === sortField;
       const newOrder = isCurrentSort
         ? (order === 'asc' ? 'desc' : 'asc')
-        : 'asc';
+        : defaultDirection;
       if (!isCurrentSort) setSortBy(sortField);
       setOrder(newOrder);
       handleSearch(undefined, { sortBy: sortField, order: newOrder });
     },
-    [entityType, sortBy, order, handleSearch]
+    [entityType, sortBy, order, filterOptionsCache, handleSearch]
   );
 
   const hasQueryPlan = Boolean(

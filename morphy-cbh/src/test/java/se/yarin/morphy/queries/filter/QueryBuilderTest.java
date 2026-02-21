@@ -431,12 +431,15 @@ public class QueryBuilderTest {
   @Test
   public void availableSortFieldsIncludesExpectedFields() {
     TeamQueryBuilder builder = new TeamQueryBuilder();
-    var fields = builder.availableSortFields();
+    var fieldNames =
+        builder.availableSortFields().stream()
+            .map(sf -> sf.name())
+            .toList();
 
-    assertTrue(fields.contains("title"));
-    assertTrue(fields.contains("number"));
-    assertTrue(fields.contains("year"));
-    assertTrue(fields.contains("nation"));
-    assertTrue(fields.contains("season"));
+    assertTrue(fieldNames.contains("title"));
+    assertTrue(fieldNames.contains("number"));
+    assertTrue(fieldNames.contains("year"));
+    assertTrue(fieldNames.contains("nation"));
+    assertTrue(fieldNames.contains("season"));
   }
 }

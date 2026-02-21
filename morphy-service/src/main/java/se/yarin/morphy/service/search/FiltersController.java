@@ -71,7 +71,13 @@ public class FiltersController {
   private FilterOptionsResponse entityFilterOptions(String entityType) {
     AbstractEntityQueryBuilder<?> builder = ENTITY_BUILDERS.get(entityType);
     List<String> fields = builder.availableFields();
-    List<String> sortFields = builder.availableSortFields();
+    List<FilterOptionsResponse.SortFieldOption> sortFields =
+        builder.availableSortFields().stream()
+            .map(
+                sf ->
+                    new FilterOptionsResponse.SortFieldOption(
+                        sf.name(), sf.defaultDirection().shortName()))
+            .toList();
     return new FilterOptionsResponse(builder.defaultField(), fields, sortFields);
   }
 }

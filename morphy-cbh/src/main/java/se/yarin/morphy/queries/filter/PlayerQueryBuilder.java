@@ -45,7 +45,7 @@ public class PlayerQueryBuilder extends AbstractEntityQueryBuilder<Player> {
       orderedMap(
           Map.entry("name", QuerySortField.playerName()),
           Map.entry("firstname", QuerySortField.playerFirstName()),
-          Map.entry("lastname", QuerySortField.playerName()));
+          Map.entry("lastname", QuerySortField.playerLastName()));
 
   public PlayerQueryBuilder() {
     super(EntityType.PLAYER, "player", "name");

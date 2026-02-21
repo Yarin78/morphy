@@ -42,7 +42,11 @@ const FILTER_API_PATH: Record<string, string> = {
 export async function fetchFilterOptions(entityType: string): Promise<FilterOptionsResponse> {
   const path = FILTER_API_PATH[entityType];
   if (!path) {
-    return { defaultField: 'id', fields: ['id'] };
+    return {
+      defaultField: 'id',
+      fields: ['id'],
+      sortFields: [{ name: 'id', defaultDirection: 'asc' }],
+    };
   }
   const res = await fetch(`${API_BASE}/filters/${path}`);
   if (!res.ok) {

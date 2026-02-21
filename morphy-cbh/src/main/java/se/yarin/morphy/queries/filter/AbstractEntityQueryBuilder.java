@@ -52,11 +52,11 @@ public abstract class AbstractEntityQueryBuilder<T extends Entity> {
 
   protected abstract QuerySortOrder<T> defaultSortOrder();
 
-  public @NotNull List<String> availableSortFields() {
-    var fields = new ArrayList<String>();
-    fields.add("id");
-    fields.addAll(sortFields().keySet());
-    fields.add("count");
+  public @NotNull List<QuerySortField<T>> availableSortFields() {
+    var fields = new ArrayList<QuerySortField<T>>();
+    fields.add(QuerySortField.id());
+    fields.addAll(sortFields().values());
+    fields.add(QuerySortField.entityCount());
     return fields;
   }
 
@@ -95,7 +95,11 @@ public abstract class AbstractEntityQueryBuilder<T extends Entity> {
               "Unknown sort field: '"
                   + part
                   + "'. Available fields: "
-                  + String.join(", ", availableSortFields()));
+                  + String.join(
+                      ", ",
+                      availableSortFields().stream()
+                          .map(QuerySortField::name)
+                          .toList()));
         }
       }
       fields.add(field);

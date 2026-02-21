@@ -12,7 +12,11 @@ public class QuerySortOrder<T extends IdObject> implements Comparator<QueryData<
 
   public enum Direction {
     ASCENDING,
-    DESCENDING
+    DESCENDING;
+
+    public String shortName() {
+      return this == ASCENDING ? "asc" : "desc";
+    }
   }
 
   private final List<QuerySortField<T>> sortFields;
@@ -51,8 +55,8 @@ public class QuerySortOrder<T extends IdObject> implements Comparator<QueryData<
   public static QuerySortOrder<Player> byPlayerFirstName(boolean reverse) {
     Direction direction = !reverse ? Direction.ASCENDING : Direction.DESCENDING;
     return new QuerySortOrder<>(
-        List.of(QuerySortField.playerFirstName(), QuerySortField.playerName()),
-        List.of(direction, direction));
+        List.of(QuerySortField.playerFirstName()),
+        List.of(direction));
   }
 
   public static QuerySortOrder<Tournament> byTournamentDefaultIndex() {
