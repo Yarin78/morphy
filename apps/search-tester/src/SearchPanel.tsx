@@ -185,10 +185,26 @@ export function SearchPanel({
           />
           {filterOptions && (
             <p className="filter-help">
-              {filterOptions.defaultField !== 'id' && (
-                <>Default: <code>{filterOptions.defaultField}</code>. </>
-              )}
-              Fields: {filterOptions.fields.join(', ')}
+              Fields:{' '}
+              {(() => {
+                const { defaultField, fields } = filterOptions;
+                const ordered = [
+                  defaultField,
+                  ...fields.filter((f) => f !== defaultField),
+                ];
+                return ordered.map((field, i) => (
+                  <span key={field}>
+                    {i > 0 && ', '}
+                    {field === defaultField ? (
+                      <>
+                        <code>{field}</code>
+                      </>
+                    ) : (
+                      field
+                    )}
+                  </span>
+                ));
+              })()}
             </p>
           )}
           {entityType === 'Games' && (
