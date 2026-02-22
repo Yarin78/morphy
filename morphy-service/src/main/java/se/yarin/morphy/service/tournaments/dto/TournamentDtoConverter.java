@@ -43,7 +43,7 @@ public class TournamentDtoConverter {
             ? null
             : tournament.timeControl().getName(),
         tournament.typeCombined().isEmpty() ? null : tournament.typeCombined(),
-        tournament.complete() ? true : null,
+        tournament.complete() ? true : false,
         tournament.teamTournament() ? true : null,
         extra.latitude() != 0.0 ? extra.latitude() : null,
         extra.longitude() != 0.0 ? extra.longitude() : null,

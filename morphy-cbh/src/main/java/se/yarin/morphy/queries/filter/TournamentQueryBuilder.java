@@ -1,5 +1,6 @@
 package se.yarin.morphy.queries.filter;
 
+import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import org.jetbrains.annotations.NotNull;
@@ -43,7 +44,12 @@ public class TournamentQueryBuilder extends AbstractEntityQueryBuilder<Tournamen
           Map.entry("year", QuerySortField.tournamentYear()),
           Map.entry("startdate", QuerySortField.tournamentStartDate()),
           Map.entry("date", QuerySortField.tournamentStartDate()),
-          Map.entry("place", QuerySortField.tournamentPlace()));
+          Map.entry("place", QuerySortField.tournamentPlace()),
+          Map.entry("combinedtype", QuerySortField.tournamentCombinedType()),
+          Map.entry("nation", QuerySortField.tournamentNation()),
+          Map.entry("category", QuerySortField.tournamentCategory()),
+          Map.entry("rounds", QuerySortField.tournamentRounds()),
+          Map.entry("complete", QuerySortField.tournamentComplete()));
 
   public TournamentQueryBuilder() {
     super(EntityType.TOURNAMENT, "tournament", "title");

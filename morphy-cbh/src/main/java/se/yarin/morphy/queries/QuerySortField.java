@@ -1,13 +1,12 @@
 package se.yarin.morphy.queries;
 
+import java.util.Comparator;
+import java.util.Objects;
 import org.jetbrains.annotations.NotNull;
 import se.yarin.morphy.Game;
 import se.yarin.morphy.IdObject;
 import se.yarin.morphy.entities.*;
 import se.yarin.morphy.queries.operations.QueryData;
-
-import java.util.Comparator;
-import java.util.Objects;
 
 public class QuerySortField<T extends IdObject> {
   private final @NotNull Comparator<QueryData<T>> comparator;
@@ -79,6 +78,40 @@ public class QuerySortField<T extends IdObject> {
 
   public static QuerySortField<Tournament> tournamentPlace() {
     return new QuerySortField<>(Comparator.comparing(o -> o.data().place()), "place", true);
+  }
+
+  public static QuerySortField<Tournament> tournamentCombinedType() {
+    Comparator<QueryData<Tournament>> comp =
+        Comparator.comparingInt((QueryData<Tournament> o) -> o.data().teamTournament() ? 1 : 0)
+            .thenComparingInt(o -> o.data().timeControl().ordinal())
+            .thenComparingInt(o -> o.data().type().ordinal());
+    return new QuerySortField<>(comp, "combinedType", true);
+  }
+
+  public static QuerySortField<Tournament> tournamentNation() {
+    return new QuerySortField<>(
+        Comparator.comparing(o -> o.data().nation().getIocCode()), "nation", true);
+  }
+
+  public static QuerySortField<Tournament> tournamentCategory() {
+    return new QuerySortField<>(
+        Comparator.comparingInt(o -> o.data().category()),
+        "category",
+        true,
+        QuerySortOrder.Direction.DESCENDING);
+  }
+
+  public static QuerySortField<Tournament> tournamentRounds() {
+    return new QuerySortField<>(
+        Comparator.comparingInt(o -> o.data().rounds()),
+        "rounds",
+        true,
+        QuerySortOrder.Direction.DESCENDING);
+  }
+
+  public static QuerySortField<Tournament> tournamentComplete() {
+    return new QuerySortField<>(
+        Comparator.comparingInt(o -> o.data().complete() ? 1 : 0), "complete", true);
   }
 
   public static QuerySortField<Annotator> annotatorName() {
