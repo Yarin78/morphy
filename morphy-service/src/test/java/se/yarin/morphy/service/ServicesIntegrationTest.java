@@ -107,13 +107,17 @@ class ServicesIntegrationTest {
             game2.tournament().startDate(),
             game2.tournament().endDate(),
             "New Location",
-            "GER", // Valid IOC country code
+            "GER", // Valid IOC nation code
             20,
+            null,
             10,
             "swiss",
             "classical",
+            null,
             true,
             false,
+            null,
+            null,
             null, null, null);
     tournamentsService.updateTournament(databaseId, game2TournamentId, updatedTournament);
 
@@ -191,7 +195,7 @@ class ServicesIntegrationTest {
     // Verify tournament was updated
     assertEquals("Updated Tournament Name", retrievedGame2.tournament().title());
     assertEquals("New Location", retrievedGame2.tournament().place());
-    assertEquals("GER", retrievedGame2.tournament().country());
+    assertEquals("GER", retrievedGame2.tournament().nation());
     assertEquals(20, retrievedGame2.tournament().category());
     assertEquals(10, retrievedGame2.tournament().rounds());
     assertEquals("swiss", retrievedGame2.tournament().type());
@@ -254,6 +258,10 @@ class ServicesIntegrationTest {
             null,
             null,
             null,
+            null,
+            null,
+            null,
+            null,
             null, null, null);
 
     TournamentDto tournament2 =
@@ -264,6 +272,10 @@ class ServicesIntegrationTest {
             new Date(2021, 1, 31),
             "Moscow",
             "RUS",
+            null,
+            null,
+            null,
+            null,
             null,
             null,
             null,
@@ -297,6 +309,10 @@ class ServicesIntegrationTest {
             null,
             null,
             null,
+            null,
+            null,
+            null,
+            null,
             null, null, null);
 
     assertThrows(
@@ -322,6 +338,10 @@ class ServicesIntegrationTest {
             null,
             null,
             null,
+            null,
+            null,
+            null,
+            null,
             null, null, null);
 
     // Create game with this tournament
@@ -338,6 +358,10 @@ class ServicesIntegrationTest {
             new Date(2021, 1, 31),
             "Paris", // Different place
             "FRA",
+            null,
+            null,
+            null,
+            null,
             null,
             null,
             null,
@@ -373,6 +397,10 @@ class ServicesIntegrationTest {
             null,
             null,
             null,
+            null,
+            null,
+            null,
+            null,
             null, null, null);
 
     // Create game with this tournament
@@ -390,11 +418,15 @@ class ServicesIntegrationTest {
             "Berlin",
             "GER",
             20, // Changed non-key field
+            null,
             10, // Changed non-key field
             "swiss",
             "classical",
+            null,
             true,
             false,
+            null,
+            null,
             null, null, null);
 
     // Should not throw
@@ -579,11 +611,15 @@ class ServicesIntegrationTest {
             "Toronto",
             "CAN",
             22,
+            null,
             14,
             "tournament",
             "classical",
+            null,
             true,
             false,
+            null,
+            null,
             null, null, null),
         new SourceDto(
             null,
@@ -630,6 +666,10 @@ class ServicesIntegrationTest {
             new Date(1985, 2, 15),
             "Moscow",
             "URS",
+            null,
+            null,
+            null,
+            null,
             null,
             null,
             null,
@@ -686,7 +726,7 @@ class ServicesIntegrationTest {
         null,
         null,
         null,
-        new TournamentDto(null, "Test Event", new Date(2024, 1, 1), null, "Test City", null, null, null, null, null, null, null, null, null, null),
+        new TournamentDto(null, "Test Event", new Date(2024, 1, 1), null, "Test City", null, null, null, null, null, null, null, null, null, null, null, null, null, null),
         new SourceDto(null, "Test Source", "Test", null, null, null, null, null, null),
         null,
         null,
@@ -711,7 +751,7 @@ class ServicesIntegrationTest {
         null,
         null,
         null,
-        new TournamentDto(null, "Test Event", new Date(2024, 1, 1), null, "Test City", null, null, null, null, null, null, null, null, null, null),
+        new TournamentDto(null, "Test Event", new Date(2024, 1, 1), null, "Test City", null, null, null, null, null, null, null, null, null, null, null, null, null, null),
         new SourceDto(null, "Test Source", "Test", null, null, null, null, null, null),
         new AnnotatorDto(null, annotatorName, null, null),
         null,

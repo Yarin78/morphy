@@ -169,8 +169,8 @@ public class GameDtoImporter {
       if (dto.tournament().place() != null) {
         headerModel.setEventSite(dto.tournament().place());
       }
-      if (dto.tournament().country() != null) {
-        headerModel.setEventCountry(dto.tournament().country());
+      if (dto.tournament().nation() != null) {
+        headerModel.setEventCountry(dto.tournament().nation());
       }
       if (dto.tournament().category() != null) {
         headerModel.setEventCategory(dto.tournament().category());

@@ -21,6 +21,6 @@ public class TournamentTypeColumn extends TournamentBaseColumn {
 
   @Override
   public String getTournamentValue(Database database, Tournament tournament) {
-    return tournament.getPrettyTypeName();
+    return tournament.typeCombined();
   }
 }

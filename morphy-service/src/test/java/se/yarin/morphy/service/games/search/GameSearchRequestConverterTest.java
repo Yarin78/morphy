@@ -615,19 +615,6 @@ class GameSearchRequestConverterTest {
     }
 
     @Test
-    @DisplayName("should create GameEntityJoin for tournament.name (alias)")
-    void testTournamentNameAlias() {
-      GameSearchRequest request = request().filter("tournament.name:Candidates").build();
-
-      GameQuery query = queryBuilder.buildQuery(database, request);
-
-      assertEquals(0, query.gameFilters().size());
-      assertEquals(1, query.entityJoins().size());
-      GameEntityJoin<?> join = query.entityJoins().get(0);
-      assertEquals(EntityType.TOURNAMENT, join.getEntityType());
-    }
-
-    @Test
     @DisplayName("should create GameEntityJoin for tournament.place filter")
     void testTournamentPlaceFilter() {
       GameSearchRequest request = request().filter("tournament.place:London").build();

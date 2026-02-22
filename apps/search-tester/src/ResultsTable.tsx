@@ -304,17 +304,25 @@ export const PLAYER_COLUMNS: Column<PlayerDto>[] = [
 export const TOURNAMENT_COLUMNS: Column<TournamentDto>[] = [
   { key: 'id', label: 'ID', render: (t) => formatValue(t.id) },
   { key: 'title', label: 'Title', render: (t) => formatValue(t.title) },
-  { key: 'startDate', label: 'Start Date', render: (t) => formatDate(t.startDate) },
-  { key: 'endDate', label: 'End Date', render: (t) => formatDate(t.endDate) },
   { key: 'place', label: 'Place', render: (t) => formatValue(t.place) },
-  { key: 'country', label: 'Country', render: (t) => formatValue(t.country) },
-  { key: 'category', label: 'Category', render: (t) => formatValue(t.category) },
+  { key: 'startDate', label: 'Start Date', render: (t) => formatDate(t.startDate) },
+  { key: 'typeCombined', label: 'Type', render: (t) => formatValue(t.typeCombined) },
+  { key: 'nation', label: 'Nation', render: (t) => formatValue(t.nation) },
+  { key: 'category', label: 'Category', render: (t) => formatValue(t.categoryRoman) },
   { key: 'rounds', label: 'Rounds', render: (t) => formatValue(t.rounds) },
-  { key: 'type', label: 'Type', render: (t) => formatValue(t.type) },
-  { key: 'timeControl', label: 'Time Control', render: (t) => formatValue(t.timeControl) },
-  { key: 'complete', label: 'Complete', render: (t) => formatValue(t.complete) },
-  { key: 'teamTournament', label: 'Team Tourn.', render: (t) => formatValue(t.teamTournament) },
   { key: 'gameCount', label: 'Game Count', render: (t) => formatValue(t.gameCount) },
+  { key: 'complete', label: 'Complete', render: (t) => formatValue(t.complete) },
+  {
+    key: 'coordinates',
+    label: 'Coordinates',
+    render: (t) => {
+      if (t.latitude == null || t.longitude == null) return '';
+      const lat = Math.abs(t.latitude).toFixed(4) + (t.latitude >= 0 ? ' N' : ' S');
+      const lng = Math.abs(t.longitude).toFixed(4) + (t.longitude >= 0 ? ' E' : ' W');
+      return `${lat}, ${lng}`;
+    },
+  },
+  { key: 'endDate', label: 'End Date', render: (t) => formatDate(t.endDate) },
 ];
 
 export const ANNOTATOR_COLUMNS: Column<AnnotatorDto>[] = [

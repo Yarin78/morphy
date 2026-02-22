@@ -52,8 +52,9 @@ class TournamentDtoConverterTest {
     assertEquals(new Date(2024, 3, 15), dto.startDate());
     assertEquals(new Date(2024, 4, 10), dto.endDate());
     assertEquals("Singapore", dto.place());
-    assertEquals("SIN", dto.country()); // IOC code for Singapore
+    assertEquals("SIN", dto.nation()); // IOC code for Singapore
     assertEquals(22, dto.category());
+    assertEquals("XXII", dto.categoryRoman());
     assertEquals(14, dto.rounds());
     assertEquals("match", dto.type());
     assertEquals("blitz", dto.timeControl());
@@ -91,7 +92,7 @@ class TournamentDtoConverterTest {
     assertNull(dto.startDate()); // Unset date becomes null
     assertNull(dto.endDate());
     assertNull(dto.place());
-    assertNull(dto.country());
+    assertNull(dto.nation());
     assertNull(dto.category());
     assertNull(dto.rounds());
     assertNull(dto.type());
@@ -188,7 +189,7 @@ class TournamentDtoConverterTest {
     TournamentDto dto =
         new TournamentDto(
             1L, null, null, null, null, null, null, null, null, null, null, null, null, null,
-            null);
+            null, null, null, null, null);
 
     Tournament tournament = converter.toTournament(dto);
     assertEquals("", tournament.title()); // null title becomes empty string

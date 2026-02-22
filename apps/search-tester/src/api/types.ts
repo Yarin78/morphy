@@ -182,13 +182,17 @@ export interface TournamentDto {
   startDate?: string;
   endDate?: string;
   place?: string;
-  country?: string;
+  nation?: string;
   category?: number;
+  categoryRoman?: string;
   rounds?: number;
   type?: string;
   timeControl?: string;
+  typeCombined?: string;
   complete?: boolean;
   teamTournament?: boolean;
+  latitude?: number;
+  longitude?: number;
   gameCount?: number;
   rawData?: string | number[];
   rawExtraData?: string | number[];

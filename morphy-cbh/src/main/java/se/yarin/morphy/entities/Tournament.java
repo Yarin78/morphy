@@ -103,23 +103,18 @@ public abstract class Tournament extends Entity implements Comparable<Tournament
   }
 
   /**
-   * Gets a string describing the type of the tournament, combining the type, time control and team
-   * status
-   *
-   * @return
+   * Gets a combined type description, e.g. "Game", "Match (Corr)", "Team-Schevening (Blitz)".
    */
   @NotNull
-  public String getPrettyTypeName() {
+  public String typeCombined() {
     String typeName = type().getLongName();
     if (timeControl() != TournamentTimeControl.NORMAL) {
-      typeName += String.format(" (%s)", timeControl().getLongName());
+      String tc = timeControl().getName();
+      tc = tc.substring(0, 1).toUpperCase() + tc.substring(1);
+      typeName += " (" + tc + ")";
     }
     if (teamTournament()) {
-      if (typeName.length() == 0) {
-        typeName = "Team";
-      } else {
-        typeName = "Team-" + typeName;
-      }
+      typeName = typeName.isEmpty() ? "Team" : "Team-" + typeName;
     }
     return typeName;
   }
@@ -169,4 +164,5 @@ public abstract class Tournament extends Entity implements Comparable<Tournament
     }
     return "X".repeat(cat / 10) + roman[cat % 10];
   }
+
 }

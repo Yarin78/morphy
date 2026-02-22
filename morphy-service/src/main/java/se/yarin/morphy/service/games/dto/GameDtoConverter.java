@@ -240,6 +240,10 @@ public class GameDtoConverter {
           null,
           null,
           null,
+          null,
+          null,
+          null,
+          null,
           null);
     }
 

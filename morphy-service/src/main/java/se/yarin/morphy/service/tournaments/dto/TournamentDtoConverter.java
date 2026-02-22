@@ -36,13 +36,17 @@ public class TournamentDtoConverter {
         tournament.place().isEmpty() ? null : tournament.place(),
         tournament.nation() != Nation.NONE ? tournament.nation().getIocCode() : null,
         tournament.category() == 0 ? null : tournament.category(),
+        tournament.category() == 0 ? null : tournament.getCategoryRoman(),
         tournament.rounds() == 0 ? null : tournament.rounds(),
         tournament.type() == TournamentType.NONE ? null : tournament.type().getName(),
         tournament.timeControl() == TournamentTimeControl.NORMAL
             ? null
             : tournament.timeControl().getName(),
+        tournament.typeCombined().isEmpty() ? null : tournament.typeCombined(),
         tournament.complete() ? true : null,
         tournament.teamTournament() ? true : null,
+        extra.latitude() != 0.0 ? extra.latitude() : null,
+        extra.longitude() != 0.0 ? extra.longitude() : null,
         tournament.count() > 0 ? tournament.count() : null,
         rawData,
         rawExtraData);
@@ -72,9 +76,9 @@ public class TournamentDtoConverter {
       builder.place(dto.place());
     }
 
-    // Set country/nation
-    if (dto.country() != null) {
-      Nation nation = Nation.fromIOC(dto.country());
+    // Set nation
+    if (dto.nation() != null) {
+      Nation nation = Nation.fromIOC(dto.nation());
       if (nation != null) {
         builder.nation(nation);
       }
