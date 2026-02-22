@@ -243,7 +243,7 @@ public class TournamentExtraStorage
       numRules = ByteBufferUtil.getUnsignedByte(buf);
     }
     if (itemSize >= 65) {
-      endDate = CBUtil.decodeDate(ByteBufferUtil.getIntL(buf));
+      endDate = CBUtil.decodeDate(ByteBufferUtil.getIntB(buf));
     }
 
     return ImmutableTournamentExtra.builder()
@@ -280,7 +280,7 @@ public class TournamentExtraStorage
       ByteBufferUtil.putByte(buf, 0);
     }
     ByteBufferUtil.putByte(buf, tournamentExtra.tiebreakRules().size());
-    ByteBufferUtil.putIntL(buf, CBUtil.encodeDate(tournamentExtra.endDate()));
+    ByteBufferUtil.putIntB(buf, CBUtil.encodeDate(tournamentExtra.endDate()));
   }
 
   public void copyEntities(@NotNull TournamentExtraStorage targetStorage) {
