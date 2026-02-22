@@ -48,10 +48,10 @@ class TournamentDtoConverterTest {
 
     // Verify DTO has correct values
     assertEquals(42L, dto.id());
-    assertEquals("World Chess Championship 2024", dto.name());
+    assertEquals("World Chess Championship 2024", dto.title());
     assertEquals(new Date(2024, 3, 15), dto.startDate());
     assertEquals(new Date(2024, 4, 10), dto.endDate());
-    assertEquals("Singapore", dto.site());
+    assertEquals("Singapore", dto.place());
     assertEquals("SIN", dto.country()); // IOC code for Singapore
     assertEquals(22, dto.category());
     assertEquals(14, dto.rounds());
@@ -87,10 +87,10 @@ class TournamentDtoConverterTest {
 
     // Verify DTO has correct values
     assertEquals(1L, dto.id());
-    assertEquals("Local Club Championship", dto.name());
+    assertEquals("Local Club Championship", dto.title());
     assertNull(dto.startDate()); // Unset date becomes null
     assertNull(dto.endDate());
-    assertNull(dto.site());
+    assertNull(dto.place());
     assertNull(dto.country());
     assertNull(dto.category());
     assertNull(dto.rounds());
@@ -171,27 +171,27 @@ class TournamentDtoConverterTest {
     TournamentDto dto = converter.toDto(tournament, TournamentExtra.empty());
 
     // Empty strings should become null in DTO for optional fields
-    assertNull(dto.site());
+    assertNull(dto.place());
 
     // But title should be preserved as empty string (it's required)
-    assertEquals("", dto.name());
+    assertEquals("", dto.title());
 
-    // Convert back - empty string in name becomes empty string in title
+    // Convert back - empty string in title stays empty string
     Tournament recreated = converter.toTournament(dto);
     assertEquals("", recreated.title());
     assertEquals("", recreated.place());
   }
 
   @Test
-  void testNullNameInDtoBecomesEmptyString() {
-    // When converting from DTO with null name, should become empty string
+  void testNullTitleInDtoBecomesEmptyString() {
+    // When converting from DTO with null title, should become empty string
     TournamentDto dto =
         new TournamentDto(
             1L, null, null, null, null, null, null, null, null, null, null, null, null, null,
             null);
 
     Tournament tournament = converter.toTournament(dto);
-    assertEquals("", tournament.title()); // null name becomes empty string
+    assertEquals("", tournament.title()); // null title becomes empty string
   }
 
   @Test

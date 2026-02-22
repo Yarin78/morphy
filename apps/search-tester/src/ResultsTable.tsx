@@ -275,7 +275,7 @@ export const GAME_COLUMNS: Column<GameDto>[] = [
   {
     key: 'tournament',
     label: 'Tournament',
-    render: (g) => formatValue(g.tournament?.name),
+    render: (g) => formatValue(g.tournament?.title),
   },
   {
     key: 'source',
@@ -303,10 +303,10 @@ export const PLAYER_COLUMNS: Column<PlayerDto>[] = [
 
 export const TOURNAMENT_COLUMNS: Column<TournamentDto>[] = [
   { key: 'id', label: 'ID', render: (t) => formatValue(t.id) },
-  { key: 'name', label: 'Name', render: (t) => formatValue(t.name) },
+  { key: 'title', label: 'Title', render: (t) => formatValue(t.title) },
   { key: 'startDate', label: 'Start Date', render: (t) => formatDate(t.startDate) },
   { key: 'endDate', label: 'End Date', render: (t) => formatDate(t.endDate) },
-  { key: 'site', label: 'Site', render: (t) => formatValue(t.site) },
+  { key: 'place', label: 'Place', render: (t) => formatValue(t.place) },
   { key: 'country', label: 'Country', render: (t) => formatValue(t.country) },
   { key: 'category', label: 'Category', render: (t) => formatValue(t.category) },
   { key: 'rounds', label: 'Rounds', render: (t) => formatValue(t.rounds) },

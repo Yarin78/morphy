@@ -58,7 +58,7 @@ public class TournamentDtoConverter {
     ImmutableTournament.Builder builder = ImmutableTournament.builder();
 
     // Set title (required)
-    builder.title(dto.name() != null ? dto.name() : "");
+    builder.title(dto.title() != null ? dto.title() : "");
 
     // Set dates
     if (dto.startDate() != null) {
@@ -68,8 +68,8 @@ public class TournamentDtoConverter {
     }
 
     // Set location
-    if (dto.site() != null) {
-      builder.place(dto.site());
+    if (dto.place() != null) {
+      builder.place(dto.place());
     }
 
     // Set country/nation

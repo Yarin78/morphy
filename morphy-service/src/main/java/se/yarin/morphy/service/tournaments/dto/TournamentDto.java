@@ -9,10 +9,10 @@ import se.yarin.chess.Date;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonPropertyOrder({
   "id",
-  "name",
+  "title",
   "startDate",
   "endDate",
-  "site",
+  "place",
   "country",
   "category",
   "rounds",
@@ -26,10 +26,10 @@ import se.yarin.chess.Date;
 })
 public record TournamentDto(
     Long id,
-    String name,
+    String title,
     @Nullable Date startDate,
     @Nullable Date endDate,
-    @Nullable String site,
+    @Nullable String place,
     @Nullable String country,
     @Nullable Integer category,
     @Nullable Integer rounds,

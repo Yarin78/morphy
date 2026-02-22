@@ -153,8 +153,8 @@ public class GameDtoImporter {
 
     // Set tournament information
     if (dto.tournament() != null) {
-      if (dto.tournament().name() != null) {
-        headerModel.setEvent(dto.tournament().name());
+      if (dto.tournament().title() != null) {
+        headerModel.setEvent(dto.tournament().title());
       }
       if (dto.tournament().id() != null) {
         headerModel.setField(
@@ -166,8 +166,8 @@ public class GameDtoImporter {
       if (dto.tournament().endDate() != null) {
         headerModel.setEventEndDate(dto.tournament().endDate());
       }
-      if (dto.tournament().site() != null) {
-        headerModel.setEventSite(dto.tournament().site());
+      if (dto.tournament().place() != null) {
+        headerModel.setEventSite(dto.tournament().place());
       }
       if (dto.tournament().country() != null) {
         headerModel.setEventCountry(dto.tournament().country());

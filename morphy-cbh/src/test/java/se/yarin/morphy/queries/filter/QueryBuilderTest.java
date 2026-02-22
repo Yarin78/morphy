@@ -20,8 +20,8 @@ public class QueryBuilderTest {
   // --- TournamentQueryBuilder ---
 
   @Test
-  public void tournamentByName() {
-    EntityQuery<Tournament> query = new TournamentQueryBuilder().buildQuery(db, "name:Candidates");
+  public void tournamentByTitle() {
+    EntityQuery<Tournament> query = new TournamentQueryBuilder().buildQuery(db, "title:Candidates");
 
     assertEquals(1, query.filters().size());
     assertTrue(query.filters().get(0) instanceof TournamentTitleFilter);

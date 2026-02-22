@@ -189,8 +189,8 @@ class ServicesIntegrationTest {
     assertEquals(game2Id, retrievedGame2.id().intValue());
 
     // Verify tournament was updated
-    assertEquals("Updated Tournament Name", retrievedGame2.tournament().name());
-    assertEquals("New Location", retrievedGame2.tournament().site());
+    assertEquals("Updated Tournament Name", retrievedGame2.tournament().title());
+    assertEquals("New Location", retrievedGame2.tournament().place());
     assertEquals("GER", retrievedGame2.tournament().country());
     assertEquals(20, retrievedGame2.tournament().category());
     assertEquals(10, retrievedGame2.tournament().rounds());
@@ -353,7 +353,7 @@ class ServicesIntegrationTest {
     // Verify the update was successful
     TournamentDto retrieved = tournamentsService.getTournament(databaseId, tournamentId);
     assertNotNull(retrieved);
-    assertEquals("Paris", retrieved.site());
+    assertEquals("Paris", retrieved.place());
   }
 
   @Test
@@ -460,7 +460,7 @@ class ServicesIntegrationTest {
             databaseId, new EntitySearchRequest("Candidates", null, null, null, null, null, null));
 
     assertEquals(1, response.count());
-    assertTrue(response.items().get(0).name().contains("Candidates"));
+    assertTrue(response.items().get(0).title().contains("Candidates"));
     assertEquals(1, response.totalCount().intValue());
     assertNotNull(response.metadata());
   }

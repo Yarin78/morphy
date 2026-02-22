@@ -74,7 +74,7 @@ export interface GameDto {
   round?: number;
   subRound?: number;
   lineEvaluation?: string;
-  tournament?: { id: number; name?: string };
+  tournament?: { id: number; title?: string };
   source?: { id: number; title?: string };
   annotator?: { id: number; name?: string };
   gameTag?: { id: number; englishTitle?: string; germanTitle?: string; [key: string]: unknown };
@@ -178,10 +178,10 @@ export interface PlayerListResponse {
 
 export interface TournamentDto {
   id: number;
-  name: string;
+  title: string;
   startDate?: string;
   endDate?: string;
-  site?: string;
+  place?: string;
   country?: string;
   category?: number;
   rounds?: number;
