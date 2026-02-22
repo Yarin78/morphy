@@ -16,7 +16,10 @@ public class TournamentTimeControlFilter implements EntityFilter<Tournament> {
   private final @NotNull Set<TournamentTimeControl> timeControls;
 
   public TournamentTimeControlFilter(@NotNull String timeControls) {
-    List<String> specTimes = Arrays.stream(timeControls.split("\\|")).collect(Collectors.toList());
+    List<String> specTimes =
+        Arrays.stream(timeControls.split("\\|"))
+            .map(s -> s.equals("classic") ? "normal" : s)
+            .collect(Collectors.toList());
     this.timeControls =
         Arrays.stream(TournamentTimeControl.values())
             .filter(x -> specTimes.contains(x.getName()))

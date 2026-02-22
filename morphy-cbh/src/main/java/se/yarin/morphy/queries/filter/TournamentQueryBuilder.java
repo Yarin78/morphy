@@ -29,14 +29,7 @@ public class TournamentQueryBuilder extends AbstractEntityQueryBuilder<Tournamen
           Map.entry("nation", c -> new TournamentNationFilter(c.value())),
           Map.entry("category", TournamentQueryBuilder::buildCategoryFilter),
           Map.entry("rounds", TournamentQueryBuilder::buildRoundsFilter),
-          Map.entry("teams", c -> new TournamentTeamFilter()),
-          Map.entry(
-              "year",
-              c -> {
-                int year = Integer.parseInt(c.value());
-                return new TournamentStartDateFilter(
-                    new Date(year, 1, 1), new Date(year, 12, 31));
-              }));
+          Map.entry("team", c -> new TournamentTeamFilter(Boolean.parseBoolean(c.value()))));
 
   private static final Map<String, QuerySortField<Tournament>> SORT_FIELDS =
       orderedMap(

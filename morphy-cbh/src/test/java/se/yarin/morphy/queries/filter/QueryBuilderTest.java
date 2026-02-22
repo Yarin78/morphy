@@ -37,7 +37,7 @@ public class QueryBuilderTest {
 
   @Test
   public void tournamentByYear() {
-    EntityQuery<Tournament> query = new TournamentQueryBuilder().buildQuery(db, "year:2024");
+    EntityQuery<Tournament> query = new TournamentQueryBuilder().buildQuery(db, "date:2024");
 
     assertEquals(1, query.filters().size());
     assertTrue(query.filters().get(0) instanceof TournamentStartDateFilter);
@@ -46,7 +46,7 @@ public class QueryBuilderTest {
   @Test
   public void tournamentByNameAndYear() {
     EntityQuery<Tournament> query =
-        new TournamentQueryBuilder().buildQuery(db, "Candidates year:2024");
+        new TournamentQueryBuilder().buildQuery(db, "Candidates date:2024");
 
     assertEquals(2, query.filters().size());
     assertTrue(query.filters().get(0) instanceof TournamentTitleFilter);

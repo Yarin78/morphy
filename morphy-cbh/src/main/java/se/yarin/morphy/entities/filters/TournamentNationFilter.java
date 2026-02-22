@@ -16,7 +16,7 @@ public class TournamentNationFilter implements EntityFilter<Tournament> {
   public TournamentNationFilter(@NotNull String nations) {
     this.nations = new boolean[256];
     nationSet =
-        Arrays.stream(nations.split("\\|")).map(Nation::fromName).collect(Collectors.toSet());
+        Arrays.stream(nations.split("\\|")).map(Nation::fromIOC).collect(Collectors.toSet());
     nationSet.forEach(nation -> this.nations[nation.ordinal()] = true);
   }
 
