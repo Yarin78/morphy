@@ -1,6 +1,7 @@
 package se.yarin.morphy.service.annotators.dto;
 
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.springframework.stereotype.Component;
 import se.yarin.morphy.entities.Annotator;
 import se.yarin.morphy.entities.ImmutableAnnotator;
@@ -18,10 +19,15 @@ public class AnnotatorDtoConverter {
    * @return the AnnotatorDto
    */
   public AnnotatorDto toDto(@NotNull Annotator annotator) {
+    return toDto(annotator, null);
+  }
+
+  public AnnotatorDto toDto(@NotNull Annotator annotator, @Nullable byte[] rawData) {
     return new AnnotatorDto(
         (long) annotator.id(),
         annotator.name().isEmpty() ? null : annotator.name(),
-        annotator.count() > 0 ? annotator.count() : null);
+        annotator.count() > 0 ? annotator.count() : null,
+        rawData);
   }
 
   /**

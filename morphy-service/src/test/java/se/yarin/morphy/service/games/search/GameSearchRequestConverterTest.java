@@ -215,7 +215,8 @@ class GameSearchRequestConverterTest {
           teamPosition,
           gameTagId,
           debugQueryPlans,
-          debugExecuteAllPlans);
+          debugExecuteAllPlans,
+          null);
     }
   }
 

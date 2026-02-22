@@ -2,6 +2,7 @@ package se.yarin.morphy.service.sources;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -164,14 +165,17 @@ public class SourcesService {
   public EntitySearchResponse<SourceDto> searchSources(
       @NotNull String databaseId, @NotNull EntitySearchRequest request) {
     SourceQueryBuilder queryBuilder = new SourceQueryBuilder();
+    boolean debugRawData = request.debugRawData();
     return databaseService.withReadTransaction(
         databaseId,
-        txn ->
-            entitySearchExecutor.executeSearch(
-                txn,
-                EntityType.SOURCE,
-                queryBuilder,
-                sourceDtoConverter::toDto,
-                request));
+        txn -> {
+          Function<Source, SourceDto> toDtoFn =
+              debugRawData
+                  ? s -> sourceDtoConverter.toDto(
+                      s, txn.database().sourceIndex().getRaw(s.id()))
+                  : sourceDtoConverter::toDto;
+          return entitySearchExecutor.executeSearch(
+              txn, EntityType.SOURCE, queryBuilder, toDtoFn, request);
+        });
   }
 }

@@ -2,6 +2,7 @@ package se.yarin.morphy.service.annotators;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -165,14 +166,17 @@ public class AnnotatorsService {
   public EntitySearchResponse<AnnotatorDto> searchAnnotators(
       @NotNull String databaseId, @NotNull EntitySearchRequest request) {
     AnnotatorQueryBuilder queryBuilder = new AnnotatorQueryBuilder();
+    boolean debugRawData = request.debugRawData();
     return databaseService.withReadTransaction(
         databaseId,
-        txn ->
-            entitySearchExecutor.executeSearch(
-                txn,
-                EntityType.ANNOTATOR,
-                queryBuilder,
-                annotatorDtoConverter::toDto,
-                request));
+        txn -> {
+          Function<Annotator, AnnotatorDto> toDtoFn =
+              debugRawData
+                  ? a -> annotatorDtoConverter.toDto(
+                      a, txn.database().annotatorIndex().getRaw(a.id()))
+                  : annotatorDtoConverter::toDto;
+          return entitySearchExecutor.executeSearch(
+              txn, EntityType.ANNOTATOR, queryBuilder, toDtoFn, request);
+        });
   }
 }

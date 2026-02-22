@@ -129,6 +129,7 @@ function App() {
   const [sortBy, setSortBy] = useState('id');
   const [order, setOrder] = useState<'asc' | 'desc'>('asc');
   const [includeMoves, setIncludeMoves] = useState(false);
+  const [includeRawData, setIncludeRawData] = useState(false);
   const [executeAllPlansDefault, setExecuteAllPlansDefault] = useState(false);
   const [filter, setFilter] = useState('');
 
@@ -142,6 +143,7 @@ function App() {
       setSortBy(saved.sortBy ?? defaultForSaved);
       setOrder(saved.order ?? 'asc');
       setIncludeMoves(saved.includeMoves ?? false);
+      setIncludeRawData(saved.includeRawData ?? false);
     },
     [filterOptionsCache]
   );
@@ -160,13 +162,14 @@ function App() {
       sortBy,
       order,
       includeMoves,
+      includeRawData,
     };
     setSavedSearches((prev) => {
       const next = [...prev, saved];
       persistSavedSearches(next);
       return next;
     });
-  }, [entityType, selectedDb, filter, sortBy, order, includeMoves]);
+  }, [entityType, selectedDb, filter, sortBy, order, includeMoves, includeRawData]);
 
   const removeSavedSearch = useCallback((id: string) => {
     setSavedSearches((prev) => {
@@ -227,12 +230,13 @@ function App() {
         sortBy: sortByParam,
         includeMoves,
         debugQueryPlans: true,
+        debugRawData: includeRawData,
       };
       if (filter.trim()) req.filter = filter.trim();
       if (executeAllPlans) req.debugExecuteAllPlans = true;
       return req;
     },
-    [sortByParam, includeMoves, filter]
+    [sortByParam, includeMoves, includeRawData, filter]
   );
 
   const handleSearch = useCallback(
@@ -276,6 +280,7 @@ function App() {
                 sortBy: effectiveSortByParam,
                 debugQueryPlans: true,
                 debugExecuteAllPlans: effective,
+                debugRawData: includeRawData,
               }
             : undefined,
       };
@@ -296,7 +301,7 @@ function App() {
         setLoading(false);
       }
     },
-    [selectedDb, entityType, filter, sortByParam, buildRequest, executeAllPlansDefault]
+    [selectedDb, entityType, filter, sortByParam, buildRequest, executeAllPlansDefault, includeRawData]
   );
 
   // When user changes entity type from dropdown: filter is cleared, trigger search
@@ -365,6 +370,7 @@ function App() {
             sortBy: sortByParam,
             debugQueryPlans: true,
             debugExecuteAllPlans: executeAllPlansDefault,
+            debugRawData: includeRawData,
           },
           null,
           2
@@ -396,6 +402,8 @@ function App() {
           onRemoveSavedSearch={removeSavedSearch}
           includeMoves={includeMoves}
           onIncludeMovesChange={setIncludeMoves}
+          includeRawData={includeRawData}
+          onIncludeRawDataChange={setIncludeRawData}
           executeAllPlansDefault={executeAllPlansDefault}
           onSearch={handleSearch}
         />

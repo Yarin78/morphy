@@ -6,5 +6,6 @@ import org.jetbrains.annotations.Nullable;
 
 /** Detailed information about a game annotator. */
 @JsonInclude(JsonInclude.Include.NON_NULL)
-@JsonPropertyOrder({"id", "name", "gameCount"})
-public record AnnotatorDto(Long id, @Nullable String name, @Nullable Integer gameCount) {}
+@JsonPropertyOrder({"id", "name", "gameCount", "rawData"})
+public record AnnotatorDto(
+    Long id, @Nullable String name, @Nullable Integer gameCount, @Nullable byte[] rawData) {}

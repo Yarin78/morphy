@@ -116,10 +116,11 @@ public class TournamentsController {
       @RequestParam(required = false) Integer limit,
       @RequestParam(required = false) String sortBy,
       @RequestParam(required = false) Boolean debugQueryPlans,
-      @RequestParam(required = false) Boolean debugExecuteAllPlans) {
+      @RequestParam(required = false) Boolean debugExecuteAllPlans,
+      @RequestParam(required = false) Boolean debugRawData) {
     EntitySearchRequest request =
         new EntitySearchRequest(filter, offset, limit, sortBy, debugQueryPlans,
-            debugExecuteAllPlans);
+            debugExecuteAllPlans, debugRawData);
     EntitySearchResponse<TournamentDto> response =
         tournamentsService.searchTournaments(databaseId, request);
     return ResponseEntity.ok(response);

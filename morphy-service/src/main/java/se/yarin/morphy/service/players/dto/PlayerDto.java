@@ -6,6 +6,10 @@ import org.jetbrains.annotations.Nullable;
 
 /** Detailed information about a chess player. */
 @JsonInclude(JsonInclude.Include.NON_NULL)
-@JsonPropertyOrder({"id", "lastName", "firstName", "gameCount"})
+@JsonPropertyOrder({"id", "lastName", "firstName", "gameCount", "rawData"})
 public record PlayerDto(
-    Long id, @Nullable String lastName, @Nullable String firstName, @Nullable Integer gameCount) {}
+    Long id,
+    @Nullable String lastName,
+    @Nullable String firstName,
+    @Nullable Integer gameCount,
+    @Nullable byte[] rawData) {}

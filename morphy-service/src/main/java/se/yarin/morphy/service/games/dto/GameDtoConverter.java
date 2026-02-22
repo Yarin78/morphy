@@ -1,5 +1,6 @@
 package se.yarin.morphy.service.games.dto;
 
+import java.nio.ByteBuffer;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -62,7 +63,7 @@ public class GameDtoConverter {
    * @return the GameDto
    */
   public GameDto toDto(@NotNull Game game) {
-    return toDto(game, false, false, false, false, false);
+    return toDto(game, false, false, false, false, false, false);
   }
 
   /**
@@ -85,6 +86,19 @@ public class GameDtoConverter {
       boolean includeTournamentDetails,
       boolean includeSourceDetails,
       boolean includeTeamDetails) {
+    return toDto(
+        game, includeMoves, includeText, includeTournamentDetails, includeSourceDetails,
+        includeTeamDetails, false);
+  }
+
+  public GameDto toDto(
+      @NotNull Game game,
+      boolean includeMoves,
+      boolean includeText,
+      boolean includeTournamentDetails,
+      boolean includeSourceDetails,
+      boolean includeTeamDetails,
+      boolean debugRawData) {
     // Basic game information
     Long id = (long) game.id();
     String type = game.guidingText() ? "text" : "game";
@@ -132,6 +146,14 @@ public class GameDtoConverter {
     // Text (optional)
     GameTextDto text = includeText ? convertText(game) : null;
 
+    // Raw data (debug)
+    byte[] rawData = null;
+    byte[] rawExtendedData = null;
+    if (debugRawData) {
+      rawData = toBytes(game.database().gameHeaderIndex().getRaw(game.id()));
+      rawExtendedData = toBytes(game.database().extendedGameHeaderStorage().getRaw(game.id()));
+    }
+
     return new GameDto(
         id,
         type,
@@ -152,7 +174,9 @@ public class GameDtoConverter {
         annotator,
         gameTag,
         moves,
-        text);
+        text,
+        rawData,
+        rawExtendedData);
   }
 
   @Nullable
@@ -179,6 +203,7 @@ public class GameDtoConverter {
       return new TeamDto(
           (long) teamId,
           team.title().isEmpty() ? null : team.title(),
+          null,
           null,
           null,
           null,
@@ -213,6 +238,8 @@ public class GameDtoConverter {
           null,
           null,
           null,
+          null,
+          null,
           null);
     }
 
@@ -236,6 +263,7 @@ public class GameDtoConverter {
       return new SourceDto(
           (long) sourceId,
           source.title().isEmpty() ? null : source.title(),
+          null,
           null,
           null,
           null,
@@ -299,5 +327,11 @@ public class GameDtoConverter {
       log.error("Failed to load text for game {}", game.id(), e);
       return null;
     }
+  }
+
+  static byte[] toBytes(@NotNull ByteBuffer buf) {
+    byte[] bytes = new byte[buf.remaining()];
+    buf.get(bytes);
+    return bytes;
   }
 }

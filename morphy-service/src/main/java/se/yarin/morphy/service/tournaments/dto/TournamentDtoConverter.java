@@ -1,6 +1,7 @@
 package se.yarin.morphy.service.tournaments.dto;
 
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.springframework.stereotype.Component;
 import se.yarin.chess.Date;
 import se.yarin.morphy.entities.*;
@@ -19,6 +20,14 @@ public class TournamentDtoConverter {
    * @return the TournamentDto
    */
   public TournamentDto toDto(@NotNull Tournament tournament, @NotNull TournamentExtra extra) {
+    return toDto(tournament, extra, null, null);
+  }
+
+  public TournamentDto toDto(
+      @NotNull Tournament tournament,
+      @NotNull TournamentExtra extra,
+      @Nullable byte[] rawData,
+      @Nullable byte[] rawExtraData) {
     return new TournamentDto(
         (long) tournament.id(),
         tournament.title(),
@@ -34,7 +43,9 @@ public class TournamentDtoConverter {
             : tournament.timeControl().getName(),
         tournament.complete() ? true : null,
         tournament.teamTournament() ? true : null,
-        tournament.count() > 0 ? tournament.count() : null);
+        tournament.count() > 0 ? tournament.count() : null,
+        rawData,
+        rawExtraData);
   }
 
   /**

@@ -10,4 +10,5 @@ export interface SavedSearch {
   sortBy: string;
   order: 'asc' | 'desc';
   includeMoves: boolean;
+  includeRawData?: boolean;
 }

@@ -279,6 +279,7 @@ public class GamesService {
           List<Game> paginatedGames = games.subList(fromIndex, toIndex);
 
           // 9. Convert to DTOs
+          boolean debugRawData = request.debugRawData();
           List<GameDto> gameDtos =
               paginatedGames.stream()
                   .map(
@@ -289,7 +290,8 @@ public class GamesService {
                               request.includeText(),
                               false,
                               false,
-                              false))
+                              false,
+                              debugRawData))
                   .collect(Collectors.toList());
 
           long endTime = System.currentTimeMillis();

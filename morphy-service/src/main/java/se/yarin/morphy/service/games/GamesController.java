@@ -195,7 +195,8 @@ public class GamesController {
       @RequestParam(required = false) String teamPosition,
       @RequestParam(required = false) Integer gameTagId,
       @RequestParam(required = false) Boolean debugQueryPlans,
-      @RequestParam(required = false) Boolean debugExecuteAllPlans) {
+      @RequestParam(required = false) Boolean debugExecuteAllPlans,
+      @RequestParam(required = false) Boolean debugRawData) {
 
     GameSearchRequest request =
         new GameSearchRequest(
@@ -222,7 +223,8 @@ public class GamesController {
             teamPosition,
             gameTagId,
             debugQueryPlans,
-            debugExecuteAllPlans);
+            debugExecuteAllPlans,
+            debugRawData);
 
     GameSearchResponse response = gamesService.searchGames(databaseId, request);
     return ResponseEntity.ok(response);

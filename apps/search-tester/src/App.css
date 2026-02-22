@@ -421,6 +421,11 @@
   align-items: flex-end;
 }
 
+.search-panel .checkbox-row {
+  flex-wrap: wrap;
+  gap: 16px 24px;
+}
+
 .search-panel .checkbox-field label {
   display: flex;
   align-items: center;
@@ -697,16 +702,61 @@
   opacity: 0.9;
 }
 
-.results-panel .results-table tbody tr:hover {
+/* Stripe by data-row index so raw-data rows share the same background as their data row */
+.results-panel .results-table tbody tr.results-table-row-even {
+  background: #fff;
+}
+
+.results-panel .results-table tbody tr.results-table-row-odd {
   background: #fafbfc;
 }
 
-.results-panel .results-table tbody tr:nth-child(even) {
-  background: #fafbfc;
-}
-
-.results-panel .results-table tbody tr:nth-child(even):hover {
+.results-panel .results-table tbody tr.results-table-row-even:hover,
+.results-panel .results-table tbody tr.results-table-row-odd:hover {
   background: #f0f2f5;
+}
+
+/* Raw data row: cell uses row stripe; only hex lines get colorful background */
+.results-panel .results-table .raw-data-row .raw-data-cell {
+  padding-left: 24px;
+  padding-top: 2px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #e0e4ec;
+  vertical-align: top;
+  font-size: 11px;
+  font-family: ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, monospace;
+  word-break: break-all;
+  color: #444;
+}
+
+.results-panel .results-table .raw-data-subtable {
+  width: 100%;
+  border: none;
+  border-collapse: collapse;
+  background: transparent;
+}
+
+.results-panel .results-table .raw-data-subtable td {
+  padding: 4px 8px 4px 0;
+  border: none;
+  vertical-align: top;
+}
+
+.results-panel .results-table .raw-data-subtable tr.raw-data-hex-row-primary td {
+  background: #e8f0fe;
+}
+
+.results-panel .results-table .raw-data-subtable tr.raw-data-hex-row-secondary td {
+  background: #fef7e0;
+}
+
+.results-panel .results-table .raw-data-subtable tr:last-child td {
+  padding-bottom: 2px;
+}
+
+.results-panel .results-table .raw-data-hex {
+  letter-spacing: 0.02em;
+  white-space: pre-wrap; /* preserve newlines; break only after 8 blocks (64 bytes) */
 }
 
 .results-panel .results-empty {

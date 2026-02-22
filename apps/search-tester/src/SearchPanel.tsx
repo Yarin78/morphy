@@ -20,6 +20,8 @@ interface SearchPanelProps {
   onRemoveSavedSearch: (id: string) => void;
   includeMoves: boolean;
   onIncludeMovesChange: (v: boolean) => void;
+  includeRawData: boolean;
+  onIncludeRawDataChange: (v: boolean) => void;
   executeAllPlansDefault: boolean;
   onSearch: (executeAllPlans?: boolean) => void;
 }
@@ -58,6 +60,8 @@ export function SearchPanel({
   onRemoveSavedSearch,
   includeMoves,
   onIncludeMovesChange,
+  includeRawData,
+  onIncludeRawDataChange,
   executeAllPlansDefault,
   onSearch,
 }: SearchPanelProps) {
@@ -207,18 +211,26 @@ export function SearchPanel({
               })()}
             </p>
           )}
-          {entityType === 'Games' && (
-          <div className="field checkbox-field checkbox-inline">
+          <div className="field checkbox-field checkbox-inline checkbox-row">
+            {entityType === 'Games' && (
+              <label>
+                <input
+                  type="checkbox"
+                  checked={includeMoves}
+                  onChange={(e) => onIncludeMovesChange(e.target.checked)}
+                />
+                Include moves
+              </label>
+            )}
             <label>
               <input
                 type="checkbox"
-                checked={includeMoves}
-                onChange={(e) => onIncludeMovesChange(e.target.checked)}
+                checked={includeRawData}
+                onChange={(e) => onIncludeRawDataChange(e.target.checked)}
               />
-              Include moves
+              Include raw data
             </label>
           </div>
-          )}
         </div>
         <div className="search-btn-split" ref={searchDropdownRef}>
           <button

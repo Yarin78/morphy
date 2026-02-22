@@ -18,7 +18,8 @@ public record EntitySearchRequest(
     @Nullable Integer limit,
     @Nullable String sortBy,
     @Nullable Boolean debugQueryPlans,
-    @Nullable Boolean debugExecuteAllPlans) {
+    @Nullable Boolean debugExecuteAllPlans,
+    @Nullable Boolean debugRawData) {
 
   public EntitySearchRequest {
     if (offset == null) {
@@ -35,6 +36,9 @@ public record EntitySearchRequest(
     }
     if (debugExecuteAllPlans == null) {
       debugExecuteAllPlans = false;
+    }
+    if (debugRawData == null) {
+      debugRawData = false;
     }
   }
 }

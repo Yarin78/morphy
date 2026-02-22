@@ -20,7 +20,9 @@ import se.yarin.chess.Date;
   "timeControl",
   "complete",
   "teamTournament",
-  "gameCount"
+  "gameCount",
+  "rawData",
+  "rawExtraData"
 })
 public record TournamentDto(
     Long id,
@@ -35,4 +37,6 @@ public record TournamentDto(
     @Nullable String timeControl,
     @Nullable Boolean complete,
     @Nullable Boolean teamTournament,
-    @Nullable Integer gameCount) {}
+    @Nullable Integer gameCount,
+    @Nullable byte[] rawData,
+    @Nullable byte[] rawExtraData) {}

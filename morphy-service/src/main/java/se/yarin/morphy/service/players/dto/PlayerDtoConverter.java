@@ -1,6 +1,7 @@
 package se.yarin.morphy.service.players.dto;
 
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.springframework.stereotype.Component;
 import se.yarin.morphy.entities.ImmutablePlayer;
 import se.yarin.morphy.entities.Player;
@@ -16,11 +17,16 @@ public class PlayerDtoConverter {
    * @return the PlayerDto
    */
   public PlayerDto toDto(@NotNull Player player) {
+    return toDto(player, null);
+  }
+
+  public PlayerDto toDto(@NotNull Player player, @Nullable byte[] rawData) {
     return new PlayerDto(
         (long) player.id(),
         player.lastName().isEmpty() ? null : player.lastName(),
         player.firstName().isEmpty() ? null : player.firstName(),
-        player.count() > 0 ? player.count() : null);
+        player.count() > 0 ? player.count() : null,
+        rawData);
   }
 
   /**

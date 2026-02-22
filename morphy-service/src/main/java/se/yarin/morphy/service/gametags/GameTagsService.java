@@ -2,6 +2,7 @@ package se.yarin.morphy.service.gametags;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -164,14 +165,17 @@ public class GameTagsService {
   public EntitySearchResponse<GameTagDto> searchGameTags(
       @NotNull String databaseId, @NotNull EntitySearchRequest request) {
     GameTagQueryBuilder queryBuilder = new GameTagQueryBuilder();
+    boolean debugRawData = request.debugRawData();
     return databaseService.withReadTransaction(
         databaseId,
-        txn ->
-            entitySearchExecutor.executeSearch(
-                txn,
-                EntityType.GAME_TAG,
-                queryBuilder,
-                gameTagDtoConverter::toDto,
-                request));
+        txn -> {
+          Function<GameTag, GameTagDto> toDtoFn =
+              debugRawData
+                  ? gt -> gameTagDtoConverter.toDto(
+                      gt, txn.database().gameTagIndex().getRaw(gt.id()))
+                  : gameTagDtoConverter::toDto;
+          return entitySearchExecutor.executeSearch(
+              txn, EntityType.GAME_TAG, queryBuilder, toDtoFn, request);
+        });
   }
 }

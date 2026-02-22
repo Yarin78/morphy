@@ -146,6 +146,7 @@ export const ENTITY_CONFIG: Record<EntityType, EntityConfig> = {
         sortBy: req.sortBy ?? '+id',
         debugQueryPlans: req.debugQueryPlans,
         debugExecuteAllPlans: req.debugExecuteAllPlans,
+        debugRawData: req.debugRawData,
       });
       return {
         data: res.items,
@@ -169,6 +170,7 @@ export const ENTITY_CONFIG: Record<EntityType, EntityConfig> = {
         sortBy: req.sortBy ?? '+id',
         debugQueryPlans: req.debugQueryPlans,
         debugExecuteAllPlans: req.debugExecuteAllPlans,
+        debugRawData: req.debugRawData,
       });
       return {
         data: res.items,
@@ -192,6 +194,7 @@ export const ENTITY_CONFIG: Record<EntityType, EntityConfig> = {
         sortBy: req.sortBy ?? '+id',
         debugQueryPlans: req.debugQueryPlans,
         debugExecuteAllPlans: req.debugExecuteAllPlans,
+        debugRawData: req.debugRawData,
       });
       return {
         data: res.items,
@@ -215,6 +218,7 @@ export const ENTITY_CONFIG: Record<EntityType, EntityConfig> = {
         sortBy: req.sortBy ?? '+id',
         debugQueryPlans: req.debugQueryPlans,
         debugExecuteAllPlans: req.debugExecuteAllPlans,
+        debugRawData: req.debugRawData,
       });
       return {
         data: res.items,
@@ -238,6 +242,7 @@ export const ENTITY_CONFIG: Record<EntityType, EntityConfig> = {
         sortBy: req.sortBy ?? '+id',
         debugQueryPlans: req.debugQueryPlans,
         debugExecuteAllPlans: req.debugExecuteAllPlans,
+        debugRawData: req.debugRawData,
       });
       return {
         data: res.items,
@@ -261,6 +266,7 @@ export const ENTITY_CONFIG: Record<EntityType, EntityConfig> = {
         sortBy: req.sortBy ?? '+id',
         debugQueryPlans: req.debugQueryPlans,
         debugExecuteAllPlans: req.debugExecuteAllPlans,
+        debugRawData: req.debugRawData,
       });
       return {
         data: res.items,

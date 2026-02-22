@@ -2,6 +2,7 @@ package se.yarin.morphy.service.teams;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -163,14 +164,17 @@ public class TeamsService {
   public EntitySearchResponse<TeamDto> searchTeams(
       @NotNull String databaseId, @NotNull EntitySearchRequest request) {
     TeamQueryBuilder queryBuilder = new TeamQueryBuilder();
+    boolean debugRawData = request.debugRawData();
     return databaseService.withReadTransaction(
         databaseId,
-        txn ->
-            entitySearchExecutor.executeSearch(
-                txn,
-                EntityType.TEAM,
-                queryBuilder,
-                teamDtoConverter::toDto,
-                request));
+        txn -> {
+          Function<Team, TeamDto> toDtoFn =
+              debugRawData
+                  ? t -> teamDtoConverter.toDto(
+                      t, txn.database().teamIndex().getRaw(t.id()))
+                  : teamDtoConverter::toDto;
+          return entitySearchExecutor.executeSearch(
+              txn, EntityType.TEAM, queryBuilder, toDtoFn, request);
+        });
   }
 }

@@ -187,7 +187,8 @@ class TournamentDtoConverterTest {
     // When converting from DTO with null name, should become empty string
     TournamentDto dto =
         new TournamentDto(
-            1L, null, null, null, null, null, null, null, null, null, null, null, null);
+            1L, null, null, null, null, null, null, null, null, null, null, null, null, null,
+            null);
 
     Tournament tournament = converter.toTournament(dto);
     assertEquals("", tournament.title()); // null name becomes empty string

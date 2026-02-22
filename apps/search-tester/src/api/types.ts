@@ -49,6 +49,7 @@ export interface GameSearchRequest {
   gameTagId?: number;
   debugQueryPlans?: boolean;
   debugExecuteAllPlans?: boolean;
+  debugRawData?: boolean;
 }
 
 export interface SearchMetadata {
@@ -79,6 +80,9 @@ export interface GameDto {
   gameTag?: { id: number; englishTitle?: string; germanTitle?: string; [key: string]: unknown };
   moves?: unknown;
   text?: unknown;
+  /** Raw storage bytes (when debugRawData is true). Base64 in JSON. */
+  rawData?: string | number[];
+  rawExtendedData?: string | number[];
 }
 
 /** Operator-level cost (estimates and optionally actuals). */
@@ -161,6 +165,8 @@ export interface PlayerDto {
   lastName?: string;
   firstName?: string;
   gameCount?: number;
+  /** Raw storage bytes when debugRawData is true. Base64 in JSON. */
+  rawData?: string | number[];
 }
 
 export interface PlayerListResponse {
@@ -184,6 +190,8 @@ export interface TournamentDto {
   complete?: boolean;
   teamTournament?: boolean;
   gameCount?: number;
+  rawData?: string | number[];
+  rawExtraData?: string | number[];
 }
 
 export interface TournamentListResponse {
@@ -197,6 +205,7 @@ export interface AnnotatorDto {
   id: number;
   name?: string;
   gameCount?: number;
+  rawData?: string | number[];
 }
 
 export interface AnnotatorListResponse {
@@ -215,6 +224,7 @@ export interface SourceDto {
   version?: number;
   quality?: string;
   gameCount?: number;
+  rawData?: string | number[];
 }
 
 export interface SourceListResponse {
@@ -232,6 +242,7 @@ export interface TeamDto {
   year?: number;
   nation?: string;
   gameCount?: number;
+  rawData?: string | number[];
 }
 
 export interface TeamListResponse {
@@ -255,6 +266,7 @@ export interface GameTagDto {
   slovenianTitle?: string;
   resTitle?: string;
   gameCount?: number;
+  rawData?: string | number[];
 }
 
 export interface GameTagListResponse {
@@ -272,6 +284,7 @@ export interface EntitySearchRequest {
   sortBy?: string | null;
   debugQueryPlans?: boolean;
   debugExecuteAllPlans?: boolean;
+  debugRawData?: boolean;
 }
 
 /** Response from entity search endpoints. */

@@ -1,6 +1,7 @@
 package se.yarin.morphy.service.gametags.dto;
 
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.springframework.stereotype.Component;
 import se.yarin.morphy.entities.GameTag;
 import se.yarin.morphy.entities.ImmutableGameTag;
@@ -16,6 +17,10 @@ public class GameTagDtoConverter {
    * @return the GameTagDto
    */
   public GameTagDto toDto(@NotNull GameTag gameTag) {
+    return toDto(gameTag, null);
+  }
+
+  public GameTagDto toDto(@NotNull GameTag gameTag, @Nullable byte[] rawData) {
     return new GameTagDto(
         (long) gameTag.id(),
         gameTag.title().isEmpty() ? null : gameTag.title(),
@@ -29,7 +34,8 @@ public class GameTagDtoConverter {
         gameTag.dutchTitle().isEmpty() ? null : gameTag.dutchTitle(),
         gameTag.slovenianTitle().isEmpty() ? null : gameTag.slovenianTitle(),
         gameTag.resTitle().isEmpty() ? null : gameTag.resTitle(),
-        gameTag.count() > 0 ? gameTag.count() : null);
+        gameTag.count() > 0 ? gameTag.count() : null,
+        rawData);
   }
 
   /**

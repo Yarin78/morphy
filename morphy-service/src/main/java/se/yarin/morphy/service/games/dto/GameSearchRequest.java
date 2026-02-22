@@ -53,7 +53,8 @@ public record GameSearchRequest(
 
     // Debug options
     @Nullable Boolean debugQueryPlans, // Include query plan debug info (default false)
-    @Nullable Boolean debugExecuteAllPlans // Execute all candidate plans for comparison (default false)
+    @Nullable Boolean debugExecuteAllPlans, // Execute all candidate plans for comparison (default false)
+    @Nullable Boolean debugRawData // Include raw storage bytes in response (default false)
     ) {
 
   public GameSearchRequest {
@@ -89,6 +90,9 @@ public record GameSearchRequest(
     }
     if (debugExecuteAllPlans == null) {
       debugExecuteAllPlans = false;
+    }
+    if (debugRawData == null) {
+      debugRawData = false;
     }
   }
 }

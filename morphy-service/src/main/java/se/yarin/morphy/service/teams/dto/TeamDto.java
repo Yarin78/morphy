@@ -6,7 +6,16 @@ import org.jetbrains.annotations.Nullable;
 
 /** Detailed information about a chess team. */
 @JsonInclude(JsonInclude.Include.NON_NULL)
-@JsonPropertyOrder({"id", "title", "teamNumber", "season", "year", "nation", "gameCount"})
+@JsonPropertyOrder({
+  "id",
+  "title",
+  "teamNumber",
+  "season",
+  "year",
+  "nation",
+  "gameCount",
+  "rawData"
+})
 public record TeamDto(
     Long id,
     @Nullable String title,
@@ -14,4 +23,5 @@ public record TeamDto(
     @Nullable Boolean season,
     @Nullable Integer year,
     @Nullable String nation,
-    @Nullable Integer gameCount) {}
+    @Nullable Integer gameCount,
+    @Nullable byte[] rawData) {}

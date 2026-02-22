@@ -1,3 +1,4 @@
+import { Fragment } from 'react';
 import type {
   AnnotatorDto,
   GameDto,
@@ -12,6 +13,47 @@ interface Column<T> {
   key: string;
   label: string;
   render: (row: T) => React.ReactNode;
+}
+
+/** Row type that may include raw bytes from the API (when debugRawData is set). */
+interface RowWithRawData {
+  rawData?: string | number[];
+  rawExtendedData?: string | number[];
+  rawExtraData?: string | number[];
+}
+
+const HEX_BLOCK_SIZE = 16;   /* hex chars per block (8 bytes) */
+const HEX_BLOCKS_PER_LINE = 8; /* line break after this many blocks (64 bytes per line) */
+const NBSP = '\u00A0';
+
+function rawPayloadToHex(payload: string | number[]): string {
+  let bytes: number[];
+  if (typeof payload === 'string') {
+    const binary = atob(payload);
+    bytes = Array.from(binary, (c) => c.charCodeAt(0));
+  } else {
+    bytes = payload;
+  }
+  const hex = bytes.map((b) => (b & 0xff).toString(16).padStart(2, '0')).join('');
+  const blocks: string[] = [];
+  for (let i = 0; i < hex.length; i += HEX_BLOCK_SIZE) {
+    blocks.push(hex.slice(i, i + HEX_BLOCK_SIZE));
+  }
+  const lines: string[] = [];
+  for (let i = 0; i < blocks.length; i += HEX_BLOCKS_PER_LINE) {
+    const lineBlocks = blocks.slice(i, i + HEX_BLOCKS_PER_LINE);
+    lines.push(lineBlocks.join(NBSP)); /* no break within 16-char block */
+  }
+  return lines.join('\n');
+}
+
+function getRawPayloads(row: unknown): (string | number[])[] {
+  const r = row as RowWithRawData;
+  const out: (string | number[])[] = [];
+  if (r.rawData != null) out.push(r.rawData);
+  if (r.rawExtendedData != null) out.push(r.rawExtendedData);
+  if (r.rawExtraData != null) out.push(r.rawExtraData);
+  return out;
 }
 
 interface ResultsTableProps<T> {
@@ -85,13 +127,44 @@ function ResultsTable<T>({
           </tr>
         </thead>
         <tbody>
-          {data.map((row) => (
-            <tr key={keyExtractor(row)}>
-              {columns.map((col) => (
-                <td key={col.key}>{col.render(row)}</td>
-              ))}
-            </tr>
-          ))}
+          {data.map((row, rowIndex) => {
+            const key = keyExtractor(row);
+            const rawPayloads = getRawPayloads(row);
+            const rowStripe = rowIndex % 2 === 0 ? 'results-table-row-even' : 'results-table-row-odd';
+            return (
+              <Fragment key={key}>
+                <tr className={rowStripe}>
+                  {columns.map((col) => (
+                    <td key={col.key}>{col.render(row)}</td>
+                  ))}
+                </tr>
+                {rawPayloads.length > 0 && (
+                  <tr className={`raw-data-row ${rowStripe}`} aria-hidden>
+                    <td colSpan={columns.length} className="raw-data-cell">
+                      <table className="raw-data-subtable">
+                        <tbody>
+                          {rawPayloads.map((payload, i) => (
+                            <tr
+                              key={i}
+                              className={
+                                i === 0
+                                  ? 'raw-data-hex-row raw-data-hex-row-primary'
+                                  : 'raw-data-hex-row raw-data-hex-row-secondary'
+                              }
+                            >
+                              <td className="raw-data-hex-cell">
+                                <span className="raw-data-hex">{rawPayloadToHex(payload)}</span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </td>
+                  </tr>
+                )}
+              </Fragment>
+            );
+          })}
         </tbody>
       </table>
     </div>

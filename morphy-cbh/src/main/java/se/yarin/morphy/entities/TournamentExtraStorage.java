@@ -159,6 +159,14 @@ public class TournamentExtraStorage
     return this.storage.isEmpty() ? 0 : this.storage.getHeader().highestIndex() + 1;
   }
 
+  public ByteBuffer getRaw(int id) {
+    if (storage instanceof FileItemStorage) {
+      return ((FileItemStorage<TournamentExtraHeader, TournamentExtra>) storage).getItemRaw(id);
+    } else {
+      throw new IllegalStateException("Storage is not a serialized storage");
+    }
+  }
+
   public @NotNull TournamentExtra get(int id) {
     // It's okay to get entries beyond the last because in this particular file,
     // ChessBase lazily adds data.

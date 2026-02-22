@@ -2,6 +2,7 @@ package se.yarin.morphy.service.players;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -164,14 +165,17 @@ public class PlayersService {
   public EntitySearchResponse<PlayerDto> searchPlayers(
       @NotNull String databaseId, @NotNull EntitySearchRequest request) {
     PlayerQueryBuilder queryBuilder = new PlayerQueryBuilder();
+    boolean debugRawData = request.debugRawData();
     return databaseService.withReadTransaction(
         databaseId,
-        txn ->
-            entitySearchExecutor.executeSearch(
-                txn,
-                EntityType.PLAYER,
-                queryBuilder,
-                playerDtoConverter::toDto,
-                request));
+        txn -> {
+          Function<Player, PlayerDto> toDtoFn =
+              debugRawData
+                  ? p -> playerDtoConverter.toDto(
+                      p, txn.database().playerIndex().getRaw(p.id()))
+                  : playerDtoConverter::toDto;
+          return entitySearchExecutor.executeSearch(
+              txn, EntityType.PLAYER, queryBuilder, toDtoFn, request);
+        });
   }
 }

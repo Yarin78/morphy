@@ -15,7 +15,8 @@ import se.yarin.chess.Date;
   "date",
   "version",
   "quality",
-  "gameCount"
+  "gameCount",
+  "rawData"
 })
 public record SourceDto(
     Long id,
@@ -25,4 +26,5 @@ public record SourceDto(
     @Nullable Date date,
     @Nullable Integer version,
     @Nullable String quality,
-    @Nullable Integer gameCount) {}
+    @Nullable Integer gameCount,
+    @Nullable byte[] rawData) {}

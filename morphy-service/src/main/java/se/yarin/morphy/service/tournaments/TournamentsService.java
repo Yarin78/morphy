@@ -180,6 +180,7 @@ public class TournamentsService {
   public EntitySearchResponse<TournamentDto> searchTournaments(
       @NotNull String databaseId, @NotNull EntitySearchRequest request) {
     TournamentQueryBuilder queryBuilder = new TournamentQueryBuilder();
+    boolean debugRawData = request.debugRawData();
     return databaseService.withReadTransaction(
         databaseId,
         txn ->
@@ -189,8 +190,23 @@ public class TournamentsService {
                 queryBuilder,
                 tournament -> {
                   TournamentExtra extra = txn.getTournamentExtra(tournament.id());
-                  return tournamentDtoConverter.toDto(tournament, extra);
+                  byte[] rawData =
+                      debugRawData
+                          ? txn.database().tournamentIndex().getRaw(tournament.id())
+                          : null;
+                  byte[] rawExtraData =
+                      debugRawData
+                          ? toBytes(
+                              txn.database().tournamentExtraStorage().getRaw(tournament.id()))
+                          : null;
+                  return tournamentDtoConverter.toDto(tournament, extra, rawData, rawExtraData);
                 },
                 request));
+  }
+
+  private static byte[] toBytes(java.nio.ByteBuffer buf) {
+    byte[] bytes = new byte[buf.remaining()];
+    buf.get(bytes);
+    return bytes;
   }
 }
