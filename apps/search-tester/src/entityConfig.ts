@@ -19,7 +19,7 @@ import {
   TOURNAMENT_COLUMNS,
 } from './ResultsTable';
 
-type ColumnDef = { key: string; label: string; render: (row: unknown) => React.ReactNode };
+type ColumnDef = { key: string; label: string; width: number; render: (row: unknown) => React.ReactNode };
 
 export const ENTITY_TYPES = [
   'Games',

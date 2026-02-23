@@ -1,9 +1,30 @@
-import { useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ColumnSelector } from './ColumnSelector';
 import { RowsPerPageSelector } from './RowsPerPageSelector';
 import ResultsTable from './ResultsTable';
 import type { EntityType } from './entityConfig';
 import { ENTITY_CONFIG, SORTABLE_COLUMN_MAP } from './entityConfig';
+
+const COL_WIDTHS_STORAGE_PREFIX = 'search-tester:colWidths:';
+
+function loadColumnWidths(entityKey: string): Record<string, number> {
+  try {
+    const raw = localStorage.getItem(COL_WIDTHS_STORAGE_PREFIX + entityKey);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveColumnWidths(entityKey: string, widths: Record<string, number>) {
+  try {
+    if (Object.keys(widths).length === 0) {
+      localStorage.removeItem(COL_WIDTHS_STORAGE_PREFIX + entityKey);
+    } else {
+      localStorage.setItem(COL_WIDTHS_STORAGE_PREFIX + entityKey, JSON.stringify(widths));
+    }
+  } catch { /* ignore quota errors */ }
+}
 
 interface PaginatedData {
   data: unknown[];
@@ -57,7 +78,45 @@ export function ResultsSection({
   order,
   onColumnSort,
 }: ResultsSectionProps) {
-  if (!result) {
+  const entityKey = result ? ENTITY_CONFIG[result.entityType].entityKey : '';
+  const [columnWidths, setColumnWidths] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    setColumnWidths(entityKey ? loadColumnWidths(entityKey) : {});
+  }, [entityKey]);
+
+  const handleColumnResize = useCallback(
+    (key: string, width: number) => {
+      setColumnWidths((prev) => {
+        const next = { ...prev, [key]: width };
+        if (entityKey) saveColumnWidths(entityKey, next);
+        return next;
+      });
+    },
+    [entityKey]
+  );
+
+  const handleResetColumnWidths = useCallback(() => {
+    setColumnWidths({});
+    if (entityKey) saveColumnWidths(entityKey, {});
+  }, [entityKey]);
+
+  const hasCustomWidths = Object.keys(columnWidths).length > 0;
+
+  const config = result ? ENTITY_CONFIG[result.entityType] : null;
+  const hiddenSet = new Set((config && hiddenColumns[config.entityKey]) ?? []);
+  const visibleColumns = config?.columns.filter((c) => !hiddenSet.has(c.key)) ?? [];
+
+  const columnSortConfig = useMemo(() => {
+    if (!result) return { sortableColumnKeys: new Set<string>(), sortColumnKey: null };
+    const map = SORTABLE_COLUMN_MAP[result.entityType] ?? {};
+    const sortableColumnKeys = new Set(Object.keys(map));
+    const sortColumnKey =
+      visibleColumns.find((col) => map[col.key] === sortBy)?.key ?? null;
+    return { sortableColumnKeys, sortColumnKey };
+  }, [result, sortBy, visibleColumns]);
+
+  if (!result || !config) {
     return (
       <section className="panel results-panel">
         <h2>
@@ -69,18 +128,6 @@ export function ResultsSection({
       </section>
     );
   }
-
-  const config = ENTITY_CONFIG[result.entityType];
-  const hiddenSet = new Set(hiddenColumns[config.entityKey] ?? []);
-  const visibleColumns = config.columns.filter((c) => !hiddenSet.has(c.key));
-
-  const columnSortConfig = useMemo(() => {
-    const map = SORTABLE_COLUMN_MAP[result.entityType] ?? {};
-    const sortableColumnKeys = new Set(Object.keys(map));
-    const sortColumnKey =
-      visibleColumns.find((col) => map[col.key] === sortBy)?.key ?? null;
-    return { sortableColumnKeys, sortColumnKey };
-  }, [result.entityType, sortBy, visibleColumns]);
 
   const metaText =
     paginatedData.total > 0 ? (
@@ -99,6 +146,16 @@ export function ResultsSection({
         <span className="results-header-actions">
           <span className="meta">{metaText}</span>
           <RowsPerPageSelector value={rowsPerPage} onChange={onRowsPerPageChange} />
+          {hasCustomWidths && (
+            <button
+              type="button"
+              className="column-selector-btn"
+              onClick={handleResetColumnWidths}
+              title="Reset all column widths to defaults"
+            >
+              Reset widths
+            </button>
+          )}
           <ColumnSelector
             columns={config.columns}
             hiddenKeys={hiddenSet}
@@ -118,6 +175,8 @@ export function ResultsSection({
         sortColumnKey={columnSortConfig.sortColumnKey}
         sortOrder={order ?? null}
         onColumnSort={onColumnSort}
+        columnWidths={columnWidths}
+        onColumnResize={handleColumnResize}
       />
 
       {paginatedData.totalPages > 1 && (

@@ -1,4 +1,4 @@
-import { Fragment } from 'react';
+import { Fragment, useCallback, useRef } from 'react';
 import type {
   AnnotatorDto,
   GameDto,
@@ -12,6 +12,7 @@ import type {
 interface Column<T> {
   key: string;
   label: string;
+  width: number;
   render: (row: T) => React.ReactNode;
 }
 
@@ -69,6 +70,10 @@ interface ResultsTableProps<T> {
   sortOrder?: 'asc' | 'desc' | null;
   /** Called when a sortable column header is clicked. */
   onColumnSort?: (columnKey: string) => void;
+  /** Custom column widths (overrides default column.width). */
+  columnWidths?: Record<string, number>;
+  /** Called when a column is resized via drag. */
+  onColumnResize?: (key: string, width: number) => void;
 }
 
 function ResultsTable<T>({
@@ -80,7 +85,37 @@ function ResultsTable<T>({
   sortColumnKey,
   sortOrder,
   onColumnSort,
+  columnWidths = {},
+  onColumnResize,
 }: ResultsTableProps<T>) {
+  const resizingRef = useRef<{ key: string; startX: number; startWidth: number } | null>(null);
+
+  const handleResizeStart = useCallback(
+    (e: React.MouseEvent, colKey: string) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const th = (e.target as HTMLElement).closest('th');
+      if (!th) return;
+      const startWidth = th.getBoundingClientRect().width;
+      resizingRef.current = { key: colKey, startX: e.clientX, startWidth };
+
+      const onMouseMove = (ev: MouseEvent) => {
+        if (!resizingRef.current) return;
+        const diff = ev.clientX - resizingRef.current.startX;
+        const newWidth = Math.max(40, resizingRef.current.startWidth + diff);
+        onColumnResize?.(resizingRef.current.key, newWidth);
+      };
+      const onMouseUp = () => {
+        resizingRef.current = null;
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+      };
+      document.addEventListener('mousemove', onMouseMove);
+      document.addEventListener('mouseup', onMouseUp);
+    },
+    [onColumnResize]
+  );
+
   if (data.length === 0) {
     return <p className="results-empty">{emptyMessage}</p>;
   }
@@ -94,9 +129,17 @@ function ResultsTable<T>({
   const isSortable = (key: string) =>
     sortableColumnKeys?.has(key) && typeof onColumnSort === 'function';
 
+  const totalWidth = columns.reduce((sum, col) => sum + (columnWidths[col.key] ?? col.width), 0);
+
   return (
     <div className="results-table-wrapper">
-      <table className="results-table">
+      <table className="results-table" style={{ tableLayout: 'fixed', minWidth: totalWidth }}>
+        <colgroup>
+          {columns.map((col) => (
+            <col key={col.key} style={{ width: columnWidths[col.key] ?? col.width }} />
+          ))}
+          <col className="results-table-filler-col" />
+        </colgroup>
         <thead>
           <tr>
             {columns.map((col) => {
@@ -121,9 +164,14 @@ function ResultsTable<T>({
                   ) : (
                     col.label
                   )}
+                  <div
+                    className="results-table-resize-handle"
+                    onMouseDown={(e) => handleResizeStart(e, col.key)}
+                  />
                 </th>
               );
             })}
+            <th className="results-table-filler" />
           </tr>
         </thead>
         <tbody>
@@ -137,10 +185,11 @@ function ResultsTable<T>({
                   {columns.map((col) => (
                     <td key={col.key}>{col.render(row)}</td>
                   ))}
+                  <td className="results-table-filler" />
                 </tr>
                 {rawPayloads.length > 0 && (
                   <tr className={`raw-data-row ${rowStripe}`} aria-hidden>
-                    <td colSpan={columns.length} className="raw-data-cell">
+                    <td colSpan={columns.length + 1} className="raw-data-cell">
                       <table className="raw-data-subtable">
                         <tbody>
                           {rawPayloads.map((payload, i) => (
@@ -243,10 +292,11 @@ function getGameTagTitle(gt: GameDto['gameTag']): string {
 }
 
 export const GAME_COLUMNS: Column<GameDto>[] = [
-  { key: 'id', label: 'ID', render: (g) => formatValue(g.id) },
+  { key: 'id', label: 'ID', width: 55, render: (g) => formatValue(g.id) },
   {
     key: 'white',
     label: 'White',
+    width: 180,
     render: (g) =>
       g.whitePlayer
         ? formatPlayerName(
@@ -259,6 +309,7 @@ export const GAME_COLUMNS: Column<GameDto>[] = [
   {
     key: 'black',
     label: 'Black',
+    width: 180,
     render: (g) =>
       g.blackPlayer
         ? formatPlayerName(
@@ -268,53 +319,58 @@ export const GAME_COLUMNS: Column<GameDto>[] = [
           )
         : '—',
   },
-  { key: 'result', label: 'Result', render: (g) => formatGameResult(g.result) },
-  { key: 'date', label: 'Date', render: (g) => formatDate(g.date) },
-  { key: 'eco', label: 'ECO', render: (g) => formatValue(g.eco) },
-  { key: 'round', label: 'Round', render: (g) => formatValue(g.round) },
+  { key: 'result', label: 'Result', width: 70, render: (g) => formatGameResult(g.result) },
+  { key: 'date', label: 'Date', width: 100, render: (g) => formatDate(g.date) },
+  { key: 'eco', label: 'ECO', width: 50, render: (g) => formatValue(g.eco) },
+  { key: 'round', label: 'Round', width: 55, render: (g) => formatValue(g.round) },
   {
     key: 'tournament',
     label: 'Tournament',
+    width: 180,
     render: (g) => formatValue(g.tournament?.title),
   },
   {
     key: 'source',
     label: 'Source',
+    width: 150,
     render: (g) => formatValue(g.source?.title),
   },
   {
     key: 'annotator',
     label: 'Annotator',
+    width: 120,
     render: (g) => formatValue(g.annotator?.name),
   },
   {
     key: 'gameTag',
     label: 'Game Tag',
+    width: 150,
     render: (g) => getGameTagTitle(g.gameTag),
   },
 ];
 
 export const PLAYER_COLUMNS: Column<PlayerDto>[] = [
-  { key: 'id', label: 'ID', render: (p) => formatValue(p.id) },
-  { key: 'lastName', label: 'Last Name', render: (p) => formatValue(p.lastName) },
-  { key: 'firstName', label: 'First Name', render: (p) => formatValue(p.firstName) },
-  { key: 'gameCount', label: 'Game Count', render: (p) => formatValue(p.gameCount) },
+  { key: 'id', label: 'ID', width: 55, render: (p) => formatValue(p.id) },
+  { key: 'lastName', label: 'Last Name', width: 180, render: (p) => formatValue(p.lastName) },
+  { key: 'firstName', label: 'First Name', width: 150, render: (p) => formatValue(p.firstName) },
+  { key: 'gameCount', label: 'Game Count', width: 80, render: (p) => formatValue(p.gameCount) },
 ];
 
 export const TOURNAMENT_COLUMNS: Column<TournamentDto>[] = [
-  { key: 'id', label: 'ID', render: (t) => formatValue(t.id) },
-  { key: 'title', label: 'Title', render: (t) => formatValue(t.title) },
-  { key: 'place', label: 'Place', render: (t) => formatValue(t.place) },
-  { key: 'startDate', label: 'Start Date', render: (t) => formatDate(t.startDate) },
-  { key: 'typeCombined', label: 'Type', render: (t) => formatValue(t.typeCombined) },
-  { key: 'nation', label: 'Nation', render: (t) => formatValue(t.nation) },
-  { key: 'category', label: 'Category', render: (t) => formatValue(t.categoryRoman) },
-  { key: 'rounds', label: 'Rounds', render: (t) => formatValue(t.rounds) },
-  { key: 'gameCount', label: 'Game Count', render: (t) => formatValue(t.gameCount) },
-  { key: 'complete', label: 'Complete', render: (t) => formatValue(t.complete) },
+  { key: 'id', label: 'ID', width: 55, render: (t) => formatValue(t.id) },
+  { key: 'title', label: 'Title', width: 250, render: (t) => formatValue(t.title) },
+  { key: 'place', label: 'Place', width: 150, render: (t) => formatValue(t.place) },
+  { key: 'startDate', label: 'Start Date', width: 100, render: (t) => formatDate(t.startDate) },
+  { key: 'typeCombined', label: 'Type', width: 100, render: (t) => formatValue(t.typeCombined) },
+  { key: 'nation', label: 'Nation', width: 55, render: (t) => formatValue(t.nation) },
+  { key: 'category', label: 'Category', width: 70, render: (t) => formatValue(t.categoryRoman) },
+  { key: 'rounds', label: 'Rounds', width: 60, render: (t) => formatValue(t.rounds) },
+  { key: 'gameCount', label: 'Game Count', width: 80, render: (t) => formatValue(t.gameCount) },
+  { key: 'complete', label: 'Complete', width: 70, render: (t) => formatValue(t.complete) },
   {
     key: 'coordinates',
     label: 'Coordinates',
+    width: 170,
     render: (t) => {
       if (t.latitude == null || t.longitude == null) return '';
       const lat = Math.abs(t.latitude).toFixed(4) + (t.latitude >= 0 ? ' N' : ' S');
@@ -322,42 +378,42 @@ export const TOURNAMENT_COLUMNS: Column<TournamentDto>[] = [
       return `${lat}, ${lng}`;
     },
   },
-  { key: 'endDate', label: 'End Date', render: (t) => formatDate(t.endDate) },
+  { key: 'endDate', label: 'End Date', width: 100, render: (t) => formatDate(t.endDate) },
 ];
 
 export const ANNOTATOR_COLUMNS: Column<AnnotatorDto>[] = [
-  { key: 'id', label: 'ID', render: (a) => formatValue(a.id) },
-  { key: 'name', label: 'Name', render: (a) => formatValue(a.name) },
-  { key: 'gameCount', label: 'Game Count', render: (a) => formatValue(a.gameCount) },
+  { key: 'id', label: 'ID', width: 55, render: (a) => formatValue(a.id) },
+  { key: 'name', label: 'Name', width: 250, render: (a) => formatValue(a.name) },
+  { key: 'gameCount', label: 'Game Count', width: 80, render: (a) => formatValue(a.gameCount) },
 ];
 
 export const SOURCE_COLUMNS: Column<SourceDto>[] = [
-  { key: 'id', label: 'ID', render: (s) => formatValue(s.id) },
-  { key: 'title', label: 'Title', render: (s) => formatValue(s.title) },
-  { key: 'publisher', label: 'Publisher', render: (s) => formatValue(s.publisher) },
-  { key: 'publication', label: 'Publication', render: (s) => formatDate(s.publication) },
-  { key: 'date', label: 'Date', render: (s) => formatDate(s.date) },
-  { key: 'version', label: 'Version', render: (s) => formatValue(s.version) },
-  { key: 'quality', label: 'Quality', render: (s) => formatValue(s.quality) },
-  { key: 'gameCount', label: 'Game Count', render: (s) => formatValue(s.gameCount) },
+  { key: 'id', label: 'ID', width: 55, render: (s) => formatValue(s.id) },
+  { key: 'title', label: 'Title', width: 250, render: (s) => formatValue(s.title) },
+  { key: 'publisher', label: 'Publisher', width: 150, render: (s) => formatValue(s.publisher) },
+  { key: 'publication', label: 'Publication', width: 90, render: (s) => formatDate(s.publication) },
+  { key: 'date', label: 'Date', width: 100, render: (s) => formatDate(s.date) },
+  { key: 'version', label: 'Version', width: 60, render: (s) => formatValue(s.version) },
+  { key: 'quality', label: 'Quality', width: 60, render: (s) => formatValue(s.quality) },
+  { key: 'gameCount', label: 'Game Count', width: 80, render: (s) => formatValue(s.gameCount) },
 ];
 
 export const TEAM_COLUMNS: Column<TeamDto>[] = [
-  { key: 'id', label: 'ID', render: (t) => formatValue(t.id) },
-  { key: 'title', label: 'Title', render: (t) => formatValue(t.title) },
-  { key: 'teamNumber', label: 'Team #', render: (t) => formatValue(t.teamNumber) },
-  { key: 'season', label: 'Season', render: (t) => formatValue(t.season) },
-  { key: 'year', label: 'Year', render: (t) => formatValue(t.year) },
-  { key: 'nation', label: 'Nation', render: (t) => formatValue(t.nation) },
-  { key: 'gameCount', label: 'Game Count', render: (t) => formatValue(t.gameCount) },
+  { key: 'id', label: 'ID', width: 55, render: (t) => formatValue(t.id) },
+  { key: 'title', label: 'Title', width: 250, render: (t) => formatValue(t.title) },
+  { key: 'teamNumber', label: 'Team #', width: 60, render: (t) => formatValue(t.teamNumber) },
+  { key: 'season', label: 'Season', width: 80, render: (t) => formatValue(t.season) },
+  { key: 'year', label: 'Year', width: 55, render: (t) => formatValue(t.year) },
+  { key: 'nation', label: 'Nation', width: 60, render: (t) => formatValue(t.nation) },
+  { key: 'gameCount', label: 'Game Count', width: 80, render: (t) => formatValue(t.gameCount) },
 ];
 
 export const GAMETAG_COLUMNS: Column<GameTagDto>[] = [
-  { key: 'id', label: 'ID', render: (g) => formatValue(g.id) },
-  { key: 'title', label: 'Title', render: (g) => formatValue(g.title) },
-  { key: 'languages', label: 'Languages', render: (g) => formatValue(g.languages) },
-  { key: 'languageCount', label: 'Lang Count', render: (g) => formatValue(g.languageCount) },
-  { key: 'gameCount', label: 'Game Count', render: (g) => formatValue(g.gameCount) },
+  { key: 'id', label: 'ID', width: 55, render: (g) => formatValue(g.id) },
+  { key: 'title', label: 'Title', width: 300, render: (g) => formatValue(g.title) },
+  { key: 'languages', label: 'Languages', width: 150, render: (g) => formatValue(g.languages) },
+  { key: 'languageCount', label: 'Lang Count', width: 80, render: (g) => formatValue(g.languageCount) },
+  { key: 'gameCount', label: 'Game Count', width: 80, render: (g) => formatValue(g.gameCount) },
 ];
 
 export default ResultsTable;

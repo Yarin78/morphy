@@ -656,12 +656,23 @@
   border: 1px solid #e0e0e0;
 }
 
+.results-panel .results-table .results-table-filler {
+  padding: 0;
+}
+
+.results-panel .results-table .results-table-filler-col {
+  width: auto;
+}
+
 .results-panel .results-table th,
 .results-panel .results-table td {
   padding: 8px 12px;
   text-align: left;
   border-bottom: 1px solid #e0e0e0;
   vertical-align: top;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .results-panel .results-table th {
@@ -673,6 +684,21 @@
   letter-spacing: 0.5px;
   position: sticky;
   top: 0;
+  z-index: 1;
+}
+
+.results-panel .results-table-resize-handle {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 5px;
+  cursor: col-resize;
+  user-select: none;
+}
+
+.results-panel .results-table-resize-handle:hover {
+  background: rgba(0, 0, 0, 0.1);
 }
 
 .results-panel .results-table-sort-header {
