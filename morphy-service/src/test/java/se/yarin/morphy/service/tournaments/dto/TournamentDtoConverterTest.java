@@ -97,7 +97,7 @@ class TournamentDtoConverterTest {
     assertNull(dto.rounds());
     assertNull(dto.type());
     assertNull(dto.timeControl());
-    assertNull(dto.complete());
+    assertFalse(dto.complete());
     assertNull(dto.teamTournament());
     assertNull(dto.gameCount()); // count is 0, so becomes null
 
