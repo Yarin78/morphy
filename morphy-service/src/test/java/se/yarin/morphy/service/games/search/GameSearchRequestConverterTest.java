@@ -629,9 +629,9 @@ class GameSearchRequestConverterTest {
     }
 
     @Test
-    @DisplayName("should create GameEntityJoin for tournament.year filter")
-    void testTournamentYearFilter() {
-      GameSearchRequest request = request().filter("tournament.year:2024").build();
+    @DisplayName("should create GameEntityJoin for tournament.date filter")
+    void testTournamentDateFilter() {
+      GameSearchRequest request = request().filter("tournament.date:2024").build();
 
       GameQuery query = queryBuilder.buildQuery(database, request);
 
