@@ -1,12 +1,15 @@
 package se.yarin.morphy.queries;
 
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import se.yarin.morphy.IdObject;
 import se.yarin.morphy.entities.*;
 import se.yarin.morphy.queries.operations.QueryData;
+import se.yarin.morphy.queries.operations.QueryOperator;
 
 import java.util.Comparator;
 import java.util.List;
+import java.util.function.BiFunction;
 
 public class QuerySortOrder<T extends IdObject> implements Comparator<QueryData<T>> {
 
@@ -147,8 +150,7 @@ public class QuerySortOrder<T extends IdObject> implements Comparator<QueryData<
   }
 
   public QuerySortOrder(@NotNull QuerySortField<T> key, @NotNull Direction direction) {
-    this.sortFields = List.of(key);
-    this.sortDirections = List.of(direction);
+    this(List.of(key), List.of(direction));
   }
 
   public QuerySortOrder(
@@ -156,12 +158,16 @@ public class QuerySortOrder<T extends IdObject> implements Comparator<QueryData<
       @NotNull Direction primaryDirection,
       @NotNull QuerySortField<T> secondaryKey,
       @NotNull Direction secondaryDirection) {
-    this.sortFields = List.of(primaryKey, secondaryKey);
-    this.sortDirections = List.of(primaryDirection, secondaryDirection);
+    this(List.of(primaryKey, secondaryKey), List.of(primaryDirection, secondaryDirection));
   }
 
   public QuerySortOrder(
       @NotNull List<QuerySortField<T>> keys, @NotNull List<Direction> directions) {
+    long lookupCount = keys.stream().filter(f -> f.requiredLookup() != null).distinct().count();
+    if (lookupCount > 1) {
+      throw new IllegalArgumentException(
+          "At most one distinct required lookup is allowed in a sort order");
+    }
     this.sortFields = List.copyOf(keys);
     this.sortDirections = List.copyOf(directions);
   }
@@ -195,6 +201,14 @@ public class QuerySortOrder<T extends IdObject> implements Comparator<QueryData<
       }
     }
     return true;
+  }
+
+  public @Nullable BiFunction<QueryContext, QueryOperator<T>, QueryOperator<T>> requiredLookup() {
+    return sortFields.stream()
+        .map(QuerySortField::requiredLookup)
+        .filter(java.util.Objects::nonNull)
+        .findFirst()
+        .orElse(null);
   }
 
   public boolean requiresData() {

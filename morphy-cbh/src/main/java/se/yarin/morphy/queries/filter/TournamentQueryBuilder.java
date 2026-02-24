@@ -42,7 +42,9 @@ public class TournamentQueryBuilder extends AbstractEntityQueryBuilder<Tournamen
           Map.entry("nation", QuerySortField.tournamentNation()),
           Map.entry("category", QuerySortField.tournamentCategory()),
           Map.entry("rounds", QuerySortField.tournamentRounds()),
-          Map.entry("complete", QuerySortField.tournamentComplete()));
+          Map.entry("complete", QuerySortField.tournamentComplete()),
+          Map.entry("enddate", QuerySortField.tournamentEndDate()),
+          Map.entry("coordinates", QuerySortField.tournamentCoordinates()));
 
   public TournamentQueryBuilder() {
     super(EntityType.TOURNAMENT, "tournament", "title");

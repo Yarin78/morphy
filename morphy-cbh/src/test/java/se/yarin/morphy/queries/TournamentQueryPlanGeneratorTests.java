@@ -193,6 +193,29 @@ public class TournamentQueryPlanGeneratorTests {
     }
   }
 
+  @Test
+  public void sortByEndDateIncludesExtraLookup() {
+    QuerySortOrder<Tournament> sortByEndDate =
+        new QuerySortOrder<>(
+            QuerySortField.tournamentEndDate(), QuerySortOrder.Direction.DESCENDING);
+    EntityQuery<Tournament> tournamentQuery =
+        new EntityQuery<>(db, EntityType.TOURNAMENT, List.of(), sortByEndDate, 0);
+
+    try (var txn = new DatabaseReadTransaction(db)) {
+      QueryContext qc = new QueryContext(txn, false);
+      List<QueryOperator<Tournament>> plans =
+          db.queryPlanner().getEntityQueryPlans(qc, tournamentQuery, true);
+
+      this.assertPlanExists(
+          plans,
+          new Sort<>(
+              qc,
+              new TournamentExtraLookup(
+                  qc, new EntityTableScan<>(qc, EntityType.TOURNAMENT, null)),
+              sortByEndDate));
+    }
+  }
+
   private void showPlans(List<QueryOperator<Tournament>> plans) {
     for (QueryOperator<Tournament> plan : plans) {
       System.out.println(plan.debugString(false));

@@ -2,17 +2,26 @@ package se.yarin.morphy.queries;
 
 import java.util.Comparator;
 import java.util.Objects;
+import java.util.function.BiFunction;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import se.yarin.morphy.Game;
 import se.yarin.morphy.IdObject;
 import se.yarin.morphy.entities.*;
 import se.yarin.morphy.queries.operations.QueryData;
+import se.yarin.morphy.queries.operations.QueryOperator;
+import se.yarin.morphy.queries.operations.TournamentExtraLookup;
 
 public class QuerySortField<T extends IdObject> {
   private final @NotNull Comparator<QueryData<T>> comparator;
   private final boolean requiresData;
   private final @NotNull String name; // also unique identifier (within T)
   private final @NotNull QuerySortOrder.Direction defaultDirection;
+  private final @Nullable BiFunction<QueryContext, QueryOperator<T>, QueryOperator<T>>
+      requiredLookup;
+
+  private static final BiFunction<QueryContext, QueryOperator<Tournament>, QueryOperator<Tournament>>
+      TOURNAMENT_EXTRA_LOOKUP = TournamentExtraLookup::new;
 
   public static <T extends IdObject> QuerySortField<T> id() {
     return new QuerySortField<>(Comparator.comparingInt(QueryData::id), "id", false);
@@ -24,6 +33,15 @@ public class QuerySortField<T extends IdObject> {
         "count",
         true,
         QuerySortOrder.Direction.DESCENDING);
+  }
+
+  public static <T extends Entity> QuerySortField<Game> entityExtendedSort(QuerySortField<T> extraSort) {
+    return new QuerySortField<>(
+        (o1, o2) -> extraSort.compare(new QueryData<T>((T) o1.extra()), new QueryData<T>((T) o2.extra())),
+        "extraSort",
+        true,
+        QuerySortOrder.Direction.ASCENDING
+    );
   }
 
   public static QuerySortField<Game> playedDate() {
@@ -62,6 +80,24 @@ public class QuerySortField<T extends IdObject> {
         "startDate",
         true,
         QuerySortOrder.Direction.DESCENDING);
+  }
+
+  public static QuerySortField<Tournament> tournamentEndDate() {
+    return new QuerySortField<>(
+        Comparator.comparing(o -> o.extra(TournamentExtra.class).endDate()),
+        "endDate",
+        true,
+        QuerySortOrder.Direction.DESCENDING,
+        TOURNAMENT_EXTRA_LOOKUP);
+  }
+
+  public static QuerySortField<Tournament> tournamentCoordinates() {
+    Comparator<QueryData<Tournament>> comp =
+        Comparator.comparingInt(
+                (QueryData<Tournament> o) -> o.extra(TournamentExtra.class).latitude() == 0.0 ? 0 : 1)
+            .thenComparingDouble(o -> o.extra(TournamentExtra.class).latitude());
+    return new QuerySortField<>(
+        comp, "coordinates", true, QuerySortOrder.Direction.ASCENDING, TOURNAMENT_EXTRA_LOOKUP);
   }
 
   public static QuerySortField<Tournament> tournamentTitle() {
@@ -219,7 +255,7 @@ public class QuerySortField<T extends IdObject> {
 
   private QuerySortField(
       @NotNull Comparator<QueryData<T>> comparator, String name, boolean requiresData) {
-    this(comparator, name, requiresData, QuerySortOrder.Direction.ASCENDING);
+    this(comparator, name, requiresData, QuerySortOrder.Direction.ASCENDING, null);
   }
 
   private QuerySortField(
@@ -227,10 +263,20 @@ public class QuerySortField<T extends IdObject> {
       String name,
       boolean requiresData,
       @NotNull QuerySortOrder.Direction defaultDirection) {
+    this(comparator, name, requiresData, defaultDirection, null);
+  }
+
+  private QuerySortField(
+      @NotNull Comparator<QueryData<T>> comparator,
+      String name,
+      boolean requiresData,
+      @NotNull QuerySortOrder.Direction defaultDirection,
+      @Nullable BiFunction<QueryContext, QueryOperator<T>, QueryOperator<T>> requiredLookup) {
     this.comparator = comparator;
     this.name = name;
     this.requiresData = requiresData;
     this.defaultDirection = defaultDirection;
+    this.requiredLookup = requiredLookup;
   }
 
   public @NotNull String name() {
@@ -247,6 +293,10 @@ public class QuerySortField<T extends IdObject> {
 
   public boolean requiresData() {
     return requiresData;
+  }
+
+  public @Nullable BiFunction<QueryContext, QueryOperator<T>, QueryOperator<T>> requiredLookup() {
+    return requiredLookup;
   }
 
   @Override
