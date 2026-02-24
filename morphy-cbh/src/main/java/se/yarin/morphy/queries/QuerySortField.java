@@ -18,14 +18,6 @@ public class QuerySortField<T extends IdObject> {
     return new QuerySortField<>(Comparator.comparingInt(QueryData::id), "id", false);
   }
 
-  public static <T extends IdObject> QuerySortField<T> weight() {
-    return new QuerySortField<>(
-        Comparator.comparingDouble(QueryData::weight),
-        "weight",
-        false,
-        QuerySortOrder.Direction.DESCENDING);
-  }
-
   public static <T extends Entity> QuerySortField<T> entityCount() {
     return new QuerySortField<>(
         Comparator.comparingInt(o -> o.data().count()),

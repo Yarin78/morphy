@@ -50,7 +50,7 @@ public class EntityLookup<T extends Entity & Comparable<T>> extends QueryOperato
     return this.source.stream()
         .map(
             entity ->
-                new QueryData<>(entity.id(), txn.get(entity.id(), entityFilter), entity.weight()))
+                new QueryData<>(entity.id(), txn.get(entity.id(), entityFilter), entity.extra()))
         .filter(data -> data.data() != null);
   }
 

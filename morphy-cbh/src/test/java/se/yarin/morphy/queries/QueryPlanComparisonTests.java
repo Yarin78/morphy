@@ -370,10 +370,6 @@ public class QueryPlanComparisonTests {
     Map<Integer, QueryData<T>> expectedMap = null;
     for (QueryOperator<T> plan : plans) {
       List<QueryData<T>> planList = plan.stream().collect(Collectors.toList());
-      //            for (QueryData<T> queryData : planList) {
-      //                System.out.println(queryData.id() + " " + queryData.weight());
-      //            }
-      //            System.out.println("---");
       // System.out.println("# elements: " + planList.size());
       if (expected == null) {
         expected = planList;
@@ -388,22 +384,11 @@ public class QueryPlanComparisonTests {
           for (int i = 0; i < expected.size(); i++) {
             assertEquals(
                 "Id of element " + i + " differs", expected.get(i).id(), planList.get(i).id());
-            assertEquals(
-                "Weight in element " + i + " differs",
-                expected.get(i).weight(),
-                planList.get(i).weight(),
-                1e-9);
           }
         } else {
           for (QueryData<T> planData : planList) {
             int id = planData.id();
-            QueryData<T> expectedData = expectedMap.get(id);
-            assertNotNull("Element with id " + id + " differs", expectedData);
-            assertEquals(
-                "Weight of element with id " + id + " differs",
-                expectedData.weight(),
-                planData.weight(),
-                1e-9);
+            assertNotNull("Element with id " + id + " not found", expectedMap.get(id));
           }
         }
       }

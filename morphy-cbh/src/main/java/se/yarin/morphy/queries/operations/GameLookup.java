@@ -42,7 +42,7 @@ public class GameLookup extends QueryOperator<Game> {
     // TODO: filter should be passed to getGame for serialized matching (speedup, avoids
     // deserialization for misses)
     Stream<QueryData<Game>> stream =
-        this.source.stream().map(data -> new QueryData<>(transaction().getGame(data.id())));
+        this.source.stream().map(data -> new QueryData<>(transaction().getGame(data.id()), data.extra()));
 
     if (gameFilter != null) {
       if (gameFilter.gameHeaderFilter() != null) {

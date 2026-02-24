@@ -12,8 +12,8 @@ import se.yarin.morphy.queries.QuerySortOrder;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -54,14 +54,10 @@ public class GameEntityHashJoin extends QueryOperator<Game> {
 
   @Override
   public Stream<QueryData<Game>> operatorStream() {
-    // No need to keep the full entity data in memory
-    Map<Integer, QueryData<?>> hashMap =
+    Set<Integer> entityIds =
         entitySource.stream()
-            .collect(
-                Collectors.toMap(
-                    IdObject::id,
-                    data -> new QueryData<>(data.id(), null, data.weight()),
-                    (a, b) -> new QueryData<>(a.id(), null, a.weight() + b.weight())));
+            .map(IdObject::id)
+            .collect(Collectors.toSet());
 
     return this.source.stream()
         .map(
@@ -69,16 +65,15 @@ public class GameEntityHashJoin extends QueryOperator<Game> {
               Game gameData = game.data();
               int[][] joinIdGroups = joinCondition.getJoinIds(gameData, entityType);
               for (int[] joinIds : joinIdGroups) {
-                int matchCnt = 0;
-                double weight = 0;
+                boolean allMatch = true;
                 for (int joinId : joinIds) {
-                  if (hashMap.containsKey(joinId)) {
-                    matchCnt += 1;
-                    weight += hashMap.get(joinId).weight();
+                  if (!entityIds.contains(joinId)) {
+                    allMatch = false;
+                    break;
                   }
                 }
-                if (matchCnt == joinIds.length) {
-                  return new QueryData<>(game.id(), gameData, game.weight() * weight);
+                if (allMatch) {
+                  return new QueryData<>(game.id(), gameData, game.extra());
                 }
               }
               return null;

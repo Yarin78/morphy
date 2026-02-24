@@ -30,10 +30,6 @@ public class QuerySortOrder<T extends IdObject> implements Comparator<QueryData<
     return new QuerySortOrder<>(QuerySortField.id(), Direction.ASCENDING);
   }
 
-  public static <T extends IdObject> QuerySortOrder<T> byWeight() {
-    return new QuerySortOrder<>(QuerySortField.weight(), Direction.DESCENDING);
-  }
-
   public static <T extends Entity> QuerySortOrder<T> byEntityCount() {
     return new QuerySortOrder<>(QuerySortField.entityCount(), Direction.DESCENDING);
   }
