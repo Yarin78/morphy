@@ -379,6 +379,12 @@ export const TOURNAMENT_COLUMNS: Column<TournamentDto>[] = [
     },
   },
   { key: 'endDate', label: 'End Date', width: 100, render: (t) => formatDate(t.endDate) },
+  {
+    key: 'tiebreak',
+    label: 'Tiebreak',
+    width: 180,
+    render: (t) => (t.tiebreakRules && t.tiebreakRules.length > 0 ? t.tiebreakRules.join(', ') : ''),
+  },
 ];
 
 export const ANNOTATOR_COLUMNS: Column<AnnotatorDto>[] = [

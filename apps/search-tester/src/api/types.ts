@@ -191,6 +191,7 @@ export interface TournamentDto {
   typeCombined?: string;
   complete?: boolean;
   teamTournament?: boolean;
+  tiebreakRules?: string[];
   latitude?: number;
   longitude?: number;
   gameCount?: number;

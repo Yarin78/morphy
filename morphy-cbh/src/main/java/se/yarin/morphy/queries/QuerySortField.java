@@ -142,6 +142,19 @@ public class QuerySortField<T extends IdObject> {
         Comparator.comparingInt(o -> o.data().complete() ? 1 : 0), "complete", true);
   }
 
+  public static QuerySortField<Tournament> tournamentTiebreak() {
+    return new QuerySortField<>(
+        Comparator.comparing(
+            o -> {
+              var rules = o.extra(TournamentExtra.class).tiebreakRules();
+              return rules.isEmpty() ? "" : rules.getFirst().tiebreakName();
+            }),
+        "tiebreak",
+        true,
+        QuerySortOrder.Direction.ASCENDING,
+        TOURNAMENT_EXTRA_LOOKUP);
+  }
+
   public static QuerySortField<Annotator> annotatorName() {
     return new QuerySortField<>(Comparator.comparing(o -> o.data().name()), "name", true);
   }

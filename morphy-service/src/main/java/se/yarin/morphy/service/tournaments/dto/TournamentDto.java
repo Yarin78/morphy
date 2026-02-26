@@ -2,6 +2,7 @@ package se.yarin.morphy.service.tournaments.dto;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
+import java.util.List;
 import org.jetbrains.annotations.Nullable;
 import se.yarin.chess.Date;
 
@@ -22,6 +23,7 @@ import se.yarin.chess.Date;
   "typeCombined",
   "complete",
   "teamTournament",
+  "tiebreakRules",
   "latitude",
   "longitude",
   "gameCount",
@@ -43,6 +45,7 @@ public record TournamentDto(
     @Nullable String typeCombined,
     @Nullable Boolean complete,
     @Nullable Boolean teamTournament,
+    @Nullable List<String> tiebreakRules,
     @Nullable Double latitude,
     @Nullable Double longitude,
     @Nullable Integer gameCount,

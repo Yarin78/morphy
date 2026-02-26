@@ -1,5 +1,6 @@
 package se.yarin.morphy.service.tournaments.dto;
 
+import java.util.List;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.stereotype.Component;
@@ -45,6 +46,9 @@ public class TournamentDtoConverter {
         tournament.typeCombined().isEmpty() ? null : tournament.typeCombined(),
         tournament.complete() ? true : false,
         tournament.teamTournament() ? true : null,
+        extra.tiebreakRules().isEmpty()
+            ? null
+            : extra.tiebreakRules().stream().map(TiebreakRule::tiebreakName).toList(),
         extra.latitude() != 0.0 ? extra.latitude() : null,
         extra.longitude() != 0.0 ? extra.longitude() : null,
         tournament.count() > 0 ? tournament.count() : null,
