@@ -409,7 +409,19 @@ export const TEAM_COLUMNS: Column<TeamDto>[] = [
   { key: 'title', label: 'Title', width: 250, render: (t) => formatValue(t.title) },
   { key: 'teamNumber', label: 'Team #', width: 60, render: (t) => formatValue(t.teamNumber) },
   { key: 'season', label: 'Season', width: 80, render: (t) => formatValue(t.season) },
-  { key: 'year', label: 'Year', width: 55, render: (t) => formatValue(t.year) },
+  {
+    key: 'year',
+    label: 'Year',
+    width: 70,
+    render: (t) => {
+      if (t.year == null || t.year === 0) return '—';
+      if (t.season) {
+        const yy = t.year % 100;
+        return `${String(yy).padStart(2, '0')} / ${String((yy + 1) % 100).padStart(2, '0')}`;
+      }
+      return String(t.year);
+    },
+  },
   { key: 'nation', label: 'Nation', width: 60, render: (t) => formatValue(t.nation) },
   { key: 'gameCount', label: 'Game Count', width: 80, render: (t) => formatValue(t.gameCount) },
 ];
