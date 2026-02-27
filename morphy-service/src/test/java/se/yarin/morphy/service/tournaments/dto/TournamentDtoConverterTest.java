@@ -189,7 +189,7 @@ class TournamentDtoConverterTest {
     TournamentDto dto =
         new TournamentDto(
             1L, null, null, null, null, null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null);
+            null, null, null, null, null, null);
 
     Tournament tournament = converter.toTournament(dto);
     assertEquals("", tournament.title()); // null title becomes empty string

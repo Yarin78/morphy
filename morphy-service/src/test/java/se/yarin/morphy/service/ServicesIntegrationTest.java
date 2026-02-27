@@ -118,7 +118,7 @@ class ServicesIntegrationTest {
             false,
             null,
             null,
-            null, null, null);
+            null, null,null, null);
     tournamentsService.updateTournament(databaseId, game2TournamentId, updatedTournament);
 
     // Step 6: Update team from game 1 with new metadata
@@ -262,7 +262,7 @@ class ServicesIntegrationTest {
             null,
             null,
             null,
-            null, null, null);
+            null, null, null, null);
 
     TournamentDto tournament2 =
         new TournamentDto(
@@ -282,7 +282,7 @@ class ServicesIntegrationTest {
             null,
             null,
             null,
-            null, null, null);
+            null, null, null, null);
 
     // Create games with these tournaments to make them persist
     GameDto game1 = createMinimalGameWithTournament(tournament1);
@@ -313,7 +313,7 @@ class ServicesIntegrationTest {
             null,
             null,
             null,
-            null, null, null);
+            null, null, null, null);
 
     assertThrows(
         IllegalArgumentException.class,
@@ -342,7 +342,7 @@ class ServicesIntegrationTest {
             null,
             null,
             null,
-            null, null, null);
+            null, null, null, null);
 
     // Create game with this tournament
     GameDto game = createMinimalGameWithTournament(tournament);
@@ -368,7 +368,7 @@ class ServicesIntegrationTest {
             null,
             null,
             null,
-            null, null, null);
+            null, null, null, null);
 
     // Should not throw
     assertDoesNotThrow(
@@ -401,7 +401,7 @@ class ServicesIntegrationTest {
             null,
             null,
             null,
-            null, null, null);
+            null, null, null, null);
 
     // Create game with this tournament
     GameDto game = createMinimalGameWithTournament(tournament);
@@ -427,7 +427,7 @@ class ServicesIntegrationTest {
             false,
             null,
             null,
-            null, null, null);
+            null, null, null, null);
 
     // Should not throw
     assertDoesNotThrow(
@@ -620,7 +620,7 @@ class ServicesIntegrationTest {
             false,
             null,
             null,
-            null, null, null),
+            null, null, null, null),
         new SourceDto(
             null,
             "FIDE Live Games",
@@ -676,7 +676,7 @@ class ServicesIntegrationTest {
             null,
             null,
             null,
-            null, null, null),
+            null, null, null, null),
         new SourceDto(null, "ChessBase Database", "ChessBase", null, null, null, null, null, null),
         null,
         null,
@@ -726,7 +726,7 @@ class ServicesIntegrationTest {
         null,
         null,
         null,
-        new TournamentDto(null, "Test Event", new Date(2024, 1, 1), null, "Test City", null, null, null, null, null, null, null, null, null, null, null, null, null, null),
+        new TournamentDto(null, "Test Event", new Date(2024, 1, 1), null, "Test City", null, null, null, null, null, null, null, null, null, null, null, null, null, null, null),
         new SourceDto(null, "Test Source", "Test", null, null, null, null, null, null),
         null,
         null,
@@ -751,7 +751,7 @@ class ServicesIntegrationTest {
         null,
         null,
         null,
-        new TournamentDto(null, "Test Event", new Date(2024, 1, 1), null, "Test City", null, null, null, null, null, null, null, null, null, null, null, null, null, null),
+        new TournamentDto(null, "Test Event", new Date(2024, 1, 1), null, "Test City", null, null, null, null, null, null, null, null, null, null, null, null, null, null, null),
         new SourceDto(null, "Test Source", "Test", null, null, null, null, null, null),
         new AnnotatorDto(null, annotatorName, null, null),
         null,
