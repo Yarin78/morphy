@@ -12,6 +12,9 @@ public class QueryDescriptionFormatter {
     StringBuilder sb = new StringBuilder("Game Query");
     if (query.limit() > 0) sb.append(" (limit ").append(query.limit()).append(")");
     sb.append("\n");
+    if (!query.sortOrder().isNone()) {
+      sb.append("  Sort: ").append(query.sortOrder()).append("\n");
+    }
     if (!query.gameFilters().isEmpty()) {
       sb.append("  Game filters:\n");
       for (var f : query.gameFilters()) {
@@ -38,6 +41,9 @@ public class QueryDescriptionFormatter {
         new StringBuilder(query.entityType().nameSingularCapitalized() + " Query");
     if (query.limit() > 0) sb.append(" (limit ").append(query.limit()).append(")");
     sb.append("\n");
+    if (!query.sortOrder().isNone()) {
+      sb.append("  Sort: ").append(query.sortOrder()).append("\n");
+    }
     if (query.filters() != null && !query.filters().isEmpty()) {
       sb.append("  Entity filters:\n");
       for (var f : query.filters()) {
