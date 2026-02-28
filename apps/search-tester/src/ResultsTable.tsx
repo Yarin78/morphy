@@ -14,6 +14,8 @@ interface Column<T> {
   label: string;
   width: number;
   render: (row: T) => React.ReactNode;
+  /** Additional column keys this cell should span into (must be consecutive visible columns). */
+  colSpan?: (row: T) => string[] | undefined;
 }
 
 /** Row type that may include raw bytes from the API (when debugRawData is set). */
@@ -203,12 +205,44 @@ function ResultsTable<T>({
             const key = keyExtractor(row);
             const rawPayloads = getRawPayloads(row);
             const rowStripe = rowIndex % 2 === 0 ? 'results-table-row-even' : 'results-table-row-odd';
+
+            /* Pre-compute which columns are absorbed by a colSpan from an earlier column. */
+            const spannedKeys = new Set<string>();
+            columns.forEach((col, i) => {
+              if (col.colSpan) {
+                const extraKeys = col.colSpan(row);
+                if (extraKeys) {
+                  const extraSet = new Set(extraKeys);
+                  for (let j = i + 1; j < columns.length; j++) {
+                    if (extraSet.has(columns[j].key)) spannedKeys.add(columns[j].key);
+                    else break;
+                  }
+                }
+              }
+            });
+
             return (
               <Fragment key={key}>
                 <tr className={rowStripe}>
-                  {columns.map((col) => (
-                    <td key={col.key} data-col={col.key}>{col.render(row)}</td>
-                  ))}
+                  {columns.map((col, i) => {
+                    if (spannedKeys.has(col.key)) return null;
+                    let span = 1;
+                    if (col.colSpan) {
+                      const extraKeys = col.colSpan(row);
+                      if (extraKeys) {
+                        const extraSet = new Set(extraKeys);
+                        for (let j = i + 1; j < columns.length; j++) {
+                          if (extraSet.has(columns[j].key)) span++;
+                          else break;
+                        }
+                      }
+                    }
+                    return (
+                      <td key={col.key} data-col={col.key} colSpan={span > 1 ? span : undefined}>
+                        {col.render(row)}
+                      </td>
+                    );
+                  })}
                   <td className="results-table-filler" />
                 </tr>
                 {rawPayloads.length > 0 && (
@@ -366,6 +400,7 @@ export const GAME_COLUMNS: Column<GameDto>[] = [
         : g.whitePlayer
           ? formatPlayerName(g.whitePlayer.lastName, g.whitePlayer.firstName)
           : '',
+    colSpan: (g) => g.type === 'text' ? ['whiteElo', 'black', 'blackElo'] : undefined,
   },
   { key: 'whiteElo', label: 'Elo W', width: 55, render: (g) => formatValue(g.whiteElo) },
   {
