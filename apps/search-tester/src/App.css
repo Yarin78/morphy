@@ -796,6 +796,19 @@
   padding: 12px 8px;
 }
 
+/* Game column styling */
+.results-panel .results-table td[data-col="white"],
+.results-panel .results-table td[data-col="black"],
+.results-panel .results-table td[data-col="result"],
+.results-panel .results-table td[data-col="eco"],
+.results-panel .results-table td[data-col="vcs"] {
+  font-weight: 600;
+}
+
+.results-panel .results-table td[data-col="tournament"] {
+  font-style: italic;
+}
+
 /* Query Plan pane */
 .query-plan-panel {
   background: #fff;

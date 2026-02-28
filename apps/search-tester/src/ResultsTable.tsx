@@ -207,7 +207,7 @@ function ResultsTable<T>({
               <Fragment key={key}>
                 <tr className={rowStripe}>
                   {columns.map((col) => (
-                    <td key={col.key}>{col.render(row)}</td>
+                    <td key={col.key} data-col={col.key}>{col.render(row)}</td>
                   ))}
                   <td className="results-table-filler" />
                 </tr>
