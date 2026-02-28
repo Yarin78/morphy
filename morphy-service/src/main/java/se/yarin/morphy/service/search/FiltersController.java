@@ -29,7 +29,17 @@ public class FiltersController {
           QuerySortField.gameTournamentTitle(),
           QuerySortField.gameSourceTitle(),
           QuerySortField.gameAnnotatorName(),
-          QuerySortField.gameGameTagTitle());
+          QuerySortField.gameGameTagTitle(),
+          QuerySortField.gameWhiteElo(),
+          QuerySortField.gameBlackElo(),
+          QuerySortField.gameNoMoves(),
+          QuerySortField.gameWhiteTeamTitle(),
+          QuerySortField.gameBlackTeamTitle(),
+          QuerySortField.gameVcs(),
+          QuerySortField.gameFinalMaterial(),
+          QuerySortField.gameVersion(),
+          QuerySortField.gameCreationTimestamp(),
+          QuerySortField.gameLastChanged());
 
   private static final Map<String, AbstractEntityQueryBuilder<?>> ENTITY_BUILDERS =
       Map.of(

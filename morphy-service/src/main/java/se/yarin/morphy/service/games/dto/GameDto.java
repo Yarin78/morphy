@@ -39,6 +39,12 @@ import se.yarin.morphy.service.tournaments.dto.TournamentDto;
   "source",
   "annotator",
   "gameTag",
+  "noMoves",
+  "vcs",
+  "finalMaterial",
+  "gameVersion",
+  "creationTimestamp",
+  "lastChanged",
   "moves",
   "text",
   "rawData",
@@ -78,6 +84,14 @@ public record GameDto(
 
     // Game tag
     @Nullable GameTagDto gameTag,
+
+    // Additional game metadata
+    @Nullable Integer noMoves,
+    @Nullable String vcs,
+    @Nullable String finalMaterial,
+    @Nullable Integer gameVersion,
+    @Nullable Long creationTimestamp,
+    @Nullable String lastChanged,
 
     // Game content (nullable for header-only queries)
     @Nullable GameMovesDto moves,

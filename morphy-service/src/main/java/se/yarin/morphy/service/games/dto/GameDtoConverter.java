@@ -140,6 +140,16 @@ public class GameDtoConverter {
     // Game tag
     GameTagDto gameTag = convertGameTag(game);
 
+    // Additional game metadata
+    Integer noMoves = game.noMoves() == 0 ? null : game.noMoves();
+    String vcs = game.vcs().isBlank() ? null : game.vcs();
+    String finalMaterial = game.finalMaterialString().isEmpty() ? null : game.finalMaterialString();
+    Integer gameVersion = game.gameVersion() == 0 ? null : game.gameVersion();
+    Long creationTimestamp =
+        game.creationTimestamp() == 0 ? null : game.creationTimestamp();
+    String lastChanged =
+        game.lastChangedTimestamp() == 0 ? null : game.lastChangedTime().toString();
+
     // Moves (optional)
     GameMovesDto moves = includeMoves ? convertMoves(game) : null;
 
@@ -173,6 +183,12 @@ public class GameDtoConverter {
         source,
         annotator,
         gameTag,
+        noMoves,
+        vcs,
+        finalMaterial,
+        gameVersion,
+        creationTimestamp,
+        lastChanged,
         moves,
         text,
         rawData,

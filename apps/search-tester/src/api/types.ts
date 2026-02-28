@@ -78,6 +78,12 @@ export interface GameDto {
   source?: { id: number; title?: string };
   annotator?: { id: number; name?: string };
   gameTag?: { id: number; englishTitle?: string; germanTitle?: string; [key: string]: unknown };
+  noMoves?: number;
+  vcs?: string;
+  finalMaterial?: string;
+  gameVersion?: number;
+  creationTimestamp?: number;
+  lastChanged?: string;
   moves?: unknown;
   text?: unknown;
   /** Raw storage bytes (when debugRawData is true). Base64 in JSON. */

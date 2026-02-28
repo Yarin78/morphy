@@ -78,6 +78,20 @@ public class GameEntityLookup<E extends Entity & Comparable<E>> extends QueryOpe
         "GameTagLookup");
   }
 
+  public static GameEntityLookup<Team> whiteTeam(
+      @NotNull QueryContext ctx, @NotNull QueryOperator<Game> source) {
+    return new GameEntityLookup<>(
+        ctx, source, EntityType.TEAM, Game::whiteTeamId, Team.of(""),
+        "GameTeamLookup(white)");
+  }
+
+  public static GameEntityLookup<Team> blackTeam(
+      @NotNull QueryContext ctx, @NotNull QueryOperator<Game> source) {
+    return new GameEntityLookup<>(
+        ctx, source, EntityType.TEAM, Game::blackTeamId, Team.of(""),
+        "GameTeamLookup(black)");
+  }
+
   @Override
   public List<QueryOperator<?>> sources() {
     return List.of(source);

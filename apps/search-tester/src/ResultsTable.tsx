@@ -292,7 +292,7 @@ function getGameTagTitle(gt: GameDto['gameTag']): string {
 }
 
 export const GAME_COLUMNS: Column<GameDto>[] = [
-  { key: 'id', label: 'ID', width: 55, render: (g) => formatValue(g.id) },
+  { key: 'id', label: 'Number', width: 60, render: (g) => formatValue(g.id) },
   {
     key: 'white',
     label: 'White',
@@ -306,6 +306,7 @@ export const GAME_COLUMNS: Column<GameDto>[] = [
           )
         : '—',
   },
+  { key: 'whiteElo', label: 'Elo W', width: 55, render: (g) => formatValue(g.whiteElo) },
   {
     key: 'black',
     label: 'Black',
@@ -319,21 +320,29 @@ export const GAME_COLUMNS: Column<GameDto>[] = [
           )
         : '—',
   },
+  { key: 'blackElo', label: 'Elo B', width: 55, render: (g) => formatValue(g.blackElo) },
   { key: 'result', label: 'Result', width: 70, render: (g) => formatGameResult(g.result) },
-  { key: 'date', label: 'Date', width: 100, render: (g) => formatDate(g.date) },
+  { key: 'noMoves', label: 'Moves', width: 55, render: (g) => formatValue(g.noMoves) },
   { key: 'eco', label: 'ECO', width: 50, render: (g) => formatValue(g.eco) },
-  { key: 'round', label: 'Round', width: 55, render: (g) => formatValue(g.round) },
   {
     key: 'tournament',
     label: 'Tournament',
     width: 180,
     render: (g) => formatValue(g.tournament?.title),
   },
+  { key: 'round', label: 'Round', width: 55, render: (g) => formatValue(g.round) },
+  { key: 'date', label: 'Date', width: 100, render: (g) => formatDate(g.date) },
   {
-    key: 'source',
-    label: 'Source',
+    key: 'whiteTeam',
+    label: 'White Team',
     width: 150,
-    render: (g) => formatValue(g.source?.title),
+    render: (g) => formatValue(g.whiteTeam?.title),
+  },
+  {
+    key: 'blackTeam',
+    label: 'Black Team',
+    width: 150,
+    render: (g) => formatValue(g.blackTeam?.title),
   },
   {
     key: 'annotator',
@@ -341,6 +350,17 @@ export const GAME_COLUMNS: Column<GameDto>[] = [
     width: 120,
     render: (g) => formatValue(g.annotator?.name),
   },
+  {
+    key: 'source',
+    label: 'Source',
+    width: 150,
+    render: (g) => formatValue(g.source?.title),
+  },
+  { key: 'vcs', label: 'VCS', width: 50, render: (g) => formatValue(g.vcs) },
+  { key: 'finalMaterial', label: 'Final Material', width: 150, render: (g) => formatValue(g.finalMaterial) },
+  { key: 'gameVersion', label: 'Version', width: 60, render: (g) => formatValue(g.gameVersion) },
+  { key: 'creationTimestamp', label: 'ID', width: 150, render: (g) => formatValue(g.creationTimestamp) },
+  { key: 'lastChanged', label: 'Last Changed', width: 160, render: (g) => formatValue(g.lastChanged) },
   {
     key: 'gameTag',
     label: 'Game Tag',

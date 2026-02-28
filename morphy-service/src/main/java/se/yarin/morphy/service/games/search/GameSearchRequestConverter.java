@@ -161,7 +161,26 @@ public class GameSearchRequestConverter {
           new QuerySortOrder<>(List.of(QuerySortField.gameAnnotatorName()), List.of(direction));
       case "gametag" ->
           new QuerySortOrder<>(List.of(QuerySortField.gameGameTagTitle()), List.of(direction));
-      // whiteElo, blackElo, avgElo sorting done post-query in service layer
+      case "whiteelo" ->
+          new QuerySortOrder<>(List.of(QuerySortField.gameWhiteElo()), List.of(direction));
+      case "blackelo" ->
+          new QuerySortOrder<>(List.of(QuerySortField.gameBlackElo()), List.of(direction));
+      case "nomoves" ->
+          new QuerySortOrder<>(List.of(QuerySortField.gameNoMoves()), List.of(direction));
+      case "whiteteam" ->
+          new QuerySortOrder<>(List.of(QuerySortField.gameWhiteTeamTitle()), List.of(direction));
+      case "blackteam" ->
+          new QuerySortOrder<>(List.of(QuerySortField.gameBlackTeamTitle()), List.of(direction));
+      case "vcs" ->
+          new QuerySortOrder<>(List.of(QuerySortField.gameVcs()), List.of(direction));
+      case "finalmaterial" ->
+          new QuerySortOrder<>(List.of(QuerySortField.gameFinalMaterial()), List.of(direction));
+      case "gameversion" ->
+          new QuerySortOrder<>(List.of(QuerySortField.gameVersion()), List.of(direction));
+      case "creationtimestamp" ->
+          new QuerySortOrder<>(List.of(QuerySortField.gameCreationTimestamp()), List.of(direction));
+      case "lastchanged" ->
+          new QuerySortOrder<>(List.of(QuerySortField.gameLastChanged()), List.of(direction));
       default -> QuerySortOrder.none();
     };
   }

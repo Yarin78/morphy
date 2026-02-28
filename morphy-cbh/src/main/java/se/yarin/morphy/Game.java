@@ -241,6 +241,20 @@ public class Game implements IdObject {
     return header.symbolsMagnitude();
   }
 
+  public @NotNull String vcs() {
+    String vMag = " vVrR", cMag = " cC", sMag = " sS";
+    return String.format(
+        "%c%c%c",
+        vMag.charAt(Math.max(0, variationsMagnitude())),
+        cMag.charAt(Math.max(0, commentariesMagnitude())),
+        sMag.charAt(Math.max(0, symbolsMagnitude())));
+  }
+
+  public @NotNull String finalMaterialString() {
+    if (!extendedHeader.finalMaterial()) return "";
+    return extendedHeader.materialPlayer1() + " - " + extendedHeader.materialPlayer2();
+  }
+
   public long getMovesOffset() {
     return resolveOffset(header.movesOffset(), extendedHeader.movesOffset(), "move");
   }

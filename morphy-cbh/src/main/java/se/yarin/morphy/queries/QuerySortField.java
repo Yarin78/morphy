@@ -42,6 +42,12 @@ public class QuerySortField<T extends IdObject> {
   private static final BiFunction<QueryContext, QueryOperator<Game>, QueryOperator<Game>>
       GAME_TAG_LOOKUP = GameEntityLookup::gameTag;
 
+  private static final BiFunction<QueryContext, QueryOperator<Game>, QueryOperator<Game>>
+      GAME_WHITE_TEAM_LOOKUP = GameEntityLookup::whiteTeam;
+
+  private static final BiFunction<QueryContext, QueryOperator<Game>, QueryOperator<Game>>
+      GAME_BLACK_TEAM_LOOKUP = GameEntityLookup::blackTeam;
+
   public static <T extends IdObject> QuerySortField<T> id() {
     return new QuerySortField<>(Comparator.comparingInt(QueryData::id), "id", false);
   }
@@ -141,6 +147,87 @@ public class QuerySortField<T extends IdObject> {
         true,
         QuerySortOrder.Direction.ASCENDING,
         GAME_TAG_LOOKUP);
+  }
+
+  public static QuerySortField<Game> gameWhiteElo() {
+    return new QuerySortField<>(
+        Comparator.comparingInt(o -> o.data().whiteElo()),
+        "whiteElo",
+        true,
+        QuerySortOrder.Direction.DESCENDING);
+  }
+
+  public static QuerySortField<Game> gameBlackElo() {
+    return new QuerySortField<>(
+        Comparator.comparingInt(o -> o.data().blackElo()),
+        "blackElo",
+        true,
+        QuerySortOrder.Direction.DESCENDING);
+  }
+
+  public static QuerySortField<Game> gameNoMoves() {
+    return new QuerySortField<>(
+        Comparator.comparingInt(o -> o.data().noMoves()),
+        "noMoves",
+        true,
+        QuerySortOrder.Direction.DESCENDING);
+  }
+
+  public static QuerySortField<Game> gameWhiteTeamTitle() {
+    return new QuerySortField<>(
+        Comparator.comparing(o -> o.extra(Team.class).title()),
+        "whiteTeam",
+        true,
+        QuerySortOrder.Direction.ASCENDING,
+        GAME_WHITE_TEAM_LOOKUP);
+  }
+
+  public static QuerySortField<Game> gameBlackTeamTitle() {
+    return new QuerySortField<>(
+        Comparator.comparing(o -> o.extra(Team.class).title()),
+        "blackTeam",
+        true,
+        QuerySortOrder.Direction.ASCENDING,
+        GAME_BLACK_TEAM_LOOKUP);
+  }
+
+  public static QuerySortField<Game> gameVcs() {
+    return new QuerySortField<>(
+        Comparator.comparing(o -> o.data().vcs()),
+        "vcs",
+        true,
+        QuerySortOrder.Direction.DESCENDING);
+  }
+
+  public static QuerySortField<Game> gameFinalMaterial() {
+    return new QuerySortField<>(
+        Comparator.comparing(o -> o.data().finalMaterialString()),
+        "finalMaterial",
+        true);
+  }
+
+  public static QuerySortField<Game> gameVersion() {
+    return new QuerySortField<>(
+        Comparator.comparingInt(o -> o.data().gameVersion()),
+        "gameVersion",
+        true,
+        QuerySortOrder.Direction.DESCENDING);
+  }
+
+  public static QuerySortField<Game> gameCreationTimestamp() {
+    return new QuerySortField<>(
+        Comparator.comparingLong(o -> o.data().creationTimestamp()),
+        "creationTimestamp",
+        true,
+        QuerySortOrder.Direction.DESCENDING);
+  }
+
+  public static QuerySortField<Game> gameLastChanged() {
+    return new QuerySortField<>(
+        Comparator.comparingLong(o -> o.data().lastChangedTimestamp()),
+        "lastChanged",
+        true,
+        QuerySortOrder.Direction.DESCENDING);
   }
 
   public static QuerySortField<Player> playerName() {
