@@ -8,13 +8,9 @@ import org.jetbrains.annotations.Nullable;
 import se.yarin.morphy.Game;
 import se.yarin.morphy.IdObject;
 import se.yarin.morphy.entities.*;
+import se.yarin.morphy.queries.operations.GameEntityLookup;
 import se.yarin.morphy.queries.operations.QueryData;
 import se.yarin.morphy.queries.operations.QueryOperator;
-import se.yarin.morphy.queries.operations.GameAnnotatorLookup;
-import se.yarin.morphy.queries.operations.GamePlayerLookup;
-import se.yarin.morphy.queries.operations.GameSourceLookup;
-import se.yarin.morphy.queries.operations.GameTagLookup;
-import se.yarin.morphy.queries.operations.GameTournamentLookup;
 import se.yarin.morphy.queries.operations.TournamentExtraLookup;
 
 public class QuerySortField<T extends IdObject> {
@@ -29,22 +25,22 @@ public class QuerySortField<T extends IdObject> {
       TOURNAMENT_EXTRA_LOOKUP = TournamentExtraLookup::new;
 
   private static final BiFunction<QueryContext, QueryOperator<Game>, QueryOperator<Game>>
-      GAME_WHITE_PLAYER_LOOKUP = (ctx, source) -> new GamePlayerLookup(ctx, source, true);
+      GAME_WHITE_PLAYER_LOOKUP = GameEntityLookup::whitePlayer;
 
   private static final BiFunction<QueryContext, QueryOperator<Game>, QueryOperator<Game>>
-      GAME_BLACK_PLAYER_LOOKUP = (ctx, source) -> new GamePlayerLookup(ctx, source, false);
+      GAME_BLACK_PLAYER_LOOKUP = GameEntityLookup::blackPlayer;
 
   private static final BiFunction<QueryContext, QueryOperator<Game>, QueryOperator<Game>>
-      GAME_TOURNAMENT_LOOKUP = GameTournamentLookup::new;
+      GAME_TOURNAMENT_LOOKUP = GameEntityLookup::tournament;
 
   private static final BiFunction<QueryContext, QueryOperator<Game>, QueryOperator<Game>>
-      GAME_SOURCE_LOOKUP = GameSourceLookup::new;
+      GAME_SOURCE_LOOKUP = GameEntityLookup::source;
 
   private static final BiFunction<QueryContext, QueryOperator<Game>, QueryOperator<Game>>
-      GAME_ANNOTATOR_LOOKUP = GameAnnotatorLookup::new;
+      GAME_ANNOTATOR_LOOKUP = GameEntityLookup::annotator;
 
   private static final BiFunction<QueryContext, QueryOperator<Game>, QueryOperator<Game>>
-      GAME_TAG_LOOKUP = GameTagLookup::new;
+      GAME_TAG_LOOKUP = GameEntityLookup::gameTag;
 
   public static <T extends IdObject> QuerySortField<T> id() {
     return new QuerySortField<>(Comparator.comparingInt(QueryData::id), "id", false);
