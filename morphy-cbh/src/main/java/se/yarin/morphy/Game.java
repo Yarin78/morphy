@@ -17,7 +17,11 @@ import se.yarin.morphy.text.TextModel;
 import java.nio.ByteBuffer;
 import java.time.Instant;
 
+import static se.yarin.morphy.games.GameHeaderFlags.ANNO_TYPE_1A;
 import static se.yarin.morphy.games.GameHeaderFlags.CRITICAL_POSITION;
+import static se.yarin.morphy.games.GameHeaderFlags.EMBEDDED_AUDIO;
+import static se.yarin.morphy.games.GameHeaderFlags.EMBEDDED_PICTURE;
+import static se.yarin.morphy.games.GameHeaderFlags.EMBEDDED_VIDEO;
 import static se.yarin.morphy.games.GameHeaderFlags.GAME_QUOTATION;
 
 /** Class that represents a game that is bound to a {@link Database}. */
@@ -263,11 +267,15 @@ public class Game implements IdObject {
     StringBuilder sb = new StringBuilder();
     sb.append(aMag.charAt(Math.max(0, Math.max(header.graphicalArrowsMagnitude(), header.graphicalSquaresMagnitude()))));
     sb.append(tMag.charAt(Math.max(0, header.trainingMagnitude())));
-    if (header.flags().contains(CRITICAL_POSITION)) {
+    var flags = header.flags();
+    if (flags.contains(CRITICAL_POSITION)) {
       sb.append("I");
     }
-    if (header.flags().contains(GAME_QUOTATION)) {
+    if (flags.contains(GAME_QUOTATION)) {
       sb.append("G");
+    }
+    if (flags.contains(ANNO_TYPE_1A) || flags.contains(EMBEDDED_AUDIO) || flags.contains(EMBEDDED_PICTURE) || flags.contains(EMBEDDED_VIDEO)) {
+      sb.append("M");
     }
     return sb.toString().replace(" ", "");
   }

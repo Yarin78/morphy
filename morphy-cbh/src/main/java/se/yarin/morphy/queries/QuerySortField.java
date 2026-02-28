@@ -15,6 +15,11 @@ import se.yarin.morphy.queries.operations.QueryData;
 import se.yarin.morphy.queries.operations.QueryOperator;
 import se.yarin.morphy.queries.operations.TournamentExtraLookup;
 
+import static se.yarin.morphy.games.GameHeaderFlags.ANNO_TYPE_1A;
+import static se.yarin.morphy.games.GameHeaderFlags.EMBEDDED_AUDIO;
+import static se.yarin.morphy.games.GameHeaderFlags.EMBEDDED_PICTURE;
+import static se.yarin.morphy.games.GameHeaderFlags.EMBEDDED_VIDEO;
+
 public class QuerySortField<T extends IdObject> {
   private final @NotNull Comparator<QueryData<T>> comparator;
   private final boolean requiresData;
@@ -209,7 +214,8 @@ public class QuerySortField<T extends IdObject> {
           int t = hdr.trainingMagnitude();
           int i = hdr.flags().contains(GameHeaderFlags.CRITICAL_POSITION) ? 1 : 0;
           int g = hdr.flags().contains(GameHeaderFlags.GAME_QUOTATION) ? 1 : 0;
-          return a * 1000 + t * 100 + i * 10 + g;
+          int m = hdr.flags().contains(ANNO_TYPE_1A) || hdr.flags().contains(EMBEDDED_AUDIO) || hdr.flags().contains(EMBEDDED_PICTURE) || hdr.flags().contains(EMBEDDED_VIDEO) ? 1 : 0;
+          return a * 10000 + t * 1000 + i * 100 + g * 10 + m;
         }),
         "ait",
         true,

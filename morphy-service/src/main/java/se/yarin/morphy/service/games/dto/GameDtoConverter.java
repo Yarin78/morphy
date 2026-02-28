@@ -127,6 +127,9 @@ public class GameDtoConverter {
     // Game metadata
     var result = game.result(); // Mandatory PGN field - GameResult is never null
     var date = game.playedDate(); // Mandatory PGN field - Date class handles unset dates
+    if (game.guidingText() && date.isUnset() && game.tournamentId() != -1) {
+      date = game.tournament().date();
+    }
     String eco = !game.eco().isSet() ? null : game.eco().toString();
     Integer round = game.round() == 0 ? null : game.round();
     Integer subRound = game.subRound() == 0 ? null : game.subRound();
