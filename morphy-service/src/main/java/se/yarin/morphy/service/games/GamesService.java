@@ -83,7 +83,6 @@ public class GamesService {
             databaseId,
             txn ->
                 txn.stream(cursor, null)
-                    .filter(morphyGame -> !morphyGame.guidingText())
                     .limit(finalLimit + 1L)
                     .map(
                         game ->
@@ -250,14 +249,12 @@ public class GamesService {
             games =
                 profiledResults.stream()
                     .map(QueryData::data)
-                    .filter(game -> !game.guidingText())
                     .collect(Collectors.toList());
           } else {
             Stream<QueryData<Game>> queryResults = bestPlan.stream();
             games =
                 queryResults
                     .map(QueryData::data)
-                    .filter(game -> !game.guidingText())
                     .collect(Collectors.toList());
           }
 

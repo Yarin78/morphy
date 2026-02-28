@@ -99,10 +99,10 @@ public class QuerySortField<T extends IdObject> {
 
   public static QuerySortField<Game> gameResult() {
     return new QuerySortField<>(
-        Comparator.comparingInt(o -> o.data().result().ordinal()),
+        Comparator.comparingInt(o -> o.data().guidingText() ? Integer.MAX_VALUE : -o.data().result().ordinal()),
         "result",
         true,
-        QuerySortOrder.Direction.DESCENDING);
+        QuerySortOrder.Direction.ASCENDING);
   }
 
   public static QuerySortField<Game> gameEco() {

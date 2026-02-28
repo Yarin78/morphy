@@ -105,6 +105,7 @@ public class GameDtoConverter {
     // Basic game information
     Long id = (long) game.id();
     String type = game.guidingText() ? "text" : "game";
+    String textTitle = game.guidingText() ? game.getTextTitle() : null;
 
     // Player information (only for games, not guiding text)
     PlayerDto whitePlayer = null;
@@ -181,6 +182,7 @@ public class GameDtoConverter {
     return new GameDto(
         id,
         type,
+        textTitle,
         whitePlayer,
         whiteElo,
         blackPlayer,

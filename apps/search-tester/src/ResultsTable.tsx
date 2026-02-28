@@ -361,9 +361,11 @@ export const GAME_COLUMNS: Column<GameDto>[] = [
     label: 'White',
     width: 180,
     render: (g) =>
-      g.whitePlayer
-        ? formatPlayerName(g.whitePlayer.lastName, g.whitePlayer.firstName)
-        : '',
+      g.type === 'text'
+        ? (g.textTitle ?? 'Text')
+        : g.whitePlayer
+          ? formatPlayerName(g.whitePlayer.lastName, g.whitePlayer.firstName)
+          : '',
   },
   { key: 'whiteElo', label: 'Elo W', width: 55, render: (g) => formatValue(g.whiteElo) },
   {
@@ -376,7 +378,7 @@ export const GAME_COLUMNS: Column<GameDto>[] = [
         : '',
   },
   { key: 'blackElo', label: 'Elo B', width: 55, render: (g) => formatValue(g.blackElo) },
-  { key: 'result', label: 'Result', width: 70, render: (g) => formatGameResult(g.result) },
+  { key: 'result', label: 'Result', width: 70, render: (g) => g.type === 'text' ? 'Text' : formatGameResult(g.result) },
   { key: 'noMoves', label: 'Moves', width: 60, render: (g) => formatValue(g.noMoves) },
   { key: 'eco', label: 'ECO', width: 50, render: (g) => formatValue(g.eco) },
   {

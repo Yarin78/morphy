@@ -62,6 +62,7 @@ export interface SearchMetadata {
 export interface GameDto {
   id: number;
   type?: string;
+  textTitle?: string;
   whitePlayer?: { id: number; lastName?: string; firstName?: string };
   whiteElo?: number;
   blackPlayer?: { id: number; lastName?: string; firstName?: string };

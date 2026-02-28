@@ -24,6 +24,7 @@ import se.yarin.morphy.service.tournaments.dto.TournamentDto;
 @JsonPropertyOrder({
   "id",
   "type",
+  "textTitle",
   "whitePlayer",
   "whiteElo",
   "blackPlayer",
@@ -58,6 +59,7 @@ public record GameDto(
     // Game identity
     Long id,
     String type, // "game" for regular chess game, "text" for guiding text
+    @Nullable String textTitle, // title for guiding texts
 
     // Player information
     @Nullable PlayerDto whitePlayer,
