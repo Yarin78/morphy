@@ -79,6 +79,7 @@ export interface GameDto {
   annotator?: { id: number; name?: string };
   gameTag?: { id: number; englishTitle?: string; germanTitle?: string; [key: string]: unknown };
   medals?: string[];
+  setupPosition?: boolean;
   noMoves?: number;
   ait?: string;
   vcs?: string;

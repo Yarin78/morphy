@@ -12,6 +12,7 @@ import se.yarin.chess.pgn.PgnExporter;
 import se.yarin.chess.pgn.PgnFormatOptions;
 import se.yarin.morphy.Game;
 import se.yarin.morphy.entities.*;
+import se.yarin.morphy.games.GameHeaderFlags;
 import se.yarin.morphy.games.Medal;
 import se.yarin.morphy.games.annotations.AnnotationConverter;
 import se.yarin.morphy.service.annotators.dto.AnnotatorDto;
@@ -149,6 +150,9 @@ public class GameDtoConverter {
             ? null
             : medalSet.stream().map(Medal::name).toList();
 
+    // Flags
+    Boolean setupPosition = game.header().flags().contains(GameHeaderFlags.SETUP_POSITION) ? true : null;
+
     // Additional game metadata
     Integer noMoves = game.noMoves() == 0 ? null : game.noMoves();
     String ait = game.ait().isBlank() ? null : game.ait();
@@ -194,6 +198,7 @@ public class GameDtoConverter {
         annotator,
         gameTag,
         medals,
+        setupPosition,
         noMoves,
         ait,
         vcs,

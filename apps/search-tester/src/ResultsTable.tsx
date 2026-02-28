@@ -245,7 +245,7 @@ function ResultsTable<T>({
 }
 
 function formatValue(value: unknown): string {
-  if (value == null) return '—';
+  if (value == null) return '';
   if (typeof value === 'boolean') return value ? 'Yes' : 'No';
   return String(value);
 }
@@ -262,7 +262,7 @@ const GAME_RESULT_DISPLAY: Record<string, string> = {
 };
 
 function formatGameResult(result: unknown): string {
-  if (result == null) return '—';
+  if (result == null) return '';
   const s = String(result);
   return GAME_RESULT_DISPLAY[s] ?? s;
 }
@@ -274,13 +274,13 @@ interface DateObject {
 }
 
 function formatDate(date: unknown): string {
-  if (date == null) return '—';
+  if (date == null) return '';
   if (typeof date === 'string') return date;
   const d = date as DateObject;
   const y = d.year ?? 0;
   const m = d.month ?? 0;
   const day = d.day ?? 0;
-  if (y === 0) return '????.??.??';
+  if (y === 0) return '';
   if (m === 0) return String(y);
   if (day === 0) return `${String(y).padStart(4, '0')}.${String(m).padStart(2, '0')}.??`;
   return `${String(y).padStart(4, '0')}-${String(m).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
@@ -289,18 +289,14 @@ function formatDate(date: unknown): string {
 function formatPlayerName(
   lastName?: string,
   firstName?: string,
-  rating?: number
 ): string {
-  const parts = [lastName, firstName].filter(Boolean);
-  const name = parts.length ? parts.join(', ') : '—';
-  if (rating != null && rating > 0) {
-    return `${name} (${rating})`;
-  }
-  return name;
+  if (!lastName) return '';
+  const initial = firstName ? firstName.charAt(0) : null;
+  return initial ? `${lastName}, ${initial}` : lastName;
 }
 
 function getGameTagTitle(gt: GameDto['gameTag']): string {
-  if (!gt) return '—';
+  if (!gt) return '';
   const titles = [
     gt.englishTitle,
     gt.germanTitle,
@@ -312,7 +308,7 @@ function getGameTagTitle(gt: GameDto['gameTag']): string {
     (gt as Record<string, unknown>).resTitle,
   ];
   const found = titles.find((t): t is string => typeof t === 'string');
-  return found ?? '—';
+  return found ?? '';
 }
 
 const MEDAL_COLORS: Record<string, [string, string]> = {
@@ -366,12 +362,8 @@ export const GAME_COLUMNS: Column<GameDto>[] = [
     width: 180,
     render: (g) =>
       g.whitePlayer
-        ? formatPlayerName(
-            g.whitePlayer.lastName,
-            g.whitePlayer.firstName,
-            g.whiteElo
-          )
-        : '—',
+        ? formatPlayerName(g.whitePlayer.lastName, g.whitePlayer.firstName)
+        : '',
   },
   { key: 'whiteElo', label: 'Elo W', width: 55, render: (g) => formatValue(g.whiteElo) },
   {
@@ -380,12 +372,8 @@ export const GAME_COLUMNS: Column<GameDto>[] = [
     width: 180,
     render: (g) =>
       g.blackPlayer
-        ? formatPlayerName(
-            g.blackPlayer.lastName,
-            g.blackPlayer.firstName,
-            g.blackElo
-          )
-        : '—',
+        ? formatPlayerName(g.blackPlayer.lastName, g.blackPlayer.firstName)
+        : '',
   },
   { key: 'blackElo', label: 'Elo B', width: 55, render: (g) => formatValue(g.blackElo) },
   { key: 'result', label: 'Result', width: 70, render: (g) => formatGameResult(g.result) },
@@ -397,7 +385,11 @@ export const GAME_COLUMNS: Column<GameDto>[] = [
     width: 180,
     render: (g) => formatValue(g.tournament?.title),
   },
-  { key: 'round', label: 'Round', width: 60, render: (g) => formatValue(g.round) },
+  { key: 'round', label: 'Round', width: 60, render: (g) => {
+    if (g.round == null) return '';
+    if (g.subRound != null && g.subRound > 0) return `${g.round}.${g.subRound}`;
+    return String(g.round);
+  }},
   { key: 'date', label: 'Date', width: 100, render: (g) => formatDate(g.date) },
   {
     key: 'whiteTeam',
@@ -424,6 +416,7 @@ export const GAME_COLUMNS: Column<GameDto>[] = [
     render: (g) => formatValue(g.source?.title),
   },
   { key: 'vcs', label: 'VCS', width: 55, render: (g) => g.vcs ?? '' },
+  { key: 'setupPosition', label: 'P', width: 40, render: (g) => g.setupPosition ? 'P' : '' },
   {
     key: 'medals',
     label: 'Medals',
@@ -436,13 +429,13 @@ export const GAME_COLUMNS: Column<GameDto>[] = [
     label: 'Year',
     width: 60,
     render: (g) => {
-      if (g.date == null) return '—';
+      if (g.date == null) return '';
       if (typeof g.date === 'string') {
         const m = g.date.match(/^(\d{4})/);
-        return m ? m[1] : '—';
+        return m ? m[1] : '';
       }
       const d = g.date as unknown as DateObject;
-      return d.year ? String(d.year) : '—';
+      return d.year ? String(d.year) : '';
     },
   },
   { key: 'finalMaterial', label: 'Final Material', width: 150, render: (g) => formatValue(g.finalMaterial) },
@@ -456,7 +449,7 @@ export const GAME_COLUMNS: Column<GameDto>[] = [
       if (w != null && b != null) return String(Math.round((w + b) / 2));
       if (w != null) return String(w);
       if (b != null) return String(b);
-      return '—';
+      return '';
     },
   },
   {
@@ -469,7 +462,7 @@ export const GAME_COLUMNS: Column<GameDto>[] = [
       if (w != null && b != null) return String(Math.max(w, b));
       if (w != null) return String(w);
       if (b != null) return String(b);
-      return '—';
+      return '';
     },
   },
   { key: 'gameVersion', label: 'Version', width: 70, render: (g) => formatValue(g.gameVersion) },
@@ -548,7 +541,7 @@ export const TEAM_COLUMNS: Column<TeamDto>[] = [
     label: 'Year',
     width: 70,
     render: (t) => {
-      if (t.year == null || t.year === 0) return '—';
+      if (t.year == null || t.year === 0) return '';
       if (t.season) {
         const yy = t.year % 100;
         return `${String(yy).padStart(2, '0')} / ${String((yy + 1) % 100).padStart(2, '0')}`;

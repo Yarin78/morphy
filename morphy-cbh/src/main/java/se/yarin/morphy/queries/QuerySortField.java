@@ -216,6 +216,14 @@ public class QuerySortField<T extends IdObject> {
         QuerySortOrder.Direction.DESCENDING);
   }
 
+  public static QuerySortField<Game> gameSetupPosition() {
+    return new QuerySortField<>(
+        Comparator.comparingInt(o -> o.data().header().flags().contains(GameHeaderFlags.SETUP_POSITION) ? 1 : 0),
+        "setupPosition",
+        true,
+        QuerySortOrder.Direction.DESCENDING);
+  }
+
   public static QuerySortField<Game> gameMedals() {
     return new QuerySortField<>(
         Comparator.comparingInt(o -> Medal.encode(o.data().header().medals())),
