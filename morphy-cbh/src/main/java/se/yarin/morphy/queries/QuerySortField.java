@@ -10,6 +10,11 @@ import se.yarin.morphy.IdObject;
 import se.yarin.morphy.entities.*;
 import se.yarin.morphy.queries.operations.QueryData;
 import se.yarin.morphy.queries.operations.QueryOperator;
+import se.yarin.morphy.queries.operations.GameAnnotatorLookup;
+import se.yarin.morphy.queries.operations.GamePlayerLookup;
+import se.yarin.morphy.queries.operations.GameSourceLookup;
+import se.yarin.morphy.queries.operations.GameTagLookup;
+import se.yarin.morphy.queries.operations.GameTournamentLookup;
 import se.yarin.morphy.queries.operations.TournamentExtraLookup;
 
 public class QuerySortField<T extends IdObject> {
@@ -22,6 +27,24 @@ public class QuerySortField<T extends IdObject> {
 
   private static final BiFunction<QueryContext, QueryOperator<Tournament>, QueryOperator<Tournament>>
       TOURNAMENT_EXTRA_LOOKUP = TournamentExtraLookup::new;
+
+  private static final BiFunction<QueryContext, QueryOperator<Game>, QueryOperator<Game>>
+      GAME_WHITE_PLAYER_LOOKUP = (ctx, source) -> new GamePlayerLookup(ctx, source, true);
+
+  private static final BiFunction<QueryContext, QueryOperator<Game>, QueryOperator<Game>>
+      GAME_BLACK_PLAYER_LOOKUP = (ctx, source) -> new GamePlayerLookup(ctx, source, false);
+
+  private static final BiFunction<QueryContext, QueryOperator<Game>, QueryOperator<Game>>
+      GAME_TOURNAMENT_LOOKUP = GameTournamentLookup::new;
+
+  private static final BiFunction<QueryContext, QueryOperator<Game>, QueryOperator<Game>>
+      GAME_SOURCE_LOOKUP = GameSourceLookup::new;
+
+  private static final BiFunction<QueryContext, QueryOperator<Game>, QueryOperator<Game>>
+      GAME_ANNOTATOR_LOOKUP = GameAnnotatorLookup::new;
+
+  private static final BiFunction<QueryContext, QueryOperator<Game>, QueryOperator<Game>>
+      GAME_TAG_LOOKUP = GameTagLookup::new;
 
   public static <T extends IdObject> QuerySortField<T> id() {
     return new QuerySortField<>(Comparator.comparingInt(QueryData::id), "id", false);
@@ -50,6 +73,78 @@ public class QuerySortField<T extends IdObject> {
         "playedDate",
         true,
         QuerySortOrder.Direction.DESCENDING);
+  }
+
+  public static QuerySortField<Game> gameWhitePlayerName() {
+    return new QuerySortField<>(
+        Comparator.comparing(o -> o.extra(Player.class).getFullName()),
+        "whitePlayerName",
+        true,
+        QuerySortOrder.Direction.ASCENDING,
+        GAME_WHITE_PLAYER_LOOKUP);
+  }
+
+  public static QuerySortField<Game> gameBlackPlayerName() {
+    return new QuerySortField<>(
+        Comparator.comparing(o -> o.extra(Player.class).getFullName()),
+        "blackPlayerName",
+        true,
+        QuerySortOrder.Direction.ASCENDING,
+        GAME_BLACK_PLAYER_LOOKUP);
+  }
+
+  public static QuerySortField<Game> gameResult() {
+    return new QuerySortField<>(
+        Comparator.comparingInt(o -> o.data().result().ordinal()),
+        "result",
+        true,
+        QuerySortOrder.Direction.DESCENDING);
+  }
+
+  public static QuerySortField<Game> gameEco() {
+    return new QuerySortField<>(
+        Comparator.comparingInt(o -> o.data().eco().getInt()), "eco", true);
+  }
+
+  public static QuerySortField<Game> gameRound() {
+    return new QuerySortField<>(
+        Comparator.comparingInt(o -> o.data().round()), "round", true);
+  }
+
+  public static QuerySortField<Game> gameTournamentTitle() {
+    return new QuerySortField<>(
+        Comparator.comparing(o -> o.extra(Tournament.class).title()),
+        "tournament",
+        true,
+        QuerySortOrder.Direction.ASCENDING,
+        GAME_TOURNAMENT_LOOKUP);
+  }
+
+  public static QuerySortField<Game> gameSourceTitle() {
+    return new QuerySortField<>(
+        Comparator.comparing(o -> o.extra(Source.class).title()),
+        "source",
+        true,
+        QuerySortOrder.Direction.ASCENDING,
+        GAME_SOURCE_LOOKUP);
+  }
+
+  public static QuerySortField<Game> gameAnnotatorName() {
+    return new QuerySortField<>(
+        Comparator.comparing(o -> o.extra(Annotator.class).name()),
+        "annotator",
+        true,
+        QuerySortOrder.Direction.ASCENDING,
+        GAME_ANNOTATOR_LOOKUP);
+  }
+
+  public static QuerySortField<Game> gameGameTagTitle() {
+    return new QuerySortField<>(
+        Comparator.comparing(o -> o.extra(GameTag.class).title()),
+        "gameTag",
+        true,
+        QuerySortOrder.Direction.ASCENDING,
+        GAME_TAG_LOOKUP);
   }
 
   public static QuerySortField<Player> playerName() {

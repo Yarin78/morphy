@@ -563,11 +563,6 @@ public class QueryPlanner {
               CombinedFilter.combine(filtersLeft));
     }
 
-    var requiredLookup = sortOrder.requiredLookup();
-    if (requiredLookup != null) {
-      operator = requiredLookup.apply(current.context(), operator);
-    }
-
     return operator.sortedAndDistinct(sortOrder, entityQuery.limit());
   }
 }

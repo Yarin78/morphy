@@ -244,10 +244,15 @@ public abstract class QueryOperator<T extends IdObject> {
   public QueryOperator<T> sortedAndDistinct(@NotNull QuerySortOrder<T> sortOrder, int limit) {
     // Wraps the query operator in a sort and/or distinct if needed
     QueryOperator<T> sortedOperator, distinctOperator, limitOperator;
+    QueryOperator<T> current = this;
     if (this.sortOrder().isSameOrStronger(sortOrder)) {
-      sortedOperator = this;
+      sortedOperator = current;
     } else {
-      sortedOperator = new Sort<>(this.queryContext, this, sortOrder);
+      var requiredLookup = sortOrder.requiredLookup();
+      if (requiredLookup != null) {
+        current = requiredLookup.apply(this.queryContext, current);
+      }
+      sortedOperator = new Sort<>(this.queryContext, current, sortOrder);
     }
     if (!sortedOperator.mayContainDuplicates()) {
       distinctOperator = sortedOperator;

@@ -7,6 +7,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import se.yarin.morphy.Game;
+import se.yarin.morphy.queries.QuerySortField;
 import se.yarin.morphy.queries.filter.*;
 
 @RestController
@@ -14,6 +16,20 @@ import se.yarin.morphy.queries.filter.*;
 public class FiltersController {
 
   private static final GameQueryBuilder GAME_QUERY_BUILDER = new GameQueryBuilder();
+
+  private static final List<QuerySortField<Game>> GAME_SORT_FIELDS =
+      List.of(
+          QuerySortField.id(),
+          QuerySortField.playedDate(),
+          QuerySortField.gameWhitePlayerName(),
+          QuerySortField.gameBlackPlayerName(),
+          QuerySortField.gameResult(),
+          QuerySortField.gameEco(),
+          QuerySortField.gameRound(),
+          QuerySortField.gameTournamentTitle(),
+          QuerySortField.gameSourceTitle(),
+          QuerySortField.gameAnnotatorName(),
+          QuerySortField.gameGameTagTitle());
 
   private static final Map<String, AbstractEntityQueryBuilder<?>> ENTITY_BUILDERS =
       Map.of(
@@ -35,7 +51,11 @@ public class FiltersController {
             .filter(f -> !hidden.contains(f))
             .filter(f -> depth > 0 || !f.contains("."))
             .toList();
-    return new FilterOptionsResponse(GAME_QUERY_BUILDER.defaultField(), fields, List.of());
+    List<FilterOptionsResponse.SortFieldOption> sortFields =
+        GAME_SORT_FIELDS.stream()
+            .map(sf -> new FilterOptionsResponse.SortFieldOption(sf.name(), sf.defaultDirection().shortName()))
+            .toList();
+    return new FilterOptionsResponse(GAME_QUERY_BUILDER.defaultField(), fields, sortFields);
   }
 
   @GetMapping("/players")

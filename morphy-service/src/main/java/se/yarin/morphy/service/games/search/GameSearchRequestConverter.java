@@ -136,13 +136,31 @@ public class GameSearchRequestConverter {
     }
     sortBy = sortBy.toLowerCase();
 
+    QuerySortOrder.Direction direction =
+        descending ? QuerySortOrder.Direction.DESCENDING : QuerySortOrder.Direction.ASCENDING;
+
     return switch (sortBy) {
       case "id" -> QuerySortOrder.byId();
-      case "date" -> {
-        QuerySortOrder.Direction direction =
-            descending ? QuerySortOrder.Direction.DESCENDING : QuerySortOrder.Direction.ASCENDING;
-        yield new QuerySortOrder<>(List.of(QuerySortField.playedDate()), List.of(direction));
-      }
+      case "date", "playeddate" ->
+          new QuerySortOrder<>(List.of(QuerySortField.playedDate()), List.of(direction));
+      case "whiteplayername" ->
+          new QuerySortOrder<>(List.of(QuerySortField.gameWhitePlayerName()), List.of(direction));
+      case "blackplayername" ->
+          new QuerySortOrder<>(List.of(QuerySortField.gameBlackPlayerName()), List.of(direction));
+      case "result" ->
+          new QuerySortOrder<>(List.of(QuerySortField.gameResult()), List.of(direction));
+      case "eco" ->
+          new QuerySortOrder<>(List.of(QuerySortField.gameEco()), List.of(direction));
+      case "round" ->
+          new QuerySortOrder<>(List.of(QuerySortField.gameRound()), List.of(direction));
+      case "tournament" ->
+          new QuerySortOrder<>(List.of(QuerySortField.gameTournamentTitle()), List.of(direction));
+      case "source" ->
+          new QuerySortOrder<>(List.of(QuerySortField.gameSourceTitle()), List.of(direction));
+      case "annotator" ->
+          new QuerySortOrder<>(List.of(QuerySortField.gameAnnotatorName()), List.of(direction));
+      case "gametag" ->
+          new QuerySortOrder<>(List.of(QuerySortField.gameGameTagTitle()), List.of(direction));
       // whiteElo, blackElo, avgElo sorting done post-query in service layer
       default -> QuerySortOrder.none();
     };

@@ -267,11 +267,6 @@ public class GamesService {
             debugInfo = buildDebugInfo(txn, gameQuery, plans, profiledResults, executeAll);
           }
 
-          // 7. Apply sorting (if needed)
-          if (needsSorting(request)) {
-            games = sortGames(games, request.sortBy());
-          }
-
           // 8. Apply pagination
           int totalCount = games.size();
           int fromIndex = Math.min(offset, totalCount);
@@ -370,15 +365,6 @@ public class GamesService {
     }
 
     return new QueryPlanDebugInfo(queryDescription, 0, allPlansAgree, planDtos);
-  }
-
-  /**
-   * Checks if sorting is needed post-query. ID and date sorting are handled by QuerySortOrder, but
-   * rating-based sorting must be done here.
-   */
-  private boolean needsSorting(@NotNull GameSearchRequest request) {
-    String sortBy = stripSortPrefix(request.sortBy()).toLowerCase();
-    return sortBy.equals("whiteelo") || sortBy.equals("blackelo") || sortBy.equals("avgelo");
   }
 
   /**
