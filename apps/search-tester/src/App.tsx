@@ -432,6 +432,7 @@ function App() {
           sortBy={sortBy}
           order={order}
           onColumnSort={handleColumnSort}
+          entityType={entityType}
         />
 
         {showQueryPlan && hasQueryPlan && (

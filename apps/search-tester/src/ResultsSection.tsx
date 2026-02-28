@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ColumnSelector } from './ColumnSelector';
 import { RowsPerPageSelector } from './RowsPerPageSelector';
 import ResultsTable from './ResultsTable';
@@ -61,6 +61,8 @@ interface ResultsSectionProps {
   order?: 'asc' | 'desc';
   /** Called when user clicks a sortable column header. */
   onColumnSort?: (columnKey: string) => void;
+  /** Current entity type – used to keep columns visible while loading. */
+  entityType: EntityType;
 }
 
 export function ResultsSection({
@@ -77,9 +79,17 @@ export function ResultsSection({
   sortBy,
   order,
   onColumnSort,
+  entityType,
 }: ResultsSectionProps) {
-  const entityKey = result ? ENTITY_CONFIG[result.entityType].entityKey : '';
+  /* Use the result's entity config when available, otherwise fall back to the
+     current entityType so we can still show columns/headers while loading. */
+  const config = result
+    ? ENTITY_CONFIG[result.entityType]
+    : ENTITY_CONFIG[entityType];
+  const entityKey = config.entityKey;
+
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>({});
+  const scrollLeftRef = useRef(0);
 
   useEffect(() => {
     setColumnWidths(entityKey ? loadColumnWidths(entityKey) : {});
@@ -103,48 +113,35 @@ export function ResultsSection({
 
   const hasCustomWidths = Object.keys(columnWidths).length > 0;
 
-  const config = result ? ENTITY_CONFIG[result.entityType] : null;
-  const hiddenSet = new Set((config && hiddenColumns[config.entityKey]) ?? []);
-  const visibleColumns = config?.columns.filter((c) => !hiddenSet.has(c.key)) ?? [];
+  const hiddenSet = new Set(hiddenColumns[config.entityKey] ?? []);
+  const visibleColumns = config.columns.filter((c) => !hiddenSet.has(c.key));
 
+  const effectiveEntityType = result?.entityType ?? entityType;
   const columnSortConfig = useMemo(() => {
-    if (!result) return { sortableColumnKeys: new Set<string>(), sortColumnKey: null };
-    const map = SORTABLE_COLUMN_MAP[result.entityType] ?? {};
+    const map = SORTABLE_COLUMN_MAP[effectiveEntityType] ?? {};
     const sortableColumnKeys = new Set(Object.keys(map));
     const sortColumnKey =
       visibleColumns.find((col) => map[col.key] === sortBy)?.key ?? null;
     return { sortableColumnKeys, sortColumnKey };
-  }, [result, sortBy, visibleColumns]);
+  }, [effectiveEntityType, sortBy, visibleColumns]);
 
-  if (!result || !config) {
-    return (
-      <section className="panel results-panel">
-        <h2>
-          Results
-          <span className="results-header-actions" aria-hidden="true" />
-        </h2>
-        {loading && <p className="results-loading">Searching…</p>}
-        {error && <div className="error">{error}</div>}
-      </section>
-    );
-  }
-
-  const metaText =
-    paginatedData.total > 0 ? (
-      <>
-        Showing {paginatedData.from}-{paginatedData.to} of {paginatedData.total}
-        {result.executionTimeMs !== undefined && ` · ${result.executionTimeMs}ms`}
-      </>
-    ) : (
-      `${result.count} ${config.countLabel}`
-    );
+  const metaText = result
+    ? paginatedData.total > 0
+      ? (
+        <>
+          Showing {paginatedData.from}-{paginatedData.to} of {paginatedData.total}
+          {result.executionTimeMs !== undefined && ` · ${result.executionTimeMs}ms`}
+        </>
+      )
+      : `${result.count} ${config.countLabel}`
+    : null;
 
   return (
     <section className="panel results-panel">
       <h2>
         Results
         <span className="results-header-actions">
-          <span className="meta">{metaText}</span>
+          {metaText && <span className="meta">{metaText}</span>}
           <RowsPerPageSelector value={rowsPerPage} onChange={onRowsPerPageChange} />
           {hasCustomWidths && (
             <button
@@ -170,13 +167,15 @@ export function ResultsSection({
         columns={visibleColumns}
         data={paginatedData.data}
         keyExtractor={(row) => config.keyExtractor(row as { id: number })}
-        emptyMessage={config.emptyMessage}
+        emptyMessage={loading ? 'Searching…' : config.emptyMessage}
         sortableColumnKeys={columnSortConfig.sortableColumnKeys}
         sortColumnKey={columnSortConfig.sortColumnKey}
         sortOrder={order ?? null}
         onColumnSort={onColumnSort}
         columnWidths={columnWidths}
         onColumnResize={handleColumnResize}
+        scrollLeftRef={scrollLeftRef}
+        loading={loading}
       />
 
       {paginatedData.totalPages > 1 && (

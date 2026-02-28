@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useRef } from 'react';
+import { Fragment, useCallback, useEffect, useRef, type MutableRefObject } from 'react';
 import type {
   AnnotatorDto,
   GameDto,
@@ -74,6 +74,10 @@ interface ResultsTableProps<T> {
   columnWidths?: Record<string, number>;
   /** Called when a column is resized via drag. */
   onColumnResize?: (key: string, width: number) => void;
+  /** Mutable ref holding horizontal scroll position, persisted by parent across unmount cycles. */
+  scrollLeftRef?: MutableRefObject<number>;
+  /** True while a search is in flight – dims the table body. */
+  loading?: boolean;
 }
 
 function ResultsTable<T>({
@@ -87,8 +91,25 @@ function ResultsTable<T>({
   onColumnSort,
   columnWidths = {},
   onColumnResize,
+  scrollLeftRef,
+  loading,
 }: ResultsTableProps<T>) {
   const resizingRef = useRef<{ key: string; startX: number; startWidth: number } | null>(null);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+
+  /* Track horizontal scroll position so parent can restore it across remounts. */
+  const handleScroll = useCallback(() => {
+    if (wrapperRef.current && scrollLeftRef) {
+      scrollLeftRef.current = wrapperRef.current.scrollLeft;
+    }
+  }, [scrollLeftRef]);
+
+  /* Restore scroll position on mount. */
+  useEffect(() => {
+    if (wrapperRef.current && scrollLeftRef && scrollLeftRef.current) {
+      wrapperRef.current.scrollLeft = scrollLeftRef.current;
+    }
+  }, [scrollLeftRef]);
 
   const handleResizeStart = useCallback(
     (e: React.MouseEvent, colKey: string) => {
@@ -116,9 +137,6 @@ function ResultsTable<T>({
     [onColumnResize]
   );
 
-  if (data.length === 0) {
-    return <p className="results-empty">{emptyMessage}</p>;
-  }
   if (columns.length === 0) {
     return (
       <p className="results-empty">
@@ -132,7 +150,7 @@ function ResultsTable<T>({
   const totalWidth = columns.reduce((sum, col) => sum + (columnWidths[col.key] ?? col.width), 0);
 
   return (
-    <div className="results-table-wrapper">
+    <div className="results-table-wrapper" ref={wrapperRef} onScroll={handleScroll}>
       <table className="results-table" style={{ tableLayout: 'fixed', minWidth: totalWidth }}>
         <colgroup>
           {columns.map((col) => (
@@ -174,8 +192,14 @@ function ResultsTable<T>({
             <th className="results-table-filler" />
           </tr>
         </thead>
-        <tbody>
-          {data.map((row, rowIndex) => {
+        <tbody style={loading ? { opacity: 0.4, pointerEvents: 'none' } : undefined}>
+          {data.length === 0 ? (
+            <tr>
+              <td colSpan={columns.length + 1} className="results-table-empty-cell">
+                {emptyMessage}
+              </td>
+            </tr>
+          ) : data.map((row, rowIndex) => {
             const key = keyExtractor(row);
             const rawPayloads = getRawPayloads(row);
             const rowStripe = rowIndex % 2 === 0 ? 'results-table-row-even' : 'results-table-row-odd';

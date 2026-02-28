@@ -785,10 +785,15 @@
   white-space: pre-wrap; /* preserve newlines; break only after 8 blocks (64 bytes) */
 }
 
-.results-panel .results-empty {
+.results-panel .results-empty,
+.results-table-empty-cell {
   color: #888;
   font-style: italic;
   font-size: 13px;
+}
+
+.results-table-empty-cell {
+  padding: 12px 8px;
 }
 
 /* Query Plan pane */
