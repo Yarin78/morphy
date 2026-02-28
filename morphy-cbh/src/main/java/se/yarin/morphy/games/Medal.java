@@ -11,8 +11,9 @@ public enum Medal {
   STRATEGY,
   TACTICS,
   WITH_ATTACK,
-  SACRIFICE,
+  // Note: Sacrifice and Defense are out of order with how they're shown in the UI
   DEFENSE,
+  SACRIFICE,
   MATERIAL,
   PIECE_PLAY,
   ENDGAME,

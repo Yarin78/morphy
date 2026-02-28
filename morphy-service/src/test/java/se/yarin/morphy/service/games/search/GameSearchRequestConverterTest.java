@@ -932,7 +932,7 @@ class GameSearchRequestConverterTest {
     @Test
     @DisplayName("should create no sort order for unsupported sort field")
     void testUnsupportedSortField() {
-      GameSearchRequest request = request().sortBy("-whiteElo").build();
+      GameSearchRequest request = request().sortBy("-whiteEloMissing").build();
 
       GameQuery query = queryBuilder.buildQuery(database, request);
 

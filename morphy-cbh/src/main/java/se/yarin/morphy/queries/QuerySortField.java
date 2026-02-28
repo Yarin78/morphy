@@ -8,6 +8,8 @@ import org.jetbrains.annotations.Nullable;
 import se.yarin.morphy.Game;
 import se.yarin.morphy.IdObject;
 import se.yarin.morphy.entities.*;
+import se.yarin.morphy.games.GameHeaderFlags;
+import se.yarin.morphy.games.Medal;
 import se.yarin.morphy.queries.operations.GameEntityLookup;
 import se.yarin.morphy.queries.operations.QueryData;
 import se.yarin.morphy.queries.operations.QueryOperator;
@@ -193,8 +195,31 @@ public class QuerySortField<T extends IdObject> {
 
   public static QuerySortField<Game> gameVcs() {
     return new QuerySortField<>(
-        Comparator.comparing(o -> o.data().variationsMagnitude() * 100 + o.data().commentariesMagnitude() * 10 + o.data().symbolsMagnitude()),
+        Comparator.comparing(o -> o.data().variationsMagnitude() * 1000 + o.data().commentariesMagnitude() * 100 + o.data().symbolsMagnitude() * 10 + o.data().trainingMagnitude()),
         "vcs",
+        true,
+        QuerySortOrder.Direction.DESCENDING);
+  }
+
+  public static QuerySortField<Game> gameAit() {
+    return new QuerySortField<>(
+        Comparator.comparingInt(o -> {
+          var hdr = o.data().header();
+          int a = Math.max(hdr.graphicalArrowsMagnitude(), hdr.graphicalSquaresMagnitude());
+          int t = hdr.trainingMagnitude();
+          int i = hdr.flags().contains(GameHeaderFlags.CRITICAL_POSITION) ? 1 : 0;
+          int g = hdr.flags().contains(GameHeaderFlags.GAME_QUOTATION) ? 1 : 0;
+          return a * 1000 + t * 100 + i * 10 + g;
+        }),
+        "ait",
+        true,
+        QuerySortOrder.Direction.DESCENDING);
+  }
+
+  public static QuerySortField<Game> gameMedals() {
+    return new QuerySortField<>(
+        Comparator.comparingInt(o -> Medal.encode(o.data().header().medals())),
+        "medals",
         true,
         QuerySortOrder.Direction.DESCENDING);
   }

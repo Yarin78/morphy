@@ -2,6 +2,7 @@ package se.yarin.morphy.service.games.dto;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
+import java.util.List;
 import org.jetbrains.annotations.Nullable;
 import se.yarin.chess.Date;
 import se.yarin.chess.GameResult;
@@ -39,7 +40,9 @@ import se.yarin.morphy.service.tournaments.dto.TournamentDto;
   "source",
   "annotator",
   "gameTag",
+  "medals",
   "noMoves",
+  "ait",
   "vcs",
   "finalMaterial",
   "gameVersion",
@@ -85,8 +88,12 @@ public record GameDto(
     // Game tag
     @Nullable GameTagDto gameTag,
 
+    // Medals
+    @Nullable List<String> medals,
+
     // Additional game metadata
     @Nullable Integer noMoves,
+    @Nullable String ait,
     @Nullable String vcs,
     @Nullable String finalMaterial,
     @Nullable Integer gameVersion,

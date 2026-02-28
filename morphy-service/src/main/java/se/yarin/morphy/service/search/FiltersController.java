@@ -35,6 +35,8 @@ public class FiltersController {
           QuerySortField.gameNoMoves(),
           QuerySortField.gameWhiteTeamTitle(),
           QuerySortField.gameBlackTeamTitle(),
+          QuerySortField.gameAit(),
+          QuerySortField.gameMedals(),
           QuerySortField.gameVcs(),
           QuerySortField.gameFinalMaterial(),
           QuerySortField.gameVersion(),

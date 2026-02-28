@@ -140,7 +140,7 @@ public class GameSearchRequestConverter {
         descending ? QuerySortOrder.Direction.DESCENDING : QuerySortOrder.Direction.ASCENDING;
 
     return switch (sortBy) {
-      case "id" -> QuerySortOrder.byId();
+      case "id" -> new QuerySortOrder<>(List.of(QuerySortField.id()), List.of(direction));
       case "date", "playeddate" ->
           new QuerySortOrder<>(List.of(QuerySortField.playedDate()), List.of(direction));
       case "whiteplayername" ->
@@ -171,6 +171,10 @@ public class GameSearchRequestConverter {
           new QuerySortOrder<>(List.of(QuerySortField.gameWhiteTeamTitle()), List.of(direction));
       case "blackteam" ->
           new QuerySortOrder<>(List.of(QuerySortField.gameBlackTeamTitle()), List.of(direction));
+      case "ait" ->
+          new QuerySortOrder<>(List.of(QuerySortField.gameAit()), List.of(direction));
+      case "medals" ->
+          new QuerySortOrder<>(List.of(QuerySortField.gameMedals()), List.of(direction));
       case "vcs" ->
           new QuerySortOrder<>(List.of(QuerySortField.gameVcs()), List.of(direction));
       case "finalmaterial" ->

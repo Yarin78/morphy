@@ -252,7 +252,7 @@ function formatValue(value: unknown): string {
 
 const GAME_RESULT_DISPLAY: Record<string, string> = {
   BLACK_WINS: '0-1',
-  DRAW: '1/2-1/2',
+  DRAW: '½-½',
   WHITE_WINS: '1-0',
   NOT_FINISHED: '*',
   WHITE_WINS_ON_FORFEIT: '+:-',
@@ -314,6 +314,49 @@ function getGameTagTitle(gt: GameDto['gameTag']): string {
   const found = titles.find((t): t is string => typeof t === 'string');
   return found ?? '—';
 }
+
+const MEDAL_COLORS: Record<string, [string, string]> = {
+  BEST_GAME: ['#FDCA31', '#CF9C03'],
+  DECIDED_TOURNAMENT: ['#FD31FD', '#CF03CF'],
+  MODEL_GAME: ['#323298', '#030369'],
+  NOVELTY: ['#3131FD', '#0303CF'],
+  PAWN_STRUCTURE: ['#319797', '#036969'],
+  STRATEGY: ['#9B6831', '#6D3A03'],
+  TACTICS: ['#973131', '#690303'],
+  WITH_ATTACK: ['#FEFE32', '#CFCF03'],
+  SACRIFICE: ['#FE3232', '#CE0202'],
+  DEFENSE: ['#FDFDFD', '#CFCFCF'],
+  MATERIAL: ['#963096', '#6A046A'],
+  PIECE_PLAY: ['#31FD31', '#03CF03'],
+  ENDGAME: ['#319731', '#046A04'],
+  TACTICAL_BLUNDER: ['#323232', '#030303'],
+  STRATEGICAL_BLUNDER: ['#979797', '#696969'],
+  USER: ['#30FCFC', '#03CFCF'],
+};
+
+function MedalBar({ medals }: { medals?: string[] }) {
+  if (!medals || medals.length === 0) return null;
+  return (
+    <div
+      style={{ display: 'flex', width: 32, height: 16, borderRadius: 2, overflow: 'hidden' }}
+      title={medals.join(', ')}
+    >
+      {medals.map((m) => {
+        const [top, bottom] = MEDAL_COLORS[m] ?? ['#999', '#666'];
+        return (
+          <div
+            key={m}
+            style={{
+              flex: 1,
+              background: `linear-gradient(to bottom, ${top}, ${bottom})`,
+            }}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
 
 export const GAME_COLUMNS: Column<GameDto>[] = [
   { key: 'id', label: 'Number', width: 70, render: (g) => formatValue(g.id) },
@@ -380,7 +423,14 @@ export const GAME_COLUMNS: Column<GameDto>[] = [
     width: 150,
     render: (g) => formatValue(g.source?.title),
   },
-  { key: 'vcs', label: 'VCS', width: 50, render: (g) => formatValue(g.vcs) },
+  { key: 'vcs', label: 'VCS', width: 55, render: (g) => g.vcs ?? '' },
+  {
+    key: 'medals',
+    label: 'Medals',
+    width: 110,
+    render: (g) => <MedalBar medals={g.medals} />,
+  },
+  { key: 'ait', label: 'AIT', width: 50, render: (g) => g.ait ?? '' },
   {
     key: 'year',
     label: 'Year',

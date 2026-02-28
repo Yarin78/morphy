@@ -1,6 +1,7 @@
 package se.yarin.morphy.service.games.dto;
 
 import java.nio.ByteBuffer;
+import java.util.List;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -11,6 +12,7 @@ import se.yarin.chess.pgn.PgnExporter;
 import se.yarin.chess.pgn.PgnFormatOptions;
 import se.yarin.morphy.Game;
 import se.yarin.morphy.entities.*;
+import se.yarin.morphy.games.Medal;
 import se.yarin.morphy.games.annotations.AnnotationConverter;
 import se.yarin.morphy.service.annotators.dto.AnnotatorDto;
 import se.yarin.morphy.service.annotators.dto.AnnotatorDtoConverter;
@@ -140,8 +142,16 @@ public class GameDtoConverter {
     // Game tag
     GameTagDto gameTag = convertGameTag(game);
 
+    // Medals
+    var medalSet = game.header().medals();
+    List<String> medals =
+        medalSet.isEmpty()
+            ? null
+            : medalSet.stream().map(Medal::name).toList();
+
     // Additional game metadata
     Integer noMoves = game.noMoves() == 0 ? null : game.noMoves();
+    String ait = game.ait().isBlank() ? null : game.ait();
     String vcs = game.vcs().isBlank() ? null : game.vcs();
     String finalMaterial = game.finalMaterialString().isEmpty() ? null : game.finalMaterialString();
     Integer gameVersion = game.gameVersion() == 0 ? null : game.gameVersion();
@@ -183,7 +193,9 @@ public class GameDtoConverter {
         source,
         annotator,
         gameTag,
+        medals,
         noMoves,
+        ait,
         vcs,
         finalMaterial,
         gameVersion,

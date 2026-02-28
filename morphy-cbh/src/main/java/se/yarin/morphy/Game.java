@@ -17,6 +17,9 @@ import se.yarin.morphy.text.TextModel;
 import java.nio.ByteBuffer;
 import java.time.Instant;
 
+import static se.yarin.morphy.games.GameHeaderFlags.CRITICAL_POSITION;
+import static se.yarin.morphy.games.GameHeaderFlags.GAME_QUOTATION;
+
 /** Class that represents a game that is bound to a {@link Database}. */
 public class Game implements IdObject {
   private static final Logger log = LoggerFactory.getLogger(Game.class);
@@ -241,13 +244,32 @@ public class Game implements IdObject {
     return header.symbolsMagnitude();
   }
 
+  public int trainingMagnitude() {
+    return header.trainingMagnitude();
+  }
+
   public @NotNull String vcs() {
-    String vMag = " vVrR", cMag = " cC", sMag = " sS";
-    return String.format(
-        "%c%c%c",
-        vMag.charAt(Math.max(0, variationsMagnitude())),
-        cMag.charAt(Math.max(0, commentariesMagnitude())),
-        sMag.charAt(Math.max(0, symbolsMagnitude())));
+    String vMag = " vVrR", cMag = " cC", sMag = " sS", tMag = " tT";
+    StringBuilder sb = new StringBuilder();
+    sb.append(vMag.charAt(Math.max(0, variationsMagnitude())));
+    sb.append(cMag.charAt(Math.max(0, commentariesMagnitude())));
+    sb.append(sMag.charAt(Math.max(0, symbolsMagnitude())));
+    sb.append(tMag.charAt(Math.max(0, header.trainingMagnitude())));
+    return sb.toString().replace(" ", "");
+  }
+
+  public @NotNull String ait() {
+    String aMag = " aA", tMag = " tT";
+    StringBuilder sb = new StringBuilder();
+    sb.append(aMag.charAt(Math.max(0, Math.max(header.graphicalArrowsMagnitude(), header.graphicalSquaresMagnitude()))));
+    sb.append(tMag.charAt(Math.max(0, header.trainingMagnitude())));
+    if (header.flags().contains(CRITICAL_POSITION)) {
+      sb.append("I");
+    }
+    if (header.flags().contains(GAME_QUOTATION)) {
+      sb.append("G");
+    }
+    return sb.toString().replace(" ", "");
   }
 
   public @NotNull String finalMaterialString() {
