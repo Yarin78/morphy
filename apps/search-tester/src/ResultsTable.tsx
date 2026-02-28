@@ -316,7 +316,7 @@ function getGameTagTitle(gt: GameDto['gameTag']): string {
 }
 
 export const GAME_COLUMNS: Column<GameDto>[] = [
-  { key: 'id', label: 'Number', width: 60, render: (g) => formatValue(g.id) },
+  { key: 'id', label: 'Number', width: 70, render: (g) => formatValue(g.id) },
   {
     key: 'white',
     label: 'White',
@@ -346,7 +346,7 @@ export const GAME_COLUMNS: Column<GameDto>[] = [
   },
   { key: 'blackElo', label: 'Elo B', width: 55, render: (g) => formatValue(g.blackElo) },
   { key: 'result', label: 'Result', width: 70, render: (g) => formatGameResult(g.result) },
-  { key: 'noMoves', label: 'Moves', width: 55, render: (g) => formatValue(g.noMoves) },
+  { key: 'noMoves', label: 'Moves', width: 60, render: (g) => formatValue(g.noMoves) },
   { key: 'eco', label: 'ECO', width: 50, render: (g) => formatValue(g.eco) },
   {
     key: 'tournament',
@@ -354,7 +354,7 @@ export const GAME_COLUMNS: Column<GameDto>[] = [
     width: 180,
     render: (g) => formatValue(g.tournament?.title),
   },
-  { key: 'round', label: 'Round', width: 55, render: (g) => formatValue(g.round) },
+  { key: 'round', label: 'Round', width: 60, render: (g) => formatValue(g.round) },
   { key: 'date', label: 'Date', width: 100, render: (g) => formatDate(g.date) },
   {
     key: 'whiteTeam',
@@ -381,8 +381,48 @@ export const GAME_COLUMNS: Column<GameDto>[] = [
     render: (g) => formatValue(g.source?.title),
   },
   { key: 'vcs', label: 'VCS', width: 50, render: (g) => formatValue(g.vcs) },
+  {
+    key: 'year',
+    label: 'Year',
+    width: 60,
+    render: (g) => {
+      if (g.date == null) return '—';
+      if (typeof g.date === 'string') {
+        const m = g.date.match(/^(\d{4})/);
+        return m ? m[1] : '—';
+      }
+      const d = g.date as unknown as DateObject;
+      return d.year ? String(d.year) : '—';
+    },
+  },
   { key: 'finalMaterial', label: 'Final Material', width: 150, render: (g) => formatValue(g.finalMaterial) },
-  { key: 'gameVersion', label: 'Version', width: 60, render: (g) => formatValue(g.gameVersion) },
+  {
+    key: 'eloAvg',
+    label: 'Elo av.',
+    width: 60,
+    render: (g) => {
+      const w = g.whiteElo && g.whiteElo > 0 ? g.whiteElo : null;
+      const b = g.blackElo && g.blackElo > 0 ? g.blackElo : null;
+      if (w != null && b != null) return String(Math.round((w + b) / 2));
+      if (w != null) return String(w);
+      if (b != null) return String(b);
+      return '—';
+    },
+  },
+  {
+    key: 'eloMax',
+    label: 'Elo max.',
+    width: 70,
+    render: (g) => {
+      const w = g.whiteElo && g.whiteElo > 0 ? g.whiteElo : null;
+      const b = g.blackElo && g.blackElo > 0 ? g.blackElo : null;
+      if (w != null && b != null) return String(Math.max(w, b));
+      if (w != null) return String(w);
+      if (b != null) return String(b);
+      return '—';
+    },
+  },
+  { key: 'gameVersion', label: 'Version', width: 70, render: (g) => formatValue(g.gameVersion) },
   { key: 'creationTimestamp', label: 'ID', width: 150, render: (g) => formatValue(g.creationTimestamp) },
   { key: 'lastChanged', label: 'Last Changed', width: 160, render: (g) => formatValue(g.lastChanged) },
   {

@@ -181,6 +181,12 @@ public class GameSearchRequestConverter {
           new QuerySortOrder<>(List.of(QuerySortField.gameCreationTimestamp()), List.of(direction));
       case "lastchanged" ->
           new QuerySortOrder<>(List.of(QuerySortField.gameLastChanged()), List.of(direction));
+      case "playedyear" ->
+          new QuerySortOrder<>(List.of(QuerySortField.gamePlayedYear()), List.of(direction));
+      case "eloavg" ->
+          new QuerySortOrder<>(List.of(QuerySortField.gameEloAvg()), List.of(direction));
+      case "elomax" ->
+          new QuerySortOrder<>(List.of(QuerySortField.gameEloMax()), List.of(direction));
       default -> QuerySortOrder.none();
     };
   }

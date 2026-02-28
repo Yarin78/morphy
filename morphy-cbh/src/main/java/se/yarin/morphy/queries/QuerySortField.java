@@ -193,7 +193,7 @@ public class QuerySortField<T extends IdObject> {
 
   public static QuerySortField<Game> gameVcs() {
     return new QuerySortField<>(
-        Comparator.comparing(o -> o.data().vcs()),
+        Comparator.comparing(o -> o.data().variationsMagnitude() * 100 + o.data().commentariesMagnitude() * 10 + o.data().symbolsMagnitude()),
         "vcs",
         true,
         QuerySortOrder.Direction.DESCENDING);
@@ -226,6 +226,35 @@ public class QuerySortField<T extends IdObject> {
     return new QuerySortField<>(
         Comparator.comparingLong(o -> o.data().lastChangedTimestamp()),
         "lastChanged",
+        true,
+        QuerySortOrder.Direction.DESCENDING);
+  }
+
+  public static QuerySortField<Game> gamePlayedYear() {
+    return new QuerySortField<>(
+        Comparator.comparingInt(o -> o.data().playedDate().year()),
+        "playedYear",
+        true,
+        QuerySortOrder.Direction.DESCENDING);
+  }
+
+  public static QuerySortField<Game> gameEloAvg() {
+    return new QuerySortField<>(
+        Comparator.comparingInt(o -> {
+          int w = o.data().whiteElo();
+          int b = o.data().blackElo();
+          if (w > 0 && b > 0) return (w + b) / 2;
+          return Math.max(w, b);
+        }),
+        "eloAvg",
+        true,
+        QuerySortOrder.Direction.DESCENDING);
+  }
+
+  public static QuerySortField<Game> gameEloMax() {
+    return new QuerySortField<>(
+        Comparator.comparingInt(o -> Math.max(o.data().whiteElo(), o.data().blackElo())),
+        "eloMax",
         true,
         QuerySortOrder.Direction.DESCENDING);
   }

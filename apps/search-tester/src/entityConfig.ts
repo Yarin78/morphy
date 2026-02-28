@@ -77,7 +77,7 @@ export function getDefaultSortDirection(
  * Columns not in the map are not sortable. Used for "sort by column header" in the results table.
  */
 export const SORTABLE_COLUMN_MAP: Record<EntityType, Record<string, string>> = {
-  Games: { id: 'id', white: 'whitePlayerName', black: 'blackPlayerName', result: 'result', date: 'playedDate', eco: 'eco', round: 'round', tournament: 'tournament', source: 'source', annotator: 'annotator', gameTag: 'gameTag', whiteElo: 'whiteElo', blackElo: 'blackElo', noMoves: 'noMoves', whiteTeam: 'whiteTeam', blackTeam: 'blackTeam', vcs: 'vcs', finalMaterial: 'finalMaterial', gameVersion: 'gameVersion', creationTimestamp: 'creationTimestamp', lastChanged: 'lastChanged' },
+  Games: { id: 'id', white: 'whitePlayerName', black: 'blackPlayerName', result: 'result', date: 'playedDate', year: 'playedYear', eco: 'eco', round: 'round', tournament: 'tournament', source: 'source', annotator: 'annotator', gameTag: 'gameTag', whiteElo: 'whiteElo', blackElo: 'blackElo', eloAvg: 'eloAvg', eloMax: 'eloMax', noMoves: 'noMoves', whiteTeam: 'whiteTeam', blackTeam: 'blackTeam', vcs: 'vcs', finalMaterial: 'finalMaterial', gameVersion: 'gameVersion', creationTimestamp: 'creationTimestamp', lastChanged: 'lastChanged' },
   Players: { id: 'id', lastName: 'lastName', firstName: 'firstName', gameCount: 'count' },
   Tournaments: { id: 'id', title: 'title', startDate: 'startDate', endDate: 'endDate', place: 'place', typeCombined: 'combinedType', nation: 'nation', category: 'category', rounds: 'rounds', gameCount: 'count', complete: 'complete', coordinates: 'coordinates', tiebreak: 'tiebreak' },
   Annotators: { id: 'id', name: 'name', gameCount: 'count' },
