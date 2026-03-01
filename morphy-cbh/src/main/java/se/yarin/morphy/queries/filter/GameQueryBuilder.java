@@ -8,6 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.chess.Date;
 import se.yarin.morphy.Database;
+import se.yarin.morphy.games.Medal;
 import se.yarin.morphy.games.filters.*;
 import se.yarin.morphy.queries.*;
 
@@ -31,7 +32,28 @@ public class GameQueryBuilder {
           Map.entry("rating", GameQueryBuilder::buildRatingFilter),
           Map.entry("eco", c -> new EcoFilter(c.value())),
           Map.entry("round", GameQueryBuilder::buildRoundFilter),
-          Map.entry("type", GameQueryBuilder::buildTypeFilter));
+          Map.entry("type", GameQueryBuilder::buildTypeFilter),
+          Map.entry(
+              "setup", c -> buildBooleanFlagFilter(c, GameFlagFilter.Flag.SETUP_POSITION)),
+          Map.entry(
+              "variations", c -> buildBooleanFlagFilter(c, GameFlagFilter.Flag.VARIATIONS)),
+          Map.entry(
+              "commentary", c -> buildBooleanFlagFilter(c, GameFlagFilter.Flag.COMMENTARY)),
+          Map.entry("symbols", c -> buildBooleanFlagFilter(c, GameFlagFilter.Flag.SYMBOLS)),
+          Map.entry(
+              "training", c -> buildBooleanFlagFilter(c, GameFlagFilter.Flag.TRAINING)),
+          Map.entry(
+              "annotations", c -> buildBooleanFlagFilter(c, GameFlagFilter.Flag.ANNOTATIONS)),
+          Map.entry("deleted", c -> buildBooleanFlagFilter(c, GameFlagFilter.Flag.DELETED)),
+          Map.entry(
+              "chess960", c -> buildBooleanFlagFilter(c, GameFlagFilter.Flag.CHESS960)),
+          Map.entry(
+              "correspondence",
+              c -> buildBooleanFlagFilter(c, GameFlagFilter.Flag.CORRESPONDENCE)),
+          Map.entry("media", c -> buildBooleanFlagFilter(c, GameFlagFilter.Flag.MEDIA)),
+          Map.entry("medals", GameQueryBuilder::buildMedalFilter),
+          Map.entry("medal", GameQueryBuilder::buildSpecificMedalFilter),
+          Map.entry("moves", GameQueryBuilder::buildMovesFilter));
 
   /** Fields that require a numeric entity ID and produce a direct game filter. */
   private static final Set<String> ENTITY_ID_FIELDS =
@@ -425,5 +447,83 @@ public class GameQueryBuilder {
   /** Parses a date string and returns the end of the range. */
   private static @NotNull Date parseDateEnd(@NotNull String dateStr) {
     return PartialDateParser.parse(dateStr).to();
+  }
+
+  private static @NotNull GameFilter buildBooleanFlagFilter(
+      @NotNull FilterCondition condition, @NotNull GameFlagFilter.Flag flag) {
+    boolean expected =
+        switch (condition.value().toLowerCase()) {
+          case "true" -> true;
+          case "false" -> false;
+          default ->
+              throw new IllegalArgumentException(
+                  "Invalid boolean value for "
+                      + condition.field()
+                      + ": "
+                      + condition.value()
+                      + ". Expected 'true' or 'false'");
+        };
+    return new GameFlagFilter(flag, expected);
+  }
+
+  private static @NotNull GameFilter buildMedalFilter(@NotNull FilterCondition condition) {
+    boolean expected =
+        switch (condition.value().toLowerCase()) {
+          case "true" -> true;
+          case "false" -> false;
+          default ->
+              throw new IllegalArgumentException(
+                  "Invalid value for medals: "
+                      + condition.value()
+                      + ". Expected 'true' or 'false'. Use 'medal' for specific medals");
+        };
+    if (!expected) {
+      throw new IllegalArgumentException(
+          "medals:false is not supported. Use medal:<name> to match specific medals");
+    }
+    return new MedalFilter();
+  }
+
+  private static @NotNull GameFilter buildSpecificMedalFilter(
+      @NotNull FilterCondition condition) {
+    try {
+      Medal medal = Medal.valueOf(condition.value().toUpperCase());
+      return new MedalFilter(medal);
+    } catch (IllegalArgumentException e) {
+      throw new IllegalArgumentException(
+          "Unknown medal: "
+              + condition.value()
+              + ". Available medals: "
+              + String.join(
+                  ", ",
+                  java.util.Arrays.stream(Medal.values())
+                      .map(m -> m.name().toLowerCase())
+                      .toList()));
+    }
+  }
+
+  private static @NotNull GameFilter buildMovesFilter(@NotNull FilterCondition condition) {
+    if ("..".equals(condition.operator())) {
+      String[] parts = condition.value().split("\\.\\.", 2);
+      int min = parts[0].isEmpty() ? 0 : Integer.parseInt(parts[0]);
+      int max =
+          parts.length > 1 && !parts[1].isEmpty()
+              ? Integer.parseInt(parts[1])
+              : Integer.MAX_VALUE;
+      return new MovesRangeFilter(min, max);
+    } else {
+      String value = condition.value();
+      if (value.contains("..")) {
+        String[] parts = value.split("\\.\\.", 2);
+        int min = parts[0].isEmpty() ? 0 : Integer.parseInt(parts[0]);
+        int max =
+            parts.length > 1 && !parts[1].isEmpty()
+                ? Integer.parseInt(parts[1])
+                : Integer.MAX_VALUE;
+        return new MovesRangeFilter(min, max);
+      }
+      int moves = Integer.parseInt(value);
+      return new MovesRangeFilter(moves, moves);
+    }
   }
 }
