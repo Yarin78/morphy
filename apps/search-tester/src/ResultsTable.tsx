@@ -221,9 +221,11 @@ function ResultsTable<T>({
               }
             });
 
+            const isDeleted = (row as Record<string, unknown>).deleted === true;
+
             return (
               <Fragment key={key}>
-                <tr className={rowStripe}>
+                <tr className={`${rowStripe}${isDeleted ? ' results-table-row-deleted' : ''}`}>
                   {columns.map((col, i) => {
                     if (spannedKeys.has(col.key)) return null;
                     let span = 1;

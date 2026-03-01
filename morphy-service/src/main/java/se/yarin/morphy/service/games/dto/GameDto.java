@@ -42,6 +42,7 @@ import se.yarin.morphy.service.tournaments.dto.TournamentDto;
   "annotator",
   "gameTag",
   "medals",
+  "deleted",
   "setupPosition",
   "noMoves",
   "ait",
@@ -93,6 +94,9 @@ public record GameDto(
 
     // Medals
     @Nullable List<String> medals,
+
+    // Deleted
+    @Nullable Boolean deleted,
 
     // Flags
     @Nullable Boolean setupPosition,

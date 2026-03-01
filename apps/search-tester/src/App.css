@@ -742,6 +742,11 @@
   background: #f0f2f5;
 }
 
+.results-panel .results-table tbody tr.results-table-row-deleted {
+  text-decoration: line-through;
+  color: #999;
+}
+
 /* Raw data row: cell uses row stripe; only hex lines get colorful background */
 .results-panel .results-table .raw-data-row .raw-data-cell {
   padding-left: 24px;

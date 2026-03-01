@@ -154,6 +154,9 @@ public class GameDtoConverter {
             ? null
             : medalSet.stream().map(Medal::name).toList();
 
+    // Deleted
+    Boolean deleted = game.deleted() ? true : null;
+
     // Flags
     Boolean setupPosition = game.header().flags().contains(GameHeaderFlags.SETUP_POSITION) ? true : null;
 
@@ -203,6 +206,7 @@ public class GameDtoConverter {
         annotator,
         gameTag,
         medals,
+        deleted,
         setupPosition,
         noMoves,
         ait,
