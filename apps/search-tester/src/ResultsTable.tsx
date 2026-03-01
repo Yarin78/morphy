@@ -457,9 +457,18 @@ export const GAME_COLUMNS: Column<GameDto>[] = [
   { key: 'vcs', label: 'VCS', width: 55, render: (g) => g.vcs ?? '' },
   { key: 'setupPosition', label: 'P', width: 40, render: (g) => g.setupPosition ? 'P' : '' },
   {
+    key: 'lineMoves',
+    label: 'Line Moves',
+    width: 85,
+    render: (g) => {
+      if (g.variationMoves == null || g.variationMoves === 0) return '';
+      return String(g.variationMoves);
+    },
+  },
+  {
     key: 'medals',
     label: 'Medals',
-    width: 110,
+    width: 65,
     render: (g) => <MedalBar medals={g.medals} />,
   },
   { key: 'ait', label: 'AIT', width: 50, render: (g) => g.ait ?? '' },
@@ -476,6 +485,12 @@ export const GAME_COLUMNS: Column<GameDto>[] = [
       const d = g.date as unknown as DateObject;
       return d.year ? String(d.year) : '';
     },
+  },
+  {
+    key: 'notation',
+    label: 'Notation',
+    width: 400,
+    render: (g) => g.notation ?? '',
   },
   { key: 'finalMaterial', label: 'Final Material', width: 150, render: (g) => formatValue(g.finalMaterial) },
   {

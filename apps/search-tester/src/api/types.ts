@@ -83,6 +83,8 @@ export interface GameDto {
   deleted?: boolean;
   setupPosition?: boolean;
   noMoves?: number;
+  notation?: string;
+  variationMoves?: number;
   ait?: string;
   vcs?: string;
   finalMaterial?: string;

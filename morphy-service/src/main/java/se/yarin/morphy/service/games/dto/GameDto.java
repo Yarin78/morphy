@@ -45,6 +45,8 @@ import se.yarin.morphy.service.tournaments.dto.TournamentDto;
   "deleted",
   "setupPosition",
   "noMoves",
+  "notation",
+  "variationMoves",
   "ait",
   "vcs",
   "finalMaterial",
@@ -103,6 +105,8 @@ public record GameDto(
 
     // Additional game metadata
     @Nullable Integer noMoves,
+    @Nullable String notation,
+    @Nullable Integer variationMoves,
     @Nullable String ait,
     @Nullable String vcs,
     @Nullable String finalMaterial,

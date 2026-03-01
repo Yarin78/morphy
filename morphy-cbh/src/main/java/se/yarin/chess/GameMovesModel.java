@@ -1,6 +1,7 @@
 package se.yarin.chess;
 
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import se.yarin.chess.annotations.Annotation;
 import se.yarin.chess.annotations.Annotations;
 import se.yarin.chess.pgn.PgnExporter;
@@ -77,6 +78,47 @@ public class GameMovesModel {
    */
   public int countPly(boolean includeVariations) {
     return root().countPly(includeVariations);
+  }
+
+  /**
+   * Gets a compact notation string from the first {@code maxPly} half-moves of the main line. Move
+   * numbers are attached directly to the move (e.g. "1.e4 e5 2.Nf3 Nc6").
+   *
+   * @param maxPly maximum number of half-moves to include
+   * @return the notation string, or null if the game has no moves
+   */
+  public @Nullable String getNotation(int maxPly) {
+    Node node = root();
+    if (!node.hasMoves()) return null;
+
+    StringBuilder sb = new StringBuilder();
+    int plyCount = 0;
+
+    while (node.hasMoves() && plyCount < maxPly) {
+      int currentPly = node.ply();
+      boolean isWhiteMove = Chess.isWhitePly(currentPly);
+      Move move = node.mainMove();
+
+      if (isWhiteMove) {
+        if (!sb.isEmpty()) sb.append(' ');
+        sb.append(Chess.plyToMoveNumber(currentPly));
+        sb.append('.');
+        sb.append(move.toSAN());
+      } else {
+        if (sb.isEmpty()) {
+          sb.append(Chess.plyToMoveNumber(currentPly));
+          sb.append("...");
+        } else {
+          sb.append(' ');
+        }
+        sb.append(move.toSAN());
+      }
+
+      node = node.mainNode();
+      plyCount++;
+    }
+
+    return sb.toString();
   }
 
   /**

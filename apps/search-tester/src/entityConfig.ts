@@ -105,6 +105,8 @@ export const SORTABLE_COLUMN_MAP: Record<EntityType, Record<string, string>> = {
     gameVersion: 'gameVersion',
     creationTimestamp: 'creationTimestamp',
     lastChanged: 'lastChanged',
+    notation: 'notation',
+    lineMoves: 'variationMoves',
   },
   Players: {
     id: 'id',

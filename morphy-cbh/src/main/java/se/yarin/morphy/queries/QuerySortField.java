@@ -11,6 +11,8 @@ import se.yarin.morphy.entities.*;
 import se.yarin.morphy.games.GameHeaderFlags;
 import se.yarin.morphy.games.Medal;
 import se.yarin.morphy.queries.operations.GameEntityLookup;
+import se.yarin.morphy.queries.operations.GameMovesInfo;
+import se.yarin.morphy.queries.operations.GameMovesInfoLookup;
 import se.yarin.morphy.queries.operations.QueryData;
 import se.yarin.morphy.queries.operations.QueryOperator;
 import se.yarin.morphy.queries.operations.TournamentExtraLookup;
@@ -54,6 +56,9 @@ public class QuerySortField<T extends IdObject> {
 
   private static final BiFunction<QueryContext, QueryOperator<Game>, QueryOperator<Game>>
       GAME_BLACK_TEAM_LOOKUP = GameEntityLookup::blackTeam;
+
+  private static final BiFunction<QueryContext, QueryOperator<Game>, QueryOperator<Game>>
+      GAME_MOVES_INFO_LOOKUP = GameMovesInfoLookup::new;
 
   public static <T extends IdObject> QuerySortField<T> id() {
     return new QuerySortField<>(Comparator.comparingInt(QueryData::id), "id", false);
@@ -296,6 +301,24 @@ public class QuerySortField<T extends IdObject> {
         "eloMax",
         true,
         QuerySortOrder.Direction.DESCENDING);
+  }
+
+  public static QuerySortField<Game> gameNotation() {
+    return new QuerySortField<>(
+        Comparator.comparing(o -> o.extra(GameMovesInfo.class).notation()),
+        "notation",
+        true,
+        QuerySortOrder.Direction.ASCENDING,
+        GAME_MOVES_INFO_LOOKUP);
+  }
+
+  public static QuerySortField<Game> gameVariationMoves() {
+    return new QuerySortField<>(
+        Comparator.comparingInt(o -> o.extra(GameMovesInfo.class).variationPly()),
+        "variationMoves",
+        true,
+        QuerySortOrder.Direction.DESCENDING,
+        GAME_MOVES_INFO_LOOKUP);
   }
 
   public static QuerySortField<Player> playerName() {

@@ -45,7 +45,9 @@ public class FiltersController {
           QuerySortField.gameLastChanged(),
           QuerySortField.gamePlayedYear(),
           QuerySortField.gameEloAvg(),
-          QuerySortField.gameEloMax());
+          QuerySortField.gameEloMax(),
+          QuerySortField.gameNotation(),
+          QuerySortField.gameVariationMoves());
 
   private static final Map<String, AbstractEntityQueryBuilder<?>> ENTITY_BUILDERS =
       Map.of(

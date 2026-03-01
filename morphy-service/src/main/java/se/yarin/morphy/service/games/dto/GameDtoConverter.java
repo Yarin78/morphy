@@ -171,8 +171,27 @@ public class GameDtoConverter {
     String lastChanged =
         game.lastChangedTimestamp() == 0 ? null : game.lastChangedTime().toString();
 
-    // Moves (optional)
-    GameMovesDto moves = includeMoves ? convertMoves(game) : null;
+    // Moves and move-derived fields (optional)
+    GameMovesDto moves = null;
+    String notation = game.guidingText() ? "Text" : null;
+    Integer variationMoves = null;
+    if (includeMoves && !game.guidingText()) {
+      try {
+        GameModel model = game.getModel();
+        PgnExporter exporter =
+            new PgnExporter(
+                PgnFormatOptions.DEFAULT,
+                (AnnotationConverter.getRoundTripConverter())::convertToPgn);
+        moves = new GameMovesDto(exporter.exportMovesOnly(model.moves()));
+
+        String built = model.moves().getNotation(20);
+        notation = built != null ? built : "--";
+        int varPly = model.moves().countPly(true) - model.moves().countPly(false);
+        variationMoves = varPly > 0 ? varPly : null;
+      } catch (Exception e) {
+        log.error("Failed to export moves for game {}", game.id(), e);
+      }
+    }
 
     // Text (optional)
     GameTextDto text = includeText ? convertText(game) : null;
@@ -209,6 +228,8 @@ public class GameDtoConverter {
         deleted,
         setupPosition,
         noMoves,
+        notation,
+        variationMoves,
         ait,
         vcs,
         finalMaterial,
@@ -343,22 +364,6 @@ public class GameDtoConverter {
 
     GameTag gameTag = game.gameTag();
     return gameTagDtoConverter.toDto(gameTag);
-  }
-
-  @Nullable
-  private GameMovesDto convertMoves(@NotNull Game game) {
-    try {
-      GameModel model = game.getModel();
-      PgnExporter exporter =
-          new PgnExporter(
-              PgnFormatOptions.DEFAULT,
-              (AnnotationConverter.getRoundTripConverter())::convertToPgn);
-      String movesPgn = exporter.exportMovesOnly(model.moves());
-      return new GameMovesDto(movesPgn);
-    } catch (Exception e) {
-      log.error("Failed to export moves for game {}", game.id(), e);
-      return null;
-    }
   }
 
   @Nullable

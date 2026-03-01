@@ -193,6 +193,10 @@ public class GameSearchRequestConverter {
           new QuerySortOrder<>(List.of(QuerySortField.gameEloAvg()), List.of(direction));
       case "elomax" ->
           new QuerySortOrder<>(List.of(QuerySortField.gameEloMax()), List.of(direction));
+      case "notation" ->
+          new QuerySortOrder<>(List.of(QuerySortField.gameNotation()), List.of(direction));
+      case "variationmoves" ->
+          new QuerySortOrder<>(List.of(QuerySortField.gameVariationMoves()), List.of(direction));
       default -> QuerySortOrder.none();
     };
   }
