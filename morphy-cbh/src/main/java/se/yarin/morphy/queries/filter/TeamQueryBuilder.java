@@ -58,29 +58,12 @@ public class TeamQueryBuilder extends AbstractEntityQueryBuilder<Team> {
 
   private static @NotNull EntityFilter<Team> buildNumberFilter(
       @NotNull FilterCondition condition) {
-    String value = condition.value();
-    if (value.contains("..")) {
-      String[] parts = value.split("\\.\\.", 2);
-      int min = parts[0].isEmpty() ? 0 : Integer.parseInt(parts[0]);
-      int max =
-          parts.length > 1 && !parts[1].isEmpty()
-              ? Integer.parseInt(parts[1])
-              : Integer.MAX_VALUE;
-      return new TeamNumberFilter(min, max);
-    }
-    int num = Integer.parseInt(value);
-    return new TeamNumberFilter(num, num);
+    IntRange range = IntRange.parse(condition, Integer.MAX_VALUE);
+    return new TeamNumberFilter(range.min(), range.max());
   }
 
   private static @NotNull EntityFilter<Team> buildYearFilter(@NotNull FilterCondition condition) {
-    String value = condition.value();
-    if (value.contains("..")) {
-      String[] parts = value.split("\\.\\.", 2);
-      int min = parts[0].isEmpty() ? 0 : Integer.parseInt(parts[0]);
-      int max = parts.length > 1 && !parts[1].isEmpty() ? Integer.parseInt(parts[1]) : 9999;
-      return new TeamYearFilter(min, max);
-    }
-    int year = Integer.parseInt(value);
-    return new TeamYearFilter(year, year);
+    IntRange range = IntRange.parse(condition, 9999);
+    return new TeamYearFilter(range.min(), range.max());
   }
 }

@@ -162,33 +162,13 @@ public abstract class AbstractEntityQueryBuilder<T extends Entity> {
   }
 
   private @NotNull EntityFilter<T> buildIdFilter(@NotNull FilterCondition condition) {
-    String value = condition.value();
-    if (value.contains("..")) {
-      String[] parts = value.split("\\.\\.", 2);
-      int min = parts[0].isEmpty() ? 0 : Integer.parseInt(parts[0]);
-      int max =
-          parts.length > 1 && !parts[1].isEmpty()
-              ? Integer.parseInt(parts[1])
-              : Integer.MAX_VALUE;
-      return new EntityIdFilter<>(entityType, min, max);
-    }
-    int id = Integer.parseInt(value);
-    return new EntityIdFilter<>(entityType, id, id);
+    IntRange range = IntRange.parse(condition, Integer.MAX_VALUE);
+    return new EntityIdFilter<>(entityType, range.min(), range.max());
   }
 
   private @NotNull EntityFilter<T> buildCountFilter(@NotNull FilterCondition condition) {
-    String value = condition.value();
-    if (value.contains("..")) {
-      String[] parts = value.split("\\.\\.", 2);
-      int min = parts[0].isEmpty() ? 0 : Integer.parseInt(parts[0]);
-      int max =
-          parts.length > 1 && !parts[1].isEmpty()
-              ? Integer.parseInt(parts[1])
-              : Integer.MAX_VALUE;
-      return new EntityCountFilter<>(entityType, min, max);
-    }
-    int count = Integer.parseInt(value);
-    return new EntityCountFilter<>(entityType, count, count);
+    IntRange range = IntRange.parse(condition, Integer.MAX_VALUE);
+    return new EntityCountFilter<>(entityType, range.min(), range.max());
   }
 
   @SafeVarargs

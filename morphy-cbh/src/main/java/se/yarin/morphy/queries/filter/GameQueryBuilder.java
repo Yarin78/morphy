@@ -6,7 +6,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import se.yarin.chess.Date;
 import se.yarin.morphy.Database;
 import se.yarin.morphy.games.Medal;
 import se.yarin.morphy.games.filters.*;
@@ -329,48 +328,15 @@ public class GameQueryBuilder {
   }
 
   private static @NotNull GameFilter buildDateFilter(@NotNull FilterCondition condition) {
-    if ("..".equals(condition.operator())) {
-      // Range operator: date..2020..2025
-      String[] parts = condition.value().split("\\.\\.", 2);
-      Date from = parts[0].isEmpty() ? Date.unset() : parseDateStart(parts[0]);
-      Date to = parts.length > 1 && !parts[1].isEmpty() ? parseDateEnd(parts[1]) : Date.unset();
-      return new DateRangeFilter(from, to);
-    } else {
-      // Colon operator: may contain embedded range
-      String value = condition.value();
-      if (value.contains("..")) {
-        // "2020..2025" or "2020.." or "..2025"
-        String[] parts = value.split("\\.\\.", 2);
-        Date from = parts[0].isEmpty() ? Date.unset() : parseDateStart(parts[0]);
-        Date to = parts.length > 1 && !parts[1].isEmpty() ? parseDateEnd(parts[1]) : Date.unset();
-        return new DateRangeFilter(from, to);
-      }
-      // Single value: partial date expansion
-      PartialDateParser.DateRange range = PartialDateParser.parse(value);
-      return new DateRangeFilter(range.from(), range.to());
-    }
+    PartialDateParser.DateRange range = PartialDateParser.parseRange(condition);
+    return new DateRangeFilter(range.from(), range.to());
   }
 
   private static @NotNull GameFilter buildRatingFilter(@NotNull FilterCondition condition) {
     String mode = condition.modifiers().getOrDefault("mode", "any");
     RatingRangeFilter.RatingColor ratingColor = parseRatingMode(mode);
-
-    if ("..".equals(condition.operator())) {
-      String[] parts = condition.value().split("\\.\\.", 2);
-      int min = parts[0].isEmpty() ? 0 : Integer.parseInt(parts[0]);
-      int max = parts.length > 1 && !parts[1].isEmpty() ? Integer.parseInt(parts[1]) : 9999;
-      return new RatingRangeFilter(min, max, ratingColor);
-    } else {
-      String value = condition.value();
-      if (value.contains("..")) {
-        String[] parts = value.split("\\.\\.", 2);
-        int min = parts[0].isEmpty() ? 0 : Integer.parseInt(parts[0]);
-        int max = parts.length > 1 && !parts[1].isEmpty() ? Integer.parseInt(parts[1]) : 9999;
-        return new RatingRangeFilter(min, max, ratingColor);
-      }
-      int rating = Integer.parseInt(value);
-      return new RatingRangeFilter(rating, rating, ratingColor);
-    }
+    IntRange range = IntRange.parse(condition, 9999);
+    return new RatingRangeFilter(range.min(), range.max(), ratingColor);
   }
 
   private static @NotNull GameFilter buildRoundFilter(@NotNull FilterCondition condition) {
@@ -439,16 +405,6 @@ public class GameQueryBuilder {
     };
   }
 
-  /** Parses a date string and returns the start of the range. */
-  private static @NotNull Date parseDateStart(@NotNull String dateStr) {
-    return PartialDateParser.parse(dateStr).from();
-  }
-
-  /** Parses a date string and returns the end of the range. */
-  private static @NotNull Date parseDateEnd(@NotNull String dateStr) {
-    return PartialDateParser.parse(dateStr).to();
-  }
-
   private static @NotNull GameFilter buildBooleanFlagFilter(
       @NotNull FilterCondition condition, @NotNull GameFlagFilter.Flag flag) {
     boolean expected =
@@ -503,27 +459,7 @@ public class GameQueryBuilder {
   }
 
   private static @NotNull GameFilter buildMovesFilter(@NotNull FilterCondition condition) {
-    if ("..".equals(condition.operator())) {
-      String[] parts = condition.value().split("\\.\\.", 2);
-      int min = parts[0].isEmpty() ? 0 : Integer.parseInt(parts[0]);
-      int max =
-          parts.length > 1 && !parts[1].isEmpty()
-              ? Integer.parseInt(parts[1])
-              : Integer.MAX_VALUE;
-      return new MovesRangeFilter(min, max);
-    } else {
-      String value = condition.value();
-      if (value.contains("..")) {
-        String[] parts = value.split("\\.\\.", 2);
-        int min = parts[0].isEmpty() ? 0 : Integer.parseInt(parts[0]);
-        int max =
-            parts.length > 1 && !parts[1].isEmpty()
-                ? Integer.parseInt(parts[1])
-                : Integer.MAX_VALUE;
-        return new MovesRangeFilter(min, max);
-      }
-      int moves = Integer.parseInt(value);
-      return new MovesRangeFilter(moves, moves);
-    }
+    IntRange range = IntRange.parse(condition, Integer.MAX_VALUE);
+    return new MovesRangeFilter(range.min(), range.max());
   }
 }

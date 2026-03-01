@@ -61,17 +61,7 @@ public class GameTagQueryBuilder extends AbstractEntityQueryBuilder<GameTag> {
 
   private static @NotNull EntityFilter<GameTag> buildLanguageCountFilter(
       @NotNull FilterCondition condition) {
-    String value = condition.value();
-    if (value.contains("..")) {
-      String[] parts = value.split("\\.\\.", 2);
-      int min = parts[0].isEmpty() ? 0 : Integer.parseInt(parts[0]);
-      int max =
-          parts.length > 1 && !parts[1].isEmpty()
-              ? Integer.parseInt(parts[1])
-              : Integer.MAX_VALUE;
-      return new GameTagLanguageCountFilter(min, max);
-    }
-    int count = Integer.parseInt(value);
-    return new GameTagLanguageCountFilter(count, count);
+    IntRange range = IntRange.parse(condition, Integer.MAX_VALUE);
+    return new GameTagLanguageCountFilter(range.min(), range.max());
   }
 }

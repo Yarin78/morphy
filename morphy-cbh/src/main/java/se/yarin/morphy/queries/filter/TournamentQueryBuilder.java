@@ -1,10 +1,8 @@
 package se.yarin.morphy.queries.filter;
 
-import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import org.jetbrains.annotations.NotNull;
-import se.yarin.chess.Date;
 import se.yarin.morphy.entities.EntityType;
 import se.yarin.morphy.entities.Tournament;
 import se.yarin.morphy.entities.filters.*;
@@ -68,70 +66,22 @@ public class TournamentQueryBuilder extends AbstractEntityQueryBuilder<Tournamen
 
   private static @NotNull EntityFilter<Tournament> buildDateFilter(
       @NotNull FilterCondition condition) {
-    if ("..".equals(condition.operator())) {
-      String[] parts = condition.value().split("\\.\\.", 2);
-      Date from = parts[0].isEmpty() ? Date.unset() : parseDateStart(parts[0]);
-      Date to = parts.length > 1 && !parts[1].isEmpty() ? parseDateEnd(parts[1]) : Date.unset();
-      return new TournamentStartDateFilter(from, to);
-    } else {
-      String value = condition.value();
-      if (value.contains("..")) {
-        String[] parts = value.split("\\.\\.", 2);
-        Date from = parts[0].isEmpty() ? Date.unset() : parseDateStart(parts[0]);
-        Date to =
-            parts.length > 1 && !parts[1].isEmpty() ? parseDateEnd(parts[1]) : Date.unset();
-        return new TournamentStartDateFilter(from, to);
-      }
-      PartialDateParser.DateRange range = PartialDateParser.parse(value);
-      return new TournamentStartDateFilter(range.from(), range.to());
-    }
+    PartialDateParser.DateRange range = PartialDateParser.parseRange(condition);
+    return new TournamentStartDateFilter(range.from(), range.to());
   }
 
   private static @NotNull EntityFilter<Tournament> buildCategoryFilter(
       @NotNull FilterCondition condition) {
-    if ("..".equals(condition.operator())) {
-      String[] parts = condition.value().split("\\.\\.", 2);
-      int min = parts[0].isEmpty() ? 0 : Integer.parseInt(parts[0]);
-      int max = parts.length > 1 && !parts[1].isEmpty() ? Integer.parseInt(parts[1]) : 100;
-      return new TournamentCategoryFilter(min, max);
-    } else {
-      String value = condition.value();
-      if (value.contains("..")) {
-        String[] parts = value.split("\\.\\.", 2);
-        int min = parts[0].isEmpty() ? 0 : Integer.parseInt(parts[0]);
-        int max = parts.length > 1 && !parts[1].isEmpty() ? Integer.parseInt(parts[1]) : 100;
-        return new TournamentCategoryFilter(min, max);
-      }
-      int cat = Integer.parseInt(value);
-      return new TournamentCategoryFilter(cat, 100);
-    }
+    IntRange range = IntRange.parse(condition, 100);
+    // Single value means "at least this category"
+    return new TournamentCategoryFilter(
+        range.min(), range.min() == range.max() ? 100 : range.max());
   }
 
   private static @NotNull EntityFilter<Tournament> buildRoundsFilter(
       @NotNull FilterCondition condition) {
-    if ("..".equals(condition.operator())) {
-      String[] parts = condition.value().split("\\.\\.", 2);
-      int min = parts[0].isEmpty() ? 0 : Integer.parseInt(parts[0]);
-      int max = parts.length > 1 && !parts[1].isEmpty() ? Integer.parseInt(parts[1]) : 999;
-      return new TournamentRoundsFilter(min, max);
-    } else {
-      String value = condition.value();
-      if (value.contains("..")) {
-        String[] parts = value.split("\\.\\.", 2);
-        int min = parts[0].isEmpty() ? 0 : Integer.parseInt(parts[0]);
-        int max = parts.length > 1 && !parts[1].isEmpty() ? Integer.parseInt(parts[1]) : 999;
-        return new TournamentRoundsFilter(min, max);
-      }
-      int rounds = Integer.parseInt(value);
-      return new TournamentRoundsFilter(rounds, rounds);
-    }
+    IntRange range = IntRange.parse(condition, 999);
+    return new TournamentRoundsFilter(range.min(), range.max());
   }
 
-  private static @NotNull Date parseDateStart(@NotNull String dateStr) {
-    return PartialDateParser.parse(dateStr).from();
-  }
-
-  private static @NotNull Date parseDateEnd(@NotNull String dateStr) {
-    return PartialDateParser.parse(dateStr).to();
-  }
 }

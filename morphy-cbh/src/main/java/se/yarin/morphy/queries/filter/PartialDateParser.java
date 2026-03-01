@@ -74,6 +74,24 @@ public class PartialDateParser {
     }
   }
 
+  /**
+   * Parses a date range from a filter condition. Supports both the ".." operator and embedded ".."
+   * in the value (e.g., "2020..2025", "2020..", "..2025").
+   *
+   * <p>For single dates, expands using partial date rules (e.g., "2020" -> Jan 1 to Dec 31).
+   */
+  public static @NotNull DateRange parseRange(@NotNull FilterCondition condition) {
+    String value = condition.value();
+    if ("..".equals(condition.operator()) || value.contains("..")) {
+      String[] parts = value.split("\\.\\.", 2);
+      Date from = parts[0].isEmpty() ? Date.unset() : parse(parts[0]).from();
+      Date to =
+          parts.length > 1 && !parts[1].isEmpty() ? parse(parts[1]).to() : Date.unset();
+      return new DateRange(from, to);
+    }
+    return parse(value);
+  }
+
   private static void validateYear(int year) {
     if (year < 1) {
       throw new IllegalArgumentException("Invalid year: " + year + ". Must be >= 1");

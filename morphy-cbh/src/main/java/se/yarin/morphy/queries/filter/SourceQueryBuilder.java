@@ -3,7 +3,6 @@ package se.yarin.morphy.queries.filter;
 import java.util.Map;
 import java.util.function.Function;
 import org.jetbrains.annotations.NotNull;
-import se.yarin.chess.Date;
 import se.yarin.morphy.entities.EntityType;
 import se.yarin.morphy.entities.Source;
 import se.yarin.morphy.entities.filters.EntityFilter;
@@ -64,49 +63,19 @@ public class SourceQueryBuilder extends AbstractEntityQueryBuilder<Source> {
 
   private static @NotNull EntityFilter<Source> buildDateFilter(
       @NotNull FilterCondition condition) {
-    String value = condition.value();
-    if (value.contains("..")) {
-      String[] parts = value.split("\\.\\.", 2);
-      Date from = parts[0].isEmpty() ? Date.unset() : PartialDateParser.parse(parts[0]).from();
-      Date to =
-          parts.length > 1 && !parts[1].isEmpty()
-              ? PartialDateParser.parse(parts[1]).to()
-              : Date.unset();
-      return new SourceDateFilter(from, to);
-    }
-    PartialDateParser.DateRange range = PartialDateParser.parse(value);
+    PartialDateParser.DateRange range = PartialDateParser.parseRange(condition);
     return new SourceDateFilter(range.from(), range.to());
   }
 
   private static @NotNull EntityFilter<Source> buildPublicationFilter(
       @NotNull FilterCondition condition) {
-    String value = condition.value();
-    if (value.contains("..")) {
-      String[] parts = value.split("\\.\\.", 2);
-      Date from = parts[0].isEmpty() ? Date.unset() : PartialDateParser.parse(parts[0]).from();
-      Date to =
-          parts.length > 1 && !parts[1].isEmpty()
-              ? PartialDateParser.parse(parts[1]).to()
-              : Date.unset();
-      return new SourcePublicationFilter(from, to);
-    }
-    PartialDateParser.DateRange range = PartialDateParser.parse(value);
+    PartialDateParser.DateRange range = PartialDateParser.parseRange(condition);
     return new SourcePublicationFilter(range.from(), range.to());
   }
 
   private static @NotNull EntityFilter<Source> buildVersionFilter(
       @NotNull FilterCondition condition) {
-    String value = condition.value();
-    if (value.contains("..")) {
-      String[] parts = value.split("\\.\\.", 2);
-      int min = parts[0].isEmpty() ? 0 : Integer.parseInt(parts[0]);
-      int max =
-          parts.length > 1 && !parts[1].isEmpty()
-              ? Integer.parseInt(parts[1])
-              : Integer.MAX_VALUE;
-      return new SourceVersionFilter(min, max);
-    }
-    int version = Integer.parseInt(value);
-    return new SourceVersionFilter(version, version);
+    IntRange range = IntRange.parse(condition, Integer.MAX_VALUE);
+    return new SourceVersionFilter(range.min(), range.max());
   }
 }
