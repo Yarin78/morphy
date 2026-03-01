@@ -8,6 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.morphy.Database;
 import se.yarin.morphy.games.Medal;
+import se.yarin.morphy.games.TopGamesStorage;
 import se.yarin.morphy.games.filters.*;
 import se.yarin.morphy.queries.*;
 
@@ -53,6 +54,9 @@ public class GameQueryBuilder {
           Map.entry("medals", GameQueryBuilder::buildMedalFilter),
           Map.entry("medal", GameQueryBuilder::buildSpecificMedalFilter),
           Map.entry("moves", GameQueryBuilder::buildMovesFilter));
+
+  /** Game filter fields that require a Database reference (e.g. separate storage lookups). */
+  private static final Set<String> DATABASE_GAME_FIELDS = Set.of("topgame");
 
   /** Fields that require a numeric entity ID and produce a direct game filter. */
   private static final Set<String> ENTITY_ID_FIELDS =
@@ -127,6 +131,8 @@ public class GameQueryBuilder {
     for (FilterCondition condition : conditions) {
       if (isGamePropertyFilter(condition)) {
         gameFilters.add(buildGameFilter(condition));
+      } else if (isDatabaseGameFilter(condition)) {
+        gameFilters.add(buildDatabaseGameFilter(condition, database));
       } else if (isEntityShorthandFilter(condition)) {
         FilterCondition rewritten = rewriteEntityNameShorthand(condition);
         String entityType = rewritten.field().split("\\.", 2)[0].toLowerCase();
@@ -156,6 +162,10 @@ public class GameQueryBuilder {
 
   private boolean isGamePropertyFilter(@NotNull FilterCondition condition) {
     return GAME_FILTERS.containsKey(condition.field().toLowerCase());
+  }
+
+  private boolean isDatabaseGameFilter(@NotNull FilterCondition condition) {
+    return DATABASE_GAME_FIELDS.contains(condition.field().toLowerCase());
   }
 
   private boolean isEntityShorthandFilter(@NotNull FilterCondition condition) {
@@ -201,6 +211,7 @@ public class GameQueryBuilder {
   /** Returns a sorted list of all available field names, including entity sub-fields. */
   public @NotNull List<String> availableFields() {
     Set<String> fields = new TreeSet<>(GAME_FILTERS.keySet());
+    fields.addAll(DATABASE_GAME_FIELDS);
     fields.addAll(ENTITY_ID_FIELDS);
     fields.addAll(ENTITY_SHORTHAND_FIELDS.keySet());
     for (var entry : ENTITY_BUILDERS.entrySet()) {
@@ -220,6 +231,7 @@ public class GameQueryBuilder {
 
   private static String availableFieldsSummary() {
     List<String> fields = new ArrayList<>(new TreeSet<>(GAME_FILTERS.keySet()));
+    fields.addAll(new TreeSet<>(DATABASE_GAME_FIELDS));
     fields.addAll(new TreeSet<>(ENTITY_ID_FIELDS));
     fields.addAll(new TreeSet<>(ENTITY_SHORTHAND_FIELDS.keySet()));
     for (var entry : new TreeMap<>(ENTITY_BUILDERS).entrySet()) {
@@ -240,6 +252,19 @@ public class GameQueryBuilder {
               + String.join(", ", new TreeSet<>(GAME_FILTERS.keySet())));
     }
     return builder.apply(condition);
+  }
+
+  private @NotNull GameFilter buildDatabaseGameFilter(
+      @NotNull FilterCondition condition, @NotNull Database database) {
+    return switch (condition.field().toLowerCase()) {
+      case "topgame" -> {
+        boolean expected = parseBooleanValue(condition);
+        yield new TopGameFilter(database.topGamesStorage(), expected);
+      }
+      default ->
+          throw new IllegalArgumentException(
+              "Unknown database game filter field: " + condition.field());
+    };
   }
 
   private @NotNull GameFilter buildEntityIdFilter(@NotNull FilterCondition condition) {
@@ -405,21 +430,23 @@ public class GameQueryBuilder {
     };
   }
 
+  private static boolean parseBooleanValue(@NotNull FilterCondition condition) {
+    return switch (condition.value().toLowerCase()) {
+      case "true" -> true;
+      case "false" -> false;
+      default ->
+          throw new IllegalArgumentException(
+              "Invalid boolean value for "
+                  + condition.field()
+                  + ": "
+                  + condition.value()
+                  + ". Expected 'true' or 'false'");
+    };
+  }
+
   private static @NotNull GameFilter buildBooleanFlagFilter(
       @NotNull FilterCondition condition, @NotNull GameFlagFilter.Flag flag) {
-    boolean expected =
-        switch (condition.value().toLowerCase()) {
-          case "true" -> true;
-          case "false" -> false;
-          default ->
-              throw new IllegalArgumentException(
-                  "Invalid boolean value for "
-                      + condition.field()
-                      + ": "
-                      + condition.value()
-                      + ". Expected 'true' or 'false'");
-        };
-    return new GameFlagFilter(flag, expected);
+    return new GameFlagFilter(flag, parseBooleanValue(condition));
   }
 
   private static @NotNull GameFilter buildMedalFilter(@NotNull FilterCondition condition) {

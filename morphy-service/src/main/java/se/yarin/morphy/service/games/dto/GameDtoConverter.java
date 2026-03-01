@@ -14,6 +14,7 @@ import se.yarin.morphy.Game;
 import se.yarin.morphy.entities.*;
 import se.yarin.morphy.games.GameHeaderFlags;
 import se.yarin.morphy.games.Medal;
+import se.yarin.morphy.games.TopGamesStorage;
 import se.yarin.morphy.games.annotations.AnnotationConverter;
 import se.yarin.morphy.service.annotators.dto.AnnotatorDto;
 import se.yarin.morphy.service.annotators.dto.AnnotatorDtoConverter;
@@ -157,6 +158,9 @@ public class GameDtoConverter {
     // Deleted
     Boolean deleted = game.deleted() ? true : null;
 
+    // Top game
+    Boolean topGame = game.topGameStatus() == TopGamesStorage.TopGameStatus.IS_TOP_GAME ? true : null;
+
     // Flags
     Boolean setupPosition = game.header().flags().contains(GameHeaderFlags.SETUP_POSITION) ? true : null;
 
@@ -226,6 +230,7 @@ public class GameDtoConverter {
         gameTag,
         medals,
         deleted,
+        topGame,
         setupPosition,
         noMoves,
         notation,

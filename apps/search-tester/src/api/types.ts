@@ -81,6 +81,7 @@ export interface GameDto {
   gameTag?: { id: number; englishTitle?: string; germanTitle?: string; [key: string]: unknown };
   medals?: string[];
   deleted?: boolean;
+  topGame?: boolean;
   setupPosition?: boolean;
   noMoves?: number;
   notation?: string;

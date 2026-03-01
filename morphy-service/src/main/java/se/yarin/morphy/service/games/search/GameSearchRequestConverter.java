@@ -173,6 +173,8 @@ public class GameSearchRequestConverter {
           new QuerySortOrder<>(List.of(QuerySortField.gameBlackTeamTitle()), List.of(direction));
       case "setupposition" ->
           new QuerySortOrder<>(List.of(QuerySortField.gameSetupPosition()), List.of(direction));
+      case "topgame" ->
+          new QuerySortOrder<>(List.of(QuerySortField.gameTopGame()), List.of(direction));
       case "ait" ->
           new QuerySortOrder<>(List.of(QuerySortField.gameAit()), List.of(direction));
       case "medals" ->

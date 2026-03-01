@@ -519,6 +519,7 @@ export const GAME_COLUMNS: Column<GameDto>[] = [
       return '';
     },
   },
+  { key: 'topGame', label: 'Top Game', width: 85, render: (g) => g.topGame ? 'Top Game' : '' },
   { key: 'gameVersion', label: 'Version', width: 70, render: (g) => formatValue(g.gameVersion) },
   { key: 'creationTimestamp', label: 'ID', width: 150, render: (g) => formatValue(g.creationTimestamp) },
   { key: 'lastChanged', label: 'Last Changed', width: 160, render: (g) => formatValue(g.lastChanged) },
