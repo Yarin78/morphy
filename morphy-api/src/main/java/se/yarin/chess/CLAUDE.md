@@ -25,3 +25,8 @@ Format-independent chess logic. This package has no dependency on the database l
 - Uses Stone arrays (not bitboards) for board representation - simpler, sufficient for this use case.
 - Position immutability enforced: `doMove()` always creates new instance.
 - GameMovesModel is mutable (tree editing) while Position/Move are immutable.
+
+## Documentation
+
+- Detailed package docs: `morphy-cbh/docs/CHESS-PACKAGE.md`
+- Game representation across layers: `morphy-cbh/docs/GAME-REPRESENTATION.md`

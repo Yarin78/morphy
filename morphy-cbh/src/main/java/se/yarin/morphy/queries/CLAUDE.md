@@ -1,7 +1,7 @@
 # se.yarin.morphy.queries
 
 Query engine with cost-based optimization for searching games and entities.
-For details, see @QUERY_ENGINE.md
+For details, see `morphy-cbh/docs/QUERY-ENGINE.md`
 
 ## Query Construction
 

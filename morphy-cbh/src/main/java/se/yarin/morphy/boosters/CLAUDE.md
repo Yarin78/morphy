@@ -16,3 +16,7 @@ Cross-reference indexes ("search boosters") that map between games and entities 
 - Separates primary types (stored in `.cit`/`.cib`) from secondary types (stored in `.cit2`/`.cib2`).
 - Block-based hierarchical indexing enables efficient range scans when searching for games by entity.
 - All index items are immutable (generated `Immutable*` classes).
+
+## Documentation
+
+- File format spec: `format/v1/5-search-boosters.md`

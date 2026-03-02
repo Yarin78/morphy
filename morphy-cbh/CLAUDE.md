@@ -40,7 +40,17 @@ Tests mirror the source structure under `src/test/java/se/yarin/morphy/`. Test d
 ## Documentation
 
 See `docs/` for detailed documentation:
-- `ARCHITECTURE.md` - System design
-- `USER-GUIDE.md` - Library usage
-- `DEVELOPER-GUIDE.md` - Contributing guide
-- `cbh-format/` - Reverse-engineered file format specification
+- `ARCHITECTURE.md` - System design, layered architecture, concurrency model, design decisions
+- `USER-GUIDE.md` - Library usage: databases, games, entities, querying, best practices
+- `DEVELOPER-GUIDE.md` - Contributing guide: setup, patterns, testing, adding features
+- `DATABASE-REFERENCE.md` - All game header fields and entity fields with types and descriptions
+- `GAME-REPRESENTATION.md` - How games are represented across three layers (storage, logic, PGN) and annotation architecture
+- `ANNOTATION-TEXT-ENCODING.md` - Spec for encoding ChessBase annotations in PGN comments (lossless round-trip)
+- `CHESS-PACKAGE.md` - Detailed `se.yarin.chess` package docs (Position, Move, GameModel, PGN)
+- `MORPHY-PACKAGE.md` - Detailed `se.yarin.morphy` package docs (Database, transactions, entities)
+- `QUERY-ENGINE.md` - Query engine internals: query plans, operators, cost-based optimization, joins
+- `NODE-QUERY-ENGINE.md` - The node-based query engine in `se.yarin.morphy.query` (singular)
+
+The binary file format specification (games, moves, annotations, entities, search boosters) lives in `format/v1/` at the repository root.
+
+Any new detailed documentation about something should go into the `docs/` folder.
