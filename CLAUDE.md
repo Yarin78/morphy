@@ -71,6 +71,8 @@ A database consists of multiple files with same base name:
 
 ## Documentation
 
+Each module and key package has its own `CLAUDE.md` with detailed guidance.
+
 Library documentation in `morphy-cbh/docs/`:
 - `ARCHITECTURE.md` - System design
 - `USER-GUIDE.md` - Library usage
