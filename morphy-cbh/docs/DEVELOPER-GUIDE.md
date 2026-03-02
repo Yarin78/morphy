@@ -308,7 +308,7 @@ Database.beginWriteTransaction()
 
 2. **Use in-memory databases for testing:**
    ```java
-   Database db = Database.openInMemory(new File("test.cbh"));
+   Database db = Database.open(new File("test.cbh"), DatabaseMode.IN_MEMORY);
    ```
 
 3. **Inspect raw data:**

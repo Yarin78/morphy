@@ -57,7 +57,7 @@ Add the following dependency to your `pom.xml`:
 
 ### Required Java Version
 
-Morphy requires **Java 11** or later.
+Morphy requires **Java 21** or later.
 
 ### Basic Example
 
@@ -106,7 +106,7 @@ Database db = Database.open(new File("database.cbh"));
 Database db = Database.open(new File("database.cbh"), DatabaseMode.READ_ONLY);
 
 // Open entirely in memory (faster reads, but uses more RAM)
-Database db = Database.openInMemory(new File("database.cbh"));
+Database db = Database.open(new File("database.cbh"), DatabaseMode.IN_MEMORY);
 
 // Create a new database
 Database db = Database.create(new File("new_database.cbh"));
@@ -495,13 +495,13 @@ GameMovesModel moves = game.moves();
 GameMovesModel.Node node = moves.root();
 
 // Navigate forward
-while (node.hasMainLine()) {
-    node = node.mainLine();
+while (node.hasMoves()) {
+    node = node.mainNode();
     System.out.println(node.lastMove().toSAN());
 }
 
 // Navigate with variations
-for (GameMovesModel.Node variation : node.variations()) {
+for (GameMovesModel.Node variation : node.children()) {
     System.out.println("Variation: " + variation.lastMove().toSAN());
 }
 
@@ -516,7 +516,7 @@ int totalPly = moves.countPly(true);   // Including variations
 import se.yarin.chess.annotations.*;
 
 // Add text annotation
-node.addAnnotation(new TextAfterMoveAnnotation("Excellent move!"));
+node.addAnnotation(new CommentaryAfterMoveAnnotation("Excellent move!"));
 
 // Add NAG (Numeric Annotation Glyph)
 node.addAnnotation(new NAGAnnotation(NAG.GOOD_MOVE));  // !
@@ -525,8 +525,8 @@ node.addAnnotation(new NAGAnnotation(NAG.DUBIOUS_MOVE));  // ?!
 // Get annotations
 Annotations annotations = node.annotations();
 for (Annotation ann : annotations) {
-    if (ann instanceof TextAfterMoveAnnotation) {
-        String text = ((TextAfterMoveAnnotation) ann).getText();
+    if (ann instanceof CommentaryAfterMoveAnnotation) {
+        String text = ((CommentaryAfterMoveAnnotation) ann).getCommentary();
     }
 }
 ```
@@ -690,7 +690,7 @@ try (Database source = Database.open(new File("source.cbh"))) {
    List<Game> all = txn.stream().collect(toList());
    ```
 
-3. **Consider `openInMemory()`** for read-heavy workloads on smaller databases.
+3. **Consider `Database.open(file, DatabaseMode.IN_MEMORY)`** for read-heavy workloads on smaller databases.
 
 ### Error Handling
 

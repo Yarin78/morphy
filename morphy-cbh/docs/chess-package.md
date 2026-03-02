@@ -84,8 +84,8 @@ Key operations:
 The `se.yarin.chess.annotations` subpackage provides annotation support:
 - **`Annotation`**: Base class for all annotations
 - **`NAGAnnotation`**: Numeric Annotation Glyphs (e.g., !, ?, !?)
-- **`TextBeforeMoveAnnotation`**: Comments before a move
-- **`TextAfterMoveAnnotation`**: Comments after a move
+- **`CommentaryBeforeMoveAnnotation`**: Text comments before a move
+- **`CommentaryAfterMoveAnnotation`**: Text comments after a move
 - **`Annotations`**: Collection of annotations at a position
 
 ### Other Utilities
@@ -93,8 +93,10 @@ The `se.yarin.chess.annotations` subpackage provides annotation support:
 - **`Date`**: Represents chess dates (year, month, day) with support for partial dates
 - **`Eco`**: Opening classification codes (e.g., "B90" for Sicilian Najdorf)
 - **`GameResult`**: Enum for game outcomes (WHITE_WINS, BLACK_WINS, DRAW, NOT_FINISHED)
-- **`NAG`**: Numeric Annotation Glyph constants
+- **`NAG`**: Numeric Annotation Glyph constants with `NAGType` categorization (MOVE_COMMENT, LINE_EVALUATION, MOVE_PREFIX)
 - **`ShortMove`**: Compact move representation (from/to squares only)
+- **`Castles`**: Enum for castling types (WHITE_SHORT_CASTLE, WHITE_LONG_CASTLE, etc.)
+- **`GameHeaderModelChangeListener`**: Listener interface for header change notifications
 
 ## Usage Examples
 
@@ -126,7 +128,7 @@ root.addMove(new Move(root.position(), Chess.coorToSqi(4, 1), Chess.coorToSqi(4,
 root.addMove(new Move(root.position(), Chess.coorToSqi(4, 6), Chess.coorToSqi(4, 4))); // e5
 
 // Add annotation
-root.addAnnotation(new TextBeforeMoveAnnotation("King's Pawn Opening"));
+root.addAnnotation(new CommentaryBeforeMoveAnnotation("King's Pawn Opening"));
 ```
 
 ### Generating Legal Moves
