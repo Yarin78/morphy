@@ -86,7 +86,7 @@ This separation allows each layer to use the most appropriate representation wit
 
 ## Storage Layer: Game Class
 
-**Package:** `se.yarin.morphy.games`
+**Package:** `se.yarin.morphy` (`Game`, `GameAdapter`), `se.yarin.morphy.games` (`GameHeader`, `ExtendedGameHeader`)
 **Key Classes:** `Game`, `GameHeader`, `ExtendedGameHeader`
 
 ### Purpose
@@ -285,9 +285,9 @@ moves.deleteAllVariations();
 Models are **mutable** and support **change notification**:
 
 ```java
-headerModel.addListener(new GameHeaderModelChangeListener() {
+headerModel.addChangeListener(new GameHeaderModelChangeListener() {
     @Override
-    public void changed(String fieldName) {
+    public void headerModelChanged(GameHeaderModel headerModel) {
         // React to changes
     }
 });
@@ -349,7 +349,7 @@ The frontend will use **`@jackstenglein/chess`**, an enhanced version of the pop
 
 ## The Bridge: GameAdapter
 
-**Package:** `se.yarin.morphy.games`
+**Package:** `se.yarin.morphy`
 **Class:** `GameAdapter`
 
 ### Purpose
@@ -370,7 +370,7 @@ GameModel gameModel = gameAdapter.getGameModel(game);
 
    // Resolve entity references to actual objects
    Player white = game.white();
-   headerModel.setWhite(white.fullName());
+   headerModel.setWhite(white.getFullName());
    headerModel.setWhiteElo(game.whiteElo());
 
    Tournament tournament = game.tournament();
@@ -409,11 +409,11 @@ gameAdapter.setGameData(headerBuilder, extHeaderBuilder, gameModel);
 
 1. **Extract metadata**
    ```java
-   header.setPlayedDate(headerModel.date());
-   header.setResult(headerModel.result());
-   header.setWhiteElo(headerModel.whiteElo());
-   header.setBlackElo(headerModel.blackElo());
-   header.setEco(headerModel.eco());
+   header.setPlayedDate(headerModel.getDate());
+   header.setResult(headerModel.getResult());
+   header.setWhiteElo(headerModel.getWhiteElo());
+   header.setBlackElo(headerModel.getBlackElo());
+   header.setEco(headerModel.getEco());
    ```
 
 2. **Compute annotation statistics**
@@ -546,7 +546,8 @@ When saving games imported from PGN, PGN annotations are automatically converted
 
 ```java
 // Configure PgnParser with automatic conversion to ChessBase annotations
-PgnParser parser = new PgnParser(AnnotationConverter::convertNodeToChessBaseAnnotations);
+AnnotationConverter converter = AnnotationConverter.getRoundTripConverter();
+PgnParser parser = new PgnParser(converter::convertToChessBase);
 GameModel model = parser.parseGame(pgnString);
 
 // Conversions performed at each node:
@@ -569,9 +570,10 @@ When exporting games to PGN, ChessBase annotations are automatically converted t
 
 ```java
 // Configure PgnExporter with automatic conversion to PGN annotations
+AnnotationConverter converter = AnnotationConverter.getRoundTripConverter();
 PgnExporter exporter = new PgnExporter(
     PgnFormatOptions.DEFAULT,
-    AnnotationConverter::convertToPgnAnnotations
+    converter::convertToPgn
 );
 String pgn = exporter.exportGame(gameModel);
 
@@ -592,7 +594,8 @@ Conversion happens **automatically** through the `AnnotationTransformer` mechani
 **PGN Import Flow:**
 ```java
 // Parser applies transformer as it builds the game tree
-PgnParser parser = new PgnParser(AnnotationConverter::convertNodeToChessBaseAnnotations);
+AnnotationConverter converter = AnnotationConverter.getRoundTripConverter();
+PgnParser parser = new PgnParser(converter::convertToChessBase);
 GameModel model = parser.parseGame(pgnString);
 // model now has ChessBase annotations, ready for database save
 ```
@@ -600,7 +603,8 @@ GameModel model = parser.parseGame(pgnString);
 **PGN Export Flow:**
 ```java
 // Exporter applies transformer as it exports each node
-PgnExporter exporter = new PgnExporter(options, AnnotationConverter::convertToPgnAnnotations);
+AnnotationConverter converter = AnnotationConverter.getRoundTripConverter();
+PgnExporter exporter = new PgnExporter(options, converter::convertToPgn);
 String pgn = exporter.exportGame(gameModel);
 // PGN contains PGN annotations with graphical encoding
 ```

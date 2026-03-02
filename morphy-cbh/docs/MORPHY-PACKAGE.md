@@ -141,10 +141,10 @@ The package includes a powerful query system for searching games:
 `GameQuery` allows building complex queries:
 
 ```java
-GameQuery query = GameQuery.builder()
-    .filter(new PlayerFilter(whitePlayerId))
-    .filter(new DateRangeFilter(startDate, endDate))
-    .build();
+GameQuery query = new GameQuery(
+    db,
+    List.of(new PlayerFilter(whitePlayerId), new DateRangeFilter(startDate, endDate))
+);
 ```
 
 **Common filters:**
@@ -246,10 +246,10 @@ try (Database db = Database.open(new File("database.cbh"))) {
 
 ```java
 try (DatabaseReadTransaction txn = db.beginReadTransaction()) {
-    GameQuery query = GameQuery.builder()
-        .filter(new PlayerFilter(playerId))
-        .filter(new DateRangeFilter(startDate, endDate))
-        .build();
+    GameQuery query = new GameQuery(
+        db,
+        List.of(new PlayerFilter(playerId), new DateRangeFilter(startDate, endDate))
+    );
 
     for (Game game : txn.iterable(query)) {
         // Process matching games

@@ -81,7 +81,7 @@ try (DatabaseReadTransaction txn = db.beginReadTransaction()) {
 
     // Rating type details
     RatingType whiteRating = game.whiteRatingType();
-    System.out.println("White rating type: " + whiteRating.ratingType());
+    System.out.println("White rating type: " + whiteRating);
 
     // Team information (returns null if no team)
     Team whiteTeam = game.whiteTeam();
@@ -148,7 +148,7 @@ Additional player information (nationality, birth date, titles, etc.) comes from
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `fullName()` | String | Combined "LastName, FirstName" |
+| `getFullName()` | String | Combined "LastName, FirstName" |
 
 ### Example: Working with Players
 
@@ -158,13 +158,13 @@ try (DatabaseReadTransaction txn = db.beginReadTransaction()) {
     Game game = txn.getGame(1);
     Player white = game.white();
 
-    System.out.println("Name: " + white.fullName());
+    System.out.println("Name: " + white.getFullName());
     System.out.println("Games in database: " + white.count());
 
     // Iterate all players (sorted by last name)
     for (Player player : txn.playerTransaction().iterable()) {
         if (player.count() > 100) {
-            System.out.println(player.fullName() + ": " + player.count() + " games");
+            System.out.println(player.getFullName() + ": " + player.count() + " games");
         }
     }
 }
@@ -378,6 +378,7 @@ Game tags (also called game titles) are stored in the `.cbl` file. They provide 
 | `italianTitle` | String | 199 chars | Title in Italian |
 | `dutchTitle` | String | 199 chars | Title in Dutch |
 | `slovenianTitle` | String | 199 chars | Title in Slovenian |
+| `resTitle` | String | 199 chars | Reserved language title |
 
 ### Example: Working with Game Tags
 
@@ -480,18 +481,27 @@ Flags indicating what types of annotations a game contains.
 
 | Flag | Description |
 |------|-------------|
-| `STARTING_POSITION` | Game doesn't start from initial position |
+| `SETUP_POSITION` | Game doesn't start from initial position |
 | `VARIATIONS` | Contains move variations |
 | `COMMENTARY` | Contains text commentary |
 | `SYMBOLS` | Contains NAG symbols |
 | `GRAPHICAL_SQUARES` | Contains colored squares |
 | `GRAPHICAL_ARROWS` | Contains arrows |
 | `TIME_SPENT` | Contains time per move data |
+| `ANNO_TYPE_8` | Has annotation type 0x08 |
 | `TRAINING` | Contains training annotations |
 | `EMBEDDED_AUDIO` | Contains audio |
 | `EMBEDDED_PICTURE` | Contains pictures |
 | `EMBEDDED_VIDEO` | Contains video |
+| `GAME_QUOTATION` | Contains game quotation |
+| `PAWN_STRUCTURE` | Contains pawn structure annotation |
+| `PIECE_PATH` | Contains piece path annotation |
+| `WHITE_CLOCK` | Contains white clock annotation |
+| `BLACK_CLOCK` | Contains black clock annotation |
 | `CRITICAL_POSITION` | Marks critical positions |
+| `CORRESPONDENCE_HEADER` | Contains correspondence header |
+| `ANNO_TYPE_1A` | Has annotation type 0x1a (media) |
+| `UNORTHODOX` | Unorthodox chess game (e.g. Chess960) |
 | `WEB_LINK` | Contains web links |
 
 ### Nation
@@ -542,10 +552,14 @@ Describes the type of rating (FIDE, national, etc.) and time control.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `name` | String | Rating system name (e.g., "FIDE", "USCF") |
-| `nation` | Nation | Nation for national ratings |
-| `isInternational` | boolean | True for international ratings |
-| `timeControl` | TournamentTimeControl | Time control for this rating |
+| `international()` | TournamentTimeControl | Time control for international rating (null if national) |
+| `national()` | TournamentTimeControl | Time control for national rating (null if international) |
+| `nation()` | Nation | Nation for national ratings |
+| `name()` | String | Rating system name (e.g., "FIDE", "ICCF") |
+| `isInternational()` | boolean | True if international rating |
+| `isNational()` | boolean | True if national rating |
+
+A rating type is either international or national (mutually exclusive). Use the factory methods `RatingType.international(timeControl)` or `RatingType.national(timeControl, nation)` to create instances.
 
 ### Tiebreak Rules
 

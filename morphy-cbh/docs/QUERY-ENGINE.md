@@ -157,15 +157,15 @@ An "index range scan" refers to reading an entity index in the default entity or
 Any type of scan is a "source operator" as it depends on no other operators. The only other source operator
 is Manual, used to pass in a static list of item id's.
 
-**`GameTableScan`, `PlayerTableScan`, `TournamentTableScan`**
-Scans all entities in the table in ID order and returns those matching an optional predicate.
+**`GameTableScan`, `EntityTableScan<T>`**
+Scans all items in the table in ID order and returns those matching an optional predicate. `EntityTableScan` is generic and handles all entity types (Player, Tournament, etc.).
 - Input: Start ID (optional)
 - Input: End ID (optional)
 - Input: A predicate (optional)
-- Output: A list of entities with full data in ID order
+- Output: A list of items with full data in ID order
 
-**`PlayerIndexRangeScan`, `TournamentIndexRangeScan`**
-Scans all entities in the index in the default order (see above) and returns those matching an optional predicate.
+**`EntityIndexRangeScan<T>`**
+Scans all entities in the index in the default order (see above) and returns those matching an optional predicate. Generic across all entity types.
 - Input: Start (optional)
 - Input: End (optional)
 - Input: A predicate (optional)
@@ -177,8 +177,8 @@ Reverse index lookup of which games an input stream of entities belong in.
 - Input: A stream of entities (only id required)
 - Output: A stream of game id's. If the input contains a single entity, it will be sorted and not include duplicates. Otherwise, the output is not sorted and may contain duplicates.
 
-**`TournamentIdsByGames`, `PlayerIdsByGames`**
-Maps a stream of games to the entity of the given type they contain references to.
+**`EntityIdsByGames<T>`**
+Maps a stream of games to the entity of the given type they contain references to. Generic across all entity types.
 - Input: A stream of games (with full data)
 - Output: A stream of entity id's; unsorted and may contain duplicates.
 
@@ -187,18 +187,28 @@ A custom source operator, enabling the user to pass in a specific entity as inpu
 - Input: A list of id's
 - Output: A stream of the same ID's, sorted
 
-**`GameLookup`, `PlayerLookup`, `TournamentLookup`**
-Looks up the full data of entities given an id, omitting entities that do not match an optional predicate.
-- Input: A stream of entities (typically only containing the id)
+**`GameLookup`, `EntityLookup<T>`**
+Looks up the full data of items given an id, omitting items that do not match an optional predicate. `EntityLookup` is generic across all entity types.
+- Input: A stream of items (typically only containing the id)
 - Input: A predicate (optional)
-- Output: A stream of entities with the same ID as the input, in the same order, but with full data. Entities not matching the predicate are omitted.
+- Output: A stream of items with the same ID as the input, in the same order, but with full data. Items not matching the predicate are omitted.
 
-**`GamePlayerFilter`, `GameTournamentFilter`**
-Filters a stream of games based on an _entity_ filter. In practice this is an inner loop join between the game and the entity.
-- Input: A stream of entities
+**`GameEntityLookup<T>`**
+Filters a stream of games based on an _entity_ filter. In practice this is an inner loop join between the game and the entity. Generic across entity types, with factory methods for specific join scenarios (e.g. `whitePlayer()`, `tournament()`).
+- Input: A stream of games
 - Input: An entity filter
 - Input: A join condition
-- Output: A stream of games, only matching those games where the player or tournament id matches.
+- Output: A stream of games, only matching those games where the entity id matches.
+
+**`GameMovesInfoLookup`**
+Loads the game model and derives notation and variation ply count for each game.
+- Input: A stream of games (with full data)
+- Output: A stream of games with supplementary `GameMovesInfo` data attached.
+
+**`TournamentExtraLookup`**
+Loads extra tournament data (from `.cbtt` file) for each tournament.
+- Input: A stream of tournaments
+- Output: A stream of tournaments with supplementary tournament extra data attached.
 
 **`Sort`, `Distinct`, `Limit`**
 These are separate operations but often applied together to sort, deduplicate and limit the number of items returned.

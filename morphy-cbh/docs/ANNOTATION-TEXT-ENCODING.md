@@ -609,30 +609,28 @@ time/moves
 
 **Format:**
 ```
-[%quote "White" "Black" "Event" "Site" YYYY.MM.DD result elo_w elo_b eco "moves"]
+[%quote field1="value1" field2="value2" ... moves="1. e4 e5 2. Nf3"]
 ```
 
-**Storage Data:**
-- `header`: GameHeaderModel with player names, event, site, date, result, elos, ECO
-- `gameData`: Optional encoded moves
+Uses key-value pairs where each field from `GameHeaderModel` is serialized as `key="value"`. Values are escaped strings. The `moves` field is optional and contains the main line in SAN notation.
 
-**Fields:**
-- Player names in quotes
-- Event and site in quotes
-- Date in PGN format: `YYYY.MM.DD`
-- Result: `1-0`, `0-1`, `1/2-1/2`, `*`
-- Elo ratings as integers (0 if unknown)
-- ECO code (e.g., `B90`)
-- Moves in SAN notation, space-separated, in quotes
+**Common fields:**
+- `White`, `Black` — Player names
+- `Event`, `EventSite` — Event and site
+- `Date` — Date in PGN format (`YYYY.MM.DD`)
+- `Result` — `1-0`, `0-1`, `1/2-1/2`, `*`
+- `WhiteElo`, `BlackElo` — Elo ratings
+- `ECO` — ECO code (e.g., `B90`)
+- `moves` — Moves in SAN notation, space-separated
 
 **Example:**
 ```
-{ [%quote "Carlsen, Magnus" "Nepomniachtchi, Ian" "World Championship" "Dubai" 2021.12.03 1-0 2856 2782 C88 "1.e4 e5 2.Nf3 Nc6 3.Bb5 a6"] }
+{ [%quote White="Carlsen, Magnus" Black="Nepomniachtchi, Ian" Event="World Championship" EventSite="Dubai" Date="2021.12.03" Result="1-0" WhiteElo="2856" BlackElo="2782" ECO="C88" moves="1. e4 e5 2. Nf3 Nc6 3. Bb5 a6"] }
 ```
 
-**Note:** For games without moves, omit the moves parameter:
+**Note:** For games without moves, omit the moves field:
 ```
-{ [%quote "Kasparov, Garry" "Karpov, Anatoly" "World Ch" "Moscow" 1985.09.03 1-0 2700 2720 E12] }
+{ [%quote White="Kasparov, Garry" Black="Karpov, Anatoly" Event="World Ch" EventSite="Moscow" Date="1985.09.03" Result="1-0" WhiteElo="2700" BlackElo="2720" ECO="E12"] }
 ```
 
 ---
