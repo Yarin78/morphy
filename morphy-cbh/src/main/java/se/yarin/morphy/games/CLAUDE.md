@@ -32,3 +32,10 @@ Move encoding/decoding for ChessBase binary format:
 ## Filters (filters/ sub-package)
 
 20+ game filters implementing `GameFilter` interface: `DateRangeFilter`, `EcoFilter`, `RatingRangeFilter`, `MovesRangeFilter`, `MedalFilter`, `ResultFilter`, etc.
+
+## Documentation
+
+- Game representation across layers: `morphy-cbh/docs/GAME-REPRESENTATION.md`
+- Annotation text encoding spec: `morphy-cbh/docs/ANNOTATION-TEXT-ENCODING.md`
+- Game header field reference: `morphy-cbh/docs/DATABASE-REFERENCE.md`
+- File format specs: `morphy-cbh/docs/cbh-format/games.md`, `moves.md`, `annotations.md`

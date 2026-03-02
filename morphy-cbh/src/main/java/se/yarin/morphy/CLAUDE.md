@@ -31,3 +31,9 @@ A database consists of multiple files with the same base name:
 - **Mandatory**: `.cbh` (headers), `.cbg` (moves), `.cba` (annotations), `.cbp` (players), `.cbt` (tournaments), `.cbc` (annotators), `.cbs` (sources)
 - **Optional**: `.cbj` (extended headers), `.cbtt` (tournament extra), `.cbe` (teams), `.cbl` (game tags), `.flags` (top games)
 - **Search boosters**: `.cbb`, `.cit`, `.cib`, `.cit2`, `.cib2`, `.cbgi`
+
+## Documentation
+
+- Detailed package docs: `morphy-cbh/docs/MORPHY-PACKAGE.md`
+- Library usage guide: `morphy-cbh/docs/USER-GUIDE.md`
+- Game header and entity field reference: `morphy-cbh/docs/DATABASE-REFERENCE.md`

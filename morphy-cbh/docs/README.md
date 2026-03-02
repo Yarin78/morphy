@@ -18,9 +18,9 @@ Morphy is a Java library for working with ChessBase databases (CBH format). It a
 
 Detailed documentation for each package:
 
-- **[`se.yarin.chess`](chess-package.md)**: Core chess functionality for representing positions, moves, and games. This package is independent of any database format and can be used as a standalone chess library.
+- **[`se.yarin.chess`](CHESS-PACKAGE.md)**: Core chess functionality for representing positions, moves, and games. This package is independent of any database format and can be used as a standalone chess library.
 
-- **[`se.yarin.morphy`](morphy-package.md)**: Modern API for working with ChessBase databases. Provides transaction-based, type-safe interfaces for reading and writing chess games and entities.
+- **[`se.yarin.morphy`](MORPHY-PACKAGE.md)**: Modern API for working with ChessBase databases. Provides transaction-based, type-safe interfaces for reading and writing chess games and entities.
 
 ### File Format Specification
 

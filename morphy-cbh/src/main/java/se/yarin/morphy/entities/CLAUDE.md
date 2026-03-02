@@ -33,3 +33,8 @@ All entities extend `Entity` (abstract, `@Value.Immutable`) with `id()`, `count(
 - `TournamentTitleFilter`, `TournamentPlaceFilter`, `TournamentDateFilter`, `TournamentTypeFilter`
 - `SourceTitleFilter`, `SourceQualityFilter`
 - `CombinedFilter` for composing multiple filters.
+
+## Documentation
+
+- Entity field reference: `morphy-cbh/docs/DATABASE-REFERENCE.md`
+- Entity index file format: `morphy-cbh/docs/cbh-format/entities.md`
