@@ -21,6 +21,7 @@ module se.yarin.morphy.cbh {
     exports se.yarin.morphy.games.moves;
     exports se.yarin.morphy.games.filters;
     exports se.yarin.morphy.games.annotations;
+    exports se.yarin.morphy.query;
     exports se.yarin.morphy.queries;
     exports se.yarin.morphy.queries.filter;
     exports se.yarin.morphy.queries.operations;
