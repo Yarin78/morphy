@@ -1,6 +1,5 @@
 package se.yarin.morphy.games.filters;
 
-import java.nio.ByteBuffer;
 import java.util.Objects;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -18,13 +17,8 @@ public class TopGameFilter implements ItemStorageFilter<GameHeader>, GameFilter 
   }
 
   @Override
-  public boolean matches(int id, @NotNull GameHeader gameHeader) {
-    return topGamesStorage.isTopGame(id) == expected;
-  }
-
-  @Override
-  public boolean matchesSerialized(int id, @NotNull ByteBuffer buf) {
-    return topGamesStorage.isTopGame(id) == expected;
+  public boolean matches(@NotNull GameHeader gameHeader) {
+    return topGamesStorage.isTopGame(gameHeader.id()) == expected;
   }
 
   @Override

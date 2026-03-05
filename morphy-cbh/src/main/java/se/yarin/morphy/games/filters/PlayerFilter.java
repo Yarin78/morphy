@@ -56,8 +56,8 @@ public class PlayerFilter extends IsGameFilter implements GameEntityFilter<Playe
   }
 
   @Override
-  public boolean matches(int id, @NotNull GameHeader gameHeader) {
-    if (!super.matches(id, gameHeader)) {
+  public boolean matches(@NotNull GameHeader gameHeader) {
+    if (!super.matches(gameHeader)) {
       return false;
     }
     return matchCondition.matches(
@@ -65,8 +65,8 @@ public class PlayerFilter extends IsGameFilter implements GameEntityFilter<Playe
   }
 
   @Override
-  public boolean matchesSerialized(int id, @NotNull ByteBuffer buf) {
-    if (!super.matchesSerialized(id, buf)) {
+  public boolean matchesSerialized(@NotNull ByteBuffer buf) {
+    if (!super.matchesSerialized(buf)) {
       return false;
     }
 

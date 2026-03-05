@@ -50,8 +50,8 @@ public class RatingRangeFilter extends IsGameFilter {
   }
 
   @Override
-  public boolean matches(int id, @NotNull GameHeader game) {
-    return super.matches(id, game) && matches(game.whiteElo(), game.blackElo());
+  public boolean matches(@NotNull GameHeader game) {
+    return super.matches(game) && matches(game.whiteElo(), game.blackElo());
   }
 
   private boolean matches(int whiteRating, int blackRating) {
@@ -85,8 +85,8 @@ public class RatingRangeFilter extends IsGameFilter {
   }
 
   @Override
-  public boolean matchesSerialized(int id, @NotNull ByteBuffer buf) {
-    if (!super.matchesSerialized(id, buf)) {
+  public boolean matchesSerialized(@NotNull ByteBuffer buf) {
+    if (!super.matchesSerialized(buf)) {
       return false;
     }
 

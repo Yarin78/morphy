@@ -197,9 +197,9 @@ public class FileItemStorage<THeader, TItem>
       if (filter == null) {
         result.add(serializer.deserializeItem(index + i, buf, this.header));
       } else {
-        if (filter.matchesSerialized(index + i, buf)) {
+        if (filter.matchesSerialized(buf)) {
           TItem item = serializer.deserializeItem(index + i, buf, this.header);
-          result.add(filter.matches(index + i, item) ? item : null);
+          result.add(filter.matches(item) ? item : null);
         } else {
           buf.position(buf.position() + serializedItemSize);
           result.add(null);
@@ -214,7 +214,7 @@ public class FileItemStorage<THeader, TItem>
     ArrayList<TItem> result = new ArrayList<>(count);
     for (int i = 0; i < count; i++) {
       TItem item = getItem(index + i);
-      result.add(filter == null || filter.matches(index + i, item) ? item : null);
+      result.add(filter == null || filter.matches(item) ? item : null);
     }
     return result;
   }

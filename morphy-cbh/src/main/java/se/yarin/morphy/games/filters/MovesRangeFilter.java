@@ -25,8 +25,8 @@ public class MovesRangeFilter extends IsGameFilter {
   }
 
   @Override
-  public boolean matches(int id, @NotNull GameHeader gameHeader) {
-    if (!super.matches(id, gameHeader)) return false;
+  public boolean matches(@NotNull GameHeader gameHeader) {
+    if (!super.matches(gameHeader)) return false;
     int moves = gameHeader.noMoves();
     // -1 means more than 255 moves; treat as 256 for comparison purposes
     if (moves == -1) moves = 256;
@@ -34,8 +34,8 @@ public class MovesRangeFilter extends IsGameFilter {
   }
 
   @Override
-  public boolean matchesSerialized(int id, @NotNull ByteBuffer buf) {
-    if (!super.matchesSerialized(id, buf)) return false;
+  public boolean matchesSerialized(@NotNull ByteBuffer buf) {
+    if (!super.matchesSerialized(buf)) return false;
     // noMoves is stored as unsigned byte at offset 45
     // A value of 0 in the serialized form when it's a game means 0 moves (or unknown)
     // The -1 case (>255 moves) is stored as 0 in the byte; the deserialized form uses -1

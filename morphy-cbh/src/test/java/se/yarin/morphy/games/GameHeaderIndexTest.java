@@ -1,6 +1,5 @@
 package se.yarin.morphy.games;
 
-import org.jetbrains.annotations.NotNull;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -8,12 +7,8 @@ import org.junit.rules.TemporaryFolder;
 import se.yarin.chess.GameResult;
 import se.yarin.morphy.DatabaseMode;
 import se.yarin.morphy.ResourceLoader;
-import se.yarin.morphy.storage.ItemStorageFilter;
-import se.yarin.util.ByteBufferUtil;
-
 import java.io.File;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -196,22 +191,7 @@ public class GameHeaderIndexTest {
         headerIndex.getRange(
             1,
             headerIndex.count() + 1,
-            new ItemStorageFilter<>() {
-              @Override
-              public boolean matches(int id, @NotNull GameHeader gameHeader) {
-                // Send everything through, we're testing the serialized filter here
-                return true;
-              }
-
-              @Override
-              public boolean matchesSerialized(int id, @NotNull ByteBuffer buf) {
-                int actualId =
-                    ByteBufferUtil.getUnsigned24BitB(
-                        buf.slice(buf.position() + 9, 3)); // id of white player offset
-                assertEquals(actualId, id);
-                return lookupIds.contains(id);
-              }
-            });
+            gameHeader -> lookupIds.contains(gameHeader.id()));
 
     assertEquals(headerIndex.count(), matchingHeaders.size());
 
@@ -235,7 +215,7 @@ public class GameHeaderIndexTest {
 
     List<GameHeader> matchingHeaders =
         headerIndex.getRange(
-            1, headerIndex.count() + 1, (id, gameHeader) -> lookupIds.contains(id));
+            1, headerIndex.count() + 1, gameHeader -> lookupIds.contains(gameHeader.id()));
 
     assertEquals(headerIndex.count(), matchingHeaders.size());
 

@@ -43,12 +43,12 @@ public class TournamentFilter
   }
 
   @Override
-  public boolean matches(int id, @NotNull GameHeader gameHeader) {
+  public boolean matches(@NotNull GameHeader gameHeader) {
     return tournamentIds.contains(gameHeader.tournamentId());
   }
 
   @Override
-  public boolean matchesSerialized(int id, @NotNull ByteBuffer buf) {
+  public boolean matchesSerialized(@NotNull ByteBuffer buf) {
     int tournamentId;
 
     if (IsGameFilter.isGame(buf)) {

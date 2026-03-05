@@ -41,7 +41,7 @@ public class GameFlagFilter implements ItemStorageFilter<GameHeader>, GameFilter
   }
 
   @Override
-  public boolean matches(int id, @NotNull GameHeader gameHeader) {
+  public boolean matches(@NotNull GameHeader gameHeader) {
     boolean value =
         switch (flag) {
           case SETUP_POSITION ->
@@ -67,7 +67,7 @@ public class GameFlagFilter implements ItemStorageFilter<GameHeader>, GameFilter
   }
 
   @Override
-  public boolean matchesSerialized(int id, @NotNull ByteBuffer buf) {
+  public boolean matchesSerialized(@NotNull ByteBuffer buf) {
     if (flag == Flag.DELETED) {
       boolean deleted = (ByteBufferUtil.getUnsignedByte(buf, 0) & 128) != 0;
       return deleted == expected;

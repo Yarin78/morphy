@@ -65,7 +65,7 @@ public class RoundFilter implements ItemStorageFilter<GameHeader>, GameFilter {
   }
 
   @Override
-  public boolean matches(int id, @NotNull GameHeader header) {
+  public boolean matches(@NotNull GameHeader header) {
     if (header.round() != this.round) {
       return false;
     }
@@ -87,7 +87,7 @@ public class RoundFilter implements ItemStorageFilter<GameHeader>, GameFilter {
   }
 
   @Override
-  public boolean matchesSerialized(int id, @NotNull ByteBuffer buf) {
+  public boolean matchesSerialized(@NotNull ByteBuffer buf) {
     int round, subRound;
 
     if (IsGameFilter.isGame(buf)) {

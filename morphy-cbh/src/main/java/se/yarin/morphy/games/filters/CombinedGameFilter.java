@@ -46,15 +46,15 @@ public class CombinedGameFilter implements GameFilter {
       combinedGameHeaderFilter =
           new ItemStorageFilter<>() {
             @Override
-            public boolean matches(int id, @NotNull GameHeader gameHeader) {
+            public boolean matches(@NotNull GameHeader gameHeader) {
               return gameHeaderFilters.stream()
-                  .allMatch(itemFilter -> itemFilter.matches(id, gameHeader));
+                  .allMatch(itemFilter -> itemFilter.matches(gameHeader));
             }
 
             @Override
-            public boolean matchesSerialized(int id, @NotNull ByteBuffer buf) {
+            public boolean matchesSerialized(@NotNull ByteBuffer buf) {
               return gameHeaderFilters.stream()
-                  .allMatch(itemFilter -> itemFilter.matchesSerialized(id, buf));
+                  .allMatch(itemFilter -> itemFilter.matchesSerialized(buf));
             }
           };
     } else {
@@ -65,15 +65,15 @@ public class CombinedGameFilter implements GameFilter {
       combinedExtendedGameHeaderFilter =
           new ItemStorageFilter<>() {
             @Override
-            public boolean matches(int id, @NotNull ExtendedGameHeader extendedGameHeader) {
+            public boolean matches(@NotNull ExtendedGameHeader extendedGameHeader) {
               return extendedGameHeaderFilters.stream()
-                  .allMatch(itemFilter -> itemFilter.matches(id, extendedGameHeader));
+                  .allMatch(itemFilter -> itemFilter.matches(extendedGameHeader));
             }
 
             @Override
-            public boolean matchesSerialized(int id, @NotNull ByteBuffer buf) {
+            public boolean matchesSerialized(@NotNull ByteBuffer buf) {
               return extendedGameHeaderFilters.stream()
-                  .allMatch(itemFilter -> itemFilter.matchesSerialized(id, buf));
+                  .allMatch(itemFilter -> itemFilter.matchesSerialized(buf));
             }
           };
     } else {

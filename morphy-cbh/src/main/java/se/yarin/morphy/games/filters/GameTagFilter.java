@@ -44,12 +44,12 @@ public class GameTagFilter
   }
 
   @Override
-  public boolean matches(int id, @NotNull ExtendedGameHeader extendedGameHeader) {
+  public boolean matches(@NotNull ExtendedGameHeader extendedGameHeader) {
     return gameTagIds.contains(extendedGameHeader.gameTagId());
   }
 
   @Override
-  public boolean matchesSerialized(int id, @NotNull ByteBuffer buf) {
+  public boolean matchesSerialized(@NotNull ByteBuffer buf) {
     return gameTagIds.contains(ByteBufferUtil.getIntB(buf, 116));
   }
 

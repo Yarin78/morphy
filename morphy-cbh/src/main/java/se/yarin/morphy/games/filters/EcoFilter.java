@@ -87,8 +87,8 @@ public class EcoFilter extends IsGameFilter {
   }
 
   @Override
-  public boolean matches(int id, @NotNull GameHeader header) {
-    if (!super.matches(id, header)) {
+  public boolean matches(@NotNull GameHeader header) {
+    if (!super.matches(header)) {
       return false;
     }
     Eco eco = header.eco();
@@ -100,8 +100,8 @@ public class EcoFilter extends IsGameFilter {
   }
 
   @Override
-  public boolean matchesSerialized(int id, @NotNull ByteBuffer buf) {
-    if (!super.matchesSerialized(id, buf)) {
+  public boolean matchesSerialized(@NotNull ByteBuffer buf) {
+    if (!super.matchesSerialized(buf)) {
       return false;
     }
     int ecoInt = ByteBufferUtil.getUnsignedShortB(buf, 35);

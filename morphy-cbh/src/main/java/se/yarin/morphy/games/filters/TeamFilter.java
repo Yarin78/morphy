@@ -64,7 +64,7 @@ public class TeamFilter
   }
 
   @Override
-  public boolean matches(int id, @NotNull ExtendedGameHeader extendedGameHeader) {
+  public boolean matches(@NotNull ExtendedGameHeader extendedGameHeader) {
     return matchCondition.matches(
         extendedGameHeader.whiteTeamId(),
         extendedGameHeader.blackTeamId(),
@@ -73,7 +73,7 @@ public class TeamFilter
   }
 
   @Override
-  public boolean matchesSerialized(int id, @NotNull ByteBuffer buf) {
+  public boolean matchesSerialized(@NotNull ByteBuffer buf) {
     int whiteTeamId = ByteBufferUtil.getIntB(buf, 0);
     int blackTeamId = ByteBufferUtil.getIntB(buf, 4);
 
