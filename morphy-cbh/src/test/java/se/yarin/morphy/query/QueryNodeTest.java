@@ -214,7 +214,7 @@ public class QueryNodeTest {
   @Test
   public void tableScanDataFilterReducesResults() {
     EcoFilter ecoFilter = new EcoFilter("C*");
-    var scan = TableScan.gameHeaders(db, gh -> ecoFilter.matches(0, gh));
+    var scan = TableScan.gameHeaders(db, ecoFilter::matches);
     List<QueryData<GameHeader>> results = scan.stream().toList();
     assertTrue(results.size() > 0);
     assertTrue(results.size() < db.count());
@@ -571,7 +571,7 @@ public class QueryNodeTest {
         false);
     SortField<String> nameSort =
         new SortField<>(
-            java.util.Comparator.comparing(qd -> qd.data()),
+            java.util.Comparator.comparing(QueryData::data),
             "name");
     SortOrder<String> byName = SortOrder.of(nameSort, SortOrder.Direction.ASCENDING);
     var sort = new Sort<>(source, byName);
@@ -716,8 +716,7 @@ public class QueryNodeTest {
       assertNotNull(gei);
 
       var gameIdsByProlificPlayers = new LoopJoin<>(
-          prolificPlayers,
-          qd -> qd.id(),
+          prolificPlayers, QueryData::id,
           playerId -> gei.stream(playerId, EntityType.PLAYER, false).map(QueryData::new),
           (outerRow, innerRow) -> new QueryData<>(innerRow.id(), outerRow.data()));
 
@@ -835,9 +834,9 @@ public class QueryNodeTest {
     EcoFilter ecoFilter = new EcoFilter("B*");
     var scan = TableScan.gameHeaders(db);
     var lookup = new Lookup<>(scan, id -> db.gameHeaderIndex().getGameHeader(id),
-        gh -> ecoFilter.matches(0, gh));
+        gh -> ecoFilter.matches(gh));
 
-    var filtered = TableScan.gameHeaders(db, gh -> ecoFilter.matches(0, gh));
+    var filtered = TableScan.gameHeaders(db, ecoFilter::matches);
 
     List<QueryData<GameHeader>> lookupResults = lookup.stream().toList();
     List<QueryData<GameHeader>> scanResults = filtered.stream().toList();
