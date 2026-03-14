@@ -8,24 +8,19 @@ import se.yarin.morphy.entities.Entity;
 import se.yarin.morphy.entities.EntityIndexReadTransaction;
 import se.yarin.morphy.entities.filters.EntityFilter;
 
-public class EntityIndexScan<T extends Entity & Comparable<T>> extends QueryNode<T> {
+public class EntityIdIndexScan<T extends Entity & Comparable<T>> extends QueryNode<T>
+    implements IndexScanNode<T, Integer> {
   private final @NotNull EntityIndexReadTransaction<T> txn;
-  private final @NotNull SortOrder<T> entitySortOrder;
   private final @Nullable EntityFilter<T> entityFilter;
   private final @Nullable DataFilter<T> postFilter;
-  private final boolean reverse;
 
-  public EntityIndexScan(
+  public EntityIdIndexScan(
       @NotNull EntityIndexReadTransaction<T> txn,
-      @NotNull SortOrder<T> entitySortOrder,
       @Nullable EntityFilter<T> entityFilter,
-      @Nullable DataFilter<T> postFilter,
-      boolean reverse) {
+      @Nullable DataFilter<T> postFilter) {
     this.txn = txn;
-    this.entitySortOrder = entitySortOrder;
     this.entityFilter = entityFilter;
     this.postFilter = postFilter;
-    this.reverse = reverse;
   }
 
   @Override
@@ -35,7 +30,7 @@ public class EntityIndexScan<T extends Entity & Comparable<T>> extends QueryNode
 
   @Override
   public @NotNull SortOrder<T> sortOrder() {
-    return entitySortOrder;
+    return SortOrder.byId();
   }
 
   @Override
@@ -48,15 +43,25 @@ public class EntityIndexScan<T extends Entity & Comparable<T>> extends QueryNode
     return streamRange(null, null);
   }
 
-  public @NotNull Stream<QueryData<T>> streamRange(@Nullable T rangeStart, @Nullable T rangeEnd) {
-    Stream<T> entityStream;
-    if (reverse) {
-      entityStream = txn.streamOrderedDescending(rangeStart, rangeEnd, entityFilter);
-    } else {
-      entityStream = txn.streamOrderedAscending(rangeStart, rangeEnd, entityFilter);
+  @Override
+  public @Nullable QueryData<T> getByKey(@NotNull Integer id) {
+    T entity = txn.get(id);
+    if (entityFilter != null && !entityFilter.matches(entity)) {
+      return null;
     }
+    QueryData<T> qd = new QueryData<>(entity.id(), entity);
+    if (postFilter != null && !postFilter.matches(entity)) {
+      return null;
+    }
+    return qd;
+  }
+
+  @Override
+  public @NotNull Stream<QueryData<T>> streamRange(
+      @Nullable Integer startId, @Nullable Integer endId) {
     Stream<QueryData<T>> result =
-        entityStream.map(entity -> new QueryData<>(entity.id(), entity));
+        txn.stream(startId, endId, entityFilter)
+            .map(entity -> new QueryData<>(entity.id(), entity));
     if (postFilter != null) {
       result =
           result.filter(
@@ -70,10 +75,9 @@ public class EntityIndexScan<T extends Entity & Comparable<T>> extends QueryNode
 
   @Override
   public String toString() {
-    return "EntityIndexScan["
-        + (reverse ? "desc" : "asc")
-        + (entityFilter != null ? ", entityFilter" : "")
-        + (postFilter != null ? ", postFilter" : "")
+    return "EntityIdIndexScan["
+        + (entityFilter != null ? "entityFilter" : "")
+        + (postFilter != null ? (entityFilter != null ? ", " : "") + "postFilter" : "")
         + "]";
   }
 }
