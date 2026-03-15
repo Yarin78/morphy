@@ -147,9 +147,8 @@ public class PlayerIndex extends EntityIndex<Player> {
 
   @Override
   protected @NotNull Player deserialize(
-      int entityId, int count, int firstGameId, byte[] serializedData) {
+      int entityId, int count, int firstGameId, @NotNull ByteBuffer buf) {
     itemMetricsRef().update(metrics -> metrics.addDeserialization(1));
-    ByteBuffer buf = ByteBuffer.wrap(serializedData);
     return ImmutablePlayer.builder()
         .id(entityId)
         .count(count)

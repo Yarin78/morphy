@@ -175,7 +175,10 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>> implements M
    */
   public byte[] getRaw(int id) {
     EntityNode node = storage.getItem(id);
-    return node.getSerializedEntity().clone();
+    ByteBuffer buf = node.getSerializedEntity();
+    byte[] bytes = new byte[buf.remaining()];
+    buf.get(bytes);
+    return bytes;
   }
 
   /**
@@ -279,7 +282,7 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>> implements M
   }
 
   protected abstract @NotNull T deserialize(
-      int entityId, int count, int firstGameId, byte[] serializedData);
+      int entityId, int count, int firstGameId, @NotNull ByteBuffer serializedData);
 
   protected abstract void serialize(T entity, @NotNull ByteBuffer buf);
 

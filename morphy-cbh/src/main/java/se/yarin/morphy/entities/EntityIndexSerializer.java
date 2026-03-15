@@ -115,8 +115,8 @@ public class EntityIndexSerializer implements ItemStorageSerializer<EntityIndexH
     ByteBufferUtil.putIntL(buf, node.getLeftChildId());
     ByteBufferUtil.putIntL(buf, node.getRightChildId());
     ByteBufferUtil.putByte(buf, node.getBalance());
-    byte[] serializedEntity = node.getSerializedEntity();
-    assert serializedEntity.length == recordSize - 8;
+    ByteBuffer serializedEntity = node.getSerializedEntity();
+    assert serializedEntity.remaining() == recordSize - 8;
     buf.put(serializedEntity);
     ByteBufferUtil.putIntL(buf, node.getGameCount());
     ByteBufferUtil.putIntL(buf, node.getFirstGameId());

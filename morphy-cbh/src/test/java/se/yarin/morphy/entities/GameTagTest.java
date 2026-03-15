@@ -77,7 +77,7 @@ public class GameTagTest {
     gameTagIndex.serialize(newGameTag, buf);
     buf.flip();
 
-    GameTag gameTag = gameTagIndex.deserialize(1, 2, 3, buf.array());
+    GameTag gameTag = gameTagIndex.deserialize(1, 2, 3, buf);
 
     assertEquals("eng", gameTag.englishTitle());
     assertEquals("ger", gameTag.germanTitle());

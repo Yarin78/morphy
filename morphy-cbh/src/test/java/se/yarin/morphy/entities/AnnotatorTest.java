@@ -62,7 +62,7 @@ public class AnnotatorTest {
     annotatorIndex.serialize(newAnnotator, buf);
     buf.flip();
 
-    Annotator annotator = annotatorIndex.deserialize(1, 2, 3, buf.array());
+    Annotator annotator = annotatorIndex.deserialize(1, 2, 3, buf);
 
     assertEquals("My annotator", annotator.name());
     assertEquals(2, annotator.count());

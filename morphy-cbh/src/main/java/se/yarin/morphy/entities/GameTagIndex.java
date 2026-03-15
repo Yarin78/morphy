@@ -95,9 +95,8 @@ public class GameTagIndex extends EntityIndex<GameTag> {
 
   @Override
   protected @NotNull GameTag deserialize(
-      int entityId, int count, int firstGameId, byte[] serializedData) {
+      int entityId, int count, int firstGameId, @NotNull ByteBuffer buf) {
     itemMetricsRef().update(metrics -> metrics.addDeserialization(1));
-    ByteBuffer buf = ByteBuffer.wrap(serializedData);
     return ImmutableGameTag.builder()
         .id(entityId)
         .count(count)

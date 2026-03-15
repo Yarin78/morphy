@@ -79,9 +79,8 @@ public class SourceIndex extends EntityIndex<Source> {
 
   @Override
   protected @NotNull Source deserialize(
-      int entityId, int count, int firstGameId, byte[] serializedData) {
+      int entityId, int count, int firstGameId, @NotNull ByteBuffer buf) {
     itemMetricsRef().update(metrics -> metrics.addDeserialization(1));
-    ByteBuffer buf = ByteBuffer.wrap(serializedData);
     return ImmutableSource.builder()
         .id(entityId)
         .count(count)

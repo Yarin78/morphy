@@ -1,5 +1,9 @@
 package se.yarin.morphy.entities;
 
+import org.jetbrains.annotations.NotNull;
+
+import java.nio.ByteBuffer;
+
 public class EntityNode {
 
   private int id;
@@ -13,6 +17,8 @@ public class EntityNode {
   private int gameCount;
 
   private int firstGameId;
+
+  private final byte @NotNull [] serializedEntity;
 
   public int getId() {
     return id;
@@ -42,7 +48,7 @@ public class EntityNode {
     return this.leftChildId == -999;
   }
 
-  public EntityNode(int id, int gameCount, int firstGameId, byte[] serializedEntity) {
+  public EntityNode(int id, int gameCount, int firstGameId, byte @NotNull [] serializedEntity) {
     this(id, -1, -1, 0, gameCount, firstGameId, serializedEntity);
   }
 
@@ -53,7 +59,7 @@ public class EntityNode {
       int balance,
       int gameCount,
       int firstGameId,
-      byte[] serializedEntity) {
+      byte @NotNull [] serializedEntity) {
     this.id = id;
     this.leftChildId = leftChildId;
     this.rightChildId = rightChildId;
@@ -74,9 +80,7 @@ public class EntityNode {
         serializedEntity);
   }
 
-  private final byte[] serializedEntity;
-
-  public byte[] getSerializedEntity() {
-    return serializedEntity;
+  public @NotNull ByteBuffer getSerializedEntity() {
+    return ByteBuffer.wrap(serializedEntity);
   }
 }

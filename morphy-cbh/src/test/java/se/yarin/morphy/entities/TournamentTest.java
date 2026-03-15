@@ -110,7 +110,7 @@ public class TournamentTest {
     tournamentIndex.serialize(newTournament, buf);
     buf.flip();
 
-    Tournament tournament = tournamentIndex.deserialize(1, 3, 100, buf.array());
+    Tournament tournament = tournamentIndex.deserialize(1, 3, 100, buf);
 
     assertEquals("My tournament", tournament.title());
     assertEquals(new Date(2016, 7, 10), tournament.date());

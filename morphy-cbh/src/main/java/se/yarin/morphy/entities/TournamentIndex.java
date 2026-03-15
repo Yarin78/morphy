@@ -160,9 +160,8 @@ public class TournamentIndex extends EntityIndex<Tournament> {
   }
 
   protected @NotNull Tournament deserialize(
-      int entityId, int count, int firstGameId, byte[] serializedData) {
+      int entityId, int count, int firstGameId, @NotNull ByteBuffer buf) {
     itemMetricsRef().update(metrics -> metrics.addDeserialization(1));
-    ByteBuffer buf = ByteBuffer.wrap(serializedData);
 
     ImmutableTournament.Builder builder =
         ImmutableTournament.builder()

@@ -72,8 +72,7 @@ public class FooEntityIndex extends EntityIndex<FooEntity> {
 
   @Override
   protected @NotNull FooEntity deserialize(
-      int entityId, int count, int firstGameId, byte[] serializedData) {
-    ByteBuffer buf = ByteBuffer.wrap(serializedData);
+      int entityId, int count, int firstGameId, @NotNull ByteBuffer buf) {
     return ImmutableFooEntity.builder()
         .id(entityId)
         .count(count)

@@ -9,8 +9,6 @@ import se.yarin.morphy.TransactionBase;
 import se.yarin.morphy.entities.filters.EntityFilter;
 import se.yarin.morphy.exceptions.MorphyInternalException;
 
-import java.nio.ByteBuffer;
-
 public abstract class EntityIndexTransaction<T extends Entity & Comparable<T>>
     extends TransactionBase {
   private static final Logger log = LoggerFactory.getLogger(EntityIndexTransaction.class);
@@ -54,7 +52,7 @@ public abstract class EntityIndexTransaction<T extends Entity & Comparable<T>>
     ensureTransactionIsOpen();
     EntityNode node = getNode(id);
 
-    if (filter != null && !filter.matchesSerialized(ByteBuffer.wrap(node.getSerializedEntity()))) {
+    if (filter != null && !filter.matchesSerialized(node.getSerializedEntity())) {
       return null;
     }
     return deserializeEntity(node);

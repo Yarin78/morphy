@@ -80,9 +80,8 @@ public class AnnotatorIndex extends EntityIndex<Annotator> {
 
   @Override
   protected @NotNull Annotator deserialize(
-      int entityId, int count, int firstGameId, byte[] serializedData) {
+      int entityId, int count, int firstGameId, @NotNull ByteBuffer buf) {
     itemMetricsRef().update(metrics -> metrics.addDeserialization(1));
-    ByteBuffer buf = ByteBuffer.wrap(serializedData);
     return ImmutableAnnotator.builder()
         .id(entityId)
         .count(count)

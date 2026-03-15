@@ -71,7 +71,7 @@ public class TeamTest {
     teamIndex.serialize(newTeam, buf);
     buf.flip();
 
-    Team team = teamIndex.deserialize(1, 2, 3, buf.array());
+    Team team = teamIndex.deserialize(1, 2, 3, buf);
 
     assertEquals("My team", team.title());
     assertEquals(7, team.teamNumber());

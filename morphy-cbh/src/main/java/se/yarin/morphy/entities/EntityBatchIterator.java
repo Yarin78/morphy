@@ -4,7 +4,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import se.yarin.morphy.entities.filters.EntityFilter;
 
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -53,7 +52,7 @@ public class EntityBatchIterator<T extends Entity & Comparable<T>> implements It
       while (batchPos < batch.size()) {
         EntityNode entityNode = batch.get(batchPos++);
         if (!entityNode.isDeleted()
-            && (filter == null || filter.matchesSerialized(ByteBuffer.wrap(entityNode.getSerializedEntity())))) {
+            && (filter == null || filter.matchesSerialized(entityNode.getSerializedEntity()))) {
           nextItem = transaction.index().resolveEntity(entityNode);
           if (filter == null || filter.matches(nextItem)) {
             return;

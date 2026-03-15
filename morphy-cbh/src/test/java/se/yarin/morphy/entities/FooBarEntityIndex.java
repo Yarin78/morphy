@@ -66,8 +66,7 @@ public class FooBarEntityIndex extends EntityIndex<FooBarEntity> {
 
   @Override
   protected @NotNull FooBarEntity deserialize(
-      int entityId, int count, int firstGameId, byte[] serializedData) {
-    ByteBuffer buf = ByteBuffer.wrap(serializedData);
+      int entityId, int count, int firstGameId, @NotNull ByteBuffer buf) {
     return ImmutableFooBarEntity.builder()
         .id(entityId)
         .key(ByteBufferUtil.getFixedSizeByteString(buf, 20))

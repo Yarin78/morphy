@@ -72,7 +72,7 @@ public class SourceTest {
     sourceIndex.serialize(newSource, buf);
     buf.flip();
 
-    Source source = sourceIndex.deserialize(1, 2, 3, buf.array());
+    Source source = sourceIndex.deserialize(1, 2, 3, buf);
 
     assertEquals("My source", source.title());
     assertEquals("my publisher", source.publisher());
