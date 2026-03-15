@@ -7,23 +7,24 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import se.yarin.morphy.Database;
+import se.yarin.morphy.DatabaseReadTransaction;
 import se.yarin.morphy.entities.Entity;
-import se.yarin.morphy.entities.EntityIndex;
+import se.yarin.morphy.entities.EntityIndexReadTransaction;
 import se.yarin.morphy.games.GameHeader;
 import se.yarin.morphy.games.GameHeaderIndex;
+import se.yarin.morphy.storage.ItemStorageFilter;
 
 public class TableScan<T> extends QueryNode<T> {
   private final @NotNull IntFunction<@Nullable T> fetcher;
   private final int startId; // inclusive
   private final int endId; // exclusive
-  private final @Nullable DataFilter<T> filter;
+  private final @Nullable ItemStorageFilter<T> filter;
 
   public TableScan(
       @NotNull IntFunction<@Nullable T> fetcher,
       int startId,
       int endId,
-      @Nullable DataFilter<T> filter) {
+      @Nullable ItemStorageFilter<T> filter) {
     if (startId < 0 || endId < startId) {
       throw new IllegalArgumentException(
           "Invalid range: startId=" + startId + ", endId=" + endId);
@@ -74,29 +75,32 @@ public class TableScan<T> extends QueryNode<T> {
             });
   }
 
-  public static TableScan<GameHeader> gameHeaders(@NotNull Database db) {
-    return gameHeaders(db, null);
+  public static TableScan<GameHeader> gameHeaders(@NotNull DatabaseReadTransaction txn) {
+    return gameHeaders(txn, null);
   }
 
   public static TableScan<GameHeader> gameHeaders(
-      @NotNull Database db, @Nullable DataFilter<GameHeader> filter) {
-    GameHeaderIndex index = db.gameHeaderIndex();
+      @NotNull DatabaseReadTransaction txn, @Nullable ItemStorageFilter<GameHeader> filter) {
+    GameHeaderIndex index = txn.database().gameHeaderIndex();
     return new TableScan<>(index::getGameHeader, 1, index.count() + 1, filter);
   }
 
   public static TableScan<GameHeader> gameHeaders(
-      @NotNull Database db, int startId, int endId, @Nullable DataFilter<GameHeader> filter) {
-    return new TableScan<>(db.gameHeaderIndex()::getGameHeader, startId, endId, filter);
+      @NotNull DatabaseReadTransaction txn,
+      int startId,
+      int endId,
+      @Nullable ItemStorageFilter<GameHeader> filter) {
+    return new TableScan<>(txn.database().gameHeaderIndex()::getGameHeader, startId, endId, filter);
   }
 
   public static <T extends Entity & Comparable<T>> TableScan<T> entities(
-      @NotNull EntityIndex<T> index) {
-    return entities(index, null);
+      @NotNull EntityIndexReadTransaction<T> txn) {
+    return entities(txn, null);
   }
 
   public static <T extends Entity & Comparable<T>> TableScan<T> entities(
-      @NotNull EntityIndex<T> index, @Nullable DataFilter<T> filter) {
-    return new TableScan<>(index::get, 0, index.count(), filter);
+      @NotNull EntityIndexReadTransaction<T> txn, @Nullable ItemStorageFilter<T> filter) {
+    return new TableScan<>(txn::get, 0, txn.index().count(), filter);
   }
 
   @Override

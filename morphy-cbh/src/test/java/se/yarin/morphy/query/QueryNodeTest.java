@@ -4,31 +4,40 @@ import static org.junit.Assert.*;
 
 import java.util.List;
 import java.util.stream.Stream;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import se.yarin.morphy.Database;
 import se.yarin.morphy.DatabaseReadTransaction;
 import se.yarin.morphy.ResourceLoader;
-import se.yarin.morphy.boosters.GameEntityIndex;
 import se.yarin.morphy.entities.EntityType;
 import se.yarin.morphy.entities.Player;
+import se.yarin.morphy.entities.TournamentExtra;
+import se.yarin.morphy.games.ExtendedGameHeader;
 import se.yarin.morphy.games.GameHeader;
 import se.yarin.morphy.games.filters.EcoFilter;
 
 public class QueryNodeTest {
 
   private Database db;
+  private DatabaseReadTransaction txn;
 
   @Before
   public void setup() {
     db = ResourceLoader.openWorldChDatabase();
+    txn = new DatabaseReadTransaction(db);
+  }
+
+  @After
+  public void teardown() {
+    txn.close();
   }
 
   // --- TableScan tests ---
 
   @Test
   public void tableScanStreamsAllGames() {
-    var scan = TableScan.gameHeaders(db);
+    var scan = TableScan.gameHeaders(txn);
     List<QueryData<GameHeader>> results = scan.stream().toList();
     assertEquals(db.count(), results.size());
     assertEquals(1, results.get(0).id());
@@ -39,7 +48,7 @@ public class QueryNodeTest {
   @Test
   public void tableScanWithFilter() {
     // Game 10 is Steinitz from 1886, so white elo should be 0 (no ratings back then)
-    var scan = TableScan.gameHeaders(db, gh -> gh.whiteElo() > 0);
+    var scan = TableScan.gameHeaders(txn, gh -> gh.whiteElo() > 0);
     List<QueryData<GameHeader>> results = scan.stream().toList();
     assertTrue(results.size() > 0);
     assertTrue(results.size() < db.count());
@@ -50,7 +59,7 @@ public class QueryNodeTest {
 
   @Test
   public void tableScanSortOrderIsByIdAscending() {
-    var scan = TableScan.gameHeaders(db);
+    var scan = TableScan.gameHeaders(txn);
     assertFalse(scan.sortOrder().isNone());
     assertTrue(scan.sortOrder().isSameOrStronger(SortOrder.byId()));
     assertFalse(scan.mayContainDuplicates());
@@ -58,13 +67,13 @@ public class QueryNodeTest {
 
   @Test
   public void tableScanEmptyRange() {
-    var scan = TableScan.gameHeaders(db, 3, 3, null);
+    var scan = TableScan.gameHeaders(txn, 3, 3, null);
     assertEquals(0, scan.stream().toList().size());
   }
 
   @Test
   public void tableScanEntities() {
-    var scan = TableScan.entities(db.playerIndex());
+    var scan = TableScan.entities(txn.playerTransaction());
     List<QueryData<Player>> results = scan.stream().toList();
     assertEquals(db.playerIndex().count(), results.size());
     assertNotNull(results.get(0).data());
@@ -72,7 +81,7 @@ public class QueryNodeTest {
 
   @Test
   public void tableScanEntitiesWithFilter() {
-    var scan = TableScan.entities(db.playerIndex(), p -> p.count() >= 10);
+    var scan = TableScan.entities(txn.playerTransaction(), p -> p.count() >= 10);
     List<QueryData<Player>> results = scan.stream().toList();
     assertTrue(results.size() >= 1);
     for (var qd : results) {
@@ -84,63 +93,54 @@ public class QueryNodeTest {
 
   @Test
   public void entityIndexScanStreamsPlayers() {
-    try (var txn = new DatabaseReadTransaction(db)) {
-      var playerTxn = txn.playerTransaction();
-      var scan =
-          new EntityIndexScan<>(
-              playerTxn,
-              SortOrder.none(),
-              null,
-              null,
-              false);
-      List<QueryData<Player>> results = scan.stream().toList();
-      assertEquals(db.playerIndex().count(), results.size());
-      assertNotNull(results.get(0).data());
-    }
+    var scan =
+        new EntityIndexScan<>(
+            txn.playerTransaction(),
+            SortOrder.none(),
+            null,
+            null,
+            false);
+    List<QueryData<Player>> results = scan.stream().toList();
+    assertEquals(db.playerIndex().count(), results.size());
+    assertNotNull(results.get(0).data());
   }
 
   @Test
   public void entityIndexScanWithRange() {
-    try (var txn = new DatabaseReadTransaction(db)) {
-      var playerTxn = txn.playerTransaction();
-      // Use a range that covers A-K in the player index
-      Player start = Player.ofFullName("A");
-      Player end = Player.ofFullName("K");
-      var scan =
-          new EntityIndexScan<>(
-              playerTxn,
-              SortOrder.none(),
-              null,
-              null,
-              false);
-      List<QueryData<Player>> results = scan.streamRange(start, end).toList();
-      assertTrue(results.size() >= 1);
-      // All results should be within range according to entity comparison
-      int totalPlayers = db.playerIndex().count();
-      assertTrue(results.size() < totalPlayers);
-      for (var qd : results) {
-        assertNotNull(qd.data());
-      }
+    // Use a range that covers A-K in the player index
+    Player start = Player.ofFullName("A");
+    Player end = Player.ofFullName("K");
+    var scan =
+        new EntityIndexScan<>(
+            txn.playerTransaction(),
+            SortOrder.none(),
+            null,
+            null,
+            false);
+    List<QueryData<Player>> results = scan.streamRange(start, end).toList();
+    assertTrue(results.size() >= 1);
+    // All results should be within range according to entity comparison
+    int totalPlayers = db.playerIndex().count();
+    assertTrue(results.size() < totalPlayers);
+    for (var qd : results) {
+      assertNotNull(qd.data());
     }
   }
 
   @Test
   public void entityIndexScanWithPostFilter() {
-    try (var txn = new DatabaseReadTransaction(db)) {
-      var playerTxn = txn.playerTransaction();
-      var scan =
-          new EntityIndexScan<>(
-              playerTxn,
-              SortOrder.none(),
-              null,
-              player -> player.count() >= 50,
-              false);
-      List<QueryData<Player>> results = scan.stream().toList();
-      assertTrue(results.size() >= 1);
-      for (var qd : results) {
-        assertNotNull(qd.data());
-        assertTrue(qd.data().count() >= 50);
-      }
+    var scan =
+        new EntityIndexScan<>(
+            txn.playerTransaction(),
+            SortOrder.none(),
+            null,
+            player -> player.count() >= 50,
+            false);
+    List<QueryData<Player>> results = scan.stream().toList();
+    assertTrue(results.size() >= 1);
+    for (var qd : results) {
+      assertNotNull(qd.data());
+      assertTrue(qd.data().count() >= 50);
     }
   }
 
@@ -148,13 +148,11 @@ public class QueryNodeTest {
 
   @Test
   public void gameEntityIndexScanSingleEntity() {
-    GameEntityIndex gei = db.gameEntityIndex(EntityType.PLAYER);
-    assertNotNull(gei);
     // Player 10 is a known player in the World-ch database
     Player player = db.getPlayer(10);
     assertNotNull(player);
 
-    var scan = new GameEntityIndexScan(gei, EntityType.PLAYER);
+    var scan = new GameEntityIndexScan(txn, EntityType.PLAYER);
 
     List<QueryData<Void>> results =
         scan.streamRange(player.id(), player.id() + 1).toList();
@@ -166,7 +164,7 @@ public class QueryNodeTest {
   @Test
   public void tableScanDataFilterReducesResults() {
     EcoFilter ecoFilter = new EcoFilter("C*");
-    var scan = TableScan.gameHeaders(db, ecoFilter::matches);
+    var scan = TableScan.gameHeaders(txn, ecoFilter::matches);
     List<QueryData<GameHeader>> results = scan.stream().toList();
     assertTrue(results.size() > 0);
     assertTrue(results.size() < db.count());
@@ -180,7 +178,7 @@ public class QueryNodeTest {
 
   @Test
   public void sortReordersStream() {
-    var scan = TableScan.gameHeaders(db);
+    var scan = TableScan.gameHeaders(txn);
     SortField<GameHeader> descId =
         new SortField<>(
             java.util.Comparator.comparingInt(QueryData::id),
@@ -238,7 +236,7 @@ public class QueryNodeTest {
 
   @Test
   public void limitTruncatesStream() {
-    var scan = TableScan.gameHeaders(db);
+    var scan = TableScan.gameHeaders(txn);
     var limit = new Limit<>(scan, 3);
     List<QueryData<GameHeader>> results = limit.stream().toList();
     assertEquals(3, results.size());
@@ -247,7 +245,7 @@ public class QueryNodeTest {
 
   @Test(expected = IllegalArgumentException.class)
   public void limitRejectsZero() {
-    var scan = TableScan.gameHeaders(db);
+    var scan = TableScan.gameHeaders(txn);
     new Limit<>(scan, 0);
   }
 
@@ -334,7 +332,7 @@ public class QueryNodeTest {
 
   @Test
   public void debugStringShowsTree() {
-    var scan = TableScan.gameHeaders(db);
+    var scan = TableScan.gameHeaders(txn);
     var sort = new Sort<>(scan, SortOrder.byId());
     var limit = new Limit<>(sort, 10);
 
@@ -372,7 +370,7 @@ public class QueryNodeTest {
   @Test
   public void tableScanFilterLimitIntegration() {
     // Scan from game 3 onwards, limit to 2
-    var scan = TableScan.gameHeaders(db, 3, db.count() + 1, null);
+    var scan = TableScan.gameHeaders(txn, 3, db.count() + 1, null);
     var limit = new Limit<>(scan, 2);
 
     List<QueryData<GameHeader>> results = limit.stream().toList();
@@ -386,11 +384,9 @@ public class QueryNodeTest {
   @Test
   public void gamesBySinglePlayerViaEntityIndex() {
     // Find all games by player 10 using entity index scan + lookup
-    GameEntityIndex gei = db.gameEntityIndex(EntityType.PLAYER);
-    assertNotNull(gei);
     Player player = db.getPlayer(10);
 
-    var scan = new GameEntityIndexScan(gei, EntityType.PLAYER);
+    var scan = new GameEntityIndexScan(txn, EntityType.PLAYER);
 
     List<QueryData<Void>> gameIds =
         scan.streamRange(player.id(), player.id() + 1).toList();
@@ -406,12 +402,10 @@ public class QueryNodeTest {
   @Test
   public void gamesByMultiplePlayersViaSortAndDistinct() {
     // Find all games by player 10 or player 11, union via sort + distinct + lookup
-    GameEntityIndex gei = db.gameEntityIndex(EntityType.PLAYER);
-    assertNotNull(gei);
     Player player10 = db.getPlayer(10);
     Player player11 = db.getPlayer(11);
 
-    var scan = new GameEntityIndexScan(gei, EntityType.PLAYER);
+    var scan = new GameEntityIndexScan(txn, EntityType.PLAYER);
 
     List<QueryData<Void>> combined = Stream.concat(
         scan.streamRange(player10.id(), player10.id() + 1),
@@ -433,10 +427,253 @@ public class QueryNodeTest {
     }
   }
 
+  // --- GameHeaderIdIndexScan tests ---
+
+  @Test
+  public void gameHeaderIdIndexScanStreamsAll() {
+    var scan = new GameHeaderIdIndexScan(txn);
+    List<QueryData<GameHeader>> results = scan.stream().toList();
+    assertEquals(db.count(), results.size());
+    assertEquals(1, results.get(0).id());
+    assertNotNull(results.get(0).data());
+    assertTrue(scan.sortOrder().isSameOrStronger(SortOrder.byId()));
+    assertFalse(scan.mayContainDuplicates());
+  }
+
+  @Test
+  public void gameHeaderIdIndexScanGetByKey() {
+    var scan = new GameHeaderIdIndexScan(txn);
+    QueryData<GameHeader> result = scan.getByKey(1);
+    assertNotNull(result);
+    assertEquals(1, result.id());
+    assertNotNull(result.data());
+  }
+
+  @Test
+  public void gameHeaderIdIndexScanGetByKeyOutOfRange() {
+    var scan = new GameHeaderIdIndexScan(txn);
+    assertNull(scan.getByKey(0));
+    assertNull(scan.getByKey(db.count() + 1));
+  }
+
+  @Test
+  public void gameHeaderIdIndexScanWithFilter() {
+    var scan = new GameHeaderIdIndexScan(txn, gh -> gh.whiteElo() > 0);
+    List<QueryData<GameHeader>> results = scan.stream().toList();
+    assertTrue(results.size() > 0);
+    assertTrue(results.size() < db.count());
+    for (var qd : results) {
+      assertTrue(qd.data().whiteElo() > 0);
+    }
+  }
+
+  @Test
+  public void gameHeaderIdIndexScanGetByKeyWithFilter() {
+    // Game 10 is from 1886, no ratings
+    var scan = new GameHeaderIdIndexScan(txn, gh -> gh.whiteElo() > 0);
+    assertNull(scan.getByKey(10));
+  }
+
+  @Test
+  public void gameHeaderIdIndexScanStreamRange() {
+    var scan = new GameHeaderIdIndexScan(txn);
+    List<QueryData<GameHeader>> results = scan.streamRange(3, 6).toList();
+    assertEquals(3, results.size());
+    assertEquals(3, results.get(0).id());
+    assertEquals(5, results.get(2).id());
+  }
+
+  // --- ExtendedGameHeaderIdIndexScan tests ---
+
+  @Test
+  public void extendedGameHeaderIdIndexScanStreamsAll() {
+    var scan = new ExtendedGameHeaderIdIndexScan(txn);
+    List<QueryData<ExtendedGameHeader>> results = scan.stream().toList();
+    assertTrue(results.size() > 0);
+    assertEquals(1, results.get(0).id());
+    assertNotNull(results.get(0).data());
+    assertTrue(scan.sortOrder().isSameOrStronger(SortOrder.byId()));
+  }
+
+  @Test
+  public void extendedGameHeaderIdIndexScanGetByKey() {
+    var scan = new ExtendedGameHeaderIdIndexScan(txn);
+    QueryData<ExtendedGameHeader> result = scan.getByKey(1);
+    assertNotNull(result);
+    assertEquals(1, result.id());
+    assertNotNull(result.data());
+  }
+
+  @Test
+  public void extendedGameHeaderIdIndexScanGetByKeyOutOfRange() {
+    var scan = new ExtendedGameHeaderIdIndexScan(txn);
+    assertNull(scan.getByKey(0));
+  }
+
+  // --- TournamentExtraIndexScan tests ---
+
+  @Test
+  public void tournamentExtraIndexScanStreamsAll() {
+    var scan = new TournamentExtraIndexScan(txn);
+    List<QueryData<TournamentExtra>> results = scan.stream().toList();
+    assertTrue(results.size() >= 0); // may be empty for some test databases
+    assertTrue(scan.sortOrder().isSameOrStronger(SortOrder.byId()));
+    assertFalse(scan.mayContainDuplicates());
+  }
+
+  @Test
+  public void tournamentExtraIndexScanGetByKey() {
+    var scan = new TournamentExtraIndexScan(txn);
+    // Should always return a result (TournamentExtraStorage returns empty for missing entries)
+    QueryData<TournamentExtra> result = scan.getByKey(0);
+    assertNotNull(result);
+    assertEquals(0, result.id());
+    assertNotNull(result.data());
+  }
+
+  // --- MapNode tests ---
+
+  @Test
+  public void mapNodeTransformsData() {
+    var source = ManualQueryNode.verified(
+        List.of(
+            new QueryData<>(1, "hello"),
+            new QueryData<>(2, "world")),
+        SortOrder.byId(),
+        false);
+    var map = new MapNode<>(source, qd -> new QueryData<>(qd.id(), qd.data().length()), false);
+    List<QueryData<Integer>> results = map.stream().toList();
+    assertEquals(2, results.size());
+    assertEquals(Integer.valueOf(5), results.get(0).data());
+    assertEquals(Integer.valueOf(5), results.get(1).data());
+  }
+
+  @Test
+  public void mapNodePreservesSortOrderWhenFlagSet() {
+    var source = ManualQueryNode.verified(
+        List.of(
+            new QueryData<>(1, "a"),
+            new QueryData<>(2, "b")),
+        SortOrder.byId(),
+        false);
+    var preserving = new MapNode<>(source, qd -> qd.withData(qd.data().toUpperCase()), true);
+    assertTrue(preserving.sortOrder().isSameOrStronger(SortOrder.byId()));
+
+    var notPreserving = new MapNode<>(source, qd -> new QueryData<>(qd.id(), qd.data().length()), false);
+    assertTrue(notPreserving.sortOrder().isNone());
+  }
+
+  @Test
+  public void mapNodePropagatesDuplicates() {
+    var sourceWithDups = ManualQueryNode.verified(
+        List.of(
+            new QueryData<>(1, "a"),
+            new QueryData<>(1, "a"),
+            new QueryData<>(2, "b")),
+        SortOrder.byId(),
+        true);
+    var map = new MapNode<>(sourceWithDups, qd -> qd.withData(qd.data().toUpperCase()), true);
+    assertTrue(map.mayContainDuplicates());
+  }
+
+  @Test
+  public void mapNodeDebugString() {
+    var source = ManualQueryNode.verified(List.of(), SortOrder.none(), false);
+    var map = new MapNode<>(source, qd -> qd, true);
+    String debug = map.debugString();
+    assertTrue(debug.contains("Map["));
+    assertTrue(debug.contains("Manual["));
+  }
+
+  // --- FilterNode tests ---
+
+  @Test
+  public void filterNodeFiltersData() {
+    var source = ManualQueryNode.verified(
+        List.of(
+            new QueryData<>(1, 10),
+            new QueryData<>(2, 20),
+            new QueryData<>(3, 5),
+            new QueryData<>(4, 30)),
+        SortOrder.byId(),
+        false);
+    var filter = new FilterNode<>(source, qd -> qd.data() > 10);
+    List<QueryData<Integer>> results = filter.stream().toList();
+    assertEquals(2, results.size());
+    assertEquals(2, results.get(0).id());
+    assertEquals(4, results.get(1).id());
+  }
+
+  @Test
+  public void filterNodePreservesSortOrder() {
+    var source = ManualQueryNode.verified(
+        List.of(
+            new QueryData<>(1, "a"),
+            new QueryData<>(2, "b")),
+        SortOrder.byId(),
+        false);
+    var filter = new FilterNode<>(source, qd -> true);
+    assertTrue(filter.sortOrder().isSameOrStronger(SortOrder.byId()));
+    assertFalse(filter.mayContainDuplicates());
+  }
+
+  @Test
+  public void filterNodePreservesDuplicateFlag() {
+    var source = ManualQueryNode.verified(
+        List.of(
+            new QueryData<>(1, "a"),
+            new QueryData<>(1, "a")),
+        SortOrder.byId(),
+        true);
+    var filter = new FilterNode<>(source, qd -> true);
+    assertTrue(filter.mayContainDuplicates());
+  }
+
+  @Test
+  public void filterNodeDebugString() {
+    var source = ManualQueryNode.verified(List.of(), SortOrder.none(), false);
+    var filter = new FilterNode<>(source, qd -> true);
+    String debug = filter.debugString();
+    assertTrue(debug.contains("Filter"));
+    assertTrue(debug.contains("Manual["));
+  }
+
+  @Test
+  public void filterNodeEmptyResult() {
+    var source = ManualQueryNode.verified(
+        List.of(
+            new QueryData<>(1, "a"),
+            new QueryData<>(2, "b")),
+        SortOrder.byId(),
+        false);
+    var filter = new FilterNode<>(source, qd -> false);
+    assertEquals(0, filter.stream().toList().size());
+  }
+
+  // --- Integration: MapNode + FilterNode composition ---
+
+  @Test
+  public void mapThenFilterComposition() {
+    var source = ManualQueryNode.verified(
+        List.of(
+            new QueryData<>(1, "hello"),
+            new QueryData<>(2, "hi"),
+            new QueryData<>(3, "greetings")),
+        SortOrder.byId(),
+        false);
+    // Map strings to their lengths, then filter for length > 3
+    var map = new MapNode<>(source, qd -> new QueryData<>(qd.id(), qd.data().length()), false);
+    var filter = new FilterNode<>(map, qd -> qd.data() > 3);
+    List<QueryData<Integer>> results = filter.stream().toList();
+    assertEquals(2, results.size());
+    assertEquals(1, results.get(0).id()); // "hello" = 5
+    assertEquals(3, results.get(1).id()); // "greetings" = 9
+  }
+
   @Test
   public void sortFilterLimitTopNQuery() {
     // Top 5 games by id descending - "latest N games" query
-    var scan = TableScan.gameHeaders(db);
+    var scan = TableScan.gameHeaders(txn);
     SortField<GameHeader> descId =
         new SortField<>(
             java.util.Comparator.comparingInt(QueryData::id),

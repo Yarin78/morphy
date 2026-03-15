@@ -5,6 +5,7 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import se.yarin.morphy.DatabaseReadTransaction;
 import se.yarin.morphy.boosters.GameEntityIndex;
 import se.yarin.morphy.entities.EntityType;
 
@@ -13,8 +14,8 @@ public class GameEntityIndexScan extends QueryNode<Void> {
   private final @NotNull EntityType entityType;
 
   public GameEntityIndexScan(
-      @NotNull GameEntityIndex gameEntityIndex, @NotNull EntityType entityType) {
-    this.gameEntityIndex = gameEntityIndex;
+      @NotNull DatabaseReadTransaction txn, @NotNull EntityType entityType) {
+    this.gameEntityIndex = txn.database().gameEntityIndex(entityType);
     this.entityType = entityType;
   }
 

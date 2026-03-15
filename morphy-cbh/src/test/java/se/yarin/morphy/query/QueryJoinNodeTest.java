@@ -4,6 +4,7 @@ import static org.junit.Assert.*;
 
 import java.util.List;
 import java.util.stream.Stream;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import se.yarin.morphy.Database;
@@ -18,10 +19,17 @@ import se.yarin.morphy.games.GameHeader;
 public class QueryJoinNodeTest {
 
   private Database db;
+  private DatabaseReadTransaction txn;
 
   @Before
   public void setup() {
     db = ResourceLoader.openWorldChDatabase();
+    txn = new DatabaseReadTransaction(db);
+  }
+
+  @After
+  public void teardown() {
+    txn.close();
   }
 
   // --- MergeJoin tests ---
@@ -540,8 +548,8 @@ public class QueryJoinNodeTest {
   @Test
   public void mergeJoinWithTableScansIntegration() {
     // Two scans with different ranges that overlap on games 20-29
-    var left = TableScan.gameHeaders(db, 10, 30, null);
-    var right = TableScan.gameHeaders(db, 20, 40, null);
+    var left = TableScan.gameHeaders(txn, 10, 30, null);
+    var right = TableScan.gameHeaders(txn, 20, 40, null);
     var join = MergeJoin.inner(left, right);
 
     List<QueryData<GameHeader>> results = join.stream().toList();
@@ -553,16 +561,11 @@ public class QueryJoinNodeTest {
   @Test
   public void gamesByPlayerAndTournamentViaMergeJoin() {
     // Find games where player 10 played in tournament 0
-    GameEntityIndex playerGei = db.gameEntityIndex(EntityType.PLAYER);
-    GameEntityIndex tournamentGei = db.gameEntityIndex(EntityType.TOURNAMENT);
-    assertNotNull(playerGei);
-    assertNotNull(tournamentGei);
-
     Player player = db.getPlayer(10);
     Tournament tournament = db.tournamentIndex().get(0);
 
-    var playerScan = new GameEntityIndexScan(playerGei, EntityType.PLAYER);
-    var tournamentScan = new GameEntityIndexScan(tournamentGei, EntityType.TOURNAMENT);
+    var playerScan = new GameEntityIndexScan(txn, EntityType.PLAYER);
+    var tournamentScan = new GameEntityIndexScan(txn, EntityType.TOURNAMENT);
 
     var gamesByPlayer = ManualQueryNode.verified(
         playerScan.streamRange(player.id(), player.id() + 1).toList(),
@@ -587,92 +590,84 @@ public class QueryJoinNodeTest {
   @Test
   public void gameScanWithFilterAndEntityLookupViaHashJoin() {
     // Find all games, then hash-join with game IDs of prolific players (>= 50 games)
-    try (var txn = new DatabaseReadTransaction(db)) {
-      var gameScan = TableScan.gameHeaders(db);
+    var gameScan = TableScan.gameHeaders(txn);
 
-      var playerTxn = txn.playerTransaction();
-      var prolificPlayers =
-          new EntityIndexScan<>(
-              playerTxn, SortOrder.none(), null,
-              player -> player.count() >= 50,
-              false);
+    var prolificPlayers =
+        new EntityIndexScan<>(
+            txn.playerTransaction(), SortOrder.none(), null,
+            player -> player.count() >= 50,
+            false);
 
-      GameEntityIndex gei = db.gameEntityIndex(EntityType.PLAYER);
-      assertNotNull(gei);
+    GameEntityIndex gei = db.gameEntityIndex(EntityType.PLAYER);
+    assertNotNull(gei);
 
-      // Collect game IDs for prolific players via flatMap on the entity index
-      var gameIdsByProlificPlayers = ManualQueryNode.<Void>verified(
-          prolificPlayers.stream()
-              .flatMap(qd ->
-                  gei.stream(qd.id(), EntityType.PLAYER, false)
-                      .map(gameId -> new QueryData<Void>(gameId)))
-              .toList(),
-          SortOrder.none(), true);
+    // Collect game IDs for prolific players via flatMap on the entity index
+    var gameIdsByProlificPlayers = ManualQueryNode.<Void>verified(
+        prolificPlayers.stream()
+            .flatMap(qd ->
+                gei.stream(qd.id(), EntityType.PLAYER, false)
+                    .map(gameId -> new QueryData<Void>(gameId)))
+            .toList(),
+        SortOrder.none(), true);
 
-      var sorted = new Sort<>(gameIdsByProlificPlayers, SortOrder.byId());
-      var distinct = new Distinct<>(sorted);
+    var sorted = new Sort<>(gameIdsByProlificPlayers, SortOrder.byId());
+    var distinct = new Distinct<>(sorted);
 
-      var hashJoin = HashJoin.<GameHeader, Void>semi(
-          gameScan, distinct, qd -> qd.id(), QueryData::id);
+    var hashJoin = HashJoin.<GameHeader, Void>semi(
+        gameScan, distinct, qd -> qd.id(), QueryData::id);
 
-      List<QueryData<GameHeader>> results = hashJoin.stream().toList();
-      assertTrue(!results.isEmpty());
-      assertTrue(results.size() <= db.count());
-      assertFalse(hashJoin.mayContainDuplicates());
-    }
+    List<QueryData<GameHeader>> results = hashJoin.stream().toList();
+    assertTrue(!results.isEmpty());
+    assertTrue(results.size() <= db.count());
+    assertFalse(hashJoin.mayContainDuplicates());
   }
 
   @Test
   public void entityQueryWithGameSubquery() {
     // Find players who played in tournament 0
-    GameEntityIndex tournamentGei = db.gameEntityIndex(EntityType.TOURNAMENT);
-    assertNotNull(tournamentGei);
-
     Tournament tournament = db.tournamentIndex().get(0);
 
-    try (var txn = new DatabaseReadTransaction(db)) {
-      // Step 1: Find game IDs in the tournament
-      var tournamentScan = new GameEntityIndexScan(tournamentGei, EntityType.TOURNAMENT);
-      var gamesInTournament = ManualQueryNode.verified(
-          tournamentScan.streamRange(tournament.id(), tournament.id() + 1).toList(),
-          SortOrder.byId(), false);
+    // Step 1: Find game IDs in the tournament
+    var tournamentScan = new GameEntityIndexScan(txn, EntityType.TOURNAMENT);
+    var gamesInTournament = ManualQueryNode.verified(
+        tournamentScan.streamRange(tournament.id(), tournament.id() + 1).toList(),
+        SortOrder.byId(), false);
 
-      // Step 2: Extract player IDs from game headers via flatMap
-      var playerIds = ManualQueryNode.verified(
-          gamesInTournament.stream()
-              .flatMap(qd -> {
-                GameHeader gh = db.gameHeaderIndex().getGameHeader(qd.id());
-                return Stream.of(
-                    new QueryData<Void>(gh.whitePlayerId()),
-                    new QueryData<Void>(gh.blackPlayerId()));
-              })
-              .toList(),
-          SortOrder.none(), true);
+    // Step 2: Extract player IDs from game headers via flatMap
+    var playerIds = ManualQueryNode.verified(
+        gamesInTournament.stream()
+            .flatMap(qd -> {
+              GameHeader gh = db.gameHeaderIndex().getGameHeader(qd.id());
+              return Stream.of(
+                  new QueryData<Void>(gh.whitePlayerId()),
+                  new QueryData<Void>(gh.blackPlayerId()));
+            })
+            .toList(),
+        SortOrder.none(), true);
 
-      // Step 3: Sort + Distinct to get unique player IDs
-      var sorted = new Sort<>(playerIds, SortOrder.byId());
-      var distinct = new Distinct<>(sorted);
+    // Step 3: Sort + Distinct to get unique player IDs
+    var sorted = new Sort<>(playerIds, SortOrder.byId());
+    var distinct = new Distinct<>(sorted);
 
-      List<QueryData<Void>> results = distinct.stream().toList();
-      // Tournament should have at least 2 players
-      assertTrue(results.size() >= 2);
-      // Should not exceed 2 * number of games in tournament
-      assertTrue(results.size() <= 2 * tournament.count());
-      assertFalse(distinct.mayContainDuplicates());
+    List<QueryData<Void>> results = distinct.stream().toList();
+    // Tournament should have at least 2 players
+    assertTrue(results.size() >= 2);
+    // Should not exceed 2 * number of games in tournament
+    assertTrue(results.size() <= 2 * tournament.count());
+    assertFalse(distinct.mayContainDuplicates());
 
-      for (var qd : results) {
-        Player player = txn.playerTransaction().get(qd.id());
-        assertNotNull(player);
-        assertNotNull(player.lastName());
-      }
+    for (var qd : results) {
+      Player player = txn.playerTransaction().get(qd.id());
+      assertNotNull(player);
+      assertNotNull(player.lastName());
     }
   }
 
   @Test
   public void hashJoinGamesByWhitePlayerName() {
     // Find all games where the white player's last name starts with "Kasparov"
-    var gameScan = TableScan.gameHeaders(db);
-    var playerScan = TableScan.entities(db.playerIndex(),
+    var gameScan = TableScan.gameHeaders(txn);
+    var playerScan = TableScan.entities(txn.playerTransaction(),
         player -> player.lastName().startsWith("Kasparov"));
 
     var join = HashJoin.<GameHeader, Player>semi(
@@ -695,13 +690,10 @@ public class QueryJoinNodeTest {
   @Test
   public void mergeJoinTwoEntityIndexScansAndFilter() {
     // Find games involving both player 10 and player 11
-    GameEntityIndex gei = db.gameEntityIndex(EntityType.PLAYER);
-    assertNotNull(gei);
-
     Player player10 = db.getPlayer(10);
     Player player11 = db.getPlayer(11);
 
-    var scan = new GameEntityIndexScan(gei, EntityType.PLAYER);
+    var scan = new GameEntityIndexScan(txn, EntityType.PLAYER);
     var gamesByP10 = ManualQueryNode.verified(
         scan.streamRange(player10.id(), player10.id() + 1).toList(),
         SortOrder.byId(), false);

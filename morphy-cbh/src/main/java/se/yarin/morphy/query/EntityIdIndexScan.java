@@ -7,17 +7,18 @@ import org.jetbrains.annotations.Nullable;
 import se.yarin.morphy.entities.Entity;
 import se.yarin.morphy.entities.EntityIndexReadTransaction;
 import se.yarin.morphy.entities.filters.EntityFilter;
+import se.yarin.morphy.storage.ItemStorageFilter;
 
 public class EntityIdIndexScan<T extends Entity & Comparable<T>> extends QueryNode<T>
     implements IndexScanNode<T, Integer> {
   private final @NotNull EntityIndexReadTransaction<T> txn;
   private final @Nullable EntityFilter<T> entityFilter;
-  private final @Nullable DataFilter<T> postFilter;
+  private final @Nullable ItemStorageFilter<T> postFilter;
 
   public EntityIdIndexScan(
       @NotNull EntityIndexReadTransaction<T> txn,
       @Nullable EntityFilter<T> entityFilter,
-      @Nullable DataFilter<T> postFilter) {
+      @Nullable ItemStorageFilter<T> postFilter) {
     this.txn = txn;
     this.entityFilter = entityFilter;
     this.postFilter = postFilter;
