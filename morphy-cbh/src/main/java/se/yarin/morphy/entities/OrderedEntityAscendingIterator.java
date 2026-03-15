@@ -4,6 +4,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import se.yarin.morphy.entities.filters.EntityFilter;
 
+import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
@@ -28,7 +29,7 @@ public class OrderedEntityAscendingIterator<T extends Entity & Comparable<T>>
 
   private void setupNextItem() {
     while (!current.isEnd() && current.getEntityId() != stopId) {
-      if (filter == null || filter.matchesSerialized(current.getNode().getSerializedEntity())) {
+      if (filter == null || filter.matchesSerialized(ByteBuffer.wrap(current.getNode().getSerializedEntity()))) {
         nextItem = current.getEntity();
         if (filter == null || filter.matches(nextItem)) {
           this.current = this.current.successor();

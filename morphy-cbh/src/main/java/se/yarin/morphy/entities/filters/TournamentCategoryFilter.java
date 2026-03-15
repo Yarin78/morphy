@@ -5,6 +5,8 @@ import se.yarin.morphy.entities.EntityType;
 import se.yarin.morphy.entities.Tournament;
 import se.yarin.morphy.queries.QueryPlanner;
 
+import java.nio.ByteBuffer;
+
 public class TournamentCategoryFilter implements EntityFilter<Tournament> {
   private final int minCategory;
   private final int maxCategory;
@@ -20,8 +22,8 @@ public class TournamentCategoryFilter implements EntityFilter<Tournament> {
   }
 
   @Override
-  public boolean matchesSerialized(byte[] serializedItem) {
-    int category = serializedItem[78];
+  public boolean matchesSerialized(@NotNull ByteBuffer buf) {
+    int category = buf.get(78);
     return category >= minCategory && category <= maxCategory;
   }
 

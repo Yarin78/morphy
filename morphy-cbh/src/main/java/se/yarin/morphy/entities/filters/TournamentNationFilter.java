@@ -5,6 +5,7 @@ import se.yarin.morphy.entities.EntityType;
 import se.yarin.morphy.entities.Nation;
 import se.yarin.morphy.entities.Tournament;
 
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -32,8 +33,8 @@ public class TournamentNationFilter implements EntityFilter<Tournament> {
   }
 
   @Override
-  public boolean matchesSerialized(byte[] serializedItem) {
-    return nations[serializedItem[76] & 0xFF];
+  public boolean matchesSerialized(@NotNull ByteBuffer buf) {
+    return nations[buf.get(76) & 0xFF];
   }
 
   @Override

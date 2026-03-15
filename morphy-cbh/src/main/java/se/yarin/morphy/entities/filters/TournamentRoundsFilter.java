@@ -4,6 +4,7 @@ import org.jetbrains.annotations.NotNull;
 import se.yarin.morphy.entities.EntityType;
 import se.yarin.morphy.entities.Tournament;
 
+import java.nio.ByteBuffer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -32,8 +33,8 @@ public class TournamentRoundsFilter implements EntityFilter<Tournament> {
   }
 
   @Override
-  public boolean matchesSerialized(byte[] serializedItem) {
-    int round = serializedItem[80];
+  public boolean matchesSerialized(@NotNull ByteBuffer buf) {
+    int round = buf.get(80);
     return round >= minRounds && round <= maxRounds;
   }
 

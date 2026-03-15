@@ -6,6 +6,7 @@ import se.yarin.morphy.entities.Tournament;
 import se.yarin.morphy.entities.TournamentTimeControl;
 import se.yarin.morphy.util.CBUtil;
 
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
@@ -36,8 +37,8 @@ public class TournamentTimeControlFilter implements EntityFilter<Tournament> {
   }
 
   @Override
-  public boolean matchesSerialized(byte[] serializedItem) {
-    return timeControls.contains(CBUtil.decodeTournamentTimeControl(serializedItem[74]));
+  public boolean matchesSerialized(@NotNull ByteBuffer buf) {
+    return timeControls.contains(CBUtil.decodeTournamentTimeControl(buf.get(74)));
   }
 
   @Override

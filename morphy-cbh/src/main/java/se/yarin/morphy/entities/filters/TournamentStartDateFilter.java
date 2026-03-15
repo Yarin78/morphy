@@ -10,6 +10,8 @@ import se.yarin.morphy.queries.QueryPlanner;
 import se.yarin.morphy.util.CBUtil;
 import se.yarin.util.ByteBufferUtil;
 
+import java.nio.ByteBuffer;
+
 public class TournamentStartDateFilter implements EntityIndexFilter<Tournament> {
   private final @NotNull Date fromDate;
   private final @NotNull Date toDate;
@@ -42,8 +44,9 @@ public class TournamentStartDateFilter implements EntityIndexFilter<Tournament> 
   }
 
   @Override
-  public boolean matchesSerialized(byte[] serializedItem) {
-    return matches(CBUtil.decodeDate(ByteBufferUtil.getIntL(serializedItem, 70)));
+  public boolean matchesSerialized(@NotNull ByteBuffer buf) {
+    buf.position(70);
+    return matches(CBUtil.decodeDate(ByteBufferUtil.getIntL(buf)));
   }
 
   @Override

@@ -6,6 +6,7 @@ import se.yarin.morphy.entities.Tournament;
 import se.yarin.morphy.entities.TournamentType;
 import se.yarin.morphy.util.CBUtil;
 
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
@@ -35,8 +36,8 @@ public class TournamentTypeFilter implements EntityFilter<Tournament> {
   }
 
   @Override
-  public boolean matchesSerialized(byte[] serializedItem) {
-    return types.contains(CBUtil.decodeTournamentType(serializedItem[74]));
+  public boolean matchesSerialized(@NotNull ByteBuffer buf) {
+    return types.contains(CBUtil.decodeTournamentType(buf.get(74)));
   }
 
   @Override

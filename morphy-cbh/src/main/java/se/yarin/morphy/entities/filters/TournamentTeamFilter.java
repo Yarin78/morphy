@@ -4,6 +4,8 @@ import org.jetbrains.annotations.NotNull;
 import se.yarin.morphy.entities.EntityType;
 import se.yarin.morphy.entities.Tournament;
 
+import java.nio.ByteBuffer;
+
 public class TournamentTeamFilter implements EntityFilter<Tournament> {
   private final boolean teamTournament;
 
@@ -21,8 +23,8 @@ public class TournamentTeamFilter implements EntityFilter<Tournament> {
   }
 
   @Override
-  public boolean matchesSerialized(byte[] serializedItem) {
-    return ((serializedItem[75] & 1) == 1) == teamTournament;
+  public boolean matchesSerialized(@NotNull ByteBuffer buf) {
+    return ((buf.get(75) & 1) == 1) == teamTournament;
   }
 
   @Override

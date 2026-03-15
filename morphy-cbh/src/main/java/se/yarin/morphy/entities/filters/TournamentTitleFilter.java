@@ -35,8 +35,8 @@ public class TournamentTitleFilter implements EntityFilter<Tournament> {
   }
 
   @Override
-  public boolean matchesSerialized(byte[] serializedItem) {
-    ByteBuffer buf = ByteBuffer.wrap(serializedItem);
+  public boolean matchesSerialized(@NotNull ByteBuffer buf) {
+    buf.position(0);
     String tournamentTitle = ByteBufferUtil.getFixedSizeByteString(buf, 40);
     return matches(tournamentTitle);
   }

@@ -7,6 +7,8 @@ import se.yarin.util.parser.Interpreter;
 import se.yarin.util.parser.Parser;
 import se.yarin.util.parser.Scanner;
 
+import java.nio.ByteBuffer;
+
 public class RawEntityFilter<T> implements EntityFilter<T> {
   @NotNull private final Expr expr;
   @NotNull private final String filterExpression;
@@ -28,8 +30,10 @@ public class RawEntityFilter<T> implements EntityFilter<T> {
   }
 
   @Override
-  public boolean matchesSerialized(byte[] buf) {
-    Interpreter interpreter = new Interpreter(buf);
+  public boolean matchesSerialized(@NotNull ByteBuffer buf) {
+    byte[] bytes = new byte[buf.remaining()];
+    buf.get(buf.position(), bytes);
+    Interpreter interpreter = new Interpreter(bytes);
     return (boolean) interpreter.evaluate(expr);
   }
 

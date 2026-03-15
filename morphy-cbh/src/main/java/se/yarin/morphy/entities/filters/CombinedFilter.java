@@ -7,6 +7,7 @@ import se.yarin.morphy.games.filters.CombinedGameFilter;
 import se.yarin.morphy.games.filters.GameFilter;
 import se.yarin.morphy.queries.QueryPlanner;
 
+import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -43,8 +44,8 @@ public class CombinedFilter<T> implements EntityFilter<T> {
   }
 
   @Override
-  public boolean matchesSerialized(byte[] serializedItem) {
-    return filters.stream().allMatch(filter -> filter.matchesSerialized(serializedItem));
+  public boolean matchesSerialized(@NotNull ByteBuffer buf) {
+    return filters.stream().allMatch(filter -> filter.matchesSerialized(buf));
   }
 
   @Override

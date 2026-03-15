@@ -40,12 +40,13 @@ public class TournamentYearTitleFilter implements EntityIndexFilter<Tournament> 
   }
 
   @Override
-  public boolean matchesSerialized(byte[] serializedItem) {
-    Date tournamentDate = CBUtil.decodeDate(ByteBufferUtil.getIntL(serializedItem, 70));
+  public boolean matchesSerialized(@NotNull ByteBuffer buf) {
+    buf.position(70);
+    Date tournamentDate = CBUtil.decodeDate(ByteBufferUtil.getIntL(buf));
     if (tournamentDate.year() != year) {
       return false;
     }
-    ByteBuffer buf = ByteBuffer.wrap(serializedItem);
+    buf.position(0);
     String tournamentTitle = ByteBufferUtil.getFixedSizeByteString(buf, 40);
     return matchesTitle(tournamentTitle);
   }

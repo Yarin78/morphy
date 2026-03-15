@@ -82,9 +82,9 @@ public class PlayerNameFilter implements EntityIndexFilter<Player> {
   }
 
   @Override
-  public boolean matchesSerialized(byte[] serializedItem) {
+  public boolean matchesSerialized(@NotNull ByteBuffer buf) {
     // Only partial matching done here; deserializing players is not that much slower
-    ByteBuffer buf = ByteBuffer.wrap(serializedItem);
+    buf.position(0);
     String playerName = ByteBufferUtil.getFixedSizeByteString(buf, 30);
     return matches(playerName, lastName);
   }
