@@ -13,6 +13,7 @@ import se.yarin.morphy.ResourceLoader;
 import se.yarin.morphy.boosters.GameEntityIndex;
 import se.yarin.morphy.entities.EntityType;
 import se.yarin.morphy.entities.Player;
+import se.yarin.morphy.entities.filters.EntityCountFilter;
 import se.yarin.morphy.entities.Tournament;
 import se.yarin.morphy.games.GameHeader;
 
@@ -594,8 +595,8 @@ public class QueryJoinNodeTest {
 
     var prolificPlayers =
         new EntityIndexScan<>(
-            txn.playerTransaction(), SortOrder.none(), null,
-            player -> player.count() >= 50,
+            txn.playerTransaction(), SortOrder.none(),
+            new EntityCountFilter<>(EntityType.PLAYER, 50, Integer.MAX_VALUE),
             false);
 
     GameEntityIndex gei = db.gameEntityIndex(EntityType.PLAYER);

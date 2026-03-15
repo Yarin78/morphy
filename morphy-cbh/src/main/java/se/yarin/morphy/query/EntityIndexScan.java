@@ -7,25 +7,21 @@ import org.jetbrains.annotations.Nullable;
 import se.yarin.morphy.entities.Entity;
 import se.yarin.morphy.entities.EntityIndexReadTransaction;
 import se.yarin.morphy.entities.filters.EntityFilter;
-import se.yarin.morphy.storage.ItemStorageFilter;
 
 public class EntityIndexScan<T extends Entity & Comparable<T>> extends QueryNode<T> {
   private final @NotNull EntityIndexReadTransaction<T> txn;
   private final @NotNull SortOrder<T> entitySortOrder;
-  private final @Nullable EntityFilter<T> entityFilter;
-  private final @Nullable ItemStorageFilter<T> postFilter;
+  private final @Nullable EntityFilter<T> filter;
   private final boolean reverse;
 
   public EntityIndexScan(
       @NotNull EntityIndexReadTransaction<T> txn,
       @NotNull SortOrder<T> entitySortOrder,
-      @Nullable EntityFilter<T> entityFilter,
-      @Nullable ItemStorageFilter<T> postFilter,
+      @Nullable EntityFilter<T> filter,
       boolean reverse) {
     this.txn = txn;
     this.entitySortOrder = entitySortOrder;
-    this.entityFilter = entityFilter;
-    this.postFilter = postFilter;
+    this.filter = filter;
     this.reverse = reverse;
   }
 
@@ -52,29 +48,18 @@ public class EntityIndexScan<T extends Entity & Comparable<T>> extends QueryNode
   public @NotNull Stream<QueryData<T>> streamRange(@Nullable T rangeStart, @Nullable T rangeEnd) {
     Stream<T> entityStream;
     if (reverse) {
-      entityStream = txn.streamOrderedDescending(rangeStart, rangeEnd, entityFilter);
+      entityStream = txn.streamOrderedDescending(rangeStart, rangeEnd, filter);
     } else {
-      entityStream = txn.streamOrderedAscending(rangeStart, rangeEnd, entityFilter);
+      entityStream = txn.streamOrderedAscending(rangeStart, rangeEnd, filter);
     }
-    Stream<QueryData<T>> result =
-        entityStream.map(entity -> new QueryData<>(entity.id(), entity));
-    if (postFilter != null) {
-      result =
-          result.filter(
-              qd -> {
-                assert qd.data() != null;
-                return postFilter.matches(qd.data());
-              });
-    }
-    return result;
+    return entityStream.map(entity -> new QueryData<>(entity.id(), entity));
   }
 
   @Override
   public String toString() {
     return "EntityIndexScan["
         + (reverse ? "desc" : "asc")
-        + (entityFilter != null ? ", entityFilter" : "")
-        + (postFilter != null ? ", postFilter" : "")
+        + (filter != null ? ", filtered" : "")
         + "]";
   }
 }

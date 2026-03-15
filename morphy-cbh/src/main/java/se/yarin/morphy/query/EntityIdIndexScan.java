@@ -7,21 +7,16 @@ import org.jetbrains.annotations.Nullable;
 import se.yarin.morphy.entities.Entity;
 import se.yarin.morphy.entities.EntityIndexReadTransaction;
 import se.yarin.morphy.entities.filters.EntityFilter;
-import se.yarin.morphy.storage.ItemStorageFilter;
 
 public class EntityIdIndexScan<T extends Entity & Comparable<T>> extends QueryNode<T>
     implements IndexScanNode<T, Integer> {
   private final @NotNull EntityIndexReadTransaction<T> txn;
-  private final @Nullable EntityFilter<T> entityFilter;
-  private final @Nullable ItemStorageFilter<T> postFilter;
+  private final @Nullable EntityFilter<T> filter;
 
   public EntityIdIndexScan(
-      @NotNull EntityIndexReadTransaction<T> txn,
-      @Nullable EntityFilter<T> entityFilter,
-      @Nullable ItemStorageFilter<T> postFilter) {
+      @NotNull EntityIndexReadTransaction<T> txn, @Nullable EntityFilter<T> filter) {
     this.txn = txn;
-    this.entityFilter = entityFilter;
-    this.postFilter = postFilter;
+    this.filter = filter;
   }
 
   @Override
@@ -47,38 +42,23 @@ public class EntityIdIndexScan<T extends Entity & Comparable<T>> extends QueryNo
   @Override
   public @Nullable QueryData<T> getByKey(@NotNull Integer id) {
     T entity = txn.get(id);
-    if (entityFilter != null && !entityFilter.matches(entity)) {
+    if (filter != null && !filter.matches(entity)) {
       return null;
     }
-    QueryData<T> qd = new QueryData<>(entity.id(), entity);
-    if (postFilter != null && !postFilter.matches(entity)) {
-      return null;
-    }
-    return qd;
+    return new QueryData<>(entity.id(), entity);
   }
 
   @Override
   public @NotNull Stream<QueryData<T>> streamRange(
       @Nullable Integer startId, @Nullable Integer endId) {
     Stream<QueryData<T>> result =
-        txn.stream(startId, endId, entityFilter)
+        txn.stream(startId, endId, filter)
             .map(entity -> new QueryData<>(entity.id(), entity));
-    if (postFilter != null) {
-      result =
-          result.filter(
-              qd -> {
-                assert qd.data() != null;
-                return postFilter.matches(qd.data());
-              });
-    }
     return result;
   }
 
   @Override
   public String toString() {
-    return "EntityIdIndexScan["
-        + (entityFilter != null ? "entityFilter" : "")
-        + (postFilter != null ? (entityFilter != null ? ", " : "") + "postFilter" : "")
-        + "]";
+    return "EntityIdIndexScan[" + (filter != null ? "filtered" : "") + "]";
   }
 }

@@ -12,6 +12,7 @@ import se.yarin.morphy.DatabaseReadTransaction;
 import se.yarin.morphy.ResourceLoader;
 import se.yarin.morphy.entities.EntityType;
 import se.yarin.morphy.entities.Player;
+import se.yarin.morphy.entities.filters.EntityCountFilter;
 import se.yarin.morphy.entities.TournamentExtra;
 import se.yarin.morphy.games.ExtendedGameHeader;
 import se.yarin.morphy.games.GameHeader;
@@ -98,7 +99,6 @@ public class QueryNodeTest {
             txn.playerTransaction(),
             SortOrder.none(),
             null,
-            null,
             false);
     List<QueryData<Player>> results = scan.stream().toList();
     assertEquals(db.playerIndex().count(), results.size());
@@ -115,7 +115,6 @@ public class QueryNodeTest {
             txn.playerTransaction(),
             SortOrder.none(),
             null,
-            null,
             false);
     List<QueryData<Player>> results = scan.streamRange(start, end).toList();
     assertTrue(results.size() >= 1);
@@ -128,13 +127,12 @@ public class QueryNodeTest {
   }
 
   @Test
-  public void entityIndexScanWithPostFilter() {
+  public void entityIndexScanWithFilter() {
     var scan =
         new EntityIndexScan<>(
             txn.playerTransaction(),
             SortOrder.none(),
-            null,
-            player -> player.count() >= 50,
+            new EntityCountFilter<>(EntityType.PLAYER, 50, Integer.MAX_VALUE),
             false);
     List<QueryData<Player>> results = scan.stream().toList();
     assertTrue(results.size() >= 1);
