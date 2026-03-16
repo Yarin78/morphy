@@ -4,12 +4,10 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.function.BiFunction;
 import java.util.function.ToIntFunction;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 public class MergeJoin<L, R> extends QueryNode<L> {
   private final @NotNull QueryNode<L> left;
@@ -17,42 +15,40 @@ public class MergeJoin<L, R> extends QueryNode<L> {
   private final @NotNull JoinType joinType;
   private final @NotNull ToIntFunction<QueryData<L>> leftKey;
   private final @NotNull ToIntFunction<QueryData<R>> rightKey;
-  private final @Nullable BiFunction<QueryData<L>, QueryData<R>, QueryData<L>> combiner;
+  private final boolean sameType;
 
-  public MergeJoin(
+  private MergeJoin(
       @NotNull QueryNode<L> left,
       @NotNull QueryNode<R> right,
       @NotNull JoinType joinType,
       @NotNull ToIntFunction<QueryData<L>> leftKey,
       @NotNull ToIntFunction<QueryData<R>> rightKey,
-      @Nullable BiFunction<QueryData<L>, QueryData<R>, QueryData<L>> combiner) {
-    if (joinType == JoinType.INNER && combiner == null) {
-      throw new IllegalArgumentException("Combiner is required for INNER join");
-    }
+      boolean sameType) {
     this.left = left;
     this.right = right;
     this.joinType = joinType;
     this.leftKey = leftKey;
     this.rightKey = rightKey;
-    this.combiner = combiner;
+    this.sameType = sameType;
   }
 
   public static <T> MergeJoin<T, T> inner(
-      @NotNull QueryNode<T> left,
-      @NotNull QueryNode<T> right,
-      @NotNull BiFunction<QueryData<T>, QueryData<T>, QueryData<T>> combiner) {
+      @NotNull QueryNode<T> left, @NotNull QueryNode<T> right) {
     if (!left.sortOrder().isSameOrStronger(SortOrder.byId())) {
       throw new IllegalArgumentException("Left source must be sorted by id");
     }
     if (!right.sortOrder().isSameOrStronger(SortOrder.byId())) {
       throw new IllegalArgumentException("Right source must be sorted by id");
     }
-    return new MergeJoin<>(left, right, JoinType.INNER, QueryData::id, QueryData::id, combiner);
+    return new MergeJoin<>(left, right, JoinType.INNER, QueryData::id, QueryData::id, true);
   }
 
-  public static <T> MergeJoin<T, T> inner(
-      @NotNull QueryNode<T> left, @NotNull QueryNode<T> right) {
-    return inner(left, right, QueryData.merger());
+  public static <L, R> MergeJoin<L, R> inner(
+      @NotNull QueryNode<L> left,
+      @NotNull QueryNode<R> right,
+      @NotNull ToIntFunction<QueryData<L>> leftKey,
+      @NotNull ToIntFunction<QueryData<R>> rightKey) {
+    return new MergeJoin<>(left, right, JoinType.INNER, leftKey, rightKey, false);
   }
 
   public static <L, R> MergeJoin<L, R> semi(
@@ -60,7 +56,7 @@ public class MergeJoin<L, R> extends QueryNode<L> {
       @NotNull QueryNode<R> right,
       @NotNull ToIntFunction<QueryData<L>> leftKey,
       @NotNull ToIntFunction<QueryData<R>> rightKey) {
-    return new MergeJoin<>(left, right, JoinType.SEMI, leftKey, rightKey, null);
+    return new MergeJoin<>(left, right, JoinType.SEMI, leftKey, rightKey, false);
   }
 
   public static <T> MergeJoin<T, T> semi(
@@ -71,7 +67,7 @@ public class MergeJoin<L, R> extends QueryNode<L> {
     if (!right.sortOrder().isSameOrStronger(SortOrder.byId())) {
       throw new IllegalArgumentException("Right source must be sorted by id");
     }
-    return new MergeJoin<>(left, right, JoinType.SEMI, QueryData::id, QueryData::id, null);
+    return new MergeJoin<>(left, right, JoinType.SEMI, QueryData::id, QueryData::id, true);
   }
 
   public static <L, R> MergeJoin<L, R> anti(
@@ -79,7 +75,7 @@ public class MergeJoin<L, R> extends QueryNode<L> {
       @NotNull QueryNode<R> right,
       @NotNull ToIntFunction<QueryData<L>> leftKey,
       @NotNull ToIntFunction<QueryData<R>> rightKey) {
-    return new MergeJoin<>(left, right, JoinType.ANTI, leftKey, rightKey, null);
+    return new MergeJoin<>(left, right, JoinType.ANTI, leftKey, rightKey, false);
   }
 
   public static <T> MergeJoin<T, T> anti(
@@ -90,7 +86,7 @@ public class MergeJoin<L, R> extends QueryNode<L> {
     if (!right.sortOrder().isSameOrStronger(SortOrder.byId())) {
       throw new IllegalArgumentException("Right source must be sorted by id");
     }
-    return new MergeJoin<>(left, right, JoinType.ANTI, QueryData::id, QueryData::id, null);
+    return new MergeJoin<>(left, right, JoinType.ANTI, QueryData::id, QueryData::id, true);
   }
 
   public @NotNull JoinType joinType() {
@@ -149,7 +145,8 @@ public class MergeJoin<L, R> extends QueryNode<L> {
                 // Continue cartesian product: left rows × buffered right rows
                 while (nextLeft != null && leftKey.applyAsInt(nextLeft) == currentKey) {
                   if (rightBufferIdx < rightBuffer.size()) {
-                    pending = combiner.apply(nextLeft, rightBuffer.get(rightBufferIdx));
+                    pending =
+                        QueryData.combine(nextLeft, rightBuffer.get(rightBufferIdx), sameType);
                     rightBufferIdx++;
                     if (rightBufferIdx >= rightBuffer.size()) {
                       nextLeft = advanceLeft();
@@ -162,7 +159,7 @@ public class MergeJoin<L, R> extends QueryNode<L> {
               } else if (joinType == JoinType.SEMI) {
                 // Continue emitting left rows that share the matched key
                 if (nextLeft != null && leftKey.applyAsInt(nextLeft) == currentKey) {
-                  pending = nextLeft;
+                  pending = QueryData.combine(nextLeft, rightBuffer.get(0), sameType);
                   nextLeft = advanceLeft();
                   return;
                 }
@@ -206,7 +203,7 @@ public class MergeJoin<L, R> extends QueryNode<L> {
                 switch (joinType) {
                   case INNER -> {
                     rightBufferIdx = 0;
-                    pending = combiner.apply(nextLeft, rightBuffer.get(0));
+                    pending = QueryData.combine(nextLeft, rightBuffer.get(0), sameType);
                     rightBufferIdx = 1;
                     if (rightBufferIdx >= rightBuffer.size()) {
                       nextLeft = advanceLeft();
@@ -215,7 +212,7 @@ public class MergeJoin<L, R> extends QueryNode<L> {
                     return;
                   }
                   case SEMI -> {
-                    pending = nextLeft;
+                    pending = QueryData.combine(nextLeft, rightBuffer.get(0), sameType);
                     nextLeft = advanceLeft();
                     return;
                   }

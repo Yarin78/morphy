@@ -1,6 +1,5 @@
 package se.yarin.morphy.query;
 
-import java.util.function.BiFunction;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -31,11 +30,16 @@ public record QueryData<T>(int id, @Nullable T data, @Nullable Object extra) {
     return new QueryData<>(id, data, extra);
   }
 
-  public static <T> BiFunction<QueryData<T>, QueryData<T>, QueryData<T>> merger() {
-    return (q1, q2) -> {
-      assert q1.id() == q2.id();
+  @SuppressWarnings("unchecked")
+  static <L, R> QueryData<L> combine(QueryData<L> left, QueryData<R> right, boolean sameType) {
+    if (sameType) {
+      QueryData<L> r = (QueryData<L>) (QueryData<?>) right;
       return new QueryData<>(
-          q1.id(), q1.data() == null ? q2.data() : q1.data(), q1.extra() != null ? q1.extra() : q2.extra());
-    };
+          left.id(),
+          left.data() != null ? left.data() : r.data(),
+          left.extra() != null ? left.extra() : r.extra());
+    } else {
+      return left.withExtra(right.data());
+    }
   }
 }

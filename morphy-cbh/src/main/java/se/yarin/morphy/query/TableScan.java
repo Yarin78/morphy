@@ -10,6 +10,8 @@ import org.jetbrains.annotations.Nullable;
 import se.yarin.morphy.DatabaseReadTransaction;
 import se.yarin.morphy.entities.Entity;
 import se.yarin.morphy.entities.EntityIndexReadTransaction;
+import se.yarin.morphy.games.ExtendedGameHeader;
+import se.yarin.morphy.games.ExtendedGameHeaderStorage;
 import se.yarin.morphy.games.GameHeader;
 import se.yarin.morphy.games.GameHeaderIndex;
 import se.yarin.morphy.storage.ItemStorageFilter;
@@ -38,7 +40,6 @@ public class TableScan<T> extends QueryNode<T> {
   public TableScan(@NotNull IntFunction<@Nullable T> fetcher, int startId, int endId) {
     this(fetcher, startId, endId, null);
   }
-
   @Override
   public @NotNull List<QueryNode<?>> sources() {
     return List.of();
@@ -91,6 +92,28 @@ public class TableScan<T> extends QueryNode<T> {
       int endId,
       @Nullable ItemStorageFilter<GameHeader> filter) {
     return new TableScan<>(txn.database().gameHeaderIndex()::getGameHeader, startId, endId, filter);
+  }
+
+  public static TableScan<ExtendedGameHeader> extendedGameHeaders(
+      @NotNull DatabaseReadTransaction txn
+  ) {
+    return extendedGameHeaders(txn, null);
+  }
+
+  public static TableScan<ExtendedGameHeader> extendedGameHeaders(
+      @NotNull DatabaseReadTransaction txn,
+      @Nullable ItemStorageFilter<ExtendedGameHeader> filter
+  ) {
+    ExtendedGameHeaderStorage index = txn.database().extendedGameHeaderStorage();
+    return extendedGameHeaders(txn, 1, index.count() + 1, filter);
+  }
+
+  public static TableScan<ExtendedGameHeader> extendedGameHeaders(
+      @NotNull DatabaseReadTransaction txn,
+      int startId,
+      int endId,
+      @Nullable ItemStorageFilter<ExtendedGameHeader> filter) {
+    return new TableScan<>(txn.database().extendedGameHeaderStorage()::get, startId, endId, filter);
   }
 
   public static <T extends Entity & Comparable<T>> TableScan<T> entities(

@@ -292,21 +292,28 @@ public class QueryNodeTest {
   }
 
   @Test
-  public void queryDataMergerPrefersLeftData() {
-    var merger = QueryData.<String>merger();
+  public void queryDataCombineSameTypePrefersLeftData() {
     var left = new QueryData<>(1, "left");
     var right = new QueryData<>(1, "right");
-    var merged = merger.apply(left, right);
-    assertEquals("left", merged.data());
+    var combined = QueryData.combine(left, right, true);
+    assertEquals("left", combined.data());
   }
 
   @Test
-  public void queryDataMergerFallsBackToRightData() {
-    var merger = QueryData.<String>merger();
+  public void queryDataCombineSameTypeFallsBackToRightData() {
     var left = new QueryData<String>(1);
     var right = new QueryData<>(1, "right");
-    var merged = merger.apply(left, right);
-    assertEquals("right", merged.data());
+    var combined = QueryData.combine(left, right, true);
+    assertEquals("right", combined.data());
+  }
+
+  @Test
+  public void queryDataCombineDifferentTypeSetsExtra() {
+    var left = new QueryData<>(1, "left");
+    var right = new QueryData<>(1, 42);
+    var combined = QueryData.combine(left, right, false);
+    assertEquals("left", combined.data());
+    assertEquals(42, (int) combined.extra(Integer.class));
   }
 
   // --- SortOrder tests ---

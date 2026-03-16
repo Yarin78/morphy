@@ -15,6 +15,7 @@ import se.yarin.morphy.entities.EntityType;
 import se.yarin.morphy.entities.Player;
 import se.yarin.morphy.entities.filters.EntityCountFilter;
 import se.yarin.morphy.entities.Tournament;
+import se.yarin.morphy.games.ExtendedGameHeader;
 import se.yarin.morphy.games.GameHeader;
 
 public class QueryJoinNodeTest {
@@ -451,10 +452,10 @@ public class QueryJoinNodeTest {
 
     List<QueryData<String>> results = join.stream().toList();
     assertEquals(2, results.size());
-    // merger() prefers left data
+    // combine prefers left data
     assertEquals("game1", results.get(0).data());
     assertEquals("game2", results.get(1).data());
-    assertTrue(join.sortOrder().isNone());
+    assertTrue(join.sortOrder().isSameOrStronger(SortOrder.byId()));
     assertTrue(join.mayContainDuplicates());
   }
 
@@ -712,6 +713,44 @@ public class QueryJoinNodeTest {
       boolean hasP10 = gh.whitePlayerId() == player10.id() || gh.blackPlayerId() == player10.id();
       boolean hasP11 = gh.whitePlayerId() == player11.id() || gh.blackPlayerId() == player11.id();
       assertTrue(hasP10 && hasP11);
+    }
+  }
+
+  @Test
+  public void mergeJoinGameHeadersWithExtendedGameHeaders() {
+    var headerScan = TableScan.gameHeaders(txn);
+    var extHeaderScan = TableScan.extendedGameHeaders(txn);
+
+    var join = MergeJoin.<GameHeader, ExtendedGameHeader>inner(
+        headerScan, extHeaderScan, QueryData::id, QueryData::id);
+
+    List<QueryData<GameHeader>> results = join.stream().toList();
+    assertEquals(db.count(), results.size());
+    assertTrue(join.sortOrder().isSameOrStronger(SortOrder.byId()));
+
+    for (var qd : results) {
+      var game = txn.getGame(qd.id());
+      assertEquals(game.header(), qd.data());
+      assertEquals(game.extendedHeader(), qd.extra(ExtendedGameHeader.class));
+    }
+  }
+
+  @Test
+  public void loopJoinGameHeadersWithExtendedGameHeaderIndex() {
+    var headerScan = TableScan.gameHeaders(txn);
+    var extHeaderIndex = new ExtendedGameHeaderIdIndexScan(txn);
+
+    var join = LoopJoin.<GameHeader, ExtendedGameHeader>inner(
+        headerScan, extHeaderIndex, QueryData::id, QueryData::id);
+
+    List<QueryData<GameHeader>> results = join.stream().toList();
+    assertEquals(db.count(), results.size());
+    assertTrue(join.sortOrder().isSameOrStronger(SortOrder.byId()));
+
+    for (var qd : results) {
+      var game = txn.getGame(qd.id());
+      assertEquals(game.header(), qd.data());
+      assertEquals(game.extendedHeader(), qd.extra(ExtendedGameHeader.class));
     }
   }
 }

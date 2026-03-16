@@ -1,11 +1,9 @@
 package se.yarin.morphy.query;
 
 import java.util.List;
-import java.util.function.BiFunction;
 import java.util.function.ToIntFunction;
 import java.util.stream.Stream;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 public class LoopJoin<L, R> extends QueryNode<L> {
   private final @NotNull QueryNode<L> left;
@@ -13,39 +11,34 @@ public class LoopJoin<L, R> extends QueryNode<L> {
   private final @NotNull JoinType joinType;
   private final @NotNull ToIntFunction<QueryData<L>> leftKey;
   private final @NotNull ToIntFunction<QueryData<R>> rightKey;
-  private final @Nullable BiFunction<QueryData<L>, QueryData<R>, QueryData<L>> combiner;
+  private final boolean sameType;
 
-  public LoopJoin(
+  private LoopJoin(
       @NotNull QueryNode<L> left,
       @NotNull QueryNode<R> right,
       @NotNull JoinType joinType,
       @NotNull ToIntFunction<QueryData<L>> leftKey,
       @NotNull ToIntFunction<QueryData<R>> rightKey,
-      @Nullable BiFunction<QueryData<L>, QueryData<R>, QueryData<L>> combiner) {
-    if (joinType == JoinType.INNER && combiner == null) {
-      throw new IllegalArgumentException("Combiner is required for INNER join");
-    }
+      boolean sameType) {
     this.left = left;
     this.right = right;
     this.joinType = joinType;
     this.leftKey = leftKey;
     this.rightKey = rightKey;
-    this.combiner = combiner;
+    this.sameType = sameType;
   }
 
   public static <L, R> LoopJoin<L, R> inner(
       @NotNull QueryNode<L> left,
       @NotNull QueryNode<R> right,
       @NotNull ToIntFunction<QueryData<L>> leftKey,
-      @NotNull ToIntFunction<QueryData<R>> rightKey,
-      @NotNull BiFunction<QueryData<L>, QueryData<R>, QueryData<L>> combiner) {
-    return new LoopJoin<>(left, right, JoinType.INNER, leftKey, rightKey, combiner);
+      @NotNull ToIntFunction<QueryData<R>> rightKey) {
+    return new LoopJoin<>(left, right, JoinType.INNER, leftKey, rightKey, false);
   }
 
   public static <T> LoopJoin<T, T> inner(
       @NotNull QueryNode<T> left, @NotNull QueryNode<T> right) {
-    return new LoopJoin<>(
-        left, right, JoinType.INNER, QueryData::id, QueryData::id, QueryData.merger());
+    return new LoopJoin<>(left, right, JoinType.INNER, QueryData::id, QueryData::id, true);
   }
 
   public static <L, R> LoopJoin<L, R> semi(
@@ -53,12 +46,12 @@ public class LoopJoin<L, R> extends QueryNode<L> {
       @NotNull QueryNode<R> right,
       @NotNull ToIntFunction<QueryData<L>> leftKey,
       @NotNull ToIntFunction<QueryData<R>> rightKey) {
-    return new LoopJoin<>(left, right, JoinType.SEMI, leftKey, rightKey, null);
+    return new LoopJoin<>(left, right, JoinType.SEMI, leftKey, rightKey, false);
   }
 
   public static <T> LoopJoin<T, T> semi(
       @NotNull QueryNode<T> left, @NotNull QueryNode<T> right) {
-    return new LoopJoin<>(left, right, JoinType.SEMI, QueryData::id, QueryData::id, null);
+    return new LoopJoin<>(left, right, JoinType.SEMI, QueryData::id, QueryData::id, true);
   }
 
   public static <L, R> LoopJoin<L, R> anti(
@@ -66,12 +59,12 @@ public class LoopJoin<L, R> extends QueryNode<L> {
       @NotNull QueryNode<R> right,
       @NotNull ToIntFunction<QueryData<L>> leftKey,
       @NotNull ToIntFunction<QueryData<R>> rightKey) {
-    return new LoopJoin<>(left, right, JoinType.ANTI, leftKey, rightKey, null);
+    return new LoopJoin<>(left, right, JoinType.ANTI, leftKey, rightKey, false);
   }
 
   public static <T> LoopJoin<T, T> anti(
       @NotNull QueryNode<T> left, @NotNull QueryNode<T> right) {
-    return new LoopJoin<>(left, right, JoinType.ANTI, QueryData::id, QueryData::id, null);
+    return new LoopJoin<>(left, right, JoinType.ANTI, QueryData::id, QueryData::id, true);
   }
 
   public @NotNull JoinType joinType() {
@@ -85,10 +78,7 @@ public class LoopJoin<L, R> extends QueryNode<L> {
 
   @Override
   public @NotNull SortOrder<L> sortOrder() {
-    return switch (joinType) {
-      case INNER -> SortOrder.none();
-      case SEMI, ANTI -> left.sortOrder();
-    };
+    return left.sortOrder();
   }
 
   @Override
@@ -117,11 +107,16 @@ public class LoopJoin<L, R> extends QueryNode<L> {
                   leftRow -> {
                     int key = leftKey.applyAsInt(leftRow);
                     return lookupRight(key)
-                        .map(rightRow -> combiner.apply(leftRow, rightRow));
+                        .map(rightRow -> QueryData.combine(leftRow, rightRow, sameType));
                   });
       case SEMI ->
           left.stream()
-              .filter(leftRow -> lookupRight(leftKey.applyAsInt(leftRow)).findAny().isPresent());
+              .flatMap(
+                  leftRow ->
+                      lookupRight(leftKey.applyAsInt(leftRow))
+                          .findFirst()
+                          .map(rightRow -> QueryData.combine(leftRow, rightRow, sameType))
+                          .stream());
       case ANTI ->
           left.stream()
               .filter(leftRow -> lookupRight(leftKey.applyAsInt(leftRow)).findAny().isEmpty());

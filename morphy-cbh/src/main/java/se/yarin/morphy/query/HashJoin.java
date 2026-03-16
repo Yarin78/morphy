@@ -3,11 +3,9 @@ package se.yarin.morphy.query;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.BiFunction;
 import java.util.function.ToIntFunction;
 import java.util.stream.Stream;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 public class HashJoin<L, R> extends QueryNode<L> {
   private final @NotNull QueryNode<L> left;
@@ -15,39 +13,29 @@ public class HashJoin<L, R> extends QueryNode<L> {
   private final @NotNull JoinType joinType;
   private final @NotNull ToIntFunction<QueryData<L>> leftKey;
   private final @NotNull ToIntFunction<QueryData<R>> rightKey;
-  private final @Nullable BiFunction<QueryData<L>, QueryData<R>, QueryData<L>> combiner;
+  private final boolean sameType;
 
-  public HashJoin(
+  private HashJoin(
       @NotNull QueryNode<L> left,
       @NotNull QueryNode<R> right,
       @NotNull JoinType joinType,
       @NotNull ToIntFunction<QueryData<L>> leftKey,
       @NotNull ToIntFunction<QueryData<R>> rightKey,
-      @Nullable BiFunction<QueryData<L>, QueryData<R>, QueryData<L>> combiner) {
+      boolean sameType) {
     if (right.mayContainDuplicates()) {
       throw new IllegalArgumentException("Right source must not contain duplicates");
-    }
-    if (joinType == JoinType.INNER && combiner == null) {
-      throw new IllegalArgumentException("Combiner is required for INNER join");
     }
     this.left = left;
     this.right = right;
     this.joinType = joinType;
     this.leftKey = leftKey;
     this.rightKey = rightKey;
-    this.combiner = combiner;
-  }
-
-  public static <T> HashJoin<T, T> inner(
-      @NotNull QueryNode<T> left,
-      @NotNull QueryNode<T> right,
-      @NotNull BiFunction<QueryData<T>, QueryData<T>, QueryData<T>> combiner) {
-    return new HashJoin<>(left, right, JoinType.INNER, QueryData::id, QueryData::id, combiner);
+    this.sameType = sameType;
   }
 
   public static <T> HashJoin<T, T> inner(
       @NotNull QueryNode<T> left, @NotNull QueryNode<T> right) {
-    return inner(left, right, QueryData.merger());
+    return new HashJoin<>(left, right, JoinType.INNER, QueryData::id, QueryData::id, true);
   }
 
   public static <L, R> HashJoin<L, R> semi(
@@ -55,12 +43,12 @@ public class HashJoin<L, R> extends QueryNode<L> {
       @NotNull QueryNode<R> right,
       @NotNull ToIntFunction<QueryData<L>> leftKey,
       @NotNull ToIntFunction<QueryData<R>> rightKey) {
-    return new HashJoin<>(left, right, JoinType.SEMI, leftKey, rightKey, null);
+    return new HashJoin<>(left, right, JoinType.SEMI, leftKey, rightKey, false);
   }
 
   public static <T> HashJoin<T, T> semi(
       @NotNull QueryNode<T> left, @NotNull QueryNode<T> right) {
-    return new HashJoin<>(left, right, JoinType.SEMI, QueryData::id, QueryData::id, null);
+    return new HashJoin<>(left, right, JoinType.SEMI, QueryData::id, QueryData::id, true);
   }
 
   public static <L, R> HashJoin<L, R> anti(
@@ -68,12 +56,12 @@ public class HashJoin<L, R> extends QueryNode<L> {
       @NotNull QueryNode<R> right,
       @NotNull ToIntFunction<QueryData<L>> leftKey,
       @NotNull ToIntFunction<QueryData<R>> rightKey) {
-    return new HashJoin<>(left, right, JoinType.ANTI, leftKey, rightKey, null);
+    return new HashJoin<>(left, right, JoinType.ANTI, leftKey, rightKey, false);
   }
 
   public static <T> HashJoin<T, T> anti(
       @NotNull QueryNode<T> left, @NotNull QueryNode<T> right) {
-    return new HashJoin<>(left, right, JoinType.ANTI, QueryData::id, QueryData::id, null);
+    return new HashJoin<>(left, right, JoinType.ANTI, QueryData::id, QueryData::id, true);
   }
 
   public @NotNull JoinType joinType() {
@@ -104,8 +92,11 @@ public class HashJoin<L, R> extends QueryNode<L> {
       case INNER ->
           left.stream()
               .filter(qd -> hashMap.containsKey(leftKey.applyAsInt(qd)))
-              .map(qd -> combiner.apply(qd, hashMap.get(leftKey.applyAsInt(qd))));
-      case SEMI -> left.stream().filter(qd -> hashMap.containsKey(leftKey.applyAsInt(qd)));
+              .map(qd -> QueryData.combine(qd, hashMap.get(leftKey.applyAsInt(qd)), sameType));
+      case SEMI ->
+          left.stream()
+              .filter(qd -> hashMap.containsKey(leftKey.applyAsInt(qd)))
+              .map(qd -> QueryData.combine(qd, hashMap.get(leftKey.applyAsInt(qd)), sameType));
       case ANTI -> left.stream().filter(qd -> !hashMap.containsKey(leftKey.applyAsInt(qd)));
     };
   }
