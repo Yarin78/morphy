@@ -34,9 +34,13 @@ public class GameHeaderIndex
 
   private static final Logger log = LoggerFactory.getLogger(GameHeaderIndex.class);
 
-  private final @NotNull ItemStorage<GameHeaderIndex.Prolog, GameHeader> storage;
+  private final @NotNull ItemStorage<Prolog, GameHeader> storage;
   private final @NotNull DatabaseContext context;
   private final @NotNull MetricsRef<ItemMetrics> itemMetricsRef;
+
+  public @NotNull ItemStorage<Prolog, GameHeader> storage() {
+    return storage;
+  }
 
   public GameHeaderIndex() {
     this(null);

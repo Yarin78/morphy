@@ -1,29 +1,25 @@
 package se.yarin.morphy.query;
 
 import java.util.List;
-import java.util.Objects;
-import java.util.function.IntFunction;
-import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import se.yarin.morphy.DatabaseReadTransaction;
-import se.yarin.morphy.entities.Entity;
-import se.yarin.morphy.entities.EntityIndexReadTransaction;
 import se.yarin.morphy.games.ExtendedGameHeader;
 import se.yarin.morphy.games.ExtendedGameHeaderStorage;
 import se.yarin.morphy.games.GameHeader;
 import se.yarin.morphy.games.GameHeaderIndex;
+import se.yarin.morphy.storage.ItemStorage;
 import se.yarin.morphy.storage.ItemStorageFilter;
 
 public class TableScan<T> extends QueryNode<T> {
-  private final @NotNull IntFunction<@Nullable T> fetcher;
+  private final @NotNull ItemStorage<?, T> storage;
   private final int startId; // inclusive
   private final int endId; // exclusive
   private final @Nullable ItemStorageFilter<T> filter;
 
   public TableScan(
-      @NotNull IntFunction<@Nullable T> fetcher,
+      @NotNull ItemStorage<?, T> storage,
       int startId,
       int endId,
       @Nullable ItemStorageFilter<T> filter) {
@@ -31,15 +27,16 @@ public class TableScan<T> extends QueryNode<T> {
       throw new IllegalArgumentException(
           "Invalid range: startId=" + startId + ", endId=" + endId);
     }
-    this.fetcher = fetcher;
+    this.storage = storage;
     this.startId = startId;
     this.endId = endId;
     this.filter = filter;
   }
 
-  public TableScan(@NotNull IntFunction<@Nullable T> fetcher, int startId, int endId) {
-    this(fetcher, startId, endId, null);
+  public TableScan(@NotNull ItemStorage<?, T> storage, int startId, int endId) {
+    this(storage, startId, endId, null);
   }
+
   @Override
   public @NotNull List<QueryNode<?>> sources() {
     return List.of();
@@ -57,23 +54,8 @@ public class TableScan<T> extends QueryNode<T> {
 
   @Override
   public @NotNull Stream<QueryData<T>> stream() {
-    // TODO: Could consider more efficient implementations here,
-    // instead of getting items one by one.
-    // Maybe change the IntFunction to something taking a range.
-    return IntStream.range(startId, endId)
-        .mapToObj(
-            id -> {
-              T data = fetcher.apply(id);
-              if (data == null) return null;
-              return new QueryData<>(id, data);
-            })
-        .filter(Objects::nonNull)
-        .filter(
-            qd -> {
-              if (filter == null) return true;
-              assert qd.data() != null;
-              return filter.matches(qd.data());
-            });
+    return storage.stream(startId, endId, filter)
+        .map(item -> new QueryData<>(item.index(), item.item()));
   }
 
   public static TableScan<GameHeader> gameHeaders(@NotNull DatabaseReadTransaction txn) {
@@ -83,7 +65,7 @@ public class TableScan<T> extends QueryNode<T> {
   public static TableScan<GameHeader> gameHeaders(
       @NotNull DatabaseReadTransaction txn, @Nullable ItemStorageFilter<GameHeader> filter) {
     GameHeaderIndex index = txn.database().gameHeaderIndex();
-    return new TableScan<>(index::getGameHeader, 1, index.count() + 1, filter);
+    return new TableScan<>(index.storage(), 1, index.count() + 1, filter);
   }
 
   public static TableScan<GameHeader> gameHeaders(
@@ -91,21 +73,19 @@ public class TableScan<T> extends QueryNode<T> {
       int startId,
       int endId,
       @Nullable ItemStorageFilter<GameHeader> filter) {
-    return new TableScan<>(txn.database().gameHeaderIndex()::getGameHeader, startId, endId, filter);
+    return new TableScan<>(txn.database().gameHeaderIndex().storage(), startId, endId, filter);
   }
 
   public static TableScan<ExtendedGameHeader> extendedGameHeaders(
-      @NotNull DatabaseReadTransaction txn
-  ) {
+      @NotNull DatabaseReadTransaction txn) {
     return extendedGameHeaders(txn, null);
   }
 
   public static TableScan<ExtendedGameHeader> extendedGameHeaders(
       @NotNull DatabaseReadTransaction txn,
-      @Nullable ItemStorageFilter<ExtendedGameHeader> filter
-  ) {
-    ExtendedGameHeaderStorage index = txn.database().extendedGameHeaderStorage();
-    return extendedGameHeaders(txn, 1, index.count() + 1, filter);
+      @Nullable ItemStorageFilter<ExtendedGameHeader> filter) {
+    ExtendedGameHeaderStorage storage = txn.database().extendedGameHeaderStorage();
+    return extendedGameHeaders(txn, 1, storage.count() + 1, filter);
   }
 
   public static TableScan<ExtendedGameHeader> extendedGameHeaders(
@@ -113,17 +93,7 @@ public class TableScan<T> extends QueryNode<T> {
       int startId,
       int endId,
       @Nullable ItemStorageFilter<ExtendedGameHeader> filter) {
-    return new TableScan<>(txn.database().extendedGameHeaderStorage()::get, startId, endId, filter);
-  }
-
-  public static <T extends Entity & Comparable<T>> TableScan<T> entities(
-      @NotNull EntityIndexReadTransaction<T> txn) {
-    return entities(txn, null);
-  }
-
-  public static <T extends Entity & Comparable<T>> TableScan<T> entities(
-      @NotNull EntityIndexReadTransaction<T> txn, @Nullable ItemStorageFilter<T> filter) {
-    return new TableScan<>(txn::get, 0, txn.index().count(), filter);
+    return new TableScan<>(txn.database().extendedGameHeaderStorage().storage(), startId, endId, filter);
   }
 
   @Override

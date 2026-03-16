@@ -5,7 +5,13 @@ import org.jetbrains.annotations.Nullable;
 import se.yarin.morphy.IdObject;
 import se.yarin.morphy.exceptions.MorphyIOException;
 
+import java.util.Iterator;
 import java.util.List;
+import java.util.NoSuchElementException;
+import java.util.Spliterator;
+import java.util.Spliterators;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 /**
  * Interface of a simple structured storage containing items of the same type. Items are referenced
@@ -103,6 +109,72 @@ public interface ItemStorage<THeader, TItem extends IdObject> {
    */
   @NotNull
   List<TItem> getItems(int index, int count, @Nullable ItemStorageFilter<TItem> filter);
+
+  /**
+   * Returns a stream of all items in the given range, reading in batches. Non-matching items (null
+   * values from filtered reads) are excluded. Each element is an {@link IndexedItem} containing the
+   * item and its index.
+   *
+   * @param startIndex the index of the first item (inclusive)
+   * @param endIndex the index past the last item (exclusive)
+   * @param filter an optional filter to apply
+   * @return a stream of indexed items
+   */
+  default @NotNull Stream<IndexedItem<TItem>> stream(
+      int startIndex, int endIndex, @Nullable ItemStorageFilter<TItem> filter) {
+    int batchSize = 1000;
+    Iterator<IndexedItem<TItem>> iterator =
+        new Iterator<>() {
+          private int nextBatchStart = startIndex;
+          private int currentBatchStartIndex = 0;
+          private List<TItem> currentBatch = List.of();
+          private int indexInBatch = 0;
+          private IndexedItem<TItem> next = null;
+
+          @Override
+          public boolean hasNext() {
+            while (next == null) {
+              if (indexInBatch < currentBatch.size()) {
+                int id = currentBatchStartIndex + indexInBatch;
+                TItem item = currentBatch.get(indexInBatch);
+                indexInBatch++;
+                if (item != null) {
+                  next = new IndexedItem<>(id, item);
+                  return true;
+                }
+              } else if (nextBatchStart < endIndex) {
+                int count = Math.min(batchSize, endIndex - nextBatchStart);
+                currentBatchStartIndex = nextBatchStart;
+                currentBatch =
+                    filter != null
+                        ? getItems(nextBatchStart, count, filter)
+                        : getItems(nextBatchStart, count);
+                nextBatchStart += count;
+                indexInBatch = 0;
+              } else {
+                return false;
+              }
+            }
+            return true;
+          }
+
+          @Override
+          public IndexedItem<TItem> next() {
+            if (!hasNext()) {
+              throw new NoSuchElementException();
+            }
+            IndexedItem<TItem> result = next;
+            next = null;
+            return result;
+          }
+        };
+    return StreamSupport.stream(
+        Spliterators.spliteratorUnknownSize(
+            iterator, Spliterator.ORDERED | Spliterator.NONNULL),
+        false);
+  }
+
+  record IndexedItem<TItem>(int index, @NotNull TItem item) {}
 
   /**
    * Closes the estorage

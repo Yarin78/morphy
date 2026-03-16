@@ -30,7 +30,8 @@ import static java.nio.file.StandardOpenOption.WRITE;
 public abstract class EntityIndex<T extends Entity & Comparable<T>> implements MetricsProvider {
   private static final Logger log = LoggerFactory.getLogger(EntityIndex.class);
 
-  protected final @NotNull ItemStorage<EntityIndexHeader, EntityNode> storage;
+  // Package-private access; also exposed via storage() for the query engine
+  final @NotNull ItemStorage<EntityIndexHeader, EntityNode> storage;
   private final @NotNull EntityType entityType;
   private final @NotNull DatabaseContext context;
 
@@ -39,6 +40,10 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>> implements M
   // if transactions are done explicitly on an entity index instead of the whole database
   private final AtomicInteger currentVersion;
   private final MetricsRef<ItemMetrics> itemMetricsRef;
+
+  public @NotNull ItemStorage<EntityIndexHeader, EntityNode> storage() {
+    return storage;
+  }
 
   public @NotNull EntityIndexHeader storageHeader() {
     return storage.getHeader();
@@ -110,7 +115,7 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>> implements M
    * @return an entity
    * @throws IllegalArgumentException if the entity refers to a deleted node
    */
-  protected @NotNull T resolveEntity(@NotNull EntityNode node) throws IllegalArgumentException {
+  public @NotNull T resolveEntity(@NotNull EntityNode node) throws IllegalArgumentException {
     if (node.isDeleted()) {
       throw new IllegalArgumentException(
           String.format("The %s node with id %d is deleted", entityType, node.getId()));

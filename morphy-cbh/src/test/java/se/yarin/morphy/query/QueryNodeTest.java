@@ -74,7 +74,7 @@ public class QueryNodeTest {
 
   @Test
   public void tableScanEntities() {
-    var scan = TableScan.entities(txn.playerTransaction());
+    var scan = new EntityTableScan<>(txn.playerTransaction());
     List<QueryData<Player>> results = scan.stream().toList();
     assertEquals(db.playerIndex().count(), results.size());
     assertNotNull(results.get(0).data());
@@ -82,7 +82,8 @@ public class QueryNodeTest {
 
   @Test
   public void tableScanEntitiesWithFilter() {
-    var scan = TableScan.entities(txn.playerTransaction(), p -> p.count() >= 10);
+    var scan = new EntityTableScan<>(txn.playerTransaction(),
+        new EntityCountFilter<>(EntityType.PLAYER, 10, Integer.MAX_VALUE));
     List<QueryData<Player>> results = scan.stream().toList();
     assertTrue(results.size() >= 1);
     for (var qd : results) {

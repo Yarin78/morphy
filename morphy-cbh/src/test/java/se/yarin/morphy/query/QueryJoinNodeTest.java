@@ -14,6 +14,7 @@ import se.yarin.morphy.boosters.GameEntityIndex;
 import se.yarin.morphy.entities.EntityType;
 import se.yarin.morphy.entities.Player;
 import se.yarin.morphy.entities.filters.EntityCountFilter;
+import se.yarin.morphy.entities.filters.PlayerNameFilter;
 import se.yarin.morphy.entities.Tournament;
 import se.yarin.morphy.games.ExtendedGameHeader;
 import se.yarin.morphy.games.GameHeader;
@@ -669,8 +670,8 @@ public class QueryJoinNodeTest {
   public void hashJoinGamesByWhitePlayerName() {
     // Find all games where the white player's last name starts with "Kasparov"
     var gameScan = TableScan.gameHeaders(txn);
-    var playerScan = TableScan.entities(txn.playerTransaction(),
-        player -> player.lastName().startsWith("Kasparov"));
+    var playerScan = new EntityTableScan<>(txn.playerTransaction(),
+        new PlayerNameFilter("Kasparov", "", true, false));
 
     var join = HashJoin.<GameHeader, Player>semi(
         gameScan,

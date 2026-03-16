@@ -38,8 +38,7 @@ public class ExtendedGameHeaderStorage
 
   private static final String STORAGE_NAME = "GameHeaderExt";
 
-  private final @NotNull ItemStorage<ExtendedGameHeaderStorage.ExtProlog, ExtendedGameHeader>
-      storage;
+  private final @NotNull ItemStorage<ExtProlog, ExtendedGameHeader> storage;
   private final @NotNull DatabaseContext context;
   private final @NotNull MetricsRef<ItemMetrics> itemMetricsRef;
 
@@ -113,6 +112,10 @@ public class ExtendedGameHeaderStorage
       return target;
     }
     return new ExtendedGameHeaderStorage(file, mode.openOptions(), context);
+  }
+
+  public @NotNull ItemStorage<ExtProlog, ExtendedGameHeader> storage() {
+    return storage;
   }
 
   public DatabaseContext context() {
