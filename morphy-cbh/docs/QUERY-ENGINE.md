@@ -51,7 +51,7 @@ The right hand side can be of another type.
 
 All joins are equijoins. Each join takes as input a `ToIntFunction` that extracts a single integer key from each row.
 For multi-key cases (e.g. matching a game against both its white and black player), the caller flatMaps the left side
-to produce two rows (one per key) before the join, then applies Distinct afterwards to remove duplicates.
+to produce two rows (one per key) before the join, then applies Distinct afterwards (if necessary) to remove duplicates.
 
 There are three semantically different types of joins: Inner (natural) join, semi-join and anti-joins.
 An inner join produces all combinations of values from both inputs that matches the join condition.
