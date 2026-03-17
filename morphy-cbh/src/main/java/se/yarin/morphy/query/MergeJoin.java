@@ -16,6 +16,7 @@ public class MergeJoin<L, R> extends QueryNode<L> {
   private final @NotNull ToIntFunction<QueryData<L>> leftKey;
   private final @NotNull ToIntFunction<QueryData<R>> rightKey;
   private final boolean sameType;
+  private final @NotNull JoinCardinality cardinality;
 
   private MergeJoin(
       @NotNull QueryNode<L> left,
@@ -23,32 +24,38 @@ public class MergeJoin<L, R> extends QueryNode<L> {
       @NotNull JoinType joinType,
       @NotNull ToIntFunction<QueryData<L>> leftKey,
       @NotNull ToIntFunction<QueryData<R>> rightKey,
-      boolean sameType) {
+      boolean sameType,
+      @NotNull JoinCardinality cardinality) {
     this.left = left;
     this.right = right;
     this.joinType = joinType;
     this.leftKey = leftKey;
     this.rightKey = rightKey;
     this.sameType = sameType;
+    this.cardinality = cardinality;
   }
 
   public static <T> MergeJoin<T, T> inner(
-      @NotNull QueryNode<T> left, @NotNull QueryNode<T> right) {
+      @NotNull QueryNode<T> left,
+      @NotNull QueryNode<T> right,
+      @NotNull JoinCardinality cardinality) {
     if (!left.sortOrder().isSameOrStronger(SortOrder.byId())) {
       throw new IllegalArgumentException("Left source must be sorted by id");
     }
     if (!right.sortOrder().isSameOrStronger(SortOrder.byId())) {
       throw new IllegalArgumentException("Right source must be sorted by id");
     }
-    return new MergeJoin<>(left, right, JoinType.INNER, QueryData::id, QueryData::id, true);
+    return new MergeJoin<>(
+        left, right, JoinType.INNER, QueryData::id, QueryData::id, true, cardinality);
   }
 
   public static <L, R> MergeJoin<L, R> inner(
       @NotNull QueryNode<L> left,
       @NotNull QueryNode<R> right,
       @NotNull ToIntFunction<QueryData<L>> leftKey,
-      @NotNull ToIntFunction<QueryData<R>> rightKey) {
-    return new MergeJoin<>(left, right, JoinType.INNER, leftKey, rightKey, false);
+      @NotNull ToIntFunction<QueryData<R>> rightKey,
+      @NotNull JoinCardinality cardinality) {
+    return new MergeJoin<>(left, right, JoinType.INNER, leftKey, rightKey, false, cardinality);
   }
 
   public static <L, R> MergeJoin<L, R> semi(
@@ -56,7 +63,8 @@ public class MergeJoin<L, R> extends QueryNode<L> {
       @NotNull QueryNode<R> right,
       @NotNull ToIntFunction<QueryData<L>> leftKey,
       @NotNull ToIntFunction<QueryData<R>> rightKey) {
-    return new MergeJoin<>(left, right, JoinType.SEMI, leftKey, rightKey, false);
+    return new MergeJoin<>(
+        left, right, JoinType.SEMI, leftKey, rightKey, false, JoinCardinality.ONE_TO_ONE);
   }
 
   public static <T> MergeJoin<T, T> semi(
@@ -67,7 +75,8 @@ public class MergeJoin<L, R> extends QueryNode<L> {
     if (!right.sortOrder().isSameOrStronger(SortOrder.byId())) {
       throw new IllegalArgumentException("Right source must be sorted by id");
     }
-    return new MergeJoin<>(left, right, JoinType.SEMI, QueryData::id, QueryData::id, true);
+    return new MergeJoin<>(
+        left, right, JoinType.SEMI, QueryData::id, QueryData::id, true, JoinCardinality.ONE_TO_ONE);
   }
 
   public static <L, R> MergeJoin<L, R> anti(
@@ -75,7 +84,8 @@ public class MergeJoin<L, R> extends QueryNode<L> {
       @NotNull QueryNode<R> right,
       @NotNull ToIntFunction<QueryData<L>> leftKey,
       @NotNull ToIntFunction<QueryData<R>> rightKey) {
-    return new MergeJoin<>(left, right, JoinType.ANTI, leftKey, rightKey, false);
+    return new MergeJoin<>(
+        left, right, JoinType.ANTI, leftKey, rightKey, false, JoinCardinality.ONE_TO_ONE);
   }
 
   public static <T> MergeJoin<T, T> anti(
@@ -86,11 +96,16 @@ public class MergeJoin<L, R> extends QueryNode<L> {
     if (!right.sortOrder().isSameOrStronger(SortOrder.byId())) {
       throw new IllegalArgumentException("Right source must be sorted by id");
     }
-    return new MergeJoin<>(left, right, JoinType.ANTI, QueryData::id, QueryData::id, true);
+    return new MergeJoin<>(
+        left, right, JoinType.ANTI, QueryData::id, QueryData::id, true, JoinCardinality.ONE_TO_ONE);
   }
 
   public @NotNull JoinType joinType() {
     return joinType;
+  }
+
+  public @NotNull JoinCardinality cardinality() {
+    return cardinality;
   }
 
   @Override
@@ -106,7 +121,10 @@ public class MergeJoin<L, R> extends QueryNode<L> {
   @Override
   public boolean mayContainDuplicates() {
     return switch (joinType) {
-      case INNER -> left.mayContainDuplicates() || right.mayContainDuplicates();
+      case INNER ->
+          cardinality == JoinCardinality.ONE_TO_MANY
+              ? left.mayContainDuplicates() || right.mayContainDuplicates()
+              : left.mayContainDuplicates();
       case SEMI, ANTI -> left.mayContainDuplicates();
     };
   }

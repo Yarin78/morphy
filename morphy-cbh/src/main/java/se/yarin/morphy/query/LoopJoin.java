@@ -12,6 +12,7 @@ public class LoopJoin<L, R> extends QueryNode<L> {
   private final @NotNull ToIntFunction<QueryData<L>> leftKey;
   private final @NotNull ToIntFunction<QueryData<R>> rightKey;
   private final boolean sameType;
+  private final @NotNull JoinCardinality cardinality;
 
   private LoopJoin(
       @NotNull QueryNode<L> left,
@@ -19,26 +20,32 @@ public class LoopJoin<L, R> extends QueryNode<L> {
       @NotNull JoinType joinType,
       @NotNull ToIntFunction<QueryData<L>> leftKey,
       @NotNull ToIntFunction<QueryData<R>> rightKey,
-      boolean sameType) {
+      boolean sameType,
+      @NotNull JoinCardinality cardinality) {
     this.left = left;
     this.right = right;
     this.joinType = joinType;
     this.leftKey = leftKey;
     this.rightKey = rightKey;
     this.sameType = sameType;
+    this.cardinality = cardinality;
   }
 
   public static <L, R> LoopJoin<L, R> inner(
       @NotNull QueryNode<L> left,
       @NotNull QueryNode<R> right,
       @NotNull ToIntFunction<QueryData<L>> leftKey,
-      @NotNull ToIntFunction<QueryData<R>> rightKey) {
-    return new LoopJoin<>(left, right, JoinType.INNER, leftKey, rightKey, false);
+      @NotNull ToIntFunction<QueryData<R>> rightKey,
+      @NotNull JoinCardinality cardinality) {
+    return new LoopJoin<>(left, right, JoinType.INNER, leftKey, rightKey, false, cardinality);
   }
 
   public static <T> LoopJoin<T, T> inner(
-      @NotNull QueryNode<T> left, @NotNull QueryNode<T> right) {
-    return new LoopJoin<>(left, right, JoinType.INNER, QueryData::id, QueryData::id, true);
+      @NotNull QueryNode<T> left,
+      @NotNull QueryNode<T> right,
+      @NotNull JoinCardinality cardinality) {
+    return new LoopJoin<>(
+        left, right, JoinType.INNER, QueryData::id, QueryData::id, true, cardinality);
   }
 
   public static <L, R> LoopJoin<L, R> semi(
@@ -46,12 +53,14 @@ public class LoopJoin<L, R> extends QueryNode<L> {
       @NotNull QueryNode<R> right,
       @NotNull ToIntFunction<QueryData<L>> leftKey,
       @NotNull ToIntFunction<QueryData<R>> rightKey) {
-    return new LoopJoin<>(left, right, JoinType.SEMI, leftKey, rightKey, false);
+    return new LoopJoin<>(
+        left, right, JoinType.SEMI, leftKey, rightKey, false, JoinCardinality.ONE_TO_ONE);
   }
 
   public static <T> LoopJoin<T, T> semi(
       @NotNull QueryNode<T> left, @NotNull QueryNode<T> right) {
-    return new LoopJoin<>(left, right, JoinType.SEMI, QueryData::id, QueryData::id, true);
+    return new LoopJoin<>(
+        left, right, JoinType.SEMI, QueryData::id, QueryData::id, true, JoinCardinality.ONE_TO_ONE);
   }
 
   public static <L, R> LoopJoin<L, R> anti(
@@ -59,16 +68,22 @@ public class LoopJoin<L, R> extends QueryNode<L> {
       @NotNull QueryNode<R> right,
       @NotNull ToIntFunction<QueryData<L>> leftKey,
       @NotNull ToIntFunction<QueryData<R>> rightKey) {
-    return new LoopJoin<>(left, right, JoinType.ANTI, leftKey, rightKey, false);
+    return new LoopJoin<>(
+        left, right, JoinType.ANTI, leftKey, rightKey, false, JoinCardinality.ONE_TO_ONE);
   }
 
   public static <T> LoopJoin<T, T> anti(
       @NotNull QueryNode<T> left, @NotNull QueryNode<T> right) {
-    return new LoopJoin<>(left, right, JoinType.ANTI, QueryData::id, QueryData::id, true);
+    return new LoopJoin<>(
+        left, right, JoinType.ANTI, QueryData::id, QueryData::id, true, JoinCardinality.ONE_TO_ONE);
   }
 
   public @NotNull JoinType joinType() {
     return joinType;
+  }
+
+  public @NotNull JoinCardinality cardinality() {
+    return cardinality;
   }
 
   @Override
@@ -84,7 +99,8 @@ public class LoopJoin<L, R> extends QueryNode<L> {
   @Override
   public boolean mayContainDuplicates() {
     return switch (joinType) {
-      case INNER -> true;
+      case INNER ->
+          cardinality == JoinCardinality.ONE_TO_MANY || left.mayContainDuplicates();
       case SEMI, ANTI -> left.mayContainDuplicates();
     };
   }

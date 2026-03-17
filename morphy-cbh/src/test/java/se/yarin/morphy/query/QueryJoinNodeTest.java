@@ -55,7 +55,7 @@ public class QueryJoinNodeTest {
         SortOrder.byId(),
         false);
 
-    var join = MergeJoin.inner(left, right);
+    var join = MergeJoin.inner(left, right, JoinCardinality.ONE_TO_ONE);
     List<QueryData<String>> results = join.stream().toList();
     assertEquals(2, results.size());
     assertEquals(2, results.get(0).id());
@@ -77,7 +77,7 @@ public class QueryJoinNodeTest {
         SortOrder.byId(),
         false);
 
-    var join = MergeJoin.inner(left, right);
+    var join = MergeJoin.inner(left, right, JoinCardinality.ONE_TO_ONE);
     assertEquals(0, join.stream().toList().size());
   }
 
@@ -169,7 +169,7 @@ public class QueryJoinNodeTest {
         SortOrder.byId(),
         true);
 
-    var join = MergeJoin.inner(left, right);
+    var join = MergeJoin.inner(left, right, JoinCardinality.ONE_TO_MANY);
     List<QueryData<String>> results = join.stream().toList();
     assertEquals(2, results.size());
     assertEquals(2, results.get(0).id());
@@ -195,7 +195,7 @@ public class QueryJoinNodeTest {
         SortOrder.byId(),
         false);
 
-    var join = MergeJoin.inner(left, right);
+    var join = MergeJoin.inner(left, right, JoinCardinality.ONE_TO_ONE);
     List<QueryData<String>> results = join.stream().toList();
     assertEquals(3, results.size());
     assertEquals(2, results.get(0).id());
@@ -223,7 +223,7 @@ public class QueryJoinNodeTest {
         SortOrder.byId(),
         true);
 
-    var join = MergeJoin.inner(left, right);
+    var join = MergeJoin.inner(left, right, JoinCardinality.ONE_TO_ONE);
     List<QueryData<String>> results = join.stream().toList();
     // 2 left × 2 right = 4 results (cartesian product for key 2)
     assertEquals(4, results.size());
@@ -449,7 +449,7 @@ public class QueryJoinNodeTest {
         SortOrder.byId(),
         false);
 
-    var join = LoopJoin.inner(left, right);
+    var join = LoopJoin.inner(left, right, JoinCardinality.ONE_TO_ONE);
 
     List<QueryData<String>> results = join.stream().toList();
     assertEquals(2, results.size());
@@ -457,7 +457,7 @@ public class QueryJoinNodeTest {
     assertEquals("game1", results.get(0).data());
     assertEquals("game2", results.get(1).data());
     assertTrue(join.sortOrder().isSameOrStronger(SortOrder.byId()));
-    assertTrue(join.mayContainDuplicates());
+    assertFalse(join.mayContainDuplicates());
   }
 
   @Test
@@ -519,7 +519,7 @@ public class QueryJoinNodeTest {
         List.of(new QueryData<>(1, "a")),
         SortOrder.byId(),
         false);
-    var join = MergeJoin.inner(left, right);
+    var join = MergeJoin.inner(left, right, JoinCardinality.ONE_TO_ONE);
 
     String debug = join.debugString();
     assertTrue(debug.contains("MergeJoin"));
@@ -534,7 +534,7 @@ public class QueryJoinNodeTest {
         List.of(new QueryData<>(1, "a")), SortOrder.byId(), false);
     var right = ManualQueryNode.verified(
         List.of(new QueryData<>(1, "a")), SortOrder.byId(), false);
-    var join = MergeJoin.inner(left, right);
+    var join = MergeJoin.inner(left, right, JoinCardinality.ONE_TO_ONE);
     var sort = new Sort<>(join, SortOrder.byId());
     var limit = new Limit<>(sort, 10);
 
@@ -553,7 +553,7 @@ public class QueryJoinNodeTest {
     // Two scans with different ranges that overlap on games 20-29
     var left = TableScan.gameHeaders(txn, 10, 30, null);
     var right = TableScan.gameHeaders(txn, 20, 40, null);
-    var join = MergeJoin.inner(left, right);
+    var join = MergeJoin.inner(left, right, JoinCardinality.ONE_TO_ONE);
 
     List<QueryData<GameHeader>> results = join.stream().toList();
     assertEquals(10, results.size());
@@ -577,7 +577,7 @@ public class QueryJoinNodeTest {
         tournamentScan.streamRange(tournament.id(), tournament.id() + 1).toList(),
         SortOrder.byId(), false);
 
-    var intersection = MergeJoin.inner(gamesByPlayer, gamesByTournament);
+    var intersection = MergeJoin.inner(gamesByPlayer, gamesByTournament, JoinCardinality.ONE_TO_ONE);
 
     List<QueryData<Void>> results = intersection.stream().toList();
     // Intersection should be <= min of both sets
@@ -704,7 +704,7 @@ public class QueryJoinNodeTest {
         scan.streamRange(player11.id(), player11.id() + 1).toList(),
         SortOrder.byId(), false);
 
-    var intersection = MergeJoin.inner(gamesByP10, gamesByP11);
+    var intersection = MergeJoin.inner(gamesByP10, gamesByP11, JoinCardinality.ONE_TO_ONE);
 
     List<QueryData<Void>> results = intersection.stream().toList();
     // Every result must involve both players
@@ -723,7 +723,7 @@ public class QueryJoinNodeTest {
     var extHeaderScan = TableScan.extendedGameHeaders(txn);
 
     var join = MergeJoin.<GameHeader, ExtendedGameHeader>inner(
-        headerScan, extHeaderScan, QueryData::id, QueryData::id);
+        headerScan, extHeaderScan, QueryData::id, QueryData::id, JoinCardinality.ONE_TO_ONE);
 
     List<QueryData<GameHeader>> results = join.stream().toList();
     assertEquals(db.count(), results.size());
@@ -742,7 +742,7 @@ public class QueryJoinNodeTest {
     var extHeaderIndex = new ExtendedGameHeaderIdIndexScan(txn);
 
     var join = LoopJoin.<GameHeader, ExtendedGameHeader>inner(
-        headerScan, extHeaderIndex, QueryData::id, QueryData::id);
+        headerScan, extHeaderIndex, QueryData::id, QueryData::id, JoinCardinality.ONE_TO_ONE);
 
     List<QueryData<GameHeader>> results = join.stream().toList();
     assertEquals(db.count(), results.size());
