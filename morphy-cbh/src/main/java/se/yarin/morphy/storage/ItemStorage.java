@@ -112,43 +112,36 @@ public interface ItemStorage<THeader, TItem extends IdObject> {
 
   /**
    * Returns a stream of all items in the given range, reading in batches. Non-matching items (null
-   * values from filtered reads) are excluded. Each element is an {@link IndexedItem} containing the
-   * item and its index.
+   * values from filtered reads) are excluded.
    *
    * @param startIndex the index of the first item (inclusive)
    * @param endIndex the index past the last item (exclusive)
    * @param filter an optional filter to apply
-   * @return a stream of indexed items
+   * @return a stream of items
    */
-  default @NotNull Stream<IndexedItem<TItem>> stream(
+  default @NotNull Stream<TItem> stream(
       int startIndex, int endIndex, @Nullable ItemStorageFilter<TItem> filter) {
     int batchSize = 1000;
-    Iterator<IndexedItem<TItem>> iterator =
+    Iterator<TItem> iterator =
         new Iterator<>() {
           private int nextBatchStart = startIndex;
-          private int currentBatchStartIndex = 0;
           private List<TItem> currentBatch = List.of();
           private int indexInBatch = 0;
-          private IndexedItem<TItem> next = null;
+          private TItem next = null;
 
           @Override
           public boolean hasNext() {
             while (next == null) {
               if (indexInBatch < currentBatch.size()) {
-                int id = currentBatchStartIndex + indexInBatch;
                 TItem item = currentBatch.get(indexInBatch);
                 indexInBatch++;
                 if (item != null) {
-                  next = new IndexedItem<>(id, item);
+                  next = item;
                   return true;
                 }
               } else if (nextBatchStart < endIndex) {
                 int count = Math.min(batchSize, endIndex - nextBatchStart);
-                currentBatchStartIndex = nextBatchStart;
-                currentBatch =
-                    filter != null
-                        ? getItems(nextBatchStart, count, filter)
-                        : getItems(nextBatchStart, count);
+                currentBatch = getItems(nextBatchStart, count, filter);
                 nextBatchStart += count;
                 indexInBatch = 0;
               } else {
@@ -159,11 +152,11 @@ public interface ItemStorage<THeader, TItem extends IdObject> {
           }
 
           @Override
-          public IndexedItem<TItem> next() {
+          public TItem next() {
             if (!hasNext()) {
               throw new NoSuchElementException();
             }
-            IndexedItem<TItem> result = next;
+            TItem result = next;
             next = null;
             return result;
           }
@@ -174,10 +167,8 @@ public interface ItemStorage<THeader, TItem extends IdObject> {
         false);
   }
 
-  record IndexedItem<TItem>(int index, @NotNull TItem item) {}
-
   /**
-   * Closes the estorage
+   * Closes the storage
    *
    * @throws MorphyIOException if an IO error occurred when closing the storage
    */

@@ -5,6 +5,7 @@ import java.util.stream.Stream;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import se.yarin.morphy.DatabaseReadTransaction;
+import se.yarin.morphy.IdObject;
 import se.yarin.morphy.games.ExtendedGameHeader;
 import se.yarin.morphy.games.ExtendedGameHeaderStorage;
 import se.yarin.morphy.games.GameHeader;
@@ -12,7 +13,7 @@ import se.yarin.morphy.games.GameHeaderIndex;
 import se.yarin.morphy.storage.ItemStorage;
 import se.yarin.morphy.storage.ItemStorageFilter;
 
-public class TableScan<T> extends QueryNode<T> {
+public class TableScan<T extends IdObject> extends QueryNode<T> {
   private final @NotNull ItemStorage<?, T> storage;
   private final int startId; // inclusive
   private final int endId; // exclusive
@@ -55,7 +56,7 @@ public class TableScan<T> extends QueryNode<T> {
   @Override
   public @NotNull Stream<QueryData<T>> stream() {
     return storage.stream(startId, endId, filter)
-        .map(item -> new QueryData<>(item.index(), item.item()));
+        .map(item -> new QueryData<>(item.id(), item));
   }
 
   public static TableScan<GameHeader> gameHeaders(@NotNull DatabaseReadTransaction txn) {

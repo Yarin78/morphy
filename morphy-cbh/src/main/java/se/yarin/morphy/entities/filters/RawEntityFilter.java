@@ -1,6 +1,7 @@
 package se.yarin.morphy.entities.filters;
 
 import org.jetbrains.annotations.NotNull;
+import se.yarin.morphy.IdObject;
 import se.yarin.morphy.entities.EntityType;
 import se.yarin.util.parser.Expr;
 import se.yarin.util.parser.Interpreter;
@@ -9,7 +10,7 @@ import se.yarin.util.parser.Scanner;
 
 import java.nio.ByteBuffer;
 
-public class RawEntityFilter<T> implements EntityFilter<T> {
+public class RawEntityFilter<T extends IdObject> implements EntityFilter<T> {
   @NotNull private final Expr expr;
   @NotNull private final String filterExpression;
   @NotNull private final EntityType entityType;

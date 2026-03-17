@@ -1,9 +1,10 @@
 package se.yarin.morphy.entities.filters;
 
 import org.jetbrains.annotations.NotNull;
+import se.yarin.morphy.IdObject;
 import se.yarin.morphy.entities.EntityType;
 
-public class AllFilter<T> implements EntityFilter<T> {
+public class AllFilter<T extends IdObject> implements EntityFilter<T> {
 
   private final @NotNull EntityType entityType;
 
