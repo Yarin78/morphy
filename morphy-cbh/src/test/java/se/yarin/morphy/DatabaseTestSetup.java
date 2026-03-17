@@ -234,6 +234,7 @@ public abstract class DatabaseTestSetup {
 
     ImmutableGameHeader.Builder header = ImmutableGameHeader.builder();
     ImmutableExtendedGameHeader.Builder extendedHeader = ImmutableExtendedGameHeader.builder();
+    extendedHeader.id(gameId);
 
     GameAdapter gameAdapter = new GameAdapter();
     gameAdapter.setHeaderGameData(header, extendedHeader, headerModel);

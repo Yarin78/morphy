@@ -466,7 +466,7 @@ public class DatabaseWriteTransactionTest extends DatabaseTestSetup {
       txn.updateTournamentById(
           game.tournamentId(),
           Tournament.of("renamed tour", Date.unset()),
-          ImmutableTournamentExtra.builder().longitude(50).build());
+          ImmutableTournamentExtra.builder().id(0).longitude(50).build());
       txn.commit();
     }
 
@@ -820,7 +820,7 @@ public class DatabaseWriteTransactionTest extends DatabaseTestSetup {
       txn.updateTournamentById(
           game.tournamentId(),
           Tournament.of("updated tour", "place", new Date(2021, 1, 2)),
-          ImmutableTournamentExtra.builder().longitude(50).build());
+          ImmutableTournamentExtra.builder().id(game.tournamentId()).longitude(50).build());
       txn.updateAnnotatorById(game.annotatorId(), Annotator.of("updated annotator"));
       txn.updateSourceById(
           game.sourceId(),
@@ -837,7 +837,8 @@ public class DatabaseWriteTransactionTest extends DatabaseTestSetup {
     assertEquals(
         Tournament.of("updated tour", "place", new Date(2021, 1, 2)), committedGame.tournament());
     assertEquals(
-        ImmutableTournamentExtra.builder().longitude(50).build(), committedGame.tournamentExtra());
+        ImmutableTournamentExtra.builder().id(committedGame.tournamentId()).longitude(50).build(),
+        committedGame.tournamentExtra());
     assertEquals(Annotator.of("updated annotator"), committedGame.annotator());
     assertEquals(
         ImmutableSource.builder().title("updated source").publisher("publisher").build(),

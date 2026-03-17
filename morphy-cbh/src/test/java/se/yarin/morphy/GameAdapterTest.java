@@ -57,6 +57,7 @@ public class GameAdapterTest {
       ExtendedGameHeader normalizedNewExtended =
           ImmutableExtendedGameHeader.builder()
               .from(newExtendedHeader)
+              .id(originalExtendedHeader.id())
               .movesOffset(originalExtendedHeader.movesOffset())
               .annotationOffset(originalExtendedHeader.annotationOffset())
               .lastChangedTimestamp(originalExtendedHeader.lastChangedTimestamp())

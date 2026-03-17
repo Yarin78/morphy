@@ -19,16 +19,18 @@ public class TournamentExtraTest {
 
   private final Random random = new Random();
 
-  private TournamentExtra createItem(double latitude, double longitude, Date endDate) {
+  private TournamentExtra createItem(int id, double latitude, double longitude, Date endDate) {
     return ImmutableTournamentExtra.builder()
+        .id(id)
         .latitude(latitude)
         .longitude(longitude)
         .endDate(endDate)
         .build();
   }
 
-  private TournamentExtra createDummyItem() {
+  private TournamentExtra createDummyItem(int id) {
     return createItem(
+        id,
         random.nextDouble(),
         random.nextDouble(),
         new Date(2020, random.nextInt(12) + 1, random.nextInt(28) + 1));
@@ -38,6 +40,7 @@ public class TournamentExtraTest {
   public void testSerialization() {
     ImmutableTournamentExtra newTournamentExtra =
         ImmutableTournamentExtra.builder()
+            .id(0)
             .latitude(1.2)
             .longitude(3.4)
             .endDate(new Date(2016, 7, 13))
@@ -70,10 +73,10 @@ public class TournamentExtraTest {
   @Test
   public void addAndRetrieveItems() {
     TournamentExtraStorage storage = new TournamentExtraStorage();
-    TournamentExtra d1 = createDummyItem();
+    TournamentExtra d1 = createDummyItem(0);
     storage.put(0, d1);
     assertEquals(1, storage.numEntries());
-    TournamentExtra d2 = createDummyItem();
+    TournamentExtra d2 = createDummyItem(1);
     storage.put(1, d2);
     assertEquals(2, storage.numEntries());
 
@@ -86,17 +89,17 @@ public class TournamentExtraTest {
   @Test
   public void addItemBeyondLastIndex() {
     TournamentExtraStorage storage = new TournamentExtraStorage();
-    TournamentExtra d1 = createDummyItem();
+    TournamentExtra d1 = createDummyItem(0);
     storage.put(0, d1);
     assertEquals(1, storage.numEntries());
-    TournamentExtra d2 = createDummyItem();
+    TournamentExtra d2 = createDummyItem(7);
     storage.put(7, d2);
     assertEquals(8, storage.numEntries());
 
     TournamentExtra e1 = storage.get(0);
     assertEquals(d1, e1);
     TournamentExtra ee = storage.get(3);
-    assertEquals(TournamentExtra.empty(), ee);
+    assertTrue(ee.isEmpty());
     TournamentExtra e2 = storage.get(7);
     assertEquals(d2, e2);
   }
@@ -106,15 +109,15 @@ public class TournamentExtraTest {
     TournamentExtraStorage storage = new TournamentExtraStorage();
 
     assertEquals(0, storage.numEntries());
-    assertEquals(TournamentExtra.empty(), storage.get(5));
+    assertTrue(storage.get(5).isEmpty());
     assertEquals(0, storage.numEntries()); // Ensure no fake entries was added on read
 
-    TournamentExtra d1 = createDummyItem();
+    TournamentExtra d1 = createDummyItem(0);
     storage.put(0, d1);
 
     // Still works after one item was added
     assertEquals(1, storage.numEntries());
-    assertEquals(TournamentExtra.empty(), storage.get(5));
+    assertTrue(storage.get(5).isEmpty());
     assertEquals(1, storage.numEntries()); // Ensure no fake entries was added on read
   }
 

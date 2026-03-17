@@ -1,10 +1,11 @@
 package se.yarin.morphy.entities;
 
 import org.jetbrains.annotations.NotNull;
+import se.yarin.morphy.IdObject;
 
 import java.nio.ByteBuffer;
 
-public class EntityNode {
+public class EntityNode implements IdObject {
 
   private int id;
 
@@ -19,6 +20,11 @@ public class EntityNode {
   private int firstGameId;
 
   private final byte @NotNull [] serializedEntity;
+
+  @Override
+  public int id() {
+    return id;
+  }
 
   public int getId() {
     return id;

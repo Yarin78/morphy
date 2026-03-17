@@ -2,6 +2,7 @@ package se.yarin.morphy.storage;
 
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import se.yarin.morphy.IdObject;
 import se.yarin.morphy.exceptions.MorphyIOException;
 
 import java.util.List;
@@ -15,7 +16,7 @@ import java.util.List;
  * @param <THeader> the type of the header
  * @param <TItem> the type of the item
  */
-public interface ItemStorage<THeader, TItem> {
+public interface ItemStorage<THeader, TItem extends IdObject> {
   /**
    * Gets the header from the storage
    *

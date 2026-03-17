@@ -3,12 +3,19 @@ package se.yarin.morphy.games;
 import org.immutables.value.Value;
 import org.jetbrains.annotations.NotNull;
 
+import se.yarin.morphy.IdObject;
+
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 
 @Value.Immutable
-public abstract class ExtendedGameHeader {
+public abstract class ExtendedGameHeader implements IdObject {
+
+  @Value.Default
+  public int id() {
+    return -1;
+  }
 
   /** Base date for creation timestamps: December 1st 2008 in Europe/Berlin timezone */
   private static final Instant CREATION_BASE_DATE =
@@ -118,15 +125,17 @@ public abstract class ExtendedGameHeader {
     return -1;
   }
 
-  public static ImmutableExtendedGameHeader empty(long annotationOffset, long movesOffset) {
+  public static ImmutableExtendedGameHeader empty(
+      int id, long annotationOffset, long movesOffset) {
     return ImmutableExtendedGameHeader.builder()
+        .id(id)
         .annotationOffset(annotationOffset)
         .movesOffset(movesOffset)
         .build();
   }
 
   public static ImmutableExtendedGameHeader empty(GameHeader header) {
-    return empty(header.annotationOffset(), header.movesOffset());
+    return empty(header.id(), header.annotationOffset(), header.movesOffset());
   }
 
   /**

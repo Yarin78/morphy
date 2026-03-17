@@ -37,7 +37,7 @@ public class GameEventStorageTest {
       GameEvents gameEvents = storage.get(gameId);
       Game game = db.getGame(gameId);
       if (!game.guidingText()) {
-        GameEvents deducedGameEvents = new GameEvents(db.getGameModel(gameId).moves());
+        GameEvents deducedGameEvents = new GameEvents(gameId, db.getGameModel(gameId).moves());
         assertEquals(gameEvents, deducedGameEvents);
       }
     }
@@ -60,7 +60,7 @@ public class GameEventStorageTest {
 
     byte[] bytes = new byte[52];
     bytes[10] = 5;
-    storage.put(1, new GameEvents(ByteBuffer.wrap(bytes)));
+    storage.put(1, new GameEvents(1, ByteBuffer.wrap(bytes)));
     assertEquals(1, storage.count());
     storage.close();
 

@@ -301,7 +301,7 @@ public class DatabaseWriteTransaction extends DatabaseTransaction {
 
     GameEvents gameEvents = game.gameEvents();
     if ((gameEvents == null || gameEvents.isEmpty()) && createGameEvents()) {
-      gameEvents = game.guidingText() ? new GameEvents() : new GameEvents(game.getModel().moves());
+      gameEvents = game.guidingText() ? new GameEvents(gameId) : new GameEvents(gameId, game.getModel().moves());
     }
 
     return putGame(
@@ -345,6 +345,8 @@ public class DatabaseWriteTransaction extends DatabaseTransaction {
     ImmutableGameHeader.Builder header = ImmutableGameHeader.builder();
     ImmutableExtendedGameHeader.Builder extendedHeader = ImmutableExtendedGameHeader.builder();
 
+    extendedHeader.id(gameId);
+
     gameAdapter().setGameData(header, extendedHeader, model);
     resolveEntities(header, extendedHeader, model.header());
 
@@ -360,7 +362,7 @@ public class DatabaseWriteTransaction extends DatabaseTransaction {
                 .serializeAnnotations(gameId, model.moves())
             : null,
         TopGamesStorage.TopGameStatus.UNKNOWN, // TODO: Not sure how this works
-        createGameEvents() ? new GameEvents(model.moves()) : null);
+        createGameEvents() ? new GameEvents(gameId, model.moves()) : null);
   }
 
   /**
@@ -463,7 +465,7 @@ public class DatabaseWriteTransaction extends DatabaseTransaction {
         model.contents().serialize(),
         null,
         TopGamesStorage.TopGameStatus.UNKNOWN,
-        createGameEvents() ? new GameEvents() : null);
+        createGameEvents() ? new GameEvents(gameId) : null);
   }
 
   /**
@@ -504,6 +506,7 @@ public class DatabaseWriteTransaction extends DatabaseTransaction {
     extendedGameHeaderBuilder.lastChangedTimestamp(ExtendedGameHeader.currentLastChangedTimestamp());
 
     gameHeaderBuilder.id(gameId);
+    extendedGameHeaderBuilder.id(gameId);
     updatedGames.put(
         gameId,
         new GameData(
@@ -734,7 +737,7 @@ public class DatabaseWriteTransaction extends DatabaseTransaction {
               .gameEventStorage()
               .put(
                   gameId,
-                  updatedGameData.events == null ? new GameEvents() : updatedGameData.events);
+                  updatedGameData.events == null ? new GameEvents(gameId) : updatedGameData.events);
         }
         updatedTopGameStatuses.put(gameId, updatedGameData.topGameStatus);
         updatedMoveOffsets.put(gameId, gameHeader.movesOffset());

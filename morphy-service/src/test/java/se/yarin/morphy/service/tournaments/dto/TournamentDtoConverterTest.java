@@ -124,7 +124,7 @@ class TournamentDtoConverterTest {
             .rounds(11)
             .build();
 
-    TournamentExtra originalExtra = TournamentExtra.empty();
+    TournamentExtra originalExtra = TournamentExtra.empty(0);
 
     // Convert to DTO
     TournamentDto dto = converter.toDto(originalTournament, originalExtra);
@@ -148,7 +148,7 @@ class TournamentDtoConverterTest {
             .type(TournamentType.SWISS_SYSTEM)
             .build();
 
-    TournamentDto swissDto = converter.toDto(swiss, TournamentExtra.empty());
+    TournamentDto swissDto = converter.toDto(swiss, TournamentExtra.empty(0));
     assertEquals("swiss", swissDto.type());
     assertEquals(TournamentType.SWISS_SYSTEM, converter.toTournament(swissDto).type());
 
@@ -159,7 +159,7 @@ class TournamentDtoConverterTest {
             .timeControl(TournamentTimeControl.RAPID)
             .build();
 
-    TournamentDto rapidDto = converter.toDto(rapidTournament, TournamentExtra.empty());
+    TournamentDto rapidDto = converter.toDto(rapidTournament, TournamentExtra.empty(0));
     assertEquals("rapid", rapidDto.timeControl());
     assertEquals(TournamentTimeControl.RAPID, converter.toTournament(rapidDto).timeControl());
   }
@@ -169,7 +169,7 @@ class TournamentDtoConverterTest {
     // Test that empty strings in DTO become null in DTO output
     Tournament tournament = ImmutableTournament.builder().title("").place("").build();
 
-    TournamentDto dto = converter.toDto(tournament, TournamentExtra.empty());
+    TournamentDto dto = converter.toDto(tournament, TournamentExtra.empty(0));
 
     // Empty strings should become null in DTO for optional fields
     assertNull(dto.place());
@@ -200,7 +200,7 @@ class TournamentDtoConverterTest {
     // Test that unset dates are handled correctly
     Tournament tournament = ImmutableTournament.builder().title("Test").date(Date.unset()).build();
 
-    TournamentExtra extra = ImmutableTournamentExtra.builder().endDate(Date.unset()).build();
+    TournamentExtra extra = ImmutableTournamentExtra.builder().id(0).endDate(Date.unset()).build();
 
     TournamentDto dto = converter.toDto(tournament, extra);
 

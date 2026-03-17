@@ -2,28 +2,41 @@ package se.yarin.morphy.boosters;
 
 import org.jetbrains.annotations.NotNull;
 import se.yarin.chess.*;
+import se.yarin.morphy.IdObject;
 
 import java.nio.ByteBuffer;
 import java.util.BitSet;
 import java.util.Objects;
 
 /** Represents events that have happened during the game */
-public class GameEvents {
+public class GameEvents implements IdObject {
+  private final int gameId;
   private final @NotNull BitSet bits;
 
-  public GameEvents() {
-    this.bits = new BitSet(52);
+  public GameEvents(int gameId) {
+    this(gameId, new BitSet(52));
   }
 
-  public GameEvents(@NotNull ByteBuffer buf) {
+  private GameEvents(int gameId, @NotNull BitSet bits) {
+    this.gameId = gameId;
+    this.bits = bits;
+  }
+
+  @Override
+  public int id() {
+    return gameId;
+  }
+
+  public GameEvents(int gameId, @NotNull ByteBuffer buf) {
     if (buf.limit() - buf.position() != 52) {
       throw new IllegalArgumentException("Expected a ByteBuffer with 52 bytes left");
     }
+    this.gameId = gameId;
     this.bits = BitSet.valueOf(buf);
   }
 
-  public GameEvents(@NotNull GameMovesModel moves) {
-    this(ByteBuffer.wrap(movesToBits(moves)));
+  public GameEvents(int gameId, @NotNull GameMovesModel moves) {
+    this(gameId, ByteBuffer.wrap(movesToBits(moves)));
   }
 
   private static byte[] movesToBits(@NotNull GameMovesModel moves) {

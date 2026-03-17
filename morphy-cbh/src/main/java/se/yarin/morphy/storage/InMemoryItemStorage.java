@@ -3,6 +3,7 @@ package se.yarin.morphy.storage;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import se.yarin.morphy.DatabaseContext;
+import se.yarin.morphy.IdObject;
 import se.yarin.morphy.exceptions.MorphyIOException;
 import se.yarin.morphy.metrics.ItemMetrics;
 import se.yarin.morphy.metrics.MetricsRef;
@@ -16,7 +17,7 @@ import java.util.List;
  * @param <THeader>
  * @param <TItem>
  */
-public class InMemoryItemStorage<THeader, TItem> implements ItemStorage<THeader, TItem> {
+public class InMemoryItemStorage<THeader, TItem extends IdObject> implements ItemStorage<THeader, TItem> {
   private @NotNull final List<TItem> items;
   // If an empty item is provided, we are in "non-strict" mode
   private @Nullable final TItem emptyItem;

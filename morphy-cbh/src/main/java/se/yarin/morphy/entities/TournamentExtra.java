@@ -7,7 +7,12 @@ import se.yarin.morphy.IdObject;
 import java.util.List;
 
 @Value.Immutable
-public abstract class TournamentExtra {
+public abstract class TournamentExtra implements IdObject {
+  @Value.Default
+  public int id() {
+    return -1;
+  }
+
   @Value.Default
   public double latitude() {
     return 0.0;
@@ -29,10 +34,17 @@ public abstract class TournamentExtra {
   }
 
   public static TournamentExtra empty() {
-    return ImmutableTournamentExtra.builder().build();
+    return empty(-1);
+  }
+
+  public static TournamentExtra empty(int id) {
+    return ImmutableTournamentExtra.builder().id(id).build();
   }
 
   public boolean isEmpty() {
-    return this.equals(empty());
+    return latitude() == 0.0
+        && longitude() == 0.0
+        && tiebreakRules().isEmpty()
+        && endDate().equals(Date.unset());
   }
 }

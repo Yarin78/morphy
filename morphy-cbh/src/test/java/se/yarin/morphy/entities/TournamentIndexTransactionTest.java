@@ -176,13 +176,13 @@ public class TournamentIndexTransactionTest {
     assertEquals(3, index.count());
     assertEquals(3, extraStorage.numEntries());
 
-    assertNotEquals(TournamentExtra.empty(), extraStorage.get(2));
+    assertFalse(extraStorage.get(2).isEmpty());
 
     txn = new TournamentIndexWriteTransaction(index, extraStorage);
-    int id = txn.putEntityByKey(testTournament(1), TournamentExtra.empty());
+    int id = txn.putEntityByKey(testTournament(1), TournamentExtra.empty(0));
     assertEquals(2, id);
     txn.commit();
 
-    assertEquals(TournamentExtra.empty(), extraStorage.get(id));
+    assertTrue(extraStorage.get(id).isEmpty());
   }
 }

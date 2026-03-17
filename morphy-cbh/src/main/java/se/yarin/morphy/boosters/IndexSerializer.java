@@ -56,12 +56,12 @@ public class IndexSerializer implements ItemStorageSerializer<IndexHeader, Index
     for (int i = 0; i < ints.length; i++) {
       ints[i] = ByteBufferUtil.getIntL(buf);
     }
-    return new IndexItem(ints);
+    return new IndexItem(id, ints);
   }
 
   @Override
   public @NotNull IndexItem emptyItem(int id) {
-    return IndexItem.emptyCIT(numEntityTypes);
+    return IndexItem.emptyCIT(id, numEntityTypes);
   }
 
   @Override

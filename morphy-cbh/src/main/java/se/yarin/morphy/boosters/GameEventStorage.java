@@ -133,7 +133,7 @@ public class GameEventStorage
     // If we're putting beyond the last game in storage, fill out with empty GameEvent items
     // This could be done more efficiently
     for (int i = count() + 1; i < gameId; i++) {
-      storage.putItem(i, new GameEvents());
+      storage.putItem(i, new GameEvents(i));
     }
     storage.putItem(gameId, gameEvents);
     if (gameId > count()) {
@@ -226,14 +226,14 @@ public class GameEventStorage
   public @NotNull GameEvents deserializeItem(
       int id, @NotNull ByteBuffer buf, @NotNull GameEventStorage.Prolog prolog) {
     itemMetricsRef.update(metrics -> metrics.addDeserialization(1));
-    GameEvents gameEvents = new GameEvents(buf.slice(buf.position(), 52));
+    GameEvents gameEvents = new GameEvents(id, buf.slice(buf.position(), 52));
     buf.position(buf.position() + prolog.serializedItemSize());
     return gameEvents;
   }
 
   @Override
   public @NotNull GameEvents emptyItem(int id) {
-    return new GameEvents();
+    return new GameEvents(id);
   }
 
   @Override

@@ -170,13 +170,13 @@ public class TournamentExtraStorage
   public @NotNull TournamentExtra get(int id) {
     // It's okay to get entries beyond the last because in this particular file,
     // ChessBase lazily adds data.
-    return id < numEntries() ? this.storage.getItem(id) : TournamentExtra.empty();
+    return id < numEntries() ? this.storage.getItem(id) : TournamentExtra.empty(id);
   }
 
   public void put(int id, TournamentExtra extra) {
     // If there are missing items in the store, we need to fill up with empty items.
     for (int i = numEntries(); i < id; i++) {
-      this.storage.putItem(i, TournamentExtra.empty());
+      this.storage.putItem(i, TournamentExtra.empty(i));
     }
     this.storage.putItem(id, extra);
     if (id > this.storage.getHeader().highestIndex()) {
@@ -247,6 +247,7 @@ public class TournamentExtraStorage
     }
 
     return ImmutableTournamentExtra.builder()
+        .id(id)
         .latitude(latitude)
         .longitude(longitude)
         .tiebreakRules(rules.subList(0, numRules))
@@ -361,7 +362,7 @@ public class TournamentExtraStorage
 
   @Override
   public @NotNull TournamentExtra emptyItem(int id) {
-    return ImmutableTournamentExtra.empty();
+    return TournamentExtra.empty(id);
   }
 
   @Override

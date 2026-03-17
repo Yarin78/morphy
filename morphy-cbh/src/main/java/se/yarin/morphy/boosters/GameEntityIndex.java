@@ -61,9 +61,9 @@ public class GameEntityIndex implements MetricsProvider {
     this(
         entityTypes,
         new InMemoryItemStorage<>(
-            context, "IndexTable", IndexHeader.emptyCIT(), IndexItem.emptyCIT(entityTypes.size())),
+            context, "IndexTable", IndexHeader.emptyCIT(), IndexItem.emptyCIT(0, entityTypes.size())),
         new InMemoryItemStorage<>(
-            context, "IndexBlock", IndexBlockHeader.empty(), IndexBlockItem.empty()),
+            context, "IndexBlock", IndexBlockHeader.empty(), IndexBlockItem.empty(0)),
         context);
   }
 
@@ -437,7 +437,7 @@ public class GameEntityIndex implements MetricsProvider {
       }
 
       IndexBlockItem block =
-          new IndexBlockItem(nextBlockId, 0, Collections.unmodifiableList(blockGames));
+          new IndexBlockItem(currentBlockId, nextBlockId, 0, Collections.unmodifiableList(blockGames));
       cibStorage.putItem(currentBlockId, block);
 
       if (newHeadBlockId < 0) {
@@ -450,7 +450,7 @@ public class GameEntityIndex implements MetricsProvider {
 
     while (!oldBlocks.isEmpty()) {
       int blockId = oldBlocks.pollFirst();
-      IndexBlockItem block = new IndexBlockItem(nextDeletedId, 0, List.of());
+      IndexBlockItem block = new IndexBlockItem(blockId, nextDeletedId, 0, List.of());
       cibStorage.putItem(blockId, block);
       nextDeletedId = blockId;
     }
@@ -572,17 +572,17 @@ public class GameEntityIndex implements MetricsProvider {
     IndexItem item =
         entityId < getNumEntities()
             ? citStorage.getItem(entityId)
-            : IndexItem.emptyCIT(citOrder.size());
+            : IndexItem.emptyCIT(entityId, citOrder.size());
     int[] newHeadTails = item.headTails().clone();
     newHeadTails[order * 2] = headBlock;
     newHeadTails[order * 2 + 1] = tailBlock;
 
-    IndexItem newItem = new IndexItem(newHeadTails);
+    IndexItem newItem = new IndexItem(entityId, newHeadTails);
 
     // We can't write beyond the end of the file, so make sure to fill up with empty index table
     // items
     for (int i = citStorage.count(); i < entityId; i++) {
-      citStorage.putItem(i, IndexItem.emptyCIT(citOrder.size()));
+      citStorage.putItem(i, IndexItem.emptyCIT(i, citOrder.size()));
     }
     citStorage.putItem(entityId, newItem);
   }
