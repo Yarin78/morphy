@@ -181,8 +181,7 @@ public class QueryNodeTest {
     SortField<GameHeader> descId =
         new SortField<>(
             java.util.Comparator.comparingInt(QueryData::id),
-            "id",
-            SortOrder.Direction.DESCENDING);
+            "id");
     SortOrder<GameHeader> descOrder =
         SortOrder.of(descId, SortOrder.Direction.DESCENDING);
     var sort = new Sort<>(scan, descOrder);
@@ -683,8 +682,7 @@ public class QueryNodeTest {
     SortField<GameHeader> descId =
         new SortField<>(
             java.util.Comparator.comparingInt(QueryData::id),
-            "id",
-            SortOrder.Direction.DESCENDING);
+            "id");
     var sort = new Sort<>(scan, SortOrder.of(descId, SortOrder.Direction.DESCENDING));
     var limit = new Limit<>(sort, 5);
 

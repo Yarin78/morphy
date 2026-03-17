@@ -6,19 +6,12 @@ import org.jetbrains.annotations.NotNull;
 public class SortField<T> {
   private final @NotNull Comparator<QueryData<T>> comparator;
   private final @NotNull String name;
-  private final SortOrder.@NotNull Direction defaultDirection;
 
   public SortField(
       @NotNull Comparator<QueryData<T>> comparator,
-      @NotNull String name,
-      SortOrder.@NotNull Direction defaultDirection) {
+      @NotNull String name) {
     this.comparator = comparator;
     this.name = name;
-    this.defaultDirection = defaultDirection;
-  }
-
-  public SortField(@NotNull Comparator<QueryData<T>> comparator, @NotNull String name) {
-    this(comparator, name, SortOrder.Direction.ASCENDING);
   }
 
   public static <T> SortField<T> id() {
@@ -31,10 +24,6 @@ public class SortField<T> {
 
   public @NotNull String name() {
     return name;
-  }
-
-  public SortOrder.@NotNull Direction defaultDirection() {
-    return defaultDirection;
   }
 
   public int compare(QueryData<T> a, QueryData<T> b) {
