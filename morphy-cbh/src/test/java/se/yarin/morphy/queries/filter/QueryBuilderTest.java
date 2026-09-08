@@ -170,6 +170,19 @@ public class QueryBuilderTest {
   }
 
   @Test
+  public void gameByWhitePipeNames() {
+    GameQueryBuilder builder = new GameQueryBuilder();
+    GameQuery query = builder.buildQuery(db, "white.name:Carlsen|Kasparov");
+
+    assertEquals(0, query.gameFilters().size());
+    assertEquals(1, query.entityJoins().size());
+    GameEntityJoin<?> join = query.entityJoins().get(0);
+    assertEquals(GameEntityJoinCondition.WHITE, join.joinCondition());
+    assertEquals(1, join.entityQuery().filters().size());
+    assertTrue(join.entityQuery().filters().get(0) instanceof MultiPlayerNameFilter);
+  }
+
+  @Test
   public void gameByWhiteNumericValue() {
     GameQueryBuilder builder = new GameQueryBuilder();
     GameQuery query = builder.buildQuery(db, "white:42");

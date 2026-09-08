@@ -34,6 +34,11 @@ public class MultiPlayerNameFilter implements EntityFilter<Player> {
   }
 
   @Override
+  public boolean matchesSerialized(byte[] serializedItem) {
+    return filters.stream().anyMatch(filter -> filter.matchesSerialized(serializedItem));
+  }
+
+  @Override
   public EntityType entityType() {
     return EntityType.PLAYER;
   }
