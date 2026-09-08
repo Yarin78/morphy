@@ -61,7 +61,10 @@ public class GameEntityIndex implements MetricsProvider {
     this(
         entityTypes,
         new InMemoryItemStorage<>(
-            context, "IndexTable", IndexHeader.emptyCIT(), IndexItem.emptyCIT(entityTypes.size())),
+            context,
+            "IndexTable",
+            new IndexHeader(entityTypes.size() * 8, 0, 0),
+            IndexItem.emptyCIT(entityTypes.size())),
         new InMemoryItemStorage<>(
             context, "IndexBlock", IndexBlockHeader.empty(), IndexBlockItem.empty()),
         context);
@@ -105,7 +108,7 @@ public class GameEntityIndex implements MetricsProvider {
             this.context,
             "IndexTable" + suffix,
             new IndexSerializer(this.citOrder.size(), tableMetricsRef),
-            IndexHeader.emptyCIT(),
+            new IndexHeader(this.citOrder.size() * 8, 0, 0),
             options);
     this.cibStorage =
         new FileItemStorage<>(
