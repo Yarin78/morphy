@@ -6,7 +6,7 @@ import picocli.CommandLine;
     name = "morphy",
     description = "Performs an operation on a ChessBase file",
     mixinStandardHelpOptions = true,
-    subcommands = {Games.class, Players.class, Tournaments.class, Check.class})
+    subcommands = {Games.class, Players.class, Tournaments.class, Check.class, Update.class})
 class ChessBaseCommand implements Runnable {
 
   @Override
