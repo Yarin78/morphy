@@ -122,6 +122,20 @@ public class GameEntityIndex implements MetricsProvider {
     this.tableMetricsRef = tableMetricsRef;
     this.blockMetricsRef = blockMetricsRef;
 
+    // A foreign or stale .cit/.cit2 file may have been written with a different number of
+    // entity types than we expect; if so, treat it as corrupt rather than crashing later when
+    // an item sized for our entity types is serialized against this header's item size.
+    int expectedItemSize = this.citOrder.size() * 8;
+    if (citStorage.getHeader().itemSize() != expectedItemSize) {
+      throw new MorphyInvalidDataException(
+          String.format(
+              "Unexpected item size in %s: expected %d bytes (for %d entity type(s)) but header says %d",
+              citFile.getName(),
+              expectedItemSize,
+              this.citOrder.size(),
+              citStorage.getHeader().itemSize()));
+    }
+
     if (options.contains(WRITE)) {
       if (citStorage.getHeader().unknown1() != 0 || citStorage.getHeader().unknown2() != 0) {
         throw new MorphyNotSupportedException(
