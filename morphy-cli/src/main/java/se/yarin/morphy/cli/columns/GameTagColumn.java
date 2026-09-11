@@ -28,6 +28,6 @@ public class GameTagColumn implements GameColumn {
 
   @Override
   public int width() {
-    return 20;
+    return 40;
   }
 }
