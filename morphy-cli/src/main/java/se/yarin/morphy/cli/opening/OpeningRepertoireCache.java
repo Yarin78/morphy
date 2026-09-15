@@ -115,10 +115,13 @@ public class OpeningRepertoireCache {
    *       main move is inserted as a variation
    *   <li>an opponent move that isn't in the entry at all (in no variation) gets a comment saying
    *       so
+   *   <li>if neither of the above ever happens and the entry's book runs out of moves, the
+   *       position where that happens gets a comment saying so
    * </ul>
    *
-   * Annotation stops as soon as the game leaves the entry's book (a move that matches no known
-   * continuation), since the entry can't provide any guidance beyond that point.
+   * Once the game has left the entry's book (a move that matches no known continuation), it keeps
+   * being walked without further comparison against the book, in case a later move transposes back
+   * into a known position; when that happens, the move that brought it back is marked accordingly.
    *
    * <p>Any annotations already present in {@code moves} are cleared first, so the result only
    * reflects the classification against this entry.
@@ -132,32 +135,47 @@ public class OpeningRepertoireCache {
     moves.deleteAllAnnotations();
 
     GameMovesModel.Node node = moves.root();
+    boolean deviated = false;
     while (node.hasMoves()) {
-      List<Move> bookMovesHere = book.get(node.position());
-      if (bookMovesHere == null || bookMovesHere.isEmpty()) {
-        break;
-      }
-
       Move actualMove = node.mainMove();
       GameMovesModel.Node nextNode = node.mainNode();
-      boolean isMyMove = node.position().playerToMove() == myColor;
 
-      if (isMyMove) {
-        Move mainBookMove = bookMovesHere.get(0);
-        if (!actualMove.equals(mainBookMove)) {
-          nextNode.addAnnotation(new NAGAnnotation(NAG.BAD_MOVE));
-          node.addMove(mainBookMove);
+      if (!deviated) {
+        List<Move> bookMovesHere = book.get(node.position());
+        if (bookMovesHere == null || bookMovesHere.isEmpty()) {
+          break;
+        }
+
+        boolean isMyMove = node.position().playerToMove() == myColor;
+        if (isMyMove) {
+          Move mainBookMove = bookMovesHere.get(0);
+          if (!actualMove.equals(mainBookMove)) {
+            nextNode.addAnnotation(new NAGAnnotation(NAG.BAD_MOVE));
+            node.addMove(mainBookMove);
+            ANNOTATION_CONVERTER.convertToChessBase(nextNode.getAnnotations());
+          }
+        } else if (!bookMovesHere.contains(actualMove)) {
+          nextNode.addAnnotation(new CommentaryAfterMoveAnnotation("Not in repertoire"));
           ANNOTATION_CONVERTER.convertToChessBase(nextNode.getAnnotations());
         }
-      } else if (!bookMovesHere.contains(actualMove)) {
-        nextNode.addAnnotation(new CommentaryAfterMoveAnnotation("Not in repertoire"));
-        ANNOTATION_CONVERTER.convertToChessBase(nextNode.getAnnotations());
+
+        if (!bookMovesHere.contains(actualMove)) {
+          deviated = true;
+        }
       }
 
-      if (!bookMovesHere.contains(actualMove)) {
-        break;
+      if (deviated && book.containsKey(nextNode.position())) {
+        nextNode.addAnnotation(new CommentaryAfterMoveAnnotation("Back in book"));
+        ANNOTATION_CONVERTER.convertToChessBase(nextNode.getAnnotations());
+        deviated = false;
       }
+
       node = nextNode;
+    }
+
+    if (!deviated) {
+      node.addAnnotation(new CommentaryAfterMoveAnnotation("End of line"));
+      ANNOTATION_CONVERTER.convertToChessBase(node.getAnnotations());
     }
   }
 
