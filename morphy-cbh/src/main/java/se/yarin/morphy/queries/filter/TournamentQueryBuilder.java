@@ -1,7 +1,10 @@
 package se.yarin.morphy.queries.filter;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 import org.jetbrains.annotations.NotNull;
 import se.yarin.morphy.entities.EntityType;
 import se.yarin.morphy.entities.Tournament;
@@ -13,13 +16,26 @@ import se.yarin.morphy.queries.QuerySortOrder;
  * Builds an {@link se.yarin.morphy.queries.EntityQuery} for {@link Tournament} from a filter
  * expression string.
  *
- * <p>Supported fields: title, date, type, time, place, nation, category, rounds, teams, year.
+ * <p>Supported fields: title, date, type, time, place, nation, category, rounds, teams, year
+ * (title supports pipe syntax for OR matching).
  */
 public class TournamentQueryBuilder extends AbstractEntityQueryBuilder<Tournament> {
 
   private static final Map<String, Function<FilterCondition, EntityFilter<Tournament>>> FILTERS =
       orderedMap(
-          Map.entry("title", c -> new TournamentTitleFilter(c.value(), false, false)),
+          Map.entry(
+              "title",
+              c -> {
+                String value = c.value();
+                if (value.contains("|")) {
+                  List<String> titles =
+                      Arrays.stream(value.split("\\|"))
+                          .map(String::trim)
+                          .collect(Collectors.toList());
+                  return new MultiTournamentTitleFilter(titles, false, false);
+                }
+                return new TournamentTitleFilter(value, false, false);
+              }),
           Map.entry("date", TournamentQueryBuilder::buildDateFilter),
           Map.entry("type", c -> new TournamentTypeFilter(c.value())),
           Map.entry("time", c -> new TournamentTimeControlFilter(c.value())),

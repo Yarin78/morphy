@@ -68,6 +68,15 @@ public class QueryBuilderTest {
     new TournamentQueryBuilder().buildQuery(db, "unknown:value");
   }
 
+  @Test
+  public void tournamentByPipeSyntax() {
+    EntityQuery<Tournament> query =
+        new TournamentQueryBuilder().buildQuery(db, "title:Candidates|Wijk");
+
+    assertEquals(1, query.filters().size());
+    assertTrue(query.filters().get(0) instanceof MultiTournamentTitleFilter);
+  }
+
   // --- PlayerQueryBuilder ---
 
   @Test
