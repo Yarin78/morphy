@@ -711,22 +711,30 @@ public class DatabaseWriteTransaction extends DatabaseTransaction {
           database().extendedGameHeaderStorage().put(gameId, extendedGameHeader);
           gameCount += 1;
         } else {
-          gameHeader = updatedGameData.gameHeader.build();
+          long movesOffset = updatedGameData.extendedGameHeader.build().movesOffset();
+          long plannedAnnotationOffset =
+              updatedGameData.extendedGameHeader.build().annotationOffset();
+
+          database().moveRepository().putMovesBlob(movesOffset, updatedGameData.moveBlob);
+
+          // If no later game had annotations to anchor an insertion point against (see
+          // findNextAnnotationOffset), plannedAnnotationOffset is 0 even though this game does
+          // have annotations to store. putAnnotationsBlob treats an offset of 0 as "append", so
+          // the actual offset it stored at needs to be read back and baked into the header below.
+          long annotationOffset = plannedAnnotationOffset;
+          if (updatedGameData.annotationBlob != null) {
+            annotationOffset =
+                database()
+                    .annotationRepository()
+                    .putAnnotationsBlob(plannedAnnotationOffset, updatedGameData.annotationBlob);
+          }
+
+          gameHeader = updatedGameData.gameHeader.annotationOffset((int) annotationOffset).build();
           ImmutableExtendedGameHeader extendedGameHeader =
-              updatedGameData.extendedGameHeader.build();
+              updatedGameData.extendedGameHeader.annotationOffset((int) annotationOffset).build();
 
           database().gameHeaderIndex().put(gameId, gameHeader);
           database().extendedGameHeaderStorage().put(gameId, extendedGameHeader);
-
-          database()
-              .moveRepository()
-              .putMovesBlob(extendedGameHeader.movesOffset(), updatedGameData.moveBlob);
-          if (updatedGameData.annotationBlob != null) {
-            database()
-                .annotationRepository()
-                .putAnnotationsBlob(
-                    extendedGameHeader.annotationOffset(), updatedGameData.annotationBlob);
-          }
         }
 
         if (database().gameEventStorage() != null) {
