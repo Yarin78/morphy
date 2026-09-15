@@ -1,9 +1,11 @@
 package se.yarin.morphy.cli.commands;
 
 import me.tongfei.progressbar.ProgressBar;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
+import se.yarin.chess.GameHeaderModel;
 import se.yarin.chess.GameModel;
 import se.yarin.morphy.Database;
 import se.yarin.morphy.DatabaseMode;
@@ -12,9 +14,9 @@ import se.yarin.morphy.DatabaseWriteTransaction;
 import se.yarin.morphy.Game;
 import se.yarin.morphy.GameAdapter;
 import se.yarin.morphy.cli.opening.OpeningRepertoireCache;
-import se.yarin.morphy.entities.GameTag;
-import se.yarin.morphy.games.ExtendedGameHeader;
-import se.yarin.morphy.games.ImmutableExtendedGameHeader;
+import se.yarin.morphy.cli.update.GameUpdater;
+import se.yarin.morphy.cli.update.OpeningClassifyUpdater;
+import se.yarin.morphy.cli.update.StaticTagUpdater;
 import se.yarin.morphy.queries.GameQuery;
 import se.yarin.morphy.queries.QueryContext;
 import se.yarin.morphy.queries.filter.GameQueryBuilder;
@@ -24,10 +26,7 @@ import se.yarin.morphy.cli.queries.QueryAdapter;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -56,24 +55,37 @@ public class Update extends BaseCommand implements Callable<Integer> {
               + "or \"black\" to indicate which color the repertoire is prepared for.")
   private File annotateOpening;
 
+  @CommandLine.Option(
+      names = {"-o", "--output"},
+      description =
+          "Instead of updating games in place, write matching (and updated) games to this new "
+              + "database, leaving the source database(s) untouched. If the updates involve "
+              + "adding moves or annotations to the games, this might be much faster "
+              + "than an in-place update.")
+  private File output;
+
+  @CommandLine.Option(
+      names = "--overwrite",
+      description = "If true, overwrite the output database if it already exists.")
+  private boolean overwrite;
+
+  @CommandLine.Option(
+      names = "--batch-size",
+      description =
+          "Number of games to commit per transaction. Defaults to committing all matching games "
+              + "in a single transaction.")
+  private Integer batchSize;
+
   private final GameQueryBuilder gameQueryBuilder = new GameQueryBuilder();
 
   @Override
   public Integer call() throws IOException {
     setupGlobalOptions();
 
-    if (tag == null && annotateOpening == null) {
-      System.err.println("No update specified; use --tag or --annotate-opening");
-      return 1;
-    }
-    if (tag != null && annotateOpening != null) {
-      System.err.println("--tag and --annotate-opening cannot be combined");
-      return 1;
-    }
-
-    final OpeningRepertoireCache openingRepertoire;
+    List<GameUpdater> updaters = new ArrayList<>();
     if (annotateOpening != null) {
       log.info("Loading opening repertoire {}", annotateOpening);
+      OpeningRepertoireCache openingRepertoire;
       try {
         openingRepertoire = OpeningRepertoireCache.load(annotateOpening);
       } catch (IllegalArgumentException e) {
@@ -81,84 +93,93 @@ public class Update extends BaseCommand implements Callable<Integer> {
         return 1;
       }
       log.info("Annotating as {}", openingRepertoire.myColor());
-    } else {
-      openingRepertoire = null;
+      updaters.add(new OpeningClassifyUpdater(openingRepertoire));
+    }
+    if (tag != null) {
+      updaters.add(new StaticTagUpdater(tag));
+    }
+    if (updaters.isEmpty()) {
+      System.err.println("No update specified; use --tag or --annotate-opening");
+      return 1;
     }
 
     var numDatabaseErrors = new AtomicInteger(0);
     var totalUpdated = new AtomicInteger(0);
 
-    getDatabaseStream()
-        .forEach(
-            file -> {
-              log.info("Opening {}", file);
-              try (Database db = Database.open(file, DatabaseMode.READ_WRITE)) {
-                // Speeds up performance quite a lot, and we should be fairly certain that the
-                // moves in the CBH databases are valid
-                db.moveRepository().setValidateDecodedMoves(false);
+    Database outputDb = output != null ? Database.create(output, overwrite) : null;
+    try {
+      DatabaseMode sourceMode =
+          outputDb != null ? DatabaseMode.READ_ONLY : DatabaseMode.READ_WRITE;
 
-                List<Integer> matchingGameIds = new ArrayList<>();
-                try (var readTxn = new DatabaseReadTransaction(db)) {
-                  GameQuery gameQuery;
-                  try {
-                    gameQuery = gameQueryBuilder.buildQuery(db, filterExpression);
-                  } catch (IllegalArgumentException e) {
-                    System.err.println(e.getMessage());
-                    System.exit(1);
-                    return;
-                  }
+      getDatabaseStream()
+          .forEach(
+              file -> {
+                log.info("Opening {}", file);
+                try (Database db = Database.open(file, sourceMode)) {
+                  // Speeds up performance quite a lot, and we should be fairly certain that the
+                  // moves in the CBH databases are valid
+                  db.moveRepository().setValidateDecodedMoves(false);
 
-                  QueryContext qc = new QueryContext(readTxn, false);
-                  List<QueryOperator<Game>> plans =
-                      db.queryPlanner().getGameQueryPlans(qc, gameQuery, true);
-                  QueryOperator<Game> bestPlan = db.queryPlanner().selectBestQueryPlan(plans);
-
-                  try (ProgressBar pb = new ProgressBar("Searching", db.count())) {
-                    QueryAdapter.execute(
-                        bestPlan,
-                        0,
-                        false,
-                        game -> matchingGameIds.add(game.id()),
-                        game -> pb.stepTo(game.id()));
-                  }
-                }
-
-                if (!matchingGameIds.isEmpty()) {
-                  int updatedInDb;
-                  if (tag != null) {
-                    try (var writeTxn = new DatabaseWriteTransaction(db)) {
-                      updatedInDb = applyStaticTag(writeTxn, matchingGameIds, tag);
-                      writeTxn.commit();
+                  List<Integer> matchingGameIds = new ArrayList<>();
+                  try (var readTxn = new DatabaseReadTransaction(db)) {
+                    GameQuery gameQuery;
+                    try {
+                      gameQuery = gameQueryBuilder.buildQuery(db, filterExpression);
+                    } catch (IllegalArgumentException e) {
+                      System.err.println(e.getMessage());
+                      System.exit(1);
+                      return;
                     }
-                  } else {
-                    // One transaction per game: committing a single big transaction with many
-                    // growing move/annotation blobs is very slow, since each replaced game with a
-                    // size delta triggers an O(remaining games) offset-shifting pass.
-                    updatedInDb = applyOpeningAnnotation(db, matchingGameIds, openingRepertoire);
-                  }
-                  totalUpdated.addAndGet(updatedInDb);
-                }
 
-                if (showInstrumentation()) {
-                  db.context().instrumentation().show();
+                    QueryContext qc = new QueryContext(readTxn, false);
+                    List<QueryOperator<Game>> plans =
+                        db.queryPlanner().getGameQueryPlans(qc, gameQuery, true);
+                    QueryOperator<Game> bestPlan = db.queryPlanner().selectBestQueryPlan(plans);
+
+                    try (ProgressBar pb = new ProgressBar("Searching", db.count())) {
+                      QueryAdapter.execute(
+                          bestPlan,
+                          0,
+                          false,
+                          game -> matchingGameIds.add(game.id()),
+                          game -> pb.stepTo(game.id()));
+                    }
+                  }
+
+                  if (!matchingGameIds.isEmpty()) {
+                    int updatedInDb =
+                        applyUpdates(db, outputDb, matchingGameIds, updaters, batchSize);
+                    totalUpdated.addAndGet(updatedInDb);
+                  }
+
+                  if (showInstrumentation()) {
+                    db.context().instrumentation().show();
+                  }
+                } catch (IOException e) {
+                  System.err.println("IO error when processing " + file);
+                  numDatabaseErrors.incrementAndGet();
+                  if (verboseLevel() > 0) {
+                    e.printStackTrace();
+                  }
+                } catch (RuntimeException e) {
+                  System.err.println(
+                      "Unexpected error when processing " + file + ": " + e.getMessage());
+                  numDatabaseErrors.incrementAndGet();
+                  if (verboseLevel() > 0) {
+                    e.printStackTrace();
+                  }
                 }
-              } catch (IOException e) {
-                System.err.println("IO error when processing " + file);
-                numDatabaseErrors.incrementAndGet();
-                if (verboseLevel() > 0) {
-                  e.printStackTrace();
-                }
-              } catch (RuntimeException e) {
-                System.err.println(
-                    "Unexpected error when processing " + file + ": " + e.getMessage());
-                numDatabaseErrors.incrementAndGet();
-                if (verboseLevel() > 0) {
-                  e.printStackTrace();
-                }
-              }
-            });
+              });
+    } finally {
+      if (outputDb != null) {
+        outputDb.close();
+      }
+    }
 
     System.out.println("Updated " + totalUpdated.get() + " game(s)");
+    if (outputDb != null) {
+      System.out.println("Wrote to " + output);
+    }
 
     if (numDatabaseErrors.get() > 0) {
       return 1;
@@ -166,66 +187,78 @@ public class Update extends BaseCommand implements Callable<Integer> {
     return 0;
   }
 
-  /** Sets a fixed GameTag on all matching games. Returns the number of games updated. */
-  private int applyStaticTag(
-      DatabaseWriteTransaction writeTxn, List<Integer> matchingGameIds, String tag) {
-    int gameTagId = writeTxn.gameTagTransaction().getOrCreate(GameTag.of(tag));
-
-    try (ProgressBar pb = new ProgressBar("Updating", matchingGameIds.size())) {
-      for (int gameId : matchingGameIds) {
-        Game game = writeTxn.getGame(gameId);
-        ExtendedGameHeader newExtendedHeader =
-            ImmutableExtendedGameHeader.builder()
-                .from(game.extendedHeader())
-                .gameTagId(gameTagId)
-                .build();
-        writeTxn.replaceGame(gameId, new Game(writeTxn, game.header(), newExtendedHeader));
-        pb.step();
-      }
-    }
-    return matchingGameIds.size();
-  }
-
   /**
-   * Classifies each matching game against the opening repertoire, sets the GameTag to the best
-   * matching branch, and annotates moves that deviate from it. Games with no match are left
-   * untouched. Each updated game is committed in its own transaction. Returns the number of games
-   * updated.
+   * Applies all {@code updaters} to each matching game in turn, committing every {@code
+   * batchSize} games (or all of them in one transaction, if null/non-positive). A game is skipped
+   * entirely if any updater declines it (e.g. it didn't match an opening classification).
+   *
+   * <p>If {@code outputDb} is null, updated games are replaced in place in {@code sourceDb}.
+   * Otherwise they're appended to {@code outputDb}, leaving {@code sourceDb} untouched; since
+   * appending is always O(1) per game, batch size only affects transaction/commit overhead there,
+   * never the offset-shifting cost that in-place replacement can incur when move/annotation data
+   * grows.
+   *
+   * @return the number of games updated/written
    */
-  private int applyOpeningAnnotation(
-      Database db, List<Integer> matchingGameIds, OpeningRepertoireCache openingRepertoire) {
-    Map<String, Integer> classifiedTagIds = new HashMap<>();
+  private int applyUpdates(
+      Database sourceDb,
+      @Nullable Database outputDb,
+      List<Integer> matchingGameIds,
+      List<GameUpdater> updaters,
+      @Nullable Integer batchSize) {
+    boolean toOutput = outputDb != null;
+    Database targetDb = toOutput ? outputDb : sourceDb;
+    int size = batchSize == null || batchSize <= 0 ? matchingGameIds.size() : batchSize;
     int updated = 0;
 
-    try (ProgressBar pb = new ProgressBar("Updating", matchingGameIds.size())) {
-      for (int gameId : matchingGameIds) {
-        try (var writeTxn = new DatabaseWriteTransaction(db)) {
-          Game game = writeTxn.getGame(gameId);
-          GameModel model = game.getModel();
+    try (ProgressBar pb =
+        new ProgressBar(toOutput ? "Writing" : "Updating", matchingGameIds.size())) {
+      for (int start = 0; start < matchingGameIds.size(); start += size) {
+        List<Integer> batch =
+            matchingGameIds.subList(start, Math.min(start + size, matchingGameIds.size()));
 
-          Optional<OpeningRepertoireCache.Entry> matchedEntry =
-              openingRepertoire.classify(model.moves());
-          if (matchedEntry.isEmpty()) {
+        try (var writeTxn = new DatabaseWriteTransaction(targetDb)) {
+          for (int gameId : batch) {
+            Game sourceGame = toOutput ? sourceDb.getGame(gameId) : writeTxn.getGame(gameId);
+            GameModel model = sourceGame.getModel();
+
+            boolean matched = true;
+            for (GameUpdater updater : updaters) {
+              if (!updater.apply(model)) {
+                matched = false;
+                break;
+              }
+            }
+
+            if (matched) {
+              if (toOutput) {
+                // The header carries internal entity-id references resolved against sourceDb;
+                // those are meaningless (or worse, refer to unrelated entities) in outputDb, so
+                // clear them and let addGame() resolve every entity by value instead.
+                clearInternalEntityIds(model.header());
+                writeTxn.addGame(model);
+              } else {
+                writeTxn.replaceGame(gameId, model);
+              }
+              updated++;
+            }
             pb.step();
-            continue;
           }
-
-          OpeningRepertoireCache.Entry entry = matchedEntry.get();
-          String tagText = openingRepertoire.formatTag(entry);
-          int gameTagId =
-              classifiedTagIds.computeIfAbsent(
-                  tagText, t -> writeTxn.gameTagTransaction().getOrCreate(GameTag.of(t)));
-
-          openingRepertoire.annotate(model.moves(), entry);
-          model.header().setField(GameAdapter.GAME_TAG_ID, gameTagId);
-
-          writeTxn.replaceGame(gameId, model);
           writeTxn.commit();
-          updated++;
-          pb.step();
         }
       }
     }
     return updated;
+  }
+
+  private static void clearInternalEntityIds(GameHeaderModel header) {
+    header.unsetField(GameAdapter.WHITE_ID);
+    header.unsetField(GameAdapter.BLACK_ID);
+    header.unsetField(GameAdapter.EVENT_ID);
+    header.unsetField(GameAdapter.ANNOTATOR_ID);
+    header.unsetField(GameAdapter.SOURCE_ID);
+    header.unsetField(GameAdapter.WHITE_TEAM_ID);
+    header.unsetField(GameAdapter.BLACK_TEAM_ID);
+    header.unsetField(GameAdapter.GAME_TAG_ID);
   }
 }
