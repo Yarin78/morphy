@@ -214,8 +214,8 @@ public class OpeningRepertoireCache {
   /**
    * Recursively indexes every position in the subtree rooted at {@code node}: {@code
    * positionCache} keeps the highest-scoring match for each position seen so far (across this and
-   * all other entries), while {@code book} records, for every position in this entry alone, the
-   * moves known at that position (main move first).
+   * all other entries), preferring the later entry on a tied score, while {@code book} records,
+   * for every position in this entry alone, the moves known at that position (main move first).
    *
    * @param score the score of {@code node} itself (0 for the root)
    * @param levelUnit the score contribution of one more ply at the current variation level
@@ -238,7 +238,7 @@ public class OpeningRepertoireCache {
       double childScore = score + childLevelUnit;
 
       Match existing = positionCache.get(child.position());
-      if (existing == null || childScore > existing.score()) {
+      if (existing == null || childScore >= existing.score()) {
         positionCache.put(child.position(), new Match(childScore, entry));
       }
 
