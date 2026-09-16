@@ -5,4 +5,4 @@ mediafiles/
 analysis/
 .DS_Store
 /build-cli.sh
-/scripts/sync_and_classify_online_games.sh
+/scripts/
