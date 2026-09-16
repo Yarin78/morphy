@@ -104,3 +104,46 @@ This includes:
 A sort order is a list of sort fields and a corresponding list if the field should be reversed or not.
 A SortField<T> maps a QueryData<T> to a comparable. It's up to the query planner to ensure
 that the QueryData is able to provide this value (e.g. in case of the extra field being accessed).
+
+## Query planner
+
+The Query Planner is responsible for converting a logical GameQuery or EntityQuery<T> into one or more
+physical query plans (a tree of QueryNode described above). The logical query describes _what_ the user wants,
+a physical query describes how to get that data.
+
+A logical query can be executed in many different ways. One example below:
+
+Logical query: All games where the name of the white player starts with "Carlsen"
+Physical query alt 1: Do a TableScan of all GameHeaders, Loop Join this with a EntityIdIndexScan<Player>
+  on the white player id, where the EntityIdIndexScan has a PlayerNameFilter on "Carlsen"
+Physical query alt 2: Do a EntityIndexScan on Players, filtered on "Carlsen". Do a loop join of this with
+  GameHeaderIdIndexScan based on the player id.
+
+The two approach above generally holds when the query wants to filter a game on data in an entity - this
+is a GameEntityJoin. In the case above, the GameEntityJoinCondition was WHITE. If the condition is ANY,
+it gets more complicated as we need to, for instance, duplicate the GameHeaders rows and assign the different
+join keys (white and black player id) as the extra field through a FlatMap operation.
+
+A GameQuery can also have filters on the game data itself, a GameFilter. This can either be applied
+directly onto a QueryNode of GameHeader, or it might require a join (likely a MergeJoin) with ExtendedGameHeader
+depending on if the GameFilter is made up of gameHeaderFilter or extendedGameHeaderFilter (or both!).
+
+An EntityQuery works much in the same way. An EntityQuery may have EntityFilters which can be applied directly
+onto a EntityTableScan, EntityIdIndexScan or EntityIndexScan.
+
+It may get quite a bit complicated if it has a gameQuery. For instance:
+
+Logical query: Players who have played games before the year 1900.
+Physical query: Do a TableScan of all GameHeaders filtered on playing date. FlatMap this into
+  a new stream of GameHeaders where whitePlayerId and blackPlayerId are in the extra field (two output
+  rows for every input row). LoopJoin this with the Player table on the extra field. Do a MapNode
+  so the player data becomes the primary field in the QueryData. Sort on id, then do a Distinct
+
+Another thing to take into account is sorting order. By using a different index, we may get different query plans.
+For instance:
+
+Logical query: All games sorted by the Tournament default sorting order
+Physical query alt 1: Do a TableScan of all GameHeaders. Loop Join this with EntityIdIndexScan<Tournament>
+  on the tournamentId so the tournament data is in the extra field. Sort the result by the extra field.
+Physical query alt 2: Do an EntityIndexScan on Tournament. Loop join this with GameEntityIndexScan to
+  get the games for each tournament.

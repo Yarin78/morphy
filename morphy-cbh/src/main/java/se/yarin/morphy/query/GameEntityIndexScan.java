@@ -9,6 +9,7 @@ import se.yarin.morphy.DatabaseReadTransaction;
 import se.yarin.morphy.boosters.GameEntityIndex;
 import se.yarin.morphy.entities.EntityType;
 
+// TODO: This needs more testing. Should not be Void. Should be quick to join with.
 public class GameEntityIndexScan extends QueryNode<Void> {
   private final @NotNull GameEntityIndex gameEntityIndex;
   private final @NotNull EntityType entityType;

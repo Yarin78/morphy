@@ -2,5 +2,10 @@
   "world-ch": {
     "displayName": "World Chess Championships",
     "path": "test-databases/world-ch/World-ch.cbh"
+  },
+  "morphy2": {
+    "displayName": "Morphy2",
+    "path": "/Users/yarin/OneDrive/Documents/ChessBase/Example bases/Morphy-test/Morphy2.cbh",
+    "readOnly": true
   }
 }
