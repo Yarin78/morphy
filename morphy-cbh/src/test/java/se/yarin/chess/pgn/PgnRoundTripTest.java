@@ -69,6 +69,80 @@ public class PgnRoundTripTest {
     }
 
     @Test
+    public void testGamePrefaceCommentRoundTrip() throws PgnFormatException {
+        // A plain comment before the first move is a whole-game preface, not "about" move 1: it
+        // should attach to the root, be exported with no stray leading space, and round-trip.
+        String originalPgn = """
+                [Event "Test"]
+                [Site "?"]
+                [Date "????.??.??"]
+                [Round "?"]
+                [White "?"]
+                [Black "?"]
+                [Result "*"]
+
+                { A preface comment } 1. e4 e5 2. Nf3 *
+                """;
+
+        GameModel game1 = new PgnParser().parseGame(originalPgn);
+        assertEquals(
+                "A preface comment",
+                game1.moves().root().getAnnotations()
+                        .getByClass(se.yarin.chess.annotations.CommentaryAfterMoveAnnotation.class)
+                        .getCommentary());
+        assertNull(
+                "The comment must not have landed on move 1",
+                game1.moves().root().mainNode().getAnnotations()
+                        .getByClass(se.yarin.chess.annotations.CommentaryBeforeMoveAnnotation.class));
+
+        PgnExporter exporter = new PgnExporter();
+        String exportedPgn = exporter.exportGame(game1);
+        assertTrue(
+                "Exported movetext must not have a leading space before the preface comment",
+                exportedPgn.contains("\n{ A preface comment } 1. e4"));
+
+        GameModel game2 = new PgnParser().parseGame(exportedPgn);
+        assertGamesEqual(game1, game2);
+        assertEquals(
+                "A preface comment",
+                game2.moves().root().getAnnotations()
+                        .getByClass(se.yarin.chess.annotations.CommentaryAfterMoveAnnotation.class)
+                        .getCommentary());
+    }
+
+    @Test
+    public void testExplicitBeforeMoveCommentAtGameStartRoundTrip() throws PgnFormatException {
+        // An explicitly [%pre]-marked comment is about the next move even at the very start of
+        // the game, so it must still attach to move 1, not the root.
+        String originalPgn = """
+                [Event "Test"]
+                [Site "?"]
+                [Date "????.??.??"]
+                [Round "?"]
+                [White "?"]
+                [Black "?"]
+                [Result "*"]
+
+                { [%pre 1] Before move 1 } 1. e4 e5 2. Nf3 *
+                """;
+
+        GameModel game1 = new PgnParser().parseGame(originalPgn);
+        assertNull(
+                "The marked comment must not have landed on the root",
+                game1.moves().root().getAnnotations()
+                        .getByClass(se.yarin.chess.annotations.CommentaryAfterMoveAnnotation.class));
+        assertNotNull(
+                "The marked comment must have landed on move 1 instead",
+                game1.moves().root().mainNode().getAnnotations()
+                        .getByClass(se.yarin.chess.annotations.CommentaryBeforeMoveAnnotation.class));
+
+        PgnExporter exporter = new PgnExporter();
+        String exportedPgn = exporter.exportGame(game1);
+        GameModel game2 = new PgnParser().parseGame(exportedPgn);
+        assertGamesEqual(game1, game2);
+    }
+
+    @Test
     public void testGameWithAnnotationsRoundTrip() throws PgnFormatException {
         String originalPgn = """
                 [Event "Test"]

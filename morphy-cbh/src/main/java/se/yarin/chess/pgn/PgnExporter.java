@@ -299,10 +299,42 @@ public class PgnExporter {
 
     private void exportMoves(GameMovesModel moves, @Nullable GameResult result, Writer writer) throws IOException {
         MoveTextWriter moveWriter = new MoveTextWriter(writer);
+        exportPrefaceComment(moves.root(), moveWriter);
         exportNode(moves.root(), true, moveWriter);
 
         moveWriter.ensureSpace();
         moveWriter.write((result == null ? GameResult.NOT_FINISHED : result).toString());
+    }
+
+    /**
+     * Exports any comment attached directly to the root node. The root has no incoming move, so
+     * such a comment can't be an "after this move" comment for any move like everywhere else in
+     * the tree; it's rendered as a preface before the first move instead, the only place it
+     * makes sense.
+     */
+    private void exportPrefaceComment(GameMovesModel.Node root, MoveTextWriter writer) throws IOException {
+        if (!options.exportComments()) {
+            return;
+        }
+        Annotations annotations = new Annotations(root.getAnnotations());
+        if (annotationTransformer != null) {
+            annotationTransformer.transform(annotations, null);
+        }
+        boolean wrote = false;
+        CommentaryBeforeMoveAnnotation before = annotations.getByClass(CommentaryBeforeMoveAnnotation.class);
+        if (before != null) {
+            writer.write("{ " + before.getCommentary() + " }");
+            wrote = true;
+        }
+        CommentaryAfterMoveAnnotation after = annotations.getByClass(CommentaryAfterMoveAnnotation.class);
+        if (after != null) {
+            // Only need a separating space if a before-comment was also just written; this is
+            // the very first thing in the movetext otherwise, so no leading space is wanted.
+            if (wrote) {
+                writer.ensureSpace();
+            }
+            writer.write("{ " + after.getCommentary() + " }");
+        }
     }
 
     void exportNode(GameMovesModel.Node node, boolean firstMoveInLine, MoveTextWriter writer) throws IOException {

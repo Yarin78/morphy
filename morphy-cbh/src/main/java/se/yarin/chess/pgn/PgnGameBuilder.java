@@ -152,6 +152,23 @@ public class PgnGameBuilder {
     }
 
     /**
+     * Adds a whole-game preface comment, i.e. a plain (not explicitly move-marked) comment that
+     * appears before the very first move of the game. Unlike {@link #addCommentBefore}, this
+     * isn't really "about" move 1 - it's stored on the root itself, so it round-trips
+     * symmetrically with how {@link PgnExporter} emits root-level comments.
+     *
+     * @param comment the comment text
+     * @return the builder for chaining
+     */
+    @NotNull
+    public PgnGameBuilder addGamePrefaceComment(@NotNull String comment) {
+        if (!comment.trim().isEmpty()) {
+            currentNode.getAnnotations().add(new CommentaryAfterMoveAnnotation(comment));
+        }
+        return this;
+    }
+
+    /**
      * Adds a commentary annotation after the current move.
      *
      * @param comment the comment text

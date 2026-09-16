@@ -256,11 +256,18 @@ public class PgnParser {
                     break;
 
                 case COMMENT:
-                    // Determine if this is a before-move or after-move comment
-                    // 1. If comment contains before-move markers ([%pre ...] or [%pre:XXX ...])
-                    // 2. Otherwise, treat as before-move if we're at root or just started a variation
-                    // 3. Otherwise treat as after-move (the common case)
-                    if (isBeforeMoveComment(token.value()) || builder.isAtBeforeCommentPosition()) {
+                    // Determine what this comment attaches to:
+                    // 1. If it contains before-move markers ([%pre ...] or [%pre:XXX ...]), it's
+                    //    explicitly about the next move, wherever we are.
+                    // 2. Otherwise, a plain comment before the game's very first move is a
+                    //    whole-game preface, not really "about" move 1.
+                    // 3. Otherwise, treat as before-move if we just started a variation.
+                    // 4. Otherwise treat as after-move (the common case).
+                    if (isBeforeMoveComment(token.value())) {
+                        builder.addCommentBefore(token.value());
+                    } else if (builder.getCurrentNode().isRoot()) {
+                        builder.addGamePrefaceComment(token.value());
+                    } else if (builder.isAtBeforeCommentPosition()) {
                         builder.addCommentBefore(token.value());
                     } else {
                         builder.addCommentAfter(token.value());

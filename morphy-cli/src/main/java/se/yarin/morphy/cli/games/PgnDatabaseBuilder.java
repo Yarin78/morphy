@@ -2,6 +2,7 @@ package se.yarin.morphy.cli.games;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import se.yarin.chess.GameModel;
 import se.yarin.chess.annotations.AnnotationTransformer;
 import se.yarin.chess.pgn.PgnExporter;
 import se.yarin.chess.pgn.PgnFormatOptions;
@@ -75,13 +76,18 @@ public class PgnDatabaseBuilder extends GameConsumerBase {
   @Override
   public void accept(Game game) {
     try {
-      if (!firstGame) {
-        this.pgnFileWriter.write("\n");
-      }
-      firstGame = false;
-      exporter.exportGame(game.getModel(), this.pgnFileWriter);
+      writeModel(game.getModel());
     } catch (IOException e) {
       log.warn("Failed to write to PGN database", e);
     }
+  }
+
+  /** Writes a single game model to the PGN file, separated from any previous game. */
+  public void writeModel(GameModel model) throws IOException {
+    if (!firstGame) {
+      this.pgnFileWriter.write("\n");
+    }
+    firstGame = false;
+    exporter.exportGame(model, this.pgnFileWriter);
   }
 }
