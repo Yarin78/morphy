@@ -251,7 +251,7 @@ public class Update extends BaseCommand implements Callable<Integer> {
     return updated;
   }
 
-  private static void clearInternalEntityIds(GameHeaderModel header) {
+  static void clearInternalEntityIds(GameHeaderModel header) {
     header.unsetField(GameAdapter.WHITE_ID);
     header.unsetField(GameAdapter.BLACK_ID);
     header.unsetField(GameAdapter.EVENT_ID);

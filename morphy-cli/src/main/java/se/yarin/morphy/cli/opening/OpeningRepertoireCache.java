@@ -1,5 +1,7 @@
 package se.yarin.morphy.cli.opening;
 
+import se.yarin.chess.GameHeaderModel;
+import se.yarin.chess.GameModel;
 import se.yarin.chess.GameMovesModel;
 import se.yarin.chess.Move;
 import se.yarin.chess.NAG;
@@ -12,6 +14,8 @@ import se.yarin.morphy.DatabaseMode;
 import se.yarin.morphy.DatabaseReadTransaction;
 import se.yarin.morphy.Game;
 import se.yarin.morphy.games.annotations.AnnotationConverter;
+import se.yarin.morphy.games.annotations.TextAfterMoveAnnotation;
+import se.yarin.morphy.games.annotations.TextBeforeMoveAnnotation;
 
 import java.io.File;
 import java.io.IOException;
@@ -46,8 +50,17 @@ public class OpeningRepertoireCache {
   private static final AnnotationConverter ANNOTATION_CONVERTER =
       AnnotationConverter.getRoundTripConverter();
 
-  /** One "opening game" (branch of variations) in the repertoire database. */
-  public record Entry(int number, String title) {}
+  /**
+   * One "opening game" (branch of variations) in the repertoire database.
+   *
+   * @param title a human-readable label for the entry, e.g. for {@link #formatTag}
+   * @param whiteName the White player name on the entry's own game in the repertoire database
+   * @param blackName the Black player name on the entry's own game in the repertoire database
+   * @param eventTitle the tournament/event title on the entry's own game in the repertoire
+   *     database
+   */
+  public record Entry(
+      int number, String title, String whiteName, String blackName, String eventTitle) {}
 
   private record Match(double score, Entry entry) {}
 
@@ -56,18 +69,26 @@ public class OpeningRepertoireCache {
   private final List<Entry> entries;
   private final Map<Position, Match> positionCache;
   private final Map<Entry, Map<Position, List<Move>>> bookMoves;
+  private final Map<Entry, GameMovesModel> entryMoves;
+
+  // Aggregated across calls to recordGame(), for later use by summarize().
+  private final Map<Entry, Integer> gamesRecorded = new HashMap<>();
+  private final Map<Entry, Map<Position, Map<Move, Integer>>> playCounts = new HashMap<>();
+  private final Map<Entry, Map<Position, Integer>> endOfLineCounts = new HashMap<>();
 
   private OpeningRepertoireCache(
       String name,
       Player myColor,
       List<Entry> entries,
       Map<Position, Match> positionCache,
-      Map<Entry, Map<Position, List<Move>>> bookMoves) {
+      Map<Entry, Map<Position, List<Move>>> bookMoves,
+      Map<Entry, GameMovesModel> entryMoves) {
     this.name = name;
     this.myColor = myColor;
     this.entries = entries;
     this.positionCache = positionCache;
     this.bookMoves = bookMoves;
+    this.entryMoves = entryMoves;
   }
 
   /** The base name of the opening database (without path or extension), e.g. "white-e4". */
@@ -179,6 +200,173 @@ public class OpeningRepertoireCache {
     }
   }
 
+  /**
+   * Records how {@code moves} actually played out against {@code entry}'s book, for later
+   * aggregation by {@link #summarize}. Uses the same book-matching rule as {@link #annotate}: a
+   * move counts as staying in book if it's any known continuation at that position, not just the
+   * main move. Once a move is found that doesn't match any known continuation at all, that move
+   * itself is recorded (so {@link #summarize} can show it as a common mistake) but nothing past
+   * it, since the entry can't provide any guidance beyond that point.
+   */
+  public void recordGame(GameMovesModel moves, Entry entry) {
+    Map<Position, List<Move>> book = bookMoves.get(entry);
+    if (book == null) {
+      return;
+    }
+
+    gamesRecorded.merge(entry, 1, Integer::sum);
+    Map<Position, Map<Move, Integer>> counts =
+        playCounts.computeIfAbsent(entry, e -> new HashMap<>());
+    Map<Position, Integer> endOfLine =
+        endOfLineCounts.computeIfAbsent(entry, e -> new HashMap<>());
+
+    GameMovesModel.Node node = moves.root();
+    while (true) {
+      List<Move> bookMovesHere = book.get(node.position());
+      if (bookMovesHere == null || bookMovesHere.isEmpty()) {
+        endOfLine.merge(node.position(), 1, Integer::sum);
+        break;
+      }
+      if (!node.hasMoves()) {
+        // The recorded game ended early, still nominally in book; nothing more to count.
+        break;
+      }
+
+      Move actualMove = node.mainMove();
+      counts.computeIfAbsent(node.position(), p -> new HashMap<>()).merge(actualMove, 1, Integer::sum);
+      if (!bookMovesHere.contains(actualMove)) {
+        break;
+      }
+      node = node.mainNode();
+    }
+  }
+
+  /**
+   * Builds a summary of every game recorded against {@code entry} via {@link #recordGame}: a
+   * clone of the entry's own move tree (same line order as the repertoire), pruned to the
+   * positions that were actually reached by a recorded game:
+   *
+   * <ul>
+   *   <li>a known continuation (the main move, or an existing sideline) that was never played by
+   *       any recorded game is kept as a single reference leaf (to show the correct next move),
+   *       but nothing beyond it
+   *   <li>a move that was played and doesn't match any known continuation at that position is
+   *       inserted as a new variation, annotated with how many times it was played; if it's my
+   *       move it's also marked with {@link NAG#BAD_MOVE}
+   *   <li>a position where the entry's own book runs out of moves is annotated with how many
+   *       recorded games reached it
+   * </ul>
+   *
+   * If {@code annotateAllMoves} is true, known continuations that were actually played also get a
+   * count annotation; otherwise only deviations and end-of-book positions do.
+   *
+   * <p>Any pre-existing free-text comments in the repertoire itself are stripped, since they'd
+   * read confusingly next to the aggregated counts; pre-existing move-quality symbols (e.g. "!" or
+   * "?" already in the repertoire) are kept.
+   *
+   * @return empty if no game has been recorded against this entry
+   */
+  public Optional<GameModel> summarize(Entry entry, boolean annotateAllMoves) {
+    if (gamesRecorded.getOrDefault(entry, 0) == 0) {
+      return Optional.empty();
+    }
+
+    GameMovesModel entryModel = entryMoves.get(entry);
+    GameMovesModel summary = new GameMovesModel(entryModel);
+    for (GameMovesModel.Node n : summary.getAllNodes()) {
+      // Annotations.removeByClass() does an exact getClass() == check, which wouldn't match
+      // these @Value.Immutable types (real instances are e.g. ImmutableTextAfterMoveAnnotation).
+      n.getAnnotations()
+          .removeIf(a -> a instanceof TextAfterMoveAnnotation || a instanceof TextBeforeMoveAnnotation);
+    }
+
+    summarizeNode(
+        summary.root(),
+        entryModel.root(),
+        playCounts.getOrDefault(entry, Map.of()),
+        endOfLineCounts.getOrDefault(entry, Map.of()),
+        annotateAllMoves);
+    addCountAnnotation(
+        summary.root(), entry.title() + " (" + gamesRecorded.get(entry) + " games recorded)");
+
+    // White/Black/Event are backed by Player/Tournament entities that ChessBase stores with a
+    // fixed byte length (30/20/40 bytes) and resolves/updates by that stored (possibly truncated)
+    // value. Reusing the entry's own already-stored values here is safe (they already fit those
+    // limits, or the repertoire database itself couldn't have stored them); it's synthesizing a
+    // NEW unbounded string, e.g. concatenating title fields together, that's dangerous: two
+    // entries with a long common prefix could then truncate to the exact same stored name, which
+    // blows up at commit time once a third game's stats update can't tell the resulting
+    // same-key duplicates apart. GameTag has a 200-byte limit, so formatTag() is safe there.
+    GameHeaderModel header = new GameHeaderModel();
+    header.setWhite(entry.whiteName());
+    header.setBlack(entry.blackName());
+    header.setGameTag(formatTag(entry));
+    header.setEvent(entry.eventTitle());
+    return Optional.of(new GameModel(header, summary));
+  }
+
+  private void summarizeNode(
+      GameMovesModel.Node cloneNode,
+      GameMovesModel.Node origNode,
+      Map<Position, Map<Move, Integer>> counts,
+      Map<Position, Integer> endOfLineCounts,
+      boolean annotateAllMoves) {
+    Position position = origNode.position();
+    List<GameMovesModel.Node> origChildren = origNode.children();
+
+    if (origChildren.isEmpty()) {
+      int reached = endOfLineCounts.getOrDefault(position, 0);
+      if (reached > 0) {
+        addCountAnnotation(cloneNode, reachedText(reached));
+      }
+      return;
+    }
+
+    Map<Move, Integer> here = counts.getOrDefault(position, Map.of());
+    List<GameMovesModel.Node> cloneChildren = cloneNode.children();
+    for (int i = 0; i < origChildren.size(); i++) {
+      GameMovesModel.Node origChild = origChildren.get(i);
+      GameMovesModel.Node cloneChild = cloneChildren.get(i);
+      Integer count = here.get(origChild.lastMove());
+      if (count == null) {
+        // Never played beyond this move; keep it as a "correct move" reference leaf.
+        cloneChild.deleteRemainingMoves();
+      } else {
+        if (annotateAllMoves) {
+          addCountAnnotation(cloneChild, playedText(count));
+        }
+        summarizeNode(cloneChild, origChild, counts, endOfLineCounts, annotateAllMoves);
+      }
+    }
+
+    boolean isMyMove = position.playerToMove() == myColor;
+    List<Move> knownMoves = origNode.moves();
+    for (Map.Entry<Move, Integer> playedMove : here.entrySet()) {
+      if (knownMoves.contains(playedMove.getKey())) {
+        continue;
+      }
+      GameMovesModel.Node deviation = cloneNode.addMove(playedMove.getKey());
+      if (isMyMove) {
+        deviation.addAnnotation(new NAGAnnotation(NAG.BAD_MOVE));
+      }
+      addCountAnnotation(
+          deviation, (isMyMove ? "" : "Not in repertoire, ") + playedText(playedMove.getValue()));
+    }
+  }
+
+  private static void addCountAnnotation(GameMovesModel.Node node, String text) {
+    node.addAnnotation(new CommentaryAfterMoveAnnotation(text));
+    ANNOTATION_CONVERTER.convertToChessBase(node.getAnnotations());
+  }
+
+  private static String playedText(int count) {
+    return "Played " + count + " time" + (count == 1 ? "" : "s");
+  }
+
+  private static String reachedText(int count) {
+    return "Reached end of line " + count + " time" + (count == 1 ? "" : "s");
+  }
+
   /** Loads and preprocesses an opening repertoire database into a cache. */
   public static OpeningRepertoireCache load(File file) throws IOException {
     String name = file.getName();
@@ -191,23 +379,30 @@ public class OpeningRepertoireCache {
     List<Entry> entries = new ArrayList<>();
     Map<Position, Match> positionCache = new HashMap<>();
     Map<Entry, Map<Position, List<Move>>> bookMoves = new HashMap<>();
+    Map<Entry, GameMovesModel> entryMoves = new HashMap<>();
     try (Database db = Database.open(file, DatabaseMode.READ_ONLY)) {
       try (DatabaseReadTransaction txn = new DatabaseReadTransaction(db)) {
         for (Game game : txn.iterable()) {
           if (game.guidingText() || game.deleted()) {
             continue;
           }
-          String title = game.white().getFullName() + " - " + game.black().getFullName();
-          Entry entry = new Entry(game.id(), title);
+          String whiteName = game.white().getFullName();
+          String blackName = game.black().getFullName();
+          String title = whiteName + " - " + blackName;
+          Entry entry =
+              new Entry(game.id(), title, whiteName, blackName, game.tournament().title());
           entries.add(entry);
+
+          GameMovesModel moves = game.getModel().moves();
+          entryMoves.put(entry, moves);
 
           Map<Position, List<Move>> book = new HashMap<>();
           bookMoves.put(entry, book);
-          indexNode(game.getModel().moves().root(), 0.0, 1.0, entry, positionCache, book);
+          indexNode(moves.root(), 0.0, 1.0, entry, positionCache, book);
         }
       }
     }
-    return new OpeningRepertoireCache(name, myColor, entries, positionCache, bookMoves);
+    return new OpeningRepertoireCache(name, myColor, entries, positionCache, bookMoves, entryMoves);
   }
 
   /**
