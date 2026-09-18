@@ -1,0 +1,240 @@
+#!/usr/bin/env python3
+"""hexit: hexdump-like tool for files with a header and fixed-size records.
+
+Each record is printed on its own line, prefixed with its 1-indexed record
+number and the byte address of the record within the file. Hex bytes are
+space-separated, with an extra separator every 8th byte. With -C, an ASCII
+sidebar (. for unprintable bytes) is printed on the line below, aligned
+under the hex bytes above. With -c, that same ASCII sidebar is printed
+after the hex bytes on the same line instead, with no spaces between
+characters.
+
+Two files may be given at once, in which case they are dumped side by
+side (record N of the first file next to record N of the second),
+separated by " | ", and bytes that differ between the two are
+colorized. Both files must share the same header/record size (i.e. the
+same known extension, or both unknown). Color is on by default when
+stdout is a terminal; override with --color.
+
+Header/record sizes are chosen from the file extension:
+    .2cba   12-byte header, 236-byte records
+    .2cbg   12-byte header, 140-byte records
+    .2cbh  192-byte header, 192-byte records
+    other     no header,     16-byte records  (hexdump-like)
+"""
+import argparse
+import os
+import re
+import sys
+
+FORMATS = {
+    ".2cba": (12, 236),
+    ".2cbg": (12, 140),
+    ".2cbh": (192, 192),
+    ".2lgd": (12, 32),  # 12 byte header, blocks that are multiple of 1024
+}
+DEFAULT_HEADER, DEFAULT_RECORD = 0, 16
+
+GROUP = 8  # extra separator every this many bytes
+
+COLOR_ON = "\x1b[31m"
+COLOR_OFF = "\x1b[0m"
+ANSI_RE = re.compile(r"\x1b\[[0-9;]*m")
+
+
+def visible_len(s):
+    return len(ANSI_RE.sub("", s))
+
+
+def ljust_visible(s, width):
+    pad = width - visible_len(s)
+    return s + " " * pad if pad > 0 else s
+
+
+def sizes_for(path):
+    ext = os.path.splitext(path)[1].lower()
+    return FORMATS.get(ext, (DEFAULT_HEADER, DEFAULT_RECORD))
+
+
+def render(chunk, mask=None):
+    """Return (hex_line, ascii_line) for a chunk of bytes, columns aligned.
+    Bytes where mask[i] is true are wrapped in color."""
+    hex_pieces = []
+    ascii_pieces = []
+    for i, b in enumerate(chunk):
+        hex_str = f"{b:02x}"
+        ascii_ch = chr(b) if 32 <= b < 127 else "."
+        if mask is not None and mask[i]:
+            hex_str = COLOR_ON + hex_str + COLOR_OFF
+            ascii_ch = COLOR_ON + ascii_ch + COLOR_OFF
+        hex_pieces.append(hex_str)
+        ascii_pieces.append(ascii_ch)
+        extra = (i + 1) % GROUP == 0
+        hex_pieces.append("  " if extra else " ")
+        ascii_pieces.append("   " if extra else "  ")
+    return "".join(hex_pieces).rstrip(), "".join(ascii_pieces).rstrip()
+
+
+def ascii_compact(chunk, mask=None):
+    pieces = []
+    for i, b in enumerate(chunk):
+        ch = chr(b) if 32 <= b < 127 else "."
+        if mask is not None and mask[i]:
+            ch = COLOR_ON + ch + COLOR_OFF
+        pieces.append(ch)
+    return "".join(pieces)
+
+
+def format_entry(label, addr, chunk, label_width, addr_width, ascii_mode, width, mask=None):
+    """Return the list of output lines for one record (or the header)."""
+    lines = []
+    label_prefix = f"{label.rjust(label_width)} {addr:0{addr_width}x}  "
+    blank_prefix = " " * len(label_prefix)
+    for i in range(0, len(chunk), width):
+        sub = chunk[i:i + width]
+        sub_mask = mask[i:i + width] if mask is not None else None
+        hex_line, ascii_line = render(sub, sub_mask)
+        prefix = label_prefix if i == 0 else blank_prefix
+        if ascii_mode == "inline":
+            lines.append(prefix + hex_line + "  " + ascii_compact(sub, sub_mask))
+        else:
+            lines.append(prefix + hex_line)
+            if ascii_mode == "below":
+                lines.append(" " * len(prefix) + ascii_line)
+    return lines
+
+
+def read_entries(path, header_size, record_size):
+    """Return a list of (label, addr, raw_bytes); label is 'HEADER' or a record number string."""
+    entries = []
+    with open(path, "rb") as f:
+        if header_size:
+            header = f.read(header_size)
+            if header:
+                entries.append(("HEADER", 0, header))
+
+        recnum = 1
+        while True:
+            chunk = f.read(record_size)
+            if not chunk:
+                break
+            addr = header_size + (recnum - 1) * record_size
+            entries.append((str(recnum), addr, chunk))
+            recnum += 1
+    return entries
+
+
+def diff_masks(chunk1, chunk2):
+    """Return per-byte diff masks (mask1, mask2) for two records being compared."""
+    n = max(len(chunk1), len(chunk2))
+    mask1, mask2 = [], []
+    for i in range(n):
+        b1 = chunk1[i] if i < len(chunk1) else None
+        b2 = chunk2[i] if i < len(chunk2) else None
+        differs = b1 != b2
+        if i < len(chunk1):
+            mask1.append(differs)
+        if i < len(chunk2):
+            mask2.append(differs)
+    return mask1, mask2
+
+
+def label_addr_widths(entries):
+    label_width = max([len("HEADER")] + [len(label) for label, _, _ in entries])
+    max_addr = max([0] + [addr + len(chunk) for _, addr, chunk in entries])
+    addr_width = max(8, len(f"{max_addr:x}"))
+    return label_width, addr_width
+
+
+def dump_single(path, header_size, record_size, ascii_mode, width):
+    entries = read_entries(path, header_size, record_size)
+    label_width, addr_width = label_addr_widths(entries)
+    for label, addr, chunk in entries:
+        w = width if width > 0 else len(chunk)
+        for line in format_entry(label, addr, chunk, label_width, addr_width, ascii_mode, w):
+            print(line)
+
+
+def dump_side_by_side(path1, path2, header_size, record_size, ascii_mode, width, color):
+    entries1 = read_entries(path1, header_size, record_size)
+    entries2 = read_entries(path2, header_size, record_size)
+    label_width1, addr_width1 = label_addr_widths(entries1)
+    label_width2, addr_width2 = label_addr_widths(entries2)
+
+    for i in range(max(len(entries1), len(entries2))):
+        e1 = entries1[i] if i < len(entries1) else None
+        e2 = entries2[i] if i < len(entries2) else None
+
+        mask1 = mask2 = None
+        if color and e1 is not None and e2 is not None:
+            mask1, mask2 = diff_masks(e1[2], e2[2])
+
+        if e1 is not None:
+            label, addr, chunk = e1
+            w = width if width > 0 else len(chunk)
+            lines1 = format_entry(label, addr, chunk, label_width1, addr_width1, ascii_mode, w, mask1)
+        else:
+            lines1 = []
+
+        if e2 is not None:
+            label, addr, chunk = e2
+            w = width if width > 0 else len(chunk)
+            lines2 = format_entry(label, addr, chunk, label_width2, addr_width2, ascii_mode, w, mask2)
+        else:
+            lines2 = []
+
+        col1_width = max((visible_len(l) for l in lines1), default=0)
+        col2_width = max((visible_len(l) for l in lines2), default=0)
+        for j in range(max(len(lines1), len(lines2))):
+            l1 = lines1[j] if j < len(lines1) else ""
+            l2 = lines2[j] if j < len(lines2) else ""
+            print(f"{ljust_visible(l1, col1_width)} | {ljust_visible(l2, col2_width)}")
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        prog="hexit",
+        description="hexdump-like tool for fixed-record files with a header.",
+        epilog=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    parser.add_argument("file")
+    parser.add_argument("file2", nargs="?", help="optional second file, dumped side by side with the first")
+    ascii_group = parser.add_mutually_exclusive_group()
+    ascii_group.add_argument(
+        "-C", dest="ascii_mode", action="store_const", const="below",
+        help="show an ASCII sidebar below each hex line (like hexdump -C)",
+    )
+    ascii_group.add_argument(
+        "-c", dest="ascii_mode", action="store_const", const="inline",
+        help="show the ASCII sidebar after each hex line instead of below it",
+    )
+    parser.add_argument(
+        "-w", "--width", type=int, default=16,
+        help="bytes of hex shown per output line (default: 16); "
+             "0 means the whole record on one line",
+    )
+    parser.add_argument(
+        "--color", choices=["auto", "always", "never"], default="auto",
+        help="colorize differing bytes when dumping two files (default: auto)",
+    )
+    args = parser.parse_args()
+
+    header_size, record_size = sizes_for(args.file)
+
+    if args.file2 is not None:
+        header_size2, record_size2 = sizes_for(args.file2)
+        if (header_size, record_size) != (header_size2, record_size2):
+            parser.error(
+                f"{args.file} and {args.file2} have different header/record sizes "
+                f"({header_size}/{record_size} vs {header_size2}/{record_size2})"
+            )
+
+        color = args.color == "always" or (args.color == "auto" and sys.stdout.isatty())
+        dump_side_by_side(args.file, args.file2, header_size, record_size, args.ascii_mode, args.width, color)
+    else:
+        dump_single(args.file, header_size, record_size, args.ascii_mode, args.width)
+
+
+if __name__ == "__main__":
+    main()
