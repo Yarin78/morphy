@@ -5,11 +5,19 @@ point in time. The encodings are described in FORMAT.md.
 import datetime as dt
 from dataclasses import dataclass
 
-# A game's creation timestamp counts 1/1024 seconds from this moment, and its
-# last-changed timestamp counts 100 nanoseconds from this one. Both are the
-# encodings the older format (v1) uses.
+# A game's creation timestamp counts fractions of a second from this moment,
+# and its last-changed timestamp counts 100 nanoseconds from this one.
 CREATION_EPOCH = dt.datetime(2008, 12, 1, tzinfo=dt.timezone(dt.timedelta(hours=1)))
 LAST_CHANGED_EPOCH = dt.datetime(1582, 10, 15, tzinfo=dt.timezone.utc)
+
+# ChessBase writes a creation timestamp in units of 1/2**22 s, but a database
+# converted from v1 keeps v1's 1/2**10 s values unrescaled (see FORMAT.md).
+# The two are 4096 apart, so which is which can be told from the size: a
+# v1-scale value only reaches this threshold in the 2040s, and a native one
+# falls below it only within days of the epoch.
+CREATION_UNITS_PER_SECOND = 2 ** 22
+CREATION_UNITS_PER_SECOND_V1 = 2 ** 10
+CREATION_SCALE_THRESHOLD = 2 ** 40
 
 
 @dataclass(frozen=True)
@@ -50,8 +58,11 @@ def _decode_timestamp(value, epoch, units_per_second):
 
 
 def decode_creation_timestamp(value):
-    """When a game was created; 1/1024 seconds since 2008-12-01 in Berlin."""
-    return _decode_timestamp(value, CREATION_EPOCH, 1024)
+    """When a game was created; fractions of a second since 2008-12-01 in
+    Berlin, at whichever of the two scales the value is written in."""
+    units = (CREATION_UNITS_PER_SECOND if value >= CREATION_SCALE_THRESHOLD
+             else CREATION_UNITS_PER_SECOND_V1)
+    return _decode_timestamp(value, CREATION_EPOCH, units)
 
 
 def decode_last_changed_timestamp(value):

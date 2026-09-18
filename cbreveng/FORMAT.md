@@ -33,6 +33,9 @@ Working notes on the file format, and the source of truth for the Python code in
 - `wch2` — 1038 world championship games, converted by ChessBase from the v1
   database in `wch1`. The game ids match one to one between the two, so decoding
   `wch1` with the Java code gives an expected value for every game.
+- `probe` — 7 games built to order in ChessBase to pin down specific fields: a
+  deleted game, a Chess960 game, a game with round/subround/board set, and games
+  with different kinds of rating. Facts from it are marked **(probe)**.
 
 ## Files
 
@@ -104,6 +107,13 @@ An empty database is just the header.
 
 ### Entity records
 
+An entity referred to by a game but left blank is stored as a real entity with
+an empty name, and games point at it rather than at -1. `probe` has an empty
+player at #2, which every game with no annotator refers to; the same holds for
+game tag 0, and for tournament and source 0 in a database where they were never
+filled in. The empty entity is created the first time it is needed, so its id is
+not always 0. (probe)
+
 Every entity record, whatever its type, starts with:
 
 | Offset | Size | Type | Description |
@@ -131,7 +141,12 @@ fields in order, starting with that length.
 | 4 | int | `d6` `?` (-1) |
 
 The record ends after `d6`; a player record with any other length is malformed.
-The unknown ints are called `d1`–`d6` in the code.
+The unknown ints are called `d1`–`d6` in the code, and they are **the same six
+values in every player of every sample database** — 0, 0, -1, 8, -1, -1 across
+all 134 players — so they carry nothing about the individual player. Nor would
+there be much to carry: ChessBase does not keep a player's title, rating, birth
+date or nation in the database file, but looks them up online, so a player record
+really is just the two names. (probe)
 
 Example, player "Jimmy Mårdell" (49 bytes, at file offset 0xb8):
 
@@ -174,8 +189,11 @@ same fields as v1, in the same order, only widened and little-endian: (wch2)
 | 11 | 1 | byte | `?` always 0 |
 | 12 | 4 | float | latitude of the place, 0 if not known |
 | 16 | 4 | float | longitude |
+| 20 | 40 | | `?` mostly zero, see below |
 | 60 | 4 | int | end date |
 | 64 | 44 | | `?` always 0 |
+
+These rows account for all 108 bytes.
 
 Bytes 20-59 of the tail are zero except for a `07` at 34, 45 and 56 — three of
 something 11 bytes apart. The same three bytes, with the same spacing, sit in the
@@ -362,9 +380,11 @@ Known fields of a game record:
 
 | Offset | Size | Type | Description |
 |--------|------|------|-------------|
-| 0x00 | 1 | byte | type: bit 0 always set, bit 1 = guiding text, bit 7 = deleted |
+| 0x00 | 1 | byte | type: bit 0 always set, bit 1 = guiding text, bit 7 = deleted (probe) |
+| 0x01 | 1 | byte | `?` always 0 |
 | 0x02 | 1 | byte | `?` always 1 (wch2) |
 | 0x03 | 1 | byte | `?` always the same as the type byte at 0x00 (wch2) |
+| 0x04 | 4 | | `?` always 0 |
 | 0x08 | 8 | long | offset of the moves in the `.2cbg` file (wch2) |
 | 0x10 | 8 | long | offset of the annotations in the `.2cba` file (wch2) |
 | 0x18 | 8 | long | white player id |
@@ -377,30 +397,40 @@ Known fields of a game record:
 | 0x50 | 8 | long | game tag id |
 | 0x58 | 1 | byte | result (`GameResult` enum) |
 | 0x59 | 1 | byte | NAG (if the result is "line", this is the `LineEvaluation`) |
-| 0x5a | 2 | short | round |
-| 0x5c | 2 | short | subround |
-| 0x5e | 2 | short | board |
-| 0x60 | 2 | short | white elo, followed by the white rating type, see [Rating type](#rating-type) |
-| 0x70 | 2 | short | black elo, followed by the black rating type |
-| 0x80 | 2 | ushort | ECO opening code (wch2), see [ECO](#eco) |
+| 0x5a | 2 | short | round (probe) |
+| 0x5c | 2 | short | subround (probe) |
+| 0x5e | 2 | short | board (probe) |
+| 0x60 | 2 | short | white elo |
+| 0x62 | 14 | | white rating type (probe), see [Rating type](#rating-type) |
+| 0x70 | 2 | short | black elo |
+| 0x72 | 14 | | black rating type |
+| 0x80 | 2 | ushort | ECO opening code, or a Chess960 start position (wch2, probe), see [ECO](#eco) |
 | 0x82 | 2 | ushort | medals, a bitmask (wch2), see [Flags and medals](#flags-and-medals) |
 | 0x84 | 4 | uint | flags, a bitmask (wch2), see [Flags and medals](#flags-and-medals) |
 | 0x88 | 2 | ushort | annotation magnitude flags (wch2) |
 | 0x8a | 2 | short | number of full moves in the game |
 | 0x8c | 4 | uint | final material of one player (wch2), see [Final material](#final-material) |
 | 0x90 | 4 | uint | final material of the other player (wch2) |
-| 0x98 | 8 | long | creation timestamp (wch2), see [Timestamps](#timestamps) |
+| 0x94 | 4 | | `?` always 0 |
+| 0x98 | 8 | long | creation timestamp (wch2, probe), see [Timestamps](#timestamps) |
 | 0xa0 | 8 | long | last-changed timestamp (wch2), see [Timestamps](#timestamps) |
 | 0xa8 | 6 | bitmask | endgame types the game passed through (wch2), see [Endgame types](#endgame-types) |
+| 0xae | 10 | | `?` always 0 |
 | 0xb8 | 4 | int | game version, increases by 1 on every save |
 | 0xbc | 4 | int | encoded played date, see [Dates](#dates) |
 
-Everything not in the table is zero in every game of `wch2`: 0x01, 0x04-0x07,
-0x62-0x6f, 0x72-0x7f, 0x8e-0x8f, 0x92-0x97, 0xae-0xb7 and 0xba-0xbb. The endgame
-bitmask at 0xa8 is therefore at least 6 bytes and at most 16.
+The rows above account for all 192 bytes. The fields marked `?` are zero in every
+game of every sample database, apart from 0x02 and 0x03 as noted. Two fields do
+not use all the room they have: each final material is a 4-byte slot whose top
+two bytes are always zero, and the endgame bitmask is 6 bytes followed by 10 more
+that are always zero, so it could be anything up to 16.
 
 The entity ids are 0-based ids into the `.2lid` file, in the block/slot sense
 above. Verified with `inspect games` against the sample databases.
+
+An annotator is an ordinary player, in the same type and the same id space: a
+`probe` game annotated by "Probe, Delta" stores annotator id 4, which is exactly
+the player Delta. (probe)
 
 Converting a v1 database renumbers some entities but not others: in `wch2` the
 tournament and source ids are unchanged from v1, while players, annotators and
@@ -433,7 +463,10 @@ The round (0x5a), subround (0x5c) and board (0x5e) are shown together as
 The ECO code is stored the same way as in v1: `value / 128 - 1` is the code,
 numbered from 0, so 0-99 is A00-A99, 100-199 is B00-B99 and so on up to E99, and
 `value % 128` is the sub-ECO. A value of 0 means no ECO. A value of at least
-65536 - 960 is a Chess960 start position instead, `value - (65536 - 960)`. (wch2)
+65536 - 960 is a Chess960 start position instead, `value - (65536 - 960)`, and
+the `unorthodox` flag is set at the same time. A `probe` game entered as
+Chess960 position 123 stores 64699, which is 65536 - 960 + 123, with flags
+`0x08000005`. (wch2, probe)
 
 ### Flags and medals
 
@@ -479,13 +512,67 @@ ended up.
 
 ### Rating type
 
-In `reveng1`, each elo is followed by what looks like a rating type: at 0x62 and
-0x64 a short of 1, and at 0x68 the text `FIDE`. That makes a 16-byte block per
-player, 0x60-0x6f for white and 0x70-0x7f for black, matching v1's 16-byte
-`RatingType`. In `wch2` the whole block after the elo is zero even though v1 has
-`FIDE` for 747 of those games, so the conversion dropped it and the layout is
-only a guess.
+Each elo is followed by 14 bytes saying what kind of rating it is, so white uses
+0x60-0x6f and black 0x70-0x7f. v1 keeps the same idea in a 16-byte `RatingType`,
+but only knows about international and national ratings.
 
+| Offset after the elo | Size | Type | Description |
+|------|------|------|-------------|
+| 0 | 2 | short | kind in the bottom 3 bits, time control in the bits above |
+| 2 | 2 | short | which rating list this is, see below |
+| 4 | 2 | short | nation |
+| 6 | 8 | string bytes | what the rating is called |
+
+The kind is **1 international, 2 national, 3 server**, masked with 7 exactly as
+v1 masks its own type byte. Shifting right by 3 gives the time control:
+**0 normal, 1 bullet, 2 blitz, 3 rapid, 4 correspondence**. Bullet is new; v1 has
+normal, blitz, rapid and correspondence only.
+
+In ChessBase each kind has its own second choice: international is Elo or ICCF,
+national picks a nation, and a server rating picks ChessBase, chess.com or
+LiChess. Choosing ICCF and choosing Elo with the correspondence time control give
+the same record, which is also how v1 behaves — it names an international rating
+"ICCF" when the time control is correspondence and "FIDE" otherwise.
+
+Every combination entered into `probe`: (probe)
+
+| First short | Kind | Time control | List | Nation | Name |
+|------|------|------|------|------|------|
+| 1 | international | normal | 1 | 0 | `FIDE` |
+| 25 | international | rapid | 3 | 0 | `FIDE` |
+| 33 | international | correspondence | 4 | 0 | `ICCF` |
+| 2 | national | normal | 100 | 53 GER / 134 SWE / 247 GBR | *(empty)* |
+| 3 | server | normal | 10 | 0 | `chess.co` |
+| 11 | server | bullet | 6 | 196 NET | `CB` |
+| 19 | server | blitz | 16 | 196 NET | `LiChess` |
+| 27 | server | rapid | 17 | 196 NET | `LiChess` |
+
+The name is a fixed 8 bytes with no terminator when it fills them, so ChessBase
+truncates `chess.com` to `chess.co` in the file — the tool is not cutting it
+short. A national rating has no name at all; the nation says which one it is.
+
+`inspect games` shows the elo and its rating type together, the way ChessBase
+does: `2000-ChessBase-Bullet (NET)`, `2000-LiC-Rapid (NET)`, `2000-ELO-Rapid`,
+`2000-corr`, `2000-CC`, `2000 (GER)`. The rating list is written under the name
+ChessBase uses rather than the one stored in the record (`FIDE` as `ELO`, `ICCF`
+as `corr`, `CB` as `ChessBase`, `chess.co` as `CC`, `LiChess` as `LiC`), the time
+control is left out when it is normal or correspondence, an ordinary
+international rating at normal time control is just the number, and an elo of 0,
+which means the player has no rating, is left blank.
+
+The second short is an id for the particular rating list, not for the kind: all
+three national ratings use 100 whatever the nation, so it cannot be the nation,
+and LiChess blitz and rapid are 16 and 17 while FIDE rapid and ICCF are 3 and 4 —
+adjacent ids for adjacent time controls. It reads as a flat registry of the
+rating lists ChessBase knows about, one entry per provider and time control, with
+a single generic entry for national ratings. Which id is which beyond the eight
+above is not known, and FIDE appears to have no bullet list.
+
+A server rating stores the nation as `Internet` (196), which is a real entry in
+the nation list — except for chess.com, which stores 0. Whether that is
+deliberate is not clear from one sample.
+
+### Dates
 ### Dates
 
 A date is an int where bits 0-4 are the day, bits 5-8 the month and bits 9-20 the
@@ -497,38 +584,36 @@ in the `.ini` file, so they use this encoding too.
 
 ### Timestamps
 
-A game header holds two timestamps, both in the v1 encodings, and in `wch2` both
-are byte for byte what v1 has:
+A game header holds two timestamps, both counting from a fixed moment:
 
-- **Creation** (0x98): 1/1024 seconds since 2008-12-01 in Europe/Berlin.
-- **Last changed** (0xa0): 100 nanoseconds since 1582-10-15 UTC, the epoch
-  UUID timestamps use. 0 means the game has never been changed since it was
-  created.
+- **Creation** (0x98): fractions of a second since 2008-12-01 in Europe/Berlin.
+- **Last changed** (0xa0): 100 nanoseconds since 1582-10-15 UTC, the epoch UUID
+  timestamps use. 0 means the game has never been changed since it was created.
 
-Game 1 of `wch2` gives 2017-04-14 12:12:08 UTC and 2019-10-03 09:21:02 UTC, which
-is what the Java command line tool prints for the v1 database in local time.
+The creation timestamp is written at **two different scales**. ChessBase writes
+1/2²² of a second; v1 writes 1/2¹⁰ (1/1024) of a second, and converting a
+database does not rescale the value, so `wch2` still holds v1-scale numbers. The
+two are 4096 apart and nowhere near each other — a v1-scale value only reaches
+2⁴⁰ in the 2040s, and a native one falls below it only within days of the epoch —
+so the code picks the scale from the size of the value. (probe)
 
-The creation timestamp is only understood for a converted database. In `reveng1`,
-which ChessBase made itself, 0x98 holds the same value
-`2b e0 0a 59 f5 5d 08 00` in every game and in all four snapshots of it, taken on
-different days, and no epoch and unit turn that into a date near 2026. So either
-the field means something else when ChessBase writes it fresh, and the converter
-just copied v1's value in, or it is a creation timestamp in an encoding that has
-not been worked out. Last changed (0xa0) has no such problem: it decodes
-correctly in `reveng1` too, giving the days those games were actually saved.
-## `.2cbg` and `.2cba` — moves and annotations
+Read this way every game of `probe` was created before it was last changed, and
+the seven creation times run in order from 20:50:20 to 20:59:12 on the day the
+database was built, which is what entering seven games one after another looks
+like.
 
-Not analysed beyond their framing. Both start with a 12-byte file header holding
-the file size as a long and then the header size (12) as an int. A record begins
-with the 8-byte marker `88 77 66 55 44 33 22 11`, then an int length, then an int
-that varies by record (0x62, 0x64, 0x68 … in `.2cbg`, 0xc2, 0xc3, 0xc4 … in
-`.2cba`). A game's records are found through the offsets at 0x08 and 0x10 of its
-game header. (wch2)
+The creation time is stamped once when the record is born and never touched
+again. **Copying a game carries it across**, and editing the copy afterwards does
+not reset it: `reveng1`'s two games are a game and a copy of it pasted into the
+same database, and although they now have different players, different lengths,
+different last-changed times and 7 against 17 saves, their creation times are
+identical to the nanosecond. So the field doubles as a marker for where a game
+originally came from, which is presumably the point of storing it at that
+resolution.
 
-Every game has an annotation record, even with nothing to annotate: 414 games of
-`wch1` have no annotations, and in `wch2` each of them points at a record of
-length 4 whose body is `00 00 00 00 7f ff ff ff`. There is no "offset 0 means
-none" convention as in v1.
+It is a creation time rather than a unique id, even so: `wch2` matches v1's
+`creationTimestamp` on all 1025 distinct values, and v1 derives a date from it.
+A value that a copy inherits cannot identify a game on its own.
 
 ## Open questions
 
@@ -537,10 +622,9 @@ none" convention as in v1.
   new entity is added (and if so, which one, and how the list changes).
 - In `1tour/reveng1.2lid`, player #2 is a valid (not deleted) record with both
   names empty (36 bytes).
-- What 0x98 holds in a database ChessBase made itself, where it is a constant
-  rather than a creation timestamp (see above).
-- The deletion bit: the code tests bit 7 of the first byte, as v1 does, but no
-  sample database has a deleted game to check it against.
+- Which rating list each id in the second short of a rating type refers to,
+  beyond the eight seen (see above), and why chess.com stores no nation while the
+  other two servers store `Internet`.
 - The layout of a guiding text record (see above), and what 0x02 and 0x03 are.
 - What the endgame bits at 0xa8 mean, beyond the seven guessed above, and whether
   the field is more than 6 bytes.

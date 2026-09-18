@@ -11,6 +11,7 @@ from morphy.dates import decode_creation_timestamp, decode_date, decode_last_cha
 from morphy.eco import decode_eco
 from morphy.flags import decode_flags, decode_medals
 from morphy.material import decode_endgame_types, decode_material
+from morphy.ratings import decode_rating_type, format_elo
 from morphy.results import format_result
 
 
@@ -36,8 +37,10 @@ class GameHeader:
     round_number: int  # 0 = none
     subround_number: int  # 0 = none
     board_number: int  # 0 = none
-    white_elo: int
-    black_elo: int
+    white_elo_value: int
+    white_rating_bytes: bytes  # the rating type that goes with the elo
+    black_elo_value: int
+    black_rating_bytes: bytes
     encoded_eco: int
     medals_value: int  # bitmask
     flags_value: int  # bitmask, mostly saying what annotations the game has
@@ -72,6 +75,24 @@ class GameHeader:
     def played_date(self):
         """The date the game was played, as a PartialDate."""
         return decode_date(self.encoded_played_date)
+
+    @property
+    def white_rating(self):
+        """What kind of rating white's elo is."""
+        return decode_rating_type(self.white_rating_bytes)
+
+    @property
+    def black_rating(self):
+        return decode_rating_type(self.black_rating_bytes)
+
+    @property
+    def white_elo(self):
+        """White's elo, with whatever its rating type adds to it."""
+        return format_elo(self.white_elo_value, self.white_rating)
+
+    @property
+    def black_elo(self):
+        return format_elo(self.black_elo_value, self.black_rating)
 
     @property
     def eco(self):
