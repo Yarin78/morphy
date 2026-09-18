@@ -16,9 +16,23 @@ Working notes on the file format, and the source of truth for the Python code in
   is only a guide to what fields mean and how values are encoded. Offsets, sizes
   and byte order differ in this format (e.g. ids are 24-bit big-endian in v1's
   `.cbh`), so anything borrowed from v1 needs to be checked against the samples.
+- Most of what follows was checked against `wch2`, a 1038-game database that
+  ChessBase converted from the v1 database in `wch1`. Because the game ids match
+  one to one, a field is confirmed by decoding the v1 file and requiring the
+  values to agree for every game. Facts established that way are marked
+  **(wch2)**; they rest on a real database but only one.
 - Fields marked `?` have unknown meaning; the value given is what the sample
   files contain. **(observed)** marks facts that come from inspecting the sample
   files rather than from the earlier notes, so they rest on very few samples.
+
+## Sample databases
+
+- `reveng1` — a handful of games made by hand in ChessBase, with `empty`, `1tour`
+  and `2tour` as earlier states of it. Small enough to read byte by byte, and the
+  only place some fields are set at all.
+- `wch2` — 1038 world championship games, converted by ChessBase from the v1
+  database in `wch1`. The game ids match one to one between the two, so decoding
+  `wch1` with the Java code gives an expected value for every game.
 
 ## Files
 
@@ -28,8 +42,8 @@ A database is a set of files with the same base name, e.g. `reveng1.*`:
 |-----------|---------|--------|-------|
 | `.2cbh` | game headers | 192 bytes | 192-byte records, see [below](#2cbh--game-headers) |
 | `.2lid` | entities (players, tournaments, ...) | variable | see [below](#2lid--entities) |
-| `.2cba` | not analysed | 12 bytes | 236-byte records |
-| `.2cbg` | not analysed | 12 bytes | 140-byte records |
+| `.2cba` | annotations | 12 bytes | records start with `88 77 66 55 44 33 22 11` (wch2) |
+| `.2cbg` | moves | 12 bytes | records start with `88 77 66 55 44 33 22 11` (wch2) |
 | `.2lgd` | not analysed | 12 bytes | blocks are a multiple of 1024 bytes |
 | `.2lcd` | not analysed | none | 40960 bytes in every sample, even an empty database (observed) |
 | `.ini` | settings | | plain text INI |
@@ -136,16 +150,30 @@ first name (length 0), 41 bytes in total. (observed)
 | Size | Type | Description |
 |------|------|-------------|
 | 4 | int | record length (e.g. 120) |
-| 4 | int | `?` (0) |
+| 4 | int | length of place |
+| n | string bytes | place |
 | 4 | int | length of title |
-| n | string bytes | title |
+| m | string bytes | title |
 | … | | `?` — zero, except that a byte with value `07` was seen 34, 45 and 56 bytes after the end of the title (observed) |
 
-Example, tournament "Test" (124 bytes, at file offset 0x4b8):
+The **place comes before the title**, which only shows up in a database that has
+one. In `reveng1` the place is empty, so the record looks like it starts with a
+`?` int of 0. Tournament #0 of `wch2` (wch2):
+
+```
+9c 00 00 00                              record length 156
+03 00 00 00  55 53 41                    place "USA"
+25 00 00 00  57 6f 72 6c 64 2d 63 68 ... title "World-ch01 Steinitz-Zukertort +10-5=5+"
+```
+
+Example, tournament "Test" with no place (124 bytes, at file offset 0x4b8):
 
 ```
 78 00 00 00  00 00 00 00  04 00 00 00  54 65 73 74  00 00 00 00 ...
 ```
+
+`morphy/entitydb.py` does not know this yet: it scans for the first string in the
+record, so it reports the place as the title whenever there is one.
 
 #### Source (observed)
 
@@ -230,7 +258,11 @@ Known fields of a game record:
 
 | Offset | Size | Type | Description |
 |--------|------|------|-------------|
-| 0x00 | | | highest bit first byte marks deletion |
+| 0x00 | 1 | byte | type: bit 0 always set, bit 1 = guiding text, bit 7 = deleted |
+| 0x02 | 1 | byte | `?` always 1 (wch2) |
+| 0x03 | 1 | byte | `?` always the same as the type byte at 0x00 (wch2) |
+| 0x08 | 8 | long | offset of the moves in the `.2cbg` file (wch2) |
+| 0x10 | 8 | long | offset of the annotations in the `.2cba` file (wch2) |
 | 0x18 | 8 | long | white player id |
 | 0x20 | 8 | long | black player id |
 | 0x28 | 8 | long | tournament id |
@@ -244,19 +276,40 @@ Known fields of a game record:
 | 0x5a | 2 | short | round |
 | 0x5c | 2 | short | subround |
 | 0x5e | 2 | short | board |
-| 0x60 | 2 | short | white elo |
-| 0x70 | 2 | short | black elo |
+| 0x60 | 2 | short | white elo, followed by the white rating type, see [Rating type](#rating-type) |
+| 0x70 | 2 | short | black elo, followed by the black rating type |
+| 0x80 | 2 | ushort | ECO opening code (wch2), see [ECO](#eco) |
+| 0x82 | 2 | ushort | medals, a bitmask (wch2), see [Flags and medals](#flags-and-medals) |
+| 0x84 | 4 | uint | flags, a bitmask (wch2), see [Flags and medals](#flags-and-medals) |
+| 0x88 | 2 | ushort | annotation magnitude flags (wch2) |
 | 0x8a | 2 | short | number of full moves in the game |
-| 0xa0 | 8 | long | presumably a timestamp of when the game was saved; encoding unknown, see [Timestamp](#timestamp) |
-| 0xb8 | 4 | int | version number (increases by 1 on every save) |
+| 0x8c | 4 | uint | final material of one player (wch2), see [Final material](#final-material) |
+| 0x90 | 4 | uint | final material of the other player (wch2) |
+| 0x98 | 8 | long | creation timestamp (wch2), see [Timestamps](#timestamps) |
+| 0xa0 | 8 | long | last-changed timestamp (wch2), see [Timestamps](#timestamps) |
+| 0xa8 | 6 | bitmask | endgame types the game passed through (wch2), see [Endgame types](#endgame-types) |
+| 0xb8 | 4 | int | game version, increases by 1 on every save |
 | 0xbc | 4 | int | encoded played date, see [Dates](#dates) |
+
+Everything not in the table is zero in every game of `wch2`: 0x01, 0x04-0x07,
+0x62-0x6f, 0x72-0x7f, 0x8e-0x8f, 0x92-0x97, 0xae-0xb7 and 0xba-0xbb. The endgame
+bitmask at 0xa8 is therefore at least 6 bytes and at most 16.
 
 The entity ids are 0-based ids into the `.2lid` file, in the block/slot sense
 above. Verified with `inspect games` against the sample databases.
 
-The samples have 2200 at 0x60 and 2100 at 0x70, so those are the white and black
-elo. The result is 3 in all samples (the v1 value for an unfinished game, "line"),
-and the NAG is only non-zero (15) in a game where the result is 3 as well.
+Converting a v1 database renumbers some entities but not others: in `wch2` the
+tournament and source ids are unchanged from v1, while players, annotators and
+game tags are renumbered. A game with no game tag refers to game tag 0, which is
+an entity with an empty title, rather than to -1 as in v1.
+
+### Guiding texts
+
+A record whose type byte has bit 1 set is a guiding text, not a game, and then
+the whole record has a different layout that is not decoded. The little that is
+known (wch2): 0x08 is still the offset into `.2cbg`, 0x30 holds the creation
+timestamp that a game keeps at 0x98, and everything from 0x50 on is zero. In
+`wch2`, 13 of the 1038 games are guiding texts.
 
 ### Result, NAG and round
 
@@ -271,6 +324,64 @@ in the Java command line tool.
 The round (0x5a), subround (0x5c) and board (0x5e) are shown together as
 `round.subround.board`, leaving out trailing parts that are 0.
 
+### ECO
+
+The ECO code is stored the same way as in v1: `value / 128 - 1` is the code,
+numbered from 0, so 0-99 is A00-A99, 100-199 is B00-B99 and so on up to E99, and
+`value % 128` is the sub-ECO. A value of 0 means no ECO. A value of at least
+65536 - 960 is a Chess960 start position instead, `value - (65536 - 960)`. (wch2)
+
+### Flags and medals
+
+Both are bitmasks and both use the v1 values. The flags (0x84) mostly say which
+kinds of annotation the game has: 0x01 setup position, 0x02 variations,
+0x04 commentary, 0x08 symbols, 0x10 graphical squares, 0x20 graphical arrows,
+0x80 time spent, 0x100 anno type 8, 0x200 training, 0x10000 embedded audio,
+0x20000 embedded picture, 0x40000 embedded video, 0x80000 game quotation,
+0x100000 pawn structure, 0x200000 piece path, 0x400000 white clock,
+0x800000 black clock, 0x1000000 critical position, 0x2000000 correspondence
+header, 0x4000000 anno type 1a, 0x8000000 unorthodox, 0x10000000 web link.
+
+The annotation magnitude flags (0x88) qualify some of those, giving a rough size
+for each kind of annotation; the v1 meanings are in `GameHeaderIndex`.
+
+The medals (0x82) are one bit each, from bit 0: best game, decided tournament,
+model game, novelty, pawn structure, strategy, tactics, with attack, defense,
+sacrifice, material, piece play, endgame, tactical blunder, strategical blunder,
+user. (wch2)
+
+### Final material
+
+The material a player has left at the end of the game, packed into one value:
+bits 0-2 rooks, bits 3-5 bishops, bits 6-8 knights, bits 9-11 queens and bits
+12-15 pawns. The same encoding as v1. Which of 0x8c and 0x90 is white is not
+known; v1 calls them player 1 and player 2. (wch2)
+
+### Endgame types
+
+A bitmask of the endgame types the game passed through. v1 stores endgame
+information differently, in 20 bytes of the `.cbj` file, and it is empty for all
+of `wch1` while `wch2` has it for 206 games, so ChessBase computed it during the
+conversion and there is nothing to check it against.
+
+What the bits mean is guesswork, from the final material of the games that set
+each bit. Bits that fit a clear rule in at least four games out of five:
+bit 0 bishop endgame, bit 1 knight vs bishop, bit 13 minor piece endgame,
+bit 14 knight endgame, bit 24 queen endgame, bit 29 bishop vs rook, and bit 35
+rook endgame, which is by far the most common (76 games, all of them ending with
+only rooks and pawns). The rule can't be expected to hold exactly, since the bits
+record what the game passed through and the final material is only where it
+ended up.
+
+### Rating type
+
+In `reveng1`, each elo is followed by what looks like a rating type: at 0x62 and
+0x64 a short of 1, and at 0x68 the text `FIDE`. That makes a 16-byte block per
+player, 0x60-0x6f for white and 0x70-0x7f for black, matching v1's 16-byte
+`RatingType`. In `wch2` the whole block after the elo is zero even though v1 has
+`FIDE` for 747 of those games, so the conversion dropped it and the layout is
+only a guess.
+
 ### Dates
 
 A date is an int where bits 0-4 are the day, bits 5-8 the month and bits 9-20 the
@@ -280,14 +391,40 @@ encoding, and it fits the samples: the played dates 1037616 and 940544 are
 unknown. The same value, 1037616, is stored in source records and as `GameDate`
 in the `.ini` file, so they use this encoding too.
 
-### Timestamp
+### Timestamps
 
-The long at 0xa0 changes every time the game is saved, and the samples show it
-increasing for successive saves of a game. Values are around 1.4·10¹⁷ and are
-always multiples of 10. Interpreting it as a count of seconds, milliseconds,
-microseconds, 10 ns, 100 ns or nanoseconds since 0001, 1601, 1970, 1899-12-30,
-1904 or 2000 gives no date near 2026, when the samples were made, so the unit and
-epoch are not known. The code keeps the value as is.
+A game header holds two timestamps, both in the v1 encodings, and in `wch2` both
+are byte for byte what v1 has:
+
+- **Creation** (0x98): 1/1024 seconds since 2008-12-01 in Europe/Berlin.
+- **Last changed** (0xa0): 100 nanoseconds since 1582-10-15 UTC, the epoch
+  UUID timestamps use. 0 means the game has never been changed since it was
+  created.
+
+Game 1 of `wch2` gives 2017-04-14 12:12:08 UTC and 2019-10-03 09:21:02 UTC, which
+is what the Java command line tool prints for the v1 database in local time.
+
+The creation timestamp is only understood for a converted database. In `reveng1`,
+which ChessBase made itself, 0x98 holds the same value
+`2b e0 0a 59 f5 5d 08 00` in every game and in all four snapshots of it, taken on
+different days, and no epoch and unit turn that into a date near 2026. So either
+the field means something else when ChessBase writes it fresh, and the converter
+just copied v1's value in, or it is a creation timestamp in an encoding that has
+not been worked out. Last changed (0xa0) has no such problem: it decodes
+correctly in `reveng1` too, giving the days those games were actually saved.
+## `.2cbg` and `.2cba` — moves and annotations
+
+Not analysed beyond their framing. Both start with a 12-byte file header holding
+the file size as a long and then the header size (12) as an int. A record begins
+with the 8-byte marker `88 77 66 55 44 33 22 11`, then an int length, then an int
+that varies by record (0x62, 0x64, 0x68 … in `.2cbg`, 0xc2, 0xc3, 0xc4 … in
+`.2cba`). A game's records are found through the offsets at 0x08 and 0x10 of its
+game header. (wch2)
+
+Every game has an annotation record, even with nothing to annotate: 414 games of
+`wch1` have no annotations, and in `wch2` each of them points at a record of
+length 4 whose body is `00 00 00 00 7f ff ff ff`. There is no "offset 0 means
+none" convention as in v1.
 
 ## Open questions
 
@@ -296,13 +433,20 @@ epoch are not known. The code keeps the value as is.
   new entity is added (and if so, which one, and how the list changes).
 - In `1tour/reveng1.2lid`, player #2 is a valid (not deleted) record with both
   names empty (36 bytes).
-- Which byte(s) of a game record hold the deletion bit (the code tests bit 7 of
-  the first byte, as v1 does, but no sample has a deleted game).
-- The encoding of the timestamp at 0xa0 (see above).
-- Other non-zero bytes in the samples' game records: 0x08 and 0x10 hold 0x0c in
-  game 1 and 0x98 and 0xf8 in game 2, which look like offsets into `.2cbg`
-  (12 + 140·n) and `.2cba` (12 + 236·n); 0x62 and 0x64 hold 1 and 0x68 holds
-  `FIDE` (the same at 0x72, 0x74 and 0x78, so probably rating type information
-  for white and black); and there is more from 0x80 to 0x9e. Byte 0 is 0x01, as in
-  the v1 type byte where bit 0 is always set.
+- What 0x98 holds in a database ChessBase made itself, where it is a constant
+  rather than a creation timestamp (see above).
+- The deletion bit: the code tests bit 7 of the first byte, as v1 does, but no
+  sample database has a deleted game to check it against.
+- The layout of a guiding text record (see above), and what 0x02 and 0x03 are.
+- What the endgame bits at 0xa8 mean, beyond the seven guessed above, and whether
+  the field is more than 6 bytes.
+- Whether 0x8c or 0x90 is white's final material.
+- The rating type after each elo (see above); only `reveng1` has it.
+- Subround (0x5c) and board (0x5e) are 0 everywhere except in `reveng1`, where
+  they were set by hand.
 - The unknown fields in every entity record, and the layout of the text title.
+- Titled entities are still decoded by scanning for the first string in the
+  record, which is wrong for a tournament (see above) and unchecked for source,
+  team and game tag. Each needs its layout worked out from `wch2`.
+- The 192-byte `.2cbh` file header: 0x0a holds the record size (192) and 0x10 the
+  next game id (games + 1). 0x08 holds 38 and 0x0c holds 1280 in every sample.

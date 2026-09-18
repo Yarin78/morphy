@@ -16,8 +16,12 @@ RECORD_SIZE = 192
 # The first byte of a record has this bit set if the game is deleted.
 DELETED_FLAG = 0x80
 
-# GameHeader field -> (offset in the record, struct format of the value)
+# GameHeader field -> (offset in the record, how to read the value): either a
+# struct format, or a number of bytes to read as a little-endian unsigned int
+# (for fields that aren't a whole number of words).
 FIELDS = {
+    "moves_offset": (0x08, "<q"),
+    "annotation_offset": (0x10, "<q"),
     "white_id": (0x18, "<q"),
     "black_id": (0x20, "<q"),
     "tournament_id": (0x28, "<q"),
@@ -33,8 +37,16 @@ FIELDS = {
     "board_number": (0x5E, "<h"),
     "white_elo": (0x60, "<h"),
     "black_elo": (0x70, "<h"),
+    "encoded_eco": (0x80, "<H"),
+    "medals_value": (0x82, "<H"),
+    "flags_value": (0x84, "<I"),
+    "annotation_magnitude": (0x88, "<H"),
     "moves": (0x8A, "<h"),
-    "timestamp": (0xA0, "<q"),
+    "final_material_1": (0x8C, "<I"),
+    "final_material_2": (0x90, "<I"),
+    "creation_timestamp": (0x98, "<q"),
+    "last_changed_timestamp": (0xA0, "<q"),
+    "endgame_bits": (0xA8, 6),
     "version": (0xB8, "<i"),
     "encoded_played_date": (0xBC, "<i"),
 }
@@ -65,8 +77,14 @@ class GameHeaderDatabase:
         self._file.seek(HEADER_SIZE + (game_id - 1) * RECORD_SIZE)
         return self._parse(game_id, self._file.read(RECORD_SIZE))
 
+    @staticmethod
+    def _read_field(data, offset, fmt):
+        if isinstance(fmt, int):
+            return int.from_bytes(data[offset:offset + fmt], "little")
+        return struct.unpack_from(fmt, data, offset)[0]
+
     def _parse(self, recnum, data):
-        values = {name: struct.unpack_from(fmt, data, offset)[0] for name, (offset, fmt) in FIELDS.items()}
+        values = {name: self._read_field(data, offset, fmt) for name, (offset, fmt) in FIELDS.items()}
         return GameHeader(id=recnum, deleted=bool(data[0] & DELETED_FLAG), _entities=self.entities, **values)
 
     def close(self):

@@ -7,7 +7,10 @@ and there is a property that decodes them.
 from dataclasses import dataclass, field
 
 from morphy.columns import default_columns
-from morphy.dates import decode_date
+from morphy.dates import decode_creation_timestamp, decode_date, decode_last_changed_timestamp
+from morphy.eco import decode_eco
+from morphy.flags import decode_flags, decode_medals
+from morphy.material import decode_endgame_types, decode_material
 from morphy.results import format_result
 
 
@@ -18,6 +21,8 @@ from morphy.results import format_result
 class GameHeader:
     id: int
     deleted: bool  # the game is marked as deleted
+    moves_offset: int  # where the moves are in the .2cbg file
+    annotation_offset: int  # where the annotations are in the .2cba file
     white_id: int  # references a Player
     black_id: int  # references a Player
     tournament_id: int
@@ -33,8 +38,16 @@ class GameHeader:
     board_number: int  # 0 = none
     white_elo: int
     black_elo: int
+    encoded_eco: int
+    medals_value: int  # bitmask
+    flags_value: int  # bitmask, mostly saying what annotations the game has
+    annotation_magnitude: int  # bitmask giving rough sizes for those annotations
     moves: int  # number of full moves in the game
-    timestamp: int  # presumably when the game was saved; encoding unknown
+    final_material_1: int  # material left at the end, for one player ...
+    final_material_2: int  # ... and for the other
+    creation_timestamp: int
+    last_changed_timestamp: int
+    endgame_bits: int  # bitmask of the endgame types the game passed through
     version: int  # increases by 1 every time the game is saved
     encoded_played_date: int
     # The EntityDatabase used to resolve the ids above into names, if any
@@ -59,6 +72,41 @@ class GameHeader:
     def played_date(self):
         """The date the game was played, as a PartialDate."""
         return decode_date(self.encoded_played_date)
+
+    @property
+    def eco(self):
+        """The ECO opening code as text, e.g. "D11"."""
+        return decode_eco(self.encoded_eco)
+
+    @property
+    def medals(self):
+        """The medals given to the game, as text."""
+        return decode_medals(self.medals_value)
+
+    @property
+    def flags(self):
+        """The game's flags, as text."""
+        return decode_flags(self.flags_value)
+
+    @property
+    def final_material(self):
+        """The material both players had left at the end, e.g. "R2P : R1P"."""
+        return f"{decode_material(self.final_material_1)} : {decode_material(self.final_material_2)}"
+
+    @property
+    def endgame_types(self):
+        """The endgame types the game passed through, as text."""
+        return decode_endgame_types(self.endgame_bits)
+
+    @property
+    def created(self):
+        """When the game was created (UTC), or None if not set."""
+        return decode_creation_timestamp(self.creation_timestamp)
+
+    @property
+    def last_changed(self):
+        """When the game was last changed (UTC), or None if it never was."""
+        return decode_last_changed_timestamp(self.last_changed_timestamp)
 
     def _resolve(self, getter_name, entity_id):
         """Name of the entity that entity_id refers to: "" if there is none
