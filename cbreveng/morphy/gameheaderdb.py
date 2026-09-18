@@ -2,52 +2,50 @@
 
 The file starts with a 192-byte header (not yet decoded), followed by
 192-byte game records, game #1 first. All integers in a record are
-little-endian, signed. Fields decoded so far:
-
-    0x18  long  white player id
-    0x20  long  black player id
-    0x28  long  tournament id
-    0x30  long  annotator id (references a player)
-    0x38  long  source id
-    0x40  long  white team id (-1 = none)
-    0x48  long  black team id
-    0x50  long  game tag id
+little-endian, signed. FORMAT.md is the source of truth for the layout;
+FIELDS below lists the fields decoded so far.
 """
 import os
 import struct
-from dataclasses import dataclass
+
+from morphy.gameheader import GameHeader
 
 HEADER_SIZE = 192
 RECORD_SIZE = 192
 
-FIELD_OFFSETS = {
-    "white_id": 0x18,
-    "black_id": 0x20,
-    "tournament_id": 0x28,
-    "annotator_id": 0x30,
-    "source_id": 0x38,
-    "white_team_id": 0x40,
-    "black_team_id": 0x48,
-    "game_tag_id": 0x50,
+# The first byte of a record has this bit set if the game is deleted.
+DELETED_FLAG = 0x80
+
+# GameHeader field -> (offset in the record, struct format of the value)
+FIELDS = {
+    "white_id": (0x18, "<q"),
+    "black_id": (0x20, "<q"),
+    "tournament_id": (0x28, "<q"),
+    "annotator_id": (0x30, "<q"),
+    "source_id": (0x38, "<q"),
+    "white_team_id": (0x40, "<q"),
+    "black_team_id": (0x48, "<q"),
+    "game_tag_id": (0x50, "<q"),
+    "result_code": (0x58, "<B"),
+    "nag": (0x59, "<B"),
+    "round_number": (0x5A, "<h"),
+    "subround_number": (0x5C, "<h"),
+    "board_number": (0x5E, "<h"),
+    "white_elo": (0x60, "<h"),
+    "black_elo": (0x70, "<h"),
+    "moves": (0x8A, "<h"),
+    "timestamp": (0xA0, "<q"),
+    "version": (0xB8, "<i"),
+    "encoded_played_date": (0xBC, "<i"),
 }
 
 
-@dataclass
-class GameHeader:
-    id: int
-    white_id: int  # references a Player
-    black_id: int  # references a Player
-    tournament_id: int
-    annotator_id: int  # references a Player
-    source_id: int
-    white_team_id: int
-    black_team_id: int
-    game_tag_id: int
-
-
 class GameHeaderDatabase:
-    def __init__(self, path):
+    def __init__(self, path, entities=None):
+        """entities is the EntityDatabase that the game headers' names are
+        resolved with, if wanted."""
         self.path = path
+        self.entities = entities
         self._file = open(path, "rb")
         self.header = self._file.read(HEADER_SIZE)
         self.count = (os.path.getsize(path) - HEADER_SIZE) // RECORD_SIZE
@@ -67,10 +65,9 @@ class GameHeaderDatabase:
         self._file.seek(HEADER_SIZE + (game_id - 1) * RECORD_SIZE)
         return self._parse(game_id, self._file.read(RECORD_SIZE))
 
-    @staticmethod
-    def _parse(recnum, data):
-        values = {name: struct.unpack_from("<q", data, offset)[0] for name, offset in FIELD_OFFSETS.items()}
-        return GameHeader(id=recnum, **values)
+    def _parse(self, recnum, data):
+        values = {name: struct.unpack_from(fmt, data, offset)[0] for name, (offset, fmt) in FIELDS.items()}
+        return GameHeader(id=recnum, deleted=bool(data[0] & DELETED_FLAG), _entities=self.entities, **values)
 
     def close(self):
         self._file.close()

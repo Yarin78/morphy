@@ -20,12 +20,27 @@ Header/record sizes are chosen from the file extension:
     .2cba   12-byte header, 236-byte records
     .2cbg   12-byte header, 140-byte records
     .2cbh  192-byte header, 192-byte records
+    .2lid  header size and block size are read from the file's own header
     other     no header,     16-byte records  (hexdump-like)
+
+For .2lid files each "record" is a block holding one entity of every type
+back to back, labelled with its 0-based entity id. With -e TYPE (a name such
+as "tournament", or an index into the header's entity type list), only the
+bytes belonging to that entity type are shown for each block, and the header
+is left out. Addresses are still absolute file offsets. Only the entity's
+actual record is shown, not the rest of its container: a record starts with
+a little-endian int giving the number of bytes that follow it, so it is
+4 + that many bytes long. (If that length is negative or doesn't fit in the
+container, the whole container is shown instead so the oddity is visible.)
 """
 import argparse
 import os
 import re
+import struct
 import sys
+from dataclasses import dataclass
+
+from morphy.entitydb import ENTITY_TYPE_ORDER, block_layout, read_header
 
 FORMATS = {
     ".2cba": (12, 236),
@@ -34,6 +49,7 @@ FORMATS = {
     ".2lgd": (12, 32),  # 12 byte header, blocks that are multiple of 1024
 }
 DEFAULT_HEADER, DEFAULT_RECORD = 0, 16
+ENTITY_DB_EXT = ".2lid"
 
 GROUP = 8  # extra separator every this many bytes
 
@@ -51,9 +67,66 @@ def ljust_visible(s, width):
     return s + " " * pad if pad > 0 else s
 
 
-def sizes_for(path):
+@dataclass(frozen=True)
+class Layout:
+    """Where the header and records of a file are. Each record is
+    record_size bytes, but only the slice_len bytes starting slice_start
+    bytes into it are dumped (by default, the whole record). If
+    length_prefixed, the dumped slice is further cut down to the length
+    given by its own first 4 bytes (a little-endian int not counting itself)."""
+    header_size: int
+    record_size: int
+    slice_start: int = 0
+    slice_len: int = None
+    first_label: int = 1
+    show_header: bool = True
+    length_prefixed: bool = False
+
+    def __post_init__(self):
+        if self.slice_len is None:
+            object.__setattr__(self, "slice_len", self.record_size)
+
+
+def resolve_entity_type(spec, type_count):
+    """Turn an entity type name or index into an index into the header's
+    entity type list."""
+    if spec.isdigit():
+        index = int(spec)
+    else:
+        name = spec.lower().replace("-", "_")
+        if name not in ENTITY_TYPE_ORDER:
+            raise ValueError(f"unknown entity type {spec!r} (choose from {', '.join(ENTITY_TYPE_ORDER)})")
+        index = ENTITY_TYPE_ORDER.index(name)
+    if index >= type_count:
+        raise ValueError(f"entity type index {index} out of range (file has {type_count} entity types)")
+    return index
+
+
+def layout_for(path, entity=None):
     ext = os.path.splitext(path)[1].lower()
-    return FORMATS.get(ext, (DEFAULT_HEADER, DEFAULT_RECORD))
+    if ext != ENTITY_DB_EXT:
+        if entity is not None:
+            raise ValueError(f"an entity type can only be given for {ENTITY_DB_EXT} files, not {path}")
+        return Layout(*FORMATS.get(ext, (DEFAULT_HEADER, DEFAULT_RECORD)))
+
+    try:
+        with open(path, "rb") as f:
+            header_size, entity_types = read_header(f)
+    except struct.error:
+        raise ValueError(f"{path} is too short to have a valid {ENTITY_DB_EXT} header")
+    block_size, offsets = block_layout(entity_types)
+    if entity is None:
+        return Layout(header_size, block_size, first_label=0)
+
+    index = resolve_entity_type(entity, len(entity_types))
+    return Layout(
+        header_size, block_size,
+        slice_start=offsets[ENTITY_TYPE_ORDER[index]],
+        slice_len=entity_types[index].container_size,
+        first_label=0,
+        show_header=False,
+        length_prefixed=True,
+    )
 
 
 def render(chunk, mask=None):
@@ -104,22 +177,34 @@ def format_entry(label, addr, chunk, label_width, addr_width, ascii_mode, width,
     return lines
 
 
-def read_entries(path, header_size, record_size):
+def trim_to_length_prefix(chunk):
+    """Cut chunk down to the record size given by its leading int, if that
+    size is plausible; otherwise return it untouched."""
+    if len(chunk) < 4:
+        return chunk
+    size = 4 + struct.unpack_from("<i", chunk)[0]
+    return chunk[:size] if 4 <= size <= len(chunk) else chunk
+
+
+def read_entries(path, layout):
     """Return a list of (label, addr, raw_bytes); label is 'HEADER' or a record number string."""
     entries = []
     with open(path, "rb") as f:
-        if header_size:
-            header = f.read(header_size)
+        if layout.header_size and layout.show_header:
+            header = f.read(layout.header_size)
             if header:
                 entries.append(("HEADER", 0, header))
 
-        recnum = 1
+        recnum = 0
         while True:
-            chunk = f.read(record_size)
+            addr = layout.header_size + recnum * layout.record_size + layout.slice_start
+            f.seek(addr)
+            chunk = f.read(layout.slice_len)
             if not chunk:
                 break
-            addr = header_size + (recnum - 1) * record_size
-            entries.append((str(recnum), addr, chunk))
+            if layout.length_prefixed:
+                chunk = trim_to_length_prefix(chunk)
+            entries.append((str(layout.first_label + recnum), addr, chunk))
             recnum += 1
     return entries
 
@@ -146,8 +231,8 @@ def label_addr_widths(entries):
     return label_width, addr_width
 
 
-def dump_single(path, header_size, record_size, ascii_mode, width):
-    entries = read_entries(path, header_size, record_size)
+def dump_single(path, layout, ascii_mode, width):
+    entries = read_entries(path, layout)
     label_width, addr_width = label_addr_widths(entries)
     for label, addr, chunk in entries:
         w = width if width > 0 else len(chunk)
@@ -155,9 +240,9 @@ def dump_single(path, header_size, record_size, ascii_mode, width):
             print(line)
 
 
-def dump_side_by_side(path1, path2, header_size, record_size, ascii_mode, width, color):
-    entries1 = read_entries(path1, header_size, record_size)
-    entries2 = read_entries(path2, header_size, record_size)
+def dump_side_by_side(path1, path2, layout1, layout2, ascii_mode, width, color):
+    entries1 = read_entries(path1, layout1)
+    entries2 = read_entries(path2, layout2)
     label_width1, addr_width1 = label_addr_widths(entries1)
     label_width2, addr_width2 = label_addr_widths(entries2)
 
@@ -215,25 +300,31 @@ def main():
              "0 means the whole record on one line",
     )
     parser.add_argument(
+        "-e", "--entity", metavar="TYPE",
+        help="for .2lid files: only show the bytes of this entity type (name or index) in each block",
+    )
+    parser.add_argument(
         "--color", choices=["auto", "always", "never"], default="auto",
         help="colorize differing bytes when dumping two files (default: auto)",
     )
     args = parser.parse_args()
 
-    header_size, record_size = sizes_for(args.file)
+    try:
+        layout = layout_for(args.file, args.entity)
+        layout2 = layout_for(args.file2, args.entity) if args.file2 is not None else None
+    except ValueError as e:
+        parser.error(str(e))
 
-    if args.file2 is not None:
-        header_size2, record_size2 = sizes_for(args.file2)
-        if (header_size, record_size) != (header_size2, record_size2):
-            parser.error(
-                f"{args.file} and {args.file2} have different header/record sizes "
-                f"({header_size}/{record_size} vs {header_size2}/{record_size2})"
-            )
+    if layout2 is not None:
+        if (layout.header_size, layout.record_size, layout.slice_start, layout.slice_len) != (
+            layout2.header_size, layout2.record_size, layout2.slice_start, layout2.slice_len
+        ):
+            parser.error(f"{args.file} and {args.file2} have different layouts ({layout} vs {layout2})")
 
         color = args.color == "always" or (args.color == "auto" and sys.stdout.isatty())
-        dump_side_by_side(args.file, args.file2, header_size, record_size, args.ascii_mode, args.width, color)
+        dump_side_by_side(args.file, args.file2, layout, layout2, args.ascii_mode, args.width, color)
     else:
-        dump_single(args.file, header_size, record_size, args.ascii_mode, args.width)
+        dump_single(args.file, layout, args.ascii_mode, args.width)
 
 
 if __name__ == "__main__":

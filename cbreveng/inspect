@@ -1,0 +1,108 @@
+#!/usr/bin/env python3
+"""inspect: commands for examining a database in the ChessBase "2" format.
+
+Run it without arguments (or with --help) to list the commands. Add a new
+command by adding a function decorated with @cli.command().
+"""
+import os
+
+import click
+
+from morphy.columns import ID_COLUMN, available_columns, format_objects, parse_columns
+from morphy.entities import Player
+from morphy.entitydb import EntityDatabase
+from morphy.gameheader import GameHeader
+from morphy.gameheaderdb import GameHeaderDatabase
+
+
+DEFAULT_EXTENSION = ".2cbh"
+
+
+class DatabaseFile(click.ParamType):
+    """A path to a database's game file. If no such file exists, the default
+    extension is added, so "reveng1." and "reveng1" both find "reveng1.2cbh"
+    (a trailing dot is what tab completion leaves you with)."""
+
+    name = "file"
+
+    def convert(self, value, param, ctx):
+        if os.path.isfile(value):
+            return value
+        candidate = value + DEFAULT_EXTENSION[1:] if value.endswith(".") else value + DEFAULT_EXTENSION
+        if os.path.isfile(candidate):
+            return candidate
+        self.fail(f"File {value!r} does not exist (also tried {candidate!r}).", param, ctx)
+
+
+DATABASE_FILE = DatabaseFile()
+
+
+def columns_option(cls):
+    """A --columns option for choosing which columns of cls to show. The
+    command gets the resulting list of column names, id first."""
+    def parse(ctx, param, value):
+        try:
+            return parse_columns(cls, value)
+        except ValueError as e:
+            raise click.BadParameter(str(e))
+
+    selectable = [name for name in available_columns(cls) if name != ID_COLUMN]
+    return click.option(
+        "--columns", callback=parse, metavar="COL1,COL2,...",
+        help=f"Columns to show, separated by commas. The id column is always shown first. "
+             f"Prefix a column with + to add it to the default columns, or with - to remove it "
+             f"from them; if any column has no prefix, only the named columns are shown. "
+             f"Default: {', '.join(cls.DEFAULT_COLUMNS)}. Available: {', '.join(selectable)}.",
+    )
+
+
+@click.group()
+def cli():
+    """Examine a ChessBase database."""
+
+
+@cli.command()
+@click.argument("file", type=DATABASE_FILE)
+@click.option("--start", type=int, default=1, show_default=True, help="First game id to include.")
+@click.option(
+    "--limit", type=int, default=20, show_default=True,
+    help="Maximum number of games to include; 0 means no limit.",
+)
+@columns_option(GameHeader)
+def games(file, start, limit, columns):
+    """Print a table of the games in a .2cbh file.
+
+    Entity names and titles are resolved from the paired .2lid file, which has
+    the same base name as FILE. The extension of FILE can be left out.
+    """
+    try:
+        with EntityDatabase.for_game_file(file) as edb, GameHeaderDatabase(file, entities=edb) as gdb:
+            last = gdb.count if limit <= 0 else min(start + limit - 1, gdb.count)
+            table = format_objects((gdb.get(game_id) for game_id in range(start, last + 1)), columns)
+    except (OSError, ValueError) as e:
+        raise click.ClickException(str(e))
+
+    click.echo(table)
+
+
+@cli.command()
+@click.argument("file", type=DATABASE_FILE)
+@columns_option(Player)
+def players(file, columns):
+    """Print a table of the players in a database, in id order.
+
+    Players in the list of deleted entities are left out. The players are read
+    from the .2lid file that has the same base name as FILE. The extension of
+    FILE can be left out.
+    """
+    try:
+        with EntityDatabase.for_game_file(file) as edb:
+            table = format_objects(edb.players(), columns)
+    except (OSError, ValueError) as e:
+        raise click.ClickException(str(e))
+
+    click.echo(table)
+
+
+if __name__ == "__main__":
+    cli()

@@ -6,3 +6,5 @@ analysis/
 .DS_Store
 /build-cli.sh
 /scripts/
+__pycache__/
+*.pyc

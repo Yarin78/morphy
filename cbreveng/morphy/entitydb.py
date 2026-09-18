@@ -3,30 +3,13 @@ tournaments, sources, teams, ...) a game database's .2cbh file refers to.
 It shares the same base name as the .2cbh file, e.g. "foo.2cbh" pairs
 with "foo.2lid".
 
+The file layout (header, blocks, entity records) is described in
+FORMAT.md, which is the source of truth for it. In short: a big-endian
+header, followed by one block per entity id, each holding a fixed-size
+container per entity type in the order of ENTITY_TYPE_ORDER.
+
 The file is not read into memory all at once -- only its header is read
-at construction time. The header layout is:
-
-    4 bytes   int   total header size
-    4 bytes   int   number of entity types in the file
-    for each entity type, in order:
-        4 bytes   int    container size (bytes per entity record)
-        8 bytes   long   number of entities of this type in the file
-        8 bytes   long   id of a logically deleted entity (-1 = none)
-    (any remaining bytes, up to the declared header size, are unused)
-
-All integers here are big-endian, signed (unlike the little-endian
-records in the .2cbh game file).
-
-After the header, the file is a sequence of fixed-size "blocks", one
-per entity id, starting right after the header. Within a block, each
-entity type's data appears back to back, in this fixed order:
-
-    player, tournament, source, text_title, team, game_tag
-
-sized according to each type's container size from the header. So a
-block's total size is the sum of all container sizes, and a given
-entity type's data within a block starts at the sum of the container
-sizes of the types before it.
+at construction time.
 """
 import argparse
 import os
@@ -45,20 +28,82 @@ ENTITY_TYPE_ORDER = ["player", "tournament", "source", "text_title", "team", "ga
 STRING_SCAN_RANGE = 64
 MIN_STRING_LENGTH = 2
 
+# Logically deleted entities form a linked list (see FORMAT.md). A deleted
+# record is exactly this long and holds the id of the next deleted entity of
+# its type at this offset, as a little-endian long (-1 ends the list).
+DELETED_NEXT_OFFSET = 12
+DELETED_RECORD_LENGTH = DELETED_NEXT_OFFSET + 8
+
+# The unknown ints at the end of a player record (see FORMAT.md).
+PLAYER_UNKNOWN_FIELDS = ("d1", "d2", "d3", "d4", "d5", "d6")
+PLAYER_UNKNOWN_INTS = len(PLAYER_UNKNOWN_FIELDS)
+
 
 @dataclass
 class EntityTypeHeader:
     container_size: int
     count: int
-    deleted_id: int  # -1 if there is no logically deleted entity
+    first_deleted_id: int  # head of the list of logically deleted entities, -1 if empty
+
+
+def _read_int(f):
+    return struct.unpack(">i", f.read(4))[0]
+
+
+def _read_long(f):
+    return struct.unpack(">q", f.read(8))[0]
+
+
+def read_header(f):
+    """Read the header from a file positioned at its start. Returns
+    (header_size, entity_types), with entity_types in header order."""
+    header_size = _read_int(f)
+    type_count = _read_int(f)
+    entity_types = []
+    for _ in range(type_count):
+        container_size = _read_int(f)
+        count = _read_long(f)
+        first_deleted_id = _read_long(f)
+        entity_types.append(EntityTypeHeader(container_size, count, first_deleted_id))
+    return header_size, entity_types
+
+
+def block_layout(entity_types):
+    """Return (block_size, offsets), where offsets maps each entity type
+    name to where its data starts within a block."""
+    offsets = {}
+    offset = 0
+    for name, et in zip(ENTITY_TYPE_ORDER, entity_types):
+        offsets[name] = offset
+        offset += et.container_size
+    return sum(et.container_size for et in entity_types), offsets
+
+
+class DeletedEntityError(LookupError):
+    """The requested entity is in its type's list of logically deleted entities."""
+
+
+def _deleted_next_id(container):
+    """Given the container of a deleted entity, return the id of the next
+    deleted entity of the same type (-1 if this is the last one)."""
+    record_length = struct.unpack_from("<i", container, 0)[0]
+    if 4 + record_length != DELETED_RECORD_LENGTH:
+        raise ValueError(f"deleted record has length {record_length}, "
+                         f"expected {DELETED_RECORD_LENGTH - 4}")
+    return struct.unpack_from("<q", container, DELETED_NEXT_OFFSET)[0]
 
 
 def _read_length_prefixed_string(data, offset):
-    """A 4-byte little-endian length followed by that many UTF-8 bytes."""
+    """A 4-byte little-endian length followed by that many UTF-8 bytes.
+    Returns (text, offset of the byte after the string). Raises ValueError
+    if the string doesn't fit within data."""
+    if offset + 4 > len(data):
+        raise ValueError(f"no room for a string length at offset {offset}")
     length = struct.unpack_from("<i", data, offset)[0]
     start = offset + 4
-    text = data[start:start + length].decode("utf-8")
-    return text, start + length
+    if length < 0 or start + length > len(data):
+        raise ValueError(f"string of length {length} at offset {offset} doesn't fit in the record")
+    return data[start:start + length].decode("utf-8"), start + length
 
 
 def _find_string_offset(data, start=0):
@@ -79,12 +124,22 @@ def _find_string_offset(data, start=0):
 
 
 def _deserialize_player(entity_id, data):
-    offset = _find_string_offset(data)
-    if offset is None:
-        return Player(id=entity_id, first_name=None, last_name=None)
-    last_name, offset = _read_length_prefixed_string(data, offset)
-    first_name, _ = _read_length_prefixed_string(data, offset)
-    return Player(id=entity_id, first_name=first_name, last_name=last_name)
+    """Decode a player record as described in FORMAT.md. Raises ValueError
+    if the record doesn't have exactly that layout."""
+    try:
+        record_length = struct.unpack_from("<i", data, 0)[0]
+        if not 0 <= record_length <= len(data) - 4:
+            raise ValueError(f"record length {record_length} doesn't fit in the container")
+        record = data[:4 + record_length]
+        last_name, offset = _read_length_prefixed_string(record, 4)
+        first_name, offset = _read_length_prefixed_string(record, offset)
+        if offset + PLAYER_UNKNOWN_INTS * 4 != len(record):
+            raise ValueError(f"expected {PLAYER_UNKNOWN_INTS} ints after the names, "
+                             f"but {len(record) - offset} bytes remain in the record")
+        d = struct.unpack_from(f"<{PLAYER_UNKNOWN_INTS}i", record, offset)
+    except (ValueError, struct.error) as e:
+        raise ValueError(f"malformed player #{entity_id}: {e}") from e
+    return Player(id=entity_id, first_name=first_name, last_name=last_name, **dict(zip(PLAYER_UNKNOWN_FIELDS, d)))
 
 
 def _deserialize_titled(cls, entity_id, data):
@@ -97,18 +152,22 @@ class EntityDatabase:
     def __init__(self, path):
         self.path = path
         self._file = open(path, "rb")
-        self.header_size = self._read_int()
-        type_count = self._read_int()
-        self.entity_types = [self._read_entity_type_header() for _ in range(type_count)]
+        self.header_size, self.entity_types = read_header(self._file)
         self._file.seek(self.header_size)
-        self.print_header()
 
-        self._block_size = sum(et.container_size for et in self.entity_types)
-        self._block_offset = {}
-        offset = 0
-        for name, et in zip(ENTITY_TYPE_ORDER, self.entity_types):
-            self._block_offset[name] = offset
-            offset += et.container_size
+        self._block_size, self._block_offset = block_layout(self.entity_types)
+
+        # Read the lists of deleted entities up front, so that looking up an
+        # entity can tell right away whether its id is valid.
+        try:
+            self._deleted_ids = {
+                name: tuple(self._walk_deleted(name))
+                for name, _ in zip(ENTITY_TYPE_ORDER, self.entity_types)
+            }
+        except ValueError:
+            self._file.close()
+            raise
+        self._deleted_sets = {name: frozenset(ids) for name, ids in self._deleted_ids.items()}
 
     def print_header(self):
         counts = ", ".join(f"{name}: {et.count}" for name, et in zip(ENTITY_TYPE_ORDER, self.entity_types))
@@ -120,19 +179,8 @@ class EntityDatabase:
         base, _ext = os.path.splitext(game_file_path)
         return cls(base + ".2lid")
 
-    def _read_int(self):
-        return struct.unpack(">i", self._file.read(4))[0]
-
-    def _read_long(self):
-        return struct.unpack(">q", self._file.read(8))[0]
-
-    def _read_entity_type_header(self):
-        container_size = self._read_int()
-        count = self._read_long()
-        deleted_id = self._read_long()
-        return EntityTypeHeader(container_size, count, deleted_id)
-
-    def _read_entity_raw(self, type_name, entity_id):
+    def _read_container(self, type_name, entity_id):
+        """The raw container of an entity, whether or not it is deleted."""
         type_index = ENTITY_TYPE_ORDER.index(type_name)
         et = self.entity_types[type_index]
         if not 0 <= entity_id < et.count:
@@ -140,6 +188,47 @@ class EntityDatabase:
         offset = self.header_size + entity_id * self._block_size + self._block_offset[type_name]
         self._file.seek(offset)
         return self._file.read(et.container_size)
+
+    def _read_entity_raw(self, type_name, entity_id):
+        """The raw container of an entity. Raises IndexError if the id is out
+        of range and DeletedEntityError if the entity is deleted."""
+        if entity_id in self._deleted_sets[type_name]:
+            raise DeletedEntityError(f"{type_name} #{entity_id} is deleted")
+        return self._read_container(type_name, entity_id)
+
+    def deleted_ids(self, type_name):
+        """Ids of the logically deleted entities of a type, in list order:
+        the header points to the first one and each deleted record points to
+        the next."""
+        return self._deleted_ids[type_name]
+
+    def _walk_deleted(self, type_name):
+        """Follow the list of deleted entities of a type, starting at the id
+        in the header. Raises ValueError if the list is broken."""
+        et = self.entity_types[ENTITY_TYPE_ORDER.index(type_name)]
+        ids = []
+        seen = set()
+        entity_id = et.first_deleted_id
+        while entity_id != -1:
+            if entity_id in seen:
+                raise ValueError(f"the deleted {type_name} list loops back to #{entity_id}")
+            seen.add(entity_id)
+            ids.append(entity_id)
+            try:
+                entity_id = _deleted_next_id(self._read_container(type_name, entity_id))
+            except (IndexError, ValueError) as e:
+                raise ValueError(f"broken deleted {type_name} list at #{ids[-1]}: {e}") from e
+        return ids
+
+    def _live_ids(self, type_name):
+        """Ids of the entities of a type that aren't deleted, in id order."""
+        deleted = self._deleted_sets[type_name]
+        count = self.entity_types[ENTITY_TYPE_ORDER.index(type_name)].count
+        return (entity_id for entity_id in range(count) if entity_id not in deleted)
+
+    def players(self):
+        """All players that aren't deleted, in id order."""
+        return (self.get_player(entity_id) for entity_id in self._live_ids("player"))
 
     def get_player(self, entity_id):
         return _deserialize_player(entity_id, self._read_entity_raw("player", entity_id))
