@@ -109,8 +109,11 @@ class GameHeader:
         return decode_last_changed_timestamp(self.last_changed_timestamp)
 
     def _resolve(self, getter_name, entity_id):
-        """Name of the entity that entity_id refers to: "" if there is none
-        (-1), and "?<id>" if it can't be found, is deleted, or has no name."""
+        """Name of the entity that entity_id refers to. Gives "" when there is
+        no entity (-1) and when the entity has no name, which is how a game
+        with no game tag is stored: it refers to game tag 0, whose title is
+        empty. Gives "?<id>" when the entity can't be read or is deleted, so
+        that a real problem doesn't pass unnoticed."""
         if entity_id < 0:
             return ""
         if self._entities is None:
@@ -119,7 +122,7 @@ class GameHeader:
             entity = getattr(self._entities, getter_name)(entity_id)
         except (LookupError, ValueError):
             return f"?{entity_id}"
-        return entity.name or f"?{entity_id}"
+        return entity.name
 
     @property
     def white(self):

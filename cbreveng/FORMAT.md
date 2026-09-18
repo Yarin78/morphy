@@ -149,71 +149,175 @@ first name (length 0), 41 bytes in total. (observed)
 
 | Size | Type | Description |
 |------|------|-------------|
-| 4 | int | record length (e.g. 120) |
+| 4 | int | record length |
 | 4 | int | length of place |
 | n | string bytes | place |
 | 4 | int | length of title |
 | m | string bytes | title |
-| … | | `?` — zero, except that a byte with value `07` was seen 34, 45 and 56 bytes after the end of the title (observed) |
+| 108 | | the fixed-size tail below |
 
-The **place comes before the title**, which only shows up in a database that has
-one. In `reveng1` the place is empty, so the record looks like it starts with a
-`?` int of 0. Tournament #0 of `wch2` (wch2):
+The **place comes before the title**. In `reveng1` the place is empty, so the
+record looks like it starts with a `?` int of 0, which is what these notes used
+to say. The tail after the two strings is always exactly 108 bytes, and holds the
+same fields as v1, in the same order, only widened and little-endian: (wch2)
+
+| Offset in tail | Size | Type | Description |
+|------|------|------|-------------|
+| 0 | 4 | int | start date, see [Dates](#dates) |
+| 4 | 1 | byte | type and time control, see below |
+| 5 | 1 | byte | bit 0 = team tournament |
+| 6 | 1 | byte | nation, see below |
+| 7 | 1 | byte | `?` always 0 |
+| 8 | 1 | byte | category |
+| 9 | 1 | byte | flags: bit 0 and 1 = complete, bit 2 = board points, bit 3 = three points win |
+| 10 | 1 | byte | number of rounds |
+| 11 | 1 | byte | `?` always 0 |
+| 12 | 4 | float | latitude of the place, 0 if not known |
+| 16 | 4 | float | longitude |
+| 60 | 4 | int | end date |
+| 64 | 44 | | `?` always 0 |
+
+Bytes 20-59 of the tail are zero except for a `07` at 34, 45 and 56 — three of
+something 11 bytes apart. The same three bytes, with the same spacing, sit in the
+34 bytes that v1 skips over in its `.cbtt` file, so whatever it is, it was
+carried across unchanged. v1 keeps the tiebreak rules right after them, ten bytes
+that are all 1 with a count of 0 in every tournament of `wch1`, and nothing like
+that run appears in the v2 records.
+
+The low 5 bits of the type byte give the kind of tournament: 1 game, 2 match,
+3 tournament (round robin), 4 open (swiss), 5 team, 6 knockout, 7 simul,
+8 schevening. Bit 5 means blitz, bit 6 rapid and bit 7 correspondence; none set
+means a normal time control.
+
+The nation byte uses the v1 numbering, which `morphy/nations.py` lists as IOC
+codes. In `wch2` it agrees with v1 for 38 of the 52 tournaments, and the rest are
+a difference in the data rather than the encoding: see below.
+
+Example, tournament #1 of `wch2`, 162 bytes with the tail starting at 54:
 
 ```
-9c 00 00 00                              record length 156
-03 00 00 00  55 53 41                    place "USA"
-25 00 00 00  57 6f 72 6c 64 2d 63 68 ... title "World-ch01 Steinitz-Zukertort +10-5=5+"
+9e 00 00 00                              record length 158
+06 00 00 00  48 61 76 61 6e 61           place "Havana"
+24 00 00 00  57 6f 72 6c 64 2d 63 68 ... title "World-ch02 Steinitz-Chigorin +10-6=1"
+34 c2 0e 00                              start date 1889-01-20
+02                                       type: match
+00 22 00                                 not a team tournament, nation CUB, ?
+00 03 11 00                              category 0, complete, 17 rounds, ?
+8e 29 b9 41  c3 db a4 c2                 23.1453, -82.4292
+...                                      zero, apart from the three 07 bytes
+58 c2 0e 00                              end date 1889-02-24 (at tail+60)
 ```
 
-Example, tournament "Test" with no place (124 bytes, at file offset 0x4b8):
+Tournament #0 of `wch2` is written differently from the other 51: it has no
+coordinates and no end date, though v1 has an end date for it, it is missing the
+three `07` bytes, and it alone has a 1 at tail+57. Nothing explains that yet.
 
-```
-78 00 00 00  00 00 00 00  04 00 00 00  54 65 73 74  00 00 00 00 ...
-```
+##### What the conversion changed
 
-`morphy/entitydb.py` does not know this yet: it scans for the first string in the
-record, so it reports the place as the title whenever there is one.
+Comparing all 52 tournaments of `wch2` with `wch1` confirms the layout: the start
+date, type byte, team byte, category, flags and rounds agree for every single
+one, and so do all 52 titles. The fields that disagree do so because ChessBase
+rewrote the data, not because the encoding differs:
 
-#### Source (observed)
+- Three places were renamed to ChessBase's own spelling, and v2 stores them as
+  UTF-8 rather than v1's single-byte charset: `Duesseldorf/Munich` became
+  `Düsseldorf Munich`, `Seville` became `Sevilla`, and `Vienna & Berlin` became
+  `Vienne Berlin`.
+- The nation and the coordinates were then re-derived from the place, sometimes
+  wrongly. `Vienne Berlin` became France, and the London tournaments were placed
+  at 43.0005, -81.2298, which is London in Ontario, so `London/Leningrad` became
+  Canada. Every Soviet Union tournament became Russia, which looks deliberate.
 
-| Size | Type | Description |
-|------|------|-------------|
-| 4 | int | record length |
-| 4 | int | length of title (0 if none) |
-| n | string bytes | title |
-| 4 | int | `?` (0) |
-| 4 | int | `?` (1037616) |
-| 4 | int | `?` (1037616) |
-| 4 | int | `?` (0) |
+v1's own coordinates are stored as **big-endian** doubles in `.cbtt`, not the
+little-endian ones `ExtendedGameHeaderStorage` reads, which is why the Java tool
+shows nonsense for them. v2 stores them as little-endian 32-bit floats, and the
+two agree to four decimal places for the 48 tournaments that were not moved.
 
-1037616 is also the `GameDate` and `RecentDate` in `reveng1.ini`, so it is
-probably a date in the same encoding as the played date in `.2cbh`.
-
-#### Team (observed)
+#### Source
 
 | Size | Type | Description |
 |------|------|-------------|
 | 4 | int | record length |
 | 4 | int | length of title |
 | n | string bytes | title |
-| 5 | | `?` (zero) |
+| 4 | int | length of publisher |
+| m | string bytes | publisher |
+| 4 | int | publication date, see [Dates](#dates) |
+| 4 | int | date |
+| 2 | short | version |
+| 2 | short | quality: 0 unset, 1 high, 2 medium, 3 low |
 
-#### Game tag (observed)
+The tail after the two strings is always 12 bytes. This is v1's layout with the
+two fixed-size strings replaced by length-prefixed ones, and the version and
+quality widened from a byte each. All six fields of all 24 sources in `wch2`
+agree with v1 exactly. (wch2)
+
+Example, source #0 of `wch2` (41 bytes):
+
+```
+25 00 00 00                              record length 37
+08 00 00 00  4d 61 69 6e 42 61 73 65     title "MainBase"
+09 00 00 00  43 68 65 73 73 42 61 73 65  publisher "ChessBase"
+e1 9e 0f 00                              publication 1999-07-01
+e1 9e 0f 00                              date 1999-07-01
+02 00  01 00                             version 2, quality high
+```
+
+#### Team
 
 | Size | Type | Description |
 |------|------|-------------|
 | 4 | int | record length |
-| 4 | int | `?` (1 with a title, 0 without) |
-| 4 | int | `?` (42) |
 | 4 | int | length of title |
 | n | string bytes | title |
+| 5 | | `?` all zero in the one team there is |
 
-A game tag without a title is just the length (4) and one `int` of 0.
+`reveng1` has the only team in any sample database, so only the title is
+confirmed. v1 keeps a team number, a season flag, a year and a nation after the
+title, which is 10 bytes; v2 has 5, so they cannot all be there in the same form.
+
+#### Game tag
+
+| Size | Type | Description |
+|------|------|-------------|
+| 4 | int | record length |
+| 4 | int | number of titles |
+| … | | that many titles, each as below |
+
+Each title is:
+
+| Size | Type | Description |
+|------|------|-------------|
+| 4 | int | language, numbered as the nations are, e.g. 42 English, 53 German |
+| 4 | int | length of the title |
+| n | string bytes | the title in that language |
+
+v1 keeps eight fixed 200-byte titles, one per language, in a 1600-byte record;
+v2 stores only the languages that are actually filled in. A game tag with no
+title at all is just a record length of 4 and a count of 0, and that is what a
+game with no game tag refers to: **game tag 0 is an empty placeholder**, where v1
+would use -1. Every game tag in `wch2` and `reveng1` accounts for exactly its
+record length this way. (wch2)
+
+Example, game tag #4 of `wch2` (55 bytes), which has an English and a German
+title:
+
+```
+33 00 00 00                                record length 51
+02 00 00 00                                two titles
+2a 00 00 00  11 00 00 00  "Tournament Report"
+35 00 00 00  0e 00 00 00  "Turnierbericht"
+```
+
+Guiding texts use game tags for their own titles, which is why `wch2` has nine
+game tags where v1 has two: seven of them are the titles of its 13 guiding texts,
+referred to from offset 0x28 of a text record. (wch2)
 
 #### Text title
 
-No entities of this type exist in the samples, so nothing is known.
+No entities of this type exist in any sample database, so nothing is known.
+`morphy/entitydb.py` still falls back to scanning for the first string in the
+record for this one type.
 
 ### Deleted entities
 
@@ -445,8 +549,9 @@ none" convention as in v1.
 - Subround (0x5c) and board (0x5e) are 0 everywhere except in `reveng1`, where
   they were set by hand.
 - The unknown fields in every entity record, and the layout of the text title.
-- Titled entities are still decoded by scanning for the first string in the
-  record, which is wrong for a tournament (see above) and unchecked for source,
-  team and game tag. Each needs its layout worked out from `wch2`.
+- The 5 bytes after a team's title, and the layout of a text title. Neither has
+  enough data in any sample database: there is one team and no text titles.
+- What the three `07` bytes in a tournament tail are, and why tournament #0 of
+  `wch2` is written differently from the rest (see above).
 - The 192-byte `.2cbh` file header: 0x0a holds the record size (192) and 0x10 the
   next game id (games + 1). 0x08 holds 38 and 0x0c holds 1280 in every sample.

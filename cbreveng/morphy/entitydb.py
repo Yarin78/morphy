@@ -34,6 +34,15 @@ MIN_STRING_LENGTH = 2
 DELETED_NEXT_OFFSET = 12
 DELETED_RECORD_LENGTH = DELETED_NEXT_OFFSET + 8
 
+# A tournament record ends with a fixed-size block of fields after its two
+# strings, with the end date near the end of it (see FORMAT.md).
+TOURNAMENT_TAIL_SIZE = 108
+TOURNAMENT_END_DATE_OFFSET = 60
+
+# The fixed-size blocks that follow the strings of a source and of a team.
+SOURCE_TAIL_SIZE = 12
+TEAM_TAIL_SIZE = 5
+
 # The unknown ints at the end of a player record (see FORMAT.md).
 PLAYER_UNKNOWN_FIELDS = ("d1", "d2", "d3", "d4", "d5", "d6")
 PLAYER_UNKNOWN_INTS = len(PLAYER_UNKNOWN_FIELDS)
@@ -93,6 +102,15 @@ def _deleted_next_id(container):
     return struct.unpack_from("<q", container, DELETED_NEXT_OFFSET)[0]
 
 
+def _record_of(data):
+    """The bytes of an entity record, which is its leading length plus that
+    many bytes. Raises ValueError if the length doesn't fit the container."""
+    record_length = struct.unpack_from("<i", data, 0)[0]
+    if not 0 <= record_length <= len(data) - 4:
+        raise ValueError(f"record length {record_length} doesn't fit in the container")
+    return data[:4 + record_length]
+
+
 def _read_length_prefixed_string(data, offset):
     """A 4-byte little-endian length followed by that many UTF-8 bytes.
     Returns (text, offset of the byte after the string). Raises ValueError
@@ -127,10 +145,7 @@ def _deserialize_player(entity_id, data):
     """Decode a player record as described in FORMAT.md. Raises ValueError
     if the record doesn't have exactly that layout."""
     try:
-        record_length = struct.unpack_from("<i", data, 0)[0]
-        if not 0 <= record_length <= len(data) - 4:
-            raise ValueError(f"record length {record_length} doesn't fit in the container")
-        record = data[:4 + record_length]
+        record = _record_of(data)
         last_name, offset = _read_length_prefixed_string(record, 4)
         first_name, offset = _read_length_prefixed_string(record, offset)
         if offset + PLAYER_UNKNOWN_INTS * 4 != len(record):
@@ -146,6 +161,77 @@ def _deserialize_titled(cls, entity_id, data):
     offset = _find_string_offset(data)
     title = _read_length_prefixed_string(data, offset)[0] if offset is not None else None
     return cls(id=entity_id, title=title)
+
+
+def _deserialize_source(entity_id, data):
+    """Decode a source record as described in FORMAT.md."""
+    try:
+        record = _record_of(data)
+        title, offset = _read_length_prefixed_string(record, 4)
+        publisher, offset = _read_length_prefixed_string(record, offset)
+        if offset + SOURCE_TAIL_SIZE != len(record):
+            raise ValueError(f"expected {SOURCE_TAIL_SIZE} bytes after the strings, "
+                             f"but {len(record) - offset} remain in the record")
+        publication, date, version, quality = struct.unpack_from("<iihh", record, offset)
+    except (ValueError, struct.error) as e:
+        raise ValueError(f"malformed source #{entity_id}: {e}") from e
+    return Source(id=entity_id, title=title, publisher=publisher, encoded_publication=publication,
+                  encoded_date=date, version=version, quality_value=quality)
+
+
+def _deserialize_team(entity_id, data):
+    """Decode a team record as described in FORMAT.md."""
+    try:
+        record = _record_of(data)
+        title, offset = _read_length_prefixed_string(record, 4)
+        if offset + TEAM_TAIL_SIZE != len(record):
+            raise ValueError(f"expected {TEAM_TAIL_SIZE} bytes after the title, "
+                             f"but {len(record) - offset} remain in the record")
+    except (ValueError, struct.error) as e:
+        raise ValueError(f"malformed team #{entity_id}: {e}") from e
+    return Team(id=entity_id, title=title, trailing=record[offset:])
+
+
+def _deserialize_game_tag(entity_id, data):
+    """Decode a game tag record as described in FORMAT.md: a count, then that
+    many titles, each with the language it is written in."""
+    try:
+        record = _record_of(data)
+        count = struct.unpack_from("<i", record, 4)[0]
+        if count < 0:
+            raise ValueError(f"negative title count {count}")
+        titles, offset = [], 8
+        for _ in range(count):
+            language = struct.unpack_from("<i", record, offset)[0]
+            title, offset = _read_length_prefixed_string(record, offset + 4)
+            titles.append((language, title))
+        if offset != len(record):
+            raise ValueError(f"{len(record) - offset} bytes left over after {count} title(s)")
+    except (ValueError, struct.error) as e:
+        raise ValueError(f"malformed game tag #{entity_id}: {e}") from e
+    return GameTag(id=entity_id, localized_titles=tuple(titles))
+
+
+def _deserialize_tournament(entity_id, data):
+    """Decode a tournament record as described in FORMAT.md. Raises ValueError
+    if the record doesn't have exactly that layout."""
+    try:
+        record = _record_of(data)
+        place, offset = _read_length_prefixed_string(record, 4)
+        title, offset = _read_length_prefixed_string(record, offset)
+        if offset + TOURNAMENT_TAIL_SIZE != len(record):
+            raise ValueError(f"expected {TOURNAMENT_TAIL_SIZE} bytes after the strings, "
+                             f"but {len(record) - offset} remain in the record")
+        date, type_byte, team_byte, nation, _, category, flags, rounds, _ = struct.unpack_from(
+            "<i8B", record, offset)
+        latitude, longitude = struct.unpack_from("<2f", record, offset + 12)
+        end_date = struct.unpack_from("<i", record, offset + TOURNAMENT_END_DATE_OFFSET)[0]
+    except (ValueError, struct.error) as e:
+        raise ValueError(f"malformed tournament #{entity_id}: {e}") from e
+    return Tournament(
+        id=entity_id, title=title, place=place, encoded_date=date, type_byte=type_byte,
+        team_byte=team_byte, nation_value=nation, category=category, flags_value=flags,
+        rounds=rounds, latitude=latitude, longitude=longitude, encoded_end_date=end_date)
 
 
 class EntityDatabase:
@@ -230,23 +316,39 @@ class EntityDatabase:
         """All players that aren't deleted, in id order."""
         return (self.get_player(entity_id) for entity_id in self._live_ids("player"))
 
+    def tournaments(self):
+        """All tournaments that aren't deleted, in id order."""
+        return (self.get_tournament(entity_id) for entity_id in self._live_ids("tournament"))
+
+    def sources(self):
+        """All sources that aren't deleted, in id order."""
+        return (self.get_source(entity_id) for entity_id in self._live_ids("source"))
+
+    def teams(self):
+        """All teams that aren't deleted, in id order."""
+        return (self.get_team(entity_id) for entity_id in self._live_ids("team"))
+
+    def game_tags(self):
+        """All game tags that aren't deleted, in id order."""
+        return (self.get_game_tag(entity_id) for entity_id in self._live_ids("game_tag"))
+
     def get_player(self, entity_id):
         return _deserialize_player(entity_id, self._read_entity_raw("player", entity_id))
 
     def get_tournament(self, entity_id):
-        return _deserialize_titled(Tournament, entity_id, self._read_entity_raw("tournament", entity_id))
+        return _deserialize_tournament(entity_id, self._read_entity_raw("tournament", entity_id))
 
     def get_source(self, entity_id):
-        return _deserialize_titled(Source, entity_id, self._read_entity_raw("source", entity_id))
+        return _deserialize_source(entity_id, self._read_entity_raw("source", entity_id))
 
     def get_text_title(self, entity_id):
         return _deserialize_titled(TextTitle, entity_id, self._read_entity_raw("text_title", entity_id))
 
     def get_team(self, entity_id):
-        return _deserialize_titled(Team, entity_id, self._read_entity_raw("team", entity_id))
+        return _deserialize_team(entity_id, self._read_entity_raw("team", entity_id))
 
     def get_game_tag(self, entity_id):
-        return _deserialize_titled(GameTag, entity_id, self._read_entity_raw("game_tag", entity_id))
+        return _deserialize_game_tag(entity_id, self._read_entity_raw("game_tag", entity_id))
 
     def close(self):
         self._file.close()

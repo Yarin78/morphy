@@ -9,7 +9,7 @@ import os
 import click
 
 from morphy.columns import ID_COLUMN, available_columns, format_objects, parse_columns
-from morphy.entities import Player
+from morphy.entities import GameTag, Player, Source, Team, Tournament
 from morphy.entitydb import EntityDatabase
 from morphy.gameheader import GameHeader
 from morphy.gameheaderdb import GameHeaderDatabase
@@ -85,23 +85,36 @@ def games(file, start, limit, columns):
     click.echo(table)
 
 
-@cli.command()
-@click.argument("file", type=DATABASE_FILE)
-@columns_option(Player)
-def players(file, columns):
-    """Print a table of the players in a database, in id order.
+def entity_command(name, entities, cls, what):
+    """Define a command listing one kind of entity, in id order. entities is
+    the EntityDatabase method that yields them."""
+    help_text = (
+        f"Print a table of the {what} in a database, in id order.\n\n"
+        f"{what.capitalize()} in the list of deleted entities are left out. They are read "
+        f"from the .2lid file that has the same base name as FILE. The extension of FILE "
+        f"can be left out."
+    )
 
-    Players in the list of deleted entities are left out. The players are read
-    from the .2lid file that has the same base name as FILE. The extension of
-    FILE can be left out.
-    """
-    try:
-        with EntityDatabase.for_game_file(file) as edb:
-            table = format_objects(edb.players(), columns)
-    except (OSError, ValueError) as e:
-        raise click.ClickException(str(e))
+    @cli.command(name=name, help=help_text)
+    @click.argument("file", type=DATABASE_FILE)
+    @columns_option(cls)
+    def command(file, columns):
+        try:
+            with EntityDatabase.for_game_file(file) as edb:
+                table = format_objects(getattr(edb, entities)(), columns)
+        except (OSError, ValueError) as e:
+            raise click.ClickException(str(e))
 
-    click.echo(table)
+        click.echo(table)
+
+    return command
+
+
+players = entity_command("players", "players", Player, "players")
+tournaments = entity_command("tournaments", "tournaments", Tournament, "tournaments")
+sources = entity_command("sources", "sources", Source, "sources")
+teams = entity_command("teams", "teams", Team, "teams")
+game_tags = entity_command("tags", "game_tags", GameTag, "game tags")
 
 
 if __name__ == "__main__":
