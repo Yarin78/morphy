@@ -13,6 +13,8 @@ from morphy.entities import GameTag, Player, Source, Team, Tournament
 from morphy.entitydb import EntityDatabase
 from morphy.gameheader import GameHeader
 from morphy.gameheaderdb import GameHeaderDatabase
+from morphy.moves import MoveDatabase
+from morphy.nations import NATIONS
 
 
 DEFAULT_EXTENSION = ".2cbh"
@@ -83,6 +85,73 @@ def games(file, start, limit, columns):
         raise click.ClickException(str(e))
 
     click.echo(table)
+
+
+@cli.command()
+@click.argument("file", type=DATABASE_FILE)
+@click.option("--start", type=int, default=1, show_default=True, help="First game id to include.")
+@click.option(
+    "--limit", type=int, default=20, show_default=True,
+    help="Maximum number of games to include; 0 means no limit.",
+)
+@click.option("--raw", is_flag=True, help="Also print the record's framing and its words in hex.")
+def moves(file, start, limit, raw):
+    """Print the moves of the games in a database, with variations.
+
+    The moves are read from the .2cbg file with the same base name as FILE,
+    at the offsets in FILE. Moves are shown as the piece, the from and to
+    squares and any capture or promotion, e.g. Ng1-f3, e4xd5, O-O. Guiding
+    texts are only noted; the text command shows them. The extension of FILE
+    can be left out.
+    """
+    try:
+        with GameHeaderDatabase(file) as gdb, MoveDatabase.for_game_file(file) as mdb:
+            last = gdb.count if limit <= 0 else min(start + limit - 1, gdb.count)
+            for game_id in range(start, last + 1):
+                offset = gdb.get(game_id).moves_offset
+                try:
+                    game = mdb.read(offset)
+                except ValueError as e:
+                    click.echo(f"#{game_id}: not decoded: {e}")
+                    continue
+                prefix = ""
+                if game.chess960_position is not None:
+                    prefix = f"[Chess960 #{game.chess960_position}] "
+                elif game.setup_position:
+                    prefix = f"[Setup: {game.setup_position}] "
+                click.echo(f"#{game_id}: {prefix}{game.notation()}")
+                if raw:
+                    words = " ".join(f"{w:04x}" for w in game.words)
+                    click.echo(
+                        f"    offset {game.offset}, hash {game.hash.hex()}, {game.move_bytes} move bytes, "
+                        f"{game.spare_bytes} spare, record length {game.record_length}\n    {words}"
+                    )
+    except (OSError, ValueError) as e:
+        raise click.ClickException(str(e))
+
+
+@cli.command()
+@click.argument("file", type=DATABASE_FILE)
+@click.argument("game_id", type=int)
+@click.option("--html", is_flag=True, help="Print the HTML of each language, not just its size.")
+def text(file, game_id, html):
+    """Print the contents of a guiding text, one entry per language.
+
+    GAME_ID is the text's id in FILE; its contents are read from the .2cbg
+    file with the same base name. The extension of FILE can be left out.
+    """
+    try:
+        with GameHeaderDatabase(file) as gdb, MoveDatabase.for_game_file(file) as mdb:
+            guiding_text = mdb.read_text(gdb.get(game_id).moves_offset)
+    except (OSError, ValueError, IndexError) as e:
+        raise click.ClickException(str(e))
+
+    for language, content in guiding_text.contents:
+        name = NATIONS[language] if 0 < language < len(NATIONS) else "(none)" if language == 0 else f"?{language}"
+        click.echo(f"{name}: {len(content)} bytes")
+        if html:
+            click.echo(content.decode("utf-8", errors="replace"))
+            click.echo()
 
 
 def entity_command(name, entities, cls, what):
