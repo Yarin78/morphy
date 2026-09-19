@@ -53,10 +53,21 @@ agree once castling is written as the king's move and a null move as `0000`.
 |--------|------|------|-------------|
 | 0x00 | 8 | long | file size in bytes |
 | 0x08 | 2 | short | header size (12) |
-| 0x0a | 2 | | `?` `00 05`, or `01 00` in an empty database (observed) |
+| 0x0a | 1 | | `?` 0, or 1 in an empty database |
+| 0x0b | 1 | byte | format version: 5, or 0 in an empty database |
 
-The `.2cba` header has the same size and the same header size field, but
-`00 00` at 0x0a.
+The file size is the actual size of the file in every sample, `mega` included
+(3,633,383,224 bytes). The file never has unused space at its end: the last
+record's spare area takes that role.
+
+The 5 is the same version byte as at 0x0d of the `.2cbh` header (see
+[FORMAT.md](FORMAT.md#file-header-1)). An empty database has `01 00`
+instead, and the byte becomes 5 once a game is written. `empty` has `01 00`,
+while `1tour`, `2tour`, `reveng1`, `probe`, `wch2` and `mega` have `00 05`.
+(observed)
+
+The `.2cba` header has the same size and the same two fields, but `00 00` at
+0x0a in every sample, including the empty one.
 
 ### Records
 
@@ -669,8 +680,10 @@ blocks are not decoded. (wch2)
 - How a Chess960 game from a setup position is stored, if ChessBase allows one.
 - What happens when the games after an edited game do not have enough spare
   between them (see [The spare area](#the-spare-area)).
-- The two bytes at 0x0a of the file header.
-- What the `00 10 05 00` at the start of a guiding text means (a version?).
+- What byte 0x0a of the file header is: 1 only in an empty `.2cbg`, possibly a
+  "never written" flag.
+- What the `00 10 05 00` at the start of a guiding text means. The 5 may be the
+  same version as in the file headers.
 - Where the images a text refers to are kept, and whether the rewritten image
   paths in `wch2` are broken or point to something.
 - Whether word 0 and the words from `c30d` to `fff9` ever mean anything. Nothing

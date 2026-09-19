@@ -54,7 +54,44 @@ A database is a set of files with the same base name, e.g. `reveng1.*`:
 | `.2cbg` | moves and guiding texts | 12 bytes | see [MOVES.md](MOVES.md#2cbg--moves) |
 | `.2lgd` | the games that refer to each entity | 12 bytes | see [INDEXES.md](INDEXES.md#2lgd--the-games-of-each-entity) |
 | `.2lcd` | the sort order of each kind of entity | 4096 bytes | see [INDEXES.md](INDEXES.md#2lcd--sort-orders) |
-| `.ini` | settings | | plain text INI |
+| `.ini` | settings | | plain text INI, see [below](#ini--settings) |
+
+### File headers
+
+The byte order of each header follows the rest of its file, except in `.2lid`,
+whose header is big-endian (see [Conventions](#conventions)). Every header has
+something that fixes the shape of the file: a size or a count.
+
+| File | Size | Fields | Details |
+|------|------|--------|---------|
+| `.2cbh` | 192 | next game id, record size, format version 5 | [below](#file-header-1) |
+| `.2cbg` | 12 | file size, header size, format version 5 | [MOVES.md](MOVES.md#file-header) |
+| `.2cba` | 12 | file size, header size | [MOVES.md](MOVES.md#file-header-and-records) |
+| `.2lid` | 184 | per entity type: container size, count, first deleted id | [below](#file-header) |
+| `.2lgd` | 12 | list blocks in use | [INDEXES.md](INDEXES.md#2lgd--the-games-of-each-entity) |
+| `.2lcd` | 4096 (page 0) | page count, page size | [INDEXES.md](INDEXES.md#file-header) |
+
+### What ChessBase counts
+
+The statistics ChessBase shows for `mega` come from these places, all but one of
+them a file header: (mega)
+
+| ChessBase shows | Value | Where it comes from |
+|-----------------|------:|---------------------|
+| games | 11,990,472 | the `.2cbh` header's next game id − 1 |
+| players | 481,710 | the node count of the `Default Spieler` sort index in `.2lcd`: the players with at least one game. The `.2lid` header counts 482,530, which includes 820 annotators with no games |
+| tournaments | 110,137 | the tournament count in the `.2lid` header |
+| keys | 106,707 | the `.cko` header: a big-endian int at 7, and again as a little-endian int at 21 |
+| positions | 160,482 | the `.cpo` header: a big-endian int at 6 |
+
+`.cko` and `.cpo` are not part of the new format, and none of the small samples
+has them. The v1 Mega Database 2021 has them too, with its position
+count (55,847) at the same place. It also has the `.ck1`-`.ck3`/`.ckn` and
+`.cp1`-`.cp3`/`.cpn` files for its other keys. They are the opening key (the
+classification tree) and its positions. The size of `.cpo` is exactly 34 bytes
+times the position count, in both versions. The "positions" are the positions
+of the opening key, not an index of the positions in the games. These files are
+not analysed here.
 
 ## `.2lid` — entities
 
@@ -491,9 +528,43 @@ as deleted without following the list.
 
 ## `.2cbh` — game headers
 
-A 192-byte header (not decoded) followed by one 192-byte record per game. Game
-ids are 1-based: game 1 is the first record after the header. The number of games
-is `(file size − 192) / 192`.
+A 192-byte header followed by one 192-byte record per game. Game ids are
+1-based: game 1 is the first record after the header. The number of games is
+`(file size − 192) / 192`.
+
+### File header
+
+Only the first 20 bytes are used; the rest is zero in every sample, including
+`mega`.
+
+| Offset | Size | Type | Description |
+|--------|------|------|-------------|
+| 0x00 | 8 | | `?` always 0 |
+| 0x08 | 2 | short | `?` always 38 |
+| 0x0a | 2 | short | record size (192) |
+| 0x0c | 1 | | `?` always 0 |
+| 0x0d | 1 | byte | format version: 5 |
+| 0x0e | 2 | | `?` always 0 |
+| 0x10 | 4 | int | id of the next game to be added: the number of games + 1 |
+
+It is v1's `.cbh` header with wider fields, in the same order:
+
+| v1 `.cbh` | v2 `.2cbh` | Value |
+|-----------|------------|-------|
+| 0x01, short | 0x08, short | 44 in v1 (36 in databases made by CB6), 38 in v2 |
+| 0x03, short | 0x0a, short | the record size, 46 in v1 |
+| 0x05, byte | 0x0d, byte | 1 in v1, but 5 in a v1 database made by ChessBase 26 |
+| 0x06, int | 0x10, int | the next game id |
+
+The 5 is probably the version of ChessBase's database code rather than of this
+file. `.2cbg` has it too (see [MOVES.md](MOVES.md#file-header)). v1's
+header goes on with the next sound, picture and video ids and a second copy
+of the next game id. The zeros in the v2 header give no sign of any of them.
+
+The next game id is the record count + 1 in every sample, `mega` included
+(11,990,473). A deleted game keeps its record, and `probe` has one, so
+deleting doesn't change the header either. Whether compacting a database
+lowers it has not been tried.
 
 Known fields of a game record:
 
@@ -727,7 +798,6 @@ the nation list — except for chess.com, which stores 0. Whether that is
 deliberate is not clear from one sample.
 
 ### Dates
-### Dates
 
 A date is an int where bits 0-4 are the day, bits 5-8 the month and bits 9-20 the
 year; higher bits are ignored, and a part that is 0 is unknown. This is the v1
@@ -769,6 +839,45 @@ It is a creation time rather than a unique id, even so: `wch2` matches v1's
 `creationTimestamp` on all 1025 distinct values, and v1 derives a date from it.
 A value that a copy inherits cannot identify a game on its own.
 
+## `.ini` — settings
+
+A plain text INI file. Most of it is ChessBase's user interface state, but the
+first section describes the database:
+
+```ini
+[Descr2CBG]
+Type=0
+Title=wch2
+Usage=2
+Access=1037618
+```
+
+- `Type` is presumably the database type set in its properties: 30 in `mega`,
+  0 in the other samples.
+- `Title` is the title shown for the database, which need not be the file name
+  (`Mega Database 2026`).
+- `Usage` goes up over time: 1 in a new database, 29 in `probe`, 36 in `mega`.
+  It is presumably the number of times the database has been opened.
+- `Access` is the date of the last access, in the [game date encoding](#dates):
+  1037618 is 2026-09-18.
+
+v1 has the same section, named `[DescrCBG]`.
+
+The other sections:
+
+- `[Protocol2CBG]` logs imports, one line per source:
+  `World-ch=9/2F18/2F2026 (1038)` is 1038 games from `World-ch` on 9/18/2026.
+  `/2F` is an escaped `/`.
+- `[SearchBooster]` holds only `DontAskCbb` and `DontAskCgi`, whether
+  ChessBase should stop offering to build v1's search booster files (`.cbb`
+  and presumably `.cbgi`). No v2 sample has either file.
+- `[Environ]` holds the last values typed into dialogs (`LastPlayer`,
+  `LastTourn`, `GameDate` as a date, ...) and the game list position as game ids
+  (`LastListTop`, `LastSelected`).
+- `[ChessBase '26]` holds the column layouts of the game list.
+
+Nothing in the file is needed to read the database.
+
 ## Open questions
 
 - Deleted entities: the record layout for the other entity types, what the
@@ -801,5 +910,6 @@ A value that a copy inherits cannot identify a game on its own.
   enough data in any sample database: there is one team and no text titles.
 - What the three `07` bytes in a tournament tail are, and why tournament #0 of
   `wch2` is written differently from the rest (see above).
-- The 192-byte `.2cbh` file header: 0x0a holds the record size (192) and 0x10 the
-  next game id (games + 1). 0x08 holds 38 and 0x0c holds 1280 in every sample.
+- What 0x08 (38) and the first 8 bytes of the `.2cbh` file header are. v1's
+  version of the 38 changed between ChessBase versions, so it may be the size or
+  layout version of something.

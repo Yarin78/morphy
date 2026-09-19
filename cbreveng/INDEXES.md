@@ -49,7 +49,9 @@ sample made in ChessBase, 14 in `wch2` and 7,578 in `mega`.
 | 0x04 | 4 | int | number of pages in the file |
 | 0x08 | 4 | int | page size (4096) |
 
-The rest of the page is zero.
+The rest of the page is zero. The page count times the page size is the file
+size in every sample, `mega` included. The 1 could be the page number of the
+catalog, but a version number fits the samples just as well. (observed)
 
 ### Catalog
 
@@ -101,17 +103,20 @@ player 5. A node page holds 102 nodes of 40 bytes, node `n` at `40 · (n mod 102
 not in the index are zero or hold stale data.
 
 Node pages are numbered from 0 (nodes 0-101), 1 (nodes 102-203), and so on.
-When there is more than one, the catalog points to a **directory page**: a list
-of up to 1024 page numbers (ints), the node pages in order, ending at a 0. When
-there are more than 1024 node pages, the directory pages have a directory page
-of their own, and so on; the depth in the catalog is the number of these
-levels. It depends only on the highest entity id, not on how many entities
-the index holds:
+When there is more than one, the catalog points to a **directory page**: 1024
+ints, entry `k` being the page that holds node page `k`. **An entry of 0 means
+there is no such page**, because no id in that range is in the index, and
+entries can be 0 before later ones that aren't: the annotator directories of
+`mega` have 3,673 such holes, since only 2,574 of its 482,530 player ids are
+annotators. When there are more than 1024 node pages, the directory pages have
+a directory page of their own, and so on; the depth in the catalog is the number
+of these levels. It depends only on the highest entity id, not on how many
+entities the index holds:
 
 | Ids | Depth | Example |
 |-----|-------|---------|
 | up to 102 | 0 | every index of `probe`; the tournaments of `wch2` |
-| up to 104,448 (102 · 1024) | 1 | the players of `wch2` (120 ids, on pages 2 and 13, listed on page 12); the 71,455 teams of `mega` |
+| up to 104,448 (102 · 1024) | 1 | the players of `wch2` (120 ids, on pages 2 and 13, listed on page 12, whose other entries are 0); the 71,455 teams of `mega` |
 | up to 106,954,752 | 2 | the players (482,530 ids) and tournaments (110,137) of `mega`, and its annotators, which are players |
 
 So the annotator index of `mega` has two levels for only 2,574 nodes, because
@@ -129,6 +134,10 @@ its node ids are player ids. (wch2, mega)
 
 An in-order walk of the tree, from the root in the catalog, gives the entities
 in sort order.
+
+That is all the file holds: every page of every sample is the header, the
+catalog, a directory page or a node page reached from the catalog. In `mega`
+that is 1 + 1 + 20 directory pages + 7,556 node pages, all 7,578. (mega)
 
 The int at 0x24 is the slot in 636,263 of the 668,610 nodes of `mega`, and -1 in
 the others, which are **all leaves**. In the small databases the slot is the
@@ -230,7 +239,10 @@ All little-endian: a 12-byte header, then 512-byte records.
 | 0x04 | 4 | int | number of list blocks in use, see below |
 | 0x08 | 4 | int | `?` always 0 |
 
-An empty database is just the header.
+256 is the size in bytes of each half of a record, the heads and the list block
+(32 longs each), and may be just that. Nothing in the header gives the number of
+records: that follows from the file size (see below). An empty database is just
+the header.
 
 ### Records
 
@@ -301,6 +313,33 @@ This decodes to exactly the right games, in the right numbers, for every list
 of every entity in `wch2` (1,155 lists), `probe` (182), and `reveng1` and its
 earlier states. (wch2, probe)
 
+### Dead blocks
+
+The lists are all the file holds, but not all of it is in use. In `mega`, the
+668,610 lists (100,604 single, 103,644 ranges, 464,362 chains) reach 2,398,273
+list blocks, each exactly once, with every count right. The other 1,956,805
+blocks, **45% of the file, about 1 GB**, are reached from nothing:
+
+- They lie in two runs, blocks 5,473-396,833 and 2,345,284-3,910,727, with the
+  live blocks in between and after.
+- Their next pointer is 0 rather than a block number (or -1), and all but the
+  last block of a copy are full.
+- They hold **five copies of one list**: the games with no game tag (game tag 0),
+  ascending, as it was when the database had 11,743,083 records. It matches
+  today's list up to that id, except for 5 games that have since been given a
+  tag. The first run holds one copy and the second four.
+
+So these look like old versions of the longest list, left behind each time it
+was rebuilt somewhere else, and never reused or cut away. They are still
+counted in the file header's block count. Nothing in the samples made in
+ChessBase has dead blocks. (mega)
+
+There is **no position index** in either file: every block is either part of an
+entity's list or one of these copies.
+
+The statistics ChessBase shows for a database, and where each comes from, are in
+[FORMAT.md](FORMAT.md#what-chessbase-counts).
+
 ## Analyses
 
 `mega` has a third kind of record in the `.2cbh` file besides games and guiding
@@ -337,10 +376,12 @@ The rest of the record is zero. Their titles are opening lines such as
 
 `.2lgd`:
 
-- What slot 30 (always 12) and the first int of the header (always 256) are.
+- What slot 30 (always 12) is, and whether the 256 in the header really is the
+  size of a half-record.
 - Whether role 9 is ever used.
 - What happens to the lists when a game is deleted for good (compacting the
-  database), or when an entity is deleted.
+  database), or when an entity is deleted, and whether compacting drops the
+  dead blocks.
 
 Analyses: the fields at 0x30-0x50, and whether their moves and annotations are
 stored like a game's.

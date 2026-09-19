@@ -113,11 +113,14 @@ class SortIndexes:
     def node_page(self, index, node_id):
         """The page holding a node: the node pages are numbered from 0, 102
         nodes each, and found through `depth` levels of directory pages of
-        1024 page numbers each."""
+        1024 page numbers each. A directory entry of 0 means no id in that
+        range is in the index."""
         position, page = node_id // NODES_PER_PAGE, index.page
         for level in range(index.depth - 1, -1, -1):
             span = PAGES_PER_DIRECTORY ** level
             page = struct.unpack_from("<i", self.data, page * PAGE_SIZE + 4 * (position // span))[0]
+            if page == 0:
+                raise KeyError(f"node {node_id} is not in the index {index.name!r}")
             position %= span
         return page
 

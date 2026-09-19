@@ -1,7 +1,7 @@
 """GameHeaderDatabase: reads the .2cbh file holding one game header per game.
 
-The file starts with a 192-byte header (not yet decoded), followed by
-192-byte game records, game #1 first. All integers in a record are
+The file starts with a 192-byte header, of which only the record size, the
+format version and the next game id are known, followed by 192-byte game records, game #1 first. All integers in a record are
 little-endian, signed. FORMAT.md is the source of truth for the layout;
 FIELDS below lists the fields decoded so far.
 """
@@ -12,6 +12,11 @@ from morphy.gameheader import GameHeader
 
 HEADER_SIZE = 192
 RECORD_SIZE = 192
+
+# Fields of the file header: offset -> how to read it.
+HEADER_RECORD_SIZE = (0x0A, "<h")
+HEADER_VERSION = (0x0D, "<B")
+HEADER_NEXT_GAME_ID = (0x10, "<i")
 
 # Bits of the first byte of a record.
 DELETED_FLAG = 0x80
@@ -76,6 +81,11 @@ class GameHeaderDatabase:
         self.entities = entities
         self._file = open(path, "rb")
         self.header = self._file.read(HEADER_SIZE)
+        record_size = self._read_field(self.header, *HEADER_RECORD_SIZE)
+        if record_size != RECORD_SIZE:
+            raise ValueError(f"unexpected record size {record_size} in {path}")
+        self.version = self._read_field(self.header, *HEADER_VERSION)
+        self.next_game_id = self._read_field(self.header, *HEADER_NEXT_GAME_ID)
         self.count = (os.path.getsize(path) - HEADER_SIZE) // RECORD_SIZE
 
     def __len__(self):
