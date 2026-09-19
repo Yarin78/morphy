@@ -52,8 +52,8 @@ A database is a set of files with the same base name, e.g. `reveng1.*`:
 | `.2lid` | entities (players, tournaments, ...) | variable | see [below](#2lid--entities) |
 | `.2cba` | annotations | 12 bytes | see [MOVES.md](MOVES.md#2cba--annotations) |
 | `.2cbg` | moves and guiding texts | 12 bytes | see [MOVES.md](MOVES.md#2cbg--moves) |
-| `.2lgd` | not analysed | 12 bytes | blocks are a multiple of 1024 bytes |
-| `.2lcd` | not analysed | none | 40960 bytes in every sample, even an empty database (observed) |
+| `.2lgd` | the games that refer to each entity | 12 bytes | see [INDEXES.md](INDEXES.md#2lgd--the-games-of-each-entity) |
+| `.2lcd` | the sort order of each kind of entity | 4096 bytes | see [INDEXES.md](INDEXES.md#2lcd--sort-orders) |
 | `.ini` | settings | | plain text INI |
 
 ## `.2lid` — entities

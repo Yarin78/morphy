@@ -14,6 +14,7 @@ from morphy.entities import GameTag, Player, Source, Team, Tournament
 from morphy.entitydb import EntityDatabase
 from morphy.gameheader import GameHeader
 from morphy.gameheaderdb import GameHeaderDatabase
+from morphy.indexes import GameLists, SortIndexes
 from morphy.moves import MoveDatabase
 from morphy.nations import NATIONS
 
@@ -184,6 +185,65 @@ def annotations(file, start, limit):
                     move = "game" if annotation.position == -1 else (
                         str(nodes[index].move) if index < len(nodes) else f"?{annotation.position}")
                     click.echo(f"#{game_id} {annotation.position} {move}: {annotation.name}: {annotation.describe()}")
+    except (OSError, ValueError) as e:
+        raise click.ClickException(str(e))
+
+
+# EntityDatabase method listing each .2lid entity type, by type number.
+ENTITY_LISTS = {0: "players", 1: "tournaments", 2: "sources", 4: "teams", 5: "game_tags"}
+
+
+def entity_names(file, entity_type):
+    """Entity id -> name for one entity type, or as many as can be read."""
+    names = {}
+    try:
+        with EntityDatabase.for_game_file(file) as edb:
+            for entity in getattr(edb, ENTITY_LISTS[entity_type])():
+                names[entity.id] = entity.name
+    except (OSError, ValueError, KeyError):
+        pass
+    return names
+
+
+@cli.command(name="sorted")
+@click.argument("file", type=DATABASE_FILE)
+@click.argument("index", required=False)
+def sorted_command(file, index):
+    """Print the entities of a sort index in the .2lcd file, in sort order.
+
+    Without INDEX, list the indexes. INDEX is an index's name as listed, e.g.
+    "Default Spieler", or its position in the list, from 1. Entity names are
+    read from the .2lid file. The extension of FILE can be left out.
+    """
+    try:
+        indexes = SortIndexes.for_game_file(file)
+        if index is None:
+            for number, idx in enumerate(indexes.indexes, 1):
+                click.echo(f"{number}. {idx.name}: entity type {idx.entity_type}, {idx.count} entries, "
+                           f"pages {idx.pages}, root {idx.root}")
+            return
+        idx = indexes.indexes[int(index) - 1] if index.isdigit() else indexes.get(index)
+        names = entity_names(file, idx.entity_type)
+        for node in indexes.sorted_nodes(idx) if idx.root != -1 else []:
+            click.echo(f"{node.id:6}  {node.key_text(idx.entity_type):18}  {names.get(node.id, '?')}")
+    except (OSError, ValueError, KeyError, IndexError) as e:
+        raise click.ClickException(str(e))
+
+
+@cli.command()
+@click.argument("file", type=DATABASE_FILE)
+@click.argument("entity_id", type=int)
+def references(file, entity_id):
+    """Print the games that refer to the entities with id ENTITY_ID.
+
+    The lists come from the .2lgd file. It keeps one list per role for each
+    id, so the player, tournament, source, ... with this id each have their
+    own. The extension of FILE can be left out.
+    """
+    try:
+        for game_list in GameLists.for_game_file(file).lists(entity_id):
+            games = " ".join(str(game) for game in game_list.games)
+            click.echo(f"{game_list.role} ({game_list.count}, {game_list.form}): {games}")
     except (OSError, ValueError) as e:
         raise click.ClickException(str(e))
 
