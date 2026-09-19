@@ -26,6 +26,7 @@ Run development tools from the `se.yarin.morphy.tools` package.
 - `QueryTest` - Test database queries
 - `RipDbHeaders` - Extract database headers
 - `GenerateTestDatabase` - Generate test databases
+- `DumpMoves` - Write every game's move tree to a file, for checking a v2 (`.2cbg`) decoder against v1
 
 ## Instructions
 
