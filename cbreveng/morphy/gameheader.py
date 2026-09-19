@@ -21,38 +21,40 @@ from morphy.results import format_result
 @dataclass
 class GameHeader:
     id: int
-    deleted: bool  # the game is marked as deleted
-    moves_offset: int  # where the moves are in the .2cbg file
-    annotation_offset: int  # where the annotations are in the .2cba file
-    white_id: int  # references a Player
-    black_id: int  # references a Player
-    tournament_id: int
-    annotator_id: int  # references a Player
-    source_id: int
-    white_team_id: int
-    black_team_id: int
-    game_tag_id: int
-    result_code: int  # a GameResult enum value
-    nag: int  # if the result is "line", the line evaluation
-    round_number: int  # 0 = none
-    subround_number: int  # 0 = none
-    board_number: int  # 0 = none
-    white_elo_value: int
-    white_rating_bytes: bytes  # the rating type that goes with the elo
-    black_elo_value: int
-    black_rating_bytes: bytes
-    encoded_eco: int
-    medals_value: int  # bitmask
-    flags_value: int  # bitmask, mostly saying what annotations the game has
-    annotation_magnitude: int  # bitmask giving rough sizes for those annotations
-    moves: int  # number of full moves in the game
-    final_material_1: int  # material left at the end, for one player ...
-    final_material_2: int  # ... and for the other
-    creation_timestamp: int
-    last_changed_timestamp: int
-    endgame_bits: int  # bitmask of the endgame types the game passed through
-    version: int  # increases by 1 every time the game is saved
-    encoded_played_date: int
+    deleted: bool = False  # the game is marked as deleted
+    guiding_text: bool = False  # a text document rather than a game
+    moves_offset: int = 0  # where the moves, or the text, are in the .2cbg file
+    annotation_offset: int = 0  # where the annotations are in the .2cba file
+    media_offset: int = 0  # only guiding texts have one
+    white_id: int = -1  # references a Player
+    black_id: int = -1  # references a Player
+    tournament_id: int = -1
+    annotator_id: int = -1  # references a Player; the author of a guiding text
+    source_id: int = -1
+    white_team_id: int = -1
+    black_team_id: int = -1
+    game_tag_id: int = -1  # a guiding text keeps its title here
+    result_code: int = 0  # a GameResult enum value
+    nag: int = 0  # if the result is "line", the line evaluation
+    round_number: int = 0  # 0 = none
+    subround_number: int = 0  # 0 = none
+    board_number: int = 0  # 0 = none
+    white_elo_value: int = 0
+    white_rating_bytes: bytes = b"\0" * 14  # the rating type that goes with the elo
+    black_elo_value: int = 0
+    black_rating_bytes: bytes = b"\0" * 14
+    encoded_eco: int = 0
+    medals_value: int = 0  # bitmask
+    flags_value: int = 0  # bitmask, mostly saying what annotations the game has
+    annotation_magnitude: int = 0  # bitmask giving rough sizes for those annotations
+    moves: int = 0  # number of full moves in the game
+    final_material_1: int = 0  # material left at the end, for one player ...
+    final_material_2: int = 0  # ... and for the other
+    creation_timestamp: int = 0
+    last_changed_timestamp: int = 0
+    endgame_bits: int = 0  # bitmask of the endgame types the game passed through
+    version: int = 0  # increases by 1 every time the game is saved
+    encoded_played_date: int = 0
     # The EntityDatabase used to resolve the ids above into names, if any
     # (needed for the properties that resolve names).
     _entities: object = field(default=None, repr=False, compare=False)

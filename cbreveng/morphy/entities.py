@@ -9,7 +9,9 @@ from morphy.columns import default_columns
 from morphy.dates import decode_date
 from morphy.nations import decode_language, decode_nation
 from morphy.sources import decode_source_quality
-from morphy.tournaments import decode_time_control, decode_tournament_flags, decode_tournament_type
+from morphy.tournaments import (
+    decode_tiebreaks, decode_time_control, decode_tournament_flags, decode_tournament_type,
+)
 
 # The language a title is written in, when a title has to be picked and there
 # is more than one to choose from.
@@ -60,6 +62,8 @@ class Tournament(TitledEntity):
     rounds: int
     latitude: float  # of the place; 0 if not known
     longitude: float
+    place_nation_value: int  # the nation the place is in today, 0 if not known
+    tiebreak_values: tuple  # tiebreak rule ids, in the order they apply
     encoded_end_date: int
 
     @property
@@ -88,13 +92,27 @@ class Tournament(TitledEntity):
 
     @property
     def nation(self):
-        """The nation of the place, as an IOC code."""
+        """The nation at the time the tournament was played, as an IOC code.
+        Historical states are used, e.g. URS for the Soviet Union."""
         return decode_nation(self.nation_value)
 
     @property
     def flags(self):
         """The tournament's flags, as text."""
         return decode_tournament_flags(self.flags_value)
+
+    @property
+    def tiebreaks(self):
+        """The tiebreak rules, in the order they apply, as text."""
+        return decode_tiebreaks(self.tiebreak_values)
+
+    @property
+    def place_nation(self):
+        """The nation the place is in today, worked out from its coordinates,
+        as an IOC code. Unlike nation, it doesn't depend on when the tournament
+        was played: a tournament in Breslau has nation GER, but place_nation
+        POL, since the city is now Wrocław."""
+        return decode_nation(self.place_nation_value)
 
     @property
     def coordinates(self):
@@ -134,19 +152,30 @@ class TextTitle(TitledEntity):
     pass
 
 
-@default_columns("title")
+@default_columns("title", "team_number", "season", "year", "nation")
 @dataclass
 class Team(TitledEntity):
-    # The 5 bytes after the title; every team seen so far has them all zero,
-    # so what they hold isn't known (see FORMAT.md).
-    trailing: bytes
+    team_number: int  # 0 = not set
+    season_byte: int  # bit 0 = the year is a season spanning two years
+    year: int  # 0 = not set
+    nation_value: int
+
+    @property
+    def season(self):
+        return bool(self.season_byte & 1)
+
+    @property
+    def nation(self):
+        """The team's nation, as an IOC code."""
+        return decode_nation(self.nation_value)
 
 
 @default_columns("title", "titles")
 @dataclass
 class GameTag:
-    """A game tag, whose title is given in one or more languages. Guiding
-    texts use these for their titles too."""
+    """A game tag or the title of a guiding text -- both are this one entity
+    type, and which a given entity is depends only on whether a game or a text
+    refers to it. The title is given in one or more languages."""
     id: int
     # (language, title) pairs, in the order they appear in the record.
     localized_titles: tuple

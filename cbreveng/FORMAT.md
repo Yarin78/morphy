@@ -33,6 +33,10 @@ Working notes on the file format, and the source of truth for the Python code in
 - `wch2` — 1038 world championship games, converted by ChessBase from the v1
   database in `wch1`. The game ids match one to one between the two, so decoding
   `wch1` with the Java code gives an expected value for every game.
+- `mega` — ChessBase's own Mega Database 2026: 482,530 players, 110,137
+  tournaments and 71,455 teams. Far too big to read by hand, but the size is the
+  point: a field that is constant across all of it is genuinely constant, and a
+  rare form shows up often enough to study. Facts from it are marked **(mega)**.
 - `probe` — 7 games built to order in ChessBase to pin down specific fields: a
   deleted game, a Chess960 game, a game with round/subround/board set, and games
   with different kinds of rating. Facts from it are marked **(probe)**.
@@ -169,19 +173,20 @@ first name (length 0), 41 bytes in total. (observed)
 | n | string bytes | place |
 | 4 | int | length of title |
 | m | string bytes | title |
-| 108 | | the fixed-size tail below |
+| 108 + 2k | | the tail below, where k is the number of tiebreak rules |
 
 The **place comes before the title**. In `reveng1` the place is empty, so the
 record looks like it starts with a `?` int of 0, which is what these notes used
-to say. The tail after the two strings is always exactly 108 bytes, and holds the
-same fields as v1, in the same order, only widened and little-endian: (wch2)
+to say. The tail after the two strings is 108 bytes, plus 2 for each tiebreak
+rule, and holds the same fields as v1, in the same order, only widened and
+little-endian: (wch2, probe)
 
 | Offset in tail | Size | Type | Description |
 |------|------|------|-------------|
 | 0 | 4 | int | start date, see [Dates](#dates) |
 | 4 | 1 | byte | type and time control, see below |
 | 5 | 1 | byte | bit 0 = team tournament |
-| 6 | 1 | byte | nation, see below |
+| 6 | 1 | byte | nation at the time of the tournament, see below |
 | 7 | 1 | byte | `?` always 0 |
 | 8 | 1 | byte | category |
 | 9 | 1 | byte | flags: bit 0 and 1 = complete, bit 2 = board points, bit 3 = three points win |
@@ -189,18 +194,78 @@ same fields as v1, in the same order, only widened and little-endian: (wch2)
 | 11 | 1 | byte | `?` always 0 |
 | 12 | 4 | float | latitude of the place, 0 if not known |
 | 16 | 4 | float | longitude |
-| 20 | 40 | | `?` mostly zero, see below |
-| 60 | 4 | int | end date |
-| 64 | 44 | | `?` always 0 |
+| 20 | 1 | byte | nation the place is in today, from the coordinates, 0 if not known (mega) |
+| 21 | 37 | | `?` mostly zero, see below |
+| 58 | 2 | short | k, the number of tiebreak rules (probe) |
+| 60 | 2·k | short | the tiebreak rules, in the order they apply, see below (probe) |
+| 60 + 2k | 4 | int | end date |
+| 64 + 2k | 44 | | `?` always 0 |
 
-These rows account for all 108 bytes.
+These rows account for all 108 + 2k bytes. Every tournament in `wch2` and `mega`
+has no tiebreak rules, so the end date sits at 60 in all of them; that is where
+these notes first placed it.
 
-Bytes 20-59 of the tail are zero except for a `07` at 34, 45 and 56 — three of
-something 11 bytes apart. The same three bytes, with the same spacing, sit in the
-34 bytes that v1 skips over in its `.cbtt` file, so whatever it is, it was
-carried across unchanged. v1 keeps the tiebreak rules right after them, ten bytes
-that are all 1 with a count of 0 in every tournament of `wch1`, and nothing like
-that run appears in the v2 records.
+The nation at 20 is not the same field as the one at 6, and the two answer
+different questions. (mega)
+
+- **Tail+6 is the nation at the time** the tournament was played. It uses the
+  historical states in the nation list: Moscow is the Russian Empire (ZAR), then
+  the Soviet Union (URS), then Russia; Prague is Czechoslovakia (TCH); Berlin is
+  sometimes the German Empire (GE2). It is entered by hand and not always
+  consistent — Prague in 1884 is marked Czechoslovakia, which did not exist until
+  1918, and Moscow in 1934 is marked Russia rather than the Soviet Union.
+- **Tail+20 is the nation the place is in today**, worked out from the
+  coordinates. It is never set unless the coordinates are, and it is the same for
+  every tournament held in a given place — constant within all 528 places in
+  `mega` that have it — whatever the year.
+
+So a tournament in **Breslau** is German at 6 and Polish at 20: it was played in
+Germany, and the city is Wrocław in Poland now.
+
+Bytes 21-57 of the tail are zero except for a `07` at 34, 45 and 56 — three of
+something 11 bytes apart — and the flag at 57 described below. The same three
+bytes, with the same spacing, sit in the 34 bytes that v1 skips over in its
+`.cbtt` file (v1's own writer says "unknown purpose, but every 11th byte is 7"),
+so whatever it is, it was carried across unchanged.
+
+**Tiebreak rules** follow, as in v1, but as a count and a list rather than ten
+fixed slots: v1 always stores ten bytes and a count, while v2 stores only the
+rules that are set, two bytes each, so the record grows with them. They keep the
+order they were entered in. The ids are **not v1's** — v2 numbers the rules
+afresh. Every rule ChessBase offers has been entered in `probe`: (probe)
+
+| v2 id | Rule | v1 id |
+|------|------|------|
+| 0 | Not set | 2 |
+| 1 | Rating of Buchholz | 10 |
+| 2 | Feine Buchholz | 11 |
+| 3 | Median Buchholz | 12 |
+| 4 | Fortschritt | 13 |
+| 5 | Sonneborn-Berger, swiss | 14 |
+| 11 | # wins | 201 |
+| 12 | # black wins | 202 |
+| 13 | # black games | 203 |
+| 14 | Point group | 204 |
+| 16 | Median2 Buchholz | 21 |
+| 17 | Buchholz Cut 1 | 22 |
+| 18 | Buchholz Cut 2 | 23 |
+| 19 | Sonneborn-Berger, round robin | 200 |
+| 21 | Koya | 206 |
+
+The swiss rules are v1's ids minus 9 and the Buchholz variants minus 5, and four
+of the round-robin rules are v1's minus 190, but Sonneborn-Berger and Koya break
+the pattern, so the table is the only reliable mapping. Swiss and round robin
+each have their own Sonneborn-Berger, as in v1. Ids 6-10, 15 and 20 have not
+been seen and are presumably unused.
+
+Choosing "Not set" in ChessBase stores a 0, and counts as a rule; choosing
+"undefined" stores nothing at all, so a tournament entered as Point group, Koya,
+Not set, undefined has a count of 3.
+
+Two `probe` tournaments carry them: `foo`, an open, stores `03 00  11 00 05 00
+01 00` — Buchholz Cut 1, Sonneborn-Berger, Rating of Buchholz — and `bar`, a
+round robin, stores `04 00  15 00 0b 00 0e 00 0d 00` — Koya, # wins, Point group,
+# black games.
 
 The low 5 bits of the type byte give the kind of tournament: 1 game, 2 match,
 3 tournament (round robin), 4 open (swiss), 5 team, 6 knockout, 7 simul,
@@ -223,12 +288,16 @@ Example, tournament #1 of `wch2`, 162 bytes with the tail starting at 54:
 00 03 11 00                              category 0, complete, 17 rounds, ?
 8e 29 b9 41  c3 db a4 c2                 23.1453, -82.4292
 ...                                      zero, apart from the three 07 bytes
-58 c2 0e 00                              end date 1889-02-24 (at tail+60)
+00 00                                    no tiebreak rules
+58 c2 0e 00                              end date 1889-02-24
 ```
 
-Tournament #0 of `wch2` is written differently from the other 51: it has no
-coordinates and no end date, though v1 has an end date for it, it is missing the
-three `07` bytes, and it alone has a 1 at tail+57. Nothing explains that yet.
+A few tournaments are written differently: they are missing the three `07` bytes
+and have a 1 at tail+57 instead. This is rare but not a quirk of one database —
+12 of `mega`'s 110,137 are like it, and so is tournament #0 of `wch2`. Every
+tournament ChessBase created fresh in `reveng1` and `probe` has the usual form.
+The 12 in `mega` do have coordinates, so it is not simply a matter of how much is
+known about the tournament. Nothing explains it yet. (mega)
 
 ##### What the conversion changed
 
@@ -288,13 +357,30 @@ e1 9e 0f 00                              date 1999-07-01
 | 4 | int | record length |
 | 4 | int | length of title |
 | n | string bytes | title |
-| 5 | | `?` all zero in the one team there is |
+| 1 | byte | team number, 0 if not set |
+| 1 | byte | bit 0 = the year is a season spanning two years |
+| 2 | short | year, 0 if not set |
+| 1 | byte | nation |
 
-`reveng1` has the only team in any sample database, so only the title is
-confirmed. v1 keeps a team number, a season flag, a year and a nation after the
-title, which is 10 bytes; v2 has 5, so they cannot all be there in the same form.
+These are v1's four fields in v1's order, narrowed to fit: v1 keeps the team
+number and the year as 4-byte ints, which is 10 bytes in all, where v2 uses 5.
+All 71,455 teams of `mega` decode cleanly: team numbers run 0 to 30, the season
+byte is only ever 0 or 1, the years are real years, and the nations are the ones
+team chess is played in — Germany first, then Poland, Spain, England, Czechia.
+`St James CC London` is year 1865, nation ENG. (mega)
 
-#### Game tag
+#### Game tag and text title
+
+This one entity type holds two things ChessBase shows as separate lists. Which a
+given entity is depends only on **what refers to it**: a game points at its game
+tag from 0x50 of its record, and a guiding text points at its title from 0x28.
+Nothing in the entity itself says which it is, and the two share an id space.
+
+In `probe` the type holds an empty entity, the title of the one text, and one
+game tag, and ChessBase lists the first and third under "Game tags" and the
+second under "Text titles". In `wch2` it holds nine: the empty one and the single
+game tag that came from v1, plus the titles of the seven distinct texts. That is
+why there are nine here where v1 has two — v1 keeps text titles somewhere else.
 
 | Size | Type | Description |
 |------|------|-------------|
@@ -311,7 +397,11 @@ Each title is:
 | n | string bytes | the title in that language |
 
 v1 keeps eight fixed 200-byte titles, one per language, in a 1600-byte record;
-v2 stores only the languages that are actually filled in. A game tag with no
+v2 stores a title per language, in ascending order of language code. ChessBase
+writes an entry for each of the seven languages it offers even when most are
+blank: a `probe` text titled in English and German alone stores all of ENG (42),
+ESP (43), FRA (49), GER (53), ITA (70), NED (103) and POR (117), five of them
+with an empty string. (probe) A game tag with no
 title at all is just a record length of 4 and a count of 0, and that is what a
 game with no game tag refers to: **game tag 0 is an empty placeholder**, where v1
 would use -1. Every game tag in `wch2` and `reveng1` accounts for exactly its
@@ -327,9 +417,8 @@ title:
 35 00 00 00  0e 00 00 00  "Turnierbericht"
 ```
 
-Guiding texts use game tags for their own titles, which is why `wch2` has nine
-game tags where v1 has two: seven of them are the titles of its 13 guiding texts,
-referred to from offset 0x28 of a text record. (wch2)
+Which entities are titles of guiding texts and which are game tags can only be
+worked out by looking at what refers to them, as above. (wch2, probe)
 
 #### Text title
 
@@ -367,8 +456,12 @@ player #1:  10 00 00 00  22 33 44 55 66 77 88 99  02 00 00 00 00 00 00 00   next
 player #2:  10 00 00 00  22 33 44 55 66 77 88 99  ff ff ff ff ff ff ff ff   next = -1, end
 ```
 
-Not known: the layout for the other entity types, what the `22 33 …` bytes mean,
-and whether a record can be recognised as deleted without following the list.
+The same layout holds for other entity types and at scale: `mega` has five
+deleted game tags, chained 2217 → 2210 → 2205 → 2203 → 2177 → end, each with a
+record length of 16 and the same `22 33 44 55 66 77 88 99` marker. (mega)
+
+Not known: what the `22 33 …` bytes mean, and whether a record can be recognised
+as deleted without following the list.
 
 ## `.2cbh` — game headers
 
@@ -439,11 +532,46 @@ an entity with an empty title, rather than to -1 as in v1.
 
 ### Guiding texts
 
-A record whose type byte has bit 1 set is a guiding text, not a game, and then
-the whole record has a different layout that is not decoded. The little that is
-known (wch2): 0x08 is still the offset into `.2cbg`, 0x30 holds the creation
-timestamp that a game keeps at 0x98, and everything from 0x50 on is zero. In
-`wch2`, 13 of the 1038 games are guiding texts.
+A record whose type byte has bit 1 set is a guiding text — a piece of writing
+filed among the games rather than a game. **The record then has its own layout**,
+and nothing from 0x10 on means what it means in a game. This is v1's arrangement
+as well, and the fields are the same ones v1 keeps for a text, in the same order.
+
+| Offset | Size | Type | Description |
+|--------|------|------|-------------|
+| 0x00 | 8 | | as in a game, with bit 1 of the type byte set |
+| 0x08 | 8 | long | offset of the text in the `.2cbg` file |
+| 0x10 | 8 | long | tournament id (wch2) |
+| 0x18 | 8 | long | source id (wch2) |
+| 0x20 | 8 | long | annotator id, which is the author of the text (wch2, probe) |
+| 0x28 | 8 | long | game tag id, which is the **title** of the text (wch2, probe) |
+| 0x30 | 8 | long | creation timestamp (wch2) |
+| 0x38 | 8 | long | media offset, `?` encoding, see below (wch2) |
+| 0x40 | 8 | long | version (wch2) |
+| 0x48 | 120 | | `?` always 0 |
+
+The tournament, source and creation timestamp match `wch1` exactly for all 13 of
+its texts, and the annotator matches once the renumbering of players is taken
+into account. The `probe` text confirms the rest: its author Jimmy Mårdell is
+player 10, its tournament "some tournament" is tournament 1, and its title is
+game tag 1.
+
+A text has **no title of its own**: the title is an entity of the same type that
+holds game tags, and it holds one title per language. See
+[Game tag and text title](#game-tag-and-text-title) — ChessBase keeps the two
+apart in its interface even though the file does not.
+
+Two fields do not simply carry v1's value across:
+
+- The **version** is v1's plus exactly 1, for all 13 texts, while a game's
+  version matches v1 exactly. Converting a text had to put its title into a game
+  tag, and that counts as a change.
+- The **media offset** is v1's value plus 2⁴⁹ (`0x0002000000000028` for v1's 40),
+  or `0xffffffff` where v1 has -1 for no media. The `probe` text, made in
+  ChessBase rather than converted, has 0. What the high bits mean is not known.
+
+Nothing has been seen that holds a text's round, although v1 has a field for it
+(0 in every text of `wch1`).
 
 ### Result, NAG and round
 
@@ -625,14 +753,23 @@ A value that a copy inherits cannot identify a game on its own.
 - Which rating list each id in the second short of a rating type refers to,
   beyond the eight seen (see above), and why chess.com stores no nation while the
   other two servers store `Internet`.
-- The layout of a guiding text record (see above), and what 0x02 and 0x03 are.
+- What 0x02 and 0x03 of a game record are.
+- Whether a guiding text stores a round anywhere, and what the high bits of its
+  media offset mean (see above).
 - What the endgame bits at 0xa8 mean, beyond the seven guessed above, and whether
   the field is more than 6 bytes.
 - Whether 0x8c or 0x90 is white's final material.
 - The rating type after each elo (see above); only `reveng1` has it.
 - Subround (0x5c) and board (0x5e) are 0 everywhere except in `reveng1`, where
   they were set by hand.
-- The unknown fields in every entity record, and the layout of the text title.
+- The unknown fields in every entity record.
+- What entity type 3 is for. It has a container of its own in every database and
+  has **never held a single entity** — not in the hand-made ones, not in a
+  converted one, and not in `mega`, with its 482,530 players and 110,137
+  tournaments. Whatever creates one, ChessBase's own flagship database does not
+  contain it. The name `text_title` the code gives it is a guess from its
+  position and is probably wrong, since the titles of guiding texts go in the
+  game tag type.
 - The 5 bytes after a team's title, and the layout of a text title. Neither has
   enough data in any sample database: there is one team and no text titles.
 - What the three `07` bytes in a tournament tail are, and why tournament #0 of

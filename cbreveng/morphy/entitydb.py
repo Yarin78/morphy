@@ -19,7 +19,9 @@ from dataclasses import dataclass
 from morphy.entities import GameTag, Player, Source, Team, TextTitle, Tournament
 
 # Order entity types appear within a block, matching the header's entity
-# type list.
+# type list. The type at index 3 has never held an entity in any database seen,
+# so "text_title" is only a guess at what it is for, and probably a wrong one:
+# the titles of guiding texts live in the game_tag type. See FORMAT.md.
 ENTITY_TYPE_ORDER = ["player", "tournament", "source", "text_title", "team", "game_tag"]
 
 # How far into a record to look for a length-prefixed string. Each entity
@@ -34,10 +36,12 @@ MIN_STRING_LENGTH = 2
 DELETED_NEXT_OFFSET = 12
 DELETED_RECORD_LENGTH = DELETED_NEXT_OFFSET + 8
 
-# A tournament record ends with a fixed-size block of fields after its two
-# strings, with the end date near the end of it (see FORMAT.md).
-TOURNAMENT_TAIL_SIZE = 108
-TOURNAMENT_END_DATE_OFFSET = 60
+# A tournament record ends with a block of fields after its two strings (see
+# FORMAT.md). Its size depends on the number of tiebreak rules, which are a
+# count and a list of shorts ahead of the end date; it is 108 bytes with none.
+TOURNAMENT_PLACE_NATION_OFFSET = 20
+TOURNAMENT_TIEBREAKS_OFFSET = 58
+TOURNAMENT_TRAILING_SIZE = 44  # after the end date, always zero
 
 # The fixed-size blocks that follow the strings of a source and of a team.
 SOURCE_TAIL_SIZE = 12
@@ -187,9 +191,11 @@ def _deserialize_team(entity_id, data):
         if offset + TEAM_TAIL_SIZE != len(record):
             raise ValueError(f"expected {TEAM_TAIL_SIZE} bytes after the title, "
                              f"but {len(record) - offset} remain in the record")
+        team_number, season, year, nation = struct.unpack_from("<BBHB", record, offset)
     except (ValueError, struct.error) as e:
         raise ValueError(f"malformed team #{entity_id}: {e}") from e
-    return Team(id=entity_id, title=title, trailing=record[offset:])
+    return Team(id=entity_id, title=title, team_number=team_number, season_byte=season,
+                year=year, nation_value=nation)
 
 
 def _deserialize_game_tag(entity_id, data):
@@ -219,19 +225,27 @@ def _deserialize_tournament(entity_id, data):
         record = _record_of(data)
         place, offset = _read_length_prefixed_string(record, 4)
         title, offset = _read_length_prefixed_string(record, offset)
-        if offset + TOURNAMENT_TAIL_SIZE != len(record):
-            raise ValueError(f"expected {TOURNAMENT_TAIL_SIZE} bytes after the strings, "
-                             f"but {len(record) - offset} remain in the record")
         date, type_byte, team_byte, nation, _, category, flags, rounds, _ = struct.unpack_from(
             "<i8B", record, offset)
         latitude, longitude = struct.unpack_from("<2f", record, offset + 12)
-        end_date = struct.unpack_from("<i", record, offset + TOURNAMENT_END_DATE_OFFSET)[0]
+        place_nation = record[offset + TOURNAMENT_PLACE_NATION_OFFSET]
+        at = offset + TOURNAMENT_TIEBREAKS_OFFSET
+        count = struct.unpack_from("<h", record, at)[0]
+        if count < 0:
+            raise ValueError(f"negative number of tiebreak rules {count}")
+        tiebreaks = struct.unpack_from(f"<{count}h", record, at + 2)
+        at += 2 + 2 * count
+        end_date = struct.unpack_from("<i", record, at)[0]
+        if at + 4 + TOURNAMENT_TRAILING_SIZE != len(record):
+            raise ValueError(f"expected {TOURNAMENT_TRAILING_SIZE} bytes after the end date, "
+                             f"but {len(record) - at - 4} remain in the record")
     except (ValueError, struct.error) as e:
         raise ValueError(f"malformed tournament #{entity_id}: {e}") from e
     return Tournament(
         id=entity_id, title=title, place=place, encoded_date=date, type_byte=type_byte,
         team_byte=team_byte, nation_value=nation, category=category, flags_value=flags,
-        rounds=rounds, latitude=latitude, longitude=longitude, encoded_end_date=end_date)
+        rounds=rounds, latitude=latitude, longitude=longitude,
+        place_nation_value=place_nation, tiebreak_values=tiebreaks, encoded_end_date=end_date)
 
 
 class EntityDatabase:

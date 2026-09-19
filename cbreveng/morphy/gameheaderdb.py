@@ -13,8 +13,9 @@ from morphy.gameheader import GameHeader
 HEADER_SIZE = 192
 RECORD_SIZE = 192
 
-# The first byte of a record has this bit set if the game is deleted.
+# Bits of the first byte of a record.
 DELETED_FLAG = 0x80
+GUIDING_TEXT_FLAG = 0x02
 
 # GameHeader field -> (offset in the record, how to read the value): either a
 # struct format, or a number of bytes to read as a little-endian unsigned int
@@ -53,6 +54,19 @@ FIELDS = {
     "encoded_played_date": (0xBC, "<i"),
 }
 
+# A guiding text is not a game, and its record has its own layout: the fields
+# above from 0x10 on do not apply to it. See FORMAT.md.
+TEXT_FIELDS = {
+    "moves_offset": (0x08, "<q"),
+    "tournament_id": (0x10, "<q"),
+    "source_id": (0x18, "<q"),
+    "annotator_id": (0x20, "<q"),
+    "game_tag_id": (0x28, "<q"),
+    "creation_timestamp": (0x30, "<q"),
+    "media_offset": (0x38, "<q"),
+    "version": (0x40, "<q"),
+}
+
 
 class GameHeaderDatabase:
     def __init__(self, path, entities=None):
@@ -86,8 +100,11 @@ class GameHeaderDatabase:
         return struct.unpack_from(fmt, data, offset)[0]
 
     def _parse(self, recnum, data):
-        values = {name: self._read_field(data, offset, fmt) for name, (offset, fmt) in FIELDS.items()}
-        return GameHeader(id=recnum, deleted=bool(data[0] & DELETED_FLAG), _entities=self.entities, **values)
+        guiding_text = bool(data[0] & GUIDING_TEXT_FLAG)
+        fields = TEXT_FIELDS if guiding_text else FIELDS
+        values = {name: self._read_field(data, offset, fmt) for name, (offset, fmt) in fields.items()}
+        return GameHeader(id=recnum, deleted=bool(data[0] & DELETED_FLAG), guiding_text=guiding_text,
+                          _entities=self.entities, **values)
 
     def close(self):
         self._file.close()
