@@ -7,6 +7,7 @@
 
 INDEXES.md is the source of truth for both layouts.
 """
+import mmap
 import os
 import struct
 from dataclasses import dataclass
@@ -17,6 +18,7 @@ CATALOG_PAGE = 1
 CATALOG_ENTRY_SIZE = 128
 NODE_SIZE = 40
 NODES_PER_PAGE = PAGE_SIZE // NODE_SIZE
+PAGES_PER_DIRECTORY = PAGE_SIZE // 4
 
 # .2lid entity types whose keys hold more than text.
 TOURNAMENT_TYPE = 1
@@ -38,6 +40,7 @@ ROLES = {
     5: "team",
     6: "game tag",
     7: "text title",
+    8: "analysis title",
 }
 
 
@@ -49,7 +52,7 @@ class IndexNode:
     parent: int
     key: bytes  # 8 bytes, in comparison (big-endian) order; all zero if not set
     balance: int
-    value: int  # `?` usually the node's own id, sometimes -1 or another id
+    slot: int  # the node's slot in its page (id mod 102), or -1 (only ever on a leaf)
 
     def key_text(self, entity_type):
         """The key shown as text: a tournament's starts with its year, and a
@@ -70,10 +73,11 @@ class IndexNode:
 class SortIndex:
     name: str
     entity_type: int  # the .2lid entity type, 0-based (players 0, tournaments 1, ...)
-    number: int  # `?` 1-6, the same for game tags, text titles and "Analysen"
+    number: int  # `?` 1-6, the same for game tags, text titles and analysis titles
     root: int
     count: int
-    pages: list  # the pages holding the nodes: ids 0-101 on the first, and so on
+    page: int  # the only node page, or the top directory page
+    depth: int  # levels of directory pages above the node pages
 
 
 class SortIndexes:
@@ -98,32 +102,31 @@ class SortIndexes:
         indexes = []
         for offset in range(0, PAGE_SIZE, CATALOG_ENTRY_SIZE):
             entry = catalog[offset:offset + CATALOG_ENTRY_SIZE]
-            directory, page, root, count = struct.unpack_from(">hiqq", entry, 0)
+            depth, page, root, count = struct.unpack_from(">hiqq", entry, 0)
             name_length = struct.unpack_from(">H", entry, 26)[0]
             if not name_length:
                 continue
             name = entry[28:28 + name_length].decode("latin-1")
-            pages = self._directory(page) if directory else [page]
-            indexes.append(SortIndex(name, entry[22] - 1, entry[24], root, count, pages))
+            indexes.append(SortIndex(name, entry[22] - 1, entry[24], root, count, page, depth))
         return indexes
 
-    def _directory(self, page):
-        """The node pages listed on a directory page, which ends at a 0."""
-        data = self._page(page)
-        pages = []
-        for (number,) in struct.iter_unpack("<i", data):
-            if number == 0:
-                break
-            pages.append(number)
-        return pages
+    def node_page(self, index, node_id):
+        """The page holding a node: the node pages are numbered from 0, 102
+        nodes each, and found through `depth` levels of directory pages of
+        1024 page numbers each."""
+        position, page = node_id // NODES_PER_PAGE, index.page
+        for level in range(index.depth - 1, -1, -1):
+            span = PAGES_PER_DIRECTORY ** level
+            page = struct.unpack_from("<i", self.data, page * PAGE_SIZE + 4 * (position // span))[0]
+            position %= span
+        return page
 
     def node(self, index, node_id):
-        page = index.pages[node_id // NODES_PER_PAGE]
-        offset = page * PAGE_SIZE + (node_id % NODES_PER_PAGE) * NODE_SIZE
+        offset = self.node_page(index, node_id) * PAGE_SIZE + (node_id % NODES_PER_PAGE) * NODE_SIZE
         left, right, parent = struct.unpack_from("<qqq", self.data, offset)
         key = self.data[offset + 24:offset + 32][::-1]
-        balance, _, value = struct.unpack_from("<hhi", self.data, offset + 32)
-        return IndexNode(node_id, left, right, parent, key, balance, value)
+        balance, _, slot = struct.unpack_from("<hhi", self.data, offset + 32)
+        return IndexNode(node_id, left, right, parent, key, balance, slot)
 
     def sorted_nodes(self, index):
         """The nodes of an index in sort order (an in-order walk of the tree)."""
@@ -157,7 +160,7 @@ class GameLists:
     def __init__(self, path):
         self.path = path
         with open(path, "rb") as f:
-            self.data = f.read()
+            self.data = mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ)
         _, self.blocks_used, _ = struct.unpack_from("<iii", self.data, 0)
         self.record_count = (len(self.data) - LISTS_HEADER_SIZE) // LISTS_RECORD_SIZE
 

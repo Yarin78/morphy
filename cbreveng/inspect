@@ -220,7 +220,7 @@ def sorted_command(file, index):
         if index is None:
             for number, idx in enumerate(indexes.indexes, 1):
                 click.echo(f"{number}. {idx.name}: entity type {idx.entity_type}, {idx.count} entries, "
-                           f"pages {idx.pages}, root {idx.root}")
+                           f"page {idx.page}, {idx.depth} directory levels, root {idx.root}")
             return
         idx = indexes.indexes[int(index) - 1] if index.isdigit() else indexes.get(index)
         names = entity_names(file, idx.entity_type)

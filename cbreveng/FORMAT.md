@@ -501,7 +501,7 @@ Known fields of a game record:
 |--------|------|------|-------------|
 | 0x00 | 1 | byte | type: bit 0 always set, bit 1 = guiding text, bit 7 = deleted (probe) |
 | 0x01 | 1 | byte | `?` always 0 |
-| 0x02 | 1 | byte | `?` always 1 (wch2) |
+| 0x02 | 1 | byte | record kind: 1 for a game or a guiding text, 2 for an analysis, which has a layout of its own (mega), see [INDEXES.md](INDEXES.md#analyses) |
 | 0x03 | 1 | byte | `?` always the same as the type byte at 0x00 (wch2) |
 | 0x04 | 4 | | `?` always 0 |
 | 0x08 | 8 | long | offset of the moves in the `.2cbg` file (wch2) |
@@ -779,7 +779,7 @@ A value that a copy inherits cannot identify a game on its own.
 - Which rating list each id in the second short of a rating type refers to,
   beyond the eight seen (see above), and why chess.com stores no nation while the
   other two servers store `Internet`.
-- What 0x02 and 0x03 of a game record are.
+- What 0x03 of a game record is (0x02 is the record kind, see above).
 - Whether a guiding text stores a round anywhere, and what the high bits of its
   media offset mean (see above).
 - What the endgame bits at 0xa8 mean, beyond the seven guessed above, and whether
