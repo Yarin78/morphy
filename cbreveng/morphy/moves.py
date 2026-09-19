@@ -181,7 +181,7 @@ class Node:
 class GameMoves:
     offset: int
     variant: int  # VARIANT_NORMAL or VARIANT_CHESS960
-    hash: bytes
+    checksum: bytes
     words: list  # the whole word stream, from the section count to the final END_OF_LINE
     sections: dict  # section marker -> list of words
     root: Node
@@ -268,8 +268,22 @@ TEXT_MAGIC = bytes.fromhex("00100500")
 @dataclass
 class GuidingText:
     offset: int
-    hash: bytes
+    checksum: bytes
     contents: list  # (language, HTML as bytes); the language is a nation code, 0 for none
+
+
+def checksum(data):
+    """The 8 bytes a .2cbg or .2cba record stores at 0x10, a checksum of the A
+    bytes of content after its first word. Whole 8-byte blocks only are split
+    into 8 runs of equal length, and byte i of the value (from the least
+    significant) is the sum of run i, modulo 256; content shorter than 8 bytes
+    is taken as it is. The value is written big-endian."""
+    runs = len(data) // 8
+    if runs == 0:
+        sums = (data + bytes(8))[:8]
+    else:
+        sums = bytes(sum(data[i * runs:(i + 1) * runs]) & 0xFF for i in range(8))
+    return int.from_bytes(sums, "little").to_bytes(8, "big")
 
 
 class MoveDatabase:
@@ -284,7 +298,7 @@ class MoveDatabase:
         return cls(os.path.splitext(game_file)[0] + ".2cbg")
 
     def _read_record(self, offset):
-        """The framing of the record at offset: the hash, the content (A + 2
+        """The framing of the record at offset: the checksum, the content (A + 2
         bytes), A, B and the record length."""
         self._file.seek(offset)
         head = self._file.read(24)
@@ -293,11 +307,14 @@ class MoveDatabase:
         size, spare_bytes = struct.unpack_from("<ii", head, 8)
         data = self._file.read(size + 2 + spare_bytes + 8)
         record_length = struct.unpack_from("<q", data, size + 2 + spare_bytes)[0]
-        return head[16:24], data[:size + 2], size, spare_bytes, record_length
+        stored = head[16:24]
+        if stored != checksum(data[2:size + 2]):
+            raise ValueError(f"wrong checksum in the record at offset {offset}")
+        return stored, data[:size + 2], size, spare_bytes, record_length
 
     def read_text(self, offset):
         """The contents of the guiding text whose .2cbh record holds this offset."""
-        text_hash, content, *_ = self._read_record(offset)
+        text_checksum, content, *_ = self._read_record(offset)
         if content[:4] != TEXT_MAGIC:
             raise ValueError(f"no guiding text at offset {offset}")
         remaining, count = struct.unpack_from("<ii", content, 4)
@@ -308,11 +325,11 @@ class MoveDatabase:
             language, length = struct.unpack_from("<ii", content, pos)
             contents.append((language, content[pos + 8:pos + 8 + length]))
             pos += 8 + length
-        return GuidingText(offset, text_hash, contents)
+        return GuidingText(offset, text_checksum, contents)
 
     def read(self, offset):
         """The moves of the game whose .2cbh record holds this offset."""
-        game_hash, content, move_bytes, spare_bytes, record_length = self._read_record(offset)
+        game_checksum, content, move_bytes, spare_bytes, record_length = self._read_record(offset)
         if content[:4] == TEXT_MAGIC:
             raise ValueError(f"a guiding text, not a game, at offset {offset}")
         words = list(struct.unpack(f"<{len(content) // 2}H", content))
@@ -338,7 +355,7 @@ class MoveDatabase:
             else:
                 raise ValueError(f"unknown section {marker:#06x} at offset {offset}")
         return GameMoves(
-            offset, variant, game_hash, words[:pos], sections, root, move_bytes, spare_bytes, record_length
+            offset, variant, game_checksum, words[:pos], sections, root, move_bytes, spare_bytes, record_length
         )
 
     def close(self):

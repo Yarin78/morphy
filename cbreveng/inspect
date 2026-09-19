@@ -9,6 +9,7 @@ import os
 import click
 
 from morphy.columns import ID_COLUMN, available_columns, format_objects, parse_columns
+from morphy.annotations import AnnotationDatabase, pgn_order
 from morphy.entities import GameTag, Player, Source, Team, Tournament
 from morphy.entitydb import EntityDatabase
 from morphy.gameheader import GameHeader
@@ -123,7 +124,7 @@ def moves(file, start, limit, raw):
                 if raw:
                     words = " ".join(f"{w:04x}" for w in game.words)
                     click.echo(
-                        f"    offset {game.offset}, hash {game.hash.hex()}, {game.move_bytes} move bytes, "
+                        f"    offset {game.offset}, checksum {game.checksum.hex()}, {game.move_bytes} move bytes, "
                         f"{game.spare_bytes} spare, record length {game.record_length}\n    {words}"
                     )
     except (OSError, ValueError) as e:
@@ -152,6 +153,39 @@ def text(file, game_id, html):
         if html:
             click.echo(content.decode("utf-8", errors="replace"))
             click.echo()
+
+
+@cli.command()
+@click.argument("file", type=DATABASE_FILE)
+@click.option("--start", type=int, default=1, show_default=True, help="First game id to include.")
+@click.option(
+    "--limit", type=int, default=20, show_default=True,
+    help="Maximum number of games to include; 0 means no limit.",
+)
+def annotations(file, start, limit):
+    """Print the annotations of the games in a database, one per line.
+
+    Each annotation is shown with the move it belongs to ("game" for the game
+    as a whole), its type, and its content as far as it is decoded. They are
+    read from the .2cba and .2cbg files with the same base name as FILE. The
+    extension of FILE can be left out.
+    """
+    try:
+        with GameHeaderDatabase(file) as gdb, MoveDatabase.for_game_file(file) as mdb, \
+                AnnotationDatabase.for_game_file(file) as adb:
+            last = gdb.count if limit <= 0 else min(start + limit - 1, gdb.count)
+            for game_id in range(start, last + 1):
+                header = gdb.get(game_id)
+                if header.guiding_text:
+                    continue
+                nodes = pgn_order(mdb.read(header.moves_offset).root)
+                for annotation in adb.read(header.annotation_offset):
+                    index = annotation.position + 1
+                    move = "game" if annotation.position == -1 else (
+                        str(nodes[index].move) if index < len(nodes) else f"?{annotation.position}")
+                    click.echo(f"#{game_id} {annotation.position} {move}: {annotation.name}: {annotation.describe()}")
+    except (OSError, ValueError) as e:
+        raise click.ClickException(str(e))
 
 
 def entity_command(name, entities, cls, what):

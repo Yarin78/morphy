@@ -1,10 +1,12 @@
 # ChessBase "2" format: moves and annotations
 
-Working notes on the `.2cbg` (moves) file, and later the `.2cba` (annotations)
-file, of the format described in [FORMAT.md](FORMAT.md). The conventions are the
-same as there: offsets are hexadecimal and relative to the start of the structure,
-integers are little-endian, and **(wch2)**, **(probe)** and **(observed)** say
-what a fact rests on. This file is the source of truth for `morphy/moves.py`.
+Working notes on the `.2cbg` (moves) and `.2cba` (annotations) files of the
+format described in [FORMAT.md](FORMAT.md). The conventions are the same as
+there: offsets are hexadecimal and relative to the start of the structure,
+integers are little-endian (except the [checksum](#the-checksum-at-0x10) of each
+record), and **(wch2)**, **(probe)** and **(observed)** say
+what a fact rests on. This file is the source of truth for `morphy/moves.py` and
+`morphy/annotations.py`.
 
 ## Summary
 
@@ -69,15 +71,15 @@ end of the file. (wch2)
 | 0x00 | 8 | | magic `88 77 66 55 44 33 22 11` |
 | 0x08 | 4 | int | `A`, the size of the content minus 2 |
 | 0x0c | 4 | int | `B`, the size of the spare area |
-| 0x10 | 8 | | `?` a hash, see [below](#the-hash-at-0x10) |
+| 0x10 | 8 | | a checksum of the content, see [below](#the-checksum-at-0x10) |
 | 0x18 | A + 2 | | the content: a game's [word stream](#the-word-stream), or a [guiding text](#guiding-texts) |
 | 0x1a + A | B | | spare, all zero |
 | 0x1a + A + B | 8 | long | record length, which is `A + B + 34` |
 
-Why `A` is 2 less than the content is not known. For a game, those last 2 bytes
-are always the `ff ff` that ends the word stream, which made it look as if `A`
-left out the end marker. But a text has no end marker, and its last 2 bytes are
-ordinary content, so `A` is simply 2 short. (wch2, probe)
+`A` is the size of the content after its first 2 bytes (the variant of a game,
+`00 10` of a text, `00 20` of annotations), which is exactly the part the
+[checksum](#the-checksum-at-0x10) covers. For a game, it can look as if `A`
+leaves out the final `ff ff` instead, since that is also 2 bytes. (wch2, probe)
 
 #### The spare area
 
@@ -359,7 +361,7 @@ The start of game 1 of `wch2`, 1.d4 d5 2.c4 c6 3.e3 Bf5 4.Nc3 (4.cxd5 …) e6:
 88 77 66 55 44 33 22 11    magic
 c0 02 00 00                A = 704
 62 00 00 00                B = 98
-a1 74 64 d5 eb aa 48 26    hash
+a1 74 64 d5 eb aa 48 26    checksum
 01 00                      one section
 fc ff                      moves
 e1 ac   cf af              d2-d4, d7-d5
@@ -373,31 +375,38 @@ The alternative `c4xd5` is the very last line in the stream, since it is the
 first branch point in the game. The record is 836 bytes and ends with the long
 `44 03 00 00 00 00 00 00`.
 
-### The hash at 0x10
+### The checksum at 0x10
 
-The 8 bytes at 0x10 are not understood. They look random for a normal game.
-They are the same for the two games in `wch2` whose move data is identical
-(both empty). They do not appear anywhere in `wch1`, and they are not a CRC32,
-Adler32, MD5, SHA-1, SHA-256 or BLAKE2 of the stream.
+The 8 bytes at 0x10 are a 64-bit checksum of the `A` bytes of content after the
+first 2 bytes (after the variant word of a game), and **the one big-endian field
+in these files**. With `m = A / 8`, rounded down:
 
-In very short games they are not random at all: they are the stream's first
-four words after the first word, **read as a big-endian 64-bit number with
-the first word at the bottom**. (observed)
+1. Only the first `8m` bytes count. The last `A mod 8` bytes are left out.
+2. They are split into 8 runs of `m` bytes, and each run is summed modulo 256.
+3. Byte `i` of the checksum, counting from the least significant, is the sum of
+   run `i`, bytes `i·m` to `i·m + m − 1`.
 
-| Game | Stream after the first word | Bytes at 0x10 |
-|------|------------------------|---------------|
-| no moves | `fffc ffff` | `00 00 00 00 ff ff ff fc` |
-| 1.d4 | `fffc ace1 ffff` | `00 00 ff ff ac e1 ff fc` |
-| 1.e4 e5 | `fffc ad3f b02d ffff` | `ff ff b0 2d ad 3f ff fc` |
-| Chess960, 1.e3 d5 | `fffb 007b fffc ad40 afcf ffff` | `ad 40 ff fc 00 7b ff fb` |
+If `A` is less than 8, the checksum is the content itself read as a
+little-endian number, as if padded with zeros to 8 bytes; that is the same rule
+with runs of one byte. Either way the value is written big-endian, so its bytes
+appear in the file in the reverse order of the runs.
 
-In the last one there are more than four words, and the extra ones are simply
-lost, so shifting the words in (with `h = h << 16 | w` over the reversed stream)
-fits all four. For a game of any length, though, the value is not the first
-four words, and the setup game (`fffb 0001 0000 0000 …`) has
-`d1 f8 93 56 c4 e3 00 fb`, which isn't them either. Perhaps this is a hash function that only mixes once its input is
-longer than one block, or perhaps it is a key for duplicate detection that
-stores short games as they are. Either way it cannot be computed yet.
+This holds for every record in every sample, 2,154 in all: every game and
+guiding text in `.2cbg`, and every game in `.2cba`. The `probe` games 17-36,
+short games made by adding one move at a time, show each step: (wch2, probe)
+
+| Game | Content after the variant | m | Stored |
+|------|------|---|------|
+| 1.e4 e5 2.Nf3 Nc6 | `fffc ad3f b02d 325f 836b ffff` (12 bytes) | 1 | `32 5f b0 2d ad 3f ff fc`, the first 8 bytes |
+| … 3.Bc4 | 14 bytes | 1 | the same: the new move is in the left-out bytes |
+| … 3…Bc5 | `fffc ad3f … 3c61 93eb ffff` (16 bytes) | 2 | `fe 7e 9d ee 91 dd ec fb`: `fb` = `fc + ff`, `ec` = `3f + ad`, … |
+| … 3…Be7 | as above, with `93df` | 2 | `fe 72 …`: only the byte for that word changes |
+
+So the checksum changes in steps: adding a move only shows once it completes an
+8-byte block, and once `m` is 3 or more a move's bytes share a sum with their
+neighbours. It is far too weak to identify a game, but it is enough to catch a
+record that was damaged or read at the wrong offset, which is presumably what
+it's for. It is not in v1.
 
 ## Guiding texts
 
@@ -467,9 +476,196 @@ texts of `wch2` with `wch1`: (wch2)
   559 of them differ, all in links like these.
 - The title moved out of the text into a game tag entity, see FORMAT.md.
 
+## `.2cba` — annotations
+
+**The annotations are v1's, repackaged.** Every annotation of `wch2` decodes to
+exactly the data `wch1` has: the same types with the same numbers, on the same
+moves, in the same order. What changed is the framing around them and some field
+widths, while a few types have their bytes reversed. And one thing changed
+completely: which move a position number means. (wch2)
+
+### File header and records
+
+The file header is the same as the [`.2cbg` header](#file-header), apart from
+`00 00` at 0x0a. Records have the same framing as `.2cbg` records: the magic,
+`A`, `B`, an 8-byte checksum, `A + 2` bytes of content, the spare area and the record
+length. They are also stored back to back in game order, and grow in the same
+way. A game's `.2cbh` record has the offset of its `.2cba` record at 0x10.
+
+**Every game has a record**, even with no annotations, where v1 stores offset 0.
+A guiding text has none: its `.2cbh` record has no annotation offset.
+
+The checksum at 0x10 is computed [as in `.2cbg`](#the-checksum-at-0x10), over
+the content after its `00 20`. For a record with no annotations that is
+`ff ff ff 7f`, fewer than 8 bytes, so the checksum is `00 00 00 00 7f ff ff ff`.
+(wch2, probe)
+
+### Content
+
+| Size | Type | Description |
+|------|------|-------------|
+| 2 | | `00 20` |
+| | | position blocks, each as below, in ascending order of position |
+| 4 | int | `0x7fffffff`, the end |
+
+A position block:
+
+| Size | Type | Description |
+|------|------|-------------|
+| 4 | int | the position, see below |
+| 4 | int | the number of annotations |
+| … | | the annotations, each a short type and then its data |
+
+A game with no annotations is just `00 20 ff ff ff 7f`.
+
+v1 writes each annotation with its own position (3 bytes) and length (2 bytes).
+v2 groups the annotations by position, and has no length at all, so every type
+has to be understood to get past it.
+
+### Positions
+
+Position −1 is the game as a whole, before the first move. Otherwise a position
+counts the moves of the tree, starting from 0, **in the order a PGN lists
+them**: each alternative, with everything that follows it, comes right after the
+move it is an alternative to, before the main line goes on. v1 numbers them the
+other way round: the whole main line first, then the variations, deepest first.
+That is also the order v2 stores the moves in, so the two formats have swapped
+orders between their moves and their annotations. (wch2)
+
+In `1.e4 c5 (1...c6 2.d4) 2.Nf3`, the positions are e4 0, c5 1, c6 2, d4 3,
+Nf3 4. v1 would have Nf3 at 2, c6 at 3 and d4 at 4.
+
+Annotations on the same move keep v1's order. (wch2)
+
+### Annotation types
+
+The same type numbers as v1, as a short. The table lists every type in `wch2`,
+with how its data differs from v1's; see the v1 notes
+(`morphy-cbh/docs/cbh-format/annotations.md`) for what the fields mean.
+Everything is checked against all the annotations of each type in `wch2`:
+(wch2)
+
+| Type | Count | Name | Data in v2 |
+|------|------:|------|------|
+| `02` | 16,387 | text after move | short 0, short language, int length, text |
+| `82` | 2,049 | text before move | as `02` |
+| `03` | 23,249 | symbols | 3 bytes: move, evaluation, prefix; v1 leaves out trailing zeros |
+| `04` | 522 | colored squares | int length, then v1's data |
+| `05` | 1,025 | arrows | int length, then v1's data |
+| `07` | 830 | time spent | v1's 4 bytes, reversed |
+| `09` | 5 | training | see below |
+| `13` | 12 | game quotation | see below |
+| `14` | 8 | pawn structure | 1 byte, as v1 |
+| `15` | 2 | piece path | int length, then v1's data |
+| `18` | 162 | critical position | 1 byte, as v1 |
+| `22` | 72 | medals | v1's 4 bytes, reversed |
+| `23` | 102 | variation color | v1's 4 bytes, reversed |
+| `24` | 1 | time control | `01`, v1's three series little-endian, int 0; 38 bytes |
+| `25` | 102 | video stream time | v1's 4 bytes, reversed |
+| `26` | 6 | evaluations | see below |
+
+"Reversed" means v1's big-endian int is now little-endian, so these are the same
+value.
+
+#### Text
+
+The text bytes are exactly v1's, in all 18,436 comments. That means they are
+**not UTF-8**, unlike names in the `.2lid` file and guiding texts: `…` is the
+single byte `85`, and German umlauts are single bytes, as in cp1252. (wch2)
+
+The language is no longer a nation code but a small number: (wch2)
+
+| v2 | v1 | Language | Comments in `wch2` |
+|---:|---:|---|---:|
+| 0 | 42 | English | 8,804 |
+| 1 | 53 | German | 2,153 |
+| 2 | 49 | French | 17 |
+| 3 | 43 | Spanish | 591 |
+| 7 | 0 | any language | 6,871 |
+
+This is the order v1 uses for the languages of guiding texts, where Italian,
+Dutch and Portuguese come next, so they are presumably 4, 5 and 6.
+
+A text made in ChessBase for a setup or Chess960 game holds `[#]`, the diagram
+marker, and for Chess960 the start position, e.g. `[#] Chess 960-Position 566`.
+(probe)
+
+#### Evaluations
+
+Type `0x26` holds an engine evaluation for each move of the main line, at
+position −1. v1 has this type too (the Java code does not know it), and in
+`wch2` it is in the six games where `wch1` has it:
+
+| Size | Type | Description |
+|------|------|-------------|
+| 1 | | `01` |
+| 4 | int | the number of bytes that follow |
+| 2 | short | the number of entries |
+| 4 · n | | the entries |
+
+Each entry is v1's entry reversed:
+
+| Size | Type | Description |
+|------|------|-------------|
+| 2 | short | the evaluation in centipawns (or moves to mate, see the flag) |
+| 1 | byte | the search depth |
+| 1 | byte | 0 for an evaluation, `ff` for none (value and depth 0), 1 in a few entries, presumably mate |
+
+In `wch2`, there are as many entries as positions in the main line, the start
+included. ChessBase itself writes one per move (`reveng1`), and doesn't update
+them when moves are added: `probe` game 2 has 90, which is what fits the 89 plies
+it had after its first round of edits, not the 103 it has now. Of the games made
+in ChessBase, both games of `reveng1` and game 2 of `probe` have evaluations, at
+depth 1, while the other `probe` games with moves (1, 13-16) have none. What
+makes ChessBase add them is not known. (wch2, probe)
+
+#### Training
+
+A training question, with the same content as v1 but slightly wider fields. v1
+doesn't decode it either (the Java code keeps the raw bytes), so the fields below
+are only what the samples show:
+
+| Size | Description |
+|------|-------------|
+| 6 | `01 01 01 00 00 00`, where v1 has `01 00 01` and a short length |
+| 4 | int, the time allowed in seconds (e.g. 300) |
+| 2 | short, the points |
+| … | the question texts, see below |
+| 6 | `?` zero |
+| 1 | the number of solutions |
+| … | each solution: from and to square (v1 numbering, 1 byte each), 2 bytes `?`, then its texts |
+
+A list of texts is a short count, then per text a short `?` (0), an int length
+(a short in v1) and the text. Converting v1 by those rules gives exactly the v2
+bytes for all five. (wch2)
+
+#### Game quotation
+
+A game quoted in a comment, with a header of its own and, optionally, its moves:
+
+| Size | Description |
+|------|-------------|
+| 1 | `01` |
+| 2 | short, v1's quotation type: 1 header only, 2 with the moves |
+| 2 | short, v1's unknown value |
+| 4 | int 1 |
+| 1 | 0 |
+| … | six strings: white's last name, white's first name, black's last name, black's first name, site, event; each a length byte (counting the terminating 0), the text and a 0 |
+| 35 | date (int), event type, nation, category, rounds, …, white and black Elo, ECO, result |
+| 44 | `?` mostly zero |
+| … | two rating types, each `01 00 01 00 00` and an int-length name (`FIDE`) |
+| 29 | `?` |
+| 4 | int, the number of moves |
+| 5 · n | the moves: from and to square (v1 numbering, 0-based), 3 bytes `?` (0) |
+| 4 | int 0 |
+
+v1 writes the names as `last,first` and the event before the site. It stores
+the moves in its own compact move encoding, where v2 just lists the squares.
+This layout accounts for all 12 quotations in `wch2`, but most of the fixed
+blocks are not decoded. (wch2)
+
 ## Open questions
 
-- The hash at 0x10 for games longer than a few moves.
 - How a Chess960 game from a setup position is stored, if ChessBase allows one.
 - What happens when the games after an edited game do not have enough spare
   between them (see [The spare area](#the-spare-area)).
@@ -480,7 +676,17 @@ texts of `wch2` with `wch1`: (wch2)
 - Whether word 0 and the words from `c30d` to `fff9` ever mean anything. Nothing
   in the samples uses them.
 
-## `.2cba` — annotations
+`.2cba`:
 
-Not analysed yet. Like the `.2cbg` file, it has a 12-byte header and records
-that start with `88 77 66 55 44 33 22 11`.
+- The fields of a game quotation beyond the names, date, Elos and ECO, and the
+  3 bytes after the squares of each of its moves (promotion, presumably).
+- What the time control's leading `01` and trailing int 0 are.
+- Which language index ITA, NED and POR get (4, 5 and 6 are guessed from v1's
+  order for guiding texts), and whether a comment with non-ASCII text written in
+  ChessBase itself is stored as cp1252 too.
+- The meaning of the flag byte of an evaluation beyond `ff` (none), and why its
+  entry count is one more than the main line's plies in some games and equal to
+  it in others.
+- The annotation types v1 knows that the samples don't have: sound, picture,
+  video, correspondence move and header, web link, and types `0x08` and `0x1a`.
+
