@@ -8,8 +8,9 @@ Working notes on the file format, and the source of truth for the Python code in
 - Offsets are hexadecimal (`0x18`) and relative to the start of the structure
   being described, unless stated otherwise.
 - `int` = 4 bytes, `short` = 2 bytes, `long` = 8 bytes, all signed.
-- Byte order is **little-endian everywhere, except the `.2lid` file header**,
-  which is big-endian.
+- Byte order is **little-endian everywhere, except the `.2lid` file header and
+  the checksum in each `.2cbg` and `.2cba` record** (see
+  [MOVES.md](MOVES.md#the-checksum-at-0x10)), which are big-endian.
 - A `string` is an `int` byte length followed by that many UTF-8 bytes, with no
   terminator. The length counts bytes, not characters (`Mårdell` is 8).
 - The older format (v1), implemented in Java in `morphy-cbh` (`se.yarin.morphy`),
@@ -49,8 +50,8 @@ A database is a set of files with the same base name, e.g. `reveng1.*`:
 |-----------|---------|--------|-------|
 | `.2cbh` | game headers | 192 bytes | 192-byte records, see [below](#2cbh--game-headers) |
 | `.2lid` | entities (players, tournaments, ...) | variable | see [below](#2lid--entities) |
-| `.2cba` | annotations | 12 bytes | records start with `88 77 66 55 44 33 22 11` (wch2) |
-| `.2cbg` | moves | 12 bytes | records start with `88 77 66 55 44 33 22 11` (wch2) |
+| `.2cba` | annotations | 12 bytes | see [MOVES.md](MOVES.md#2cba--annotations) |
+| `.2cbg` | moves and guiding texts | 12 bytes | see [MOVES.md](MOVES.md#2cbg--moves) |
 | `.2lgd` | not analysed | 12 bytes | blocks are a multiple of 1024 bytes |
 | `.2lcd` | not analysed | none | 40960 bytes in every sample, even an empty database (observed) |
 | `.ini` | settings | | plain text INI |
