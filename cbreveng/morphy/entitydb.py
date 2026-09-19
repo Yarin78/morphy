@@ -47,9 +47,11 @@ TOURNAMENT_TRAILING_SIZE = 44  # after the end date, always zero
 SOURCE_TAIL_SIZE = 12
 TEAM_TAIL_SIZE = 5
 
-# The unknown ints at the end of a player record (see FORMAT.md).
-PLAYER_UNKNOWN_FIELDS = ("d1", "d2", "d3", "d4", "d5", "d6")
-PLAYER_UNKNOWN_INTS = len(PLAYER_UNKNOWN_FIELDS)
+# What follows the names of a player (see FORMAT.md): two ints that are
+# always 0, the player's id in ChessBase's own player database, then the FIDE
+# id as a long, presumably preceded by its size (always 8).
+PLAYER_TAIL_FORMAT = "<iiiiq"
+PLAYER_TAIL_SIZE = struct.calcsize(PLAYER_TAIL_FORMAT)
 
 
 @dataclass
@@ -152,13 +154,14 @@ def _deserialize_player(entity_id, data):
         record = _record_of(data)
         last_name, offset = _read_length_prefixed_string(record, 4)
         first_name, offset = _read_length_prefixed_string(record, offset)
-        if offset + PLAYER_UNKNOWN_INTS * 4 != len(record):
-            raise ValueError(f"expected {PLAYER_UNKNOWN_INTS} ints after the names, "
+        if offset + PLAYER_TAIL_SIZE != len(record):
+            raise ValueError(f"expected {PLAYER_TAIL_SIZE} bytes after the names, "
                              f"but {len(record) - offset} bytes remain in the record")
-        d = struct.unpack_from(f"<{PLAYER_UNKNOWN_INTS}i", record, offset)
+        d1, d2, chessbase_id, fide_id_size, fide_id = struct.unpack_from(PLAYER_TAIL_FORMAT, record, offset)
     except (ValueError, struct.error) as e:
         raise ValueError(f"malformed player #{entity_id}: {e}") from e
-    return Player(id=entity_id, first_name=first_name, last_name=last_name, **dict(zip(PLAYER_UNKNOWN_FIELDS, d)))
+    return Player(id=entity_id, first_name=first_name, last_name=last_name, d1=d1, d2=d2,
+                  chessbase_id=chessbase_id, fide_id_size=fide_id_size, fide_id=fide_id)
 
 
 def _deserialize_titled(cls, entity_id, data):

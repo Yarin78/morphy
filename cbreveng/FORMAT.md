@@ -137,20 +137,44 @@ fields in order, starting with that length.
 | n | string bytes | last name |
 | 4 | int | length of first name (0 if none, e.g. for an annotator) |
 | m | string bytes | first name |
-| 4 | int | `d1` `?` (0) |
-| 4 | int | `d2` `?` (0) |
-| 4 | int | `d3` `?` (-1) |
-| 4 | int | `d4` `?` (8) |
-| 4 | int | `d5` `?` (-1) |
-| 4 | int | `d6` `?` (-1) |
+| 4 | int | `d1` `?` always 0, perhaps the length of an always-empty string |
+| 4 | int | `d2` `?` always 0, likewise |
+| 4 | int | id in ChessBase's player database: -1 never looked up, 0 no match (mega) |
+| 4 | int | size of the FIDE id that follows, presumably; always 8 |
+| 8 | long | FIDE id: -1 never looked up, 0 none (mega) |
 
-The record ends after `d6`; a player record with any other length is malformed.
-The unknown ints are called `d1`–`d6` in the code, and they are **the same six
-values in every player of every sample database** — 0, 0, -1, 8, -1, -1 across
-all 134 players — so they carry nothing about the individual player. Nor would
-there be much to carry: ChessBase does not keep a player's title, rating, birth
-date or nation in the database file, but looks them up online, so a player record
-really is just the two names. (probe)
+The record ends after the FIDE id; a player record with any other length is
+malformed.
+
+In every hand-made database these five fields are the same for every player —
+0, 0, -1, 8, -1 — which is why they looked like constants. They are not. `mega`
+has 468,425 different combinations across its 482,530 players, and they are two
+links to other databases that ChessBase fills in by looking players up: (mega)
+
+- The **FIDE id** is plain to see: Kasparov is 4100018, Carlsen 1503014, Judit
+  Polgar 700070, Caruana 2020009 — their real FIDE ids.
+- The **id in ChessBase's player database** is different for every linked player
+  (468,423 distinct values among 468,424 players, only one pair shared). That
+  fits ChessBase keeping titles, ratings, birth dates and photos outside the
+  database file and looking them up online: this is what it looks them up by.
+  Carlsen is 40108, Kasparov 124501.
+
+Together they record how far the lookup got:
+
+| ChessBase id | FIDE id | Players in `mega` | Meaning |
+|------|------|------|------|
+| -1 | -1 | 1,464 | never looked up — every player in a hand-made database |
+| 0 | 0 | 12,642 | looked up, not found |
+| id | 0 | 142,509 | found, has no FIDE id, e.g. players from before FIDE |
+| id | FIDE id | 325,901 | found, with a FIDE id |
+| id | -1 | 14 | found, FIDE id never looked up |
+
+The int before the FIDE id is 8 in every player of every sample database, `mega`
+included, which is exactly the size of the FIDE id after it. Everything else in
+the format is length-prefixed, so it is most likely the FIDE id's size rather
+than a constant. By the same reasoning `d1` and `d2`, both always 0, may be the
+lengths of two strings that are always empty. None of this can be told apart from
+a constant until a database turns up where the values differ.
 
 Example, player "Jimmy Mårdell" (49 bytes, at file offset 0xb8):
 
@@ -158,7 +182,8 @@ Example, player "Jimmy Mårdell" (49 bytes, at file offset 0xb8):
 2d 00 00 00                            record length 45
 08 00 00 00  4d c3 a5 72 64 65 6c 6c   last name "Mårdell"
 05 00 00 00  4a 69 6d 6d 79            first name "Jimmy"
-00 00 00 00  00 00 00 00  ff ff ff ff  08 00 00 00  ff ff ff ff  ff ff ff ff
+00 00 00 00  00 00 00 00  ff ff ff ff  08 00 00 00  ff ff ff ff ff ff ff ff
+                                       d1, d2, ChessBase id -1, size 8, FIDE id -1
 ```
 
 An annotator named "jimmy" is the same record with last name "jimmy" and an empty
@@ -762,7 +787,8 @@ A value that a copy inherits cannot identify a game on its own.
 - The rating type after each elo (see above); only `reveng1` has it.
 - Subround (0x5c) and board (0x5e) are 0 everywhere except in `reveng1`, where
   they were set by hand.
-- The unknown fields in every entity record.
+- `d1` and `d2` of a player (always 0), and whether the 8 before the FIDE id is
+  its size; and the 44 zero bytes at the end of a tournament.
 - What entity type 3 is for. It has a container of its own in every database and
   has **never held a single entity** — not in the hand-made ones, not in a
   converted one, and not in `mega`, with its 482,530 players and 110,137

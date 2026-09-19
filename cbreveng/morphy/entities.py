@@ -24,13 +24,14 @@ class Player:
     id: int
     first_name: str
     last_name: str
-    # Unknown fields, in the order they appear in the record (see FORMAT.md).
-    d1: int
-    d2: int
-    d3: int
-    d4: int
-    d5: int
-    d6: int
+    d1: int  # always 0; perhaps the length of a string that is always empty
+    d2: int  # always 0; likewise
+    # The player's id in ChessBase's own player database, which is what it
+    # looks titles, ratings and birth dates up by. -1 = never looked up,
+    # 0 = looked up but not found.
+    chessbase_id: int
+    fide_id_size: int  # always 8; presumably the size of the FIDE id after it
+    fide_id: int  # -1 = never looked up, 0 = none
 
     @property
     def name(self):
