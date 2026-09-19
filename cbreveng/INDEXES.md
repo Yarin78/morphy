@@ -240,7 +240,8 @@ All little-endian: a 12-byte header, then 512-byte records.
 | 0x08 | 4 | int | `?` always 0 |
 
 256 is the size in bytes of each half of a record, the heads and the list block
-(32 longs each), and may be just that. Nothing in the header gives the number of
+(32 longs each), and may be just that. v1's `.cib` file, which does the same job
+with 64-byte blocks, starts its header with 64. Nothing in the header gives the number of
 records: that follows from the file size (see below). An empty database is just
 the header.
 
@@ -279,8 +280,8 @@ and list `k` of the record is in three slots:
 | `10 + k` | last |
 | `20 + k` | number of records |
 
-Slots 0 and 9 and their partners are always empty, slot 30 is always 12 and slot
-31 always 0. Role 8 is used 402 times in `mega`, once for each entry of its
+Slots 0 and 9 and their partners are always empty, in all 4,355,078 records of
+`mega` too, so there is no role 9. Slot 30 is always 12 and slot 31 always 0. Role 8 is used 402 times in `mega`, once for each entry of its
 Analysen index. (mega)
 
 A list is written in one of three ways, depending on the flags in the top bits
@@ -378,7 +379,6 @@ The rest of the record is zero. Their titles are opening lines such as
 
 - What slot 30 (always 12) is, and whether the 256 in the header really is the
   size of a half-record.
-- Whether role 9 is ever used.
 - What happens to the lists when a game is deleted for good (compacting the
   database), or when an entity is deleted, and whether compacting drops the
   dead blocks.

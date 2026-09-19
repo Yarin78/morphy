@@ -57,8 +57,7 @@ agree once castling is written as the king's move and a null move as `0000`.
 | 0x0b | 1 | byte | format version: 5, or 0 in an empty database |
 
 The file size is the actual size of the file in every sample, `mega` included
-(3,633,383,224 bytes). The file never has unused space at its end: the last
-record's spare area takes that role.
+(3,633,383,224 bytes), and the same holds for `.2cba`.
 
 The 5 is the same version byte as at 0x0d of the `.2cbh` header (see
 [FORMAT.md](FORMAT.md#file-header-1)). An empty database has `01 00`
@@ -166,6 +165,10 @@ Sections follow, each a marker and the words up to the next marker:
     and `0002 fffb 0236 fffc …`, and their `.2cbh` records give the same
     positions in the ECO field. (probe)
   - In a normal game it is a [setup position](#setup-positions).
+  - In a Chess960 game from a setup position it is 1000 in place of the start
+    position number, followed by the setup position. `mega` has two such
+    records, the same game twice: `0002 fffb 03e8 0025 0000 0000 c13d …`, a
+    position at move 37 with white to move and no castling rights. (mega)
 - `fffc`, the moves: the [move tree](#the-move-tree), which runs to the end of
   the stream.
 
@@ -189,7 +192,9 @@ every sample until the setup game: it has two sections, but its first word is 1.
 A move word stands for one move: the piece that moves, its from and to squares,
 the piece it captures, and the piece it promotes to. The words are simply every
 such move numbered in a fixed order. Word 0 is not used, and the moves run from
-1 to `c02c`, 49,196 words in all:
+1 to `c02c`, 49,196 words in all. Word 0 and the words from `c30d` to `fff9`,
+the ones that are neither a move nor a marker, occur in no move section of any
+of `mega`'s 11,988,649 records. (mega)
 
 | Words | Moves |
 |-------|-------|
@@ -581,8 +586,16 @@ value.
 #### Text
 
 The text bytes are exactly v1's, in all 18,436 comments. That means they are
-**not UTF-8**, unlike names in the `.2lid` file and guiding texts: `…` is the
-single byte `85`, and German umlauts are single bytes, as in cp1252. (wch2)
+**mostly not UTF-8**, unlike names in the `.2lid` file and guiding texts: `…` is
+the single byte `85`, and German umlauts are single bytes, as in cp1252. (wch2)
+
+But the encoding is **mixed, and nothing says which a comment uses**. 167
+comments of `wch2` are valid UTF-8 with non-ASCII characters, most of them
+figurines as private-use characters (`ee 80 a6`, U+E026). In `mega`, of 1.77
+million comments, 1.32 million are plain ASCII, 365,000 are cp1252 and 79,000
+UTF-8, in every language. The short before the language is 0 in all of them,
+so it isn't an encoding flag. v1 stored the bytes as they came, and v2 keeps
+them. A reader has to try UTF-8 first and fall back to cp1252. (wch2, mega)
 
 The language is no longer a nation code but a small number: (wch2)
 
@@ -595,7 +608,11 @@ The language is no longer a nation code but a small number: (wch2)
 | 7 | 0 | any language | 6,871 |
 
 This is the order v1 uses for the languages of guiding texts, where Italian,
-Dutch and Portuguese come next, so they are presumably 4, 5 and 6.
+Dutch and Portuguese come next. `mega` confirms 5 as Dutch and 6 as Portuguese
+from the text of the comments. Its 129 comments with language 4 are too short or
+too garbled to tell, so Italian is still a guess. It also has two languages
+beyond v1's eight: **12, Polish** (21 comments) and **18, Greek** (19), all
+written in UTF-8. (mega)
 
 A text made in ChessBase for a setup or Chess960 game holds `[#]`, the diagram
 marker, and for Chess960 the start position, e.g. `[#] Chess 960-Position 566`.
@@ -620,7 +637,7 @@ Each entry is v1's entry reversed:
 |------|------|-------------|
 | 2 | short | the evaluation in centipawns (or moves to mate, see the flag) |
 | 1 | byte | the search depth |
-| 1 | byte | 0 for an evaluation, `ff` for none (value and depth 0), 1 in a few entries, presumably mate |
+| 1 | byte | 0 for an evaluation, `ff` for none (value and depth 0), 1 in a few entries, presumably mate; 2 and `20` occur 10 and 8 times in `mega` |
 
 In `wch2`, there are as many entries as positions in the main line, the start
 included. ChessBase itself writes one per move (`reveng1`), and doesn't update
@@ -677,29 +694,37 @@ blocks are not decoded. (wch2)
 
 ## Open questions
 
-- How a Chess960 game from a setup position is stored, if ChessBase allows one.
-- What happens when the games after an edited game do not have enough spare
-  between them (see [The spare area](#the-spare-area)).
+- What happens when a game grows by more than all the games after it have
+  spare in total, or when the last game grows (see
+  [The spare area](#the-spare-area)). A cascade over the next games has been
+  seen.
 - What byte 0x0a of the file header is: 1 only in an empty `.2cbg`, possibly a
   "never written" flag.
 - What the `00 10 05 00` at the start of a guiding text means. The 5 may be the
   same version as in the file headers.
 - Where the images a text refers to are kept, and whether the rewritten image
   paths in `wch2` are broken or point to something.
-- Whether word 0 and the words from `c30d` to `fff9` ever mean anything. Nothing
-  in the samples uses them.
 
 `.2cba`:
 
 - The fields of a game quotation beyond the names, date, Elos and ECO, and the
   3 bytes after the squares of each of its moves (promotion, presumably).
-- What the time control's leading `01` and trailing int 0 are.
-- Which language index ITA, NED and POR get (4, 5 and 6 are guessed from v1's
-  order for guiding texts), and whether a comment with non-ASCII text written in
-  ChessBase itself is stored as cp1252 too.
-- The meaning of the flag byte of an evaluation beyond `ff` (none), and why its
-  entry count is one more than the main line's plies in some games and equal to
-  it in others.
-- The annotation types v1 knows that the samples don't have: sound, picture,
-  video, correspondence move and header, web link, and types `0x08` and `0x1a`.
+- What the time control's leading `01` and trailing int 0 are. All 20,453 time
+  controls in `mega` have them, so they may be constants.
+- Whether language 4 is Italian.
+- The meaning of an evaluation entry's flag byte beyond 0, 1 and `ff`: `mega`
+  also has 2 and `20`. Also why the entry count is one more than the main
+  line's plies in some games and equal to it in others.
+- The annotation types that are in `mega` but not in `wch2`, so are not
+  decoded yet (v1's names, and how many records they are the first unknown type
+  in): `16` white clock (29,326), `17` black clock (404), `21` v1's computer
+  evaluation (401), `20` video (17) and `1c` web link (15). Samples suggest a
+  clock is 4 bytes, a computer evaluation 6, and a web link a byte `01` followed
+  by two length-prefixed strings, the URL and a text.
+- The training annotation (`09`) layout is not fully right: in some `mega`
+  records the reader loses its place after one, and the rest of the record
+  reads as nonsense types. Another 698 records fail in other ways, which were
+  not looked into.
+- Sound, picture and correspondence annotations, and types `0x08` and `0x1a`,
+  appear in no sample, `mega` included.
 

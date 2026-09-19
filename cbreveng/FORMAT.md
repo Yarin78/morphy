@@ -33,7 +33,10 @@ Working notes on the file format, and the source of truth for the Python code in
   only place some fields are set at all.
 - `wch2` — 1038 world championship games, converted by ChessBase from the v1
   database in `wch1`. The game ids match one to one between the two, so decoding
-  `wch1` with the Java code gives an expected value for every game.
+  `wch1` with the Java code gives an expected value for every game. The copy
+  in `wch2/` is the file as converted. The top-level `wch2.2cbh` has since been
+  classified in ChessBase (beauty, Top Game, final material), which filled in
+  the [classification scores](#classification-scores).
 - `mega` — ChessBase's own Mega Database 2026: 482,530 players, 110,137
   tournaments and 71,455 teams. Far too big to read by hand, but the size is the
   point: a field that is constant across all of it is genuinely constant, and a
@@ -262,7 +265,7 @@ little-endian: (wch2, probe)
 | 58 | 2 | short | k, the number of tiebreak rules (probe) |
 | 60 | 2·k | short | the tiebreak rules, in the order they apply, see below (probe) |
 | 60 + 2k | 4 | int | end date |
-| 64 + 2k | 44 | | `?` always 0 |
+| 64 + 2k | 44 | | `?` always 0, in all of `mega` too |
 
 These rows account for all 108 + 2k bytes. Every tournament in `wch2` and `mega`
 has no tiebreak rules, so the end date sits at 60 in all of them; that is where
@@ -573,7 +576,7 @@ Known fields of a game record:
 | 0x00 | 1 | byte | type: bit 0 always set, bit 1 = guiding text, bit 7 = deleted (probe) |
 | 0x01 | 1 | byte | `?` always 0 |
 | 0x02 | 1 | byte | record kind: 1 for a game or a guiding text, 2 for an analysis, which has a layout of its own (mega), see [INDEXES.md](INDEXES.md#analyses) |
-| 0x03 | 1 | byte | `?` always the same as the type byte at 0x00 (wch2) |
+| 0x03 | 1 | byte | the type byte without the deleted flag: 1 for a game, 3 for a text, even when 0x00 says deleted (probe, mega) |
 | 0x04 | 4 | | `?` always 0 |
 | 0x08 | 8 | long | offset of the moves in the `.2cbg` file (wch2) |
 | 0x10 | 8 | long | offset of the annotations in the `.2cba` file (wch2) |
@@ -599,21 +602,21 @@ Known fields of a game record:
 | 0x84 | 4 | uint | flags, a bitmask (wch2), see [Flags and medals](#flags-and-medals) |
 | 0x88 | 2 | ushort | annotation magnitude flags (wch2) |
 | 0x8a | 2 | short | number of full moves in the game |
-| 0x8c | 4 | uint | final material of one player (wch2), see [Final material](#final-material) |
-| 0x90 | 4 | uint | final material of the other player (wch2) |
+| 0x8c | 4 | uint | final material of one player, the larger value (wch2, mega), see [Final material](#final-material) |
+| 0x90 | 4 | uint | final material of the other player, the smaller value |
 | 0x94 | 4 | | `?` always 0 |
 | 0x98 | 8 | long | creation timestamp (wch2, probe), see [Timestamps](#timestamps) |
 | 0xa0 | 8 | long | last-changed timestamp (wch2), see [Timestamps](#timestamps) |
 | 0xa8 | 6 | bitmask | endgame types the game passed through (wch2), see [Endgame types](#endgame-types) |
-| 0xae | 10 | | `?` always 0 |
+| 0xae | 2 | | `?` always 0 (mega) |
+| 0xb0 | 6 | | classification scores, see [Classification scores](#classification-scores) (mega, wch2) |
+| 0xb6 | 2 | | `?` always 0 (mega) |
 | 0xb8 | 4 | int | game version, increases by 1 on every save |
 | 0xbc | 4 | int | encoded played date, see [Dates](#dates) |
 
 The rows above account for all 192 bytes. The fields marked `?` are zero in every
-game of every sample database, apart from 0x02 and 0x03 as noted. Two fields do
-not use all the room they have: each final material is a 4-byte slot whose top
-two bytes are always zero, and the endgame bitmask is 6 bytes followed by 10 more
-that are always zero, so it could be anything up to 16.
+game of every sample database, apart from 0x02 as noted. Each final material is
+a 4-byte slot whose top two bytes are always zero, in `mega` too.
 
 The entity ids are 0-based ids into the `.2lid` file, in the block/slot sense
 above. Verified with `inspect games` against the sample databases.
@@ -665,10 +668,11 @@ Two fields do not simply carry v1's value across:
   tag, and that counts as a change.
 - The **media offset** is v1's value plus 2⁴⁹ (`0x0002000000000028` for v1's 40),
   or `0xffffffff` where v1 has -1 for no media. The `probe` text, made in
-  ChessBase rather than converted, has 0. What the high bits mean is not known.
+  ChessBase rather than converted, has 0. In `mega`, 551 of the 1,823 texts
+  have the 2⁴⁹ bit and the rest have no high bits. What it means is not known.
 
-Nothing has been seen that holds a text's round, although v1 has a field for it
-(0 in every text of `wch1`).
+Nothing holds a text's round, although v1 has a field for it (0 in every text
+of `wch1`): 0x48 onwards is zero in all 1,823 texts of `mega` as well. (mega)
 
 ### Result, NAG and round
 
@@ -682,6 +686,11 @@ in the Java command line tool.
 
 The round (0x5a), subround (0x5c) and board (0x5e) are shown together as
 `round.subround.board`, leaving out trailing parts that are 0.
+
+In `mega` the subround is set in 2,197,184 games, up to 255, while the board is
+0 in every game. The subround is mostly a team match's board: 1,554,319 of the
+1,930,714 games with a team have one, against 642,865 of the 10,057,529 without.
+(mega)
 
 ### ECO
 
@@ -716,8 +725,16 @@ user. (wch2)
 
 The material a player has left at the end of the game, packed into one value:
 bits 0-2 rooks, bits 3-5 bishops, bits 6-8 knights, bits 9-11 queens and bits
-12-15 pawns. The same encoding as v1. Which of 0x8c and 0x90 is white is not
-known; v1 calls them player 1 and player 2. (wch2)
+12-15 pawns. The same encoding as v1, which calls the two player 1 and player 2.
+(wch2)
+
+**The two are not white and black: 0x8c is the larger value.** Replaying the
+main line of every `wch2` game shows 0x8c is white's material in 440 games and
+black's in 311, while it is the larger number in all 751 games where the two
+differ. In `mega`, 0x8c is at least 0x90 in all 11,988,243 games. Since pawns
+are in the top bits, the side with more pawns comes first. Presumably this is
+for searching by material, where "rook against bishop" should match whichever
+side has the rook. (wch2, mega)
 
 ### Endgame types
 
@@ -734,6 +751,58 @@ rook endgame, which is by far the most common (76 games, all of them ending with
 only rooks and pawns). The rule can't be expected to hold exactly, since the bits
 record what the game passed through and the final material is only where it
 ended up.
+
+### Classification scores
+
+0xb0-0xb5 hold the scores ChessBase's "classify" commands compute: beauty, Top
+Game and, presumably, theoretical importance. They are zero until a database is
+classified. So they are zero in every game made by hand or converted
+(`reveng1`, `probe`, the original `wch2`), but set in 11,791,411 of `mega`'s
+11,988,243 games.
+
+Classifying all of `wch2` for beauty, Top Game and final material, and
+comparing the file before and after, shows what the commands write. In every
+game record, 0xb0-0xb5 is filled in, and the last-changed timestamp and version
+change as for any edit. Nothing else changes. The final material at 0x8c/0x90
+is rewritten with the values it already had. The 13 guiding texts only get a
+new version. (wch2)
+
+The 48 bits, numbered from bit 0 of 0xb0, seem to be several small numbers
+side by side. Bits 7, 8, 17, 33-35 and 43-47 are never set, in `mega` or
+`wch2`. The groups below are inferred from which bits vary together, so the
+boundaries are not certain:
+
+| Bits | Name here | Range seen | Notes |
+|------|-----------|------------|-------|
+| 0-6 | A | 0-90 | part of beauty |
+| 9-16 | B | 0-141 | part of beauty |
+| 18-21 | C | 0 or 15 | the four bits are always set or clear together |
+| 22-26 | D | multiples of 5 up to 30, and 31 | |
+| 27-32 | E | 0-40 | part of beauty |
+| 36-38 | F | 0-7 | grows with the length of the game |
+| 39-42 | G | 1-15 | part of beauty; high for short decisive games (correlation −0.72 with the number of moves, +0.59 with a decisive result) |
+
+**Beauty** is not stored as its own value. ChessBase shows it as a level from 0
+to 3, but its sort order within a level is finer than that. No bit window
+anywhere in the 192-byte record matches the levels shown for ten `mega` games
+(5008802-5008811). Sorted by beauty, `wch2`'s top level holds 25 games, in the
+order 793, 57, 954, 827, 545, 369, 411, 224, 3, 1023, 807, 881, 71, 86, 611,
+907, 891, 777, 570, 230, 237, 35, 859, 102, 1, and level 2 starts with 744,
+248, 717. A weighted sum of A, B, E and G, with G weighted about 13 times the
+other three, puts 24 of those 25 in the top 25. It gets 6-8 of the neighbouring
+pairs in the wrong order, so it is not the exact formula. It is probably a
+function of these four groups, with the parts capped or combined in some other
+way. (wch2)
+
+**Top Game** is not a single bit. v1 kept it in the `.flags` file. Matching
+7,491,110 games of the v1 Mega Database 2021 to `mega` (by date, both ratings,
+ECO and result; the move counts then agree for 99.995% of them), no bit of the
+v2 record follows v1's Top Game flag. Either it is derived from the scores, or
+it was recomputed differently. (mega)
+
+v1's `.flags` file stores its two bits per game most significant bit first. The
+v1 notes say least significant first. Read MSB-first, the "evaluated" bit is set
+for every game, as the notes expect, and Top Game for 17% of them.
 
 ### Rating type
 
@@ -764,6 +833,7 @@ Every combination entered into `probe`: (probe)
 | First short | Kind | Time control | List | Nation | Name |
 |------|------|------|------|------|------|
 | 1 | international | normal | 1 | 0 | `FIDE` |
+| 17 | international | blitz | 2 | 0 | `FIDE` (mega) |
 | 25 | international | rapid | 3 | 0 | `FIDE` |
 | 33 | international | correspondence | 4 | 0 | `ICCF` |
 | 2 | national | normal | 100 | 53 GER / 134 SWE / 247 GBR | *(empty)* |
@@ -880,36 +950,34 @@ Nothing in the file is needed to read the database.
 
 ## Open questions
 
-- Deleted entities: the record layout for the other entity types, what the
-  `22 33 44 55 66 77 88 99` bytes are, and whether a deleted slot is reused when a
-  new entity is added (and if so, which one, and how the list changes).
-- In `1tour/reveng1.2lid`, player #2 is a valid (not deleted) record with both
-  names empty (36 bytes).
+- Deleted entities: what the `22 33 44 55 66 77 88 99` bytes are, and whether a
+  deleted slot is reused when a new entity is added (and if so, which one, and
+  how the list changes).
 - Which rating list each id in the second short of a rating type refers to,
-  beyond the eight seen (see above), and why chess.com stores no nation while the
-  other two servers store `Internet`.
-- What 0x03 of a game record is (0x02 is the record kind, see above).
-- Whether a guiding text stores a round anywhere, and what the high bits of its
-  media offset mean (see above).
-- What the endgame bits at 0xa8 mean, beyond the seven guessed above, and whether
-  the field is more than 6 bytes.
-- Whether 0x8c or 0x90 is white's final material.
-- The rating type after each elo (see above); only `reveng1` has it.
-- Subround (0x5c) and board (0x5e) are 0 everywhere except in `reveng1`, where
-  they were set by hand.
+  beyond the nine seen (see above), and why chess.com stores no nation while the
+  other two servers store `Internet`. `mega` has only FIDE ratings, in 11,615
+  games.
+- What the high bits of a guiding text's media offset mean (see above).
+- How beauty, Top Game and theoretical importance are computed from the
+  classification scores, what C, D and F are, and where exactly the group
+  boundaries lie (see [Classification scores](#classification-scores)).
+- What the endgame bits at 0xa8 mean, beyond the seven guessed above. The field
+  is 6 bytes: 0xae and 0xaf are zero in all of `mega`.
+- The board (0x5e), which is 0 everywhere except in `reveng1`, where it was set
+  by hand. Not even `mega` uses it.
 - `d1` and `d2` of a player (always 0), and whether the 8 before the FIDE id is
-  its size; and the 44 zero bytes at the end of a tournament.
+  its size; and the 44 zero bytes at the end of a tournament. All of them are
+  the same in every record of `mega`, so no sample can answer this.
 - What entity type 3 is for. It has a container of its own in every database and
   has **never held a single entity** — not in the hand-made ones, not in a
   converted one, and not in `mega`, with its 482,530 players and 110,137
   tournaments. Whatever creates one, ChessBase's own flagship database does not
   contain it. The name `text_title` the code gives it is a guess from its
   position and is probably wrong, since the titles of guiding texts go in the
-  game tag type.
-- The 5 bytes after a team's title, and the layout of a text title. Neither has
-  enough data in any sample database: there is one team and no text titles.
-- What the three `07` bytes in a tournament tail are, and why tournament #0 of
-  `wch2` is written differently from the rest (see above).
+  game tag type. Without one, its record layout can't be known either.
+- What the three `07` bytes in a tournament tail are, and why 12 of `mega`'s
+  tournaments and tournament #0 of `wch2` are written differently from the rest
+  (see above).
 - What 0x08 (38) and the first 8 bytes of the `.2cbh` file header are. v1's
   version of the 38 changed between ChessBase versions, so it may be the size or
   layout version of something.

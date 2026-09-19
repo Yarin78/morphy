@@ -123,7 +123,12 @@ _LENGTHS = {
 
 def _describe_text(data):
     language = struct.unpack_from("<H", data, 2)[0]
-    text = data[8:].decode("cp1252", errors="replace").strip().replace("\r\n", " / ")
+    # Comments are stored as they came, in UTF-8 or cp1252, with nothing to say which.
+    try:
+        text = data[8:].decode("utf-8")
+    except UnicodeDecodeError:
+        text = data[8:].decode("cp1252", errors="replace")
+    text = text.strip().replace("\r\n", " / ")
     return f"[{LANGUAGES.get(language, language)}] {text}"
 
 
