@@ -1,0 +1,116 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 312" width="860" height="312" role="img" aria-label="The .2lcd file is a row of 4096-byte pages: page 0 the header, page 1 the catalog of indexes, and the rest directory pages and node pages. Below, the 128-byte catalog entry of the Mega 2026 player index.">
+  <title>The .2lcd file is a row of 4096-byte pages: page 0 the header, page 1 the catalog of indexes, and the rest directory pages and node pages. Below, the 128-byte catalog entry of the Mega 2026 player index.</title>
+  <style>
+  text { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+          font-size: 12px; }
+  .m { font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace; }
+  .sm { font-size: 11px; } .xs { font-size: 10px; } .lg { font-size: 13px; }
+  .b { font-weight: 600; }
+  .box, .wash, .accb, .keyb, .slotb, .roseb { stroke-width: 1.2; }
+  .ln, .lnacc, .lndash { fill: none; stroke-width: 1.5; }
+  .lndash { stroke-width: 1.2; stroke-dasharray: 4 4; }
+
+  .bg { fill: #ffffff; stroke: #d3dad6; }
+  text { fill: #16201c; }
+  .mut { fill: #56625c; } .fnt { fill: #8a958f; }
+  .acc { fill: #16805a; } .keyc { fill: #b07614; } .slotc { fill: #5b5fa8; }
+  .rosec { fill: #a4405f; }
+  .box { fill: #ffffff; stroke: #d3dad6; }
+  .wash { fill: #eff2f0; stroke: #d3dad6; }
+  .accb { fill: #ddefe6; stroke: #16805a; }
+  .keyb { fill: #f6ead3; stroke: #b07614; }
+  .slotb { fill: #e4e5f3; stroke: #5b5fa8; }
+  .roseb { fill: #f6e2e8; stroke: #a4405f; }
+  .ln, .lndash { stroke: #8a958f; }
+  .lnacc { stroke: #16805a; }
+  .hfnt { fill: #8a958f; } .hacc { fill: #16805a; }
+
+  @media (prefers-color-scheme: dark) {
+
+  .bg { fill: #17201d; stroke: #2c3833; }
+  text { fill: #e2e8e5; }
+  .mut { fill: #9daaa3; } .fnt { fill: #6f7c75; }
+  .acc { fill: #2fa877; } .keyc { fill: #b98322; } .slotc { fill: #8c90d8; }
+  .rosec { fill: #d4738f; }
+  .box { fill: #17201d; stroke: #2c3833; }
+  .wash { fill: #1d2824; stroke: #2c3833; }
+  .accb { fill: #16362a; stroke: #2fa877; }
+  .keyb { fill: #3a2d14; stroke: #b98322; }
+  .slotb { fill: #262844; stroke: #8c90d8; }
+  .roseb { fill: #3a1f28; stroke: #d4738f; }
+  .ln, .lndash { stroke: #6f7c75; }
+  .lnacc { stroke: #2fa877; }
+  .hfnt { fill: #6f7c75; } .hacc { fill: #2fa877; }
+
+  }
+  </style>
+  <rect class="bg" x="0.5" y="0.5" width="859" height="311" rx="5"/>
+  <text x="24" y="28" class="lg b">The file: a row of 4096-byte pages</text>
+  <text x="24" y="46" class="xs mut">with the page numbers the player index of Mega Database 2026 uses</text>
+  <rect x="24" y="62" width="110" height="52" class="wash" rx="4"/>
+  <text x="79.0" y="86.0" class="sm b mut" text-anchor="middle">page 0</text>
+  <text x="79.0" y="100.0" class="xs mut" text-anchor="middle">header</text>
+  <rect x="140" y="62" width="110" height="52" class="keyb" rx="4"/>
+  <text x="195.0" y="86.0" class="sm b keyc" text-anchor="middle">page 1</text>
+  <text x="195.0" y="100.0" class="xs mut" text-anchor="middle">catalog</text>
+  <text x="269" y="94" class="lg fnt" text-anchor="middle">…</text>
+  <rect x="282" y="62" width="110" height="52" class="slotb" rx="4"/>
+  <text x="337.0" y="86.0" class="sm b slotc" text-anchor="middle">page 1867</text>
+  <text x="337.0" y="100.0" class="xs mut" text-anchor="middle">directory</text>
+  <rect x="398" y="62" width="110" height="52" class="slotb" rx="4"/>
+  <text x="453.0" y="86.0" class="sm b slotc" text-anchor="middle">page 1868</text>
+  <text x="453.0" y="100.0" class="xs mut" text-anchor="middle">directory</text>
+  <text x="527" y="94" class="lg fnt" text-anchor="middle">…</text>
+  <rect x="540" y="62" width="110" height="52" class="accb" rx="4"/>
+  <text x="595.0" y="86.0" class="sm b acc" text-anchor="middle">page 2459</text>
+  <text x="595.0" y="100.0" class="xs mut" text-anchor="middle">nodes</text>
+  <text x="669" y="94" class="lg fnt" text-anchor="middle">…</text>
+  <text x="686" y="82" class="sm mut">7578 pages in all,</text>
+  <text x="686" y="98" class="sm mut">31 MB</text>
+  <path d="M282 120 L282 128 L650 128 L650 120" class="ln"/>
+  <text x="466.0" y="144" class="xs mut" text-anchor="middle">the player index: two levels of directory, then its node pages</text>
+  <rect x="24" y="164" width="812" height="118" class="box" rx="5"/>
+  <text x="40" y="186" class="sm b">One catalog entry — 128 bytes, big-endian</text>
+  <text x="40" y="202" class="xs mut">page 1 holds 32 of them, one per index; entries not in use have an empty name</text>
+  <rect x="40" y="220" width="42" height="34" class="slotb" rx="2"/>
+  <text x="61.0" y="241.0" class="sm slotc" text-anchor="middle">depth</text>
+  <text x="40" y="214" class="xs m fnt">0x00</text>
+  <text x="61.0" y="270" class="xs m mut" text-anchor="middle">2</text>
+  <rect x="84" y="220" width="60" height="34" class="slotb" rx="2"/>
+  <text x="114.0" y="241.0" class="sm slotc" text-anchor="middle">page</text>
+  <text x="84" y="214" class="xs m fnt">0x02</text>
+  <text x="114.0" y="270" class="xs m mut" text-anchor="middle">1867</text>
+  <rect x="146" y="220" width="86" height="34" class="accb" rx="2"/>
+  <text x="189.0" y="241.0" class="sm acc" text-anchor="middle">root node</text>
+  <text x="146" y="214" class="xs m fnt">0x06</text>
+  <text x="189.0" y="270" class="xs m mut" text-anchor="middle">3</text>
+  <rect x="234" y="220" width="86" height="34" class="box" rx="2"/>
+  <text x="277.0" y="241.0" class="sm" text-anchor="middle">count</text>
+  <text x="234" y="214" class="xs m fnt">0x0e</text>
+  <text x="277.0" y="270" class="xs m mut" text-anchor="middle">481710</text>
+  <rect x="322" y="220" width="46" height="34" class="wash" rx="2"/>
+  <text x="345.0" y="241.0" class="sm mut" text-anchor="middle">type</text>
+  <text x="322" y="214" class="xs m fnt">0x16</text>
+  <text x="345.0" y="270" class="xs m mut" text-anchor="middle">0+1</text>
+  <rect x="370" y="220" width="38" height="34" class="wash" rx="2"/>
+  <text x="389.0" y="241.0" class="sm mut" text-anchor="middle">?</text>
+  <text x="370" y="214" class="xs m fnt">0x17</text>
+  <text x="389.0" y="270" class="xs m mut" text-anchor="middle">3</text>
+  <rect x="410" y="220" width="38" height="34" class="wash" rx="2"/>
+  <text x="429.0" y="241.0" class="sm mut" text-anchor="middle">#</text>
+  <text x="410" y="214" class="xs m fnt">0x18</text>
+  <text x="429.0" y="270" class="xs m mut" text-anchor="middle">0</text>
+  <rect x="450" y="220" width="38" height="34" class="wash" rx="2"/>
+  <text x="469.0" y="241.0" class="sm mut" text-anchor="middle">?</text>
+  <text x="450" y="214" class="xs m fnt">0x19</text>
+  <text x="469.0" y="270" class="xs m mut" text-anchor="middle">1</text>
+  <rect x="490" y="220" width="42" height="34" class="wash" rx="2"/>
+  <text x="511.0" y="241.0" class="sm mut" text-anchor="middle">len</text>
+  <text x="490" y="214" class="xs m fnt">0x1a</text>
+  <text x="511.0" y="270" class="xs m mut" text-anchor="middle">15</text>
+  <rect x="534" y="220" width="316" height="34" class="keyb" rx="2"/>
+  <text x="692.0" y="241.0" class="sm keyc" text-anchor="middle">name</text>
+  <text x="534" y="214" class="xs m fnt">0x1c</text>
+  <text x="692.0" y="270" class="xs m mut" text-anchor="middle">“Default Spieler”</text>
+  <text x="40" y="292" class="xs mut">depth 0 — 0x02 is the one node page;  depth 1 or more — it is the top directory page</text>
+</svg>

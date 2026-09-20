@@ -1,0 +1,105 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 356" width="860" height="356" role="img" aria-label="A database is six files sharing one base name. The game record in .2cbh holds the offset of its moves in .2cbg and its annotations in .2cba, and refers to players, tournaments and the rest by id in .2lid. The .2lcd and .2lgd files index those entities.">
+  <title>A database is six files sharing one base name. The game record in .2cbh holds the offset of its moves in .2cbg and its annotations in .2cba, and refers to players, tournaments and the rest by id in .2lid. The .2lcd and .2lgd files index those entities.</title>
+  <style>
+  text { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+          font-size: 12px; }
+  .m { font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace; }
+  .sm { font-size: 11px; } .xs { font-size: 10px; } .lg { font-size: 13px; }
+  .b { font-weight: 600; }
+  .box, .wash, .accb, .keyb, .slotb, .roseb { stroke-width: 1.2; }
+  .ln, .lnacc, .lndash { fill: none; stroke-width: 1.5; }
+  .lndash { stroke-width: 1.2; stroke-dasharray: 4 4; }
+
+  .bg { fill: #ffffff; stroke: #d3dad6; }
+  text { fill: #16201c; }
+  .mut { fill: #56625c; } .fnt { fill: #8a958f; }
+  .acc { fill: #16805a; } .keyc { fill: #b07614; } .slotc { fill: #5b5fa8; }
+  .rosec { fill: #a4405f; }
+  .box { fill: #ffffff; stroke: #d3dad6; }
+  .wash { fill: #eff2f0; stroke: #d3dad6; }
+  .accb { fill: #ddefe6; stroke: #16805a; }
+  .keyb { fill: #f6ead3; stroke: #b07614; }
+  .slotb { fill: #e4e5f3; stroke: #5b5fa8; }
+  .roseb { fill: #f6e2e8; stroke: #a4405f; }
+  .ln, .lndash { stroke: #8a958f; }
+  .lnacc { stroke: #16805a; }
+  .hfnt { fill: #8a958f; } .hacc { fill: #16805a; }
+
+  @media (prefers-color-scheme: dark) {
+
+  .bg { fill: #17201d; stroke: #2c3833; }
+  text { fill: #e2e8e5; }
+  .mut { fill: #9daaa3; } .fnt { fill: #6f7c75; }
+  .acc { fill: #2fa877; } .keyc { fill: #b98322; } .slotc { fill: #8c90d8; }
+  .rosec { fill: #d4738f; }
+  .box { fill: #17201d; stroke: #2c3833; }
+  .wash { fill: #1d2824; stroke: #2c3833; }
+  .accb { fill: #16362a; stroke: #2fa877; }
+  .keyb { fill: #3a2d14; stroke: #b98322; }
+  .slotb { fill: #262844; stroke: #8c90d8; }
+  .roseb { fill: #3a1f28; stroke: #d4738f; }
+  .ln, .lndash { stroke: #6f7c75; }
+  .lnacc { stroke: #2fa877; }
+  .hfnt { fill: #6f7c75; } .hacc { fill: #2fa877; }
+
+  }
+  </style>
+  <rect class="bg" x="0.5" y="0.5" width="859" height="355" rx="5"/>
+  <marker id="d" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="hacc"/></marker>
+  <marker id="e" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="hfnt"/></marker>
+  <text x="24" y="28" class="lg b">One database, six files</text>
+  <text x="24" y="46" class="xs mut">they share a base name; every one is needed to read the database in full, and the sizes are Mega Database 2026’s</text>
+  <rect x="24" y="74" width="236" height="212" class="box" rx="5"/>
+  <text x="40" y="98" class="sm b m acc">.2cbh</text>
+  <text x="96" y="98" class="sm b">game headers</text>
+  <text x="40" y="114" class="xs mut">192 bytes per game · 2.3 GB</text>
+  <rect x="40" y="130" width="204" height="22" class="keyb" rx="2"/>
+  <text x="48" y="145" class="xs m fnt">0x08</text>
+  <text x="88" y="145" class="xs keyc">moves offset</text>
+  <rect x="40" y="156" width="204" height="22" class="keyb" rx="2"/>
+  <text x="48" y="171" class="xs m fnt">0x10</text>
+  <text x="88" y="171" class="xs keyc">annotation offset</text>
+  <rect x="40" y="182" width="204" height="22" class="accb" rx="2"/>
+  <text x="48" y="197" class="xs m fnt">0x18</text>
+  <text x="88" y="197" class="xs acc">white player</text>
+  <rect x="40" y="208" width="204" height="22" class="accb" rx="2"/>
+  <text x="48" y="223" class="xs m fnt">0x20</text>
+  <text x="88" y="223" class="xs acc">black player</text>
+  <rect x="40" y="234" width="204" height="22" class="accb" rx="2"/>
+  <text x="48" y="249" class="xs m fnt">0x28</text>
+  <text x="88" y="249" class="xs acc">tournament</text>
+  <rect x="40" y="260" width="204" height="22" class="accb" rx="2"/>
+  <text x="48" y="275" class="xs m fnt">0x30</text>
+  <text x="88" y="275" class="xs acc">annotator · source …</text>
+  <rect x="332" y="74" width="244" height="64" class="keyb" rx="5"/>
+  <text x="348" y="100" class="sm b m keyc">.2cbg</text>
+  <text x="404" y="100" class="sm b">moves</text>
+  <text x="348" y="118" class="xs mut">3.6 GB · one record per game</text>
+  <rect x="332" y="158" width="244" height="64" class="keyb" rx="5"/>
+  <text x="348" y="184" class="sm b m keyc">.2cba</text>
+  <text x="404" y="184" class="sm b">annotations</text>
+  <text x="348" y="202" class="xs mut">3.0 GB · one record per game</text>
+  <rect x="332" y="242" width="244" height="64" class="accb" rx="5"/>
+  <text x="348" y="268" class="sm b m acc">.2lid</text>
+  <text x="404" y="268" class="sm b">entities</text>
+  <text x="348" y="286" class="xs mut">2.0 GB · players, tournaments, sources,</text>
+  <text x="348" y="300" class="xs mut">teams and game tags, by id</text>
+  <path d="M244 141 C 290 141, 290 106, 328 106" class="lnacc" marker-end="url(#d)"/>
+  <path d="M244 167 C 290 167, 290 190, 328 190" class="lnacc" marker-end="url(#d)"/>
+  <path d="M244 219 C 290 219, 290 274, 328 274" class="lnacc" marker-end="url(#d)"/>
+  <text x="262" y="122" class="xs keyc">offset</text>
+  <text x="262" y="250" class="xs acc">id</text>
+  <rect x="630" y="158" width="206" height="64" class="slotb" rx="5"/>
+  <text x="646" y="184" class="sm b m slotc">.2lcd</text>
+  <text x="702" y="184" class="sm b">sort orders</text>
+  <text x="646" y="202" class="xs mut">31 MB · a tree per list</text>
+  <rect x="630" y="242" width="206" height="64" class="slotb" rx="5"/>
+  <text x="646" y="268" class="sm b m slotc">.2lgd</text>
+  <text x="702" y="268" class="sm b">games per entity</text>
+  <text x="646" y="286" class="xs mut">2.2 GB · the ids, backwards</text>
+  <path d="M576 262 C 604 262, 604 196, 626 196" class="ln" marker-end="url(#e)"/>
+  <path d="M576 278 L 626 278" class="ln" marker-end="url(#e)"/>
+  <text x="586" y="172" class="xs mut">index it</text>
+  <text x="24" y="322" class="xs mut">Derived data: both indexes can be rebuilt from the game headers and the entities, but ChessBase relies on them.</text>
+  <text x="24" y="340" class="xs mut">A .cko and .cpo pair may sit alongside holding the opening key, and a plain-text .ini holds settings; neither is part of this format.</text>
+</svg>

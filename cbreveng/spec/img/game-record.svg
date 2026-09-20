@@ -1,0 +1,148 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 560" width="860" height="560" role="img" aria-label="A map of the 192-byte game record: eight bytes of common header, two file offsets, seven entity ids, the details of the game, and the values ChessBase computes from the moves.">
+  <title>A map of the 192-byte game record: eight bytes of common header, two file offsets, seven entity ids, the details of the game, and the values ChessBase computes from the moves.</title>
+  <style>
+  text { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+          font-size: 12px; }
+  .m { font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace; }
+  .sm { font-size: 11px; } .xs { font-size: 10px; } .lg { font-size: 13px; }
+  .b { font-weight: 600; }
+  .box, .wash, .accb, .keyb, .slotb, .roseb { stroke-width: 1.2; }
+  .ln, .lnacc, .lndash { fill: none; stroke-width: 1.5; }
+  .lndash { stroke-width: 1.2; stroke-dasharray: 4 4; }
+
+  .bg { fill: #ffffff; stroke: #d3dad6; }
+  text { fill: #16201c; }
+  .mut { fill: #56625c; } .fnt { fill: #8a958f; }
+  .acc { fill: #16805a; } .keyc { fill: #b07614; } .slotc { fill: #5b5fa8; }
+  .rosec { fill: #a4405f; }
+  .box { fill: #ffffff; stroke: #d3dad6; }
+  .wash { fill: #eff2f0; stroke: #d3dad6; }
+  .accb { fill: #ddefe6; stroke: #16805a; }
+  .keyb { fill: #f6ead3; stroke: #b07614; }
+  .slotb { fill: #e4e5f3; stroke: #5b5fa8; }
+  .roseb { fill: #f6e2e8; stroke: #a4405f; }
+  .ln, .lndash { stroke: #8a958f; }
+  .lnacc { stroke: #16805a; }
+  .hfnt { fill: #8a958f; } .hacc { fill: #16805a; }
+
+  @media (prefers-color-scheme: dark) {
+
+  .bg { fill: #17201d; stroke: #2c3833; }
+  text { fill: #e2e8e5; }
+  .mut { fill: #9daaa3; } .fnt { fill: #6f7c75; }
+  .acc { fill: #2fa877; } .keyc { fill: #b98322; } .slotc { fill: #8c90d8; }
+  .rosec { fill: #d4738f; }
+  .box { fill: #17201d; stroke: #2c3833; }
+  .wash { fill: #1d2824; stroke: #2c3833; }
+  .accb { fill: #16362a; stroke: #2fa877; }
+  .keyb { fill: #3a2d14; stroke: #b98322; }
+  .slotb { fill: #262844; stroke: #8c90d8; }
+  .roseb { fill: #3a1f28; stroke: #d4738f; }
+  .ln, .lndash { stroke: #6f7c75; }
+  .lnacc { stroke: #2fa877; }
+  .hfnt { fill: #6f7c75; } .hacc { fill: #2fa877; }
+
+  }
+  </style>
+  <rect class="bg" x="0.5" y="0.5" width="859" height="559" rx="5"/>
+  <text x="24" y="28" class="lg b">The game record — 192 bytes, 16 to a row</text>
+  <text x="24" y="46" class="xs mut">every game has one, at 192 · game id; ids start at 1 and records are never removed</text>
+  <text x="24" y="70" class="xs fnt">Mega Database 2026: 11,990,472 records, 2.3 GB</text>
+  <text x="64" y="116.0" class="xs m fnt" text-anchor="end">0x00</text>
+  <text x="64" y="148.0" class="xs m fnt" text-anchor="end">0x10</text>
+  <text x="64" y="180.0" class="xs m fnt" text-anchor="end">0x20</text>
+  <text x="64" y="212.0" class="xs m fnt" text-anchor="end">0x30</text>
+  <text x="64" y="244.0" class="xs m fnt" text-anchor="end">0x40</text>
+  <text x="64" y="276.0" class="xs m fnt" text-anchor="end">0x50</text>
+  <text x="64" y="308.0" class="xs m fnt" text-anchor="end">0x60</text>
+  <text x="64" y="340.0" class="xs m fnt" text-anchor="end">0x70</text>
+  <text x="64" y="372.0" class="xs m fnt" text-anchor="end">0x80</text>
+  <text x="64" y="404.0" class="xs m fnt" text-anchor="end">0x90</text>
+  <text x="64" y="436.0" class="xs m fnt" text-anchor="end">0xa0</text>
+  <text x="64" y="468.0" class="xs m fnt" text-anchor="end">0xb0</text>
+  <rect x="74" y="96" width="365" height="28" class="roseb" rx="2"/>
+  <text x="256.5" y="113.0" class="xs b rosec" text-anchor="middle">common header</text>
+  <rect x="442" y="96" width="365" height="28" class="keyb" rx="2"/>
+  <text x="624.5" y="113.0" class="xs b keyc" text-anchor="middle">moves offset</text>
+  <rect x="74" y="128" width="365" height="28" class="keyb" rx="2"/>
+  <text x="256.5" y="145.0" class="xs b keyc" text-anchor="middle">annotation offset</text>
+  <rect x="442" y="128" width="365" height="28" class="accb" rx="2"/>
+  <text x="624.5" y="145.0" class="xs b acc" text-anchor="middle">white player</text>
+  <rect x="74" y="160" width="365" height="28" class="accb" rx="2"/>
+  <text x="256.5" y="177.0" class="xs b acc" text-anchor="middle">black player</text>
+  <rect x="442" y="160" width="365" height="28" class="accb" rx="2"/>
+  <text x="624.5" y="177.0" class="xs b acc" text-anchor="middle">tournament</text>
+  <rect x="74" y="192" width="365" height="28" class="accb" rx="2"/>
+  <text x="256.5" y="209.0" class="xs b acc" text-anchor="middle">annotator</text>
+  <rect x="442" y="192" width="365" height="28" class="accb" rx="2"/>
+  <text x="624.5" y="209.0" class="xs b acc" text-anchor="middle">source</text>
+  <rect x="74" y="224" width="365" height="28" class="accb" rx="2"/>
+  <text x="256.5" y="241.0" class="xs b acc" text-anchor="middle">white team</text>
+  <rect x="442" y="224" width="365" height="28" class="accb" rx="2"/>
+  <text x="624.5" y="241.0" class="xs b acc" text-anchor="middle">black team</text>
+  <rect x="74" y="256" width="365" height="28" class="accb" rx="2"/>
+  <text x="256.5" y="273.0" class="xs b acc" text-anchor="middle">game tag</text>
+  <rect x="442" y="256" width="43" height="28" class="box" rx="2"/>
+  <text x="463.5" y="273.0" class="xs b" text-anchor="middle">result</text>
+  <rect x="488" y="256" width="43" height="28" class="box" rx="2"/>
+  <text x="509.5" y="273.0" class="xs b" text-anchor="middle">eval</text>
+  <rect x="534" y="256" width="89" height="28" class="box" rx="2"/>
+  <text x="578.5" y="273.0" class="xs b" text-anchor="middle">round</text>
+  <rect x="626" y="256" width="89" height="28" class="box" rx="2"/>
+  <text x="670.5" y="273.0" class="xs b" text-anchor="middle">subround</text>
+  <rect x="718" y="256" width="89" height="28" class="box" rx="2"/>
+  <text x="762.5" y="273.0" class="xs b" text-anchor="middle">board</text>
+  <rect x="74" y="288" width="89" height="28" class="box" rx="2"/>
+  <text x="118.5" y="305.0" class="xs b" text-anchor="middle">elo</text>
+  <rect x="166" y="288" width="641" height="28" class="box" rx="2"/>
+  <text x="486.5" y="305.0" class="xs b" text-anchor="middle">white rating type</text>
+  <rect x="74" y="320" width="89" height="28" class="box" rx="2"/>
+  <text x="118.5" y="337.0" class="xs b" text-anchor="middle">elo</text>
+  <rect x="166" y="320" width="641" height="28" class="box" rx="2"/>
+  <text x="486.5" y="337.0" class="xs b" text-anchor="middle">black rating type</text>
+  <rect x="74" y="352" width="89" height="28" class="box" rx="2"/>
+  <text x="118.5" y="369.0" class="xs b" text-anchor="middle">ECO</text>
+  <rect x="166" y="352" width="89" height="28" class="box" rx="2"/>
+  <text x="210.5" y="369.0" class="xs b" text-anchor="middle">medals</text>
+  <rect x="258" y="352" width="181" height="28" class="box" rx="2"/>
+  <text x="348.5" y="369.0" class="xs b" text-anchor="middle">flags</text>
+  <rect x="442" y="352" width="89" height="28" class="box" rx="2"/>
+  <text x="486.5" y="369.0" class="xs b" text-anchor="middle">magn.</text>
+  <rect x="534" y="352" width="89" height="28" class="box" rx="2"/>
+  <text x="578.5" y="369.0" class="xs b" text-anchor="middle">moves</text>
+  <rect x="626" y="352" width="181" height="28" class="slotb" rx="2"/>
+  <text x="716.5" y="369.0" class="xs b slotc" text-anchor="middle">material</text>
+  <rect x="74" y="384" width="181" height="28" class="slotb" rx="2"/>
+  <text x="164.5" y="401.0" class="xs b slotc" text-anchor="middle">material</text>
+  <rect x="258" y="384" width="181" height="28" class="wash" rx="2"/>
+  <text x="348.5" y="401.0" class="xs b mut" text-anchor="middle">0</text>
+  <rect x="442" y="384" width="365" height="28" class="wash" rx="2"/>
+  <text x="624.5" y="401.0" class="xs b mut" text-anchor="middle">created</text>
+  <rect x="74" y="416" width="365" height="28" class="wash" rx="2"/>
+  <text x="256.5" y="433.0" class="xs b mut" text-anchor="middle">last changed</text>
+  <rect x="442" y="416" width="273" height="28" class="slotb" rx="2"/>
+  <text x="578.5" y="433.0" class="xs b slotc" text-anchor="middle">endgames</text>
+  <rect x="718" y="416" width="89" height="28" class="wash" rx="2"/>
+  <text x="762.5" y="433.0" class="xs b mut" text-anchor="middle">0</text>
+  <rect x="74" y="448" width="273" height="28" class="slotb" rx="2"/>
+  <text x="210.5" y="465.0" class="xs b slotc" text-anchor="middle">classification</text>
+  <rect x="350" y="448" width="89" height="28" class="wash" rx="2"/>
+  <text x="394.5" y="465.0" class="xs b mut" text-anchor="middle">0</text>
+  <rect x="442" y="448" width="181" height="28" class="wash" rx="2"/>
+  <text x="532.5" y="465.0" class="xs b mut" text-anchor="middle">version</text>
+  <rect x="626" y="448" width="181" height="28" class="wash" rx="2"/>
+  <text x="716.5" y="465.0" class="xs b mut" text-anchor="middle">played date</text>
+  <rect x="24" y="497" width="12" height="12" class="roseb" rx="2"/>
+  <text x="42" y="506" class="xs mut">type, kind, deleted</text>
+  <rect x="168.60000000000002" y="497" width="12" height="12" class="keyb" rx="2"/>
+  <text x="186.60000000000002" y="506" class="xs mut">where the moves and annotations are</text>
+  <rect x="399.6" y="497" width="12" height="12" class="accb" rx="2"/>
+  <text x="417.6" y="506" class="xs mut">entity ids — 56 of the 192 bytes</text>
+  <rect x="614.4000000000001" y="497" width="12" height="12" class="box" rx="2"/>
+  <text x="632.4000000000001" y="506" class="xs mut">what the user entered</text>
+  <rect x="24" y="517" width="12" height="12" class="slotb" rx="2"/>
+  <text x="42" y="526" class="xs mut">computed from the moves</text>
+  <rect x="190.2" y="517" width="12" height="12" class="wash" rx="2"/>
+  <text x="208.2" y="526" class="xs mut">timestamps, version, padding</text>
+  <text x="24" y="554" class="xs mut">A guiding text and an analysis share only the first eight bytes; everything from 0x08 on has a layout of its own.</text>
+</svg>

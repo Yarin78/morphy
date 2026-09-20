@@ -79,17 +79,19 @@ end of the file. (wch2)
 | Offset | Size | Type | Description |
 |--------|------|------|-------------|
 | 0x00 | 8 | | magic `88 77 66 55 44 33 22 11` |
-| 0x08 | 4 | int | `A`, the size of the content minus 2 |
+| 0x08 | 4 | int | `A`, the size of the content |
 | 0x0c | 4 | int | `B`, the size of the spare area |
 | 0x10 | 8 | | a checksum of the content, see [below](#the-checksum-at-0x10) |
-| 0x18 | A + 2 | | the content: a game's [word stream](#the-word-stream), or a [guiding text](#guiding-texts) |
+| 0x18 | 2 | | the tag: the variant of a game, `00 10` of a text, `00 20` of annotations |
+| 0x1a | A | | the content: a game's [word stream](#the-word-stream), or a [guiding text](#guiding-texts) |
 | 0x1a + A | B | | spare, all zero |
 | 0x1a + A + B | 8 | long | record length, which is `A + B + 34` |
 
-`A` is the size of the content after its first 2 bytes (the variant of a game,
-`00 10` of a text, `00 20` of annotations), which is exactly the part the
-[checksum](#the-checksum-at-0x10) covers. For a game, it can look as if `A`
-leaves out the final `ff ff` instead, since that is also 2 bytes. (wch2, probe)
+The 2 bytes at 0x18 are read here as a **tag of their own** rather than as the
+first 2 bytes of the content, which is what makes `A` the plain size of the
+content and the part the [checksum](#the-checksum-at-0x10) covers. For a game,
+it can look as if `A` leaves out the final `ff ff` instead, since that is also
+2 bytes. (wch2, probe)
 
 #### The spare area
 
@@ -155,8 +157,8 @@ position](#setup-positions), up to `c30c`. No other words have been seen.
 | `fffe` | never seen |
 | `ffff` | end of a line |
 
-The stream starts with the **variant**: 1 for normal chess, 2 for Chess960.
-Sections follow, each a marker and the words up to the next marker:
+The record's tag is the **variant**: 1 for normal chess, 2 for Chess960. The
+content is sections, each a marker and the words up to the next marker:
 
 - `fffb`, the start position, only when the game does not start from the
   normal position:
@@ -172,20 +174,23 @@ Sections follow, each a marker and the words up to the next marker:
 - `fffc`, the moves: the [move tree](#the-move-tree), which runs to the end of
   the stream.
 
-Every game in `wch2` starts from the normal position, so its stream starts
-`0001 fffc`. A game with no moves is `0001 fffc ffff`.
+Every game in `wch2` starts from the normal position, so its content starts
+`fffc`. A game with no moves is `fffc ffff`, so `A` is 4.
 
 Examples from `probe`, with the words written as numbers (the bytes are the
 other way round):
 
 ```
-0001 fffc ffff                       no moves
-0001 fffc ace1 ffff                  1.d4
-0002 fffb 007b fffc ad40 afcf ffff   Chess960 #123: 1.e3 d5
+0001 | fffc ffff                       no moves
+0001 | fffc ace1 ffff                  1.d4
+0002 | fffb 007b fffc ad40 afcf ffff   Chess960 #123: 1.e3 d5
 ```
 
-These notes used to read the first word as a count of sections, which fitted
-every sample until the setup game: it has two sections, but its first word is 1.
+The bar marks the end of the tag; the words after it are the content that `A`
+counts.
+
+These notes used to read the tag as a count of sections, which fitted every
+sample until the setup game: it has two sections, but its tag is 1.
 
 ### Move words
 
@@ -378,7 +383,7 @@ The start of game 1 of `wch2`, 1.d4 d5 2.c4 c6 3.e3 Bf5 4.Nc3 (4.cxd5 …) e6:
 c0 02 00 00                A = 704
 62 00 00 00                B = 98
 a1 74 64 d5 eb aa 48 26    checksum
-01 00                      one section
+01 00                      the tag: variant 1, normal chess
 fc ff                      moves
 e1 ac   cf af              d2-d4, d7-d5
 83 ac   72 af              c2-c4, c7-c6
@@ -393,9 +398,9 @@ first branch point in the game. The record is 836 bytes and ends with the long
 
 ### The checksum at 0x10
 
-The 8 bytes at 0x10 are a 64-bit checksum of the `A` bytes of content after the
-first 2 bytes (after the variant word of a game), and **the one big-endian field
-in these files**. With `m = A / 8`, rounded down:
+The 8 bytes at 0x10 are a 64-bit checksum of the `A` bytes of the content, that
+is of everything after the tag, and **the one big-endian field in these files**.
+With `m = A / 8`, rounded down:
 
 1. Only the first `8m` bytes count. The last `A mod 8` bytes are left out.
 2. They are split into 8 runs of `m` bytes, and each run is summed modulo 256.
@@ -411,7 +416,7 @@ This holds for every record in every sample, 2,154 in all: every game and
 guiding text in `.2cbg`, and every game in `.2cba`. The `probe` games 17-36,
 short games made by adding one move at a time, show each step: (wch2, probe)
 
-| Game | Content after the variant | m | Stored |
+| Game | Content | m | Stored |
 |------|------|---|------|
 | 1.e4 e5 2.Nf3 Nc6 | `fffc ad3f b02d 325f 836b ffff` (12 bytes) | 1 | `32 5f b0 2d ad 3f ff fc`, the first 8 bytes |
 | … 3.Bc4 | 14 bytes | 1 | the same: the new move is in the left-out bytes |
@@ -431,7 +436,7 @@ HTML, a complete document for each language: (wch2, probe)
 
 | Size | Type | Description |
 |------|------|-------------|
-| 4 | | `00 10 05 00` in every text |
+| 2 | | `05 00` in every text, after the `00 10` tag |
 | 4 | int | the number of bytes that follow this field |
 | 4 | int | the number of languages |
 | … | | that many entries, each as below |
@@ -452,7 +457,8 @@ of length 0 for each of the other five languages, and a bold sentence is plain
 HTML:
 
 ```
-00 10 05 00
+00 10                        the tag
+05 00
 02 01 00 00                  258 bytes follow
 07 00 00 00                  7 languages
 2a 00 00 00  74 00 00 00     ENG, 116 bytes:
@@ -504,23 +510,23 @@ completely: which move a position number means. (wch2)
 
 The file header is the same as the [`.2cbg` header](#file-header), apart from
 `00 00` at 0x0a. Records have the same framing as `.2cbg` records: the magic,
-`A`, `B`, an 8-byte checksum, `A + 2` bytes of content, the spare area and the record
-length. They are also stored back to back in game order, and grow in the same
+`A`, `B`, an 8-byte checksum, the `00 20` tag, `A` bytes of content, the spare
+area and the record length. They are also stored back to back in game order, and grow in the same
 way. A game's `.2cbh` record has the offset of its `.2cba` record at 0x10.
 
 **Every game has a record**, even with no annotations, where v1 stores offset 0.
 A guiding text has none: its `.2cbh` record has no annotation offset.
 
 The checksum at 0x10 is computed [as in `.2cbg`](#the-checksum-at-0x10), over
-the content after its `00 20`. For a record with no annotations that is
-`ff ff ff 7f`, fewer than 8 bytes, so the checksum is `00 00 00 00 7f ff ff ff`.
+the content, that is after the `00 20` tag. For a record with no annotations the
+content is `ff ff ff 7f`, fewer than 8 bytes, so the checksum is
+`00 00 00 00 7f ff ff ff`.
 (wch2, probe)
 
 ### Content
 
 | Size | Type | Description |
 |------|------|-------------|
-| 2 | | `00 20` |
 | | | position blocks, each as below, in ascending order of position |
 | 4 | int | `0x7fffffff`, the end |
 
@@ -532,7 +538,7 @@ A position block:
 | 4 | int | the number of annotations |
 | … | | the annotations, each a short type and then its data |
 
-A game with no annotations is just `00 20 ff ff ff 7f`.
+A game with no annotations has the end marker alone as its content, so the record holds `00 20 ff ff ff 7f`.
 
 v1 writes each annotation with its own position (3 bytes) and length (2 bytes).
 v2 groups the annotations by position, and has no length at all, so every type
@@ -647,6 +653,42 @@ in ChessBase, both games of `reveng1` and game 2 of `probe` have evaluations, at
 depth 1, while the other `probe` games with moves (1, 13-16) have none. What
 makes ChessBase add them is not known. (wch2, probe)
 
+#### Clocks and the computer evaluation
+
+Three types that `wch2` does not have, so they were read from `mega` alone.
+(mega)
+
+**Clocks** (`16` white, `17` black) are v1's `clockTime`, hundredths of a
+second, with v1's big-endian int reversed like the other 4-byte types. `mega`
+has 58,614 of them in 29,730 games, every one at position −1 and never on a
+move; a game has at most one of each. Read little-endian all but two are under
+24 hours and all but 59 under two; read big-endian 0.7% are. The commonest value
+is 5,400,000, exactly 90 minutes.
+
+It is the time **left**, not the time used. Summing a game's `07` time spent
+annotations and adding this value gives the time control exactly where every
+move carries one: Andreikin-Kramnik from the 2014 Candidates (game 6,706,098)
+has 1:25:42 left against 34:18 used for white and 1:14:56 against 45:04 for
+black, two hours each to the second. Of 1094 games whose time spent covers every
+move, six land on the same whole quarter of an hour for both players, which
+chance would give about once in a million. The plain readings agree: games
+ending 0:00:13 against 0:00:06, or 0:00:56 against an untouched 2:00:00. In one
+game in eight the two clocks are equal and hold the time control, so nothing was
+ever recorded for them.
+
+**The computer evaluation** (`21`) is v1's three little-endian shorts unchanged,
+since v1 already wrote that type little-endian: the score in centipawns, the
+kind, the depth. `mega` has 4434 of them in 315 games, all on a move. The kind
+is 0 in 4278, 1 in 132, 3 in 23 and 32 in one, which matches v1's comment that 0
+is an ordinary score and 1 a number of moves to mate. Bytes 3 and 5 are zero in
+every one, so neither the kind nor the depth exceeds a byte, which is what fixes
+the field boundaries; 95% of the ordinary scores are within ten pawns of level.
+
+In 32 of those 315 games the third short is not a depth but the absolute value
+of the score — −48 with "depth" 48, −103 with 103 — which looks like a fault in
+whatever imported them. Elsewhere it distributes like a search depth, peaking at
+11 to 16.
+
 #### Training
 
 A training question, with the same content as v1 but slightly wider fields. v1
@@ -694,14 +736,18 @@ blocks are not decoded. (wch2)
 
 ## Open questions
 
+These are the working list, with what has been tried and what each rests on.
+[spec/UNKNOWNS.md](spec/UNKNOWNS.md) is the short list of what the specification
+itself leaves open; keep the two in step.
+
 - What happens when a game grows by more than all the games after it have
   spare in total, or when the last game grows (see
   [The spare area](#the-spare-area)). A cascade over the next games has been
   seen.
 - What byte 0x0a of the file header is: 1 only in an empty `.2cbg`, possibly a
   "never written" flag.
-- What the `00 10 05 00` at the start of a guiding text means. The 5 may be the
-  same version as in the file headers.
+- What the `05 00` at the start of a guiding text's content means. The 5 may be
+  the same version as in the file headers.
 - Where the images a text refers to are kept, and whether the rewritten image
   paths in `wch2` are broken or point to something.
 
@@ -715,16 +761,20 @@ blocks are not decoded. (wch2)
 - The meaning of an evaluation entry's flag byte beyond 0, 1 and `ff`: `mega`
   also has 2 and `20`. Also why the entry count is one more than the main
   line's plies in some games and equal to it in others.
-- The annotation types that are in `mega` but not in `wch2`, so are not
-  decoded yet (v1's names, and how many records they are the first unknown type
-  in): `16` white clock (29,326), `17` black clock (404), `21` v1's computer
-  evaluation (401), `20` video (17) and `1c` web link (15). Samples suggest a
-  clock is 4 bytes, a computer evaluation 6, and a web link a byte `01` followed
-  by two length-prefixed strings, the URL and a text.
-- The training annotation (`09`) layout is not fully right: in some `mega`
-  records the reader loses its place after one, and the rest of the record
-  reads as nonsense types. Another 698 records fail in other ways, which were
-  not looked into.
-- Sound, picture and correspondence annotations, and types `0x08` and `0x1a`,
-  appear in no sample, `mega` included.
+- Of the annotation types that are in `mega` but not in `wch2`, the clocks
+  (`16`, `17`) and the computer evaluation (`21`) are decoded above. `1c` web
+  link, 26 annotations in 17 games, is a byte `01` followed by two
+  length-prefixed strings, the URL and a text, but the pieces have not been
+  checked one by one. (mega)
+- Type `08` is 4 bytes. One game of `mega` has one, `06 00 00 00`, and reading
+  it as 4 bytes takes the reader cleanly to the end of that record. What it
+  means is unknown. (mega)
+- The training annotation (`09`) is read as four lists in a row and then the
+  solutions, which accounts for all but 29 of `mega`'s 2315 training games.
+  Those 29 open `01 01 02 00 00 00` rather than `01 01 01 00 00 00`, and what
+  follows the third byte is unknown. With that layout, 48 of `mega`'s 356,955
+  annotated games still fail to read, which was not looked into. (mega)
+- `20` video, type `1a`, and the sound, picture and correspondence annotations
+  appear in no sample: in `mega` no game sets the flag for any of them, so there
+  is nothing to work from. (mega)
 

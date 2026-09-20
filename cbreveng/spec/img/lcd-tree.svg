@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 352" width="860" height="352" role="img" aria-label="A real subtree of the Mega 2026 player index, six players named Carlsen. Walking it in order gives them sorted by first name, although all six share the key carlsen.">
+  <title>A real subtree of the Mega 2026 player index, six players named Carlsen. Walking it in order gives them sorted by first name, although all six share the key carlsen.</title>
+  <style>
+  text { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+          font-size: 12px; }
+  .m { font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace; }
+  .sm { font-size: 11px; } .xs { font-size: 10px; } .lg { font-size: 13px; }
+  .b { font-weight: 600; }
+  .box, .wash, .accb, .keyb, .slotb, .roseb { stroke-width: 1.2; }
+  .ln, .lnacc, .lndash { fill: none; stroke-width: 1.5; }
+  .lndash { stroke-width: 1.2; stroke-dasharray: 4 4; }
+
+  .bg { fill: #ffffff; stroke: #d3dad6; }
+  text { fill: #16201c; }
+  .mut { fill: #56625c; } .fnt { fill: #8a958f; }
+  .acc { fill: #16805a; } .keyc { fill: #b07614; } .slotc { fill: #5b5fa8; }
+  .rosec { fill: #a4405f; }
+  .box { fill: #ffffff; stroke: #d3dad6; }
+  .wash { fill: #eff2f0; stroke: #d3dad6; }
+  .accb { fill: #ddefe6; stroke: #16805a; }
+  .keyb { fill: #f6ead3; stroke: #b07614; }
+  .slotb { fill: #e4e5f3; stroke: #5b5fa8; }
+  .roseb { fill: #f6e2e8; stroke: #a4405f; }
+  .ln, .lndash { stroke: #8a958f; }
+  .lnacc { stroke: #16805a; }
+  .hfnt { fill: #8a958f; } .hacc { fill: #16805a; }
+
+  @media (prefers-color-scheme: dark) {
+
+  .bg { fill: #17201d; stroke: #2c3833; }
+  text { fill: #e2e8e5; }
+  .mut { fill: #9daaa3; } .fnt { fill: #6f7c75; }
+  .acc { fill: #2fa877; } .keyc { fill: #b98322; } .slotc { fill: #8c90d8; }
+  .rosec { fill: #d4738f; }
+  .box { fill: #17201d; stroke: #2c3833; }
+  .wash { fill: #1d2824; stroke: #2c3833; }
+  .accb { fill: #16362a; stroke: #2fa877; }
+  .keyb { fill: #3a2d14; stroke: #b98322; }
+  .slotb { fill: #262844; stroke: #8c90d8; }
+  .roseb { fill: #3a1f28; stroke: #d4738f; }
+  .ln, .lndash { stroke: #6f7c75; }
+  .lnacc { stroke: #2fa877; }
+  .hfnt { fill: #6f7c75; } .hacc { fill: #2fa877; }
+
+  }
+  </style>
+  <rect class="bg" x="0.5" y="0.5" width="859" height="351" rx="5"/>
+  <text x="24" y="28" class="lg b">Walking the tree gives the sort order</text>
+  <text x="24" y="46" class="xs mut">a real subtree of the Mega 2026 player index — six of its Carlsens</text>
+  <path d="M430 124 L216 164" class="ln"/>
+  <path d="M430 124 L644 164" class="ln"/>
+  <path d="M216 212 L110 252" class="ln"/>
+  <path d="M216 212 L322 252" class="ln"/>
+  <path d="M644 212 L538 252" class="ln"/>
+  <rect x="342.0" y="76" width="176" height="48" class="accb" rx="8"/>
+  <text x="430" y="96" class="sm b" text-anchor="middle">Jimmy Gronbaek Carlsen</text>
+  <text x="430" y="112" class="xs m mut" text-anchor="middle">node 158691</text>
+  <rect x="128.0" y="164" width="176" height="48" class="box" rx="8"/>
+  <text x="216" y="184" class="sm b" text-anchor="middle">Ingrid Oen Carlsen</text>
+  <text x="216" y="200" class="xs m mut" text-anchor="middle">node 237176</text>
+  <rect x="556.0" y="164" width="176" height="48" class="box" rx="8"/>
+  <text x="644" y="184" class="sm b" text-anchor="middle">Magnus Carlsen</text>
+  <text x="644" y="200" class="xs m mut" text-anchor="middle">node 145915</text>
+  <rect x="22.0" y="252" width="176" height="48" class="box" rx="8"/>
+  <text x="110" y="272" class="sm b" text-anchor="middle">Henrik Carlsen</text>
+  <text x="110" y="288" class="xs m mut" text-anchor="middle">node 146997</text>
+  <rect x="234.0" y="252" width="176" height="48" class="box" rx="8"/>
+  <text x="322" y="272" class="sm b" text-anchor="middle">Jasper Carlsen</text>
+  <text x="322" y="288" class="xs m mut" text-anchor="middle">node 217185</text>
+  <rect x="450.0" y="252" width="176" height="48" class="box" rx="8"/>
+  <text x="538" y="272" class="sm b" text-anchor="middle">Kjell Arne Carlsen</text>
+  <text x="538" y="288" class="xs m mut" text-anchor="middle">node 167742</text>
+  <text x="430" y="68" class="xs mut" text-anchor="middle">root of this subtree</text>
+  <text x="216" y="158" class="xs fnt" text-anchor="middle">left</text>
+  <text x="644" y="158" class="xs fnt" text-anchor="middle">right</text>
+  <text x="24" y="322" class="sm b">In order:</text>
+  <text x="92" y="322" class="sm">Henrik  ·  Ingrid Oen  ·  Jasper  ·  Jimmy Gronbaek  ·  Kjell Arne  ·  Magnus  —  every one of them keyed “carlsen”</text>
+  <text x="24" y="342" class="xs mut">The key ties, so ChessBase compared the entities in full; the tree, not the key, carries the order.</text>
+</svg>

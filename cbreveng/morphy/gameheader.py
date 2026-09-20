@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 from morphy.columns import default_columns
 from morphy.dates import decode_creation_timestamp, decode_date, decode_last_changed_timestamp
 from morphy.eco import decode_eco
-from morphy.flags import decode_flags, decode_medals
+from morphy.flags import decode_annotation_magnitudes, decode_flags, decode_medals
 from morphy.material import decode_endgame_types, decode_material
 from morphy.ratings import decode_rating_type, format_elo
 from morphy.results import format_result
@@ -46,7 +46,7 @@ class GameHeader:
     encoded_eco: int = 0
     medals_value: int = 0  # bitmask
     flags_value: int = 0  # bitmask, mostly saying what annotations the game has
-    annotation_magnitude: int = 0  # bitmask giving rough sizes for those annotations
+    annotation_magnitude_value: int = 0  # bitmask giving rough sizes for those annotations
     moves: int = 0  # number of full moves in the game
     final_material_1: int = 0  # material left at the end, for one player ...
     final_material_2: int = 0  # ... and for the other
@@ -110,6 +110,11 @@ class GameHeader:
     def flags(self):
         """The game's flags, as text."""
         return decode_flags(self.flags_value)
+
+    @property
+    def annotation_magnitude(self):
+        """How much of each kind of annotation the game has, as text."""
+        return decode_annotation_magnitudes(self.annotation_magnitude_value)
 
     @property
     def final_material(self):

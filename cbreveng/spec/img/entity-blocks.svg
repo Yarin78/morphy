@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 300" width="860" height="300" role="img" aria-label="The .2lid file: a 184-byte header, then blocks of 4234 bytes. Block i holds entity i of every type, each type in a fixed-size container.">
+  <title>The .2lid file: a 184-byte header, then blocks of 4234 bytes. Block i holds entity i of every type, each type in a fixed-size container.</title>
+  <style>
+  text { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+          font-size: 12px; }
+  .m { font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace; }
+  .sm { font-size: 11px; } .xs { font-size: 10px; } .lg { font-size: 13px; }
+  .b { font-weight: 600; }
+  .box, .wash, .accb, .keyb, .slotb, .roseb { stroke-width: 1.2; }
+  .ln, .lnacc, .lndash { fill: none; stroke-width: 1.5; }
+  .lndash { stroke-width: 1.2; stroke-dasharray: 4 4; }
+
+  .bg { fill: #ffffff; stroke: #d3dad6; }
+  text { fill: #16201c; }
+  .mut { fill: #56625c; } .fnt { fill: #8a958f; }
+  .acc { fill: #16805a; } .keyc { fill: #b07614; } .slotc { fill: #5b5fa8; }
+  .rosec { fill: #a4405f; }
+  .box { fill: #ffffff; stroke: #d3dad6; }
+  .wash { fill: #eff2f0; stroke: #d3dad6; }
+  .accb { fill: #ddefe6; stroke: #16805a; }
+  .keyb { fill: #f6ead3; stroke: #b07614; }
+  .slotb { fill: #e4e5f3; stroke: #5b5fa8; }
+  .roseb { fill: #f6e2e8; stroke: #a4405f; }
+  .ln, .lndash { stroke: #8a958f; }
+  .lnacc { stroke: #16805a; }
+  .hfnt { fill: #8a958f; } .hacc { fill: #16805a; }
+
+  @media (prefers-color-scheme: dark) {
+
+  .bg { fill: #17201d; stroke: #2c3833; }
+  text { fill: #e2e8e5; }
+  .mut { fill: #9daaa3; } .fnt { fill: #6f7c75; }
+  .acc { fill: #2fa877; } .keyc { fill: #b98322; } .slotc { fill: #8c90d8; }
+  .rosec { fill: #d4738f; }
+  .box { fill: #17201d; stroke: #2c3833; }
+  .wash { fill: #1d2824; stroke: #2c3833; }
+  .accb { fill: #16362a; stroke: #2fa877; }
+  .keyb { fill: #3a2d14; stroke: #b98322; }
+  .slotb { fill: #262844; stroke: #8c90d8; }
+  .roseb { fill: #3a1f28; stroke: #d4738f; }
+  .ln, .lndash { stroke: #6f7c75; }
+  .lnacc { stroke: #2fa877; }
+  .hfnt { fill: #6f7c75; } .hacc { fill: #2fa877; }
+
+  }
+  </style>
+  <rect class="bg" x="0.5" y="0.5" width="859" height="299" rx="5"/>
+  <text x="24" y="28" class="lg b">Entities are stored a block at a time</text>
+  <text x="24" y="46" class="xs mut">block i holds entity i of every type — player 5, tournament 5, source 5 and the rest are neighbours</text>
+  <rect x="24" y="76" width="92" height="44" class="wash" rx="3"/>
+  <text x="70.0" y="96.0" class="sm b mut" text-anchor="middle">header</text>
+  <text x="70.0" y="110.0" class="xs mut" text-anchor="middle">184 B</text>
+  <rect x="124" y="76" width="168" height="44" class="box" rx="3"/>
+  <text x="208.0" y="96.0" class="sm b" text-anchor="middle">block 0</text>
+  <text x="208.0" y="110.0" class="xs mut" text-anchor="middle">4234 B</text>
+  <rect x="300" y="76" width="168" height="44" class="box" rx="3"/>
+  <text x="384.0" y="96.0" class="sm b" text-anchor="middle">block 1</text>
+  <text x="384.0" y="110.0" class="xs mut" text-anchor="middle">4234 B</text>
+  <rect x="476" y="76" width="168" height="44" class="box" rx="3"/>
+  <text x="560.0" y="96.0" class="sm b" text-anchor="middle">block 2</text>
+  <text x="560.0" y="110.0" class="xs mut" text-anchor="middle">4234 B</text>
+  <text x="656" y="94" class="lg fnt">…</text>
+  <text x="680" y="92" class="xs mut">one block per entity id</text>
+  <text x="680" y="108" class="xs fnt">2.0 GB in Mega 2026</text>
+  <path d="M300 120 L300 140 L24 140 L24 160" class="lndash"/>
+  <path d="M468 120 L468 140 L836 140 L836 160" class="lndash"/>
+  <rect x="24" y="160" width="193.3835616438356" height="52" class="accb" rx="3"/>
+  <text x="120.6917808219178" y="184" class="sm b acc" text-anchor="middle">player</text>
+  <text x="120.6917808219178" y="200" class="xs mut" text-anchor="middle">1024 B</text>
+  <text x="24" y="152" class="xs m fnt">0</text>
+  <rect x="220.3835616438356" y="160" width="211.79452054794518" height="52" class="keyb" rx="3"/>
+  <text x="326.2808219178082" y="184" class="sm b keyc" text-anchor="middle">tournament</text>
+  <text x="326.2808219178082" y="200" class="xs mut" text-anchor="middle">1120 B</text>
+  <text x="220.3835616438356" y="152" class="xs m fnt">1024</text>
+  <rect x="435.1780821917808" y="160" width="39.1917808219178" height="52" class="slotb" rx="3"/>
+  <text x="454.7739726027397" y="190" class="xs mut" text-anchor="middle">220</text>
+  <text x="435.1780821917808" y="152" class="xs m fnt">2144</text>
+  <rect x="477.3698630136986" y="160" width="193.3835616438356" height="52" class="wash" rx="3"/>
+  <text x="574.0616438356165" y="184" class="sm b mut" text-anchor="middle">type 3 — never used</text>
+  <text x="574.0616438356165" y="200" class="xs mut" text-anchor="middle">1024 B</text>
+  <text x="477.3698630136986" y="152" class="xs m fnt">2364</text>
+  <rect x="673.7534246575342" y="160" width="57.219178082191775" height="52" class="roseb" rx="3"/>
+  <text x="702.3630136986301" y="190" class="xs mut" text-anchor="middle">314</text>
+  <text x="673.7534246575342" y="152" class="xs m fnt">3388</text>
+  <rect x="733.972602739726" y="160" width="99.02739726027397" height="52" class="accb" rx="3"/>
+  <text x="783.486301369863" y="184" class="sm b acc" text-anchor="middle">game tag</text>
+  <text x="783.486301369863" y="200" class="xs mut" text-anchor="middle">532 B</text>
+  <text x="733.972602739726" y="152" class="xs m fnt">3702</text>
+  <text x="836" y="152" class="xs m fnt" text-anchor="end">4234</text>
+  <path d="M456.2739726027397 212 L456.2739726027397 228" class="ln"/>
+  <text x="456.2739726027397" y="242" class="xs b slotc" text-anchor="middle">source</text>
+  <text x="456.2739726027397" y="256" class="xs mut" text-anchor="middle">220 B</text>
+  <path d="M703.8630136986301 212 L703.8630136986301 228" class="ln"/>
+  <text x="703.8630136986301" y="242" class="xs b rosec" text-anchor="middle">team</text>
+  <text x="703.8630136986301" y="256" class="xs mut" text-anchor="middle">314 B</text>
+  <text x="24" y="282" class="xs mut">A type with fewer entities than there are blocks leaves its container empty in the later blocks, and the file stops after the last record written.</text>
+</svg>

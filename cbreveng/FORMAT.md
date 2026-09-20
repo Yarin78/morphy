@@ -600,14 +600,14 @@ Known fields of a game record:
 | 0x80 | 2 | ushort | ECO opening code, or a Chess960 start position (wch2, probe), see [ECO](#eco) |
 | 0x82 | 2 | ushort | medals, a bitmask (wch2), see [Flags and medals](#flags-and-medals) |
 | 0x84 | 4 | uint | flags, a bitmask (wch2), see [Flags and medals](#flags-and-medals) |
-| 0x88 | 2 | ushort | annotation magnitude flags (wch2) |
+| 0x88 | 2 | ushort | annotation magnitudes (wch2, mega), see [Flags and medals](#flags-and-medals) |
 | 0x8a | 2 | short | number of full moves in the game |
 | 0x8c | 4 | uint | final material of one player, the larger value (wch2, mega), see [Final material](#final-material) |
 | 0x90 | 4 | uint | final material of the other player, the smaller value |
 | 0x94 | 4 | | `?` always 0 |
 | 0x98 | 8 | long | creation timestamp (wch2, probe), see [Timestamps](#timestamps) |
 | 0xa0 | 8 | long | last-changed timestamp (wch2), see [Timestamps](#timestamps) |
-| 0xa8 | 6 | bitmask | endgame types the game passed through (wch2), see [Endgame types](#endgame-types) |
+| 0xa8 | 6 | bitmask | endgames the game passed through (wch2, mega), see [Endgame types](#endgame-types) |
 | 0xae | 2 | | `?` always 0 (mega) |
 | 0xb0 | 6 | | classification scores, see [Classification scores](#classification-scores) (mega, wch2) |
 | 0xb6 | 2 | | `?` always 0 (mega) |
@@ -713,8 +713,43 @@ kinds of annotation the game has: 0x01 setup position, 0x02 variations,
 0x800000 black clock, 0x1000000 critical position, 0x2000000 correspondence
 header, 0x4000000 anno type 1a, 0x8000000 unorthodox, 0x10000000 web link.
 
-The annotation magnitude flags (0x88) qualify some of those, giving a rough size
-for each kind of annotation; the v1 meanings are in `GameHeaderIndex`.
+The annotation magnitudes (0x88) qualify some of those, giving a rough size for
+that kind of annotation. The bits are v1's, and a bit is only set when its flag
+is: across `mega`'s 88,883 games with a value here, no bit is ever set without
+its flag, and bits 1, 6, 8 and 10-15 are never set at all.
+
+| Bit | Flag | Set when |
+|---|---|---|
+| 0-1 | 0x02 variations | see below |
+| 2 | 0x04 commentary | over 200 bytes of text |
+| 3 | 0x08 symbols | 10 or more symbol annotations |
+| 4 | 0x10 graphical squares | 10 or more coloured-square annotations |
+| 5 | 0x20 graphical arrows | 6 or more arrow annotations |
+| 7 | 0x80 time spent | 10 or more time-spent annotations |
+| 9 | 0x200 training | 6 or more training annotations |
+
+Every threshold is exact in `mega`: counting the annotations of each kind in
+55,461 games, from equal numbers with the bit set and clear, put the boundary in
+the same place every time, with no game on the wrong side of it.
+
+What is counted for bits 3, 4, 5, 7 and 9 is the number of **annotations**, not
+the number of symbols, squares or arrows in them; a game with 4 annotations
+holding 20 squares between them does not set bit 4. Commentary is counted in
+**bytes of text**, summed over every text annotation, before the move and after
+it, and including the game text at position -1. Bytes, not characters: a game
+whose comments come to 194 characters in 201 bytes sets bit 2. Leaving out the
+text before the move, or the game text, misclassifies games; counting bytes of
+both, none.
+
+Bits 0-1 are the **variation magnitude**, a number 0-3 standing for levels 1-4
+of the count of plies in variations (over 50, over 300, over 1000). Whether it
+is written depends on what wrote the database. v1 writes it: Mega Database 2021
+has it in 65,264 of the 123,176 games that have variations. `wch2`, which
+ChessBase converted from v1, has it in 489 of 604, so the converter carries it
+over. But `mega` has it in **2** of 176,512 games with the variations flag, and
+never sets bit 1; those two have 53 and 56 plies in variations, which is level 2,
+exactly what the rule above gives. So whatever built `mega` computes the other
+six magnitudes and not this one, and bits 0-1 cannot be relied on.
 
 The medals (0x82) are one bit each, from bit 0: best game, decided tournament,
 model game, novelty, pawn structure, strategy, tactics, with attack, defense,
@@ -738,19 +773,71 @@ side has the rook. (wch2, mega)
 
 ### Endgame types
 
-A bitmask of the endgame types the game passed through. v1 stores endgame
-information differently, in 20 bytes of the `.cbj` file, and it is empty for all
-of `wch1` while `wch2` has it for 206 games, so ChessBase computed it during the
-conversion and there is nothing to check it against.
+A bitmask of the endgames the game passed through, one bit per **matchup**: what
+white has against what black has, counting pieces only, with kings and pawns
+left out. v1 stores endgame information differently, in 20 bytes of the `.cbj`
+file, as up to four endgame types each with the ply it starts at, plus the type
+that lasted longest; it is empty for all of `wch1`, and `mega`'s v1 predecessor
+(Mega Database 2021) fills it in only 267 of 8.5 million games.
 
-What the bits mean is guesswork, from the final material of the games that set
-each bit. Bits that fit a clear rule in at least four games out of five:
-bit 0 bishop endgame, bit 1 knight vs bishop, bit 13 minor piece endgame,
-bit 14 knight endgame, bit 24 queen endgame, bit 29 bishop vs rook, and bit 35
-rook endgame, which is by far the most common (76 games, all of them ending with
-only rooks and pawns). The rule can't be expected to hold exactly, since the bits
-record what the game passed through and the final material is only where it
-ended up.
+The bits are an enumeration of the matchups. Ten kinds of material take part,
+in alphabetical order:
+
+    B  BB  BN  N  NN  Q  R  RB  RN  RR
+
+Only matchups of roughly equal material are enumerated, so each kind has its own
+list of opponents: B and N take B, N, R; BB, BN and NN take BB, BN, NN, Q, R; Q
+takes BB, BN, NN, Q, R, RB, RN, RR; R takes B, BB, BN, N, NN, Q, R; RB and RN
+take Q, RB, RN; RR takes Q, RR. The bits run through the white material in the
+order above and, for each, through its opponents in the same order, which gives
+44 bits; bits 44-47 are never set in `mega`.
+
+The two sides are white and black, unlike the final material at 0x8c, which is
+ordered by size. So an uneven matchup has a bit for each way round: white knight
+against black bishop is bit 1, white bishop against black knight is bit 13.
+
+| Bit | W | B | Bit | W | B | Bit | W | B | Bit | W | B |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| 0 | B | B | 11 | BN | Q | 22 | Q | BN | 33 | R | NN |
+| 1 | B | N | 12 | BN | R | 23 | Q | NN | 34 | R | Q |
+| 2 | B | R | 13 | N | B | 24 | Q | Q | 35 | R | R |
+| 3 | BB | BB | 14 | N | N | 25 | Q | R | 36 | RB | Q |
+| 4 | BB | BN | 15 | N | R | 26 | Q | RB | 37 | RB | RB |
+| 5 | BB | NN | 16 | NN | BB | 27 | Q | RN | 38 | RB | RN |
+| 6 | BB | Q | 17 | NN | BN | 28 | Q | RR | 39 | RN | Q |
+| 7 | BB | R | 18 | NN | NN | 29 | R | B | 40 | RN | RB |
+| 8 | BN | BB | 19 | NN | Q | 30 | R | BB | 41 | RN | RN |
+| 9 | BN | BN | 20 | NN | R | 31 | R | BN | 42 | RR | Q |
+| 10 | BN | NN | 21 | Q | BB | 32 | R | N | 43 | RR | RR |
+
+This was worked out from `mega`, which sets at least one bit in 1,972,014 of its
+11,988,243 games. Sampling 400 games that set one bit and no other, for each of
+the 44 bits in turn, and replaying the main line of 60 of them gave in every
+case the matchup above, in all 60 games and for all 44 bits. The commonest bit
+by far is 35, rook against rook, in 653,797 games; the rarest is 19, two knights
+against a queen, in 140.
+
+The matchups are those of the **main line**; variations play no part. A bit is
+only set for a matchup the main line holds for at least **5 plies**. Replaying
+24,847 games that have bits set, with 27,738 bits between them, every bit had
+its matchup on the board for 5 plies or more, and not one was set for a matchup
+held for fewer. (Chess960 games are the only ones this could not be checked on,
+since their start position is not decoded.) The 231 bits of `wch2`, which
+ChessBase computed while converting a v1 database, all fit the same rule.
+
+The converse is not true, and which of the qualifying matchups get a bit is
+unknown. A game that passes through two of them usually records only one: of the
+1,972,014 games with any bit, 1,753,477 set one, 215,507 two, 3,017 three and
+13 four. Four is the most there is — the same four that v1 had room for. The matchup
+the game ends in is recorded in 99% of cases, and an earlier one is recorded
+more often the longer the game stayed in it: about 6% of the time at 5-9 plies,
+half the time at around 30 plies, and nearly always past 60. Nothing measured
+here — the duration, the material with any weighting of the pieces, the pawn
+count, the move number, the distance to the end of the game — separates the
+recorded from the unrecorded cleanly, and games ending in an obvious endgame
+lack the bit at the same rate (42% for rook against rook) whatever their id,
+their date or their record version, so this is not a matter of part of `mega`
+having gone unclassified.
 
 ### Classification scores
 
@@ -950,6 +1037,10 @@ Nothing in the file is needed to read the database.
 
 ## Open questions
 
+These are the working list, with what has been tried and what each rests on.
+[spec/UNKNOWNS.md](spec/UNKNOWNS.md) is the short list of what the specification
+itself leaves open; keep the two in step.
+
 - Deleted entities: what the `22 33 44 55 66 77 88 99` bytes are, and whether a
   deleted slot is reused when a new entity is added (and if so, which one, and
   how the list changes).
@@ -961,8 +1052,9 @@ Nothing in the file is needed to read the database.
 - How beauty, Top Game and theoretical importance are computed from the
   classification scores, what C, D and F are, and where exactly the group
   boundaries lie (see [Classification scores](#classification-scores)).
-- What the endgame bits at 0xa8 mean, beyond the seven guessed above. The field
-  is 6 bytes: 0xae and 0xaf are zero in all of `mega`.
+- Which of the matchups a game passes through actually get an endgame bit at
+  0xa8, given that holding the matchup for 5 plies is necessary but not
+  sufficient (see [Endgame types](#endgame-types)).
 - The board (0x5e), which is 0 everywhere except in `reveng1`, where it was set
   by hand. Not even `mega` uses it.
 - `d1` and `d2` of a player (always 0), and whether the 8 before the FIDE id is

@@ -29,6 +29,18 @@ GAME_FLAGS = {
     0x10000000: "web link",
 }
 
+# Annotation magnitude bits, each qualifying one of the flags above with a
+# rough size for that kind of annotation. Bits 0-1 hold the variation
+# magnitude and are handled separately. See FORMAT.md.
+ANNOTATION_MAGNITUDES = {
+    0x0004: "over 200 bytes of commentary",
+    0x0008: "10 or more symbol annotations",
+    0x0010: "10 or more square annotations",
+    0x0020: "6 or more arrow annotations",
+    0x0080: "10 or more time spent annotations",
+    0x0200: "6 or more training annotations",
+}
+
 # Medals, in bit order.
 MEDALS = [
     "best game", "decided tournament", "model game", "novelty", "pawn structure",
@@ -50,6 +62,17 @@ def _decode_bits(value, names):
 def decode_flags(value):
     """Decode the game flags to text."""
     return _decode_bits(value, GAME_FLAGS)
+
+
+def decode_annotation_magnitudes(value):
+    """Decode the annotation magnitudes to text. Bits 0-1 are the variation
+    magnitude, a level from 1 to 4, which only a database written by the older
+    format or converted from it has."""
+    parts = []
+    if value & 3:
+        parts.append(f"variation level {(value & 3) + 1}")
+    rest = _decode_bits(value & ~3, ANNOTATION_MAGNITUDES)
+    return ", ".join(parts + ([rest] if rest else []))
 
 
 def decode_medals(value):

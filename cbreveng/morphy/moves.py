@@ -182,7 +182,7 @@ class GameMoves:
     offset: int
     variant: int  # VARIANT_NORMAL or VARIANT_CHESS960
     checksum: bytes
-    words: list  # the whole word stream, from the section count to the final END_OF_LINE
+    words: list  # the content as words, the sections from their first marker to the last ffff
     sections: dict  # section marker -> list of words
     root: Node
     move_bytes: int
@@ -261,8 +261,10 @@ def parse_tree(words):
     raise ValueError("move data ended without a final END_OF_LINE")
 
 
-# A guiding text's content starts with these 4 bytes in every sample.
-TEXT_MAGIC = bytes.fromhex("00100500")
+# The tag at 0x18 of a record says what it holds. A game's is its variant.
+TEXT_TAG = bytes.fromhex("0010")
+# Every guiding text's content then opens with these 2 bytes.
+TEXT_VERSION = bytes.fromhex("0500")
 
 
 @dataclass
@@ -274,7 +276,8 @@ class GuidingText:
 
 def checksum(data):
     """The 8 bytes a .2cbg or .2cba record stores at 0x10, a checksum of the A
-    bytes of content after its first word. Whole 8-byte blocks only are split
+    bytes of content, which is everything after the tag. Whole 8-byte blocks
+    only are split
     into 8 runs of equal length, and byte i of the value (from the least
     significant) is the sum of run i, modulo 256; content shorter than 8 bytes
     is taken as it is. The value is written big-endian."""
@@ -298,29 +301,30 @@ class MoveDatabase:
         return cls(os.path.splitext(game_file)[0] + ".2cbg")
 
     def _read_record(self, offset):
-        """The framing of the record at offset: the checksum, the content (A + 2
-        bytes), A, B and the record length."""
+        """The framing of the record at offset: the checksum, the 2-byte tag,
+        the content (A bytes), A, B and the record length."""
         self._file.seek(offset)
         head = self._file.read(24)
         if head[:8] != RECORD_MAGIC:
             raise ValueError(f"no .2cbg record at offset {offset}")
         size, spare_bytes = struct.unpack_from("<ii", head, 8)
-        data = self._file.read(size + 2 + spare_bytes + 8)
-        record_length = struct.unpack_from("<q", data, size + 2 + spare_bytes)[0]
+        data = self._file.read(2 + size + spare_bytes + 8)
+        record_length = struct.unpack_from("<q", data, 2 + size + spare_bytes)[0]
+        tag, content = data[:2], data[2:2 + size]
         stored = head[16:24]
-        if stored != checksum(data[2:size + 2]):
+        if stored != checksum(content):
             raise ValueError(f"wrong checksum in the record at offset {offset}")
-        return stored, data[:size + 2], size, spare_bytes, record_length
+        return stored, tag, content, size, spare_bytes, record_length
 
     def read_text(self, offset):
         """The contents of the guiding text whose .2cbh record holds this offset."""
-        text_checksum, content, *_ = self._read_record(offset)
-        if content[:4] != TEXT_MAGIC:
+        text_checksum, tag, content, *_ = self._read_record(offset)
+        if tag != TEXT_TAG or content[:2] != TEXT_VERSION:
             raise ValueError(f"no guiding text at offset {offset}")
-        remaining, count = struct.unpack_from("<ii", content, 4)
-        if remaining != len(content) - 8:
+        remaining, count = struct.unpack_from("<ii", content, 2)
+        if remaining != len(content) - 6:
             raise ValueError(f"guiding text at offset {offset} has the wrong length")
-        pos, contents = 12, []
+        pos, contents = 10, []
         for _ in range(count):
             language, length = struct.unpack_from("<ii", content, pos)
             contents.append((language, content[pos + 8:pos + 8 + length]))
@@ -329,14 +333,17 @@ class MoveDatabase:
 
     def read(self, offset):
         """The moves of the game whose .2cbh record holds this offset."""
-        game_checksum, content, move_bytes, spare_bytes, record_length = self._read_record(offset)
-        if content[:4] == TEXT_MAGIC:
+        game_checksum, tag, content, move_bytes, spare_bytes, record_length = \
+            self._read_record(offset)
+        if tag == TEXT_TAG:
             raise ValueError(f"a guiding text, not a game, at offset {offset}")
         words = list(struct.unpack(f"<{len(content) // 2}H", content))
 
-        # The variant, then sections, each a marker and the words up to the next
-        # marker. The moves section is last and runs to the end.
-        variant, pos, sections, root = words[0], 1, {}, None
+        # A game's tag is its variant; the content is sections, each a marker and
+        # the words up to the next marker. The moves section is last and runs to
+        # the end.
+        variant = struct.unpack("<H", tag)[0]
+        pos, sections, root = 0, {}, None
         if variant not in (VARIANT_NORMAL, VARIANT_CHESS960):
             raise ValueError(f"unknown variant {variant:#06x} at offset {offset}")
         while root is None:

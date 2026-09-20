@@ -88,6 +88,8 @@ The first eight bytes are common to all three:
 A game with no annotations still has an annotation record, so 0x10 always points
 at one.
 
+![A map of the 192-byte game record](img/game-record.svg)
+
 Entity references are never −1 except for the two teams. A field left blank by
 the user points at an entity whose text is empty; see
 [6-behaviour.md](6-behaviour.md#placeholder-entities).
@@ -147,8 +149,32 @@ material, piece play, endgame, tactical blunder, strategical blunder, user.
 
 ### Annotation magnitudes
 
-A bitmask qualifying some of the annotation flags with a rough size for that kind
-of annotation. The individual bits are **unknown**.
+A bitmask qualifying some of the [flags](#flags) with a rough size for that kind
+of annotation. A bit is set only when its flag is, and bits 1, 6, 8 and 10-15 are
+never set.
+
+| Bit | Flag | Set when |
+|---|---|---|
+| 0-1 | variations | the variation magnitude; see below |
+| 2 | commentary | the text comes to more than 200 bytes |
+| 3 | symbols | the game has 10 or more symbol annotations |
+| 4 | coloured squares | 10 or more coloured-square annotations |
+| 5 | arrows | 6 or more arrow annotations |
+| 7 | time spent | 10 or more time-spent annotations |
+| 9 | training | 6 or more training annotations |
+
+What is counted is the number of **annotations**, not the number of symbols,
+squares or arrows inside them: four annotations holding twenty squares between
+them do not set bit 4. Commentary is the exception, and is counted in **bytes**
+of text, summed over every text annotation — before the move and after it, and
+including the game text that belongs to no move. Bytes, not characters: comments
+of 194 characters in 201 bytes set bit 2.
+
+Bits 0-1 hold a **variation magnitude**: 0 to 3, standing for levels 1 to 4 of
+the number of plies in variations, the levels beginning at 51, 301 and 1001
+plies. Not every writer fills it in — a converted database carries it over from
+the previous format, while ChessBase's own databases leave it 0 — so a reader
+cannot rely on it.
 
 ### Final material
 
@@ -170,23 +196,70 @@ normally first. Storing them ordered lets a material search match either colour.
 
 ### Endgame types
 
-A 48-bit mask of the kinds of endgame the game passed through. Bit numbering
-starts at bit 0 of 0xa8. Most bits are **unknown**; the following fit the final
-material of the games that set them:
+A 48-bit mask of the endgames the game passed through. Bit numbering starts at
+bit 0 of 0xa8. Each bit stands for one **matchup**: what white has against what
+black has, counting pieces only — kings and pawns are not part of it. Bits 44-47
+are never set.
 
-| Bit | Endgame |
+Ten kinds of material take part. In the order they are numbered, which is
+alphabetical:
+
+    B  BB  BN  N  NN  Q  R  RB  RN  RR
+
+Only matchups of roughly equal material are in the table, so each kind has its
+own list of opponents:
+
+| Material | Opponents |
 |---|---|
-| 0 | bishop |
-| 1 | knight against bishop |
-| 13 | minor piece |
-| 14 | knight |
-| 24 | queen |
-| 29 | bishop against rook |
-| 35 | rook |
+| B, N | B, N, R |
+| BB, BN, NN | BB, BN, NN, Q, R |
+| Q | BB, BN, NN, Q, R, RB, RN, RR |
+| R | B, BB, BN, N, NN, Q, R |
+| RB, RN | Q, RB, RN |
+| RR | Q, RR |
 
-Bit 35 is by far the most common. The bits record what the game passed through
-rather than where it ended, so they do not correspond exactly to the final
-material.
+The bits run through the white material in the order above and, for each, its
+opponents in the same order. That gives 44 bits. The two sides are **white and
+black**, not greater and lesser as in the final material, so an uneven matchup
+has one bit for each way round: white knight against black bishop is bit 1 and
+white bishop against black knight is bit 13.
+
+| Bit | White | Black | Games | Bit | White | Black | Games |
+|---|---|---|---|---|---|---|---|
+| 0 | B | B | 225439 | 22 | Q | BN | 1104 |
+| 1 | B | N | 127366 | 23 | Q | NN | 189 |
+| 2 | B | R | 49664 | 24 | Q | Q | 96386 |
+| 3 | BB | BB | 8833 | 25 | Q | R | 14991 |
+| 4 | BB | BN | 19206 | 26 | Q | RB | 8365 |
+| 5 | BB | NN | 2542 | 27 | Q | RN | 5010 |
+| 6 | BB | Q | 281 | 28 | Q | RR | 5897 |
+| 7 | BB | R | 4126 | 29 | R | B | 58356 |
+| 8 | BN | BB | 17906 | 30 | R | BB | 4380 |
+| 9 | BN | BN | 41727 | 31 | R | BN | 15917 |
+| 10 | BN | NN | 8094 | 32 | R | N | 33314 |
+| 11 | BN | Q | 861 | 33 | R | NN | 2677 |
+| 12 | BN | R | 15798 | 34 | R | Q | 13875 |
+| 13 | N | B | 133681 | 35 | R | R | 653797 |
+| 14 | N | N | 128612 | 36 | RB | Q | 6414 |
+| 15 | N | R | 29578 | 37 | RB | RB | 141947 |
+| 16 | NN | BB | 2529 | 38 | RB | RN | 78427 |
+| 17 | NN | BN | 7944 | 39 | RN | Q | 4027 |
+| 18 | NN | NN | 4214 | 40 | RN | RB | 82142 |
+| 19 | NN | Q | 140 | 41 | RN | RN | 71708 |
+| 20 | NN | R | 2633 | 42 | RR | Q | 5350 |
+| 21 | Q | BB | 371 | 43 | RR | RR | 57776 |
+
+The game counts are Mega Database 2026's, which sets at least one bit in
+1972014 of its 11988243 games. Most such games set one bit, and no game sets
+more than four.
+
+The matchups are those of the **main line**; variations are not considered. A
+bit is never set for a matchup the main line holds for fewer than **5 plies**.
+
+Which of the qualifying matchups get a bit is **unknown**. A game that passes
+through two of them usually records only one, most often the one it ends in, and
+an earlier matchup is the more likely to be recorded the longer the game stayed
+in it.
 
 ### Classification scores
 
@@ -197,7 +270,7 @@ record but the version and last-changed timestamp.
 
 The 48 bits are **unknown** in detail. They appear to be several small numbers
 side by side. Bits 7, 8, 17, 33-35 and 43-47 are never set. Groups that vary
-together, with the ranges observed:
+together, with their ranges:
 
 | Bits | Range | Notes |
 |---|---|---|
@@ -209,9 +282,9 @@ together, with the ranges observed:
 | 36-38 | 0-7 | grows with the length of the game |
 | 39-42 | 1-15 | contributes to beauty; high for short decisive games |
 
-Beauty is not stored as a value of its own and no bit window reproduces the level
-ChessBase displays. A weighted sum of the four groups marked above, dominated by
-bits 39-42, reproduces the ordering approximately but not exactly.
+Beauty is not stored as a value of its own. No window of bits gives the level
+ChessBase displays: it is derived from the groups marked above, bits 39-42
+weighing most.
 
 ### Rating type
 
@@ -301,7 +374,7 @@ and annotations like a game, but a header of its own.
 | 0x20 | 8 | long | source |
 | 0x28 | 8 | long | annotator, the author |
 | 0x30 | 8 | | unknown, large values, possibly a timestamp |
-| 0x38 | 8 | | unknown, 776 in every analysis examined |
+| 0x38 | 8 | | unknown, always 776 |
 | 0x40 | 8 | | unknown, small numbers |
 | 0x48 | 8 | | unknown, large values, possibly a timestamp |
 | 0x50 | 8 | | unknown, small numbers |

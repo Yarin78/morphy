@@ -22,6 +22,8 @@ A sequence of 4096-byte pages.
 **The file header and the catalog are big-endian**; node pages and directory
 pages are little-endian.
 
+![The .2lcd file as a row of pages, and the layout of a catalog entry](img/lcd-file.svg)
+
 ## File header
 
 | Offset | Size | Type | Description |
@@ -94,6 +96,8 @@ yields the entities in sort order.
 The value at 0x24 is −1 in some leaves and the slot number otherwise. Which
 leaves is **unknown**; it may mark a node that has never had a child.
 
+![A node is 40 bytes: three links, a key, the balance and the slot](img/lcd-node.svg)
+
 ### Page lookup
 
 With a depth of 0 the catalog points directly at the single node page. Otherwise
@@ -110,6 +114,8 @@ highest entity id in the index rather than the number of entities:
 | up to 102 | 0 |
 | up to 104,448 (102 · 1024) | 1 |
 | up to 106,954,752 | 2 |
+
+![Finding a node through two levels of directory](img/lcd-lookup.svg)
 
 ## Keys
 
@@ -134,6 +140,11 @@ the characters whose ASCII order agrees with the full comparison below.
 
 An entity whose sort fields are all empty takes the key 1, placing it first. A
 tournament with only a year takes the year followed by six zero bytes.
+
+![A real subtree of the Mega 2026 player index, walked in order](img/lcd-tree.svg)
+
+*Every node in it carries the same key, so the order came from comparing the
+entities in full.*
 
 ## How text is compared
 
@@ -204,6 +215,8 @@ Each list occupies three slots:
 Slots 0 and 9, with their partners, are always empty; there is no role 0 or 9.
 Slot 30 is always 12 — **unknown** — and slot 31 always 0.
 
+![A .2lgd record: 32 head slots and one list block](img/lgd-record.svg)
+
 ## List forms
 
 The top bits of *first* select one of three representations:
@@ -213,6 +226,8 @@ The top bits of *first* select one of three representations:
 | `0x4000000000000000` + id | single | that game, and also the game in *last* if *last* is not −1 |
 | `0x2000000000000000` + id | range | every game from *first* to *last*, which carries the same flag |
 | a block number | chain | the games in the chain of list blocks beginning at *first*; *last* is the final block |
+
+![The three forms a list takes, all from one Mega 2026 record](img/lgd-forms.svg)
 
 Ids are the 1-based game ids of the `.2cbh` file. A list is in ascending order.
 **A record that refers to an entity twice appears twice**, for example a game in

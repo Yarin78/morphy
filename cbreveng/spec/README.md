@@ -15,6 +15,7 @@ likely meaning it is given as such. Everything else is stated as fact.
 | [4-entities.md](4-entities.md) | `.2lid`: players, tournaments, sources, teams, game tags |
 | [5-indexes.md](5-indexes.md) | `.2lcd` sort orders and `.2lgd` game lists |
 | [6-behaviour.md](6-behaviour.md) | How ChessBase uses the format: free space, placeholders, statistics |
+| [UNKNOWNS.md](UNKNOWNS.md) | Everything the specification leaves open, in one list |
 
 ## Files
 
@@ -37,6 +38,8 @@ not described here.
 
 Records in `.2cbh` are addressed by a 1-based **game id**. Entities are addressed
 by a 0-based **entity id**, per entity type.
+
+![The six files of a database and how a game record reaches the others](img/files.svg)
 
 ## Conventions
 
@@ -162,3 +165,10 @@ see [3-annotations.md](3-annotations.md).
 
 Squares are numbered `a1` = 0, `a2` = 1, … `a8` = 7, `b1` = 8, … `h8` = 63: file
 by file, and within a file from rank 1 upward.
+
+## Figures
+
+The figures these documents embed are in [img](img), drawn by
+[img/make.py](img/make.py); running it regenerates every one. They are plain SVG
+with no external dependency, and the values in them are read from Mega Database
+2026.

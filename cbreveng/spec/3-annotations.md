@@ -17,13 +17,14 @@ here.
 ## Records
 
 Records use the same framing as `.2cbg`, including the
-[checksum](2-moves.md#checksum), computed over the content after its `00 20` tag.
+[checksum](2-moves.md#checksum). The tag is `00 20`.
+
+![The framing of a record in the move and annotation files](img/cbg-record.svg)
 
 The content is:
 
 | Size | Type | Description |
 |---|---|---|
-| 2 | | `00 20` |
 | … | | position blocks, in ascending order of position |
 | 4 | int | `7fffffff`, the end marker |
 
@@ -35,8 +36,9 @@ A position block groups every annotation attached to one position:
 | 4 | int | the number of annotations |
 | … | | that many annotations, each a `short` type followed by its data |
 
-A game with no annotations is just `00 20 ff ff ff 7f`, whose checksum is
-therefore always `00 00 00 00 7f ff ff ff`.
+A game with no annotations has the end marker alone as its content,
+`ff ff ff 7f`, so *A* is 4 and the checksum is always
+`00 00 00 00 7f ff ff ff`.
 
 Annotations carry **no length field**, so a reader must understand every type it
 meets in order to find the end of one and the start of the next.
@@ -67,25 +69,26 @@ reader should preserve it.
 | `03` | symbols | 3 bytes: move, evaluation, prefix |
 | `04` | coloured squares | `int` length, then that many bytes |
 | `05` | arrows | `int` length, then that many bytes |
-| `07` | time spent | 4 bytes |
+| `07` | time spent | 4 bytes: **unknown**, then seconds, minutes, hours |
+| `08` | **unknown** | 4 bytes |
 | `09` | training | [below](#training) |
 | `13` | game quotation | [below](#game-quotation) |
 | `14` | pawn structure | 1 byte |
 | `15` | piece path | `int` length, then that many bytes |
-| `16` | white clock | 4 bytes, **unknown** |
-| `17` | black clock | 4 bytes, **unknown** |
+| `16` | white clock | [below](#clocks) |
+| `17` | black clock | as `16`, for black |
 | `18` | critical position | 1 byte |
 | `1c` | web link | `01`, then two strings: the URL and a caption. **Unknown** in detail |
 | `20` | video | **unknown** |
-| `21` | computer evaluation | 6 bytes, **unknown** |
+| `21` | computer evaluation | [below](#computer-evaluation) |
 | `22` | medals | 4 bytes |
 | `23` | variation colour | 4 bytes |
 | `24` | time control | `01`, three 12-byte series, `int` 0; 38 bytes in all |
 | `25` | video stream time | 4 bytes |
 | `26` | evaluations | [below](#evaluations) |
 
-Types `08` and `1a`, and sound, picture and correspondence annotations, are
-referred to by the [flags](1-game-headers.md#flags) but have not been observed.
+Type `1a`, and sound, picture and correspondence annotations, are referred to by
+the [flags](1-game-headers.md#flags) but have not been seen.
 
 ### Text
 
@@ -139,23 +142,47 @@ Each entry:
 The number of entries does not always match the length of the main line: they are
 not rewritten when moves are added afterwards.
 
+### Clocks
+
+The time the player had **left on the clock**, as an `int` of hundredths of a
+second. Type `16` is white's and `17` black's.
+
+Both sit at position −1, the game as a whole, and never on a move, and a game
+has at most one of each. Where the two hold the same value it is the time
+control, no clock having been recorded for that game.
+
+### Computer evaluation
+
+One engine evaluation, attached to the move it belongs to.
+
+| Size | Type | Description |
+|---|---|---|
+| 2 | short | evaluation in centipawns, or moves to mate |
+| 2 | short | 0 ordinary, 1 moves to mate; 3 and 32 also occur and are **unknown** |
+| 2 | short | search depth |
+
+Some games hold the absolute value of the evaluation in place of the depth.
+
 ### Training
 
-A training question. The layout below accounts for the observed records but is
-**not fully reliable**: some records cannot be parsed by it.
+A training question.
 
 | Size | Description |
 |---|---|
 | 6 | `01 01 01 00 00 00` |
 | 4 | `int`, time allowed in seconds |
 | 2 | `short`, points |
-| … | a list of texts, see below |
-| 6 | unknown, zero |
+| … | four lists, see below: the question, then three kinds of response |
 | 1 | number of solutions |
-| … | per solution: origin and destination square, 1 byte each; 2 unknown bytes; then a list of texts |
+| … | per solution: origin and destination square, 1 byte each; 2 unknown bytes; then a list |
 
-A list of texts is a `short` count, then per text a `short` (0), an `int` length
-and the bytes.
+A list is a `short` count, then per item a `short` kind, an `int` length and that
+many bytes. Kind 0 is a text, 7 arrows and 8 coloured squares, the last two in
+the same form as the annotation of that name. The three response lists are
+usually all empty, which is six zero bytes in a row and easy to mistake for a
+fixed field.
+
+A record whose third byte is 2 rather than 1 has a layout that is **unknown**.
 
 ### Game quotation
 

@@ -20,8 +20,7 @@ the file header, and each type has a fixed container size in bytes.
 
 Container sizes come from the header, not from this table.
 
-Type 3 has never been observed to hold a single entity, in databases of any size,
-and its purpose is **unknown**.
+Type 3 never holds an entity, and its purpose is **unknown**.
 
 Annotators are not a separate type: an annotator is a player, sharing the same
 ids. Likewise the titles of guiding texts and of analyses are entities of type 5.
@@ -40,8 +39,8 @@ All integers **big-endian**. *T* is the number of entity types.
 | 0x80 | 56 | | unknown |
 
 The 56 bytes at the end are the `int` pairs (−1, 1), (0, 1), (1, 1), … (5, 1) —
-a leading pair and then one per entity type — in every database including an
-empty one, so they are not counts.
+a leading pair and then one per entity type. They do not vary, so they are not
+counts; their meaning is **unknown**.
 
 ## Blocks
 
@@ -59,6 +58,8 @@ the sum of all container sizes.
   usually truncated.
 
 A database with no entities is the header alone.
+
+![Block i holds entity i of every type, each in a fixed-size container](img/entity-blocks.svg)
 
 ## Records
 
@@ -101,12 +102,10 @@ ratings, birth dates, photographs — and take these combinations:
 | id | 0 | matched, no FIDE id |
 | id | FIDE id | matched, with a FIDE id |
 
-The two zero `int`s before the ChessBase id, and the 8 before the FIDE id, are
-the same in every player of every database. The 8 is exactly the size of the
-field it precedes, and everything else in the format is length-prefixed, so it is
-probably a size; by the same reasoning the two zeros may be the lengths of
-strings that are always empty. Neither can be distinguished from a constant
-without a database in which they differ.
+The two zero `int`s before the ChessBase id, and the 8 before the FIDE id, never
+vary. The 8 is the size of the field it precedes and is likely its length, and the
+two zeros are likely the lengths of strings that are always empty, but both are
+**unknown**.
 
 ### Tournament
 

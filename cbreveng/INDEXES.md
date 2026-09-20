@@ -368,6 +368,10 @@ The rest of the record is zero. Their titles are opening lines such as
 
 ## Open questions
 
+These are the working list, with what has been tried and what each rests on.
+[spec/UNKNOWNS.md](spec/UNKNOWNS.md) is the short list of what the specification
+itself leaves open; keep the two in step.
+
 `.2lcd`:
 
 - Which leaves have -1 at 0x24 rather than their slot.

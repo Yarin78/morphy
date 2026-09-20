@@ -21,26 +21,29 @@ is found through the offset at 0x08 of its `.2cbh` record.
 | Offset | Size | Type | Description |
 |---|---|---|---|
 | 0x00 | 8 | | magic `88 77 66 55 44 33 22 11` |
-| 0x08 | 4 | int | *A*, the size of the content minus 2 |
+| 0x08 | 4 | int | *A*, the size of the content |
 | 0x0c | 4 | int | *B*, the size of the spare area |
 | 0x10 | 8 | | [checksum](#checksum) of the content, **big-endian** |
-| 0x18 | *A* + 2 | | the content |
+| 0x18 | 2 | | the tag, below |
+| 0x1a | *A* | | the content |
 | 0x1a + *A* | *B* | | spare, all zero |
 | 0x1a + *A* + *B* | 8 | long | the record length, `A + B + 34` |
 
-The content always begins with a 2-byte tag, which *A* excludes: `01 00` or
-`02 00` for a game (the variant), `00 10` for a guiding text, `00 20` for
-annotations.
+The **tag** says what the record holds: `01 00` or `02 00` for a game, where it
+is also the [variant](#the-word-stream), `00 10` for a guiding text and `00 20`
+for annotations.
 
 The spare area is free space inside the record, allowing the game to grow without
 moving. Its size varies and it is always zero. How ChessBase chooses it, and what
 happens when a game outgrows its record, is described in
 [6-behaviour.md](6-behaviour.md#free-space-in-the-move-and-annotation-files).
 
+![The framing of a record in the move and annotation files](img/cbg-record.svg)
+
 ### Checksum
 
-A 64-bit value over the *A* bytes of content that follow the 2-byte tag, stored
-**big-endian** — the only big-endian field in this file. With *m* = ⌊*A* / 8⌋:
+A 64-bit value over the *A* bytes of the content, stored **big-endian** — the
+only big-endian field in this file. With *m* = ⌊*A* / 8⌋:
 
 1. Only the first 8*m* bytes take part; the last *A* mod 8 bytes are ignored.
 2. They are divided into 8 consecutive runs of *m* bytes.
@@ -72,8 +75,8 @@ upward are markers; everything below is a [move](#move-words) or a
 
 `fffe` has not been seen.
 
-The stream starts with the **variant**: 1 for normal chess, 2 for Chess960. Then
-come sections, each introduced by its marker:
+The record's tag is the **variant**: 1 for normal chess, 2 for Chess960. The
+content is a series of sections, each introduced by its marker:
 
 - **`fffb`, the start position**, present only when the game does not begin from
   the standard position. It holds either
@@ -83,8 +86,8 @@ come sections, each introduced by its marker:
     starts from a set-up position.
 - **`fffc`, the moves**, which run to the end of the stream.
 
-A game from the standard position therefore starts `0001 fffc`, and a game with
-no moves at all is `0001 fffc ffff`.
+The content of a game from the standard position begins `fffc`; a game with no
+moves at all is the two words `fffc ffff`.
 
 ### The move tree
 
@@ -232,11 +235,12 @@ Pawns take 48 words each since they occupy only ranks 2 to 7.
 
 ## Guiding texts
 
-A guiding text's record has the same framing, and content tagged `00 10`:
+A guiding text's record has the same framing, under the tag `00 10`. Its
+content:
 
 | Size | Type | Description |
 |---|---|---|
-| 4 | | `00 10 05 00`; the 5 is probably the format version |
+| 2 | | `05 00`; the 5 is probably the format version |
 | 4 | int | number of bytes that follow this field |
 | 4 | int | number of languages |
 | … | | that many entries, below |

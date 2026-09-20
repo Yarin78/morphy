@@ -48,7 +48,7 @@ FIELDS = {
     "encoded_eco": (0x80, "<H"),
     "medals_value": (0x82, "<H"),
     "flags_value": (0x84, "<I"),
-    "annotation_magnitude": (0x88, "<H"),
+    "annotation_magnitude_value": (0x88, "<H"),
     "moves": (0x8A, "<h"),
     "final_material_1": (0x8C, "<I"),
     "final_material_2": (0x90, "<I"),

@@ -1,0 +1,94 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 340" width="860" height="340" role="img" aria-label="The three forms a game list takes, all three from record 11576 of Mega 2026: a single pair of games for the player, a range for the tournament, and a chain of blocks for the team.">
+  <title>The three forms a game list takes, all three from record 11576 of Mega 2026: a single pair of games for the player, a range for the tournament, and a chain of blocks for the team.</title>
+  <style>
+  text { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+          font-size: 12px; }
+  .m { font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace; }
+  .sm { font-size: 11px; } .xs { font-size: 10px; } .lg { font-size: 13px; }
+  .b { font-weight: 600; }
+  .box, .wash, .accb, .keyb, .slotb, .roseb { stroke-width: 1.2; }
+  .ln, .lnacc, .lndash { fill: none; stroke-width: 1.5; }
+  .lndash { stroke-width: 1.2; stroke-dasharray: 4 4; }
+
+  .bg { fill: #ffffff; stroke: #d3dad6; }
+  text { fill: #16201c; }
+  .mut { fill: #56625c; } .fnt { fill: #8a958f; }
+  .acc { fill: #16805a; } .keyc { fill: #b07614; } .slotc { fill: #5b5fa8; }
+  .rosec { fill: #a4405f; }
+  .box { fill: #ffffff; stroke: #d3dad6; }
+  .wash { fill: #eff2f0; stroke: #d3dad6; }
+  .accb { fill: #ddefe6; stroke: #16805a; }
+  .keyb { fill: #f6ead3; stroke: #b07614; }
+  .slotb { fill: #e4e5f3; stroke: #5b5fa8; }
+  .roseb { fill: #f6e2e8; stroke: #a4405f; }
+  .ln, .lndash { stroke: #8a958f; }
+  .lnacc { stroke: #16805a; }
+  .hfnt { fill: #8a958f; } .hacc { fill: #16805a; }
+
+  @media (prefers-color-scheme: dark) {
+
+  .bg { fill: #17201d; stroke: #2c3833; }
+  text { fill: #e2e8e5; }
+  .mut { fill: #9daaa3; } .fnt { fill: #6f7c75; }
+  .acc { fill: #2fa877; } .keyc { fill: #b98322; } .slotc { fill: #8c90d8; }
+  .rosec { fill: #d4738f; }
+  .box { fill: #17201d; stroke: #2c3833; }
+  .wash { fill: #1d2824; stroke: #2c3833; }
+  .accb { fill: #16362a; stroke: #2fa877; }
+  .keyb { fill: #3a2d14; stroke: #b98322; }
+  .slotb { fill: #262844; stroke: #8c90d8; }
+  .roseb { fill: #3a1f28; stroke: #d4738f; }
+  .ln, .lndash { stroke: #6f7c75; }
+  .lnacc { stroke: #2fa877; }
+  .hfnt { fill: #6f7c75; } .hacc { fill: #2fa877; }
+
+  }
+  </style>
+  <rect class="bg" x="0.5" y="0.5" width="859" height="339" rx="5"/>
+  <marker id="c" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="hacc"/></marker>
+  <text x="24" y="28" class="lg b">Three ways to write a list</text>
+  <text x="24" y="46" class="xs mut">record 11576 of Mega 2026 happens to use all three — its player, its tournament and its team</text>
+  <text x="24" y="78" class="sm b">single</text>
+  <text x="24" y="94" class="xs mut">player 11576</text>
+  <text x="24" y="108" class="xs fnt">E Caroe</text>
+  <rect x="184" y="60" width="196" height="38" class="accb" rx="3"/>
+  <text x="194" y="73" class="xs mut">first</text>
+  <text x="194" y="89" class="sm m b">0x4000… + 109230</text>
+  <rect x="390" y="60" width="166" height="38" class="accb" rx="3"/>
+  <text x="400" y="73" class="xs mut">last</text>
+  <text x="400" y="89" class="sm m b">109293</text>
+  <rect x="566" y="60" width="70" height="38" class="wash" rx="3"/>
+  <text x="576" y="73" class="xs mut">count</text>
+  <text x="576" y="89" class="sm m b">2</text>
+  <path d="M642 79 L660 79" class="lnacc" marker-end="url(#c)"/>
+  <text x="668" y="83" class="sm">games 109230 and 109293</text>
+  <text x="24" y="166" class="sm b">range</text>
+  <text x="24" y="182" class="xs mut">tournament 11576</text>
+  <text x="24" y="196" class="xs fnt">October Revolution 50years</text>
+  <rect x="184" y="148" width="196" height="38" class="keyb" rx="3"/>
+  <text x="194" y="161" class="xs mut">first</text>
+  <text x="194" y="177" class="sm m b">0x2000… + 256403</text>
+  <rect x="390" y="148" width="166" height="38" class="keyb" rx="3"/>
+  <text x="400" y="161" class="xs mut">last</text>
+  <text x="400" y="177" class="sm m b">0x2000… + 256538</text>
+  <rect x="566" y="148" width="70" height="38" class="wash" rx="3"/>
+  <text x="576" y="161" class="xs mut">count</text>
+  <text x="576" y="177" class="sm m b">136</text>
+  <path d="M642 167 L660 167" class="lnacc" marker-end="url(#c)"/>
+  <text x="668" y="171" class="sm">games 256403 … 256538</text>
+  <text x="24" y="254" class="sm b">chain</text>
+  <text x="24" y="270" class="xs mut">team 11576</text>
+  <text x="24" y="284" class="xs fnt">Schwerin Schachfreunde</text>
+  <rect x="184" y="236" width="196" height="38" class="slotb" rx="3"/>
+  <text x="194" y="249" class="xs mut">first</text>
+  <text x="194" y="265" class="sm m b">block 1216794</text>
+  <rect x="390" y="236" width="166" height="38" class="slotb" rx="3"/>
+  <text x="400" y="249" class="xs mut">last</text>
+  <text x="400" y="265" class="sm m b">block 1216796</text>
+  <rect x="566" y="236" width="70" height="38" class="wash" rx="3"/>
+  <text x="576" y="249" class="xs mut">count</text>
+  <text x="576" y="265" class="sm m b">72</text>
+  <path d="M642 255 L660 255" class="lnacc" marker-end="url(#c)"/>
+  <text x="668" y="259" class="sm">three blocks: 30 + 30 + 12</text>
+  <text x="24" y="316" class="xs mut">The top bits of first choose the form. A list is in ascending order, an entity referred to twice is listed twice, and deleted games stay in it.</text>
+</svg>

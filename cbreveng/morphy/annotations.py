@@ -15,7 +15,7 @@ from dataclasses import dataclass
 
 from morphy.moves import RECORD_MAGIC, checksum, square_name
 
-CONTENT_MAGIC = b"\x00\x20"
+CONTENT_TAG = b"\x00\x20"
 END_OF_ANNOTATIONS = 0x7FFFFFFF
 GAME_POSITION = -1
 
@@ -28,7 +28,12 @@ TYPE_NAMES = {
     0x04: "squares",
     0x05: "arrows",
     0x07: "time spent",
+    0x08: "type 08",
     0x09: "training",
+    0x16: "white clock",
+    0x17: "black clock",
+    0x1C: "web link",
+    0x21: "computer evaluation",
     0x13: "game quotation",
     0x14: "pawn structure",
     0x15: "piece path",
@@ -60,9 +65,11 @@ class Annotation:
         return describe(self.data) if describe else self.data.hex(" ")
 
 
-def _texts_length(data, pos):
-    """Length of a list of texts in a training annotation: a short count, then
-    for each a short (?), an int length and the text."""
+def _items_length(data, pos):
+    """End of a list of items in a training annotation: a short count, then for
+    each a short kind, an int length and that many bytes. Kind 0 is a text, 7
+    arrows and 8 coloured squares, each in the same form as the annotation of
+    that name."""
     count = struct.unpack_from("<H", data, pos)[0]
     pos += 2
     for _ in range(count):
@@ -71,11 +78,15 @@ def _texts_length(data, pos):
 
 
 def _training_length(data, pos):
-    end = _texts_length(data, pos + 12) + 6
+    # Four lists in a row — the question and three kinds of response — then the
+    # solutions. The last three lists are usually empty, six zero bytes in all.
+    end = pos + 12
+    for _ in range(4):
+        end = _items_length(data, end)
     solutions = data[end]
     end += 1
     for _ in range(solutions):
-        end = _texts_length(data, end + 4)
+        end = _items_length(data, end + 4)
     return end - pos
 
 
@@ -90,6 +101,14 @@ def _quotation_length(data, pos):
     end += 29
     moves = struct.unpack_from("<i", data, end)[0]
     return end + 4 + 5 * moves + 4 - pos
+
+
+def _web_link_length(data, pos):
+    """Length of a web link: a byte, then two strings, the URL and a caption."""
+    end = pos + 1
+    for _ in range(2):
+        end += 4 + struct.unpack_from("<i", data, end)[0]
+    return end - pos
 
 
 def _int_prefixed(data, pos):
@@ -108,7 +127,12 @@ _LENGTHS = {
     0x04: _int_prefixed,
     0x05: _int_prefixed,
     0x07: lambda data, pos: 4,
+    0x08: lambda data, pos: 4,
     0x09: _training_length,
+    0x16: lambda data, pos: 4,
+    0x17: lambda data, pos: 4,
+    0x1C: _web_link_length,
+    0x21: lambda data, pos: 6,
     0x13: _quotation_length,
     0x14: lambda data, pos: 1,
     0x15: _int_prefixed,
@@ -159,6 +183,19 @@ def _describe_evaluations(data):
     return " ".join(entries)
 
 
+def _describe_clock(data):
+    """The time left on a player's clock, an int of hundredths of a second."""
+    seconds = struct.unpack("<I", data)[0] // 100
+    return f"{seconds // 3600}:{seconds // 60 % 60:02}:{seconds % 60:02}"
+
+
+def _describe_computer_evaluation(data):
+    """One engine evaluation: the score, what kind it is, and the depth."""
+    score, kind, depth = struct.unpack("<hhh", data)
+    shown = f"#{score}" if kind == 1 else f"{score / 100:+.2f}"
+    return f"{shown}/{depth}" + (f" (kind {kind})" if kind not in (0, 1) else "")
+
+
 def _describe_time_control(data):
     series = []
     for i in range(3):
@@ -173,8 +210,11 @@ _DESCRIBE = {
     0x03: lambda data: " ".join(f"{b}" for b in data),
     0x04: _describe_squares,
     0x05: _describe_arrows,
-    0x07: lambda data: "{3}:{2:02}:{1:02}".format(*data),
+    0x07: lambda data: "{3}:{2:02}:{1:02}".format(*data),  # unknown, s, m, h
+    0x16: _describe_clock,
+    0x17: _describe_clock,
     0x18: lambda data: {1: "opening", 2: "middlegame", 3: "endgame"}.get(data[0], str(data[0])),
+    0x21: _describe_computer_evaluation,
     0x22: lambda data: f"{struct.unpack('<I', data)[0]:#x}",
     0x24: _describe_time_control,
     0x26: _describe_evaluations,
@@ -216,12 +256,13 @@ class AnnotationDatabase:
         if head[:8] != RECORD_MAGIC:
             raise ValueError(f"no .2cba record at offset {offset}")
         size = struct.unpack_from("<i", head, 8)[0]
-        content = self._file.read(size + 2)
-        if head[16:24] != checksum(content[2:]):
+        data = self._file.read(2 + size)
+        tag, content = data[:2], data[2:]
+        if head[16:24] != checksum(content):
             raise ValueError(f"wrong checksum in the record at offset {offset}")
-        if content[:2] != CONTENT_MAGIC:
-            raise ValueError(f"unexpected annotation content at offset {offset}")
-        pos, annotations = 2, []
+        if tag != CONTENT_TAG:
+            raise ValueError(f"unexpected annotation tag at offset {offset}")
+        pos, annotations = 0, []
         while True:
             position = struct.unpack_from("<i", content, pos)[0]
             pos += 4

@@ -1,0 +1,96 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 276" width="860" height="276" role="img" aria-label="The framing shared by a .2cbg and a .2cba record: an 8-byte magic, the two sizes A and B, a big-endian checksum, a 2-byte tag, the content, the spare area and the record length.">
+  <title>The framing shared by a .2cbg and a .2cba record: an 8-byte magic, the two sizes A and B, a big-endian checksum, a 2-byte tag, the content, the spare area and the record length.</title>
+  <style>
+  text { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+          font-size: 12px; }
+  .m { font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace; }
+  .sm { font-size: 11px; } .xs { font-size: 10px; } .lg { font-size: 13px; }
+  .b { font-weight: 600; }
+  .box, .wash, .accb, .keyb, .slotb, .roseb { stroke-width: 1.2; }
+  .ln, .lnacc, .lndash { fill: none; stroke-width: 1.5; }
+  .lndash { stroke-width: 1.2; stroke-dasharray: 4 4; }
+
+  .bg { fill: #ffffff; stroke: #d3dad6; }
+  text { fill: #16201c; }
+  .mut { fill: #56625c; } .fnt { fill: #8a958f; }
+  .acc { fill: #16805a; } .keyc { fill: #b07614; } .slotc { fill: #5b5fa8; }
+  .rosec { fill: #a4405f; }
+  .box { fill: #ffffff; stroke: #d3dad6; }
+  .wash { fill: #eff2f0; stroke: #d3dad6; }
+  .accb { fill: #ddefe6; stroke: #16805a; }
+  .keyb { fill: #f6ead3; stroke: #b07614; }
+  .slotb { fill: #e4e5f3; stroke: #5b5fa8; }
+  .roseb { fill: #f6e2e8; stroke: #a4405f; }
+  .ln, .lndash { stroke: #8a958f; }
+  .lnacc { stroke: #16805a; }
+  .hfnt { fill: #8a958f; } .hacc { fill: #16805a; }
+
+  @media (prefers-color-scheme: dark) {
+
+  .bg { fill: #17201d; stroke: #2c3833; }
+  text { fill: #e2e8e5; }
+  .mut { fill: #9daaa3; } .fnt { fill: #6f7c75; }
+  .acc { fill: #2fa877; } .keyc { fill: #b98322; } .slotc { fill: #8c90d8; }
+  .rosec { fill: #d4738f; }
+  .box { fill: #17201d; stroke: #2c3833; }
+  .wash { fill: #1d2824; stroke: #2c3833; }
+  .accb { fill: #16362a; stroke: #2fa877; }
+  .keyb { fill: #3a2d14; stroke: #b98322; }
+  .slotb { fill: #262844; stroke: #8c90d8; }
+  .roseb { fill: #3a1f28; stroke: #d4738f; }
+  .ln, .lndash { stroke: #6f7c75; }
+  .lnacc { stroke: #2fa877; }
+  .hfnt { fill: #6f7c75; } .hacc { fill: #2fa877; }
+
+  }
+  </style>
+  <rect class="bg" x="0.5" y="0.5" width="859" height="275" rx="5"/>
+  <text x="24" y="28" class="lg b">A record in the move and annotation files</text>
+  <text x="24" y="46" class="xs mut">the same framing in both; a game’s .2cbh record holds the offset of each</text>
+  <rect x="24" y="96" width="80" height="52" class="wash" rx="3"/>
+  <text x="64.0" y="118" class="sm b mut" text-anchor="middle">magic</text>
+  <text x="64.0" y="134" class="xs mut" text-anchor="middle">8 bytes</text>
+  <text x="64.0" y="166" class="xs fnt" text-anchor="middle">88 77 66 …</text>
+  <rect x="108" y="96" width="56" height="52" class="accb" rx="3"/>
+  <text x="136.0" y="118" class="sm b acc" text-anchor="middle">A</text>
+  <text x="136.0" y="134" class="xs mut" text-anchor="middle">4</text>
+  <text x="136.0" y="166" class="xs fnt" text-anchor="middle">content size</text>
+  <rect x="168" y="96" width="56" height="52" class="slotb" rx="3"/>
+  <text x="196.0" y="118" class="sm b slotc" text-anchor="middle">B</text>
+  <text x="196.0" y="134" class="xs mut" text-anchor="middle">4</text>
+  <text x="196.0" y="166" class="xs fnt" text-anchor="middle">spare size</text>
+  <rect x="228" y="96" width="80" height="52" class="keyb" rx="3"/>
+  <text x="268.0" y="118" class="sm b keyc" text-anchor="middle">checksum</text>
+  <text x="268.0" y="134" class="xs mut" text-anchor="middle">8, big-endian</text>
+  <text x="268.0" y="166" class="xs fnt" text-anchor="middle">of the content</text>
+  <rect x="312" y="96" width="62" height="52" class="roseb" rx="3"/>
+  <text x="343.0" y="118" class="sm b rosec" text-anchor="middle">tag</text>
+  <text x="343.0" y="134" class="xs mut" text-anchor="middle">2 bytes</text>
+  <text x="343.0" y="166" class="xs fnt" text-anchor="middle">what it holds</text>
+  <rect x="378" y="96" width="198" height="52" class="accb" rx="3"/>
+  <text x="477.0" y="118" class="sm b acc" text-anchor="middle">content</text>
+  <text x="477.0" y="134" class="xs mut" text-anchor="middle">A bytes</text>
+  <text x="477.0" y="166" class="xs fnt" text-anchor="middle">moves, or annotations</text>
+  <rect x="580" y="96" width="140" height="52" class="slotb" rx="3"/>
+  <text x="650.0" y="118" class="sm b slotc" text-anchor="middle">spare</text>
+  <text x="650.0" y="134" class="xs mut" text-anchor="middle">B bytes, all zero</text>
+  <text x="650.0" y="166" class="xs fnt" text-anchor="middle">room to grow</text>
+  <rect x="724" y="96" width="92" height="52" class="wash" rx="3"/>
+  <text x="770.0" y="118" class="sm b mut" text-anchor="middle">length</text>
+  <text x="770.0" y="134" class="xs mut" text-anchor="middle">8 bytes</text>
+  <text x="770.0" y="166" class="xs fnt" text-anchor="middle">A + B + 34</text>
+  <text x="24" y="88" class="xs m fnt">0x00</text>
+  <text x="108" y="88" class="xs m fnt">0x08</text>
+  <text x="168" y="88" class="xs m fnt">0x0c</text>
+  <text x="228" y="88" class="xs m fnt">0x10</text>
+  <text x="312" y="88" class="xs m fnt">0x18</text>
+  <text x="378" y="88" class="xs m fnt">0x1a</text>
+  <text x="24" y="202" class="xs mut">The tag says what the record holds, and A does not count it:</text>
+  <text x="24" y="222" class="sm m b">01 00 / 02 00</text>
+  <text x="24" y="238" class="xs mut">a game, and which variant</text>
+  <text x="244" y="222" class="sm m b">00 10</text>
+  <text x="244" y="238" class="xs mut">a guiding text</text>
+  <text x="464" y="222" class="sm m b">00 20</text>
+  <text x="464" y="238" class="xs mut">annotations</text>
+  <text x="24" y="262" class="xs mut">The checksum is the only big-endian field in either file. Records sit back to back, each starting where the last one ended.</text>
+</svg>
