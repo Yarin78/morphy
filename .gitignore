@@ -8,3 +8,8 @@ analysis/
 /scripts/
 __pycache__/
 *.pyc
+.venv/
+
+# Sample databases used while working on the format documentation; fetched with
+# test-databases/scratch/sync.sh, not part of the repository.
+/test-databases/scratch/

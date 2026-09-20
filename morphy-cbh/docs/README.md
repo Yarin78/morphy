@@ -24,7 +24,7 @@ Detailed documentation for each package:
 
 ### File Format Specification
 
-- **[CBH Format](cbh-format/README.md)**: Reverse-engineered specification of the ChessBase database format, including game headers, moves, annotations, and entity indexes.
+- **[CBH Format](../../format/v1/README.md)**: Reverse-engineered specification of the ChessBase database format, including game headers, moves, annotations, and entity indexes.
 
 ---
 

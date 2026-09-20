@@ -1,6 +1,6 @@
 # Database Reference
 
-This document provides a user-friendly reference for the data stored in a ChessBase database. For the detailed binary file format specification, see the [cbh-format documentation](cbh-format/README.md).
+This document provides a user-friendly reference for the data stored in a ChessBase database. For the detailed binary file format specification, see the [v1 format documentation](../../format/v1/README.md).
 
 ## Table of Contents
 
@@ -111,7 +111,7 @@ try (DatabaseReadTransaction txn = db.beginReadTransaction()) {
 }
 ```
 
-For detailed binary format, see [games.md](cbh-format/games.md).
+For detailed binary format, see [games.md](../../format/v1/games.md).
 
 ---
 
@@ -127,7 +127,7 @@ Entities are reusable objects referenced by games. All entities share these comm
 
 Entities can only exist if at least one game references them. When no games reference an entity, it is automatically deleted.
 
-For the general structure of entity index files, see [entities.md](cbh-format/entities.md).
+For the general structure of entity index files, see [entities.md](../../format/v1/entities.md).
 
 ---
 
@@ -170,7 +170,7 @@ try (DatabaseReadTransaction txn = db.beginReadTransaction()) {
 }
 ```
 
-For detailed binary format, see [players.md](cbh-format/players.md).
+For detailed binary format, see [players.md](../../format/v1/players.md).
 
 ---
 
@@ -255,7 +255,7 @@ try (DatabaseReadTransaction txn = db.beginReadTransaction()) {
 }
 ```
 
-For detailed binary format, see [tournaments.md](cbh-format/tournaments.md).
+For detailed binary format, see [tournaments.md](../../format/v1/tournaments.md).
 
 ---
 
@@ -289,7 +289,7 @@ try (DatabaseReadTransaction txn = db.beginReadTransaction()) {
 }
 ```
 
-For detailed binary format, see [annotators.md](cbh-format/annotators.md).
+For detailed binary format, see [annotators.md](../../format/v1/annotators.md).
 
 ---
 
@@ -321,7 +321,7 @@ try (DatabaseReadTransaction txn = db.beginReadTransaction()) {
 }
 ```
 
-For detailed binary format, see [sources.md](cbh-format/sources.md).
+For detailed binary format, see [sources.md](../../format/v1/sources.md).
 
 ---
 
@@ -359,7 +359,7 @@ try (DatabaseReadTransaction txn = db.beginReadTransaction()) {
 }
 ```
 
-For detailed binary format, see [teams.md](cbh-format/teams.md).
+For detailed binary format, see [teams.md](../../format/v1/teams.md).
 
 ---
 
@@ -392,7 +392,7 @@ try (DatabaseReadTransaction txn = db.beginReadTransaction()) {
 }
 ```
 
-For detailed binary format, see [game_tags.md](cbh-format/game_tags.md).
+For detailed binary format, see [game_tags.md](../../format/v1/game_tags.md).
 
 ---
 
@@ -574,4 +574,4 @@ Available tiebreak rules for tournaments.
 ## See Also
 
 - [User Guide](USER-GUIDE.md) - How to use the Morphy library
-- [CBH Format Documentation](cbh-format/README.md) - Detailed binary file format specification
+- [CBH Format Documentation](../../format/v1/README.md) - Detailed binary file format specification

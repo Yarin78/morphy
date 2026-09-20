@@ -433,4 +433,4 @@ Morphy supports ChessBase databases from various versions:
 - [Developer Guide](DEVELOPER-GUIDE.md) - Contributing to Morphy
 - [Chess Package](chess-package.md) - Chess core details
 - [Morphy Package](morphy-package.md) - Modern API details
-- [CBH Format](cbh-format/README.md) - File format specification
+- [CBH Format](../../format/v1/README.md) - File format specification

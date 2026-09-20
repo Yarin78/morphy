@@ -1,0 +1,4 @@
+# Sample databases are evidence: keep them byte for byte. ChessBase writes .ini
+# files with CRLF, which end-of-line translation would silently rewrite.
+/test-databases/wch2/** -text
+/morphy-cbh/src/test/resources/** -text

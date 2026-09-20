@@ -58,8 +58,19 @@ A database consists of multiple files with same base name:
 
 ## Documentation
 
-Detailed documentation in `morphy-cbh/docs/`:
+Library documentation in `morphy-cbh/docs/`:
 - `ARCHITECTURE.md` - System design
 - `USER-GUIDE.md` - Library usage
 - `DEVELOPER-GUIDE.md` - Contributing guide
-- `cbh-format/` - Reverse-engineered file format specification
+
+File format documentation in `format/`, one directory per format:
+- `format/v1/` - the `.cbh` family, which this library implements
+- `format/v2/spec/` - the `.2cbh` family, the reference to implement against
+- `format/v2/notes/` - the evidence behind the v2 specification
+- `format/CLAUDE.md` - **read this before editing anything under `format/`**
+
+## Python tooling
+
+`morphy-py/` holds a Python reader for the v2 format: the `cb2` package, plus
+the `inspect` and `hexit` command line tools. It is separate from the Maven
+build. Sample databases live in `test-databases/`.

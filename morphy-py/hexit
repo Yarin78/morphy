@@ -1,0 +1,331 @@
+#!/usr/bin/env python3
+"""hexit: hexdump-like tool for files with a header and fixed-size records.
+
+Each record is printed on its own line, prefixed with its 1-indexed record
+number and the byte address of the record within the file. Hex bytes are
+space-separated, with an extra separator every 8th byte. With -C, an ASCII
+sidebar (. for unprintable bytes) is printed on the line below, aligned
+under the hex bytes above. With -c, that same ASCII sidebar is printed
+after the hex bytes on the same line instead, with no spaces between
+characters.
+
+Two files may be given at once, in which case they are dumped side by
+side (record N of the first file next to record N of the second),
+separated by " | ", and bytes that differ between the two are
+colorized. Both files must share the same header/record size (i.e. the
+same known extension, or both unknown). Color is on by default when
+stdout is a terminal; override with --color.
+
+Header/record sizes are chosen from the file extension:
+    .2cba   12-byte header, 236-byte records
+    .2cbg   12-byte header, 140-byte records
+    .2cbh  192-byte header, 192-byte records
+    .2lid  header size and block size are read from the file's own header
+    other     no header,     16-byte records  (hexdump-like)
+
+For .2lid files each "record" is a block holding one entity of every type
+back to back, labelled with its 0-based entity id. With -e TYPE (a name such
+as "tournament", or an index into the header's entity type list), only the
+bytes belonging to that entity type are shown for each block, and the header
+is left out. Addresses are still absolute file offsets. Only the entity's
+actual record is shown, not the rest of its container: a record starts with
+a little-endian int giving the number of bytes that follow it, so it is
+4 + that many bytes long. (If that length is negative or doesn't fit in the
+container, the whole container is shown instead so the oddity is visible.)
+"""
+import argparse
+import os
+import re
+import struct
+import sys
+from dataclasses import dataclass
+
+from cb2.entitydb import ENTITY_TYPE_ORDER, block_layout, read_header
+
+FORMATS = {
+    ".2cba": (12, 236),
+    ".2cbg": (12, 140),
+    ".2cbh": (192, 192),
+    ".2lgd": (12, 32),  # 12 byte header, blocks that are multiple of 1024
+}
+DEFAULT_HEADER, DEFAULT_RECORD = 0, 16
+ENTITY_DB_EXT = ".2lid"
+
+GROUP = 8  # extra separator every this many bytes
+
+COLOR_ON = "\x1b[31m"
+COLOR_OFF = "\x1b[0m"
+ANSI_RE = re.compile(r"\x1b\[[0-9;]*m")
+
+
+def visible_len(s):
+    return len(ANSI_RE.sub("", s))
+
+
+def ljust_visible(s, width):
+    pad = width - visible_len(s)
+    return s + " " * pad if pad > 0 else s
+
+
+@dataclass(frozen=True)
+class Layout:
+    """Where the header and records of a file are. Each record is
+    record_size bytes, but only the slice_len bytes starting slice_start
+    bytes into it are dumped (by default, the whole record). If
+    length_prefixed, the dumped slice is further cut down to the length
+    given by its own first 4 bytes (a little-endian int not counting itself)."""
+    header_size: int
+    record_size: int
+    slice_start: int = 0
+    slice_len: int = None
+    first_label: int = 1
+    show_header: bool = True
+    length_prefixed: bool = False
+
+    def __post_init__(self):
+        if self.slice_len is None:
+            object.__setattr__(self, "slice_len", self.record_size)
+
+
+def resolve_entity_type(spec, type_count):
+    """Turn an entity type name or index into an index into the header's
+    entity type list."""
+    if spec.isdigit():
+        index = int(spec)
+    else:
+        name = spec.lower().replace("-", "_")
+        if name not in ENTITY_TYPE_ORDER:
+            raise ValueError(f"unknown entity type {spec!r} (choose from {', '.join(ENTITY_TYPE_ORDER)})")
+        index = ENTITY_TYPE_ORDER.index(name)
+    if index >= type_count:
+        raise ValueError(f"entity type index {index} out of range (file has {type_count} entity types)")
+    return index
+
+
+def layout_for(path, entity=None):
+    ext = os.path.splitext(path)[1].lower()
+    if ext != ENTITY_DB_EXT:
+        if entity is not None:
+            raise ValueError(f"an entity type can only be given for {ENTITY_DB_EXT} files, not {path}")
+        return Layout(*FORMATS.get(ext, (DEFAULT_HEADER, DEFAULT_RECORD)))
+
+    try:
+        with open(path, "rb") as f:
+            header_size, entity_types = read_header(f)
+    except struct.error:
+        raise ValueError(f"{path} is too short to have a valid {ENTITY_DB_EXT} header")
+    block_size, offsets = block_layout(entity_types)
+    if entity is None:
+        return Layout(header_size, block_size, first_label=0)
+
+    index = resolve_entity_type(entity, len(entity_types))
+    return Layout(
+        header_size, block_size,
+        slice_start=offsets[ENTITY_TYPE_ORDER[index]],
+        slice_len=entity_types[index].container_size,
+        first_label=0,
+        show_header=False,
+        length_prefixed=True,
+    )
+
+
+def render(chunk, mask=None):
+    """Return (hex_line, ascii_line) for a chunk of bytes, columns aligned.
+    Bytes where mask[i] is true are wrapped in color."""
+    hex_pieces = []
+    ascii_pieces = []
+    for i, b in enumerate(chunk):
+        hex_str = f"{b:02x}"
+        ascii_ch = chr(b) if 32 <= b < 127 else "."
+        if mask is not None and mask[i]:
+            hex_str = COLOR_ON + hex_str + COLOR_OFF
+            ascii_ch = COLOR_ON + ascii_ch + COLOR_OFF
+        hex_pieces.append(hex_str)
+        ascii_pieces.append(ascii_ch)
+        extra = (i + 1) % GROUP == 0
+        hex_pieces.append("  " if extra else " ")
+        ascii_pieces.append("   " if extra else "  ")
+    return "".join(hex_pieces).rstrip(), "".join(ascii_pieces).rstrip()
+
+
+def ascii_compact(chunk, mask=None):
+    pieces = []
+    for i, b in enumerate(chunk):
+        ch = chr(b) if 32 <= b < 127 else "."
+        if mask is not None and mask[i]:
+            ch = COLOR_ON + ch + COLOR_OFF
+        pieces.append(ch)
+    return "".join(pieces)
+
+
+def format_entry(label, addr, chunk, label_width, addr_width, ascii_mode, width, mask=None):
+    """Return the list of output lines for one record (or the header)."""
+    lines = []
+    label_prefix = f"{label.rjust(label_width)} {addr:0{addr_width}x}  "
+    blank_prefix = " " * len(label_prefix)
+    for i in range(0, len(chunk), width):
+        sub = chunk[i:i + width]
+        sub_mask = mask[i:i + width] if mask is not None else None
+        hex_line, ascii_line = render(sub, sub_mask)
+        prefix = label_prefix if i == 0 else blank_prefix
+        if ascii_mode == "inline":
+            lines.append(prefix + hex_line + "  " + ascii_compact(sub, sub_mask))
+        else:
+            lines.append(prefix + hex_line)
+            if ascii_mode == "below":
+                lines.append(" " * len(prefix) + ascii_line)
+    return lines
+
+
+def trim_to_length_prefix(chunk):
+    """Cut chunk down to the record size given by its leading int, if that
+    size is plausible; otherwise return it untouched."""
+    if len(chunk) < 4:
+        return chunk
+    size = 4 + struct.unpack_from("<i", chunk)[0]
+    return chunk[:size] if 4 <= size <= len(chunk) else chunk
+
+
+def read_entries(path, layout):
+    """Return a list of (label, addr, raw_bytes); label is 'HEADER' or a record number string."""
+    entries = []
+    with open(path, "rb") as f:
+        if layout.header_size and layout.show_header:
+            header = f.read(layout.header_size)
+            if header:
+                entries.append(("HEADER", 0, header))
+
+        recnum = 0
+        while True:
+            addr = layout.header_size + recnum * layout.record_size + layout.slice_start
+            f.seek(addr)
+            chunk = f.read(layout.slice_len)
+            if not chunk:
+                break
+            if layout.length_prefixed:
+                chunk = trim_to_length_prefix(chunk)
+            entries.append((str(layout.first_label + recnum), addr, chunk))
+            recnum += 1
+    return entries
+
+
+def diff_masks(chunk1, chunk2):
+    """Return per-byte diff masks (mask1, mask2) for two records being compared."""
+    n = max(len(chunk1), len(chunk2))
+    mask1, mask2 = [], []
+    for i in range(n):
+        b1 = chunk1[i] if i < len(chunk1) else None
+        b2 = chunk2[i] if i < len(chunk2) else None
+        differs = b1 != b2
+        if i < len(chunk1):
+            mask1.append(differs)
+        if i < len(chunk2):
+            mask2.append(differs)
+    return mask1, mask2
+
+
+def label_addr_widths(entries):
+    label_width = max([len("HEADER")] + [len(label) for label, _, _ in entries])
+    max_addr = max([0] + [addr + len(chunk) for _, addr, chunk in entries])
+    addr_width = max(8, len(f"{max_addr:x}"))
+    return label_width, addr_width
+
+
+def dump_single(path, layout, ascii_mode, width):
+    entries = read_entries(path, layout)
+    label_width, addr_width = label_addr_widths(entries)
+    for label, addr, chunk in entries:
+        w = width if width > 0 else len(chunk)
+        for line in format_entry(label, addr, chunk, label_width, addr_width, ascii_mode, w):
+            print(line)
+
+
+def dump_side_by_side(path1, path2, layout1, layout2, ascii_mode, width, color):
+    entries1 = read_entries(path1, layout1)
+    entries2 = read_entries(path2, layout2)
+    label_width1, addr_width1 = label_addr_widths(entries1)
+    label_width2, addr_width2 = label_addr_widths(entries2)
+
+    for i in range(max(len(entries1), len(entries2))):
+        e1 = entries1[i] if i < len(entries1) else None
+        e2 = entries2[i] if i < len(entries2) else None
+
+        mask1 = mask2 = None
+        if color and e1 is not None and e2 is not None:
+            mask1, mask2 = diff_masks(e1[2], e2[2])
+
+        if e1 is not None:
+            label, addr, chunk = e1
+            w = width if width > 0 else len(chunk)
+            lines1 = format_entry(label, addr, chunk, label_width1, addr_width1, ascii_mode, w, mask1)
+        else:
+            lines1 = []
+
+        if e2 is not None:
+            label, addr, chunk = e2
+            w = width if width > 0 else len(chunk)
+            lines2 = format_entry(label, addr, chunk, label_width2, addr_width2, ascii_mode, w, mask2)
+        else:
+            lines2 = []
+
+        col1_width = max((visible_len(l) for l in lines1), default=0)
+        col2_width = max((visible_len(l) for l in lines2), default=0)
+        for j in range(max(len(lines1), len(lines2))):
+            l1 = lines1[j] if j < len(lines1) else ""
+            l2 = lines2[j] if j < len(lines2) else ""
+            print(f"{ljust_visible(l1, col1_width)} | {ljust_visible(l2, col2_width)}")
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        prog="hexit",
+        description="hexdump-like tool for fixed-record files with a header.",
+        epilog=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    parser.add_argument("file")
+    parser.add_argument("file2", nargs="?", help="optional second file, dumped side by side with the first")
+    ascii_group = parser.add_mutually_exclusive_group()
+    ascii_group.add_argument(
+        "-C", dest="ascii_mode", action="store_const", const="below",
+        help="show an ASCII sidebar below each hex line (like hexdump -C)",
+    )
+    ascii_group.add_argument(
+        "-c", dest="ascii_mode", action="store_const", const="inline",
+        help="show the ASCII sidebar after each hex line instead of below it",
+    )
+    parser.add_argument(
+        "-w", "--width", type=int, default=16,
+        help="bytes of hex shown per output line (default: 16); "
+             "0 means the whole record on one line",
+    )
+    parser.add_argument(
+        "-e", "--entity", metavar="TYPE",
+        help="for .2lid files: only show the bytes of this entity type (name or index) in each block",
+    )
+    parser.add_argument(
+        "--color", choices=["auto", "always", "never"], default="auto",
+        help="colorize differing bytes when dumping two files (default: auto)",
+    )
+    args = parser.parse_args()
+
+    try:
+        layout = layout_for(args.file, args.entity)
+        layout2 = layout_for(args.file2, args.entity) if args.file2 is not None else None
+    except ValueError as e:
+        parser.error(str(e))
+
+    if layout2 is not None:
+        if (layout.header_size, layout.record_size, layout.slice_start, layout.slice_len) != (
+            layout2.header_size, layout2.record_size, layout2.slice_start, layout2.slice_len
+        ):
+            parser.error(f"{args.file} and {args.file2} have different layouts ({layout} vs {layout2})")
+
+        color = args.color == "always" or (args.color == "auto" and sys.stdout.isatty())
+        dump_side_by_side(args.file, args.file2, layout, layout2, args.ascii_mode, args.width, color)
+    else:
+        dump_single(args.file, layout, args.ascii_mode, args.width)
+
+
+if __name__ == "__main__":
+    main()

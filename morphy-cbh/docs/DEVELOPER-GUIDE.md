@@ -552,7 +552,7 @@ public class CompactMoveEncoder implements MoveEncoder {
 When ChessBase releases a new version:
 
 1. **Analyze new format** using hex dumps and comparison
-2. **Update format docs** in `docs/cbh-format/`
+2. **Update format docs** in `format/v1/`
 3. **Implement changes** in storage/serialization classes
 4. **Add version detection** if format changed
 5. **Test with new databases**
@@ -591,4 +591,4 @@ public class NewValidator implements Validator {
 
 - [Architecture Overview](ARCHITECTURE.md) - System design
 - [User Guide](USER-GUIDE.md) - Library usage
-- [CBH Format Specification](cbh-format/README.md) - File format details
+- [CBH Format Specification](../../format/v1/README.md) - File format details

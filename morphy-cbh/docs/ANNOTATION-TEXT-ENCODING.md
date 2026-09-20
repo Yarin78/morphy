@@ -767,5 +767,5 @@ The encoding must ensure:
 ## See Also
 
 - [GAME-REPRESENTATION.md](GAME-REPRESENTATION.md) - Overall architecture
-- [cbh-format/annotations.md](cbh-format/annotations.md) - Binary format specification
+- [format/v1/annotations.md](../../format/v1/annotations.md) - Binary format specification
 - `AnnotationConverter.java` - Implementation reference
