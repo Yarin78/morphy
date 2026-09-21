@@ -37,8 +37,9 @@ it, and move it there if they do not.
 
 **The notes are not in this repository.** They mention personal databases, so
 they live in a private repository, `morphy-notes`, next to this checkout, and
-`format/v1/notes` and `format/v2/notes` are symbolic links to it that git ignores
-(`ln -s ../../../morphy-notes/v1 format/v1/notes`, and the same for v2). Notes
+`format/v1/notes`, `format/v2/notes` and `format/v1/old` (the superseded v1
+documents) are symbolic links to it that git ignores (`ln -s
+../../../morphy-notes/v1 format/v1/notes`, and the same for the others). Notes
 link to the specification with relative paths (`../2-moves.md`). Never
 `git add` them, and expect them to be missing in another clone. Do not put the
 names of personal databases in the specifications, in code comments or in
