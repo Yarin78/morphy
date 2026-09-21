@@ -28,7 +28,10 @@ public abstract class TimeControlAnnotation extends Annotation {
     int moves(); // 1000 = rest of the game
 
     @Value.Parameter
-    int type(); // ?? 0, 1 or 3. 3 only on last time serie, 1 usually means increment!?
+    // 0 = the rest of the game, no increment; 1 = a stage of a set number of moves; 3 = the rest of
+    // the game, with an increment; 5 = an unused serie (no time, 1000 moves) following a serie of
+    // type 0 or 3; 2 = unknown (very rare)
+    int type();
   }
 
   @Value.Parameter
@@ -93,6 +96,9 @@ public abstract class TimeControlAnnotation extends Annotation {
         int increment = ByteBufferUtil.getIntB(buf);
         int moves = ByteBufferUtil.getUnsignedShortB(buf);
         int type = ByteBufferUtil.getUnsignedByte(buf);
+        if (start == 0 && increment == 0 && moves == 0 && type == 0) {
+          continue; // An unused serie
+        }
         timeSeries.add(ImmutableTimeSerie.of(start, increment, moves, type));
         if (moves == 1000) break;
       }
