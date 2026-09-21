@@ -650,4 +650,4 @@ Database (.cbh/.cbg/.cba files)
 - [Database Reference](DATABASE-REFERENCE.md) - Entity types and game headers
 - [User Guide](USER-GUIDE.md) - How to use the Morphy library
 - [Developer Guide](DEVELOPER-GUIDE.md) - Contributing to Morphy
-- [CBH Format Documentation](../../format/v1/README.md) - Binary file format specification
+- [CBH Format Documentation](../../format/v1/spec/README.md) - Binary file format specification

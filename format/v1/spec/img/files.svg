@@ -1,0 +1,120 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 452" width="860" height="452" role="img" aria-label="A database is a set of files sharing one base name. The game record in .cbh holds the offset of its moves in .cbg and of its annotations in .cba, and refers to players, tournaments, annotators and sources by id. The .cbj file adds teams and a game tag. The search boosters can be rebuilt from the rest.">
+  <title>A database is a set of files sharing one base name. The game record in .cbh holds the offset of its moves in .cbg and of its annotations in .cba, and refers to players, tournaments, annotators and sources by id. The .cbj file adds teams and a game tag. The search boosters can be rebuilt from the rest.</title>
+  <style>
+  text { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+          font-size: 12px; }
+  .m { font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace; }
+  .sm { font-size: 11px; } .xs { font-size: 10px; } .lg { font-size: 13px; }
+  .b { font-weight: 600; }
+  .box, .wash, .accb, .keyb, .slotb, .roseb { stroke-width: 1.2; }
+  .ln, .lnacc, .lndash { fill: none; stroke-width: 1.5; }
+  .lndash { stroke-width: 1.2; stroke-dasharray: 4 4; }
+
+  .bg { fill: #ffffff; stroke: #d3dad6; }
+  text { fill: #16201c; }
+  .mut { fill: #56625c; } .fnt { fill: #8a958f; }
+  .acc { fill: #16805a; } .keyc { fill: #b07614; } .slotc { fill: #5b5fa8; }
+  .rosec { fill: #a4405f; }
+  .box { fill: #ffffff; stroke: #d3dad6; }
+  .wash { fill: #eff2f0; stroke: #d3dad6; }
+  .accb { fill: #ddefe6; stroke: #16805a; }
+  .keyb { fill: #f6ead3; stroke: #b07614; }
+  .slotb { fill: #e4e5f3; stroke: #5b5fa8; }
+  .roseb { fill: #f6e2e8; stroke: #a4405f; }
+  .ln, .lndash { stroke: #8a958f; }
+  .lnacc { stroke: #16805a; }
+  .hfnt { fill: #8a958f; } .hacc { fill: #16805a; }
+
+  @media (prefers-color-scheme: dark) {
+
+  .bg { fill: #17201d; stroke: #2c3833; }
+  text { fill: #e2e8e5; }
+  .mut { fill: #9daaa3; } .fnt { fill: #6f7c75; }
+  .acc { fill: #2fa877; } .keyc { fill: #b98322; } .slotc { fill: #8c90d8; }
+  .rosec { fill: #d4738f; }
+  .box { fill: #17201d; stroke: #2c3833; }
+  .wash { fill: #1d2824; stroke: #2c3833; }
+  .accb { fill: #16362a; stroke: #2fa877; }
+  .keyb { fill: #3a2d14; stroke: #b98322; }
+  .slotb { fill: #262844; stroke: #8c90d8; }
+  .roseb { fill: #3a1f28; stroke: #d4738f; }
+  .ln, .lndash { stroke: #6f7c75; }
+  .lnacc { stroke: #2fa877; }
+  .hfnt { fill: #6f7c75; } .hacc { fill: #2fa877; }
+
+  }
+  </style>
+  <rect class="bg" x="0.5" y="0.5" width="859" height="451" rx="5"/>
+  <marker id="d" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="hacc"/></marker>
+  <marker id="e" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="hfnt"/></marker>
+  <text x="24" y="28" class="lg b">One database, many files</text>
+  <text x="24" y="46" class="xs mut">they share a base name; the sizes are those of Mega Database 2021, 8.5 million games</text>
+  <rect x="24" y="74" width="236" height="206" class="box" rx="5"/>
+  <text x="40" y="98" class="sm b m acc">.cbh</text>
+  <text x="88" y="98" class="sm b">game headers</text>
+  <text x="40" y="114" class="xs mut">46 bytes per game · 391 MB</text>
+  <rect x="40" y="124" width="204" height="21" class="keyb" rx="2"/>
+  <text x="48" y="139" class="xs m fnt">0x01</text>
+  <text x="88" y="139" class="xs keyc">moves offset</text>
+  <rect x="40" y="149" width="204" height="21" class="keyb" rx="2"/>
+  <text x="48" y="164" class="xs m fnt">0x05</text>
+  <text x="88" y="164" class="xs keyc">annotation offset</text>
+  <rect x="40" y="174" width="204" height="21" class="accb" rx="2"/>
+  <text x="48" y="189" class="xs m fnt">0x09</text>
+  <text x="88" y="189" class="xs acc">white · black player</text>
+  <rect x="40" y="199" width="204" height="21" class="accb" rx="2"/>
+  <text x="48" y="214" class="xs m fnt">0x0f</text>
+  <text x="88" y="214" class="xs acc">tournament</text>
+  <rect x="40" y="224" width="204" height="21" class="accb" rx="2"/>
+  <text x="48" y="239" class="xs m fnt">0x12</text>
+  <text x="88" y="239" class="xs acc">annotator · source</text>
+  <rect x="40" y="249" width="204" height="21" class="box" rx="2"/>
+  <text x="48" y="264" class="xs m fnt">0x18</text>
+  <text x="88" y="264" class="xs ">date · result · elo …</text>
+  <rect x="24" y="300" width="236" height="76" class="box" rx="5"/>
+  <text x="40" y="324" class="sm b m acc">.cbj</text>
+  <text x="88" y="324" class="sm b">extended headers</text>
+  <text x="40" y="342" class="xs mut">120 bytes per game · 1.0 GB</text>
+  <text x="40" y="360" class="xs mut">teams, game tag, material, ratings, times</text>
+  <rect x="332" y="74" width="244" height="64" class="keyb" rx="5"/>
+  <text x="348" y="100" class="sm b m keyc">.cbg</text>
+  <text x="404" y="100" class="sm b">moves</text>
+  <text x="348" y="118" class="xs mut">896 MB · one record per game</text>
+  <rect x="332" y="158" width="244" height="64" class="keyb" rx="5"/>
+  <text x="348" y="184" class="sm b m keyc">.cba</text>
+  <text x="404" y="184" class="sm b">annotations</text>
+  <text x="348" y="202" class="xs mut">176 MB · one record per game</text>
+  <rect x="332" y="242" width="244" height="64" class="accb" rx="5"/>
+  <text x="348" y="268" class="sm b m acc">.cbp .cbt .cbc .cbs</text>
+  <text x="348" y="286" class="xs mut">players, tournaments, annotators,</text>
+  <text x="348" y="300" class="xs mut">sources: 26 MB · a tree of records</text>
+  <rect x="332" y="322" width="244" height="54" class="accb" rx="5"/>
+  <text x="348" y="344" class="sm b m acc">.cbe .cbl</text>
+  <text x="414" y="344" class="sm b">teams · game tags</text>
+  <text x="348" y="362" class="xs mut">referred to from .cbj</text>
+  <path d="M244 135 C 290 135, 290 106, 328 106" class="lnacc" marker-end="url(#d)"/>
+  <path d="M244 160 C 290 160, 290 190, 328 190" class="lnacc" marker-end="url(#d)"/>
+  <path d="M244 210 C 290 210, 290 274, 328 274" class="lnacc" marker-end="url(#d)"/>
+  <path d="M260 338 L 328 338" class="lnacc" marker-end="url(#d)"/>
+  <text x="262" y="100" class="xs keyc">offset</text>
+  <text x="268" y="262" class="xs acc">id</text>
+  <text x="266" y="330" class="xs acc">id</text>
+  <rect x="630" y="74" width="206" height="60" class="slotb" rx="5"/>
+  <text x="646" y="99" class="sm b m slotc">.cit .cib</text>
+  <text x="718" y="99" class="sm b">games per entity</text>
+  <text x="646" y="118" class="xs mut">257 MB · linked blocks</text>
+  <rect x="630" y="148" width="206" height="60" class="slotb" rx="5"/>
+  <text x="646" y="173" class="sm b m slotc">.cbb</text>
+  <text x="718" y="173" class="sm b">what happened</text>
+  <text x="646" y="192" class="xs mut">443 MB · 52 bytes per game</text>
+  <rect x="630" y="222" width="206" height="60" class="slotb" rx="5"/>
+  <text x="646" y="247" class="sm b m slotc">.cbgi</text>
+  <text x="718" y="247" class="sm b">move offsets</text>
+  <text x="646" y="266" class="xs mut">34 MB · 4 bytes per game</text>
+  <rect x="630" y="296" width="206" height="60" class="box" rx="5"/>
+  <text x="646" y="321" class="sm b m ">.flags</text>
+  <text x="718" y="321" class="sm b">top games</text>
+  <text x="646" y="340" class="xs mut">2 MB · 2 bits per game</text>
+  <text x="24" y="404" class="xs mut">The three search boosters (blue) repeat what the other files say, and any of them may be missing or out of date.</text>
+  <text x="24" y="422" class="xs mut">A .cbm manifest and the .html and .bmp folders hold the media of guiding texts, and an .ini file holds settings.</text>
+</svg>

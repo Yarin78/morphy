@@ -1,0 +1,129 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 280" width="860" height="280" role="img" aria-label="A map of the 46-byte game record: a type byte, two file offsets, five entity ids, the date, result, ratings and ECO code, and the flags, annotation magnitudes and move count that ChessBase computes.">
+  <title>A map of the 46-byte game record: a type byte, two file offsets, five entity ids, the date, result, ratings and ECO code, and the flags, annotation magnitudes and move count that ChessBase computes.</title>
+  <style>
+  text { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+          font-size: 12px; }
+  .m { font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace; }
+  .sm { font-size: 11px; } .xs { font-size: 10px; } .lg { font-size: 13px; }
+  .b { font-weight: 600; }
+  .box, .wash, .accb, .keyb, .slotb, .roseb { stroke-width: 1.2; }
+  .ln, .lnacc, .lndash { fill: none; stroke-width: 1.5; }
+  .lndash { stroke-width: 1.2; stroke-dasharray: 4 4; }
+
+  .bg { fill: #ffffff; stroke: #d3dad6; }
+  text { fill: #16201c; }
+  .mut { fill: #56625c; } .fnt { fill: #8a958f; }
+  .acc { fill: #16805a; } .keyc { fill: #b07614; } .slotc { fill: #5b5fa8; }
+  .rosec { fill: #a4405f; }
+  .box { fill: #ffffff; stroke: #d3dad6; }
+  .wash { fill: #eff2f0; stroke: #d3dad6; }
+  .accb { fill: #ddefe6; stroke: #16805a; }
+  .keyb { fill: #f6ead3; stroke: #b07614; }
+  .slotb { fill: #e4e5f3; stroke: #5b5fa8; }
+  .roseb { fill: #f6e2e8; stroke: #a4405f; }
+  .ln, .lndash { stroke: #8a958f; }
+  .lnacc { stroke: #16805a; }
+  .hfnt { fill: #8a958f; } .hacc { fill: #16805a; }
+
+  @media (prefers-color-scheme: dark) {
+
+  .bg { fill: #17201d; stroke: #2c3833; }
+  text { fill: #e2e8e5; }
+  .mut { fill: #9daaa3; } .fnt { fill: #6f7c75; }
+  .acc { fill: #2fa877; } .keyc { fill: #b98322; } .slotc { fill: #8c90d8; }
+  .rosec { fill: #d4738f; }
+  .box { fill: #17201d; stroke: #2c3833; }
+  .wash { fill: #1d2824; stroke: #2c3833; }
+  .accb { fill: #16362a; stroke: #2fa877; }
+  .keyb { fill: #3a2d14; stroke: #b98322; }
+  .slotb { fill: #262844; stroke: #8c90d8; }
+  .roseb { fill: #3a1f28; stroke: #d4738f; }
+  .ln, .lndash { stroke: #6f7c75; }
+  .lnacc { stroke: #2fa877; }
+  .hfnt { fill: #6f7c75; } .hacc { fill: #2fa877; }
+
+  }
+  </style>
+  <rect class="bg" x="0.5" y="0.5" width="859" height="279" rx="5"/>
+  <text x="24" y="28" class="lg b">The game record — 46 bytes, 16 to a row</text>
+  <text x="24" y="46" class="xs mut">every game has one, at 46 · game id; the first record is the file header, of the same size</text>
+  <text x="24" y="66" class="xs fnt">shown: game 1038 of World-ch, Carlsen – Caruana, 2018</text>
+  <text x="64" y="108.0" class="xs m fnt" text-anchor="end">0x00</text>
+  <text x="64" y="148.0" class="xs m fnt" text-anchor="end">0x10</text>
+  <text x="64" y="188.0" class="xs m fnt" text-anchor="end">0x20</text>
+  <rect x="74" y="84" width="43" height="36" class="roseb" rx="2"/>
+  <text x="95.5" y="99" class="xs b rosec" text-anchor="middle">type</text>
+  <text x="95.5" y="113" class="xs m mut" text-anchor="middle">01</text>
+  <rect x="120" y="84" width="181" height="36" class="keyb" rx="2"/>
+  <text x="210.5" y="99" class="xs b keyc" text-anchor="middle">moves offset</text>
+  <text x="210.5" y="113" class="xs m mut" text-anchor="middle">4620620</text>
+  <rect x="304" y="84" width="181" height="36" class="keyb" rx="2"/>
+  <text x="394.5" y="99" class="xs b keyc" text-anchor="middle">annotation offset</text>
+  <text x="394.5" y="113" class="xs m mut" text-anchor="middle">1637705</text>
+  <rect x="488" y="84" width="135" height="36" class="accb" rx="2"/>
+  <text x="555.5" y="99" class="xs b acc" text-anchor="middle">white</text>
+  <text x="555.5" y="113" class="xs m mut" text-anchor="middle">35</text>
+  <rect x="626" y="84" width="135" height="36" class="accb" rx="2"/>
+  <text x="693.5" y="99" class="xs b acc" text-anchor="middle">black</text>
+  <text x="693.5" y="113" class="xs m mut" text-anchor="middle">37</text>
+  <rect x="764" y="84" width="43" height="36" class="accb" rx="2"/>
+  <text x="785.5" y="104.0" class="xs fnt" text-anchor="middle">…</text>
+  <rect x="74" y="124" width="89" height="36" class="accb" rx="2"/>
+  <text x="118.5" y="139" class="xs b acc" text-anchor="middle">tournament</text>
+  <text x="118.5" y="153" class="xs m mut" text-anchor="middle">51</text>
+  <rect x="166" y="124" width="135" height="36" class="accb" rx="2"/>
+  <text x="233.5" y="139" class="xs b acc" text-anchor="middle">annotator</text>
+  <text x="233.5" y="153" class="xs m mut" text-anchor="middle">79</text>
+  <rect x="304" y="124" width="135" height="36" class="accb" rx="2"/>
+  <text x="371.5" y="139" class="xs b acc" text-anchor="middle">source</text>
+  <text x="371.5" y="153" class="xs m mut" text-anchor="middle">23</text>
+  <rect x="442" y="124" width="135" height="36" class="box" rx="2"/>
+  <text x="509.5" y="139" class="xs b" text-anchor="middle">date</text>
+  <text x="509.5" y="153" class="xs m mut" text-anchor="middle">2018-11-28</text>
+  <rect x="580" y="124" width="43" height="36" class="box" rx="2"/>
+  <text x="601.5" y="139" class="xs b" text-anchor="middle">result</text>
+  <text x="601.5" y="153" class="xs m mut" text-anchor="middle">1-0</text>
+  <rect x="626" y="124" width="43" height="36" class="box" rx="2"/>
+  <text x="647.5" y="139" class="xs b" text-anchor="middle">eval</text>
+  <text x="647.5" y="153" class="xs m mut" text-anchor="middle">0</text>
+  <rect x="672" y="124" width="43" height="36" class="box" rx="2"/>
+  <text x="693.5" y="139" class="xs b" text-anchor="middle">round</text>
+  <text x="693.5" y="153" class="xs m mut" text-anchor="middle">3</text>
+  <rect x="718" y="124" width="43" height="36" class="box" rx="2"/>
+  <text x="739.5" y="139" class="xs b" text-anchor="middle">sub</text>
+  <text x="739.5" y="153" class="xs m mut" text-anchor="middle">0</text>
+  <rect x="764" y="124" width="43" height="36" class="box" rx="2"/>
+  <text x="785.5" y="139" class="xs b" text-anchor="middle">w. elo</text>
+  <text x="785.5" y="153" class="xs m mut" text-anchor="middle">2835</text>
+  <rect x="74" y="164" width="43" height="36" class="box" rx="2"/>
+  <text x="95.5" y="184.0" class="xs fnt" text-anchor="middle">…</text>
+  <rect x="120" y="164" width="89" height="36" class="box" rx="2"/>
+  <text x="164.5" y="179" class="xs b" text-anchor="middle">b. elo</text>
+  <text x="164.5" y="193" class="xs m mut" text-anchor="middle">2832</text>
+  <rect x="212" y="164" width="89" height="36" class="box" rx="2"/>
+  <text x="256.5" y="179" class="xs b" text-anchor="middle">ECO</text>
+  <text x="256.5" y="193" class="xs m mut" text-anchor="middle">B44</text>
+  <rect x="304" y="164" width="89" height="36" class="box" rx="2"/>
+  <text x="348.5" y="179" class="xs b" text-anchor="middle">medals</text>
+  <text x="348.5" y="193" class="xs m mut" text-anchor="middle">0</text>
+  <rect x="396" y="164" width="181" height="36" class="slotb" rx="2"/>
+  <text x="486.5" y="179" class="xs b slotc" text-anchor="middle">flags</text>
+  <text x="486.5" y="193" class="xs m mut" text-anchor="middle">0x0e</text>
+  <rect x="580" y="164" width="89" height="36" class="slotb" rx="2"/>
+  <text x="624.5" y="179" class="xs b slotc" text-anchor="middle">magn.</text>
+  <text x="624.5" y="193" class="xs m mut" text-anchor="middle">13</text>
+  <rect x="672" y="164" width="43" height="36" class="slotb" rx="2"/>
+  <text x="693.5" y="179" class="xs b slotc" text-anchor="middle">moves</text>
+  <text x="693.5" y="193" class="xs m mut" text-anchor="middle">51</text>
+  <rect x="24" y="217" width="12" height="12" class="roseb" rx="2"/>
+  <text x="42" y="226" class="xs mut">type</text>
+  <rect x="87.6" y="217" width="12" height="12" class="keyb" rx="2"/>
+  <text x="105.6" y="226" class="xs mut">where the moves and annotations are</text>
+  <rect x="318.6" y="217" width="12" height="12" class="accb" rx="2"/>
+  <text x="336.6" y="226" class="xs mut">entity ids</text>
+  <rect x="414.6" y="217" width="12" height="12" class="box" rx="2"/>
+  <text x="432.6" y="226" class="xs mut">what the user entered</text>
+  <rect x="570.0" y="217" width="12" height="12" class="slotb" rx="2"/>
+  <text x="588.0" y="226" class="xs mut">computed from the moves</text>
+  <text x="24" y="272" class="xs mut">Numbers are big-endian. A guiding text has the same size and its own layout from 0x01 on.</text>
+</svg>

@@ -1,0 +1,100 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 340" width="860" height="340" role="img" aria-label="How the games of a player are found: the record of the player in .cit holds the first and last block of a list; each block in .cib holds up to 13 game ids and the number of the next block.">
+  <title>How the games of a player are found: the record of the player in .cit holds the first and last block of a list; each block in .cib holds up to 13 game ids and the number of the next block.</title>
+  <style>
+  text { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+          font-size: 12px; }
+  .m { font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace; }
+  .sm { font-size: 11px; } .xs { font-size: 10px; } .lg { font-size: 13px; }
+  .b { font-weight: 600; }
+  .box, .wash, .accb, .keyb, .slotb, .roseb { stroke-width: 1.2; }
+  .ln, .lnacc, .lndash { fill: none; stroke-width: 1.5; }
+  .lndash { stroke-width: 1.2; stroke-dasharray: 4 4; }
+
+  .bg { fill: #ffffff; stroke: #d3dad6; }
+  text { fill: #16201c; }
+  .mut { fill: #56625c; } .fnt { fill: #8a958f; }
+  .acc { fill: #16805a; } .keyc { fill: #b07614; } .slotc { fill: #5b5fa8; }
+  .rosec { fill: #a4405f; }
+  .box { fill: #ffffff; stroke: #d3dad6; }
+  .wash { fill: #eff2f0; stroke: #d3dad6; }
+  .accb { fill: #ddefe6; stroke: #16805a; }
+  .keyb { fill: #f6ead3; stroke: #b07614; }
+  .slotb { fill: #e4e5f3; stroke: #5b5fa8; }
+  .roseb { fill: #f6e2e8; stroke: #a4405f; }
+  .ln, .lndash { stroke: #8a958f; }
+  .lnacc { stroke: #16805a; }
+  .hfnt { fill: #8a958f; } .hacc { fill: #16805a; }
+
+  @media (prefers-color-scheme: dark) {
+
+  .bg { fill: #17201d; stroke: #2c3833; }
+  text { fill: #e2e8e5; }
+  .mut { fill: #9daaa3; } .fnt { fill: #6f7c75; }
+  .acc { fill: #2fa877; } .keyc { fill: #b98322; } .slotc { fill: #8c90d8; }
+  .rosec { fill: #d4738f; }
+  .box { fill: #17201d; stroke: #2c3833; }
+  .wash { fill: #1d2824; stroke: #2c3833; }
+  .accb { fill: #16362a; stroke: #2fa877; }
+  .keyb { fill: #3a2d14; stroke: #b98322; }
+  .slotb { fill: #262844; stroke: #8c90d8; }
+  .roseb { fill: #3a1f28; stroke: #d4738f; }
+  .ln, .lndash { stroke: #6f7c75; }
+  .lnacc { stroke: #2fa877; }
+  .hfnt { fill: #6f7c75; } .hacc { fill: #2fa877; }
+
+  }
+  </style>
+  <rect class="bg" x="0.5" y="0.5" width="859" height="339" rx="5"/>
+  <marker id="d" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="hacc"/></marker>
+  <text x="24" y="28" class="lg b">The games of an entity</text>
+  <text x="24" y="46" class="xs mut">a record in .cit for each entity id, and blocks of 64 bytes in .cib that are linked</text>
+  <text x="24" y="66" class="xs fnt">shown: player 0 of World-ch, Zukertort, who played 20 games</text>
+  <text x="24" y="96" class="sm b">.cit — record 0, 40 bytes</text>
+  <rect x="24" y="108" width="108" height="46" class="accb" rx="3"/>
+  <text x="78" y="127" class="xs b acc" text-anchor="middle">players</text>
+  <text x="78" y="143" class="xs m mut" text-anchor="middle">0 · 5</text>
+  <rect x="136" y="108" width="108" height="46" class="box" rx="3"/>
+  <text x="190" y="127" class="xs b " text-anchor="middle">tournaments</text>
+  <text x="190" y="143" class="xs m mut" text-anchor="middle">2 · 6</text>
+  <rect x="248" y="108" width="108" height="46" class="wash" rx="3"/>
+  <text x="302" y="127" class="xs b mut" text-anchor="middle">teams</text>
+  <text x="302" y="143" class="xs m mut" text-anchor="middle">−1 · −1</text>
+  <rect x="360" y="108" width="108" height="46" class="box" rx="3"/>
+  <text x="414" y="127" class="xs b " text-anchor="middle">sources</text>
+  <text x="414" y="143" class="xs m mut" text-anchor="middle">4 · 347</text>
+  <rect x="472" y="108" width="108" height="46" class="box" rx="3"/>
+  <text x="526" y="127" class="xs b " text-anchor="middle">annotators</text>
+  <text x="526" y="143" class="xs m mut" text-anchor="middle">3 · 338</text>
+  <text x="592" y="135" class="xs mut">each pair is the first and the last block of a list</text>
+  <rect x="24" y="208" width="380" height="64" class="box" rx="3"/>
+  <rect x="32" y="216" width="60" height="48" class="keyb" rx="2"/>
+  <text x="62.0" y="236" class="xs b keyc" text-anchor="middle">next</text>
+  <text x="62.0" y="252" class="xs m mut" text-anchor="middle">5</text>
+  <rect x="96" y="216" width="30" height="48" class="wash" rx="2"/>
+  <text x="111.0" y="244" class="xs b mut" text-anchor="middle">0</text>
+  <rect x="130" y="216" width="56" height="48" class="box" rx="2"/>
+  <text x="158.0" y="236" class="xs b " text-anchor="middle">count</text>
+  <text x="158.0" y="252" class="xs m mut" text-anchor="middle">13</text>
+  <text x="194" y="236" class="xs b">game ids</text>
+  <text x="194" y="252" class="xs m mut">1 2 3 4 5 6 7 8 9 10 11 12 13</text>
+  <text x="24" y="292" class="sm b">.cib — block 0</text>
+  <rect x="440" y="208" width="396" height="64" class="box" rx="3"/>
+  <rect x="448" y="216" width="60" height="48" class="keyb" rx="2"/>
+  <text x="478.0" y="236" class="xs b keyc" text-anchor="middle">next</text>
+  <text x="478.0" y="252" class="xs m mut" text-anchor="middle">−1</text>
+  <rect x="512" y="216" width="30" height="48" class="wash" rx="2"/>
+  <text x="527.0" y="244" class="xs b mut" text-anchor="middle">0</text>
+  <rect x="546" y="216" width="56" height="48" class="box" rx="2"/>
+  <text x="574.0" y="236" class="xs b " text-anchor="middle">count</text>
+  <text x="574.0" y="252" class="xs m mut" text-anchor="middle">7</text>
+  <text x="610" y="236" class="xs b">game ids</text>
+  <text x="610" y="252" class="xs m mut">14 15 16 17 18 19 20  … leftovers</text>
+  <text x="440" y="292" class="sm b">.cib — block 5</text>
+  <path d="M404 240 L 436 240" class="lnacc" marker-end="url(#d)"/>
+  <text x="414" y="232" class="xs acc">5</text>
+  <path d="M54 154 L54 206" class="lnacc" marker-end="url(#d)"/>
+  <path d="M118 154 L118 176 L 700 176 L700 206" class="lndash" marker-end="url(#d)"/>
+  <text x="706" y="172" class="xs mut">last block</text>
+  <text x="62" y="176" class="xs mut">first block</text>
+  <text x="24" y="322" class="xs mut">A list ends where the next block is −1. An entity with no games has −1 and −1.</text>
+</svg>

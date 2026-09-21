@@ -1,0 +1,110 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 352" width="860" height="352" role="img" aria-label="An entity file: a 32-byte header, then records of a fixed size. Each record starts with a tree node, the left and right child and a balance, and ends with the data of the entity.">
+  <title>An entity file: a 32-byte header, then records of a fixed size. Each record starts with a tree node, the left and right child and a balance, and ends with the data of the entity.</title>
+  <style>
+  text { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+          font-size: 12px; }
+  .m { font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace; }
+  .sm { font-size: 11px; } .xs { font-size: 10px; } .lg { font-size: 13px; }
+  .b { font-weight: 600; }
+  .box, .wash, .accb, .keyb, .slotb, .roseb { stroke-width: 1.2; }
+  .ln, .lnacc, .lndash { fill: none; stroke-width: 1.5; }
+  .lndash { stroke-width: 1.2; stroke-dasharray: 4 4; }
+
+  .bg { fill: #ffffff; stroke: #d3dad6; }
+  text { fill: #16201c; }
+  .mut { fill: #56625c; } .fnt { fill: #8a958f; }
+  .acc { fill: #16805a; } .keyc { fill: #b07614; } .slotc { fill: #5b5fa8; }
+  .rosec { fill: #a4405f; }
+  .box { fill: #ffffff; stroke: #d3dad6; }
+  .wash { fill: #eff2f0; stroke: #d3dad6; }
+  .accb { fill: #ddefe6; stroke: #16805a; }
+  .keyb { fill: #f6ead3; stroke: #b07614; }
+  .slotb { fill: #e4e5f3; stroke: #5b5fa8; }
+  .roseb { fill: #f6e2e8; stroke: #a4405f; }
+  .ln, .lndash { stroke: #8a958f; }
+  .lnacc { stroke: #16805a; }
+  .hfnt { fill: #8a958f; } .hacc { fill: #16805a; }
+
+  @media (prefers-color-scheme: dark) {
+
+  .bg { fill: #17201d; stroke: #2c3833; }
+  text { fill: #e2e8e5; }
+  .mut { fill: #9daaa3; } .fnt { fill: #6f7c75; }
+  .acc { fill: #2fa877; } .keyc { fill: #b98322; } .slotc { fill: #8c90d8; }
+  .rosec { fill: #d4738f; }
+  .box { fill: #17201d; stroke: #2c3833; }
+  .wash { fill: #1d2824; stroke: #2c3833; }
+  .accb { fill: #16362a; stroke: #2fa877; }
+  .keyb { fill: #3a2d14; stroke: #b98322; }
+  .slotb { fill: #262844; stroke: #8c90d8; }
+  .roseb { fill: #3a1f28; stroke: #d4738f; }
+  .ln, .lndash { stroke: #6f7c75; }
+  .lnacc { stroke: #2fa877; }
+  .hfnt { fill: #6f7c75; } .hacc { fill: #2fa877; }
+
+  }
+  </style>
+  <rect class="bg" x="0.5" y="0.5" width="859" height="351" rx="5"/>
+  <text x="24" y="28" class="lg b">An entity file</text>
+  <text x="24" y="46" class="xs mut">the same layout for players, tournaments, annotators, sources, teams and game tags; only the data differs</text>
+  <text x="24" y="66" class="xs fnt">shown: the players of World-ch, which has 38</text>
+  <text x="24" y="92" class="sm b">The header</text>
+  <rect x="24" y="102" width="68" height="44" class="wash" rx="2"/>
+  <text x="58.0" y="120" class="xs b" text-anchor="middle">records</text>
+  <text x="58.0" y="136" class="xs m mut" text-anchor="middle">38</text>
+  <rect x="96" y="102" width="68" height="44" class="wash" rx="2"/>
+  <text x="130.0" y="120" class="xs b" text-anchor="middle">root</text>
+  <text x="130.0" y="136" class="xs m mut" text-anchor="middle">4</text>
+  <rect x="168" y="102" width="106" height="44" class="wash" rx="2"/>
+  <text x="221.0" y="120" class="xs b" text-anchor="middle">magic</text>
+  <text x="221.0" y="136" class="xs m mut" text-anchor="middle">1234567890</text>
+  <rect x="278" y="102" width="76" height="44" class="wash" rx="2"/>
+  <text x="316.0" y="120" class="xs b" text-anchor="middle">size</text>
+  <text x="316.0" y="136" class="xs m mut" text-anchor="middle">58</text>
+  <rect x="358" y="102" width="96" height="44" class="wash" rx="2"/>
+  <text x="406.0" y="120" class="xs b" text-anchor="middle">first deleted</text>
+  <text x="406.0" y="136" class="xs m mut" text-anchor="middle">−1</text>
+  <rect x="458" y="102" width="68" height="44" class="wash" rx="2"/>
+  <text x="492.0" y="120" class="xs b" text-anchor="middle">count</text>
+  <text x="492.0" y="136" class="xs m mut" text-anchor="middle">38</text>
+  <rect x="530" y="102" width="68" height="44" class="wash" rx="2"/>
+  <text x="564.0" y="120" class="xs b" text-anchor="middle">extra</text>
+  <text x="564.0" y="136" class="xs m mut" text-anchor="middle">4</text>
+  <rect x="602" y="102" width="86" height="44" class="wash" rx="2"/>
+  <text x="645.0" y="120" class="xs b" text-anchor="middle">extra bytes</text>
+  <text x="645.0" y="136" class="xs m mut" text-anchor="middle"></text>
+  <text x="24" y="162" class="xs m fnt">0x00</text>
+  <text x="96" y="162" class="xs m fnt">0x04</text>
+  <text x="168" y="162" class="xs m fnt">0x08</text>
+  <text x="278" y="162" class="xs m fnt">0x0c</text>
+  <text x="358" y="162" class="xs m fnt">0x10</text>
+  <text x="458" y="162" class="xs m fnt">0x14</text>
+  <text x="530" y="162" class="xs m fnt">0x18</text>
+  <text x="602" y="162" class="xs m fnt">0x1c</text>
+  <text x="24" y="196" class="sm b">A record — player 4, 67 bytes</text>
+  <rect x="24" y="206" width="74" height="48" class="accb" rx="3"/>
+  <text x="61.0" y="226" class="xs b acc" text-anchor="middle">left</text>
+  <text x="61.0" y="242" class="xs m mut" text-anchor="middle">3</text>
+  <rect x="102" y="206" width="74" height="48" class="accb" rx="3"/>
+  <text x="139.0" y="226" class="xs b acc" text-anchor="middle">right</text>
+  <text x="139.0" y="242" class="xs m mut" text-anchor="middle">7</text>
+  <rect x="180" y="206" width="56" height="48" class="slotb" rx="3"/>
+  <text x="208.0" y="226" class="xs b slotc" text-anchor="middle">balance</text>
+  <text x="208.0" y="242" class="xs m mut" text-anchor="middle">0</text>
+  <rect x="240" y="206" width="196" height="48" class="box" rx="3"/>
+  <text x="338.0" y="226" class="xs b " text-anchor="middle">last name</text>
+  <text x="338.0" y="242" class="xs m mut" text-anchor="middle">Lasker</text>
+  <rect x="440" y="206" width="128" height="48" class="box" rx="3"/>
+  <text x="504.0" y="226" class="xs b " text-anchor="middle">first name</text>
+  <text x="504.0" y="242" class="xs m mut" text-anchor="middle">Emanuel</text>
+  <rect x="572" y="206" width="96" height="48" class="keyb" rx="3"/>
+  <text x="620.0" y="226" class="xs b keyc" text-anchor="middle">references</text>
+  <text x="620.0" y="242" class="xs m mut" text-anchor="middle">102</text>
+  <rect x="672" y="206" width="96" height="48" class="keyb" rx="3"/>
+  <text x="720.0" y="226" class="xs b keyc" text-anchor="middle">first game</text>
+  <text x="720.0" y="242" class="xs m mut" text-anchor="middle">80</text>
+  <text x="24" y="274" class="xs mut">the node, 9 bytes</text>
+  <text x="240" y="274" class="xs mut">the data of the entity, 58 bytes for a player</text>
+  <text x="24" y="308" class="xs mut">The children are entity ids, −1 for none. The balance is the height of the right subtree minus that of the left.</text>
+  <text x="24" y="326" class="xs mut">A deleted record has −999 as its left child, and its right child links to the next deleted record.</text>
+</svg>

@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 400" width="860" height="400" role="img" aria-label="The top three levels of the tree of the 38 players of World-ch: Lasker at the root, Gunsberg and Schlechter below him, and four more players below them. Read left to right they are in alphabetical order.">
+  <title>The top three levels of the tree of the 38 players of World-ch: Lasker at the root, Gunsberg and Schlechter below him, and four more players below them. Read left to right they are in alphabetical order.</title>
+  <style>
+  text { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+          font-size: 12px; }
+  .m { font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace; }
+  .sm { font-size: 11px; } .xs { font-size: 10px; } .lg { font-size: 13px; }
+  .b { font-weight: 600; }
+  .box, .wash, .accb, .keyb, .slotb, .roseb { stroke-width: 1.2; }
+  .ln, .lnacc, .lndash { fill: none; stroke-width: 1.5; }
+  .lndash { stroke-width: 1.2; stroke-dasharray: 4 4; }
+
+  .bg { fill: #ffffff; stroke: #d3dad6; }
+  text { fill: #16201c; }
+  .mut { fill: #56625c; } .fnt { fill: #8a958f; }
+  .acc { fill: #16805a; } .keyc { fill: #b07614; } .slotc { fill: #5b5fa8; }
+  .rosec { fill: #a4405f; }
+  .box { fill: #ffffff; stroke: #d3dad6; }
+  .wash { fill: #eff2f0; stroke: #d3dad6; }
+  .accb { fill: #ddefe6; stroke: #16805a; }
+  .keyb { fill: #f6ead3; stroke: #b07614; }
+  .slotb { fill: #e4e5f3; stroke: #5b5fa8; }
+  .roseb { fill: #f6e2e8; stroke: #a4405f; }
+  .ln, .lndash { stroke: #8a958f; }
+  .lnacc { stroke: #16805a; }
+  .hfnt { fill: #8a958f; } .hacc { fill: #16805a; }
+
+  @media (prefers-color-scheme: dark) {
+
+  .bg { fill: #17201d; stroke: #2c3833; }
+  text { fill: #e2e8e5; }
+  .mut { fill: #9daaa3; } .fnt { fill: #6f7c75; }
+  .acc { fill: #2fa877; } .keyc { fill: #b98322; } .slotc { fill: #8c90d8; }
+  .rosec { fill: #d4738f; }
+  .box { fill: #17201d; stroke: #2c3833; }
+  .wash { fill: #1d2824; stroke: #2c3833; }
+  .accb { fill: #16362a; stroke: #2fa877; }
+  .keyb { fill: #3a2d14; stroke: #b98322; }
+  .slotb { fill: #262844; stroke: #8c90d8; }
+  .roseb { fill: #3a1f28; stroke: #d4738f; }
+  .ln, .lndash { stroke: #6f7c75; }
+  .lnacc { stroke: #2fa877; }
+  .hfnt { fill: #6f7c75; } .hacc { fill: #2fa877; }
+
+  }
+  </style>
+  <rect class="bg" x="0.5" y="0.5" width="859" height="399" rx="5"/>
+  <text x="24" y="28" class="lg b">A tree of players</text>
+  <text x="24" y="46" class="xs mut">each node has the id of the player, the balance is under the name; the triangles stand for what hangs below</text>
+  <marker id="t" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="hfnt"/></marker>
+  <path d="M430 118 L230 158" class="ln" marker-end="url(#t)"/>
+  <path d="M430 118 L630 158" class="ln" marker-end="url(#t)"/>
+  <path d="M230 202 L130 242" class="ln" marker-end="url(#t)"/>
+  <path d="M230 202 L330 242" class="ln" marker-end="url(#t)"/>
+  <path d="M630 202 L530 242" class="ln" marker-end="url(#t)"/>
+  <path d="M630 202 L730 242" class="ln" marker-end="url(#t)"/>
+  <rect x="364" y="74" width="132" height="44" class="accb" rx="4"/>
+  <text x="430" y="92" class="xs b" text-anchor="middle">Lasker</text>
+  <text x="430" y="108" class="xs m mut" text-anchor="middle">id 4 · balance 0</text>
+  <rect x="164" y="158" width="132" height="44" class="box" rx="4"/>
+  <text x="230" y="176" class="xs b" text-anchor="middle">Gunsberg</text>
+  <text x="230" y="192" class="xs m mut" text-anchor="middle">id 3 · balance 0</text>
+  <rect x="564" y="158" width="132" height="44" class="box" rx="4"/>
+  <text x="630" y="176" class="xs b" text-anchor="middle">Schlechter</text>
+  <text x="630" y="192" class="xs m mut" text-anchor="middle">id 7 · balance +1</text>
+  <rect x="64" y="242" width="132" height="44" class="box" rx="4"/>
+  <text x="130" y="260" class="xs b" text-anchor="middle">Capablanca</text>
+  <text x="130" y="276" class="xs m mut" text-anchor="middle">id 9 · balance 0</text>
+  <rect x="264" y="242" width="132" height="44" class="box" rx="4"/>
+  <text x="330" y="260" class="xs b" text-anchor="middle">Keres</text>
+  <text x="330" y="276" class="xs m mut" text-anchor="middle">id 13 · balance -1</text>
+  <rect x="464" y="242" width="132" height="44" class="box" rx="4"/>
+  <text x="530" y="260" class="xs b" text-anchor="middle">Petrosian</text>
+  <text x="530" y="276" class="xs m mut" text-anchor="middle">id 19 · balance -1</text>
+  <rect x="664" y="242" width="132" height="44" class="box" rx="4"/>
+  <text x="730" y="260" class="xs b" text-anchor="middle">Steinitz</text>
+  <text x="730" y="276" class="xs m mut" text-anchor="middle">id 1 · balance +1</text>
+  <path d="M130 286 L106 320 L154 320 z" class="lndash"/>
+  <path d="M330 286 L306 320 L354 320 z" class="lndash"/>
+  <path d="M530 286 L506 320 L554 320 z" class="lndash"/>
+  <path d="M730 286 L706 320 L754 320 z" class="lndash"/>
+  <text x="24" y="358" class="xs mut">In order: Capablanca, Gunsberg, Keres, Lasker, Petrosian, Schlechter, Steinitz — with the subtrees between them.</text>
+  <text x="24" y="378" class="xs mut">Walking left subtree, node, right subtree gives the players in sort order; a search descends from the root.</text>
+</svg>

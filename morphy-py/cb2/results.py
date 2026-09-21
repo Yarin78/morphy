@@ -11,9 +11,9 @@ RESULT_TEXT = {
     0: "0-1",
     1: "½-½",
     2: "1-0",
-    4: "+:-",  # white wins on forfeit
+    4: "-:+",  # black wins on forfeit
     5: "=:=",  # draw on forfeit
-    6: "-:+",  # black wins on forfeit
+    6: "+:-",  # white wins on forfeit
     7: "0-0",  # both players lost
 }
 

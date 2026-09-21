@@ -1,0 +1,99 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 320" width="860" height="320" role="img" aria-label="The move file: a 26-byte header, then the records of the games one after the other in game id order, with a hole of unused bytes where a record became shorter.">
+  <title>The move file: a 26-byte header, then the records of the games one after the other in game id order, with a hole of unused bytes where a record became shorter.</title>
+  <style>
+  text { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+          font-size: 12px; }
+  .m { font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace; }
+  .sm { font-size: 11px; } .xs { font-size: 10px; } .lg { font-size: 13px; }
+  .b { font-weight: 600; }
+  .box, .wash, .accb, .keyb, .slotb, .roseb { stroke-width: 1.2; }
+  .ln, .lnacc, .lndash { fill: none; stroke-width: 1.5; }
+  .lndash { stroke-width: 1.2; stroke-dasharray: 4 4; }
+
+  .bg { fill: #ffffff; stroke: #d3dad6; }
+  text { fill: #16201c; }
+  .mut { fill: #56625c; } .fnt { fill: #8a958f; }
+  .acc { fill: #16805a; } .keyc { fill: #b07614; } .slotc { fill: #5b5fa8; }
+  .rosec { fill: #a4405f; }
+  .box { fill: #ffffff; stroke: #d3dad6; }
+  .wash { fill: #eff2f0; stroke: #d3dad6; }
+  .accb { fill: #ddefe6; stroke: #16805a; }
+  .keyb { fill: #f6ead3; stroke: #b07614; }
+  .slotb { fill: #e4e5f3; stroke: #5b5fa8; }
+  .roseb { fill: #f6e2e8; stroke: #a4405f; }
+  .ln, .lndash { stroke: #8a958f; }
+  .lnacc { stroke: #16805a; }
+  .hfnt { fill: #8a958f; } .hacc { fill: #16805a; }
+
+  @media (prefers-color-scheme: dark) {
+
+  .bg { fill: #17201d; stroke: #2c3833; }
+  text { fill: #e2e8e5; }
+  .mut { fill: #9daaa3; } .fnt { fill: #6f7c75; }
+  .acc { fill: #2fa877; } .keyc { fill: #b98322; } .slotc { fill: #8c90d8; }
+  .rosec { fill: #d4738f; }
+  .box { fill: #17201d; stroke: #2c3833; }
+  .wash { fill: #1d2824; stroke: #2c3833; }
+  .accb { fill: #16362a; stroke: #2fa877; }
+  .keyb { fill: #3a2d14; stroke: #b98322; }
+  .slotb { fill: #262844; stroke: #8c90d8; }
+  .roseb { fill: #3a1f28; stroke: #d4738f; }
+  .ln, .lndash { stroke: #6f7c75; }
+  .lnacc { stroke: #2fa877; }
+  .hfnt { fill: #6f7c75; } .hacc { fill: #2fa877; }
+
+  }
+  </style>
+  <rect class="bg" x="0.5" y="0.5" width="859" height="319" rx="5"/>
+  <text x="24" y="28" class="lg b">The move file</text>
+  <text x="24" y="46" class="xs mut">the offsets in .cbh say where each record starts; a hole is skipped by offset alone</text>
+  <text x="24" y="66" class="xs fnt">shown: the first games of World-ch</text>
+  <rect x="24" y="102" width="92" height="52" class="wash" rx="3"/>
+  <text x="70.0" y="124" class="sm b mut" text-anchor="middle">header</text>
+  <text x="70.0" y="142" class="xs mut" text-anchor="middle">26</text>
+  <text x="24" y="94" class="xs m fnt">0</text>
+  <rect x="120" y="102" width="124" height="52" class="keyb" rx="3"/>
+  <text x="182.0" y="124" class="sm b keyc" text-anchor="middle">game 1</text>
+  <text x="182.0" y="142" class="xs mut" text-anchor="middle">355 bytes</text>
+  <text x="120" y="94" class="xs m fnt">26</text>
+  <rect x="248" y="102" width="124" height="52" class="keyb" rx="3"/>
+  <text x="310.0" y="124" class="sm b keyc" text-anchor="middle">game 2</text>
+  <text x="310.0" y="142" class="xs mut" text-anchor="middle">376</text>
+  <text x="248" y="94" class="xs m fnt">381</text>
+  <rect x="376" y="102" width="88" height="52" class="keyb" rx="3"/>
+  <text x="420.0" y="124" class="sm b keyc" text-anchor="middle">game 3</text>
+  <text x="420.0" y="142" class="xs mut" text-anchor="middle">242</text>
+  <text x="376" y="94" class="xs m fnt">757</text>
+  <rect x="468" y="102" width="96" height="52" class="roseb" rx="3"/>
+  <text x="516.0" y="124" class="sm b rosec" text-anchor="middle">hole</text>
+  <text x="516.0" y="142" class="xs mut" text-anchor="middle">1024 bytes</text>
+  <text x="468" y="94" class="xs m fnt">999</text>
+  <rect x="568" y="102" width="80" height="52" class="keyb" rx="3"/>
+  <text x="608.0" y="124" class="sm b keyc" text-anchor="middle">game 4</text>
+  <text x="608.0" y="142" class="xs mut" text-anchor="middle">221</text>
+  <text x="568" y="94" class="xs m fnt">2023</text>
+  <rect x="652" y="102" width="106" height="52" class="keyb" rx="3"/>
+  <text x="705.0" y="124" class="sm b keyc" text-anchor="middle">game 5</text>
+  <text x="705.0" y="142" class="xs mut" text-anchor="middle">374</text>
+  <text x="652" y="94" class="xs m fnt">2244</text>
+  <text x="768" y="132" class="lg fnt">…</text>
+  <text x="24" y="190" class="sm b">The header</text>
+  <rect x="24" y="202" width="42" height="40" class="wash" rx="2"/>
+  <text x="45.0" y="219" class="xs m b" text-anchor="middle">26</text>
+  <text x="45.0" y="234" class="xs mut" text-anchor="middle">size</text>
+  <rect x="70" y="202" width="88" height="40" class="wash" rx="2"/>
+  <text x="114.0" y="219" class="xs m b" text-anchor="middle">4,620,808</text>
+  <text x="114.0" y="234" class="xs mut" text-anchor="middle">file size</text>
+  <rect x="162" y="202" width="88" height="40" class="wash" rx="2"/>
+  <text x="206.0" y="219" class="xs m b" text-anchor="middle">10,240</text>
+  <text x="206.0" y="234" class="xs mut" text-anchor="middle">bytes in holes</text>
+  <rect x="254" y="202" width="116" height="40" class="wash" rx="2"/>
+  <text x="312.0" y="219" class="xs m b" text-anchor="middle">4,620,808</text>
+  <text x="312.0" y="234" class="xs mut" text-anchor="middle">again, 8 bytes</text>
+  <rect x="374" y="202" width="116" height="40" class="wash" rx="2"/>
+  <text x="432.0" y="219" class="xs m b" text-anchor="middle">10,240</text>
+  <text x="432.0" y="234" class="xs mut" text-anchor="middle">again, 8 bytes</text>
+  <text x="506" y="226" class="xs mut">the two 8-byte fields are absent when the header is 10 bytes</text>
+  <text x="24" y="274" class="xs mut">A game record: a flags byte, a 3-byte size that counts these 4 bytes, then the moves.</text>
+  <text x="24" y="292" class="xs mut">A guiding text is a record of the same kind with bit 7 of the flags set, holding titles and HTML.</text>
+</svg>

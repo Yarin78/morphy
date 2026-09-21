@@ -1,0 +1,128 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 470" width="860" height="470" role="img" aria-label="A map of the 120-byte extended game record: two team ids, a media offset, the offsets of the annotations and moves again, final material, two rating types, a version and timestamps, endgame information and a game tag.">
+  <title>A map of the 120-byte extended game record: two team ids, a media offset, the offsets of the annotations and moves again, final material, two rating types, a version and timestamps, endgame information and a game tag.</title>
+  <style>
+  text { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+          font-size: 12px; }
+  .m { font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace; }
+  .sm { font-size: 11px; } .xs { font-size: 10px; } .lg { font-size: 13px; }
+  .b { font-weight: 600; }
+  .box, .wash, .accb, .keyb, .slotb, .roseb { stroke-width: 1.2; }
+  .ln, .lnacc, .lndash { fill: none; stroke-width: 1.5; }
+  .lndash { stroke-width: 1.2; stroke-dasharray: 4 4; }
+
+  .bg { fill: #ffffff; stroke: #d3dad6; }
+  text { fill: #16201c; }
+  .mut { fill: #56625c; } .fnt { fill: #8a958f; }
+  .acc { fill: #16805a; } .keyc { fill: #b07614; } .slotc { fill: #5b5fa8; }
+  .rosec { fill: #a4405f; }
+  .box { fill: #ffffff; stroke: #d3dad6; }
+  .wash { fill: #eff2f0; stroke: #d3dad6; }
+  .accb { fill: #ddefe6; stroke: #16805a; }
+  .keyb { fill: #f6ead3; stroke: #b07614; }
+  .slotb { fill: #e4e5f3; stroke: #5b5fa8; }
+  .roseb { fill: #f6e2e8; stroke: #a4405f; }
+  .ln, .lndash { stroke: #8a958f; }
+  .lnacc { stroke: #16805a; }
+  .hfnt { fill: #8a958f; } .hacc { fill: #16805a; }
+
+  @media (prefers-color-scheme: dark) {
+
+  .bg { fill: #17201d; stroke: #2c3833; }
+  text { fill: #e2e8e5; }
+  .mut { fill: #9daaa3; } .fnt { fill: #6f7c75; }
+  .acc { fill: #2fa877; } .keyc { fill: #b98322; } .slotc { fill: #8c90d8; }
+  .rosec { fill: #d4738f; }
+  .box { fill: #17201d; stroke: #2c3833; }
+  .wash { fill: #1d2824; stroke: #2c3833; }
+  .accb { fill: #16362a; stroke: #2fa877; }
+  .keyb { fill: #3a2d14; stroke: #b98322; }
+  .slotb { fill: #262844; stroke: #8c90d8; }
+  .roseb { fill: #3a1f28; stroke: #d4738f; }
+  .ln, .lndash { stroke: #6f7c75; }
+  .lnacc { stroke: #2fa877; }
+  .hfnt { fill: #6f7c75; } .hacc { fill: #2fa877; }
+
+  }
+  </style>
+  <rect class="bg" x="0.5" y="0.5" width="859" height="469" rx="5"/>
+  <text x="24" y="28" class="lg b">The extended record — 120 bytes, 16 to a row</text>
+  <text x="24" y="46" class="xs mut">at 32 + 120 · (game id − 1) in .cbj; the file header is 32 bytes and little-endian, the records are big-endian</text>
+  <text x="24" y="66" class="xs fnt">shown: game 1038 of World-ch</text>
+  <text x="64" y="108.0" class="xs m fnt" text-anchor="end">0x00</text>
+  <text x="64" y="148.0" class="xs m fnt" text-anchor="end">0x10</text>
+  <text x="64" y="188.0" class="xs m fnt" text-anchor="end">0x20</text>
+  <text x="64" y="228.0" class="xs m fnt" text-anchor="end">0x30</text>
+  <text x="64" y="268.0" class="xs m fnt" text-anchor="end">0x40</text>
+  <text x="64" y="308.0" class="xs m fnt" text-anchor="end">0x50</text>
+  <text x="64" y="348.0" class="xs m fnt" text-anchor="end">0x60</text>
+  <text x="64" y="388.0" class="xs m fnt" text-anchor="end">0x70</text>
+  <rect x="74" y="84" width="181" height="36" class="accb" rx="2"/>
+  <text x="164.5" y="99" class="xs b acc" text-anchor="middle">white team</text>
+  <text x="164.5" y="113" class="xs m mut" text-anchor="middle">−1</text>
+  <rect x="258" y="84" width="181" height="36" class="accb" rx="2"/>
+  <text x="348.5" y="99" class="xs b acc" text-anchor="middle">black team</text>
+  <text x="348.5" y="113" class="xs m mut" text-anchor="middle">−1</text>
+  <rect x="442" y="84" width="181" height="36" class="wash" rx="2"/>
+  <text x="532.5" y="99" class="xs b mut" text-anchor="middle">media</text>
+  <text x="532.5" y="113" class="xs m mut" text-anchor="middle">−1</text>
+  <rect x="626" y="84" width="181" height="36" class="keyb" rx="2"/>
+  <text x="716.5" y="99" class="xs b keyc" text-anchor="middle">annotation offset</text>
+  <text x="716.5" y="113" class="xs m mut" text-anchor="middle">1637705</text>
+  <rect x="74" y="124" width="181" height="36" class="keyb" rx="2"/>
+  <text x="164.5" y="144.0" class="xs fnt" text-anchor="middle">…</text>
+  <rect x="258" y="124" width="181" height="36" class="slotb" rx="2"/>
+  <text x="348.5" y="139" class="xs b slotc" text-anchor="middle">material</text>
+  <text x="348.5" y="153" class="xs m mut" text-anchor="middle">0x4240</text>
+  <rect x="442" y="124" width="181" height="36" class="slotb" rx="2"/>
+  <text x="532.5" y="139" class="xs b slotc" text-anchor="middle">material</text>
+  <text x="532.5" y="153" class="xs m mut" text-anchor="middle">0x3408</text>
+  <rect x="626" y="124" width="89" height="36" class="slotb" rx="2"/>
+  <text x="670.5" y="139" class="xs b slotc" text-anchor="middle">total</text>
+  <text x="670.5" y="153" class="xs m mut" text-anchor="middle">0x73a7</text>
+  <rect x="718" y="124" width="89" height="36" class="keyb" rx="2"/>
+  <text x="762.5" y="144.0" class="xs fnt" text-anchor="middle">…</text>
+  <rect x="74" y="164" width="273" height="36" class="keyb" rx="2"/>
+  <text x="210.5" y="179" class="xs b keyc" text-anchor="middle">moves offset</text>
+  <text x="210.5" y="193" class="xs m mut" text-anchor="middle">4620620</text>
+  <rect x="350" y="164" width="457" height="36" class="box" rx="2"/>
+  <text x="578.5" y="179" class="xs b" text-anchor="middle">white rating type</text>
+  <text x="578.5" y="193" class="xs m mut" text-anchor="middle">FIDE</text>
+  <rect x="74" y="204" width="273" height="36" class="box" rx="2"/>
+  <text x="210.5" y="224.0" class="xs fnt" text-anchor="middle">…</text>
+  <rect x="350" y="204" width="457" height="36" class="box" rx="2"/>
+  <text x="578.5" y="219" class="xs b" text-anchor="middle">black rating type</text>
+  <text x="578.5" y="233" class="xs m mut" text-anchor="middle">FIDE</text>
+  <rect x="74" y="244" width="273" height="36" class="box" rx="2"/>
+  <text x="210.5" y="264.0" class="xs fnt" text-anchor="middle">…</text>
+  <rect x="350" y="244" width="181" height="36" class="wash" rx="2"/>
+  <text x="440.5" y="264.0" class="xs b mut" text-anchor="middle">?</text>
+  <rect x="534" y="244" width="181" height="36" class="wash" rx="2"/>
+  <text x="624.5" y="264.0" class="xs b mut" text-anchor="middle">?</text>
+  <rect x="718" y="244" width="89" height="36" class="wash" rx="2"/>
+  <text x="762.5" y="259" class="xs b mut" text-anchor="middle">version</text>
+  <text x="762.5" y="273" class="xs m mut" text-anchor="middle">233</text>
+  <rect x="74" y="284" width="365" height="36" class="wash" rx="2"/>
+  <text x="256.5" y="304.0" class="xs b mut" text-anchor="middle">created</text>
+  <rect x="442" y="284" width="365" height="36" class="slotb" rx="2"/>
+  <text x="624.5" y="304.0" class="xs fnt" text-anchor="middle">…</text>
+  <rect x="74" y="324" width="549" height="36" class="slotb" rx="2"/>
+  <text x="348.5" y="339" class="xs b slotc" text-anchor="middle">endgames</text>
+  <text x="348.5" y="353" class="xs m mut" text-anchor="middle">not computed</text>
+  <rect x="626" y="324" width="181" height="36" class="wash" rx="2"/>
+  <text x="716.5" y="344.0" class="xs b mut" text-anchor="middle">last saved</text>
+  <rect x="74" y="364" width="181" height="36" class="wash" rx="2"/>
+  <text x="164.5" y="384.0" class="xs fnt" text-anchor="middle">…</text>
+  <rect x="258" y="364" width="181" height="36" class="accb" rx="2"/>
+  <text x="348.5" y="379" class="xs b acc" text-anchor="middle">game tag</text>
+  <text x="348.5" y="393" class="xs m mut" text-anchor="middle">0</text>
+  <rect x="24" y="421" width="12" height="12" class="accb" rx="2"/>
+  <text x="42" y="430" class="xs mut">entity ids</text>
+  <rect x="120.0" y="421" width="12" height="12" class="keyb" rx="2"/>
+  <text x="138.0" y="430" class="xs mut">the offsets .cbh holds too</text>
+  <rect x="302.4" y="421" width="12" height="12" class="slotb" rx="2"/>
+  <text x="320.4" y="430" class="xs mut">computed from the moves</text>
+  <rect x="468.59999999999997" y="421" width="12" height="12" class="box" rx="2"/>
+  <text x="486.59999999999997" y="430" class="xs mut">what the user entered</text>
+  <rect x="624.0" y="421" width="12" height="12" class="wash" rx="2"/>
+  <text x="642.0" y="430" class="xs mut">media, timestamps, version, unknown</text>
+</svg>

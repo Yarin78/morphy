@@ -6,7 +6,7 @@ what ChessBase does to them.
 
 | | Files | Introduced | Documentation |
 |---|---|---|---|
-| **v1** | `.cbh` `.cbg` `.cba` `.cbp` `.cbt` `.cbc` `.cbs` `.cbe` `.cbl` | ChessBase 6 | [v1](v1) |
+| **v1** | `.cbh` `.cbj` `.cbg` `.cba` `.cbp` `.cbt` `.cbc` `.cbs` `.cbe` `.cbl` | ChessBase 6 | [v1/spec](v1/spec) |
 | **v2** | `.2cbh` `.2cbg` `.2cba` `.2lid` `.2lgd` `.2lcd` | ChessBase 17 | [v2/spec](v2/spec) |
 
 A database is a set of files sharing one base name, and the two formats are
@@ -31,13 +31,15 @@ file, and `spec/UNKNOWNS.md` gathers every **unknown** in one list.
 
 ## State
 
-**v2** is complete enough to implement a reader and a writer, and the Python
-implementation in [morphy-py](../morphy-py) follows it.
+Both formats are documented completely enough to implement a reader and a
+writer. The Python implementation in [morphy-py](../morphy-py) follows v2, and the
+Java library in [morphy-cbh](../morphy-cbh) implements v1.
 
-**v1** is older documentation, written before the v2 work and in a different
-style: specification and notes are mixed together, and it has no `UNKNOWNS.md`.
-It awaits a rewrite into the shape above. Some of what the v2 work established
-almost certainly applies to v1 as well — the entity sort order follows the
-Windows string comparison rather than a byte comparison, for one — so parts of
-it should be treated with suspicion until they are checked. The Java library in
-[morphy-cbh](../morphy-cbh) implements v1.
+The two are documented alike, and share the figure toolkit [figkit.py](figkit.py).
+The v1 specification was rewritten from the older documents, which are kept in
+[v1/old](v1/old) until nothing in them is missing from the new ones. Where the
+two disagree, [v1/spec](v1/spec) is right: the differences are gathered in
+[v1/notes](v1/notes).
+
+Some of what was learnt about v2 does not carry over. In particular v1 sorts
+entities by raw bytes, and only v2 uses the Windows string comparison.

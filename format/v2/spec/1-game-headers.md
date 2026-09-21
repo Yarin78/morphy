@@ -102,9 +102,9 @@ the user points at an entity whose text is empty; see
 | 1 | ½-½ |
 | 2 | 1-0 |
 | 3 | line (unfinished) |
-| 4 | 1-0 on forfeit |
+| 4 | 0-1 on forfeit |
 | 5 | ½-½ on forfeit |
-| 6 | 0-1 on forfeit |
+| 6 | 1-0 on forfeit |
 | 7 | 0-0, both lost |
 
 When the result is 3 the byte at 0x59 holds a numeric annotation glyph giving the
