@@ -144,7 +144,13 @@ public abstract class EntityIndex<T extends Entity & Comparable<T>> implements M
    * @return the entity
    */
   public @NotNull T get(int id) {
-    return resolveEntity(getNode(id));
+    EntityNode node = getNode(id);
+    if (node.isDeleted() && storage.isLax()) {
+      // Games that refer to an entity that has been deleted do occur. Provide an empty entity.
+      log.warn("The {} node with id {} is deleted; returning an empty entity", entityType, id);
+      return deserialize(id, 0, 0, new byte[node.getSerializedEntity().length]);
+    }
+    return resolveEntity(node);
   }
 
   /**

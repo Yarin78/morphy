@@ -32,6 +32,16 @@ public interface ItemStorage<THeader, TItem> {
   void putHeader(@NotNull THeader header);
 
   /**
+   * Determines if the storage was opened to tolerate faulty data, such as a reference to an item
+   * that doesn't exist. See {@link se.yarin.morphy.DatabaseMode#READ_REPAIR}.
+   *
+   * @return true if faulty data should be worked around instead of causing an exception
+   */
+  default boolean isLax() {
+    return false;
+  }
+
+  /**
    * Determines if the storage is empty (has 0 items), regardless of what the header metadata might
    * say.
    *

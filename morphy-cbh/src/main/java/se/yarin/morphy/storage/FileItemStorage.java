@@ -133,6 +133,11 @@ public class FileItemStorage<THeader, TItem>
   }
 
   @Override
+  public boolean isLax() {
+    return laxMode;
+  }
+
+  @Override
   public @NotNull TItem getItem(int index) {
     ByteBuffer buf = ByteBuffer.allocate(serializer.itemSize(this.header));
     itemMetricsRef.update(metrics -> metrics.addGet(1));

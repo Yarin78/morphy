@@ -4,6 +4,7 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import se.yarin.morphy.DatabaseMode;
 import se.yarin.morphy.ResourceLoader;
 import se.yarin.morphy.games.GameHeaderIndex;
 
@@ -45,6 +46,24 @@ public class GameTagTest {
     assertEquals("This is Dutch", s1.dutchTitle());
     assertEquals("This is Slovenia", s1.slovenianTitle());
     assertEquals("", s1.resTitle());
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void testGetDeletedGameTagFails() throws IOException {
+    // Game tag 1 has been deleted
+    GameTagIndex gameTagIndex = GameTagIndex.open(gameTagIndexFile, DatabaseMode.READ_ONLY, null);
+    gameTagIndex.get(1);
+  }
+
+  @Test
+  public void testGetDeletedGameTagWhenRepairing() throws IOException {
+    // Games that refer to a deleted entity exist in the wild
+    GameTagIndex gameTagIndex =
+        GameTagIndex.open(gameTagIndexFile, DatabaseMode.READ_REPAIR, null);
+    GameTag gameTag = gameTagIndex.get(1);
+    assertEquals(1, gameTag.id());
+    assertEquals("", gameTag.englishTitle());
+    assertEquals(0, gameTag.count());
   }
 
   @Test
