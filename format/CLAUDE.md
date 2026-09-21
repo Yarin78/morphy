@@ -34,6 +34,14 @@ together. Each ends with the open questions for its own subject.
 Before removing evidence from a specification, make sure the notes already hold
 it, and move it there if they do not.
 
+**The notes are not in this repository.** They mention personal databases, so
+they live in a private repository, `morphy-notes`, next to this checkout, and
+`format/v1/notes` and `format/v2/notes` are symbolic links to it that git ignores
+(`ln -s ../../../morphy-notes/v1 format/v1/notes`, and the same for v2). Never
+`git add` them, and expect them to be missing in another clone. Do not put the
+names of personal databases in the specifications, in code comments or in
+commit messages either: describe them as "a collection of older databases".
+
 ## Both
 
 Figures live in `spec/img/`, drawn by the `make.py` beside them; run it to

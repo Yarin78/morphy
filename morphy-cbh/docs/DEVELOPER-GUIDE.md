@@ -552,7 +552,7 @@ public class CompactMoveEncoder implements MoveEncoder {
 When ChessBase releases a new version:
 
 1. **Analyze new format** using hex dumps and comparison
-2. **Update format docs** in `format/v1/spec/` and `format/v1/notes/`
+2. **Update format docs** in `format/v1/spec/`
 3. **Implement changes** in storage/serialization classes
 4. **Add version detection** if format changed
 5. **Test with new databases**

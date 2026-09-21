@@ -13,3 +13,9 @@ __pycache__/
 # Sample databases used while working on the format documentation; fetched with
 # test-databases/scratch/sync.sh, not part of the repository.
 /test-databases/scratch/
+
+# The working notes behind the format specifications mention personal databases.
+# They live in a private repository, morphy-notes, next to this one, and are
+# linked in here; see the README in that repository.
+/format/v1/notes
+/format/v2/notes

@@ -34,8 +34,7 @@ public class AnnotationStatistics {
   }
 
   // The boundaries were confirmed against Mega Database 2021: for every game that has the flag, the
-  // magnitude bit is set exactly when the count is at least the boundary below (see
-  // format/v1/notes/1-game-headers.md).
+  // magnitude bit is set exactly when the count is at least the boundary below.
 
   public int getCommentariesMagnitude() {
     if (commentariesLength > 200) return 2;

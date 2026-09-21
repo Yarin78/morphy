@@ -35,7 +35,7 @@ reads v2 yet; when it does, this will likely move next to the v1 copy in
 
 Not in the repository. Small hand-made databases — `probe`, `reveng1`, `1tour`,
 `2tour`, `empty` — built in ChessBase to answer one question each, and cited
-throughout the v2 working notes. `sync.sh` fetches them from the Windows machine
+throughout the v2 documentation. `sync.sh` fetches them from the Windows machine
 they were made on.
 
 ## Configuration

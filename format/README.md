@@ -22,10 +22,13 @@ Each format is documented twice, for two different readers.
 - **`spec/`** states what the format is. It is the reference to implement
   against, and it says **unknown** where something is not understood.
 - **`notes/`** says how it came to be known: which database showed what, what
-  was tried, what is still open. The evidence behind the specification.
+  was tried, what is still open. The evidence behind the specification. The
+  notes mention personal databases, so they are **not part of this repository**;
+  see [CLAUDE.md](CLAUDE.md).
 
 Files come in pairs: `spec/2-moves.md` and `notes/2-moves.md` cover the same
-file, and `spec/UNKNOWNS.md` gathers every **unknown** in one list.
+file, and `spec/UNKNOWNS.md` gathers every **unknown** in one list. The
+specifications never depend on the notes.
 
 [CLAUDE.md](CLAUDE.md) sets out how to write in each.
 
@@ -38,8 +41,7 @@ Java library in [morphy-cbh](../morphy-cbh) implements v1.
 The two are documented alike, and share the figure toolkit [figkit.py](figkit.py).
 The v1 specification was rewritten from the older documents, which are kept in
 [v1/old](v1/old) until nothing in them is missing from the new ones. Where the
-two disagree, [v1/spec](v1/spec) is right: the differences are gathered in
-[v1/notes](v1/notes).
+two disagree, [v1/spec](v1/spec) is right.
 
 Some of what was learnt about v2 does not carry over. In particular v1 sorts
 entities by raw bytes, and only v2 uses the Windows string comparison.
