@@ -164,4 +164,22 @@ public class TournamentExtraTest {
     assertEquals(TournamentExtraHeader.DEFAULT_HEADER_VERSION, upgradedStorage.getStorageVersion());
     assertEquals(0, upgradedStorage.numEntries());
   }
+
+  @Test
+  public void testTiebreakRulesFillerIsUnspecified() {
+    TournamentExtra extra =
+        ImmutableTournamentExtra.builder()
+            .tiebreakRules(Arrays.asList(TiebreakRule.RR_NUM_WINS, TiebreakRule.SWISS_MEDIAN_BUCHHOLZ))
+            .build();
+    ByteBuffer buf = ByteBuffer.allocate(TournamentExtraHeader.DEFAULT_RECORD_SIZE);
+    new TournamentExtraStorage().serializeItem(extra, buf, TournamentExtraHeader.empty());
+
+    byte[] data = buf.array();
+    assertEquals((byte) 201, data[0x32]);
+    assertEquals((byte) 12, data[0x33]);
+    for (int i = 0x34; i < 0x3c; i++) {
+      assertEquals("Slot at " + i, 1, data[i]);
+    }
+    assertEquals(2, data[0x3c]); // Number of rules in use
+  }
 }

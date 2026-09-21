@@ -276,8 +276,9 @@ public class TournamentExtraStorage
     for (TiebreakRule tiebreakRule : tournamentExtra.tiebreakRules()) {
       ByteBufferUtil.putByte(buf, tiebreakRule.id());
     }
+    // ChessBase fills the slots that are not in use with 1 (Unspecified)
     for (int i = 0; i < 10 - tournamentExtra.tiebreakRules().size(); i++) {
-      ByteBufferUtil.putByte(buf, 0);
+      ByteBufferUtil.putByte(buf, TiebreakRule.UNSPECIFIED.id());
     }
     ByteBufferUtil.putByte(buf, tournamentExtra.tiebreakRules().size());
     ByteBufferUtil.putIntB(buf, CBUtil.encodeDate(tournamentExtra.endDate()));
