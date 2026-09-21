@@ -448,6 +448,11 @@ public class Database implements EntityRetriever, AutoCloseable {
         cbjFile.exists()
             ? ExtendedGameHeaderStorage.open(cbjFile, mode, context)
             : new ExtendedGameHeaderStorage(context);
+    if (mode != DatabaseMode.READ_WRITE) {
+      extendedGameHeaderStorage =
+          padExtendedGameHeaders(
+              extendedGameHeaderStorage, cbjFile.exists(), gameHeaderIndex, mode, context);
+    }
     TournamentExtraStorage tournamentExtraStorage =
         cbttFile.exists()
             ? TournamentExtraStorage.open(cbttFile, mode, context)
@@ -600,6 +605,40 @@ public class Database implements EntityRetriever, AutoCloseable {
         throw new IOException("Database deletion aborted; Failed to delete " + databaseFile);
       }
     }
+  }
+
+  /**
+   * The .cbj file is missing in the very oldest databases, and in old ones it exists but holds no
+   * records (version 1, which only has the team ids, is written that way). ChessBase treats a game
+   * that has no record as having the default values. When the database isn't opened for writing we
+   * can't upgrade the file, so instead provide the missing records from memory.
+   *
+   * <p>A file that holds some but not all records is left as it is: {@link
+   * DatabaseMode#READ_REPAIR} provides the default values for the missing ones, and in other modes
+   * it is reported as an error by the caller.
+   *
+   * @return the storage to use
+   */
+  private static @NotNull ExtendedGameHeaderStorage padExtendedGameHeaders(
+      @NotNull ExtendedGameHeaderStorage storage,
+      boolean fileExists,
+      @NotNull GameHeaderIndex gameHeaderIndex,
+      @NotNull DatabaseMode mode,
+      @NotNull DatabaseContext context) {
+    int headerCount = gameHeaderIndex.count(), extCount = storage.count();
+    if (extCount >= headerCount || (fileExists && extCount > 0)) {
+      return storage;
+    }
+    ExtendedGameHeaderStorage padded = new ExtendedGameHeaderStorage(context);
+    for (int id = 1; id <= headerCount; id++) {
+      padded.put(id, ExtendedGameHeader.empty(gameHeaderIndex.getGameHeader(id)));
+    }
+    try {
+      storage.close();
+    } catch (RuntimeException e) {
+      log.warn("Failed to close the extended game header storage", e);
+    }
+    return padded;
   }
 
   public void close() throws IOException {

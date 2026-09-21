@@ -4,12 +4,17 @@ import org.junit.Test;
 import se.yarin.chess.GameResult;
 import se.yarin.morphy.entities.Nation;
 import se.yarin.morphy.games.RatingType;
+import se.yarin.morphy.util.CBUtil;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.nio.file.Files;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 public class DatabaseTransactionTest {
 
@@ -80,6 +85,51 @@ public class DatabaseTransactionTest {
       Game game4 = txn.getGame(4);
       assertEquals(2, game4.whiteTeamId());
       assertEquals(Nation.SWEDEN, game4.whiteRatingType().nation());
+    }
+  }
+
+  @Test
+  public void readDatabaseWithoutExtendedHeaderFile() throws IOException {
+    // The .cbj file is missing in the earliest ChessBase databases
+    File cbh_cbj =
+        ResourceLoader.materializeDatabaseStream(
+            Database.class, "database/shorter_cbj_test", "shorter_cbj_test");
+    assertTrue(CBUtil.fileWithExtension(cbh_cbj, ".cbj").delete());
+
+    Database db = Database.open(cbh_cbj, DatabaseMode.READ_ONLY);
+    try (var txn = new DatabaseReadTransaction(db)) {
+      assertEquals(4, db.count());
+      int count = 0;
+      for (Game game : txn.iterable()) {
+        count++;
+        assertEquals(-1, game.whiteTeamId());
+        assertEquals(-1, game.blackTeamId());
+        assertEquals(game.header().movesOffset(), game.extendedHeader().movesOffset());
+      }
+      assertEquals(4, count);
+      assertEquals(2200, txn.getGame(1).whiteElo());
+    }
+  }
+
+  @Test
+  public void readDatabaseWithEmptyExtendedHeaderFile() throws IOException {
+    // Old versions of ChessBase write a .cbj file with version 1, which only has the team ids,
+    // and no records at all
+    File cbh_cbj =
+        ResourceLoader.materializeDatabaseStream(
+            Database.class, "database/shorter_cbj_test", "shorter_cbj_test");
+    ByteBuffer header = ByteBuffer.allocate(32).order(ByteOrder.LITTLE_ENDIAN);
+    header.putInt(1).putInt(8).putInt(0);
+    Files.write(CBUtil.fileWithExtension(cbh_cbj, ".cbj").toPath(), header.array());
+
+    Database db = Database.open(cbh_cbj, DatabaseMode.READ_ONLY);
+    try (var txn = new DatabaseReadTransaction(db)) {
+      int count = 0;
+      for (Game game : txn.iterable()) {
+        count++;
+        assertEquals(-1, game.whiteTeamId());
+      }
+      assertEquals(4, count);
     }
   }
 
