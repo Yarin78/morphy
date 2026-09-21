@@ -266,7 +266,12 @@ public class GameAdapter {
 
     EnumSet<GameHeaderFlags> gameFlags = stats.getFlags();
 
-    int moves = (model.countPly(false) + 1) / 2;
+    // The number of moves in the main line. A game that starts with a move by black, which is
+    // possible when the game starts from a set-up position, counts that move as a move. A game
+    // without moves has 0 moves.
+    int plies = model.countPly(false);
+    boolean blackFirst = !Chess.isWhitePly(model.root().ply());
+    int moves = plies == 0 ? 0 : (plies + (blackFirst ? 1 : 0) + 1) / 2;
 
     int v = model.countPly(true) - model.countPly(false);
     if (v > 0) {
