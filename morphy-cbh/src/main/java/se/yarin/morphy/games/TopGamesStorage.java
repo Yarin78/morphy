@@ -33,9 +33,10 @@ public class TopGamesStorage {
   // But this chunk size is a bit too small for it to efficient in memory when expanding, so we
   // use another chunk size for the in-memory buffer.
 
+  // ChessBase 12 (Mega Database 2014) wrote 3 bits per game instead of 2. The first two bits have
+  // the same meaning in both; the third has always been found to be 0.
   private static final int STEP = 16;
   private static final int BITS_PER_GAME = 2;
-  private static final int GAMES_PER_BYTE = 8 / BITS_PER_GAME;
   private static final int IN_MEMORY_CHUNK_SIZE = 65536;
 
   private final @NotNull DatabaseContext context;
@@ -74,7 +75,7 @@ public class TopGamesStorage {
     } else {
       ByteBuffer buf = this.channel.read(0L, FlagsProlog.SERIALIZED_SIZE);
       this.prolog = FlagsProlog.deserializeHeader(buf);
-      this.highestGameId = this.prolog.capacity() * 4 * GAMES_PER_BYTE;
+      this.highestGameId = (int) (this.prolog.capacity() * 32L / bitsPerGame());
       extendBuffer();
 
       this.channel.read(FlagsProlog.SERIALIZED_SIZE, this.flagBuffer);
@@ -87,11 +88,10 @@ public class TopGamesStorage {
                   "TopGamesStorage has invalid header id (%d != %d)",
                   this.prolog.id(), FlagsProlog.ID));
         }
-        if (this.prolog.gameBits() != BITS_PER_GAME) {
+        if (this.prolog.gameBits() != 2 && this.prolog.gameBits() != 3) {
           throw new MorphyInvalidDataException(
               String.format(
-                  "TopGamesStorage has unsupported bits per game (%d != %d)",
-                  this.prolog.gameBits(), BITS_PER_GAME));
+                  "TopGamesStorage has unsupported bits per game (%d)", this.prolog.gameBits()));
         }
       }
     }
@@ -156,11 +156,11 @@ public class TopGamesStorage {
     public abstract int gameBits();
 
     public static TopGamesStorage.FlagsProlog ofCapacity(int capacity) {
-      return ImmutableFlagsProlog.builder()
-          .id(ID)
-          .capacity(capacity)
-          .gameBits(BITS_PER_GAME)
-          .build();
+      return ofCapacity(capacity, BITS_PER_GAME);
+    }
+
+    public static TopGamesStorage.FlagsProlog ofCapacity(int capacity, int gameBits) {
+      return ImmutableFlagsProlog.builder().id(ID).capacity(capacity).gameBits(gameBits).build();
     }
 
     public static TopGamesStorage.FlagsProlog empty() {
@@ -189,17 +189,25 @@ public class TopGamesStorage {
     IS_TOP_GAME,
   }
 
+  /** The number of bits used for each game: 2, or 3 in the files of some older versions. */
+  private int bitsPerGame() {
+    // If the value is invalid we only get here when ignoring errors; use the default
+    int bits = prolog.gameBits();
+    return bits == 2 || bits == 3 ? bits : BITS_PER_GAME;
+  }
+
   private int fileCapacity(int numGames) {
     // How many 32-bit ints should be used to store numGames games in the storage?
-    int gamesPerInt = GAMES_PER_BYTE * 4; // There are 16 games per 32-bit int
-    int intsNeeded =
-        numGames / gamesPerInt
-            + 1; // Unusual rounding since first game has id 1 and we waste id 0 in the storage
+    // Since first game has id 1 we waste the bits of id 0 in the storage
+    long bitsNeeded = (long) (numGames + 1) * bitsPerGame();
+    int intsNeeded = (int) ((bitsNeeded + 31) / 32);
     return ((intsNeeded + STEP - 1) / STEP) * STEP; // Ensure it's modulo STEP (rounded up)
   }
 
   private int numInMemoryChunks(int numGames) {
-    return numGames / (GAMES_PER_BYTE * IN_MEMORY_CHUNK_SIZE) + 1;
+    // One byte more than needed, since a game can straddle two bytes when using 3 bits per game
+    long bytesNeeded = ((long) (numGames + 1) * bitsPerGame() + 7) / 8 + 1;
+    return (int) (bytesNeeded / IN_MEMORY_CHUNK_SIZE) + 1;
   }
 
   public int count() {
@@ -218,12 +226,18 @@ public class TopGamesStorage {
   }
 
   public @NotNull TopGameStatus getGameStatus(int gameId) {
-    if (gameId < 1 || gameId / 4 >= this.flagBuffer.limit()) {
+    long bit = (long) gameId * bitsPerGame();
+    int offset = (int) (bit >> 3);
+    int shift = (int) (bit & 7);
+    if (gameId < 1 || offset >= this.flagBuffer.limit()) {
       return TopGameStatus.UNKNOWN;
     }
 
-    int b = ByteBufferUtil.getUnsignedByte(this.flagBuffer, gameId / 4);
-    return TopGameStatus.values()[(b >> (2 * (gameId % 4))) & 3];
+    int b = ByteBufferUtil.getUnsignedByte(this.flagBuffer, offset);
+    if (shift > 6 && offset + 1 < this.flagBuffer.limit()) {
+      b |= ByteBufferUtil.getUnsignedByte(this.flagBuffer, offset + 1) << 8;
+    }
+    return TopGameStatus.values()[(b >> shift) & 3];
   }
 
   public boolean isTopGame(int gameId) {
@@ -249,17 +263,24 @@ public class TopGamesStorage {
     for (Map.Entry<Integer, TopGameStatus> entry : statusMap.entrySet()) {
       int gameId = entry.getKey();
       int value = entry.getValue().ordinal();
-      int offset = gameId / GAMES_PER_BYTE;
-      int shift = 2 * (gameId % 4);
-      int oldByte = ByteBufferUtil.getUnsignedByte(flagBuffer, offset);
-      int mask = ~(3 << shift);
-      int newByte = (oldByte & mask) | (value << shift);
-      ByteBufferUtil.putByte(flagBuffer, offset, newByte);
-
-      dirtyChunks.add(gameId / (GAMES_PER_BYTE * IN_MEMORY_CHUNK_SIZE));
+      long bit = (long) gameId * bitsPerGame();
+      int offset = (int) (bit >> 3);
+      int shift = (int) (bit & 7);
+      boolean straddles = shift > 6; // Only when using 3 bits per game
+      int old = ByteBufferUtil.getUnsignedByte(flagBuffer, offset);
+      if (straddles) {
+        old |= ByteBufferUtil.getUnsignedByte(flagBuffer, offset + 1) << 8;
+      }
+      int updated = (old & ~(3 << shift)) | (value << shift);
+      ByteBufferUtil.putByte(flagBuffer, offset, updated & 0xFF);
+      dirtyChunks.add(offset / IN_MEMORY_CHUNK_SIZE);
+      if (straddles) {
+        ByteBufferUtil.putByte(flagBuffer, offset + 1, updated >> 8);
+        dirtyChunks.add((offset + 1) / IN_MEMORY_CHUNK_SIZE);
+      }
     }
 
-    this.prolog = FlagsProlog.ofCapacity(fileCapacity(highestGameId));
+    this.prolog = FlagsProlog.ofCapacity(fileCapacity(highestGameId), bitsPerGame());
 
     for (int chunkId : dirtyChunks) {
       flushChunk(chunkId);

@@ -8,6 +8,8 @@ import se.yarin.morphy.ResourceLoader;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -135,6 +137,75 @@ public class TopGamesStorageTest {
       verify(storage, expected);
     }
 
+    storage.close();
+  }
+
+  /** Creates a .flags file that uses 3 bits per game, as ChessBase 12 did, with room for 160 games. */
+  private void createThreeBitFile() throws IOException {
+    ByteBuffer buf = ByteBuffer.allocate(12 + 16 * 4);
+    buf.putInt(0x0F010B09);
+    buf.putInt(16); // Capacity in 32-bit ints
+    buf.putInt(3); // Bits per game
+    Files.write(topGamesStorageFile.toPath(), buf.array());
+  }
+
+  @Test
+  public void threeBitsPerGame() throws IOException {
+    createThreeBitFile();
+    Random random = new Random();
+    TopGamesStorage.TopGameStatus[] expected = new TopGamesStorage.TopGameStatus[1000];
+    Arrays.fill(expected, TopGamesStorage.TopGameStatus.UNKNOWN);
+
+    TopGamesStorage storage = TopGamesStorage.open(topGamesStorageFile, null);
+    assertEquals(170, storage.count()); // 16 ints of 32 bits, with room for 170 games
+    HashMap<Integer, TopGamesStorage.TopGameStatus> update = new HashMap<>();
+    for (int gameId = 1; gameId <= 170; gameId++) {
+      TopGamesStorage.TopGameStatus status =
+          TopGamesStorage.TopGameStatus.values()[random.nextInt(4)];
+      update.put(gameId, status);
+      expected[gameId] = status;
+    }
+    storage.putGameStatuses(update);
+    verify(storage, expected);
+    storage.close();
+
+    storage = TopGamesStorage.open(topGamesStorageFile, null);
+    verify(storage, expected);
+    storage.close();
+
+    // The first bit of a game is set for a top game and the second when it has been evaluated;
+    // the third bit is never set
+    byte[] data = Files.readAllBytes(topGamesStorageFile.toPath());
+    assertEquals(12 + ByteBuffer.wrap(data).getInt(4) * 4, data.length);
+    assertEquals(3, ByteBuffer.wrap(data).getInt(8));
+    for (int gameId = 1; gameId <= 170; gameId++) {
+      int bit = gameId * 3;
+      int top = (data[12 + bit / 8] >> (bit % 8)) & 1;
+      int evaluated = (data[12 + (bit + 1) / 8] >> ((bit + 1) % 8)) & 1;
+      int third = (data[12 + (bit + 2) / 8] >> ((bit + 2) % 8)) & 1;
+      assertEquals(expected[gameId].ordinal(), top + 2 * evaluated);
+      assertEquals(0, third);
+    }
+  }
+
+  @Test
+  public void threeBitsPerGameIsKeptWhenGrowing() throws IOException {
+    createThreeBitFile();
+    TopGamesStorage storage = TopGamesStorage.open(topGamesStorageFile, null);
+    storage.putGameStatus(1000, TopGamesStorage.TopGameStatus.IS_TOP_GAME);
+    storage.putGameStatus(999, TopGamesStorage.TopGameStatus.IS_NOT_TOP_GAME);
+    storage.close();
+
+    byte[] data = Files.readAllBytes(topGamesStorageFile.toPath());
+    assertEquals(3, ByteBuffer.wrap(data).getInt(8));
+    int capacity = ByteBuffer.wrap(data).getInt(4);
+    assertEquals(0, capacity % 16);
+    assertEquals(12 + capacity * 4, data.length);
+
+    storage = TopGamesStorage.open(topGamesStorageFile, null);
+    assertEquals(TopGamesStorage.TopGameStatus.IS_TOP_GAME, storage.getGameStatus(1000));
+    assertEquals(TopGamesStorage.TopGameStatus.IS_NOT_TOP_GAME, storage.getGameStatus(999));
+    assertEquals(TopGamesStorage.TopGameStatus.UNKNOWN, storage.getGameStatus(998));
     storage.close();
   }
 
