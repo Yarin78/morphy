@@ -165,6 +165,65 @@ public class TournamentExtraTest {
     assertEquals(0, upgradedStorage.numEntries());
   }
 
+  private static byte[] hex(String hex) {
+    String[] parts = hex.trim().split("\\s+");
+    byte[] data = new byte[parts.length];
+    for (int i = 0; i < parts.length; i++) {
+      data[i] = (byte) Integer.parseInt(parts[i], 16);
+    }
+    return data;
+  }
+
+  /** The record of the Steinitz-Chigorin match in Havana 1889, as found in World-ch.cbtt. */
+  private static final String HAVANA =
+      "40 37 25 31 b9 b6 6f 93 c0 54 9b 78 57 29 b2 81 "
+          + "00 00 00 00 00 00 00 00 00 00 07 "
+          + "00 00 00 00 00 00 00 00 00 00 07 "
+          + "00 00 00 00 00 00 00 00 00 00 07 00 "
+          + "01 01 01 01 01 01 01 01 01 01 00 "
+          + "00 0e c2 58";
+
+  @Test
+  public void testDeserializeRecordWrittenByChessBase() {
+    byte[] data = hex(HAVANA);
+    assertEquals(TournamentExtraHeader.DEFAULT_RECORD_SIZE, data.length);
+
+    TournamentExtraStorage storage = new TournamentExtraStorage();
+    TournamentExtra extra =
+        storage.deserializeItem(0, ByteBuffer.wrap(data), TournamentExtraHeader.empty());
+
+    // The coordinates, like the end date, are big endian
+    assertEquals(23.14529, extra.latitude(), 1e-5);
+    assertEquals(-82.42922, extra.longitude(), 1e-5);
+    assertEquals(new Date(1889, 2, 24), extra.endDate());
+    assertTrue(extra.tiebreakRules().isEmpty());
+  }
+
+  @Test
+  public void testSerializeMatchesChessBase() {
+    // Written like ChessBase does it, including the filler in the tie-break rules not in use
+    TournamentExtra extra =
+        ImmutableTournamentExtra.builder()
+            .latitude(23.14529)
+            .longitude(-82.42922)
+            .endDate(new Date(1889, 2, 24))
+            .build();
+
+    ByteBuffer buf = ByteBuffer.allocate(TournamentExtraHeader.DEFAULT_RECORD_SIZE);
+    new TournamentExtraStorage().serializeItem(extra, buf, TournamentExtraHeader.empty());
+    assertEquals(TournamentExtraHeader.DEFAULT_RECORD_SIZE, buf.position());
+
+    byte[] expected = hex(HAVANA);
+    byte[] actual = buf.array();
+    // The coordinates are stored as they are; the last digits differ from the record above
+    // because that one was typed by a person
+    for (int i = 16; i < expected.length; i++) {
+      assertEquals("Byte " + i, expected[i], actual[i]);
+    }
+    assertEquals(23.14529, ByteBuffer.wrap(actual, 0, 8).getDouble(), 1e-9);
+    assertEquals(-82.42922, ByteBuffer.wrap(actual, 8, 8).getDouble(), 1e-9);
+  }
+
   @Test
   public void testTiebreakRulesFillerIsUnspecified() {
     TournamentExtra extra =

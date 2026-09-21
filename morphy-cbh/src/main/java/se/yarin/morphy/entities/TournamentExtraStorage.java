@@ -227,8 +227,9 @@ public class TournamentExtraStorage
 
     int itemSize = storage.getHeader().recordSize();
 
-    double latitude = ByteBufferUtil.getDoubleL(buf);
-    double longitude = ByteBufferUtil.getDoubleL(buf);
+    // Unlike most of the file, the coordinates (and the end date) are big endian
+    double latitude = ByteBufferUtil.getDoubleB(buf);
+    double longitude = ByteBufferUtil.getDoubleB(buf);
 
     Date endDate = Date.unset();
     ArrayList<TiebreakRule> rules = new ArrayList<>();
@@ -261,8 +262,8 @@ public class TournamentExtraStorage
       @NotNull TournamentExtraHeader header) {
     itemMetricsRef.update(metrics -> metrics.addSerialization(1));
 
-    ByteBufferUtil.putDoubleL(buf, tournamentExtra.latitude());
-    ByteBufferUtil.putDoubleL(buf, tournamentExtra.longitude());
+    ByteBufferUtil.putDoubleB(buf, tournamentExtra.latitude());
+    ByteBufferUtil.putDoubleB(buf, tournamentExtra.longitude());
 
     // 34 bytes with unknown purpose, but every 11th byte is 7
     for (int j = 0; j < 3; j++) {

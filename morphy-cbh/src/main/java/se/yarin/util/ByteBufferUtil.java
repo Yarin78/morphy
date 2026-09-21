@@ -438,10 +438,18 @@ public final class ByteBufferUtil {
   }
 
   public static double getDoubleL(ByteBuffer buf) {
-    return buf.getDouble();
+    return Double.longBitsToDouble(getLongL(buf));
   }
 
   public static void putDoubleL(ByteBuffer buf, double value) {
-    buf.putDouble(value);
+    putLongL(buf, Double.doubleToRawLongBits(value));
+  }
+
+  public static double getDoubleB(ByteBuffer buf) {
+    return Double.longBitsToDouble(getLongB(buf));
+  }
+
+  public static void putDoubleB(ByteBuffer buf, double value) {
+    putLongB(buf, Double.doubleToRawLongBits(value));
   }
 }

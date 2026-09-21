@@ -3,6 +3,7 @@ package se.yarin.util;
 import org.junit.Test;
 
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 
 import static org.junit.Assert.*;
 
@@ -606,9 +607,10 @@ public class ByteBufferUtilTest {
 
   @Test
   public void testGetDoubleL() {
-    ByteBuffer buf = ByteBuffer.allocate(8);
+    ByteBuffer buf = ByteBuffer.allocate(8).order(ByteOrder.LITTLE_ENDIAN);
     buf.putDouble(3.14159);
     buf.flip();
+    buf.order(ByteOrder.BIG_ENDIAN); // The result must not depend on the order of the buffer
     assertEquals(3.14159, ByteBufferUtil.getDoubleL(buf), 0.00001);
   }
 
@@ -617,7 +619,24 @@ public class ByteBufferUtilTest {
     ByteBuffer buf = ByteBuffer.allocate(8);
     ByteBufferUtil.putDoubleL(buf, 2.71828);
     buf.flip();
-    assertEquals(2.71828, buf.getDouble(), 0.00001);
+    assertEquals(2.71828, buf.order(ByteOrder.LITTLE_ENDIAN).getDouble(), 0.00001);
+  }
+
+  @Test
+  public void testGetDoubleB() {
+    ByteBuffer buf = ByteBuffer.allocate(8).order(ByteOrder.BIG_ENDIAN);
+    buf.putDouble(3.14159);
+    buf.flip();
+    buf.order(ByteOrder.LITTLE_ENDIAN); // The result must not depend on the order of the buffer
+    assertEquals(3.14159, ByteBufferUtil.getDoubleB(buf), 0.00001);
+  }
+
+  @Test
+  public void testPutDoubleB() {
+    ByteBuffer buf = ByteBuffer.allocate(8);
+    ByteBufferUtil.putDoubleB(buf, 2.71828);
+    buf.flip();
+    assertEquals(2.71828, buf.order(ByteOrder.BIG_ENDIAN).getDouble(), 0.00001);
   }
 
   // ==================== Edge Case Tests ====================
