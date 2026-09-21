@@ -54,25 +54,27 @@ In `1.e4 c5 (1...c6 2.d4) 2.Nf3` the positions are e4 0, c5 1, Nf3 2, c6 3, d4 4
 | `07` | time spent | 4 bytes: hours, minutes, seconds, and a byte that is **unknown** |
 | `08` | **unknown** | 4 bytes |
 | `09` | training | [below](#training) |
+| `10` | sound | **unknown**; likely a number like the picture's |
+| `11` | picture | the number of an [embedded picture](6-multimedia.md#embedded-pictures-and-sounds), in ASCII decimal digits |
 | `13` | game quotation | [below](#game-quotation) |
 | `14` | pawn structure | 1 byte |
 | `15` | piece path | 2 bytes, **unknown** |
 | `16` | white clock | `int`: the time left in hundredths of a second |
 | `17` | black clock | as `16`, for black |
 | `18` | critical position | 1 byte: 1 opening, 2 middlegame, 3 endgame |
+| `19` | correspondence move | **unknown** |
 | `1a` | **unknown** | 10 bytes, on position −1 |
-| `1c` | web link | **unknown** |
-| `20` | video | **unknown** |
-| `21` | computer evaluation | 3 little-endian `short`s: the evaluation in centipawns, or moves to mate; 0 for an ordinary evaluation and 1 for mate; the search depth |
+| `1c` | web link | a little-endian `ushort`, the size of the data including itself; a length byte and the URL; a length byte and a text, which is empty in every example |
+| `20` | video | a byte that is 1, a language as in a [text](#text), and a text, likely the caption of the video |
+| `21` | computer evaluation | 3 little-endian `short`s: the evaluation in centipawns, or moves to mate; 0 for an ordinary evaluation and 1 for mate; the search depth. An older form of 32 bytes is **unknown** |
 | `22` | medals | `int`: the same bits as the [medals](1-game-headers.md#medals) of the header |
 | `23` | variation colour | 4 bytes: a flags byte, then blue, green and red; bit 0 of the flags is *only the main line* and bit 1 is *only the moves* |
 | `24` | time control | [below](#time-control) |
 | `25` | video stream time | `int` |
 | `26` | evaluations | [below](#evaluations) |
 
-Sound, picture and correspondence annotations are referred to by the
-[flags](1-game-headers.md#flags) but are **unknown**: no type is known for them.
-Nothing more is known of types `08` and `1a`.
+The types `10` and `19` have not been seen in any database. Nothing more is known of
+types `08` and `1a`.
 
 The types `16`, `17`, `1a`, `24` and `26` are only ever on position −1; the rest
 are on moves, and a few on position −1 as well.

@@ -22,7 +22,8 @@ The offsets in `.cbh` and `.cbj` are how the holes are skipped.
 | 0x12 | 8 | long | number of unused bytes, again |
 
 The two fields from 0x0a on are absent when the header is 10 bytes. The `.cba`
-file has the same header.
+file has the same header. The fields from 0x0a on are not always kept up to date; the
+ones at 0x02 and 0x06 are the ones to rely on.
 
 ## Game records
 

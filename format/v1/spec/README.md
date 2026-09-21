@@ -83,7 +83,7 @@ integer of 3 bytes.
 | `.cbg`, `.cba` | big-endian, except where stated |
 | `.flags`, `.cbb` | big-endian |
 | `.cbp` `.cbt` `.cbc` `.cbs` `.cbe` `.cbl` | little-endian |
-| `.cbtt` | little-endian, except the tournament end date |
+| `.cbtt` | little-endian, except the coordinates and the tournament end date |
 | `.cit` `.cib` `.cit2` `.cib2` `.cbgi` `.cbm` | little-endian |
 
 A **string** in a fixed-size field is in ISO 8859-1, one byte per character, and

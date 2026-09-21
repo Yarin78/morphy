@@ -152,8 +152,8 @@ one of them is set.
 ### Additional tournament information
 
 Latitude, longitude, tie-break rules and the end date do not fit in the tournament
-record, and are kept in a `.cbtt` file, which is little-endian apart from the end
-date. Its 32-byte header:
+record, and are kept in a `.cbtt` file, which is little-endian apart from the
+coordinates and the end date. Its 32-byte header:
 
 | Offset | Size | Type | Description |
 |---|---|---|---|
@@ -169,8 +169,8 @@ the `.cbt` file has tournaments.
 
 | Offset | Size | Type | Description |
 |---|---|---|---|
-| 0x00 | 8 | double | latitude |
-| 0x08 | 8 | double | longitude |
+| 0x00 | 8 | double | latitude, **big-endian** |
+| 0x08 | 8 | double | longitude, **big-endian** |
 | 0x10 | 34 | | unknown; the byte at 0x1a, 0x25 and 0x30 is 7 |
 | 0x32 | 10 | | the tie-break rules, one byte each |
 | 0x3c | 1 | byte | number of tie-break rules in use |
@@ -228,8 +228,7 @@ Record data of 63 bytes, in a `.cbe` file.
 | 0x00 | 45 | string | title |
 | 0x2d | 4 | int | team number |
 | 0x31 | 1 | byte | bit 0: a season, in which case the year is a year and the one after |
-| 0x32 | 2 | short | year |
-| 0x34 | 2 | | unknown, always 0 |
+| 0x32 | 4 | int | year |
 | 0x36 | 1 | byte | nation |
 | 0x37 | 4 | int | number of references |
 | 0x3b | 4 | int | first game |

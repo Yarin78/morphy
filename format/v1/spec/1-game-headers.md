@@ -36,7 +36,7 @@ records is `(file size − 46) / 46`.
 
 The next game id equals the record count plus 1. The counters for embedded sounds,
 pictures and videos are explained in
-[6-multimedia.md](6-multimedia.md#embedded-pictures).
+[6-multimedia.md](6-multimedia.md#embedded-pictures-and-sounds).
 
 ### Record kinds
 
@@ -44,7 +44,7 @@ The byte at 0x00 says what the record is:
 
 | Bit | Meaning |
 |---|---|
-| 0 | always set |
+| 0 | set in every record; a record that is all zeros lies past the last game |
 | 1 | the record is a [guiding text](#guiding-text-records) |
 | 7 | the record has been marked as deleted |
 
@@ -73,7 +73,7 @@ A deleted game keeps its record and its id.
 | 0x25 | 2 | ushort | [medals](#medals) |
 | 0x27 | 4 | uint | [flags](#flags) |
 | 0x2b | 2 | ushort | [annotation magnitudes](#annotation-magnitudes) |
-| 0x2d | 1 | byte | number of full moves in the main line, 255 if it has 255 or more |
+| 0x2d | 1 | byte | number of moves in the main line, 255 if it has 255 or more, 0 if it has none; a game that starts with a move by black counts it as a move |
 
 Entity ids are never −1. A field left blank by the user points at an entity whose
 text is empty; see [7-behaviour.md](7-behaviour.md#placeholder-entities).
@@ -137,14 +137,14 @@ are set when a game is saved, from what the game contains.
 | 0x00000010 | coloured squares | 0x00800000 | black clock |
 | 0x00000020 | arrows | 0x01000000 | critical position |
 | 0x00000080 | time spent | 0x02000000 | correspondence header, likely |
-| 0x00000100 | annotation type 8 | 0x04000000 | media annotation, likely |
+| 0x00000100 | annotation type 8 | 0x04000000 | annotation type 1a |
 | 0x00000200 | training | 0x08000000 | unorthodox (Chess960) |
-| 0x00010000 | embedded audio, likely | 0x10000000 | web link |
+| 0x00010000 | embedded audio | 0x10000000 | web link |
 | 0x00020000 | embedded picture | | |
-| 0x00040000 | embedded video, likely | | |
+| 0x00040000 | embedded video | | |
 
-The bits not listed are unknown, and the flags marked *likely* have never been
-seen set on a game: their meaning is what the older documentation says.
+The bits not listed are unknown, and the flag marked *likely* has never been seen
+set. The flag for annotation type `1a` is not always set for a game that has one.
 
 ### Medals
 
@@ -198,14 +198,15 @@ but may be lower; a game without a record has the default values of every field.
 
 The record size follows from the version:
 
-| Version | Record size |
-|---|---|
-| 1 | 8 |
-| 5 | 30 |
-| 6 | 38 |
-| 7 | 74 |
-| 8 | 78 |
-| 11 | 120 |
+| Version | Record size | Adds |
+|---|---|---|
+| 1 | 8 | the team ids |
+| 3 | 20 | the media offset and the annotation offset |
+| 5 | 30 | the final material |
+| 6 | 38 | the moves offset |
+| 7 | 74 | the rating types and the integer at 0x46 |
+| 8 | 78 | the integer at 0x4a |
+| 11 | 120 | the version, the creation timestamp, the endgame information, the last-saved timestamp and the game tag |
 
 When a database with a short record size is saved, ChessBase rewrites the whole
 file at the newest size and gives the new fields default values. A record has
@@ -319,4 +320,6 @@ not used. Of the two bits of a game, the higher says that ChessBase has
 evaluated whether the game is a Top Game, and the lower is set if it is one.
 
 The body has room for more games than exist, and the unused bits are 0. A file
-with 3 bits per game exists; its third bit is 0.
+with 3 bits per game exists, written by ChessBase 12; the first two bits of a game
+are the same, and its third bit is 0. A file that starts with `0f 01 0a 09` and has 0
+bits per game is of an older kind, which is **unknown**.

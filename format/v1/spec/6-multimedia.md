@@ -59,11 +59,25 @@ The `n` lines after the count are names of files in the `.html` folder.
 A guiding text that uses pictures has the *embedded picture* [flag](1-game-headers.md#flags)
 set. The flag does not imply that it has a manifest.
 
-## Embedded pictures
+## Embedded pictures and sounds
 
 The header of the `.cbh` file counts the embedded sounds, pictures and videos
 ([1-game-headers.md](1-game-headers.md#file-header)): each counter is the id the
-next one will take. A picture with id *n* is the file `n.bmp` in the `.bmp`
-folder, a Windows bitmap. Ids start at 0. How a game or a text refers to an
-embedded picture is **unknown**, and so are the corresponding sound and video
-files.
+next one will take, and ids start at 0. The counter can be higher than the number
+of files, since the files of removed media are removed.
+
+A picture with id *n* is the file `n.bmp`, a Windows bitmap, in the `<name>.bmp`
+folder. A sound with id *n* is the file `n.wav` in the `<name>.wav` folder.
+
+A game refers to a picture with an annotation of type `11` whose data is the id in
+ASCII decimal digits: `31 38` is picture 18. The game has the *embedded picture*
+[flag](1-game-headers.md#flags).
+
+A guiding text in the older text format, [version 1](2-moves.md#guiding-texts), refers
+to a picture by the name of its file, in the binary formatting data that follows the
+text; the names found are of files in the `.bmp` folder such as `intro_olimpiada2.bmp`.
+The structure of that data is **unknown**. The text has the picture flag, and the
+sound flag when it has a sound.
+
+How a text refers to a sound, and the folder and the references of embedded videos,
+are **unknown**: a video has a counter and a flag, but no folder has been seen.

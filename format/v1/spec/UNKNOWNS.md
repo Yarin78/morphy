@@ -16,13 +16,12 @@ not repeated here.
   the endgame information stand for, and how the endgames a game passes through
   are chosen.
 - **[Flags](1-game-headers.md#flags)**: the bits that are not listed; whether the
-  flags marked *likely* are what they seem, which needs a **sample**; and what
-  annotation types `08` and `1a` are.
+  flag marked *likely* is what it seems, which needs a **sample**; and what annotation
+  types `08` and `1a` are.
 - **[The `.cbj` record](1-game-headers.md#records)**: the two integers at 0x46 and
   0x4a.
-- **[The `.cbj` versions](1-game-headers.md#cbj--the-extended-headers)** 1, 5, 6 and 7:
-  which fields they add. Their record sizes are from older documentation, and no
-  database examined uses them.
+- **[The `.flags` file](1-game-headers.md#flags--top-games)** of the older kind, with
+  `0f 01 0a 09` and 0 bits per game.
 
 ## `.cbg` — [moves](2-moves.md)
 
@@ -42,10 +41,10 @@ not repeated here.
 
 - **[Types](3-annotations.md#types)** `08` and `1a`: what they hold. The `15` piece
   path: its two bytes. The fourth byte of the `07` time spent.
-- **[Web links and videos](3-annotations.md#types)**, types `1c` and `20`: their
-  layout. Needs a **sample**.
-- **Sound, picture and correspondence annotations**: which types they use, if
-  any.
+- **[Sound and correspondence annotations](3-annotations.md#types)**, types `10` and
+  `19`: their layout, and whether ChessBase still writes them. Needs a **sample**.
+- **[Video annotations](3-annotations.md#types)**, type `20`: what the caption is a
+  caption of.
 - **[Colours](3-annotations.md#squares-and-arrows)** other than green, yellow and
   red: the values 7, 8 and 9 on arrows.
 - **[Evaluations](3-annotations.md#evaluations)**: the entry kinds other than 0,
@@ -74,8 +73,10 @@ not repeated here.
 
 ## `.cbm` — [multimedia](6-multimedia.md)
 
-- **[Embedded pictures](6-multimedia.md#embedded-pictures)**: how a game or a text
-  refers to one, and the sound and video files that correspond.
+- **[Embedded media](6-multimedia.md#embedded-pictures-and-sounds)**: the
+  formatting data of a version 1 guiding text that names the picture files; how a
+  text refers to a sound; the folder and the references of embedded videos. Needs a
+  **sample** for the videos.
 
 ## [Behaviour](7-behaviour.md)
 
