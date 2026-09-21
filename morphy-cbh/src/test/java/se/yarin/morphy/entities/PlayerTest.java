@@ -12,6 +12,7 @@ import se.yarin.morphy.games.GameHeaderIndex;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -384,5 +385,26 @@ public class PlayerTest {
           String.format("Expected '%s' < '%s'", playerNames[i], playerNames[i + 1]),
           p1.compareTo(p2) < 0);
     }
+  }
+
+  @Test
+  public void testNonAsciiNamesAreWrittenAsSingleBytes() {
+    // ChessBase stores the names of players with one byte per character
+    Player player = ImmutablePlayer.builder().lastName("Møller").firstName("José").build();
+
+    PlayerIndex playerIndex = new PlayerIndex();
+    ByteBuffer buf = ByteBuffer.allocate(50);
+    playerIndex.serialize(player, buf);
+
+    byte[] data = buf.array();
+    assertEquals((byte) 'M', data[0]);
+    assertEquals((byte) 0xf8, data[1]); // ø in ISO-8859-1
+    assertEquals((byte) 'l', data[2]);
+    assertEquals((byte) 0, data[6]);
+    assertEquals((byte) 'J', data[30]);
+    assertEquals((byte) 'o', data[31]);
+    assertEquals((byte) 's', data[32]);
+    assertEquals((byte) 0xe9, data[33]); // é in ISO-8859-1
+    assertEquals((byte) 0, data[34]);
   }
 }

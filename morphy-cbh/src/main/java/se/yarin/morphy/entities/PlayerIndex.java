@@ -162,8 +162,8 @@ public class PlayerIndex extends EntityIndex<Player> {
   @Override
   protected void serialize(@NotNull Player player, @NotNull ByteBuffer buf) {
     itemMetricsRef().update(metrics -> metrics.addSerialization(1));
-    ByteBufferUtil.putFixedSizeByteString(buf, player.lastName(), 30, true);
-    ByteBufferUtil.putFixedSizeByteString(buf, player.firstName(), 20, true);
+    ByteBufferUtil.putFixedSizeByteString(buf, player.lastName(), 30);
+    ByteBufferUtil.putFixedSizeByteString(buf, player.firstName(), 20);
   }
 
   public static void upgrade(@NotNull File file) throws IOException {

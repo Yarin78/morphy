@@ -195,20 +195,9 @@ public final class ByteBufferUtil {
    * @param length the length of the string
    */
   public static void putFixedSizeByteString(ByteBuffer buf, String s, int length) {
-    putFixedSizeByteString(buf, s, length, false);
-  }
-
-  /**
-   * Puts a fixed-width string to a {@link ByteBuffer}. If the length of the string is longer than
-   * the max length, it will get truncated. If it's shorter, it will be padded with zeros.
-   *
-   * @param buf the buffer to write to
-   * @param s the string to put
-   * @param length the length of the string
-   * @param fixedWidth if true, the encoding used must be 1 byte per character
-   */
-  public static void putFixedSizeByteString(ByteBuffer buf, String s, int length, boolean fixedWidth) {
-    Charset charset = fixedWidth ? StandardCharsets.UTF_8 : CBUtil.cbDefaultSingleByteCharset;
+    // A fixed-width string must be one byte per character, so it can't be UTF-8. ChessBase itself
+    // writes single byte characters everywhere in the entity files.
+    Charset charset = CBUtil.cbDefaultSingleByteCharset;
     ByteBuffer sbuf = charset.encode(s);
     sbuf.position(0);
     if (sbuf.limit() > length) {
