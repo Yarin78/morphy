@@ -52,7 +52,8 @@ public abstract class RatingType {
     buf.put((byte) 0);
     buf.put((byte) (isInternational() ? 1 : 2));
     buf.put((byte) (national() == null ? 0 : national().ordinal()));
-    buf.put((byte) (international() == null ? 0 : (international().ordinal() + 1)));
+    // For a national rating, ChessBase stores 100 here
+    buf.put((byte) (international() == null ? 100 : (international().ordinal() + 1)));
     buf.put((byte) (nation() == null ? 0 : CBUtil.encodeNation(nation())));
     ByteBufferUtil.putFixedSizeByteString(buf, name() == null ? "" : name(), 11);
   }
