@@ -5,9 +5,9 @@ public enum GameResult {
   DRAW, // 1/2-1/2
   WHITE_WINS, // 1-0
   NOT_FINISHED, // Line
-  WHITE_WINS_ON_FORFEIT, // +:-
-  DRAW_ON_FORFEIT, // =:=
   BLACK_WINS_ON_FORFEIT, // -:+
+  DRAW_ON_FORFEIT, // =:=
+  WHITE_WINS_ON_FORFEIT, // +:-
   BOTH_LOST; // 0-0
 
   @Override
