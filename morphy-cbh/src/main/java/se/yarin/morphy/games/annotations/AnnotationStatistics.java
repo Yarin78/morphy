@@ -33,7 +33,9 @@ public class AnnotationStatistics {
     return commentariesLength;
   }
 
-  // TODO: All these boundaries need to be double checked
+  // The boundaries were confirmed against Mega Database 2021: for every game that has the flag, the
+  // magnitude bit is set exactly when the count is at least the boundary below (see
+  // format/v1/notes/1-game-headers.md).
 
   public int getCommentariesMagnitude() {
     if (commentariesLength > 200) return 2;
@@ -60,13 +62,13 @@ public class AnnotationStatistics {
   }
 
   public int getTrainingMagnitude() {
-    if (noTraining > 10) return 2;
+    if (noTraining >= 6) return 2;
     if (noTraining > 0) return 1;
     return 0;
   }
 
   public int getTimeSpentMagnitude() {
-    if (noTimeSpent > 10) return 2;
+    if (noTimeSpent >= 10) return 2;
     if (noTimeSpent > 0) return 1;
     return 0;
   }
