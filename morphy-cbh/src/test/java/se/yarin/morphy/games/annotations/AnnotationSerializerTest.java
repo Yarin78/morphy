@@ -234,4 +234,19 @@ public class AnnotationSerializerTest {
     WhiteClockAnnotation after = serialize(before);
     assertEquals(before, after);
   }
+
+  @Test
+  public void testGraphicalArrowsWithUnknownColors() {
+    // Colors 7, 8 and 9 occur on arrows in the wild. They must survive reading and writing.
+    GraphicalArrowsAnnotation before =
+        ImmutableGraphicalArrowsAnnotation.of(
+            Arrays.asList(
+                ImmutableArrow.of(GraphicalAnnotationColor.BLUE, 12, 28),
+                ImmutableArrow.of(GraphicalAnnotationColor.CYAN, 1, 17),
+                ImmutableArrow.of(GraphicalAnnotationColor.ORANGE, 63, 0),
+                ImmutableArrow.of(GraphicalAnnotationColor.GREEN, 8, 9)));
+    GraphicalArrowsAnnotation after = serialize(before);
+    assertEquals(before, after);
+    assertEquals(9, after.arrows().get(2).color().getColorId());
+  }
 }

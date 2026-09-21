@@ -5,7 +5,13 @@ public enum GraphicalAnnotationColor {
   NOT_USED(1),
   GREEN(2),
   YELLOW(3),
-  RED(4);
+  RED(4),
+  // The colors below are very rare but do occur in e.g. Mega Database 2021
+  UNKNOWN_5(5),
+  UNKNOWN_6(6),
+  BLUE(7),
+  CYAN(8),
+  ORANGE(9);
 
   private final int colorId;
 
