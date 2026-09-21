@@ -1,9 +1,10 @@
 # Writing the format documentation
 
-Each format has a `spec/` and a `notes/` directory, and they have different
+Each format has its specification in a directory of its own, `v1/` and `v2/`,
+and its working notes in a `notes/` directory inside that, and they have different
 jobs. Keep them apart.
 
-## `spec/` — the specification
+## The specification (`v1/`, `v2/`)
 
 These files say what the format **is**, and nothing else.
 
@@ -20,11 +21,11 @@ These files say what the format **is**, and nothing else.
   that is the point. Keep them out of the prose otherwise.
 - An example earns its place by making a layout concrete, not by showing that
   the layout was checked.
-- **Keep `spec/UNKNOWNS.md` in step.** It lists every **unknown** in that
+- **Keep `UNKNOWNS.md` in step.** It lists every **unknown** in that
   specification. Resolving one means deleting its entry; finding one means
   adding an entry beside the **unknown** itself.
 
-## `notes/` — the working notes
+## The working notes (`v1/notes/`, `v2/notes/`)
 
 Everything the specification may not say: what each fact rests on, which
 database showed it, what was tried and failed, and what is still open. One file
@@ -37,14 +38,15 @@ it, and move it there if they do not.
 **The notes are not in this repository.** They mention personal databases, so
 they live in a private repository, `morphy-notes`, next to this checkout, and
 `format/v1/notes` and `format/v2/notes` are symbolic links to it that git ignores
-(`ln -s ../../../morphy-notes/v1 format/v1/notes`, and the same for v2). Never
+(`ln -s ../../../morphy-notes/v1 format/v1/notes`, and the same for v2). Notes
+link to the specification with relative paths (`../2-moves.md`). Never
 `git add` them, and expect them to be missing in another clone. Do not put the
 names of personal databases in the specifications, in code comments or in
 commit messages either: describe them as "a collection of older databases".
 
 ## Both
 
-Figures live in `spec/img/`, drawn by the `make.py` beside them; run it to
+Figures live in `img/`, drawn by the `make.py` inside it; run it to
 regenerate them. Anchors are GitHub-style: a heading's link is its text
 lowercased with punctuation dropped and **each** space turned into a hyphen, so
 `` ## `.2lgd` — the games ``  is `#2lgd--the-games`.

@@ -1,6 +1,6 @@
 """Nations, stored as a one-byte index. The numbering is the same as in the
 older format (v1), and it was checked by comparing every tournament of `wch2`
-with its v1 counterpart; see format/v2/spec/README.md.
+with its v1 counterpart; see format/v2/README.md.
 
 The names are IOC codes where one exists, filled out with ISO codes, which is
 what ChessBase itself uses. Index 0 means no nation.

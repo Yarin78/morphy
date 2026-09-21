@@ -1,6 +1,6 @@
 """The packed fields of a tournament entity: what kind of tournament it is,
 and the flags that go with it. Both bytes use the v1 encodings; see
-format/v2/spec/4-entities.md.
+format/v2/4-entities.md.
 """
 
 # Low 5 bits of the type byte.

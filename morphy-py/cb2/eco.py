@@ -1,5 +1,5 @@
 """ECO opening codes as they are stored in a game header. The encoding is
-described in format/v2/spec/1-game-headers.md and is the same as in the older format (v1).
+described in format/v2/1-game-headers.md and is the same as in the older format (v1).
 """
 
 # An ECO code is a letter A-E and two digits, so 500 codes in all.

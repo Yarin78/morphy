@@ -1,5 +1,5 @@
 """The flags and medals of a game header. Both are bitmasks, and which bit
-means what is taken from the older format (v1); see format/v2/spec/1-game-headers.md.
+means what is taken from the older format (v1); see format/v2/1-game-headers.md.
 """
 
 # Flag bit value -> name. Most of these say that the game has annotations of

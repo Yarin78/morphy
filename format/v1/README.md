@@ -145,7 +145,7 @@ created.
 
 ### Nation codes
 
-A nation is a one-byte index into the same table [v2](../../v2/spec/README.md#nation-codes)
+A nation is a one-byte index into the same table [v2](../v2/README.md#nation-codes)
 uses: IOC codes where one exists and ISO codes otherwise, index 0 meaning no
 nation, and 196 meaning the internet. The same numbering identifies the language
 of an annotation text; the languages of a guiding text use a smaller numbering,

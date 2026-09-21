@@ -4,7 +4,7 @@ It shares the same base name as the .2cbh file, e.g. "foo.2cbh" pairs
 with "foo.2lid".
 
 The file layout (header, blocks, entity records) is described in
-format/v2/spec/4-entities.md, which is the source of truth for it. In short:
+format/v2/4-entities.md, which is the source of truth for it. In short:
 a big-endian
 header, followed by one block per entity id, each holding a fixed-size
 container per entity type in the order of ENTITY_TYPE_ORDER.

@@ -1,5 +1,5 @@
 """GameHeader: one game's record in the .2cbh file. See
-format/v2/spec/1-game-headers.md, which is the source of truth for the fields,
+format/v2/1-game-headers.md, which is the source of truth for the fields,
 and gameheaderdb.py for how they are read.
 
 Fields that are stored encoded in the file are kept in their encoded form,

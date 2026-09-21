@@ -1,5 +1,5 @@
 """Game results and line evaluations. Which value means what is borrowed from
-the older format (v1), see format/v2/spec/1-game-headers.md; the way a result
+the older format (v1), see format/v2/1-game-headers.md; the way a result
 is shown follows the
 Java command line tool (ResultsColumn).
 """

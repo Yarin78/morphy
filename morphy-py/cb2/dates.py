@@ -1,6 +1,6 @@
 """Dates and timestamps as they are stored in the database files. A date has
 a year, month and day, any of which can be unknown; a timestamp is an exact
-point in time. The encodings are described in format/v2/spec/README.md.
+point in time. The encodings are described in format/v2/README.md.
 """
 import datetime as dt
 from dataclasses import dataclass

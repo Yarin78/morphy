@@ -2,7 +2,7 @@
 
 The file starts with a 192-byte header, of which only the record size, the
 format version and the next game id are known, followed by 192-byte game records, game #1 first. All integers in a record are
-little-endian, signed. format/v2/spec/1-game-headers.md is the source of truth
+little-endian, signed. format/v2/1-game-headers.md is the source of truth
 for the layout;
 FIELDS below lists the fields decoded so far.
 """

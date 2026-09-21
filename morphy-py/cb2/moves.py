@@ -4,7 +4,7 @@ the contents of every guiding text.
 Each game's record starts at the offset given in its .2cbh record. The move
 data is a sequence of little-endian 16-bit words: a word below 0xfff0 is a
 move (looked up in WORDS) or a piece of a setup position (see placement()),
-and the words from 0xfffa up are markers. format/v2/spec/2-moves.md is the
+and the words from 0xfffa up are markers. format/v2/2-moves.md is the
 source of truth for the layout.
 
 A move word says which piece moves from where to where, and what it captures

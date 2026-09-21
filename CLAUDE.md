@@ -64,9 +64,9 @@ Library documentation in `morphy-cbh/docs/`:
 - `DEVELOPER-GUIDE.md` - Contributing guide
 
 File format documentation in `format/`, one directory per format:
-- `format/v1/spec/` - the `.cbh` family, which this library implements
+- `format/v1/` - the `.cbh` family, which this library implements
 - `format/v1/notes/` - the evidence behind the v1 specification (not in the repository, see below)
-- `format/v2/spec/` - the `.2cbh` family, the reference to implement against
+- `format/v2/` - the `.2cbh` family, the reference to implement against
 - `format/v2/notes/` - the evidence behind the v2 specification (not in the repository)
 - `format/CLAUDE.md` - **read this before editing anything under `format/`**; it also says where the notes are
 

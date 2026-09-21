@@ -2,7 +2,7 @@
 
 Each game's record starts at the offset at 0x10 of its .2cbh record, and has
 the same framing as a .2cbg record. The content is a list of positions, each
-with the annotations on that move. format/v2/spec/3-annotations.md is the
+with the annotations on that move. format/v2/3-annotations.md is the
 source of truth for the layout.
 
 A position is -1 for the game as a whole (before the first move), or the index

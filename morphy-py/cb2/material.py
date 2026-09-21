@@ -1,5 +1,5 @@
 """The material left at the end of a game, and the endgames the game passed
-through. Both are stored in the game header; see format/v2/spec/1-game-headers.md.
+through. Both are stored in the game header; see format/v2/1-game-headers.md.
 
 The material encoding is the same as in the older format (v1). The endgame
 bitmask replaces v1's list of endgame types: one bit per matchup of pieces,

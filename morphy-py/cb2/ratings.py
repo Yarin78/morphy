@@ -1,6 +1,6 @@
 """The rating type that goes with each elo in a game header: what kind of
 rating it is, at what time control, and what it is called. See
-format/v2/spec/1-game-headers.md.
+format/v2/1-game-headers.md.
 
 v1 keeps the same idea in 16 bytes (`RatingType`), but only knows about
 international and national ratings; the server ratings are new here.

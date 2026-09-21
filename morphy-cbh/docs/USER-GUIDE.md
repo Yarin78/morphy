@@ -744,4 +744,4 @@ Ensure all files are present when opening a database.
 - [Developer Guide](DEVELOPER-GUIDE.md) - For contributors to the Morphy library
 - [Chess Package](chess-package.md) - Detailed `se.yarin.chess` documentation
 - [Morphy Package](morphy-package.md) - Detailed `se.yarin.morphy` documentation
-- [CBH Format](../../format/v1/spec/README.md) - ChessBase file format specification (low-level binary format)
+- [CBH Format](../../format/v1/README.md) - ChessBase file format specification (low-level binary format)

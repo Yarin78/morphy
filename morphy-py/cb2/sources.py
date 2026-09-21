@@ -1,5 +1,5 @@
 """The packed fields of a source entity. The values are the v1 ones; see
-format/v2/spec/4-entities.md.
+format/v2/4-entities.md.
 """
 
 # The quality byte, which says how much a source can be trusted.

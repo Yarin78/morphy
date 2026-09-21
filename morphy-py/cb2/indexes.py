@@ -5,7 +5,7 @@
 - GameLists reads the .2lgd file: for every entity, the games that refer to
   it in each role (as a player, a tournament, ...).
 
-format/v2/spec/5-indexes.md is the source of truth for both layouts.
+format/v2/5-indexes.md is the source of truth for both layouts.
 """
 import mmap
 import os
