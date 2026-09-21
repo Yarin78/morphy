@@ -4,7 +4,6 @@ import org.immutables.value.Value;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import se.yarin.morphy.util.CBUtil;
-import se.yarin.morphy.games.GameHeaderFlags;
 import se.yarin.chess.annotations.Annotation;
 
 import java.nio.ByteBuffer;
@@ -27,7 +26,9 @@ public abstract class VideoAnnotation extends Annotation implements StatisticalA
 
   @Override
   public void updateStatistics(AnnotationStatistics stats) {
-    stats.flags.add(GameHeaderFlags.EMBEDDED_VIDEO);
+    // The annotation of type 0x20 doesn't set any flag. In Mega Database 2021, 22 of them are on 17
+    // games, and none of these have the embedded video flag. In fact, no game in any database has
+    // that flag; only guiding texts do.
   }
 
   public static class Serializer implements AnnotationSerializer {
