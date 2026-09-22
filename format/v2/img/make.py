@@ -8,7 +8,7 @@ markdown refers to it with an ordinary image link, so the figures render in a
 markdown preview and on a git host without any tooling.
 
 The drawing primitives, and the reasons the figures look the way they do, are in
-../../figkit.py; this file holds only what is particular to the v2 figures.
+../../tools/figkit.py; this file holds only what is particular to the v2 figures.
 
 The numbers in the figures are real, read from Mega Database 2026 with the
 readers in morphy-py; MEGA below collects them so they can be checked
@@ -18,7 +18,7 @@ of truth for every layout drawn here.
 import os
 import sys
 
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "tools"))
 from figkit import Fig, FILLS, INK  # noqa: E402  (the drawing primitives, shared with v1)
 
 OUT_DIR = os.path.dirname(os.path.abspath(__file__))

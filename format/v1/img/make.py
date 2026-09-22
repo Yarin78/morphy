@@ -8,7 +8,7 @@ markdown refers to it with an ordinary image link, so the figures render in a
 markdown preview and on a git host without any tooling.
 
 The drawing primitives, and the reasons the figures look the way they do, are in
-../../figkit.py; this file holds only what is particular to the v1 figures.
+../../tools/figkit.py; this file holds only what is particular to the v1 figures.
 
 The numbers in the figures are real. The record figures show the last game of
 the World-ch database in test-databases/world-ch (game 1038, the third
@@ -18,7 +18,7 @@ tie-break game of the 2018 match), and the file sizes are those of Mega Database
 import os
 import sys
 
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "tools"))
 from figkit import Fig, FILLS, INK  # noqa: E402  (the drawing primitives, shared with v2)
 
 OUT_DIR = os.path.dirname(os.path.abspath(__file__))
