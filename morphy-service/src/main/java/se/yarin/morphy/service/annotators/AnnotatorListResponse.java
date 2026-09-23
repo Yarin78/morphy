@@ -2,7 +2,7 @@ package se.yarin.morphy.service.annotators;
 
 import java.util.List;
 import org.jetbrains.annotations.Nullable;
-import se.yarin.morphy.service.annotators.dto.AnnotatorDto;
+import se.yarin.morphy.model.AnnotatorDto;
 
 /**
  * Response containing a paginated list of annotators.

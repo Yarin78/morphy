@@ -17,8 +17,8 @@ import se.yarin.morphy.service.databases.DatabaseService;
 import se.yarin.morphy.service.search.EntitySearchExecutor;
 import se.yarin.morphy.service.search.EntitySearchRequest;
 import se.yarin.morphy.service.search.EntitySearchResponse;
-import se.yarin.morphy.service.sources.dto.SourceDto;
-import se.yarin.morphy.service.sources.dto.SourceDtoConverter;
+import se.yarin.morphy.model.SourceDto;
+import se.yarin.morphy.convert.SourceDtoConverter;
 
 @Service
 public class SourcesService {

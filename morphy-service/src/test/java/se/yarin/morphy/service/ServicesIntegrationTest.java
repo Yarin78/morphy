@@ -14,23 +14,23 @@ import org.springframework.test.context.TestPropertySource;
 import se.yarin.chess.Date;
 import se.yarin.chess.GameResult;
 import se.yarin.chess.NAG;
-import se.yarin.morphy.Database;
+import se.yarin.morphy.DatabaseCbh;
 import se.yarin.morphy.service.annotators.AnnotatorsService;
-import se.yarin.morphy.service.annotators.dto.AnnotatorDto;
+import se.yarin.morphy.model.AnnotatorDto;
 import se.yarin.morphy.service.databases.DatabaseService;
 import se.yarin.morphy.service.games.GamesService;
-import se.yarin.morphy.service.games.dto.GameDto;
-import se.yarin.morphy.service.games.dto.GameMovesDto;
+import se.yarin.morphy.model.GameDto;
+import se.yarin.morphy.model.GameMovesDto;
 import se.yarin.morphy.service.players.PlayersService;
-import se.yarin.morphy.service.players.dto.PlayerDto;
+import se.yarin.morphy.model.PlayerDto;
 import se.yarin.morphy.service.search.EntitySearchRequest;
 import se.yarin.morphy.service.search.EntitySearchResponse;
 import se.yarin.morphy.service.sources.SourcesService;
-import se.yarin.morphy.service.sources.dto.SourceDto;
+import se.yarin.morphy.model.SourceDto;
 import se.yarin.morphy.service.teams.TeamsService;
-import se.yarin.morphy.service.teams.dto.TeamDto;
+import se.yarin.morphy.model.TeamDto;
 import se.yarin.morphy.service.tournaments.TournamentsService;
-import se.yarin.morphy.service.tournaments.dto.TournamentDto;
+import se.yarin.morphy.model.TournamentDto;
 
 /**
  * Comprehensive integration test for all Services.
@@ -58,7 +58,7 @@ class ServicesIntegrationTest {
   void setUp() throws IOException {
     // Create new database for each test
     File dbFile = new File(tempDir, "test.cbh");
-    Database.create(dbFile, false).close();
+    DatabaseCbh.create(dbFile, false).close();
 
     // Register the database with DatabaseService
     databaseId = "test-db";
@@ -454,7 +454,7 @@ class ServicesIntegrationTest {
     int player2Id = game2.whitePlayer().id().intValue();
 
     // Try to update player2 to match player1's name
-    PlayerDto duplicateUpdate = new PlayerDto((long) player2Id, "Carlsen", "Magnus", null, null);
+    PlayerDto duplicateUpdate = new PlayerDto((long) player2Id, "Carlsen", "Magnus", null, null, null, null);
 
     assertThrows(
         IllegalArgumentException.class,
@@ -594,9 +594,9 @@ class ServicesIntegrationTest {
         null,
         "game",
         null,
-        new PlayerDto(null, whiteLastName, whiteFirstName, null, null),
+        new PlayerDto(null, whiteLastName, whiteFirstName, null, null, null, null),
         2863,
-        new PlayerDto(null, "Caruana", "Fabiano", null, null),
+        new PlayerDto(null, "Caruana", "Fabiano", null, null, null, null),
         2832,
         new TeamDto(null, "Team Norway", 1, false, 2024, "NOR", null, null),
         new TeamDto(null, "Team USA", 2, false, 2024, "USA", null, null),
@@ -652,9 +652,9 @@ class ServicesIntegrationTest {
         null,
         "game",
         null,
-        new PlayerDto(null, "Kasparov", "Garry", null, null),
+        new PlayerDto(null, "Kasparov", "Garry", null, null, null, null),
         null,
-        new PlayerDto(null, "Karpov", "Anatoly", null, null),
+        new PlayerDto(null, "Karpov", "Anatoly", null, null, null, null),
         null,
         null,
         null,
@@ -696,9 +696,9 @@ class ServicesIntegrationTest {
         null,
         "game",
         null,
-        new PlayerDto(null, "Doe", "John", null, null),
+        new PlayerDto(null, "Doe", "John", null, null, null, null),
         null,
-        new PlayerDto(null, "Doe", "Jane", null, null),
+        new PlayerDto(null, "Doe", "Jane", null, null, null, null),
         null,
         null,
         null,
@@ -723,9 +723,9 @@ class ServicesIntegrationTest {
         null,
         "game",
         null,
-        new PlayerDto(null, lastName, firstName, null, null),
+        new PlayerDto(null, lastName, firstName, null, null, null, null),
         null,
-        new PlayerDto(null, "Opponent", "Test", null, null),
+        new PlayerDto(null, "Opponent", "Test", null, null, null, null),
         null,
         null,
         null,
@@ -750,9 +750,9 @@ class ServicesIntegrationTest {
         null,
         "game",
         null,
-        new PlayerDto(null, "Player", "Test", null, null),
+        new PlayerDto(null, "Player", "Test", null, null, null, null),
         null,
-        new PlayerDto(null, "Opponent", "Test", null, null),
+        new PlayerDto(null, "Opponent", "Test", null, null, null, null),
         null,
         null,
         null,

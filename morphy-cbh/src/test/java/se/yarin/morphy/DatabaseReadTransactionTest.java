@@ -12,7 +12,7 @@ import static org.junit.Assert.*;
 public class DatabaseReadTransactionTest {
   @Test
   public void getGame() {
-    Database database = ResourceLoader.openWorldChDatabase();
+    DatabaseCbh database = ResourceLoader.openWorldChDatabase();
 
     try (DatabaseReadTransaction txn = new DatabaseReadTransaction(database)) {
       Game game = txn.getGame(10);
@@ -28,7 +28,7 @@ public class DatabaseReadTransactionTest {
 
   @Test
   public void getText() {
-    Database database = ResourceLoader.openWorldChDatabase();
+    DatabaseCbh database = ResourceLoader.openWorldChDatabase();
 
     try (DatabaseReadTransaction txn = new DatabaseReadTransaction(database)) {
       String expected = "World-ch06 Lasker-Steinitz +10-2=5";
@@ -45,7 +45,7 @@ public class DatabaseReadTransactionTest {
 
   @Test
   public void iterateGames() {
-    Database database = ResourceLoader.openWorldChDatabase();
+    DatabaseCbh database = ResourceLoader.openWorldChDatabase();
 
     int startId = 20;
 

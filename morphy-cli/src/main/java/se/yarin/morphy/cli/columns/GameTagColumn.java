@@ -1,7 +1,6 @@
 package se.yarin.morphy.cli.columns;
 
-import se.yarin.morphy.Game;
-import se.yarin.morphy.entities.GameTag;
+import se.yarin.morphy.model.GameTagDto;
 
 public class GameTagColumn implements GameColumn {
 
@@ -16,9 +15,9 @@ public class GameTagColumn implements GameColumn {
   }
 
   @Override
-  public String getValue(Game game) {
-    GameTag tag = game.gameTag();
-    return tag == null ? "" : tag.englishTitle();
+  public String getValue(GameRow row) {
+    GameTagDto tag = row.dto().gameTag();
+    return tag == null || tag.englishTitle() == null ? "" : tag.englishTitle();
   }
 
   @Override

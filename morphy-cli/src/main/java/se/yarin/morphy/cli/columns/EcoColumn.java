@@ -1,7 +1,5 @@
 package se.yarin.morphy.cli.columns;
 
-import se.yarin.morphy.Game;
-
 public class EcoColumn implements GameColumn {
   @Override
   public String getHeader() {
@@ -9,17 +7,13 @@ public class EcoColumn implements GameColumn {
   }
 
   @Override
-  public String getValue(Game game) {
-    String eco;
-    if (game.guidingText()) {
-      eco = "";
-    } else {
-      eco = game.eco().toString().substring(0, 3);
-      if (eco.equals("???")) {
-        eco = "";
-      }
+  public String getValue(GameRow row) {
+    String eco = row.dto().eco();
+    if ("text".equals(row.dto().type()) || eco == null) {
+      return "";
     }
-    return eco;
+    eco = eco.length() >= 3 ? eco.substring(0, 3) : eco;
+    return eco.equals("???") ? "" : eco;
   }
 
   @Override

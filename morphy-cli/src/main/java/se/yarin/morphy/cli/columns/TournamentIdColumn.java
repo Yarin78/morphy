@@ -1,6 +1,6 @@
 package se.yarin.morphy.cli.columns;
 
-import se.yarin.morphy.Database;
+import se.yarin.morphy.DatabaseCbh;
 import se.yarin.morphy.entities.Tournament;
 
 public class TournamentIdColumn implements TournamentColumn {
@@ -15,7 +15,7 @@ public class TournamentIdColumn implements TournamentColumn {
   }
 
   @Override
-  public String getTournamentValue(Database db, Tournament tournament) {
+  public String getTournamentValue(DatabaseCbh db, Tournament tournament) {
     return String.format("%5d", tournament.id());
   }
 

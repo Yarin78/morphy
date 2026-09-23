@@ -28,7 +28,7 @@ import static se.yarin.morphy.games.GameHeaderFlags.GAME_QUOTATION;
 public class Game implements IdObject {
   private static final Logger log = LoggerFactory.getLogger(Game.class);
 
-  private final @NotNull Database database;
+  private final @NotNull DatabaseCbh database;
 
   private final @Nullable DatabaseWriteTransaction transaction;
 
@@ -39,7 +39,7 @@ public class Game implements IdObject {
   private final @NotNull ExtendedGameHeader extendedHeader;
 
   public Game(
-      @NotNull Database database,
+      @NotNull DatabaseCbh database,
       @NotNull GameHeader header,
       @NotNull ExtendedGameHeader extendedHeader) {
     this.database = database;
@@ -60,7 +60,7 @@ public class Game implements IdObject {
     this.entityRetriever = transaction;
   }
 
-  public @NotNull Database database() {
+  public @NotNull DatabaseCbh database() {
     return this.database;
   }
 

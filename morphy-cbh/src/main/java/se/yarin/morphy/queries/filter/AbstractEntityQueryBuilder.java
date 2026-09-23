@@ -7,7 +7,7 @@ import java.util.Map;
 import java.util.function.Function;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import se.yarin.morphy.Database;
+import se.yarin.morphy.DatabaseCbh;
 import se.yarin.morphy.entities.Entity;
 import se.yarin.morphy.entities.EntityType;
 import se.yarin.morphy.entities.filters.EntityCountFilter;
@@ -114,7 +114,7 @@ public abstract class AbstractEntityQueryBuilder<T extends Entity> {
   }
 
   public @NotNull EntityQuery<T> buildQuery(
-      @NotNull Database database, @Nullable String filterExpression) {
+      @NotNull DatabaseCbh database, @Nullable String filterExpression) {
     if (filterExpression == null || filterExpression.isBlank()) {
       return new EntityQuery<>(database, entityType, List.of());
     }
@@ -123,7 +123,7 @@ public abstract class AbstractEntityQueryBuilder<T extends Entity> {
   }
 
   public @NotNull EntityQuery<T> buildQuery(
-      @NotNull Database database, @NotNull List<FilterCondition> conditions) {
+      @NotNull DatabaseCbh database, @NotNull List<FilterCondition> conditions) {
     List<EntityFilter<T>> filters = new ArrayList<>();
     for (FilterCondition condition : conditions) {
       filters.add(buildFilter(condition));

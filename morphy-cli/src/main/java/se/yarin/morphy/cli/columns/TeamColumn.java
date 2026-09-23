@@ -1,7 +1,6 @@
 package se.yarin.morphy.cli.columns;
 
-import se.yarin.morphy.Game;
-import se.yarin.morphy.entities.Team;
+import se.yarin.morphy.model.TeamDto;
 
 public class TeamColumn implements GameColumn {
 
@@ -22,12 +21,12 @@ public class TeamColumn implements GameColumn {
   }
 
   @Override
-  public String getValue(Game game) {
-    if (game.guidingText()) {
+  public String getValue(GameRow row) {
+    if ("text".equals(row.dto().type())) {
       return "";
     }
-    Team team = isWhite ? game.whiteTeam() : game.blackTeam();
-    return team == null ? "" : team.title();
+    TeamDto team = isWhite ? row.dto().whiteTeam() : row.dto().blackTeam();
+    return team == null || team.title() == null ? "" : team.title();
   }
 
   @Override

@@ -13,6 +13,10 @@
 
     <dependencies>
         <dependency>
+            <groupId>se.yarin</groupId>
+            <artifactId>morphy-api</artifactId>
+        </dependency>
+        <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
         </dependency>

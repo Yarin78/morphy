@@ -22,8 +22,8 @@ public class DatabaseTransactionTest {
   public void getGameWithoutExtendedHeaderWrite() throws IOException {
     // cbj file is missing
     File cbh_only =
-        ResourceLoader.materializeDatabaseStream(Database.class, "database/cbh_test", "cbh_test");
-    Database db = Database.open(cbh_only);
+        ResourceLoader.materializeDatabaseStream(DatabaseCbh.class, "database/cbh_test", "cbh_test");
+    DatabaseCbh db = DatabaseCbh.open(cbh_only);
     try (var txn = new DatabaseReadTransaction(db)) {
       assertEquals(4, db.count());
 
@@ -46,8 +46,8 @@ public class DatabaseTransactionTest {
   @Test
   public void getGameWithoutExtendedHeaderReadOnly() throws IOException {
     File cbh_only =
-        ResourceLoader.materializeDatabaseStream(Database.class, "database/cbh_test", "cbh_test");
-    Database db = Database.open(cbh_only, DatabaseMode.READ_ONLY);
+        ResourceLoader.materializeDatabaseStream(DatabaseCbh.class, "database/cbh_test", "cbh_test");
+    DatabaseCbh db = DatabaseCbh.open(cbh_only, DatabaseMode.READ_ONLY);
     try (var txn = new DatabaseReadTransaction(db)) {
       assertEquals(4, db.count());
 
@@ -65,8 +65,8 @@ public class DatabaseTransactionTest {
     // cbj file exists
     File cbh_cbj =
         ResourceLoader.materializeDatabaseStream(
-            Database.class, "database/cbh_cbj_test", "cbh_cbj_test");
-    Database db = Database.open(cbh_cbj);
+            DatabaseCbh.class, "database/cbh_cbj_test", "cbh_cbj_test");
+    DatabaseCbh db = DatabaseCbh.open(cbh_cbj);
     try (var txn = new DatabaseReadTransaction(db)) {
       assertEquals(4, db.count());
 
@@ -93,10 +93,10 @@ public class DatabaseTransactionTest {
     // The .cbj file is missing in the earliest ChessBase databases
     File cbh_cbj =
         ResourceLoader.materializeDatabaseStream(
-            Database.class, "database/shorter_cbj_test", "shorter_cbj_test");
+            DatabaseCbh.class, "database/shorter_cbj_test", "shorter_cbj_test");
     assertTrue(CBUtil.fileWithExtension(cbh_cbj, ".cbj").delete());
 
-    Database db = Database.open(cbh_cbj, DatabaseMode.READ_ONLY);
+    DatabaseCbh db = DatabaseCbh.open(cbh_cbj, DatabaseMode.READ_ONLY);
     try (var txn = new DatabaseReadTransaction(db)) {
       assertEquals(4, db.count());
       int count = 0;
@@ -117,12 +117,12 @@ public class DatabaseTransactionTest {
     // and no records at all
     File cbh_cbj =
         ResourceLoader.materializeDatabaseStream(
-            Database.class, "database/shorter_cbj_test", "shorter_cbj_test");
+            DatabaseCbh.class, "database/shorter_cbj_test", "shorter_cbj_test");
     ByteBuffer header = ByteBuffer.allocate(32).order(ByteOrder.LITTLE_ENDIAN);
     header.putInt(1).putInt(8).putInt(0);
     Files.write(CBUtil.fileWithExtension(cbh_cbj, ".cbj").toPath(), header.array());
 
-    Database db = Database.open(cbh_cbj, DatabaseMode.READ_ONLY);
+    DatabaseCbh db = DatabaseCbh.open(cbh_cbj, DatabaseMode.READ_ONLY);
     try (var txn = new DatabaseReadTransaction(db)) {
       int count = 0;
       for (Game game : txn.iterable()) {
@@ -139,8 +139,8 @@ public class DatabaseTransactionTest {
     // Should work in non-strict mode
     File cbh_cbj =
         ResourceLoader.materializeDatabaseStream(
-            Database.class, "database/shorter_cbj_test", "shorter_cbj_test");
-    Database db = Database.open(cbh_cbj, DatabaseMode.READ_REPAIR);
+            DatabaseCbh.class, "database/shorter_cbj_test", "shorter_cbj_test");
+    DatabaseCbh db = DatabaseCbh.open(cbh_cbj, DatabaseMode.READ_REPAIR);
     try (var txn = new DatabaseReadTransaction(db)) {
       assertEquals(4, db.count());
       assertEquals(4, db.gameHeaderIndex().count());
@@ -164,8 +164,8 @@ public class DatabaseTransactionTest {
     // cbj file exists
     File cbh_cbj =
         ResourceLoader.materializeDatabaseStream(
-            Database.class, "database/cbh_cbj_test", "cbh_cbj_test");
-    Database db = Database.open(cbh_cbj, DatabaseMode.IN_MEMORY);
+            DatabaseCbh.class, "database/cbh_cbj_test", "cbh_cbj_test");
+    DatabaseCbh db = DatabaseCbh.open(cbh_cbj, DatabaseMode.IN_MEMORY);
     try (var txn = new DatabaseReadTransaction(db)) {
       assertEquals(4, db.count());
 
@@ -188,8 +188,8 @@ public class DatabaseTransactionTest {
   public void getGameWithExtendedHeaderOldVersionReadOnly() throws IOException {
     // Older version of cbj file
     File hedgehog =
-        ResourceLoader.materializeDatabaseStream(Database.class, "database/hedgehog", "Hedgehog");
-    Database db = Database.open(hedgehog, DatabaseMode.READ_ONLY);
+        ResourceLoader.materializeDatabaseStream(DatabaseCbh.class, "database/hedgehog", "Hedgehog");
+    DatabaseCbh db = DatabaseCbh.open(hedgehog, DatabaseMode.READ_ONLY);
     assertEquals(8, db.extendedGameHeaderStorage().prolog().version());
     try (var txn = new DatabaseReadTransaction(db)) {
       Game game16 = txn.getGame(16);
@@ -203,8 +203,8 @@ public class DatabaseTransactionTest {
   public void getGameAfterOpenInMemoryWithNoExtendedHeaders() throws IOException {
     // cbj file is missing
     File cbh_only =
-        ResourceLoader.materializeDatabaseStream(Database.class, "database/cbh_test", "cbh_test");
-    Database db = Database.open(cbh_only, DatabaseMode.IN_MEMORY);
+        ResourceLoader.materializeDatabaseStream(DatabaseCbh.class, "database/cbh_test", "cbh_test");
+    DatabaseCbh db = DatabaseCbh.open(cbh_only, DatabaseMode.IN_MEMORY);
     try (var txn = new DatabaseReadTransaction(db)) {
       assertEquals(4, db.count());
 

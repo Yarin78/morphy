@@ -17,8 +17,8 @@ import se.yarin.morphy.service.databases.DatabaseService;
 import se.yarin.morphy.service.search.EntitySearchExecutor;
 import se.yarin.morphy.service.search.EntitySearchRequest;
 import se.yarin.morphy.service.search.EntitySearchResponse;
-import se.yarin.morphy.service.teams.dto.TeamDto;
-import se.yarin.morphy.service.teams.dto.TeamDtoConverter;
+import se.yarin.morphy.model.TeamDto;
+import se.yarin.morphy.convert.TeamDtoConverter;
 
 @Service
 public class TeamsService {

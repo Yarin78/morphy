@@ -17,8 +17,8 @@ import se.yarin.morphy.service.databases.DatabaseService;
 import se.yarin.morphy.service.search.EntitySearchExecutor;
 import se.yarin.morphy.service.search.EntitySearchRequest;
 import se.yarin.morphy.service.search.EntitySearchResponse;
-import se.yarin.morphy.service.tournaments.dto.TournamentDto;
-import se.yarin.morphy.service.tournaments.dto.TournamentDtoConverter;
+import se.yarin.morphy.model.TournamentDto;
+import se.yarin.morphy.convert.TournamentDtoConverter;
 
 @Service
 public class TournamentsService {

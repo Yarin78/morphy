@@ -5,7 +5,7 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
-import se.yarin.morphy.Database;
+import se.yarin.morphy.DatabaseCbh;
 import se.yarin.morphy.ResourceLoader;
 import se.yarin.morphy.games.ExtendedGameHeader;
 import se.yarin.morphy.storage.ItemStorageFilter;
@@ -16,7 +16,7 @@ import static org.junit.Assert.assertEquals;
 
 public class RawExtendedGameHeaderFilterTest {
   @Rule public TemporaryFolder folder = new TemporaryFolder();
-  private Database database;
+  private DatabaseCbh database;
 
   @Before
   public void setupFilterTest() {
@@ -24,7 +24,7 @@ public class RawExtendedGameHeaderFilterTest {
   }
 
   private int countMatches(
-      @NotNull Database database, @NotNull ItemStorageFilter<ExtendedGameHeader> filter) {
+      @NotNull DatabaseCbh database, @NotNull ItemStorageFilter<ExtendedGameHeader> filter) {
     return (int)
         database.extendedGameHeaderStorage().getFiltered(filter).stream()
             .filter(Objects::nonNull)

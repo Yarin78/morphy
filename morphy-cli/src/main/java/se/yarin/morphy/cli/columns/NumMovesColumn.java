@@ -1,7 +1,5 @@
 package se.yarin.morphy.cli.columns;
 
-import se.yarin.morphy.Game;
-
 public class NumMovesColumn implements GameColumn {
   @Override
   public String getHeader() {
@@ -9,10 +7,11 @@ public class NumMovesColumn implements GameColumn {
   }
 
   @Override
-  public String getValue(Game game) {
+  public String getValue(GameRow row) {
     String numMoves = "";
-    if (!game.guidingText()) {
-      numMoves = game.noMoves() > 0 ? Integer.toString(game.noMoves()) : "";
+    if (!"text".equals(row.dto().type())) {
+      Integer n = row.dto().noMoves();
+      numMoves = (n != null && n > 0) ? n.toString() : "";
     }
     return String.format("%3s", numMoves);
   }

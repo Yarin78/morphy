@@ -6,7 +6,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import se.yarin.morphy.Database;
+import se.yarin.morphy.DatabaseCbh;
 import se.yarin.morphy.games.Medal;
 import se.yarin.morphy.games.TopGamesStorage;
 import se.yarin.morphy.games.filters.*;
@@ -106,7 +106,7 @@ public class GameQueryBuilder {
    * @return GameQuery ready for execution via QueryPlanner
    */
   public @NotNull GameQuery buildQuery(
-      @NotNull Database database, @Nullable String filterExpression) {
+      @NotNull DatabaseCbh database, @Nullable String filterExpression) {
     if (filterExpression == null || filterExpression.isBlank()) {
       return new GameQuery(database, List.of(), List.of());
     }
@@ -122,7 +122,7 @@ public class GameQueryBuilder {
    * @return GameQuery ready for execution via QueryPlanner
    */
   public @NotNull GameQuery buildQuery(
-      @NotNull Database database, @NotNull List<FilterCondition> conditions) {
+      @NotNull DatabaseCbh database, @NotNull List<FilterCondition> conditions) {
     List<GameFilter> gameFilters = new ArrayList<>();
 
     // Group entity property conditions by entity type to combine them into single joins
@@ -255,7 +255,7 @@ public class GameQueryBuilder {
   }
 
   private @NotNull GameFilter buildDatabaseGameFilter(
-      @NotNull FilterCondition condition, @NotNull Database database) {
+      @NotNull FilterCondition condition, @NotNull DatabaseCbh database) {
     return switch (condition.field().toLowerCase()) {
       case "topgame" -> {
         boolean expected = parseBooleanValue(condition);
@@ -295,7 +295,7 @@ public class GameQueryBuilder {
    */
   @SuppressWarnings({"unchecked", "rawtypes"})
   private @NotNull GameEntityJoin<?> buildCombinedEntityJoin(
-      @NotNull Database database,
+      @NotNull DatabaseCbh database,
       @NotNull String entityType,
       @NotNull List<FilterCondition> conditions) {
     // Resolve player position aliases (white, black, winner, loser -> player)

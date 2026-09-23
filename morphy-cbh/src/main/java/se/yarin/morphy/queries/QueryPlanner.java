@@ -4,7 +4,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import se.yarin.morphy.Database;
+import se.yarin.morphy.DatabaseCbh;
 import se.yarin.morphy.DatabaseReadTransaction;
 import se.yarin.morphy.Game;
 import se.yarin.morphy.IdObject;
@@ -27,7 +27,7 @@ public class QueryPlanner {
   private final int NUM_SAMPLE_BATCHES = 2500;
   private final int NUM_SAMPLE_ITEMS = 20;
 
-  private final @NotNull Database database;
+  private final @NotNull DatabaseCbh database;
   private @NotNull StringDistribution playerLastNameDistribution;
   private @NotNull IntBucketDistribution tournamentCategoryDistribution;
   private @NotNull IntBucketDistribution tournamentYearDistribution;
@@ -41,7 +41,7 @@ public class QueryPlanner {
     return tournamentYearDistribution;
   }
 
-  public QueryPlanner(@NotNull Database database) {
+  public QueryPlanner(@NotNull DatabaseCbh database) {
     this.database = database;
 
     this.playerLastNameDistribution = new StringDistribution(); // TODO: default name distribution

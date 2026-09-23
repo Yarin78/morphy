@@ -7,7 +7,7 @@ import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
 import se.yarin.chess.GameHeaderModel;
 import se.yarin.chess.GameModel;
-import se.yarin.morphy.Database;
+import se.yarin.morphy.DatabaseCbh;
 import se.yarin.morphy.DatabaseMode;
 import se.yarin.morphy.DatabaseReadTransaction;
 import se.yarin.morphy.DatabaseWriteTransaction;
@@ -106,7 +106,7 @@ public class Update extends BaseCommand implements Callable<Integer> {
     var numDatabaseErrors = new AtomicInteger(0);
     var totalUpdated = new AtomicInteger(0);
 
-    Database outputDb = output != null ? Database.create(output, overwrite) : null;
+    DatabaseCbh outputDb = output != null ? DatabaseCbh.create(output, overwrite) : null;
     try {
       DatabaseMode sourceMode =
           outputDb != null ? DatabaseMode.READ_ONLY : DatabaseMode.READ_WRITE;
@@ -115,7 +115,7 @@ public class Update extends BaseCommand implements Callable<Integer> {
           .forEach(
               file -> {
                 log.info("Opening {}", file);
-                try (Database db = Database.open(file, sourceMode)) {
+                try (DatabaseCbh db = DatabaseCbh.open(file, sourceMode)) {
                   // Speeds up performance quite a lot, and we should be fairly certain that the
                   // moves in the CBH databases are valid
                   db.moveRepository().setValidateDecodedMoves(false);
@@ -201,13 +201,13 @@ public class Update extends BaseCommand implements Callable<Integer> {
    * @return the number of games updated/written
    */
   private int applyUpdates(
-      Database sourceDb,
-      @Nullable Database outputDb,
+      DatabaseCbh sourceDb,
+      @Nullable DatabaseCbh outputDb,
       List<Integer> matchingGameIds,
       List<GameUpdater> updaters,
       @Nullable Integer batchSize) {
     boolean toOutput = outputDb != null;
-    Database targetDb = toOutput ? outputDb : sourceDb;
+    DatabaseCbh targetDb = toOutput ? outputDb : sourceDb;
     int size = batchSize == null || batchSize <= 0 ? matchingGameIds.size() : batchSize;
     int updated = 0;
 

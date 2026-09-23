@@ -1,6 +1,6 @@
 package se.yarin.morphy.cli.columns;
 
-import se.yarin.morphy.Database;
+import se.yarin.morphy.DatabaseCbh;
 import se.yarin.morphy.entities.Tournament;
 
 public class TournamentTypeColumn extends TournamentBaseColumn {
@@ -20,7 +20,7 @@ public class TournamentTypeColumn extends TournamentBaseColumn {
   }
 
   @Override
-  public String getTournamentValue(Database database, Tournament tournament) {
+  public String getTournamentValue(DatabaseCbh database, Tournament tournament) {
     return tournament.typeCombined();
   }
 }

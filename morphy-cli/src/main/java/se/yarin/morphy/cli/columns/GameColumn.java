@@ -1,7 +1,5 @@
 package se.yarin.morphy.cli.columns;
 
-import se.yarin.morphy.Game;
-
 import java.util.Arrays;
 import java.util.stream.Collectors;
 
@@ -25,7 +23,12 @@ public interface GameColumn {
     return true;
   }
 
-  String getValue(Game game);
+  /** Whether this column needs the moves materialised (as PGN) in the row's DTO. */
+  default boolean needsMoves() {
+    return false;
+  }
+
+  String getValue(GameRow row);
 
   String getId();
 

@@ -1,8 +1,6 @@
 package se.yarin.morphy.cli.columns;
 
-import se.yarin.morphy.Game;
-import se.yarin.morphy.exceptions.MorphyException;
-import se.yarin.chess.GameModel;
+import se.yarin.morphy.model.GameMovesDto;
 
 public class MovesColumn implements GameColumn {
   @Override
@@ -11,13 +9,14 @@ public class MovesColumn implements GameColumn {
   }
 
   @Override
-  public String getValue(Game game) {
-    try {
-      GameModel model = game.getModel();
-      return model.moves().toString();
-    } catch (MorphyException e) {
-      return "<critical error>";
-    }
+  public boolean needsMoves() {
+    return true;
+  }
+
+  @Override
+  public String getValue(GameRow row) {
+    GameMovesDto moves = row.dto().moves();
+    return moves == null || moves.pgn() == null ? "" : moves.pgn();
   }
 
   @Override

@@ -2,7 +2,7 @@ package se.yarin.morphy.service.players;
 
 import java.util.List;
 import org.jetbrains.annotations.Nullable;
-import se.yarin.morphy.service.players.dto.PlayerDto;
+import se.yarin.morphy.model.PlayerDto;
 
 /**
  * Response containing a paginated list of players.

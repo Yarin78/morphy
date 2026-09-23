@@ -4,7 +4,7 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
-import se.yarin.morphy.Database;
+import se.yarin.morphy.DatabaseCbh;
 import se.yarin.morphy.ResourceLoader;
 
 import java.io.File;
@@ -24,7 +24,7 @@ public class AnnotatorTest {
   public void setupEntityTest() throws IOException {
     annotatorIndexFile =
         ResourceLoader.materializeDatabaseStream(
-            Database.class, "database/World-ch", "World-ch", List.of(".cbc"));
+            DatabaseCbh.class, "database/World-ch", "World-ch", List.of(".cbc"));
   }
 
   @Test

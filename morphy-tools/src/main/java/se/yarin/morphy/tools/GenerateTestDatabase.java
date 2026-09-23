@@ -1,7 +1,7 @@
 package se.yarin.morphy.tools;
 
 import se.yarin.chess.*;
-import se.yarin.morphy.Database;
+import se.yarin.morphy.DatabaseCbh;
 import se.yarin.morphy.DatabaseWriteTransaction;
 import se.yarin.morphy.games.annotations.*;
 
@@ -33,7 +33,7 @@ public class GenerateTestDatabase {
         }
 
         System.out.println("Creating test database: " + outputPath);
-        Database db = Database.create(outputFile);
+        DatabaseCbh db = DatabaseCbh.create(outputFile);
 
         try (var txn = new DatabaseWriteTransaction(db)) {
             // Game 1: Simple game with NAG annotations

@@ -18,18 +18,18 @@ import se.yarin.morphy.queries.operations.*;
 import se.yarin.morphy.queries.visualisation.QueryVisualiser;
 
 public class QueryTest {
-  private final Database db;
+  private final DatabaseCbh db;
 
   private static final String VIZ_PATH = "/Users/yarin/Desktop/query_viz";
   private static final long MAX_COST = 100000;
 
-  public QueryTest(Database db) {
+  public QueryTest(DatabaseCbh db) {
     this.db = db;
   }
 
   public static void main(String[] args) throws IOException {
-    Database db =
-        Database.open(
+    DatabaseCbh db =
+        DatabaseCbh.open(
             new File("/Users/yarin/chess/bases/Mega2021/Mega Database 2021.cbh"),
             DatabaseMode.READ_ONLY);
     db.queryPlanner().updateStatistics();

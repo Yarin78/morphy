@@ -2,7 +2,7 @@ package se.yarin.morphy.tools;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import se.yarin.cbhlib.Database;
+import se.yarin.cbhlib.DatabaseCbh;
 import se.yarin.cbhlib.games.GameHeader;
 import se.yarin.cbhlib.games.GameHeaderBase;
 import se.yarin.cbhlib.storage.FileBlobStorage;
@@ -25,9 +25,9 @@ public class InvestigateDynamicStorageGaps {
               // репартуар.cbh")).forEach(filePath -> {
               if (Files.isRegularFile(filePath) && filePath.toString().endsWith(".cbh")) {
                 log.info("Reading {}", filePath);
-                Database base = null;
+                DatabaseCbh base = null;
                 try {
-                  base = Database.open(filePath.toFile());
+                  base = DatabaseCbh.open(filePath.toFile());
 
                   checkMoves(base);
                   System.out.println();
@@ -50,7 +50,7 @@ public class InvestigateDynamicStorageGaps {
             });
   }
 
-  private static void checkMoves(Database base) throws IOException {
+  private static void checkMoves(DatabaseCbh base) throws IOException {
     GameHeaderBase headerBase = base.getHeaderBase();
     FileBlobStorage movesStorage = base.getMovesBase().getStorage();
 
@@ -93,7 +93,7 @@ public class InvestigateDynamicStorageGaps {
     }
   }
 
-  private static void checkAnnos(Database base) throws IOException {
+  private static void checkAnnos(DatabaseCbh base) throws IOException {
 
     GameHeaderBase headerBase = base.getHeaderBase();
     FileBlobStorage annoStorage = base.getAnnotationBase().getStorage();

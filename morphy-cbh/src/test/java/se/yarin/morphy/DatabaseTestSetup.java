@@ -24,7 +24,7 @@ import static org.junit.Assert.assertEquals;
 import static se.yarin.morphy.validation.Validator.Checks.*;
 
 public abstract class DatabaseTestSetup {
-  protected Database testBase;
+  protected DatabaseCbh testBase;
 
   // Players:
   //   Carlsen 5
@@ -65,14 +65,14 @@ public abstract class DatabaseTestSetup {
 
   @Before
   public void setupTestDatabase() {
-    this.testBase = new Database();
+    this.testBase = new DatabaseCbh();
     populateDatabase(this.testBase);
     assertEquals(10, this.testBase.playerIndex().count());
     assertEquals(5, playerCount("Carlsen"));
     assertEquals(6, tournamentCount("tour1", Date.unset()));
   }
 
-  public void populateDatabase(@NotNull Database database) {
+  public void populateDatabase(@NotNull DatabaseCbh database) {
     try (var txn = new DatabaseWriteTransaction(database)) {
       putTestGame(txn, 0, "Carlsen - Ding", "tour2", null, null, null, null, 100, 0, 1, 0);
       putTestGame(txn, 0, "Nepo - Giri", "tour1", null, null, null, null, 100, 0, 2, 0);
@@ -126,7 +126,7 @@ public abstract class DatabaseTestSetup {
     return testBase.annotationRepository().getStorage().getWastedBytes();
   }
 
-  protected static void validate(Database db) {
+  protected static void validate(DatabaseCbh db) {
     Validator validator = new Validator();
     // Don't check GAMES_LOAD since we're using phony blobs
     validator.validate(

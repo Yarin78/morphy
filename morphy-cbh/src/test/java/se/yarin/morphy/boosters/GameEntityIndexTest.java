@@ -4,7 +4,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import se.yarin.morphy.util.CBUtil;
-import se.yarin.morphy.Database;
+import se.yarin.morphy.DatabaseCbh;
 import se.yarin.morphy.ResourceLoader;
 import se.yarin.morphy.entities.EntityType;
 import se.yarin.morphy.entities.Player;
@@ -25,7 +25,7 @@ public class GameEntityIndexTest {
 
   @Test
   public void validateWorldCh() {
-    Database db = ResourceLoader.openWorldChDatabase();
+    DatabaseCbh db = ResourceLoader.openWorldChDatabase();
 
     new Validator()
         .validate(
@@ -48,7 +48,7 @@ public class GameEntityIndexTest {
 
   @Test
   public void iterateIndex() {
-    Database db = ResourceLoader.openWorldChDatabase();
+    DatabaseCbh db = ResourceLoader.openWorldChDatabase();
 
     GameEntityIndex index = db.gameEntityIndex(EntityType.PLAYER);
     assert index != null;

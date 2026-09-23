@@ -21,7 +21,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import se.yarin.morphy.Database;
+import se.yarin.morphy.DatabaseCbh;
 import se.yarin.morphy.DatabaseMode;
 import se.yarin.morphy.DatabaseReadTransaction;
 import se.yarin.morphy.DatabaseWriteTransaction;
@@ -78,7 +78,7 @@ public class DatabaseService {
    */
   public <T> T withReadTransaction(
       @NotNull String databaseId, @NotNull Function<DatabaseReadTransaction, T> operation) {
-    Database db = getDatabase(databaseId);
+    DatabaseCbh db = getDatabase(databaseId);
     try (DatabaseReadTransaction txn = new DatabaseReadTransaction(db)) {
       return operation.apply(txn);
     }
@@ -97,7 +97,7 @@ public class DatabaseService {
     if (state != null && state.config.isReadOnly()) {
       throw new IllegalStateException("Database '" + databaseId + "' is read-only");
     }
-    Database db = getDatabase(databaseId);
+    DatabaseCbh db = getDatabase(databaseId);
 
     try (DatabaseWriteTransaction txn = new DatabaseWriteTransaction(db)) {
       operation.accept(txn);
@@ -125,7 +125,7 @@ public class DatabaseService {
     if (state != null && state.config.isReadOnly()) {
       throw new IllegalStateException("Database '" + databaseId + "' is read-only");
     }
-    Database db = getDatabase(databaseId);
+    DatabaseCbh db = getDatabase(databaseId);
 
     try (DatabaseWriteTransaction txn = new DatabaseWriteTransaction(db)) {
       T result = operation.apply(txn);
@@ -139,7 +139,7 @@ public class DatabaseService {
     }
   }
 
-  private @NotNull Database getDatabase(@NotNull String databaseId) {
+  private @NotNull DatabaseCbh getDatabase(@NotNull String databaseId) {
     ensureDatabaseIsOpenAndFresh(databaseId);
 
     DatabaseState state = databaseStates.get(databaseId);
@@ -188,7 +188,7 @@ public class DatabaseService {
 
   private static class DatabaseState {
     final @NotNull DatabaseConfig config;
-    @Nullable Database database; // null = not yet opened or was closed
+    @Nullable DatabaseCbh database; // null = not yet opened or was closed
     long lastModifiedTime;
 
     long lastAccessTime;
@@ -295,7 +295,7 @@ public class DatabaseService {
             log.warn("Failed to create parent directories for '{}'", databaseId);
           }
         }
-        Database newDb = Database.create(dbFile, false);
+        DatabaseCbh newDb = DatabaseCbh.create(dbFile, false);
         newDb.close();
         log.info("Successfully created new database '{}'", databaseId);
       } catch (Exception e) {
@@ -306,7 +306,7 @@ public class DatabaseService {
 
     try {
       DatabaseMode mode = state.config.isReadOnly() ? DatabaseMode.READ_ONLY : DatabaseMode.READ_WRITE;
-      state.database = Database.open(dbFile, mode);
+      state.database = DatabaseCbh.open(dbFile, mode);
       state.lastModifiedTime = dbFile.lastModified();
       log.info(
           "Successfully opened chess database '{}' ({}): {} (last modified: {})",
@@ -425,7 +425,7 @@ public class DatabaseService {
         }
       }
 
-      Database newDb = Database.create(dbFile, false);
+      DatabaseCbh newDb = DatabaseCbh.create(dbFile, false);
       newDb.close();
       log.info("Successfully created new database '{}'", databaseId);
     } catch (IOException e) {

@@ -18,7 +18,7 @@ public class DatabaseReadTransaction extends DatabaseTransaction {
   private final EntityIndexReadTransaction<Team> teamTransaction;
   private final EntityIndexReadTransaction<GameTag> gameTagTransaction;
 
-  public DatabaseReadTransaction(@NotNull Database database) {
+  public DatabaseReadTransaction(@NotNull DatabaseCbh database) {
     super(DatabaseContext.DatabaseLock.READ, database);
 
     this.version = database.context().currentVersion();

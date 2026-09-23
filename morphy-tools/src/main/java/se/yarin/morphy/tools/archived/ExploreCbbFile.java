@@ -1,6 +1,6 @@
 package se.yarin.morphy.tools;
 
-import se.yarin.cbhlib.Database;
+import se.yarin.cbhlib.DatabaseCbh;
 import se.yarin.cbhlib.Game;
 import se.yarin.cbhlib.exceptions.ChessBaseException;
 import se.yarin.chess.GameHeaderModel;
@@ -13,12 +13,12 @@ import java.io.IOException;
 
 public class ExploreCbbFile {
   public static void main(String[] args) throws IOException, ChessBaseException {
-    Database db = Database.open(new File("/Users/yarin/chess/Mega2021/Mega Database 2021.cbh"));
+    DatabaseCbh db = DatabaseCbh.open(new File("/Users/yarin/chess/Mega2021/Mega Database 2021.cbh"));
     Game game = db.getGame(2936406);
 
     File targetFile = new File("/Users/yarin/Dropbox/ChessBase/test/cbbtest2/cbbtest2.cbh");
-    Database.delete(targetFile);
-    Database targetDb = Database.create(targetFile);
+    DatabaseCbh.delete(targetFile);
+    DatabaseCbh targetDb = DatabaseCbh.create(targetFile);
     GameMovesModel.Node currentSourceNode = game.getModel().moves().root();
 
     GameMovesModel targetModel = new GameMovesModel();

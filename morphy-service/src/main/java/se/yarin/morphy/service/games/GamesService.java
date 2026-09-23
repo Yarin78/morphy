@@ -1,5 +1,7 @@
 package se.yarin.morphy.service.games;
 
+import se.yarin.morphy.model.GameDto;
+
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -19,6 +21,8 @@ import se.yarin.morphy.queries.operations.QueryOperator;
 import se.yarin.morphy.queries.visualisation.QueryDescriptionFormatter;
 import se.yarin.morphy.service.MorphyServiceException;
 import se.yarin.morphy.service.databases.DatabaseService;
+import se.yarin.morphy.convert.GameDtoConverter;
+import se.yarin.morphy.convert.GameDtoImporter;
 import se.yarin.morphy.service.games.dto.*;
 import se.yarin.morphy.service.search.SearchMetadata;
 import se.yarin.morphy.service.games.search.GameSearchRequestConverter;

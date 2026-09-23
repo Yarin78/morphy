@@ -47,7 +47,7 @@ public class ResourceLoader {
 
   public static File materializeDatabaseStream(Class resourceRoot, String databaseName)
       throws IOException {
-    return materializeDatabaseStream(resourceRoot, "", databaseName, Database.ALL_EXTENSIONS);
+    return materializeDatabaseStream(resourceRoot, "", databaseName, DatabaseCbh.ALL_EXTENSIONS);
   }
 
   public static File materializeDatabaseStream(
@@ -58,7 +58,7 @@ public class ResourceLoader {
   public static File materializeDatabaseStream(
       Class resourceRoot, String parentPath, String databaseName) throws IOException {
     return materializeDatabaseStream(
-        resourceRoot, parentPath, databaseName, Database.ALL_EXTENSIONS);
+        resourceRoot, parentPath, databaseName, DatabaseCbh.ALL_EXTENSIONS);
   }
 
   public static File materializeDatabaseStream(
@@ -130,22 +130,22 @@ public class ResourceLoader {
     return new File(url.getPath()).listFiles();
   }
 
-  public static Database openWorldChDatabase() {
+  public static DatabaseCbh openWorldChDatabase() {
     try {
       File file =
-          ResourceLoader.materializeDatabaseStream(Database.class, "database/World-ch", "World-ch");
+          ResourceLoader.materializeDatabaseStream(DatabaseCbh.class, "database/World-ch", "World-ch");
       // Can't openInMemory because the serializedFilter tests only works on persistent storage
-      return Database.open(file);
+      return DatabaseCbh.open(file);
     } catch (IOException e) {
       throw new RuntimeException("Failed to open World-ch test database");
     }
   }
 
-  public static Database openWorldChDatabaseInMemory() {
+  public static DatabaseCbh openWorldChDatabaseInMemory() {
     try {
       File file =
-          ResourceLoader.materializeDatabaseStream(Database.class, "database/World-ch", "World-ch");
-      return Database.open(file, DatabaseMode.IN_MEMORY);
+          ResourceLoader.materializeDatabaseStream(DatabaseCbh.class, "database/World-ch", "World-ch");
+      return DatabaseCbh.open(file, DatabaseMode.IN_MEMORY);
     } catch (IOException e) {
       throw new RuntimeException("Failed to open World-ch test database");
     }

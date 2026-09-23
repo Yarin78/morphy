@@ -16,8 +16,9 @@ public class LastChangedTimestampColumn implements GameColumn {
   }
 
   @Override
-  public String getValue(Game game) {
-    if (game.lastChangedTimestamp() == 0) {
+  public String getValue(GameRow row) {
+    Game game = row.game();
+    if (game == null || game.lastChangedTimestamp() == 0) {
       return "";
     }
     return FORMATTER.format(game.lastChangedTime());

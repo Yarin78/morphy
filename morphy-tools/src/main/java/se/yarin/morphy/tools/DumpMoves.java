@@ -11,7 +11,7 @@ import se.yarin.chess.Move;
 import se.yarin.chess.Player;
 import se.yarin.chess.Position;
 import se.yarin.chess.Stone;
-import se.yarin.morphy.Database;
+import se.yarin.morphy.DatabaseCbh;
 import se.yarin.morphy.DatabaseMode;
 import se.yarin.morphy.DatabaseReadTransaction;
 import se.yarin.morphy.Game;
@@ -37,7 +37,7 @@ public class DumpMoves {
       System.err.println("Usage: DumpMoves <database.cbh> <output file>");
       System.exit(1);
     }
-    try (Database db = Database.open(new File(args[0]), DatabaseMode.READ_ONLY);
+    try (DatabaseCbh db = DatabaseCbh.open(new File(args[0]), DatabaseMode.READ_ONLY);
         DatabaseReadTransaction txn = new DatabaseReadTransaction(db);
         PrintWriter out = new PrintWriter(args[1])) {
       for (int id = 1; id <= db.count(); id++) {

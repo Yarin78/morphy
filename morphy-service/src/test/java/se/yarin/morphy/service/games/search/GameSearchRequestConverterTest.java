@@ -13,7 +13,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import se.yarin.chess.Date;
 import se.yarin.chess.Eco;
-import se.yarin.morphy.Database;
+import se.yarin.morphy.DatabaseCbh;
 import se.yarin.morphy.entities.EntityType;
 import se.yarin.morphy.games.filters.*;
 import se.yarin.morphy.games.filters.RatingRangeFilter.RatingColor;
@@ -24,12 +24,12 @@ import se.yarin.morphy.service.games.dto.GameSearchRequest;
 
 class GameSearchRequestConverterTest {
 
-  private Database database;
+  private DatabaseCbh database;
   private GameSearchRequestConverter queryBuilder;
 
   @BeforeEach
   void setUp() throws IOException {
-    database = new Database();
+    database = new DatabaseCbh();
     queryBuilder = new GameSearchRequestConverter();
   }
 

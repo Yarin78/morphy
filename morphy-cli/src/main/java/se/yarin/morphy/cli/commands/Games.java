@@ -4,7 +4,7 @@ import me.tongfei.progressbar.ProgressBar;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
-import se.yarin.morphy.Database;
+import se.yarin.morphy.DatabaseCbh;
 import se.yarin.morphy.DatabaseMode;
 import se.yarin.morphy.DatabaseReadTransaction;
 import se.yarin.morphy.Game;
@@ -127,7 +127,7 @@ public class Games extends BaseCommand implements Callable<Integer> {
         .forEach(
             file -> {
               log.info("Opening {}", file);
-              try (Database db = Database.open(file, DatabaseMode.READ_ONLY)) {
+              try (DatabaseCbh db = DatabaseCbh.open(file, DatabaseMode.READ_ONLY)) {
                 // Speeds up performance quite a lot, and we should be fairly certain that the moves
                 // in the CBH databases are valid
                 db.moveRepository().setValidateDecodedMoves(false);
@@ -184,7 +184,7 @@ public class Games extends BaseCommand implements Callable<Integer> {
     return 0;
   }
 
-  public GameQuery createGameQuery(Database db) {
+  public GameQuery createGameQuery(DatabaseCbh db) {
     // Build query from filter expression
     GameQuery baseQuery = gameQueryBuilder.buildQuery(db, filterExpression);
 
@@ -267,7 +267,7 @@ public class Games extends BaseCommand implements Callable<Integer> {
         throw new FileAlreadyExistsException(output);
       }
       if (file.exists()) {
-        Database.delete(file);
+        DatabaseCbh.delete(file);
       }
       gameConsumer = new DatabaseBuilder(file);
     } else if (output.endsWith(".pgn")) {

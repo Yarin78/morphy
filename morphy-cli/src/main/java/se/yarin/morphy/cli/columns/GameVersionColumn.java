@@ -1,7 +1,5 @@
 package se.yarin.morphy.cli.columns;
 
-import se.yarin.morphy.Game;
-
 public class GameVersionColumn implements GameColumn {
 
   @Override
@@ -10,8 +8,9 @@ public class GameVersionColumn implements GameColumn {
   }
 
   @Override
-  public String getValue(Game game) {
-    return String.format("%4d", game.gameVersion());
+  public String getValue(GameRow row) {
+    Integer version = row.dto().gameVersion();
+    return String.format("%4d", version == null ? 0 : version);
   }
 
   @Override

@@ -9,7 +9,7 @@ import se.yarin.morphy.service.MorphyServiceException;
 import se.yarin.morphy.service.games.GameCountResponse;
 import se.yarin.morphy.service.games.GameHeaderListResponse;
 import se.yarin.morphy.service.games.GamesService;
-import se.yarin.morphy.service.games.dto.GameDto;
+import se.yarin.morphy.model.GameDto;
 import se.yarin.morphy.service.games.dto.GameSearchRequest;
 import se.yarin.morphy.service.games.dto.GameSearchResponse;
 

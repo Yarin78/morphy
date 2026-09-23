@@ -10,7 +10,11 @@ public class RawMovesColumn implements GameColumn {
   }
 
   @Override
-  public String getValue(Game game) {
+  public String getValue(GameRow row) {
+    Game game = row.game();
+    if (game == null) {
+      return "";
+    }
     long movesOffset = game.getMovesOffset();
     byte[] movesData = game.database().moveRepository().getMovesBlob(movesOffset).array();
     return CBUtil.toHexString(movesData);

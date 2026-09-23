@@ -4,6 +4,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.morphy.Game;
 import se.yarin.morphy.cli.columns.GameColumn;
+import se.yarin.morphy.cli.columns.GameRow;
+import se.yarin.morphy.convert.AnnotatorDtoConverter;
+import se.yarin.morphy.convert.GameDtoConverter;
+import se.yarin.morphy.convert.GameTagDtoConverter;
+import se.yarin.morphy.convert.PlayerDtoConverter;
+import se.yarin.morphy.convert.SourceDtoConverter;
+import se.yarin.morphy.convert.TeamDtoConverter;
+import se.yarin.morphy.convert.TournamentDtoConverter;
+import se.yarin.morphy.model.GameDto;
 
 import java.util.*;
 
@@ -12,6 +21,15 @@ public class StdoutGamesSummary extends GameConsumerBase {
 
   private final boolean showTotal;
   private final Collection<GameColumn> columns;
+  private final boolean needsMoves;
+  private final GameDtoConverter gameDtoConverter =
+      new GameDtoConverter(
+          new PlayerDtoConverter(),
+          new TournamentDtoConverter(),
+          new AnnotatorDtoConverter(),
+          new SourceDtoConverter(),
+          new TeamDtoConverter(),
+          new GameTagDtoConverter());
 
   public static final String DEFAULT_COLUMNS =
       "id,name,rating,result,num-moves,eco,tournament,date";
@@ -27,6 +45,7 @@ public class StdoutGamesSummary extends GameConsumerBase {
     if (this.columns.size() == 0) {
       throw new IllegalArgumentException("No columns specified");
     }
+    this.needsMoves = columns.stream().anyMatch(GameColumn::needsMoves);
   }
 
   public static List<GameColumn> parseColumns(String columnSpec) {
@@ -126,6 +145,12 @@ public class StdoutGamesSummary extends GameConsumerBase {
 
   @Override
   public void accept(Game game) {
+    // Build the neutral row once; the columns render from it. Moves (PGN) are materialised only
+    // when a selected column needs them; full entity details are cheap enough to always include.
+    GameDto dto =
+        gameDtoConverter.toDto(game, needsMoves, false, true, true, true, false);
+    GameRow row = new GameRow(dto, game, game.database().name());
+
     StringBuilder sb = new StringBuilder();
     GameColumn lastColumn = null;
     for (GameColumn column : columns) {
@@ -134,7 +159,7 @@ public class StdoutGamesSummary extends GameConsumerBase {
       sb.append(" ".repeat(marginBefore));
       lastColumn = column;
 
-      String value = column.getValue(game);
+      String value = column.getValue(row);
       if (column.trimValueToWidth() && value.length() > column.width()) {
         value = value.substring(0, column.width());
       }

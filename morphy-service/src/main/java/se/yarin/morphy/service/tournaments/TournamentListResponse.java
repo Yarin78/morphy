@@ -1,7 +1,7 @@
 package se.yarin.morphy.service.tournaments;
 
 import java.util.List;
-import se.yarin.morphy.service.tournaments.dto.TournamentDto;
+import se.yarin.morphy.model.TournamentDto;
 
 /** Response object for paginated tournament lists. */
 public record TournamentListResponse(

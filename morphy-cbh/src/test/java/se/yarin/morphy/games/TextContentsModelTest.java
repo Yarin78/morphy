@@ -3,7 +3,7 @@ package se.yarin.morphy.games;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import se.yarin.chess.Date;
-import se.yarin.morphy.Database;
+import se.yarin.morphy.DatabaseCbh;
 import se.yarin.morphy.DatabaseReadTransaction;
 import se.yarin.morphy.Game;
 import se.yarin.morphy.ResourceLoader;
@@ -19,12 +19,12 @@ import static org.junit.Assert.*;
 
 public class TextContentsModelTest {
 
-  private static Database textDatabase;
+  private static DatabaseCbh textDatabase;
 
   @BeforeClass
   public static void setupTextDb() throws IOException {
-    File file = ResourceLoader.materializeDatabaseStream(Database.class, "database/text", "text");
-    textDatabase = Database.open(file);
+    File file = ResourceLoader.materializeDatabaseStream(DatabaseCbh.class, "database/text", "text");
+    textDatabase = DatabaseCbh.open(file);
   }
 
   @Test
@@ -79,7 +79,7 @@ public class TextContentsModelTest {
 
   @Test
   public void testSerializeText() throws MorphyInvalidDataException {
-    Database database = new Database();
+    DatabaseCbh database = new DatabaseCbh();
 
     TextHeaderModel header =
         ImmutableTextHeaderModel.builder()

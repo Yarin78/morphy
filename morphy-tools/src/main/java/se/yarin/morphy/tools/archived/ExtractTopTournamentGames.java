@@ -1,6 +1,6 @@
 package se.yarin.morphy.tools;
 
-import se.yarin.cbhlib.Database;
+import se.yarin.cbhlib.DatabaseCbh;
 import se.yarin.cbhlib.entities.TournamentBase;
 import se.yarin.cbhlib.entities.TournamentEntity;
 import se.yarin.cbhlib.games.GameHeader;
@@ -18,7 +18,7 @@ public class ExtractTopTournamentGames {
   public static void main(String[] args) throws IOException {
     // TODO: Iterating over all tournaments using the iterator doesn't seem to include all
     // tournaments!?
-    Database db = Database.open(new File("testbases/Mega Database 2017/Mega Database 2017.cbh"));
+    DatabaseCbh db = DatabaseCbh.open(new File("testbases/Mega Database 2017/Mega Database 2017.cbh"));
     GameHeaderBase headerBase = db.getHeaderBase();
     PlayerBase playerBase = db.getPlayerBase();
     TournamentBase tb = db.getTournamentBase();

@@ -17,7 +17,11 @@ public class RatingTypeColumn implements GameColumn {
   }
 
   @Override
-  public String getValue(Game game) {
+  public String getValue(GameRow row) {
+    Game game = row.game();
+    if (game == null) {
+      return "";
+    }
     RatingType ratingType = isWhite ? game.whiteRatingType() : game.blackRatingType();
     return ratingType.toString();
   }

@@ -1,7 +1,5 @@
 package se.yarin.morphy.cli.columns;
 
-import se.yarin.morphy.Game;
-
 public class VCSColumn implements GameColumn {
   @Override
   public String getHeader() {
@@ -9,8 +7,9 @@ public class VCSColumn implements GameColumn {
   }
 
   @Override
-  public String getValue(Game game) {
-    return game.vcs();
+  public String getValue(GameRow row) {
+    String vcs = row.dto().vcs();
+    return vcs == null ? "" : vcs;
   }
 
   @Override

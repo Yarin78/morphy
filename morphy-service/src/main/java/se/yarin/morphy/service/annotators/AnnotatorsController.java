@@ -6,7 +6,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import se.yarin.morphy.service.MorphyServiceException;
-import se.yarin.morphy.service.annotators.dto.AnnotatorDto;
+import se.yarin.morphy.model.AnnotatorDto;
 import se.yarin.morphy.service.search.EntitySearchRequest;
 import se.yarin.morphy.service.search.EntitySearchResponse;
 

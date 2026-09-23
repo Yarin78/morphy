@@ -5,7 +5,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import se.yarin.chess.Date;
-import se.yarin.morphy.Database;
+import se.yarin.morphy.DatabaseCbh;
 import se.yarin.morphy.ResourceLoader;
 
 import java.io.File;
@@ -25,7 +25,7 @@ public class SourceTest {
   public void setupEntityTest() throws IOException {
     sourceIndexFile =
         ResourceLoader.materializeDatabaseStream(
-            Database.class, "database/World-ch", "World-ch", List.of(".cbs"));
+            DatabaseCbh.class, "database/World-ch", "World-ch", List.of(".cbs"));
   }
 
   @Test

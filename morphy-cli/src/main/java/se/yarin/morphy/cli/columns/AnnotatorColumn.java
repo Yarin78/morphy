@@ -1,7 +1,5 @@
 package se.yarin.morphy.cli.columns;
 
-import se.yarin.morphy.Game;
-
 public class AnnotatorColumn implements GameColumn {
   @Override
   public String getHeader() {
@@ -14,8 +12,12 @@ public class AnnotatorColumn implements GameColumn {
   }
 
   @Override
-  public String getValue(Game game) {
-    return game.annotator().name();
+  public String getValue(GameRow row) {
+    return row.dto().annotator() == null ? "" : orEmpty(row.dto().annotator().name());
+  }
+
+  private static String orEmpty(String s) {
+    return s == null ? "" : s;
   }
 
   @Override

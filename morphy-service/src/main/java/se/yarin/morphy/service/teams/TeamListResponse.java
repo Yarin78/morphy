@@ -2,7 +2,7 @@ package se.yarin.morphy.service.teams;
 
 import java.util.List;
 import org.jetbrains.annotations.Nullable;
-import se.yarin.morphy.service.teams.dto.TeamDto;
+import se.yarin.morphy.model.TeamDto;
 
 /**
  * Response containing a paginated list of teams.

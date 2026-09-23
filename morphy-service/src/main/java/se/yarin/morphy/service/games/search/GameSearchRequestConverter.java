@@ -4,7 +4,7 @@ import java.time.LocalDate;
 import java.util.*;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Component;
-import se.yarin.morphy.Database;
+import se.yarin.morphy.DatabaseCbh;
 import se.yarin.morphy.Game;
 import se.yarin.morphy.queries.*;
 import se.yarin.morphy.queries.filter.FilterCondition;
@@ -30,7 +30,7 @@ public class GameSearchRequestConverter {
    * @return GameQuery ready for execution via QueryPlanner
    */
   public @NotNull GameQuery buildQuery(
-      @NotNull Database database, @NotNull GameSearchRequest request) {
+      @NotNull DatabaseCbh database, @NotNull GameSearchRequest request) {
     // 1. Parse all conditions (typed + query language)
     List<FilterCondition> conditions = parseAllConditions(request);
 

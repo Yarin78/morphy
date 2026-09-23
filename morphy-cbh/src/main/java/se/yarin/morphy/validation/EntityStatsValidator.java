@@ -3,7 +3,7 @@ package se.yarin.morphy.validation;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import se.yarin.morphy.Database;
+import se.yarin.morphy.DatabaseCbh;
 import se.yarin.morphy.DatabaseReadTransaction;
 import se.yarin.morphy.Game;
 import se.yarin.morphy.boosters.GameEntityIndex;
@@ -18,12 +18,12 @@ import java.util.*;
 public class EntityStatsValidator {
   private static final Logger log = LoggerFactory.getLogger(EntityStatsValidator.class);
 
-  private final Database database;
+  private final DatabaseCbh database;
   private final EntityStats stats;
 
   private boolean loggedDuplicateNotInGameEntityIndex = false;
 
-  public EntityStatsValidator(@NotNull Database database) {
+  public EntityStatsValidator(@NotNull DatabaseCbh database) {
     this.database = database;
     this.stats = new EntityStats();
   }

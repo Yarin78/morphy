@@ -16,8 +16,9 @@ public class CreationTimestampColumn implements GameColumn {
   }
 
   @Override
-  public String getValue(Game game) {
-    if (game.creationTimestamp() == 0) {
+  public String getValue(GameRow row) {
+    Game game = row.game();
+    if (game == null || game.creationTimestamp() == 0) {
       return "";
     }
     return FORMATTER.format(game.creationTime());

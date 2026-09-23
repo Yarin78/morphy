@@ -14,7 +14,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
-import se.yarin.morphy.Database;
+import se.yarin.morphy.DatabaseCbh;
 
 /**
  * Integration tests for DatabaseService using Spring Boot test context. These tests verify that the
@@ -113,7 +113,7 @@ class DatabaseServiceIntegrationTest {
       File dbPath = tempDir.resolve("existing-test.cbh").toFile();
 
       // Create a database file manually
-      Database db = Database.create(dbPath, false);
+      DatabaseCbh db = DatabaseCbh.create(dbPath, false);
       db.close();
 
       // Register it
@@ -340,7 +340,7 @@ class DatabaseServiceIntegrationTest {
     @DisplayName("should validate database paths correctly")
     void pathValidationError() throws Exception {
       File invalidPath = Files.createTempDirectory("invalid").resolve("test.cbh").toFile();
-      Database.create(invalidPath, false).close();
+      DatabaseCbh.create(invalidPath, false).close();
 
       // Try to register database outside allowed paths
       IllegalArgumentException exception =

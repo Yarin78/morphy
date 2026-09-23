@@ -3,7 +3,7 @@ package se.yarin.morphy.queries.filter;
 import static org.junit.Assert.*;
 
 import org.junit.Test;
-import se.yarin.morphy.Database;
+import se.yarin.morphy.DatabaseCbh;
 import se.yarin.morphy.entities.*;
 import se.yarin.morphy.entities.filters.*;
 import se.yarin.morphy.games.filters.PlayerFilter;
@@ -15,7 +15,7 @@ import se.yarin.morphy.queries.QuerySortOrder;
 
 public class QueryBuilderTest {
 
-  private final Database db = new Database();
+  private final DatabaseCbh db = new DatabaseCbh();
 
   // --- TournamentQueryBuilder ---
 

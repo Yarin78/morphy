@@ -4,7 +4,7 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
-import se.yarin.morphy.Database;
+import se.yarin.morphy.DatabaseCbh;
 import se.yarin.morphy.Game;
 import se.yarin.morphy.ResourceLoader;
 
@@ -30,7 +30,7 @@ public class MoveOffsetStorageTest {
 
   @Test
   public void validateWorldCh() {
-    Database db = ResourceLoader.openWorldChDatabase();
+    DatabaseCbh db = ResourceLoader.openWorldChDatabase();
     MoveOffsetStorage moveOffsetStorage = db.moveOffsetStorage();
     assert moveOffsetStorage != null;
 

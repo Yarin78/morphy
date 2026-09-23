@@ -1,4 +1,5 @@
 module se.yarin.morphy.cbh {
+    requires transitive se.yarin.morphy.api;
     requires org.slf4j;
     requires static org.immutables.value;
     requires me.tongfei.progressbar;
@@ -8,13 +9,11 @@ module se.yarin.morphy.cbh {
     requires com.github.albfernandez.juniversalchardet;
     requires org.jline.terminal;
 
-    exports se.yarin.chess;
-    exports se.yarin.chess.annotations;
-    exports se.yarin.chess.timeline;
     exports se.yarin.util.parser to
             se.yarin.morphy.cli;
     exports se.yarin.util;
     exports se.yarin.morphy;
+    exports se.yarin.morphy.convert;
     exports se.yarin.morphy.entities;
     exports se.yarin.morphy.entities.filters;
     exports se.yarin.morphy.games;
@@ -33,5 +32,7 @@ module se.yarin.morphy.cbh {
     exports se.yarin.morphy.metrics;
     exports se.yarin.morphy.text;
     exports se.yarin.morphy.util;
-    exports se.yarin.chess.pgn;
+
+    provides se.yarin.morphy.api.DatabaseProvider with
+            se.yarin.morphy.DatabaseCbhProvider;
 }

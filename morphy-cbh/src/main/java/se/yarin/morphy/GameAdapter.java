@@ -48,7 +48,7 @@ public class GameAdapter {
   public @NotNull GameModel getGameModel(@NotNull Game game) throws MorphyInvalidDataException {
     GameHeaderModel headerModel = getGameHeaderModel(game);
 
-    Database database = game.database();
+    DatabaseCbh database = game.database();
     GameMovesModel moves = database.moveRepository().getMoves(game.getMovesOffset(), game.id());
     database.annotationRepository().getAnnotations(moves, game.getAnnotationOffset());
 

@@ -1,7 +1,7 @@
 package se.yarin.morphy.cli.columns;
 
 import se.yarin.morphy.util.CBUtil;
-import se.yarin.morphy.Database;
+import se.yarin.morphy.DatabaseCbh;
 import se.yarin.morphy.entities.Tournament;
 
 import java.util.Arrays;
@@ -27,7 +27,7 @@ public class RawTournamentColumn implements TournamentColumn {
   }
 
   @Override
-  public String getTournamentValue(Database db, Tournament tournament) {
+  public String getTournamentValue(DatabaseCbh db, Tournament tournament) {
     byte[] raw = db.tournamentIndex().getRaw(tournament.id());
     byte[] dest = Arrays.copyOfRange(raw, start, Math.min(raw.length, start + length));
     return CBUtil.toHexString(dest);

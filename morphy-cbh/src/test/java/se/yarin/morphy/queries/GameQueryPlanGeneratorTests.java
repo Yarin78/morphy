@@ -22,13 +22,13 @@ import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.*;
 
 public class GameQueryPlanGeneratorTests {
-  private Database db;
+  private DatabaseCbh db;
   private QueryPlanner spyPlanner;
   private QueryOperator<Game> mockOperator;
 
   @Before
   public void setupContext() {
-    this.db = new Database();
+    this.db = new DatabaseCbh();
 
     QueryPlanner planner = new QueryPlanner(db);
     this.spyPlanner = spy(planner);

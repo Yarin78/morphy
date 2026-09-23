@@ -5,7 +5,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
 import se.yarin.chess.GameModel;
-import se.yarin.morphy.Database;
+import se.yarin.morphy.DatabaseCbh;
 import se.yarin.morphy.DatabaseMode;
 import se.yarin.morphy.DatabaseReadTransaction;
 import se.yarin.morphy.DatabaseWriteTransaction;
@@ -89,7 +89,7 @@ public class SummarizeOpening extends BaseCommand implements Callable<Integer> {
         .forEach(
             file -> {
               log.info("Opening {}", file);
-              try (Database db = Database.open(file, DatabaseMode.READ_ONLY)) {
+              try (DatabaseCbh db = DatabaseCbh.open(file, DatabaseMode.READ_ONLY)) {
                 db.moveRepository().setValidateDecodedMoves(false);
 
                 List<Integer> matchingGameIds = new ArrayList<>();
@@ -175,7 +175,7 @@ public class SummarizeOpening extends BaseCommand implements Callable<Integer> {
 
   private int writeToDatabase(OpeningRepertoireCache repertoire) throws IOException {
     int entriesWritten = 0;
-    try (Database outputDb = Database.create(output, overwrite)) {
+    try (DatabaseCbh outputDb = DatabaseCbh.create(output, overwrite)) {
       try (var writeTxn = new DatabaseWriteTransaction(outputDb)) {
         for (OpeningRepertoireCache.Entry entry : repertoire.entries()) {
           Optional<GameModel> summary = repertoire.summarize(entry, annotateAllMoves);

@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.*;
 import se.yarin.morphy.service.MorphyServiceException;
 import se.yarin.morphy.service.search.EntitySearchRequest;
 import se.yarin.morphy.service.search.EntitySearchResponse;
-import se.yarin.morphy.service.tournaments.dto.TournamentDto;
+import se.yarin.morphy.model.TournamentDto;
 
 @RestController
 @RequestMapping("/api/databases/{databaseId}/tournaments")

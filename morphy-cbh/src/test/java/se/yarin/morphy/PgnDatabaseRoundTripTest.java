@@ -27,7 +27,7 @@ import static org.junit.Assert.*;
  * Flow: Database (ChessBase annotations) → PGN (PGN annotations) → Database (ChessBase annotations)
  */
 public class PgnDatabaseRoundTripTest {
-    private Database testDatabase;
+    private DatabaseCbh testDatabase;
     private PgnExporter exporter;
     private PgnParser parser;
 
@@ -37,7 +37,7 @@ public class PgnDatabaseRoundTripTest {
         File dbFile = ResourceLoader.materializeDatabaseStream(getClass(), "database/test-annotations", "test-annotations");
 
         // File dbFile = new File(getClass().getResource("/test-annotations.cbh").toURI());
-        testDatabase = Database.open(dbFile, DatabaseMode.READ_ONLY);
+        testDatabase = DatabaseCbh.open(dbFile, DatabaseMode.READ_ONLY);
 
         // Configure exporter to convert ChessBase → PGN annotations
         AnnotationConverter roundTripConverter = AnnotationConverter.getRoundTripConverter();
@@ -256,7 +256,7 @@ public class PgnDatabaseRoundTripTest {
         // Open the World Championship database
         File dbFile = ResourceLoader.materializeDatabaseStream(
                 getClass(), "database/World-ch", "World-ch");
-        Database worldChDb = Database.open(dbFile, DatabaseMode.READ_ONLY);
+        DatabaseCbh worldChDb = DatabaseCbh.open(dbFile, DatabaseMode.READ_ONLY);
 
         AnnotationConverter roundTripConverter = AnnotationConverter.getRoundTripConverter();
         PgnExporter worldExporter = new PgnExporter(

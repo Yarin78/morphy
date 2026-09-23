@@ -1,7 +1,5 @@
 package se.yarin.morphy.cli.columns;
 
-import se.yarin.morphy.Game;
-
 public class RoundColumn implements GameColumn {
   @Override
   public String getHeader() {
@@ -14,14 +12,16 @@ public class RoundColumn implements GameColumn {
   }
 
   @Override
-  public String getValue(Game game) {
-    if (game.round() == 0) {
+  public String getValue(GameRow row) {
+    Integer round = row.dto().round();
+    Integer subRound = row.dto().subRound();
+    if (round == null) {
       return "";
     }
-    if (game.subRound() == 0) {
-      return String.format("%4d", game.round());
+    if (subRound == null) {
+      return String.format("%4d", round);
     }
-    return String.format("%2d.%d", game.round(), game.subRound());
+    return String.format("%2d.%d", round, subRound);
   }
 
   @Override

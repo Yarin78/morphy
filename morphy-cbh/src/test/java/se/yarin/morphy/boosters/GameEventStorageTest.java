@@ -5,7 +5,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import se.yarin.chess.GameMovesModel;
-import se.yarin.morphy.Database;
+import se.yarin.morphy.DatabaseCbh;
 import se.yarin.morphy.DatabaseMode;
 import se.yarin.morphy.Game;
 import se.yarin.morphy.ResourceLoader;
@@ -30,7 +30,7 @@ public class GameEventStorageTest {
 
   @Test
   public void validateWorldCh() {
-    Database db = ResourceLoader.openWorldChDatabase();
+    DatabaseCbh db = ResourceLoader.openWorldChDatabase();
     GameEventStorage storage = db.gameEventStorage();
     assert storage != null;
     for (int gameId = 1; gameId <= db.count(); gameId++) {

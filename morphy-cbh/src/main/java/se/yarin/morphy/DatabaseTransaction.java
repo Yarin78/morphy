@@ -14,10 +14,10 @@ public abstract class DatabaseTransaction extends TransactionBase implements Ent
   private static final Logger log = LoggerFactory.getLogger(DatabaseTransaction.class);
 
   private final @NotNull GameAdapter gameAdapter = new GameAdapter();
-  private final @NotNull Database database;
+  private final @NotNull DatabaseCbh database;
   private final @NotNull MetricsRepository metrics;
 
-  public @NotNull Database database() {
+  public @NotNull DatabaseCbh database() {
     return database;
   }
 
@@ -44,7 +44,7 @@ public abstract class DatabaseTransaction extends TransactionBase implements Ent
   public abstract EntityIndexTransaction<GameTag> gameTagTransaction();
 
   public DatabaseTransaction(
-      @NotNull DatabaseContext.DatabaseLock lock, @NotNull Database database) {
+      @NotNull DatabaseContext.DatabaseLock lock, @NotNull DatabaseCbh database) {
     super(lock, database.context());
 
     this.database = database;

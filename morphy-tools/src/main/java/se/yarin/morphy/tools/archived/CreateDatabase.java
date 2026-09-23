@@ -1,6 +1,6 @@
 package se.yarin.morphy.tools;
 
-import se.yarin.cbhlib.Database;
+import se.yarin.cbhlib.DatabaseCbh;
 import se.yarin.cbhlib.annotations.GameQuotationAnnotation;
 import se.yarin.cbhlib.annotations.SymbolAnnotation;
 import se.yarin.cbhlib.exceptions.ChessBaseInvalidDataException;
@@ -18,7 +18,7 @@ import static se.yarin.chess.Chess.*;
 public class CreateDatabase {
 
   public static void main3(String[] args) throws IOException, ChessBaseInvalidDataException {
-    Database db = Database.create(new File("testbases/tmp/Created/random3.cbh"));
+    DatabaseCbh db = DatabaseCbh.create(new File("testbases/tmp/Created/random3.cbh"));
     GameGenerator gameGenerator = new GameGenerator();
 
     Random random = new Random();
@@ -39,7 +39,7 @@ public class CreateDatabase {
   }
 
   public static void main2(String[] args) throws IOException, ChessBaseInvalidDataException {
-    Database db = Database.create(new File("testbases/tmp/Created/db8.cbh"));
+    DatabaseCbh db = DatabaseCbh.create(new File("testbases/tmp/Created/db8.cbh"));
     GameGenerator gameGenerator = new GameGenerator();
 
     GameModel[] games = new GameModel[3];
@@ -86,7 +86,7 @@ public class CreateDatabase {
     game.header().setWhite("Carlsen");
     game.header().setBlack("Caruana");
 
-    Database db = Database.create(new File("testbases/tmp/Created/withquot3.cbh"));
+    DatabaseCbh db = DatabaseCbh.create(new File("testbases/tmp/Created/withquot3.cbh"));
     db.addGame(game);
     db.close();
   }

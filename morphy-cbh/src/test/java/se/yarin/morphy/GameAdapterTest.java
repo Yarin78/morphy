@@ -22,7 +22,7 @@ public class GameAdapterTest {
    */
   @Test
   public void testRoundtripConversion() throws Exception {
-    Database database = ResourceLoader.openWorldChDatabase();
+    DatabaseCbh database = ResourceLoader.openWorldChDatabase();
     GameAdapter adapter = new GameAdapter();
 
     int totalGames = database.count();

@@ -27,7 +27,11 @@ public class RawCBBColumn implements GameColumn {
   }
 
   @Override
-  public String getValue(Game game) {
+  public String getValue(GameRow row) {
+    Game game = row.game();
+    if (game == null) {
+      return "";
+    }
     try {
       FileChannel cbbChannel = null; // TODO
       cbbChannel.position(game.id() * 52);

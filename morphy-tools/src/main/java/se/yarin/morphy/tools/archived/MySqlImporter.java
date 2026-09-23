@@ -1,6 +1,6 @@
 package se.yarin.morphy.tools;
 
-import se.yarin.cbhlib.Database;
+import se.yarin.cbhlib.DatabaseCbh;
 import se.yarin.cbhlib.Game;
 import se.yarin.cbhlib.entities.*;
 import se.yarin.cbhlib.exceptions.ChessBaseException;
@@ -26,13 +26,13 @@ public class MySqlImporter {
     MySqlImporter importer = new MySqlImporter();
 
     File megadb = new File("/Users/yarin/chess/bases/Mega2021/Mega Database 2021.cbh");
-    Database db = Database.open(megadb);
+    DatabaseCbh db = DatabaseCbh.open(megadb);
 
     // importer.importPlayers(db.getPlayerBase());
     importer.importGames(db);
   }
 
-  private void importGames(Database db) throws SQLException {
+  private void importGames(DatabaseCbh db) throws SQLException {
     long start = System.currentTimeMillis();
     try (Connection conn = getConnection()) {
       Statement stmt = conn.createStatement();

@@ -9,7 +9,7 @@ import se.yarin.chess.Player;
 import se.yarin.chess.Position;
 import se.yarin.chess.annotations.CommentaryAfterMoveAnnotation;
 import se.yarin.chess.annotations.NAGAnnotation;
-import se.yarin.morphy.Database;
+import se.yarin.morphy.DatabaseCbh;
 import se.yarin.morphy.DatabaseMode;
 import se.yarin.morphy.DatabaseReadTransaction;
 import se.yarin.morphy.Game;
@@ -380,7 +380,7 @@ public class OpeningRepertoireCache {
     Map<Position, Match> positionCache = new HashMap<>();
     Map<Entry, Map<Position, List<Move>>> bookMoves = new HashMap<>();
     Map<Entry, GameMovesModel> entryMoves = new HashMap<>();
-    try (Database db = Database.open(file, DatabaseMode.READ_ONLY)) {
+    try (DatabaseCbh db = DatabaseCbh.open(file, DatabaseMode.READ_ONLY)) {
       try (DatabaseReadTransaction txn = new DatabaseReadTransaction(db)) {
         for (Game game : txn.iterable()) {
           if (game.guidingText() || game.deleted()) {

@@ -1,6 +1,6 @@
 package se.yarin.morphy.cli.columns;
 
-import se.yarin.morphy.Database;
+import se.yarin.morphy.DatabaseCbh;
 import se.yarin.morphy.entities.Tournament;
 
 public class TournamentCompleteColumn implements TournamentColumn {
@@ -10,7 +10,7 @@ public class TournamentCompleteColumn implements TournamentColumn {
   }
 
   @Override
-  public String getTournamentValue(Database db, Tournament tournament) {
+  public String getTournamentValue(DatabaseCbh db, Tournament tournament) {
     return tournament.complete() ? "Yes" : "-";
   }
 

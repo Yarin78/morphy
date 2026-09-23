@@ -4,7 +4,7 @@ import static org.junit.Assert.*;
 
 import java.util.List;
 import org.junit.Test;
-import se.yarin.morphy.Database;
+import se.yarin.morphy.DatabaseCbh;
 import se.yarin.morphy.ResourceLoader;
 import se.yarin.morphy.entities.EntityIndexReadTransaction;
 import se.yarin.morphy.entities.Player;
@@ -17,7 +17,7 @@ public class MultiPlayerNameFilterTest {
   // own for OR-of-names ("white.name:foo|bar") searches to actually filter anything.
   @Test
   public void matchesSerializedAgreesWithMatches() {
-    Database db = ResourceLoader.openWorldChDatabase();
+    DatabaseCbh db = ResourceLoader.openWorldChDatabase();
     try (EntityIndexReadTransaction<Player> txn = db.playerIndex().beginReadTransaction()) {
       Player steinitz = db.playerIndex().prefixSearch("Steinitz").get(0);
       Player capablanca = db.playerIndex().prefixSearch("Capablanca").get(0);

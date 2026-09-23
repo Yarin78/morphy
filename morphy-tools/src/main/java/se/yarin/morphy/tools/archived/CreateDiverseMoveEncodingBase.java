@@ -1,6 +1,6 @@
 package se.yarin.morphy.tools;
 
-import se.yarin.cbhlib.Database;
+import se.yarin.cbhlib.DatabaseCbh;
 import se.yarin.cbhlib.exceptions.ChessBaseInvalidDataException;
 import se.yarin.cbhlib.util.TestGames;
 import se.yarin.chess.GameHeaderModel;
@@ -14,7 +14,7 @@ import java.io.IOException;
 public class CreateDiverseMoveEncodingBase {
 
   public static void main(String[] args) throws IOException, ChessBaseInvalidDataException {
-    Database db = Database.create(new File("testbases/tmp/Weird Move Encodings/multimode3.cbh"));
+    DatabaseCbh db = DatabaseCbh.create(new File("testbases/tmp/Weird Move Encodings/multimode3.cbh"));
 
     addGame(db, TestGames.getCrazyGame(), "crazyGame");
     addGame(db, TestGames.getEndGame(), "endGame");
@@ -24,7 +24,7 @@ public class CreateDiverseMoveEncodingBase {
     db.close();
   }
 
-  private static void addGame(Database db, GameMovesModel moves, String title)
+  private static void addGame(DatabaseCbh db, GameMovesModel moves, String title)
       throws ChessBaseInvalidDataException {
     for (int i = 0; i < 8; i++) {
       db.getMovesBase().setEncodingMode(i);

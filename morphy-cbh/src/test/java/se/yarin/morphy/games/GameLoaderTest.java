@@ -6,7 +6,7 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import se.yarin.chess.Date;
 import se.yarin.chess.GameModel;
-import se.yarin.morphy.Database;
+import se.yarin.morphy.DatabaseCbh;
 import se.yarin.morphy.ResourceLoader;
 import se.yarin.morphy.exceptions.MorphyException;
 
@@ -15,7 +15,7 @@ import static org.junit.Assert.assertNull;
 
 public class GameLoaderTest {
   @Rule public TemporaryFolder folder = new TemporaryFolder();
-  private Database worldChDatabase;
+  private DatabaseCbh worldChDatabase;
 
   @Before
   public void setupWorldChDatabase() {

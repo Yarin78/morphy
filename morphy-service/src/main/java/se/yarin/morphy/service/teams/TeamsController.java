@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.*;
 import se.yarin.morphy.service.MorphyServiceException;
 import se.yarin.morphy.service.search.EntitySearchRequest;
 import se.yarin.morphy.service.search.EntitySearchResponse;
-import se.yarin.morphy.service.teams.dto.TeamDto;
+import se.yarin.morphy.model.TeamDto;
 
 @RestController
 @RequestMapping("/api/databases/{databaseId}/teams")

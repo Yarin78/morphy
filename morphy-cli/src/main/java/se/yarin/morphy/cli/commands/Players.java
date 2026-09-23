@@ -3,7 +3,7 @@ package se.yarin.morphy.cli.commands;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
-import se.yarin.morphy.Database;
+import se.yarin.morphy.DatabaseCbh;
 import se.yarin.morphy.DatabaseMode;
 import se.yarin.morphy.DatabaseReadTransaction;
 import se.yarin.morphy.entities.Player;
@@ -49,7 +49,7 @@ public class Players extends BaseCommand implements Callable<Integer> {
         .forEach(
             file -> {
               log.info("Opening {}", file);
-              try (Database db = Database.open(file, DatabaseMode.READ_ONLY)) {
+              try (DatabaseCbh db = DatabaseCbh.open(file, DatabaseMode.READ_ONLY)) {
                 try (var txn = new DatabaseReadTransaction(db)) {
                   EntityQuery<Player> playerQuery = null;
                   try {

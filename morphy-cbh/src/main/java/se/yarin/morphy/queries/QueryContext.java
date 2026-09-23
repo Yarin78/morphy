@@ -1,7 +1,7 @@
 package se.yarin.morphy.queries;
 
 import org.jetbrains.annotations.NotNull;
-import se.yarin.morphy.Database;
+import se.yarin.morphy.DatabaseCbh;
 import se.yarin.morphy.DatabaseContext;
 import se.yarin.morphy.DatabaseReadTransaction;
 import se.yarin.morphy.boosters.GameEntityIndex;
@@ -35,7 +35,7 @@ public class QueryContext {
     return txn.database().gameEntityIndex(entityType);
   }
 
-  public @NotNull Database database() {
+  public @NotNull DatabaseCbh database() {
     return txn.database();
   }
 

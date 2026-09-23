@@ -1,7 +1,6 @@
 package se.yarin.morphy.cli.columns;
 
-import se.yarin.morphy.Game;
-import se.yarin.morphy.entities.Player;
+import se.yarin.morphy.model.PlayerDto;
 
 public class NameColumn implements GameColumn {
 
@@ -22,13 +21,33 @@ public class NameColumn implements GameColumn {
   }
 
   @Override
-  public String getValue(Game game) {
-    if (game.guidingText()) {
-      return isWhite ? game.getTextTitle() : "";
+  public String getValue(GameRow row) {
+    if ("text".equals(row.dto().type())) {
+      return isWhite ? orEmpty(row.dto().textTitle()) : "";
     }
-    Player player = isWhite ? game.white() : game.black();
-    String name = player.getFullNameShort();
+    PlayerDto player = isWhite ? row.dto().whitePlayer() : row.dto().blackPlayer();
+    String name = shortName(player);
     return isWhite ? name : ("- " + name);
+  }
+
+  private static String orEmpty(String s) {
+    return s == null ? "" : s;
+  }
+
+  /** Mirrors Player#getFullNameShort for a PlayerDto: "Last, F". */
+  static String shortName(PlayerDto player) {
+    if (player == null) {
+      return "";
+    }
+    String last = orEmpty(player.lastName());
+    String first = orEmpty(player.firstName());
+    if (last.isEmpty()) {
+      return first;
+    }
+    if (first.isEmpty()) {
+      return last;
+    }
+    return last + ", " + first.charAt(0);
   }
 
   @Override

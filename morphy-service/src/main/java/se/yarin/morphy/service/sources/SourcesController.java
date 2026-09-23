@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.*;
 import se.yarin.morphy.service.MorphyServiceException;
 import se.yarin.morphy.service.search.EntitySearchRequest;
 import se.yarin.morphy.service.search.EntitySearchResponse;
-import se.yarin.morphy.service.sources.dto.SourceDto;
+import se.yarin.morphy.model.SourceDto;
 
 @RestController
 @RequestMapping("/api/databases/{databaseId}/sources")

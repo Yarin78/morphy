@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.Set;
 import org.junit.Before;
 import org.junit.Test;
-import se.yarin.morphy.Database;
+import se.yarin.morphy.DatabaseCbh;
 import se.yarin.morphy.DatabaseReadTransaction;
 import se.yarin.morphy.Game;
 import se.yarin.morphy.entities.EntityType;
@@ -20,13 +20,13 @@ import se.yarin.morphy.entities.filters.TeamTitleFilter;
 import se.yarin.morphy.queries.operations.*;
 
 public class TeamQueryPlanGeneratorTests {
-  private Database db;
+  private DatabaseCbh db;
   private QueryPlanner spyPlanner;
   private QueryOperator<Game> mockOperator;
 
   @Before
   public void setupContext() {
-    this.db = new Database();
+    this.db = new DatabaseCbh();
 
     QueryPlanner planner = new QueryPlanner(db);
     this.spyPlanner = spy(planner);

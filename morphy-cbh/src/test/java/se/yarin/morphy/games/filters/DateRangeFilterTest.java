@@ -6,7 +6,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import se.yarin.chess.Date;
-import se.yarin.morphy.Database;
+import se.yarin.morphy.DatabaseCbh;
 import se.yarin.morphy.ResourceLoader;
 import se.yarin.morphy.games.GameHeader;
 import se.yarin.morphy.storage.ItemStorageFilter;
@@ -17,7 +17,7 @@ import static org.junit.Assert.assertEquals;
 
 public class DateRangeFilterTest {
   @Rule public TemporaryFolder folder = new TemporaryFolder();
-  private Database database, databaseInMemory;
+  private DatabaseCbh database, databaseInMemory;
 
   @Before
   public void setupFilterTest() {
@@ -45,7 +45,7 @@ public class DateRangeFilterTest {
   }
 
   private int countMatches(
-      @NotNull Database database, @NotNull ItemStorageFilter<GameHeader> filter) {
+      @NotNull DatabaseCbh database, @NotNull ItemStorageFilter<GameHeader> filter) {
     return (int)
         database.gameHeaderIndex().getFiltered(filter).stream().filter(Objects::nonNull).count();
   }

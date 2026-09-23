@@ -2,7 +2,7 @@ package se.yarin.morphy.entities;
 
 import org.junit.Test;
 import se.yarin.chess.Date;
-import se.yarin.morphy.Database;
+import se.yarin.morphy.DatabaseCbh;
 import se.yarin.morphy.ResourceLoader;
 
 import static org.junit.Assert.*;

@@ -9,7 +9,9 @@
     <packaging>pom</packaging>
     <version>0.1-SNAPSHOT</version>
     <modules>
+        <module>morphy-api</module>
         <module>morphy-cbh</module>
+        <module>morphy-cb2</module>
         <module>morphy-cli</module>
         <module>morphy-tools</module>
         <module>morphy-service</module>
@@ -23,6 +25,16 @@
 
     <dependencyManagement>
         <dependencies>
+            <dependency>
+                <groupId>se.yarin</groupId>
+                <artifactId>morphy-api</artifactId>
+                <version>0.1-SNAPSHOT</version>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-annotations</artifactId>
+                <version>2.18.2</version>
+            </dependency>
             <dependency>
                 <groupId>org.junit.jupiter</groupId>
                 <artifactId>junit-jupiter</artifactId>

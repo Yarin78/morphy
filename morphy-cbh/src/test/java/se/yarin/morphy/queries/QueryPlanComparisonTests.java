@@ -24,7 +24,7 @@ import static org.junit.Assert.*;
 
 public class QueryPlanComparisonTests {
   // Tests that all query plans evaluate to the same result
-  private Database db;
+  private DatabaseCbh db;
 
   @Before
   public void setupTestDb() {

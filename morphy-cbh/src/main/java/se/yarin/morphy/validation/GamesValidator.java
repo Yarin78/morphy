@@ -4,7 +4,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import se.yarin.chess.GameMovesModel;
-import se.yarin.morphy.Database;
+import se.yarin.morphy.DatabaseCbh;
 import se.yarin.morphy.DatabaseReadTransaction;
 import se.yarin.morphy.Game;
 import se.yarin.morphy.exceptions.MorphyException;
@@ -21,9 +21,9 @@ import java.nio.ByteBuffer;
 public class GamesValidator {
   private static final Logger log = LoggerFactory.getLogger(GamesValidator.class);
 
-  private final Database db;
+  private final DatabaseCbh db;
 
-  public GamesValidator(Database db) {
+  public GamesValidator(DatabaseCbh db) {
     this.db = db;
   }
 

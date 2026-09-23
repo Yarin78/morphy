@@ -176,7 +176,7 @@ public class DatabaseWriteTransaction extends DatabaseTransaction {
    *
    * @param database the target database
    */
-  public DatabaseWriteTransaction(@NotNull Database database) {
+  public DatabaseWriteTransaction(@NotNull DatabaseCbh database) {
     super(DatabaseContext.DatabaseLock.UPDATE, database);
     this.currentGameCount = database.gameHeaderIndex().count();
     this.version = database.context().currentVersion();

@@ -2,7 +2,7 @@ package se.yarin.morphy.queries.operations;
 
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import se.yarin.morphy.Database;
+import se.yarin.morphy.DatabaseCbh;
 import se.yarin.morphy.DatabaseReadTransaction;
 import se.yarin.morphy.IdObject;
 import se.yarin.morphy.Instrumentation;
@@ -41,7 +41,7 @@ public abstract class QueryOperator<T extends IdObject> {
     return queryContext;
   }
 
-  public @NotNull Database database() {
+  public @NotNull DatabaseCbh database() {
     return queryContext.database();
   }
 

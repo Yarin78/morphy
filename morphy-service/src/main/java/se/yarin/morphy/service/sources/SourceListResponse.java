@@ -2,7 +2,7 @@ package se.yarin.morphy.service.sources;
 
 import java.util.List;
 import org.jetbrains.annotations.Nullable;
-import se.yarin.morphy.service.sources.dto.SourceDto;
+import se.yarin.morphy.model.SourceDto;
 
 /**
  * Response containing a paginated list of sources.

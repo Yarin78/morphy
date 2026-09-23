@@ -1,6 +1,6 @@
 package se.yarin.morphy.tools;
 
-import se.yarin.morphy.Database;
+import se.yarin.morphy.DatabaseCbh;
 import se.yarin.morphy.DatabaseMode;
 import se.yarin.morphy.DatabaseReadTransaction;
 import se.yarin.morphy.Game;
@@ -31,7 +31,7 @@ public class InspectUnknownFields {
         }
 
         System.out.println("Opening database: " + databasePath);
-        Database db = Database.open(dbFile, DatabaseMode.READ_ONLY);
+        DatabaseCbh db = DatabaseCbh.open(dbFile, DatabaseMode.READ_ONLY);
 
         int totalGames = 0;
         int gamesWithUnknown1 = 0;

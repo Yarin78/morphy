@@ -2,7 +2,7 @@ package se.yarin.morphy.service.gametags;
 
 import java.util.List;
 import org.jetbrains.annotations.Nullable;
-import se.yarin.morphy.service.gametags.dto.GameTagDto;
+import se.yarin.morphy.model.GameTagDto;
 
 /**
  * Response containing a paginated list of game tags.

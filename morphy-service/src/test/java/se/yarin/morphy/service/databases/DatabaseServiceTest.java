@@ -13,7 +13,7 @@ import java.util.List;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.io.TempDir;
 import org.mockito.MockedStatic;
-import se.yarin.morphy.Database;
+import se.yarin.morphy.DatabaseCbh;
 import se.yarin.morphy.DatabaseMode;
 import se.yarin.morphy.service.config.DatabaseConfig;
 
@@ -133,7 +133,7 @@ class DatabaseServiceTest {
       File dbFile = tempDir.resolve("existing.cbh").toFile();
 
       // Create a real database file
-      Database db = Database.create(dbFile, false);
+      DatabaseCbh db = DatabaseCbh.create(dbFile, false);
       db.close();
 
       assertTrue(dbFile.exists());
@@ -152,8 +152,8 @@ class DatabaseServiceTest {
       File dbFile1 = tempDir.resolve("db1.cbh").toFile();
       File dbFile2 = tempDir.resolve("db2.cbh").toFile();
 
-      Database.create(dbFile1, false).close();
-      Database.create(dbFile2, false).close();
+      DatabaseCbh.create(dbFile1, false).close();
+      DatabaseCbh.create(dbFile2, false).close();
 
       service.registerDatabase("test-db", "Database 1", dbFile1.getAbsolutePath());
 
@@ -198,7 +198,7 @@ class DatabaseServiceTest {
       File otherDir = Files.createTempDirectory("other").toFile();
       File dbFile = new File(otherDir, "test.cbh");
 
-      Database.create(dbFile, false).close();
+      DatabaseCbh.create(dbFile, false).close();
 
       IllegalArgumentException exception =
           assertThrows(
@@ -224,13 +224,13 @@ class DatabaseServiceTest {
     void createDatabase_Success() throws Exception {
       File dbFile = tempDir.resolve("new.cbh").toFile();
 
-      try (MockedStatic<Database> dbMock = mockStatic(Database.class)) {
-        Database mockDb = mock(Database.class);
-        dbMock.when(() -> Database.create(eq(dbFile), eq(false))).thenReturn(mockDb);
+      try (MockedStatic<DatabaseCbh> dbMock = mockStatic(DatabaseCbh.class)) {
+        DatabaseCbh mockDb = mock(DatabaseCbh.class);
+        dbMock.when(() -> DatabaseCbh.create(eq(dbFile), eq(false))).thenReturn(mockDb);
 
         service.createDatabase("new-db", "New Database", dbFile.getAbsolutePath());
 
-        dbMock.verify(() -> Database.create(eq(dbFile), eq(false)));
+        dbMock.verify(() -> DatabaseCbh.create(eq(dbFile), eq(false)));
         verify(mockDb).close();
       }
 
@@ -250,9 +250,9 @@ class DatabaseServiceTest {
           new DatabaseService("", 600000L, null, List.of(tempDir.toString(), subDir.toString()));
       testService.init();
 
-      try (MockedStatic<Database> dbMock = mockStatic(Database.class)) {
-        Database mockDb = mock(Database.class);
-        dbMock.when(() -> Database.create(eq(dbFile), eq(false))).thenReturn(mockDb);
+      try (MockedStatic<DatabaseCbh> dbMock = mockStatic(DatabaseCbh.class)) {
+        DatabaseCbh mockDb = mock(DatabaseCbh.class);
+        dbMock.when(() -> DatabaseCbh.create(eq(dbFile), eq(false))).thenReturn(mockDb);
 
         testService.createDatabase("new-db", "New Database", dbFile.getAbsolutePath());
 
@@ -281,9 +281,9 @@ class DatabaseServiceTest {
       File dbFile1 = tempDir.resolve("db1.cbh").toFile();
       File dbFile2 = tempDir.resolve("db2.cbh").toFile();
 
-      try (MockedStatic<Database> dbMock = mockStatic(Database.class)) {
-        Database mockDb = mock(Database.class);
-        dbMock.when(() -> Database.create(any(File.class), eq(false))).thenReturn(mockDb);
+      try (MockedStatic<DatabaseCbh> dbMock = mockStatic(DatabaseCbh.class)) {
+        DatabaseCbh mockDb = mock(DatabaseCbh.class);
+        dbMock.when(() -> DatabaseCbh.create(any(File.class), eq(false))).thenReturn(mockDb);
 
         service.createDatabase("test-db", "Database 1", dbFile1.getAbsolutePath());
 
@@ -312,7 +312,7 @@ class DatabaseServiceTest {
     void unregisterDatabase_Success() throws Exception {
       File dbFile = tempDir.resolve("test.cbh").toFile();
 
-      Database.create(dbFile, false).close();
+      DatabaseCbh.create(dbFile, false).close();
 
       service.registerDatabase("test-db", "Test", dbFile.getAbsolutePath());
       assertEquals(1, service.getAllDatabase().size());
@@ -327,7 +327,7 @@ class DatabaseServiceTest {
     @DisplayName("should close database before unregistering")
     void unregisterDatabase_ClosesDatabase() throws Exception {
       File dbFile = tempDir.resolve("test.cbh").toFile();
-      Database.create(dbFile, false).close();
+      DatabaseCbh.create(dbFile, false).close();
 
       service.registerDatabase("test-db", "Test", dbFile.getAbsolutePath());
 
@@ -367,7 +367,7 @@ class DatabaseServiceTest {
     @DisplayName("should execute read transaction successfully")
     void withReadTransaction_Success() throws Exception {
       File dbFile = tempDir.resolve("test.cbh").toFile();
-      Database.create(dbFile, false).close();
+      DatabaseCbh.create(dbFile, false).close();
 
       service.registerDatabase("test-db", "Test", dbFile.getAbsolutePath());
 
@@ -387,7 +387,7 @@ class DatabaseServiceTest {
     @DisplayName("should execute write transaction and commit")
     void withWriteTransaction_Success() throws Exception {
       File dbFile = tempDir.resolve("test.cbh").toFile();
-      Database.create(dbFile, false).close();
+      DatabaseCbh.create(dbFile, false).close();
 
       service.registerDatabase("test-db", "Test", dbFile.getAbsolutePath());
 
@@ -408,7 +408,7 @@ class DatabaseServiceTest {
     @DisplayName("should execute write transaction with return value")
     void withWriteTransactionWithReturn_Success() throws Exception {
       File dbFile = tempDir.resolve("test.cbh").toFile();
-      Database.create(dbFile, false).close();
+      DatabaseCbh.create(dbFile, false).close();
 
       service.registerDatabase("test-db", "Test", dbFile.getAbsolutePath());
 
@@ -450,7 +450,7 @@ class DatabaseServiceTest {
     @DisplayName("should lazy-open database on first access")
     void lazyOpening() throws Exception {
       File dbFile = tempDir.resolve("test.cbh").toFile();
-      Database.create(dbFile, false).close();
+      DatabaseCbh.create(dbFile, false).close();
 
       service.registerDatabase("test-db", "Test", dbFile.getAbsolutePath());
 
@@ -468,7 +468,7 @@ class DatabaseServiceTest {
     @DisplayName("should manually refresh database")
     void manualRefresh() throws Exception {
       File dbFile = tempDir.resolve("test.cbh").toFile();
-      Database.create(dbFile, false).close();
+      DatabaseCbh.create(dbFile, false).close();
 
       service.registerDatabase("test-db", "Test", dbFile.getAbsolutePath());
 
@@ -511,7 +511,7 @@ class DatabaseServiceTest {
 
       File dbFile = tempDir.resolve("test.cbh").toFile();
 
-      Database.create(dbFile, false).close();
+      DatabaseCbh.create(dbFile, false).close();
 
       testService.registerDatabase("test-db", "Test Database", dbFile.getAbsolutePath());
 
@@ -541,7 +541,7 @@ class DatabaseServiceTest {
 
       Files.writeString(configFile.toPath(), initialConfig);
 
-      Database.create(dbFile, false).close();
+      DatabaseCbh.create(dbFile, false).close();
 
       DatabaseService testService =
           new DatabaseService(
@@ -564,7 +564,7 @@ class DatabaseServiceTest {
 
       File dbFile = tempDir.resolve("test.cbh").toFile();
 
-      Database.create(dbFile, false).close();
+      DatabaseCbh.create(dbFile, false).close();
 
       // Should not throw exception even though no config file exists
       assertDoesNotThrow(
@@ -589,9 +589,9 @@ class DatabaseServiceTest {
       File dbFile2 = tempDir.resolve("db2.cbh").toFile();
       File dbFile3 = tempDir.resolve("db3.cbh").toFile();
 
-      Database.create(dbFile1, false).close();
-      Database.create(dbFile2, false).close();
-      Database.create(dbFile3, false).close();
+      DatabaseCbh.create(dbFile1, false).close();
+      DatabaseCbh.create(dbFile2, false).close();
+      DatabaseCbh.create(dbFile3, false).close();
 
       service.registerDatabase("db1", "Database 1", dbFile1.getAbsolutePath());
       service.registerDatabase("db2", "Database 2", dbFile2.getAbsolutePath());
@@ -610,7 +610,7 @@ class DatabaseServiceTest {
     void getDatabaseConfig() throws Exception {
       File dbFile = tempDir.resolve("test.cbh").toFile();
 
-      Database.create(dbFile, false).close();
+      DatabaseCbh.create(dbFile, false).close();
 
       service.registerDatabase("test-db", "Test Database", dbFile.getAbsolutePath());
 
@@ -644,8 +644,8 @@ class DatabaseServiceTest {
       File dbFile1 = tempDir.resolve("db1.cbh").toFile();
       File dbFile2 = tempDir.resolve("db2.cbh").toFile();
 
-      Database.create(dbFile1, false).close();
-      Database.create(dbFile2, false).close();
+      DatabaseCbh.create(dbFile1, false).close();
+      DatabaseCbh.create(dbFile2, false).close();
 
       testService.registerDatabase("db1", "DB 1", dbFile1.getAbsolutePath());
       testService.registerDatabase("db2", "DB 2", dbFile2.getAbsolutePath());

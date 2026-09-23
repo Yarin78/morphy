@@ -1,7 +1,5 @@
 package se.yarin.morphy.cli.columns;
 
-import se.yarin.morphy.Game;
-
 public class DateColumn implements GameColumn {
   @Override
   public String getHeader() {
@@ -14,8 +12,8 @@ public class DateColumn implements GameColumn {
   }
 
   @Override
-  public String getValue(Game game) {
-    return game.playedDate().toPrettyString();
+  public String getValue(GameRow row) {
+    return row.dto().date().toPrettyString();
   }
 
   @Override

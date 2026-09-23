@@ -26,7 +26,7 @@ public class DatabaseWriteTransactionTest extends DatabaseTestSetup {
 
   @Test
   public void newAddSingleGameToEmptyDatabase() {
-    Database db = new Database();
+    DatabaseCbh db = new DatabaseCbh();
 
     assertEquals(db.count(), 0);
     assertEquals(db.playerIndex().count(), 0);
@@ -513,7 +513,7 @@ public class DatabaseWriteTransactionTest extends DatabaseTestSetup {
     assertEquals("Carlsen", gameModel.header().getWhite());
     gameModel.header().setWhite("foo");
 
-    Database database = new Database();
+    DatabaseCbh database = new DatabaseCbh();
     try (var txn = new DatabaseWriteTransaction(database)) {
       txn.addGame(gameModel);
       txn.commit();
@@ -538,7 +538,7 @@ public class DatabaseWriteTransactionTest extends DatabaseTestSetup {
 
   @Test
   public void addGameDirectlyFromDifferentDatabase() {
-    Database db = new Database();
+    DatabaseCbh db = new DatabaseCbh();
     try (var txn = new DatabaseWriteTransaction(db)) {
       GameHeaderModel hm = new GameHeaderModel();
       hm.setWhite("Nepo");
@@ -907,7 +907,7 @@ public class DatabaseWriteTransactionTest extends DatabaseTestSetup {
     // tried in a batch
     for (int i = 0; i < operations.size(); i++) {
       for (int j = i + 1; j < operations.size(); j++) {
-        Database db = new Database();
+        DatabaseCbh db = new DatabaseCbh();
         populateDatabase(db);
 
         // PRE
@@ -1152,7 +1152,7 @@ public class DatabaseWriteTransactionTest extends DatabaseTestSetup {
           }
         };
 
-    Database db = new Database(config);
+    DatabaseCbh db = new DatabaseCbh(config);
     CountDownLatch latch = new CountDownLatch(1);
     Thread thread =
         new Thread(
@@ -1203,7 +1203,7 @@ public class DatabaseWriteTransactionTest extends DatabaseTestSetup {
 
   @Test
   public void addTextDirectlyFromOtherDatabase() {
-    Database db = new Database();
+    DatabaseCbh db = new DatabaseCbh();
     try (var txn = new DatabaseWriteTransaction(db)) {
       TextContentsModel tcm = new TextContentsModel();
       tcm.setTitle("title");

@@ -1,6 +1,6 @@
 package se.yarin.morphy.tools;
 
-import se.yarin.morphy.Database;
+import se.yarin.morphy.DatabaseCbh;
 import se.yarin.morphy.DatabaseMode;
 import se.yarin.morphy.DatabaseReadTransaction;
 import se.yarin.morphy.Game;
@@ -14,16 +14,16 @@ import java.io.InputStreamReader;
 import java.util.Random;
 
 public class IOCPUPerformanceTest {
-  private final Database db;
+  private final DatabaseCbh db;
   private final Random random = new Random(0);
 
-  public IOCPUPerformanceTest(Database db) {
+  public IOCPUPerformanceTest(DatabaseCbh db) {
     this.db = db;
   }
 
   public static void main(String[] args) throws IOException {
-    Database db =
-        Database.open(
+    DatabaseCbh db =
+        DatabaseCbh.open(
             new File("/Users/yarin/chess/bases/Mega2021/Mega Database 2021.cbh"),
             DatabaseMode.READ_ONLY);
     //        db.queryPlanner().updateStatistics();

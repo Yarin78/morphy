@@ -3,7 +3,7 @@ package se.yarin.morphy.queries;
 import org.junit.Before;
 import org.junit.Test;
 import se.yarin.chess.Date;
-import se.yarin.morphy.Database;
+import se.yarin.morphy.DatabaseCbh;
 import se.yarin.morphy.DatabaseReadTransaction;
 import se.yarin.morphy.Game;
 import se.yarin.morphy.entities.EntityType;
@@ -20,13 +20,13 @@ import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.*;
 
 public class TournamentQueryPlanGeneratorTests {
-  private Database db;
+  private DatabaseCbh db;
   private QueryPlanner spyPlanner;
   private QueryOperator<Game> mockOperator;
 
   @Before
   public void setupContext() {
-    this.db = new Database();
+    this.db = new DatabaseCbh();
 
     QueryPlanner planner = new QueryPlanner(db);
     this.spyPlanner = spy(planner);

@@ -1,0 +1,55 @@
+package se.yarin.morphy.convert;
+
+import se.yarin.morphy.model.PlayerDto;
+
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+import se.yarin.morphy.entities.ImmutablePlayer;
+import se.yarin.morphy.entities.Player;
+
+/** Converter for bidirectional transformation between Player entities and PlayerDto objects. */
+public class PlayerDtoConverter {
+
+  /**
+   * Converts a Player entity to a PlayerDto.
+   *
+   * @param player the player entity to convert
+   * @return the PlayerDto
+   */
+  public PlayerDto toDto(@NotNull Player player) {
+    return toDto(player, null);
+  }
+
+  public PlayerDto toDto(@NotNull Player player, @Nullable byte[] rawData) {
+    return new PlayerDto(
+        (long) player.id(),
+        player.lastName().isEmpty() ? null : player.lastName(),
+        player.firstName().isEmpty() ? null : player.firstName(),
+        player.count() > 0 ? player.count() : null,
+        null, // fideId — v2 only
+        null, // chessBaseId — v2 only
+        rawData);
+  }
+
+  /**
+   * Converts a PlayerDto to a Player entity.
+   *
+   * @param dto the player DTO to convert
+   * @return a Player entity
+   */
+  public Player toPlayer(@NotNull PlayerDto dto) {
+    ImmutablePlayer.Builder builder = ImmutablePlayer.builder();
+
+    // Set last name
+    if (dto.lastName() != null) {
+      builder.lastName(dto.lastName());
+    }
+
+    // Set first name
+    if (dto.firstName() != null) {
+      builder.firstName(dto.firstName());
+    }
+
+    return builder.build();
+  }
+}

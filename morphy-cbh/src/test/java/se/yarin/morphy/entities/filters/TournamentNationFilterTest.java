@@ -1,7 +1,7 @@
 package se.yarin.morphy.entities.filters;
 
 import org.junit.Test;
-import se.yarin.morphy.Database;
+import se.yarin.morphy.DatabaseCbh;
 import se.yarin.morphy.ResourceLoader;
 import se.yarin.morphy.entities.Nation;
 import se.yarin.morphy.entities.Tournament;
@@ -15,7 +15,7 @@ import static org.junit.Assert.assertEquals;
 public class TournamentNationFilterTest {
   @Test
   public void testWch() {
-    Database db = ResourceLoader.openWorldChDatabase();
+    DatabaseCbh db = ResourceLoader.openWorldChDatabase();
     try (var txn = db.tournamentIndex().beginReadTransaction()) {
       HashMap<Nation, Integer> cnt = new HashMap<>();
       for (Tournament tournament : txn.iterable()) {

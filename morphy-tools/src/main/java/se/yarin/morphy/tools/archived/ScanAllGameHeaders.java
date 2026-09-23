@@ -2,7 +2,7 @@ package se.yarin.morphy.tools;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import se.yarin.cbhlib.Database;
+import se.yarin.cbhlib.DatabaseCbh;
 import se.yarin.cbhlib.games.GameHeader;
 import se.yarin.cbhlib.games.GameHeaderBase;
 import se.yarin.cbhlib.storage.FileBlobStorage;
@@ -31,9 +31,9 @@ public class ScanAllGameHeaders {
               //        Files.walk(Paths.get("testbases/Mega Database 2016")).forEach(filePath -> {
               if (Files.isRegularFile(filePath) && filePath.toString().endsWith(".cbh")) {
                 log.info("Reading {}", filePath);
-                Database base = null;
+                DatabaseCbh base = null;
                 try {
-                  base = Database.open(filePath.toFile());
+                  base = DatabaseCbh.open(filePath.toFile());
 
                   //                    int value =
                   // base.getHeaderBase().getStorage().getMetadata().getStorageHeaderSize();

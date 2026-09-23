@@ -27,7 +27,11 @@ public class RawExtendedHeaderColumn implements GameColumn {
   }
 
   @Override
-  public String getValue(Game game) {
+  public String getValue(GameRow row) {
+    Game game = row.game();
+    if (game == null) {
+      return "";
+    }
     ByteBuffer buf = game.database().extendedGameHeaderStorage().getRaw(game.id());
     if (start >= buf.limit()) {
       return "";

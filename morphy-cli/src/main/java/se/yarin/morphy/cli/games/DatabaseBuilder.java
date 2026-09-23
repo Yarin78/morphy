@@ -3,7 +3,7 @@ package se.yarin.morphy.cli.games;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.chess.GameModel;
-import se.yarin.morphy.Database;
+import se.yarin.morphy.DatabaseCbh;
 import se.yarin.morphy.DatabaseWriteTransaction;
 import se.yarin.morphy.Game;
 import se.yarin.morphy.exceptions.MorphyException;
@@ -22,14 +22,14 @@ public class DatabaseBuilder extends GameConsumerBase {
   private static final int BATCH_SIZE = 10000;
   private static final int LOG_INFO_SIZE = 1000;
 
-  private final Database database;
+  private final DatabaseCbh database;
   private final DatabaseWriteTransaction transaction;
   private final File file;
   private int gamesAdded = 0;
 
   public DatabaseBuilder(File file) throws IOException {
     this.file = file;
-    this.database = Database.create(file, true);
+    this.database = DatabaseCbh.create(file, true);
     transaction = new DatabaseWriteTransaction(this.database);
   }
 

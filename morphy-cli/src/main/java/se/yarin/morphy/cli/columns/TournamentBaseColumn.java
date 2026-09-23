@@ -1,6 +1,6 @@
 package se.yarin.morphy.cli.columns;
 
-import se.yarin.morphy.Database;
+import se.yarin.morphy.DatabaseCbh;
 import se.yarin.morphy.Game;
 import se.yarin.morphy.entities.Tournament;
 
@@ -23,11 +23,15 @@ public abstract class TournamentBaseColumn implements GameColumn, TournamentColu
   }
 
   @Override
-  public String getValue(Game game) {
+  public String getValue(GameRow row) {
+    Game game = row.game();
+    if (game == null) {
+      return "";
+    }
     return getTournamentValue(game.database(), game.tournament());
   }
 
-  public abstract String getTournamentValue(Database db, Tournament tournament);
+  public abstract String getTournamentValue(DatabaseCbh db, Tournament tournament);
 
   @Override
   public String getTournamentId() {

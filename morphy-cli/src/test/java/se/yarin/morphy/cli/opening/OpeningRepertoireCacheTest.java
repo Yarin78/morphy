@@ -8,7 +8,7 @@ import se.yarin.chess.GameModel;
 import se.yarin.chess.GameMovesModel;
 import se.yarin.chess.Move;
 import se.yarin.chess.NAG;
-import se.yarin.morphy.Database;
+import se.yarin.morphy.DatabaseCbh;
 import se.yarin.morphy.games.annotations.ImmutableTextAfterMoveAnnotation;
 import se.yarin.morphy.games.annotations.SymbolAnnotation;
 import se.yarin.morphy.games.annotations.TextAfterMoveAnnotation;
@@ -75,7 +75,7 @@ public class OpeningRepertoireCacheTest {
     header.setWhite("Repertoire");
     header.setBlack("Book");
     File file = folder.newFile("white-test.cbh");
-    try (Database db = Database.create(file, true)) {
+    try (DatabaseCbh db = DatabaseCbh.create(file, true)) {
       db.addGame(new GameModel(header, moves));
     }
     return OpeningRepertoireCache.load(file);

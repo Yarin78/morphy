@@ -10,7 +10,11 @@ public class RawAnnotationsColumn implements GameColumn {
   }
 
   @Override
-  public String getValue(Game game) {
+  public String getValue(GameRow row) {
+    Game game = row.game();
+    if (game == null) {
+      return "";
+    }
     long annotationOffset = game.getAnnotationOffset();
     byte[] movesData =
         game.database().annotationRepository().getAnnotationsBlob(annotationOffset).array();

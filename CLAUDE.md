@@ -14,21 +14,27 @@ mvn package -pl morphy-cli # Build CLI JAR with dependencies
 
 ## Project Overview
 
-Morphy is a Java 21 library and CLI for reading/writing ChessBase databases (.cbh binary format). It uses Maven 3.6+ with three modules:
+Morphy is a Java 21 library and CLI for reading/writing ChessBase databases (.cbh binary format). It uses Maven 3.6+ with these modules:
 
-- **morphy-cbh**: Core library with chess logic and database API
+- **morphy-api**: Vendor-neutral layer shared by every format — the format-independent chess core (`se.yarin.chess`), the neutral DTO records (`se.yarin.morphy.model`), and the `Database` facade interface (`se.yarin.morphy.api`)
+- **morphy-cbh**: The ChessBase v1 (`.cbh`) reader/writer and database API; its `DatabaseCbh` implements the `Database` facade directly and owns the v1↔DTO converters (`se.yarin.morphy.convert`)
+- **morphy-cb2**: The ChessBase v2 (`.2cbh`) format — currently a stub, `Database2Cbh`, implementing the facade
 - **morphy-cli**: Command-line interface using Picocli
 - **morphy-tools**: Development utilities
+- **morphy-service**: Spring Boot backend exposing the DTOs over HTTP for the NodeJS frontend
+
+Module dependencies point downward only: everything depends on **morphy-api**, and the v1/v2 modules never depend on each other. A `DatabaseProvider` SPI + `Databases.open` factory dispatch to the right format by file extension.
 
 This is an internal project! There is no need to keep things around for backward compatibility, unless explicitly told to do so.
 
 ## Architecture
 
-Three-layer design:
+Layered design:
 
-1. **Chess Core** (`se.yarin.chess`): Format-independent chess logic (Position, Move, GameModel)
-2. **Database API** (`se.yarin.morphy`): Transaction-based database access (Database, transactions, entities, queries)
-3. **Storage Layer** (`se.yarin.morphy.storage`): Low-level file I/O abstraction
+1. **Chess Core** (`se.yarin.chess`, in morphy-api): Format-independent chess logic (Position, Move, GameModel)
+2. **Neutral model** (`se.yarin.morphy.model` + `se.yarin.morphy.api`, in morphy-api): immutable DTO records and the `Database` facade — the vendor-neutral interface used by the CLI, the service (and its NodeJS frontend), and every format
+3. **Database API** (`se.yarin.morphy`, in morphy-cbh): Transaction-based v1 access (Database, transactions, entities, queries)
+4. **Storage Layer** (`se.yarin.morphy.storage`): Low-level file I/O abstraction
 
 Key patterns:
 - **Immutability**: All entities use `@Value.Immutable` from Immutables library. Generated classes have `Immutable` prefix.
@@ -37,10 +43,12 @@ Key patterns:
 
 ## Key Entry Points
 
-- `Database.java` - Main facade for opening/creating databases
-- `DatabaseReadTransaction` / `DatabaseWriteTransaction` - All database operations
+- `Database` (morphy-api) - Vendor-neutral facade interface; open any format via `Databases.open(file)`
+- `GameDto` (`se.yarin.morphy.model`) - The neutral game representation crossing the facade (moves as PGN)
+- `DatabaseCbh.java` (morphy-cbh) - The v1 engine; implements the `Database` facade directly (also exposes v1-specific indexes/transactions/queries)
+- `DatabaseReadTransaction` / `DatabaseWriteTransaction` - All v1 database operations
 - `Position.java` - Immutable board state with Zobrist hashing
-- `GameModel.java` - Complete game (header + move tree)
+- `GameModel.java` - Complete game (header + move tree); an internal decode/encode structure, no longer the neutral interface
 
 ## Coding Conventions
 

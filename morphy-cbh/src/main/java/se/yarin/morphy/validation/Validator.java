@@ -3,7 +3,7 @@ package se.yarin.morphy.validation;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import se.yarin.morphy.Database;
+import se.yarin.morphy.DatabaseCbh;
 import se.yarin.morphy.boosters.GameEntityIndex;
 import se.yarin.morphy.entities.EntityIndex;
 import se.yarin.morphy.entities.EntityType;
@@ -84,7 +84,7 @@ public class Validator {
    * @param showProgressBar If true, show a progress bar
    */
   public void validate(
-      Database db,
+      DatabaseCbh db,
       EnumSet<Checks> checks,
       boolean throwOnError,
       boolean throwOnWarning,
@@ -219,7 +219,7 @@ public class Validator {
   }
 
   private boolean validateGameEntityIndexBlocks(
-      @NotNull Database database, @NotNull GameEntityIndex gameEntityIndex) {
+      @NotNull DatabaseCbh database, @NotNull GameEntityIndex gameEntityIndex) {
     // Checks that all blocks in the cib file are accounted for; returns true if there is an error
 
     try {

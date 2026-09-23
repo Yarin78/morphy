@@ -1,5 +1,9 @@
 package se.yarin.morphy.service.tournaments.dto;
 
+import se.yarin.morphy.convert.TournamentDtoConverter;
+
+import se.yarin.morphy.model.TournamentDto;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 import org.junit.jupiter.api.BeforeEach;

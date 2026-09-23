@@ -5,7 +5,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import se.yarin.chess.Date;
-import se.yarin.morphy.Database;
+import se.yarin.morphy.DatabaseCbh;
 import se.yarin.morphy.DatabaseMode;
 import se.yarin.morphy.ResourceLoader;
 import se.yarin.morphy.exceptions.MorphyInvalidDataException;
@@ -28,7 +28,7 @@ public class TournamentTest {
   public void setupEntityTest() throws IOException {
     tournamentIndexFile =
         ResourceLoader.materializeDatabaseStream(
-            Database.class, "database/World-ch", "World-ch", List.of(".cbt", ".cbtt"));
+            DatabaseCbh.class, "database/World-ch", "World-ch", List.of(".cbt", ".cbtt"));
     tournamentExtraFile = CBUtil.fileWithExtension(tournamentIndexFile, ".cbtt");
   }
 

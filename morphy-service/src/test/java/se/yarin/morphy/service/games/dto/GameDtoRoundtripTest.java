@@ -1,5 +1,7 @@
 package se.yarin.morphy.service.games.dto;
 
+import se.yarin.morphy.model.GameDto;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.File;
@@ -11,16 +13,18 @@ import org.junit.jupiter.api.io.TempDir;
 import se.yarin.chess.*;
 import se.yarin.chess.pgn.PgnExporter;
 import se.yarin.chess.pgn.PgnParser;
-import se.yarin.morphy.Database;
+import se.yarin.morphy.DatabaseCbh;
 import se.yarin.morphy.DatabaseWriteTransaction;
 import se.yarin.morphy.Game;
 import se.yarin.morphy.games.annotations.AnnotationConverter;
-import se.yarin.morphy.service.annotators.dto.AnnotatorDtoConverter;
-import se.yarin.morphy.service.gametags.dto.GameTagDtoConverter;
-import se.yarin.morphy.service.players.dto.PlayerDtoConverter;
-import se.yarin.morphy.service.sources.dto.SourceDtoConverter;
-import se.yarin.morphy.service.teams.dto.TeamDtoConverter;
-import se.yarin.morphy.service.tournaments.dto.TournamentDtoConverter;
+import se.yarin.morphy.convert.GameDtoConverter;
+import se.yarin.morphy.convert.GameDtoImporter;
+import se.yarin.morphy.convert.AnnotatorDtoConverter;
+import se.yarin.morphy.convert.GameTagDtoConverter;
+import se.yarin.morphy.convert.PlayerDtoConverter;
+import se.yarin.morphy.convert.SourceDtoConverter;
+import se.yarin.morphy.convert.TeamDtoConverter;
+import se.yarin.morphy.convert.TournamentDtoConverter;
 import se.yarin.morphy.text.ImmutableTextHeaderModel;
 import se.yarin.morphy.text.ImmutableTextModel;
 import se.yarin.morphy.text.TextContentsModel;
@@ -37,7 +41,7 @@ class GameDtoRoundtripTest {
 
   @TempDir File tempDir;
 
-  private Database database;
+  private DatabaseCbh database;
   private GameDtoConverter converter;
   private GameDtoImporter importer;
   private PgnParser pgnParser;
@@ -45,7 +49,7 @@ class GameDtoRoundtripTest {
   @BeforeEach
   void setUp() throws IOException {
     File dbPath = new File(tempDir, "test.cbh");
-    database = Database.create(dbPath);
+    database = DatabaseCbh.create(dbPath);
     converter =
         new GameDtoConverter(new PlayerDtoConverter(), new TournamentDtoConverter(), new AnnotatorDtoConverter(),
             new SourceDtoConverter(),

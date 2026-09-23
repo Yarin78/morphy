@@ -1,5 +1,7 @@
 package se.yarin.morphy.service.games.dto;
 
+import se.yarin.morphy.model.GameDto;
+
 import com.fasterxml.jackson.annotation.JsonInclude;
 import java.util.List;
 import org.jetbrains.annotations.NotNull;

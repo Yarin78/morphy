@@ -45,7 +45,7 @@ public class DatabaseTest {
     File file = ResourceLoader.materializeDatabaseStream(getClass(), "database/veryold", "Mate2");
     int numFiles = countDatabaseFiles(file);
 
-    Database.open(file, DatabaseMode.READ_ONLY);
+    DatabaseCbh.open(file, DatabaseMode.READ_ONLY);
 
     assertEquals(numFiles, countDatabaseFiles(file));
   }
@@ -63,7 +63,7 @@ public class DatabaseTest {
 
     int numFiles = countDatabaseFiles(file);
 
-    Database.open(file, DatabaseMode.IN_MEMORY);
+    DatabaseCbh.open(file, DatabaseMode.IN_MEMORY);
 
     assertEquals(numFiles, countDatabaseFiles(file));
   }
@@ -77,7 +77,7 @@ public class DatabaseTest {
     int numFiles = countDatabaseFiles(file);
     assertFalse(CBUtil.fileWithExtension(file, ".cbj").exists());
 
-    Database.open(file, DatabaseMode.READ_WRITE);
+    DatabaseCbh.open(file, DatabaseMode.READ_WRITE);
 
     assertTrue(CBUtil.fileWithExtension(file, ".cbj").exists());
     assertTrue(countDatabaseFiles(file) > numFiles);
@@ -87,13 +87,13 @@ public class DatabaseTest {
   public void openDatabaseWithMissingEssentialFiles() throws IOException {
     // Try opening the database without the source index should fail
     List<String> extensions =
-        Database.MANDATORY_EXTENSIONS.stream()
+        DatabaseCbh.MANDATORY_EXTENSIONS.stream()
             .filter(x -> !x.equals(".cbs"))
             .collect(Collectors.toList());
     File file =
         ResourceLoader.materializeDatabaseStream(
             getClass(), "database/veryold", "Mate2", extensions);
-    Database.open(file, DatabaseMode.READ_ONLY);
+    DatabaseCbh.open(file, DatabaseMode.READ_ONLY);
   }
 
   @Test
@@ -105,7 +105,7 @@ public class DatabaseTest {
     long oldExtendedHeaderFileSize = CBUtil.fileWithExtension(file, ".cbj").length();
     long oldTournamentExtraFileSize = CBUtil.fileWithExtension(file, ".cbtt").length();
 
-    Database.open(file, DatabaseMode.READ_ONLY);
+    DatabaseCbh.open(file, DatabaseMode.READ_ONLY);
 
     assertEquals(numFiles, countDatabaseFiles(file));
     assertEquals(oldExtendedHeaderFileSize, CBUtil.fileWithExtension(file, ".cbj").length());
@@ -121,7 +121,7 @@ public class DatabaseTest {
     long oldFileSize = CBUtil.fileWithExtension(file, ".cbj").length();
     assertFalse(CBUtil.fileWithExtension(file, ".cbtt").exists());
 
-    Database.open(file, DatabaseMode.READ_WRITE);
+    DatabaseCbh.open(file, DatabaseMode.READ_WRITE);
 
     assertEquals(numFiles + 1, countDatabaseFiles(file)); // the .cbtt file got created
     assertTrue(oldFileSize < CBUtil.fileWithExtension(file, ".cbj").length());
@@ -134,16 +134,16 @@ public class DatabaseTest {
     // Database won't even open
     File cbh_cbj =
         ResourceLoader.materializeDatabaseStream(
-            Database.class, "database/shorter_cbj_test", "shorter_cbj_test");
-    Database.open(cbh_cbj, DatabaseMode.READ_ONLY);
+            DatabaseCbh.class, "database/shorter_cbj_test", "shorter_cbj_test");
+    DatabaseCbh.open(cbh_cbj, DatabaseMode.READ_ONLY);
   }
 
   @Test(expected = MorphyInvalidDataException.class)
   public void getGameAfterOpenInMemoryWithShorterExtendedHeaders() throws IOException {
     File cbh_cbj =
         ResourceLoader.materializeDatabaseStream(
-            Database.class, "database/shorter_cbj_test", "shorter_cbj_test");
-    Database.open(cbh_cbj, DatabaseMode.IN_MEMORY);
+            DatabaseCbh.class, "database/shorter_cbj_test", "shorter_cbj_test");
+    DatabaseCbh.open(cbh_cbj, DatabaseMode.IN_MEMORY);
   }
 
   @Test
@@ -153,7 +153,7 @@ public class DatabaseTest {
 
     assertEquals(0, countDatabaseFiles(file));
 
-    Database.create(file, false);
+    DatabaseCbh.create(file, false);
 
     assertEquals(18, countDatabaseFiles(file));
   }
@@ -164,7 +164,7 @@ public class DatabaseTest {
 
     assertEquals(1, countDatabaseFiles(file));
 
-    Database.create(file, false);
+    DatabaseCbh.create(file, false);
   }
 
   @Test(expected = IOException.class)
@@ -175,7 +175,7 @@ public class DatabaseTest {
 
     assertEquals(1, countDatabaseFiles(file));
 
-    Database.create(file, false);
+    DatabaseCbh.create(file, false);
   }
 
   @Test
@@ -185,36 +185,36 @@ public class DatabaseTest {
 
     assertEquals(2, countDatabaseFiles(file));
 
-    Database.create(file, true);
+    DatabaseCbh.create(file, true);
 
     assertEquals(18, countDatabaseFiles(file));
   }
 
   @Test
   public void deleteDatabase() throws IOException {
-    File file = ResourceLoader.materializeStreamPath(Database.class, "database/World-ch");
+    File file = ResourceLoader.materializeStreamPath(DatabaseCbh.class, "database/World-ch");
     assertEquals(20, file.listFiles().length);
 
-    Database.delete(new File(file, "World-ch.cbh"));
+    DatabaseCbh.delete(new File(file, "World-ch.cbh"));
 
     assertEquals(0, file.listFiles().length);
   }
 
   @Test
   public void deletePartialDeletedDatabase() throws IOException {
-    File file = ResourceLoader.materializeStreamPath(Database.class, "database/World-ch");
+    File file = ResourceLoader.materializeStreamPath(DatabaseCbh.class, "database/World-ch");
     File cbhFile = new File(file, "World-ch.cbh");
     cbhFile.delete();
     assertEquals(19, file.listFiles().length);
 
-    Database.delete(cbhFile);
+    DatabaseCbh.delete(cbhFile);
 
     assertEquals(0, file.listFiles().length);
   }
 
   @Test
   public void getSingleGame() {
-    Database database = ResourceLoader.openWorldChDatabase();
+    DatabaseCbh database = ResourceLoader.openWorldChDatabase();
 
     Game game = database.getGame(73);
     assertEquals("Chigorin, Mikhail Ivanovich", game.white().getFullName());
@@ -224,19 +224,19 @@ public class DatabaseTest {
 
   @Test(expected = IllegalArgumentException.class)
   public void getGame0() {
-    Database database = ResourceLoader.openWorldChDatabase();
+    DatabaseCbh database = ResourceLoader.openWorldChDatabase();
     database.getGame(0);
   }
 
   @Test(expected = IllegalArgumentException.class)
   public void getSingleMissingGame() {
-    Database database = ResourceLoader.openWorldChDatabase();
+    DatabaseCbh database = ResourceLoader.openWorldChDatabase();
     database.getGame(100000);
   }
 
   @Test
   public void addSingleGameToEmptyDatabase() throws IOException {
-    Database db = new Database();
+    DatabaseCbh db = new DatabaseCbh();
 
     GameModel gameModel =
         TestGames.getSimpleGame("Mardell", "Carlsen", "Sample tournament", null, null);
@@ -275,7 +275,7 @@ public class DatabaseTest {
 
   @Test
   public void addMultipleGames() throws IOException {
-    Database db = new Database();
+    DatabaseCbh db = new DatabaseCbh();
 
     db.addGame(TestGames.getSimpleGame("Mardell", "Carlsen", "t1", "my source", "myself"));
     db.addGame(TestGames.getSimpleGame("Kasparov", "Mardell", "t1", "", ""));
@@ -290,7 +290,7 @@ public class DatabaseTest {
 
   @Test
   public void replaceGame() throws IOException {
-    Database db = new Database();
+    DatabaseCbh db = new DatabaseCbh();
 
     db.addGame(TestGames.getSimpleGame("Mardell", "Carlsen", "t1", "my source", "myself"));
     db.addGame(TestGames.getSimpleGame("Kasparov", "Mardell", "t1", "", ""));
@@ -306,7 +306,7 @@ public class DatabaseTest {
 
   @Test
   public void replaceGameCorrectlyUpdatesFirstGame() throws IOException {
-    Database db = new Database();
+    DatabaseCbh db = new DatabaseCbh();
 
     db.addGame(TestGames.getSimpleGame("a", "b"));
     db.addGame(TestGames.getSimpleGame("c", "c"));
@@ -331,7 +331,7 @@ public class DatabaseTest {
 
   @Test
   public void replaceGameCausingMoveAdjustment() throws IOException {
-    Database db = new Database();
+    DatabaseCbh db = new DatabaseCbh();
 
     GameModel gameModel1 = TestGames.getSimpleGame("foo", "bar", "t1", "my source", "myself");
     GameModel gameModel2 = TestGames.getSimpleGame("foo", "bar", "t1", "my source", "myself");
@@ -359,7 +359,7 @@ public class DatabaseTest {
 
   @Test
   public void replaceGameCausingAnnotationAdjustment() throws IOException {
-    Database db = new Database();
+    DatabaseCbh db = new DatabaseCbh();
 
     GameModel gameModel1 = TestGames.getSimpleGame("foo", "bar", "t1", "my source", "myself");
     GameModel gameModel2 = TestGames.getSimpleGame("foo", "bar", "t1", "my source", "myself");
@@ -391,7 +391,7 @@ public class DatabaseTest {
 
   @Test
   public void replaceGameCausingInsertionOfAnnotation() throws IOException {
-    Database db = new Database();
+    DatabaseCbh db = new DatabaseCbh();
 
     GameModel gameModel1 = TestGames.getSimpleGame("foo", "bar", "t1", "my source", "myself");
     GameModel gameModel2 = TestGames.getSimpleGame("foo", "bar", "t1", "my source", "myself");
@@ -433,7 +433,7 @@ public class DatabaseTest {
       File file = folder.newFile("random" + iter + ".cbh");
       file.delete();
 
-      try (Database db = Database.create(file)) {
+      try (DatabaseCbh db = DatabaseCbh.create(file)) {
         int noOps = iter * 10 + 10, maxGames = 20;
 
         for (int i = 0; i < noOps; i++) {
@@ -465,7 +465,7 @@ public class DatabaseTest {
     // despite their headers being in the old format (they should not be upgraded)
     File file = ResourceLoader.materializeDatabaseStream(getClass(), "database/old", "linares");
 
-    Database db = Database.open(file, DatabaseMode.READ_WRITE);
+    DatabaseCbh db = DatabaseCbh.open(file, DatabaseMode.READ_WRITE);
     assertEquals(10, db.moveRepository().getStorage().getHeader().headerSize());
     assertEquals(10, db.annotationRepository().getStorage().getHeader().headerSize());
 
