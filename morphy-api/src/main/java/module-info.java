@@ -8,7 +8,6 @@ module se.yarin.morphy.api {
 
     exports se.yarin.chess;
     exports se.yarin.chess.annotations;
-    exports se.yarin.chess.timeline;
     exports se.yarin.chess.pgn;
     exports se.yarin.morphy.model;
     exports se.yarin.morphy.api;

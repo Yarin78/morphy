@@ -181,7 +181,7 @@ public class SummarizeOpening extends BaseCommand implements Callable<Integer> {
           Optional<GameModel> summary = repertoire.summarize(entry, annotateAllMoves);
           if (summary.isPresent()) {
             GameModel model = summary.get();
-            Update.clearInternalEntityIds(model.header());
+            model.header().clearEntityIds();
             writeTxn.addGame(model);
             entriesWritten++;
           }

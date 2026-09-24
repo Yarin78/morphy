@@ -4,7 +4,6 @@ import org.jetbrains.annotations.NotNull;
 
 /** Represents a complete chess game with header, moves and annotations. */
 public class GameModel {
-  // These two fields should be final so we don't drop listeners when trying to replace them
   private final GameHeaderModel header;
   private final GameMovesModel moves;
 

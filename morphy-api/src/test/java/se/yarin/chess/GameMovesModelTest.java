@@ -1,6 +1,5 @@
 package se.yarin.chess;
 
-import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -15,19 +14,10 @@ import static se.yarin.chess.Player.*;
 public class GameMovesModelTest {
 
   private GameMovesModel moves;
-  private int numFiredChanges;
-  private GameMovesModelChangeListener listener;
 
   @Before
   public void setupModel() {
     this.moves = new GameMovesModel();
-    this.listener = (movesModel, node) -> numFiredChanges++;
-    this.moves.addChangeListener(listener);
-  }
-
-  @After
-  public void tearDownModel() {
-    assertTrue(this.moves.removeChangeListener(listener));
   }
 
   @Test
@@ -37,7 +27,6 @@ public class GameMovesModelTest {
     assertEquals(0, moves.root().children().size());
     assertTrue(moves.root().isRoot());
     assertFalse(moves.isSetupPosition());
-    assertEquals(0, numFiredChanges);
   }
 
   @Test
@@ -71,7 +60,6 @@ public class GameMovesModelTest {
     assertTrue(node.isValid());
     assertEquals(1, node.ply());
     assertEquals(node.parent(), moves.root());
-    assertEquals(1, numFiredChanges);
 
     assertEquals(1, moves.root().children().size());
     assertTrue(new ShortMove(E2, E4).moveEquals(moves.root().children().get(0).lastMove()));
@@ -106,7 +94,6 @@ public class GameMovesModelTest {
     GameMovesModel.Node node =
         moves.root().addMove(E2, E4).addMove(D7, D5).addMove(E4, D5).addMove(D8, D5);
     assertEquals(4, node.ply());
-    assertEquals(4, numFiredChanges);
     assertEquals(WHITE, node.position().playerToMove());
     assertEquals(
         "rnb.kbnr\nppp.pppp\n........\n...q....\n........\n........\nPPPP.PPP\nRNBQKBNR\n",
@@ -255,7 +242,6 @@ public class GameMovesModelTest {
             .addMove(D2, D3)
             .addAnnotation(new NAGAnnotation(NAG.UNCLEAR));
 
-    numFiredChanges = 0;
     assertEquals(
         "3... Bc5 4. O-O (4. Nc3 Bb6 5. d3 unclear) 4... Nf6 5. Directed against... d3 Bb6?? 6. c3",
         node.toString());
@@ -264,7 +250,6 @@ public class GameMovesModelTest {
     assertEquals("3... Be7 4. O-O (4. Nc3) 4... Nf6 5. Directed against... d3", node.toString());
     assertFalse(a.isValid());
     assertFalse(b.isValid());
-    assertEquals(1, numFiredChanges);
     assertEquals(1, moves.countAnnotations());
   }
 
@@ -409,10 +394,8 @@ public class GameMovesModelTest {
         .addMove(B1, C3)
         .addAnnotation(new NAGAnnotation(NAG.INTERESTING_MOVE));
 
-    numFiredChanges = 0;
     moves.deleteAllAnnotations();
     assertEquals(0, moves.countAnnotations());
-    assertEquals(1, numFiredChanges);
   }
 
   @Test
@@ -434,10 +417,8 @@ public class GameMovesModelTest {
         .addMove(F1, C4)
         .addMove(F8, C5);
 
-    numFiredChanges = 0;
     moves.deleteAllVariations();
     assertEquals(4, moves.countPly(true));
-    assertEquals(1, numFiredChanges);
   }
 
   @Test
@@ -453,7 +434,6 @@ public class GameMovesModelTest {
         .addMove(B1, C3)
         .addAnnotation(new NAGAnnotation(NAG.INTERESTING_MOVE));
 
-    numFiredChanges = 0;
 
     GameMovesModel newModel = new GameMovesModel();
     newModel
@@ -466,7 +446,6 @@ public class GameMovesModelTest {
     moves.replaceAll(newModel);
 
     assertEquals("1. e4 d6 { Pirc } 2. d4", moves.toString());
-    assertEquals(1, numFiredChanges);
   }
 
   @Test

@@ -1,492 +1,609 @@
 package se.yarin.chess;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import org.jetbrains.annotations.NotNull;
-
-import java.lang.reflect.Field;
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
+import org.jetbrains.annotations.Nullable;
 
 /**
- * Contains metadata about a chess game, e.g. the name of the players, their ranking, where the game
- * was played, the result etc
+ * The header of a chess game, independent of any database format: who played, when and where, and
+ * with what result. Together with a {@link GameMovesModel} it makes up a {@link GameModel}.
  *
- * <p>Some fields are "standard" (and typed), but it's also possible to set custom metadata fields.
- * The standard fields have typed getter methods, but can be set using {@link #setField(String,
- * Object)}
+ * <p>Every field is optional and mutable. Players, the tournament, the annotator, the source, the
+ * teams and the game tag are held by name, as in PGN. Each of them may also carry the id of an
+ * existing entity in a particular database, for example when a game has been read from a
+ * database, or when a user picked an existing player rather than typing a name. A database that
+ * writes the game uses such an id as it is and finds or creates the entity from the name
+ * otherwise. An id is only meaningful in the database it came from; see {@link
+ * #clearEntityIds()}.
  *
- * <p>All fields are nullable (unset) and mutable.
+ * <p>PGN tags that have no field of their own are kept as extra tags.
+ *
+ * <p>The fields can also be accessed by name, see {@link #getField(String)}, {@link
+ * #setField(String, Object)} and {@link #getAllFields()}. That is for code that serializes a
+ * header generically; the entity ids are not part of it.
  */
 public class GameHeaderModel {
 
-  private List<GameHeaderModelChangeListener> changeListeners = new ArrayList<>();
+  /** The names of the standard fields, as used by {@link #getField(String)}, in export order. */
+  public static final List<String> STANDARD_FIELDS =
+      List.of(
+          "white",
+          "black",
+          "whiteElo",
+          "blackElo",
+          "whiteTeam",
+          "blackTeam",
+          "result",
+          "lineEvaluation",
+          "date",
+          "eco",
+          "round",
+          "subRound",
+          "event",
+          "eventDate",
+          "eventEndDate",
+          "eventSite",
+          "eventCountry",
+          "eventCategory",
+          "eventRounds",
+          "eventType",
+          "eventTimeControl",
+          "sourceTitle",
+          "source",
+          "sourceDate",
+          "annotator",
+          "gameTag");
 
-  // Define the standard fields and their types
-  // The types must be an immutable type, to avoid the data from being changed outside of the model
+  private @Nullable String white;
+  private @Nullable String black;
+  private @Nullable Integer whiteElo;
+  private @Nullable Integer blackElo;
+  private @Nullable String whiteTeam;
+  private @Nullable String blackTeam;
+  private @Nullable GameResult result;
+  private @Nullable NAG lineEvaluation;
+  private @Nullable Date date;
+  private @Nullable Eco eco;
+  private @Nullable Integer round;
+  private @Nullable Integer subRound;
 
-  private static final String FIELD_WHITE = "white";
-  private static final String FIELD_BLACK = "black";
-  private static final String FIELD_WHITE_ELO = "whiteElo";
-  private static final String FIELD_BLACK_ELO = "blackElo";
-  private static final String FIELD_WHITE_TEAM = "whiteTeam";
-  private static final String FIELD_BLACK_TEAM = "blackTeam";
-  private static final String FIELD_RESULT = "result";
-  private static final String FIELD_LINE_EVALUATION = "lineEvaluation";
-  private static final String FIELD_DATE = "date";
-  private static final String FIELD_ECO = "eco";
-  private static final String FIELD_ROUND = "round";
-  private static final String FIELD_SUB_ROUND = "subRound";
+  private @Nullable String event;
+  private @Nullable Date eventDate;
+  private @Nullable Date eventEndDate;
+  private @Nullable String eventSite;
+  private @Nullable String eventCountry;
+  private @Nullable Integer eventCategory;
+  private @Nullable Integer eventRounds;
+  private @Nullable String eventType;
+  private @Nullable String eventTimeControl;
 
-  private static final String FIELD_EVENT = "event";
-  private static final String FIELD_EVENT_DATE = "eventDate";
-  private static final String FIELD_EVENT_END_DATE = "eventEndDate";
-  private static final String FIELD_EVENT_SITE = "eventSite";
-  private static final String FIELD_EVENT_COUNTRY = "eventCountry";
-  private static final String FIELD_EVENT_CATEGORY = "eventCategory";
-  private static final String FIELD_EVENT_ROUNDS = "eventRounds";
-  private static final String FIELD_EVENT_TYPE = "eventType";
-  private static final String FIELD_EVENT_TIME_CONTROL = "eventTimeControl";
+  private @Nullable String sourceTitle;
+  private @Nullable String source;
+  private @Nullable Date sourceDate;
+  private @Nullable String annotator;
+  private @Nullable String gameTag;
 
-  private static final String FIELD_SOURCE = "source";
-  private static final String FIELD_SOURCE_TITLE = "sourceTitle";
-  private static final String FIELD_SOURCE_DATE = "sourceDate";
-  private static final String FIELD_ANNOTATOR = "annotator";
-  private static final String FIELD_GAME_TAG = "gameTag";
+  // Ids of existing entities in the database the header belongs to; null if not bound
+  private @Nullable Long whiteId;
+  private @Nullable Long blackId;
+  private @Nullable Long eventId;
+  private @Nullable Long annotatorId;
+  private @Nullable Long sourceId;
+  private @Nullable Long whiteTeamId;
+  private @Nullable Long blackTeamId;
+  private @Nullable Long gameTagId;
 
-  @HeaderData private String white;
-  @HeaderData private String black;
-  @HeaderData private Integer whiteElo;
-  @HeaderData private Integer blackElo;
-  @HeaderData private String whiteTeam;
-  @HeaderData private String blackTeam;
-  @HeaderData private GameResult result;
-  @HeaderData private NAG lineEvaluation;
-  @HeaderData private Date date;
-  @HeaderData private Eco eco;
-  @HeaderData private Integer round;
-  @HeaderData private Integer subRound;
+  private final LinkedHashMap<String, String> extraTags = new LinkedHashMap<>();
 
-  @HeaderData private String event;
-  @HeaderData private Date eventDate;
-  @HeaderData private Date eventEndDate;
-  @HeaderData private String eventSite;
-  @HeaderData private String eventCountry;
-  @HeaderData private Integer eventCategory;
-  @HeaderData private Integer eventRounds;
-  @HeaderData private String eventType;
-  @HeaderData private String eventTimeControl;
+  public GameHeaderModel() {}
 
-  @HeaderData private String sourceTitle;
-  @HeaderData private String source;
-  @HeaderData private Date sourceDate;
-  @HeaderData private String annotator;
-  @HeaderData private String gameTag;
+  /** Creates a copy of another header, including its entity ids and extra tags. */
+  public GameHeaderModel(@NotNull GameHeaderModel other) {
+    replaceAll(other);
+  }
 
-  public String getWhite() {
+  // ── Game ────────────────────────────────────────────────────────────────
+
+  public @Nullable String getWhite() {
     return white;
   }
 
-  public String getBlack() {
+  public void setWhite(@Nullable String white) {
+    this.white = white;
+  }
+
+  public @Nullable String getBlack() {
     return black;
   }
 
-  public Integer getWhiteElo() {
+  public void setBlack(@Nullable String black) {
+    this.black = black;
+  }
+
+  public @Nullable Integer getWhiteElo() {
     return whiteElo;
   }
 
-  public Integer getBlackElo() {
+  public void setWhiteElo(@Nullable Integer whiteElo) {
+    this.whiteElo = whiteElo;
+  }
+
+  public @Nullable Integer getBlackElo() {
     return blackElo;
   }
 
-  public String getWhiteTeam() {
+  public void setBlackElo(@Nullable Integer blackElo) {
+    this.blackElo = blackElo;
+  }
+
+  public @Nullable String getWhiteTeam() {
     return whiteTeam;
   }
 
-  public String getBlackTeam() {
+  public void setWhiteTeam(@Nullable String whiteTeam) {
+    this.whiteTeam = whiteTeam;
+  }
+
+  public @Nullable String getBlackTeam() {
     return blackTeam;
   }
 
-  public GameResult getResult() {
+  public void setBlackTeam(@Nullable String blackTeam) {
+    this.blackTeam = blackTeam;
+  }
+
+  public @Nullable GameResult getResult() {
     return result;
   }
 
+  public void setResult(@Nullable GameResult result) {
+    this.result = result;
+  }
+
+  /** The evaluation of an unfinished game; {@link NAG#NONE} if not set. */
   public @NotNull NAG getLineEvaluation() {
     return lineEvaluation == null ? NAG.NONE : lineEvaluation;
   }
 
-  public Date getDate() {
+  public void setLineEvaluation(@Nullable NAG lineEvaluation) {
+    this.lineEvaluation = lineEvaluation;
+  }
+
+  public @Nullable Date getDate() {
     return date;
   }
 
-  public Eco getEco() {
+  public void setDate(@Nullable Date date) {
+    this.date = date;
+  }
+
+  public @Nullable Eco getEco() {
     return eco;
   }
 
-  public Integer getRound() {
+  public void setEco(@Nullable Eco eco) {
+    this.eco = eco;
+  }
+
+  public @Nullable Integer getRound() {
     return round;
   }
 
-  public Integer getSubRound() {
+  public void setRound(@Nullable Integer round) {
+    this.round = round;
+  }
+
+  public @Nullable Integer getSubRound() {
     return subRound;
   }
 
-  public String getEvent() {
+  public void setSubRound(@Nullable Integer subRound) {
+    this.subRound = subRound;
+  }
+
+  // ── Tournament ──────────────────────────────────────────────────────────
+
+  public @Nullable String getEvent() {
     return event;
   }
 
-  public Date getEventDate() {
+  public void setEvent(@Nullable String event) {
+    this.event = event;
+  }
+
+  public @Nullable Date getEventDate() {
     return eventDate;
   }
 
-  public Date getEventEndDate() {
+  public void setEventDate(@Nullable Date eventDate) {
+    this.eventDate = eventDate;
+  }
+
+  public @Nullable Date getEventEndDate() {
     return eventEndDate;
   }
 
-  public String getEventSite() {
+  public void setEventEndDate(@Nullable Date eventEndDate) {
+    this.eventEndDate = eventEndDate;
+  }
+
+  public @Nullable String getEventSite() {
     return eventSite;
   }
 
-  public String getEventCountry() {
+  public void setEventSite(@Nullable String eventSite) {
+    this.eventSite = eventSite;
+  }
+
+  public @Nullable String getEventCountry() {
     return eventCountry;
   }
 
-  public Integer getEventCategory() {
+  public void setEventCountry(@Nullable String eventCountry) {
+    this.eventCountry = eventCountry;
+  }
+
+  public @Nullable Integer getEventCategory() {
     return eventCategory;
   }
 
-  public Integer getEventRounds() {
+  public void setEventCategory(@Nullable Integer eventCategory) {
+    this.eventCategory = eventCategory;
+  }
+
+  public @Nullable Integer getEventRounds() {
     return eventRounds;
   }
 
-  public String getEventType() {
+  public void setEventRounds(@Nullable Integer eventRounds) {
+    this.eventRounds = eventRounds;
+  }
+
+  public @Nullable String getEventType() {
     return eventType;
   }
 
-  public String getEventTimeControl() {
+  public void setEventType(@Nullable String eventType) {
+    this.eventType = eventType;
+  }
+
+  public @Nullable String getEventTimeControl() {
     return eventTimeControl;
   }
 
-  public String getSourceTitle() {
+  public void setEventTimeControl(@Nullable String eventTimeControl) {
+    this.eventTimeControl = eventTimeControl;
+  }
+
+  // ── Source, annotator, tag ──────────────────────────────────────────────
+
+  public @Nullable String getSourceTitle() {
     return sourceTitle;
   }
 
-  public String getSource() {
+  public void setSourceTitle(@Nullable String sourceTitle) {
+    this.sourceTitle = sourceTitle;
+  }
+
+  /** The publisher of the source. */
+  public @Nullable String getSource() {
     return source;
   }
 
-  public Date getSourceDate() {
+  public void setSource(@Nullable String source) {
+    this.source = source;
+  }
+
+  public @Nullable Date getSourceDate() {
     return sourceDate;
   }
 
-  public String getAnnotator() {
+  public void setSourceDate(@Nullable Date sourceDate) {
+    this.sourceDate = sourceDate;
+  }
+
+  public @Nullable String getAnnotator() {
     return annotator;
   }
 
-  public String getGameTag() {
+  public void setAnnotator(@Nullable String annotator) {
+    this.annotator = annotator;
+  }
+
+  public @Nullable String getGameTag() {
     return gameTag;
   }
 
-  public void setWhite(String name) {
-    setField(FIELD_WHITE, name);
+  public void setGameTag(@Nullable String gameTag) {
+    this.gameTag = gameTag;
   }
 
-  public void setBlack(String name) {
-    setField(FIELD_BLACK, name);
+  // ── Entity ids ──────────────────────────────────────────────────────────
+
+  public @Nullable Long getWhiteId() {
+    return whiteId;
   }
 
-  public void setWhiteElo(int elo) {
-    setField(FIELD_WHITE_ELO, elo);
+  public void setWhiteId(@Nullable Long whiteId) {
+    this.whiteId = whiteId;
   }
 
-  public void setBlackElo(int elo) {
-    setField(FIELD_BLACK_ELO, elo);
+  public @Nullable Long getBlackId() {
+    return blackId;
   }
 
-  public void setWhiteTeam(String name) {
-    setField(FIELD_WHITE_TEAM, name);
+  public void setBlackId(@Nullable Long blackId) {
+    this.blackId = blackId;
   }
 
-  public void setBlackTeam(String name) {
-    setField(FIELD_BLACK_TEAM, name);
+  public @Nullable Long getEventId() {
+    return eventId;
   }
 
-  public void setResult(GameResult result) {
-    setField(FIELD_RESULT, result);
+  public void setEventId(@Nullable Long eventId) {
+    this.eventId = eventId;
   }
 
-  public void setLineEvaluation(@NotNull NAG evaluation) {
-    setField(FIELD_LINE_EVALUATION, evaluation);
+  public @Nullable Long getAnnotatorId() {
+    return annotatorId;
   }
 
-  public void setDate(Date date) {
-    setField(FIELD_DATE, date);
+  public void setAnnotatorId(@Nullable Long annotatorId) {
+    this.annotatorId = annotatorId;
   }
 
-  public void setEco(Eco eco) {
-    setField(FIELD_ECO, eco);
+  public @Nullable Long getSourceId() {
+    return sourceId;
   }
 
-  public void setRound(int round) {
-    setField(FIELD_ROUND, round);
+  public void setSourceId(@Nullable Long sourceId) {
+    this.sourceId = sourceId;
   }
 
-  public void setSubRound(int subRound) {
-    setField(FIELD_SUB_ROUND, subRound);
+  public @Nullable Long getWhiteTeamId() {
+    return whiteTeamId;
   }
 
-  public void setEvent(String name) {
-    setField(FIELD_EVENT, name);
+  public void setWhiteTeamId(@Nullable Long whiteTeamId) {
+    this.whiteTeamId = whiteTeamId;
   }
 
-  public void setEventDate(Date date) {
-    setField(FIELD_EVENT_DATE, date);
+  public @Nullable Long getBlackTeamId() {
+    return blackTeamId;
   }
 
-  public void setEventEndDate(Date date) {
-    setField(FIELD_EVENT_END_DATE, date);
+  public void setBlackTeamId(@Nullable Long blackTeamId) {
+    this.blackTeamId = blackTeamId;
   }
 
-  public void setEventSite(String site) {
-    setField(FIELD_EVENT_SITE, site);
+  public @Nullable Long getGameTagId() {
+    return gameTagId;
   }
 
-  public void setEventCountry(String country) {
-    setField(FIELD_EVENT_COUNTRY, country);
+  public void setGameTagId(@Nullable Long gameTagId) {
+    this.gameTagId = gameTagId;
   }
 
-  public void setEventRounds(int rounds) {
-    setField(FIELD_EVENT_ROUNDS, rounds);
+  /**
+   * Removes all entity ids, so that a database writing the header finds or creates every entity by
+   * name. Needed before a header read from one database is written to another.
+   */
+  public void clearEntityIds() {
+    whiteId = null;
+    blackId = null;
+    eventId = null;
+    annotatorId = null;
+    sourceId = null;
+    whiteTeamId = null;
+    blackTeamId = null;
+    gameTagId = null;
   }
 
-  public void setEventCategory(int category) {
-    setField(FIELD_EVENT_CATEGORY, category);
+  // ── Extra tags ──────────────────────────────────────────────────────────
+
+  /** PGN tags that have no field of their own, in the order they were added. */
+  public @NotNull Map<String, String> getExtraTags() {
+    return Collections.unmodifiableMap(extraTags);
   }
 
-  public void setEventType(String type) {
-    setField(FIELD_EVENT_TYPE, type);
+  public @Nullable String getExtraTag(@NotNull String name) {
+    return extraTags.get(name);
   }
 
-  public void setEventTimeControl(String timeControl) {
-    setField(FIELD_EVENT_TIME_CONTROL, timeControl);
-  }
-
-  public void setSourceTitle(String title) {
-    setField(FIELD_SOURCE_TITLE, title);
-  }
-
-  public void setSource(String name) {
-    setField(FIELD_SOURCE, name);
-  }
-
-  public void setSourceDate(Date date) {
-    setField(FIELD_SOURCE_DATE, date);
-  }
-
-  public void setAnnotator(String annotator) {
-    setField(FIELD_ANNOTATOR, annotator);
-  }
-
-  public void setGameTag(String gameTag) {
-    setField(FIELD_GAME_TAG, gameTag);
-  }
-
-  // This map contains all the fields, including the standard ones
-  private final Map<String, Object> fields = new ConcurrentHashMap<>();
-
-  private static final Map<String, Field> predefinedHeaderFields = new HashMap<>();
-
-  static {
-    for (Field field : GameHeaderModel.class.getDeclaredFields()) {
-      HeaderData headerData = field.getAnnotation(HeaderData.class);
-      if (headerData != null) {
-        String fieldName = headerData.fieldName();
-        if (fieldName.length() == 0) {
-          fieldName = field.getName();
-        }
-        predefinedHeaderFields.put(fieldName, field);
-      }
+  /**
+   * Sets an extra tag.
+   *
+   * @param name the tag name; must not be the name of a standard field
+   * @param value the value, or null to remove the tag
+   */
+  public void setExtraTag(@NotNull String name, @Nullable String value) {
+    if (STANDARD_FIELDS.contains(name)) {
+      throw new IllegalArgumentException(name + " is a standard header field, not an extra tag");
     }
-  }
-
-  private boolean internalSetField(String fieldName, Object value, boolean ignoreTypeErrors) {
-    Field field = predefinedHeaderFields.get(fieldName);
-    if (field != null) {
-      try {
-        field.set(this, value);
-        // Only update the generic map if the set above succeeded
-        if (value == null) {
-          fields.remove(fieldName);
-        } else {
-          fields.put(fieldName, value);
-        }
-        return true;
-      } catch (IllegalAccessException | IllegalArgumentException e) {
-        if (!ignoreTypeErrors) {
-          throw new IllegalArgumentException(
-              "Header field " + fieldName + " must be of type " + field.getType(), e);
-        }
-        return false;
-      }
+    if (value == null) {
+      extraTags.remove(name);
     } else {
-      if (value == null) {
-        fields.remove(fieldName);
-      } else {
-        fields.put(fieldName, value);
+      extraTags.put(name, value);
+    }
+  }
+
+  // ── Access by name ──────────────────────────────────────────────────────
+
+  /**
+   * Gets a field by name: one of {@link #STANDARD_FIELDS}, or else an extra tag.
+   *
+   * @return the value, or null if not set
+   */
+  public @Nullable Object getField(@NotNull String name) {
+    return switch (name) {
+      case "white" -> white;
+      case "black" -> black;
+      case "whiteElo" -> whiteElo;
+      case "blackElo" -> blackElo;
+      case "whiteTeam" -> whiteTeam;
+      case "blackTeam" -> blackTeam;
+      case "result" -> result;
+      case "lineEvaluation" -> lineEvaluation;
+      case "date" -> date;
+      case "eco" -> eco;
+      case "round" -> round;
+      case "subRound" -> subRound;
+      case "event" -> event;
+      case "eventDate" -> eventDate;
+      case "eventEndDate" -> eventEndDate;
+      case "eventSite" -> eventSite;
+      case "eventCountry" -> eventCountry;
+      case "eventCategory" -> eventCategory;
+      case "eventRounds" -> eventRounds;
+      case "eventType" -> eventType;
+      case "eventTimeControl" -> eventTimeControl;
+      case "sourceTitle" -> sourceTitle;
+      case "source" -> source;
+      case "sourceDate" -> sourceDate;
+      case "annotator" -> annotator;
+      case "gameTag" -> gameTag;
+      default -> extraTags.get(name);
+    };
+  }
+
+  /**
+   * Sets a field by name: one of {@link #STANDARD_FIELDS}, or else an extra tag.
+   *
+   * @param value the value, or null to unset the field
+   * @throws IllegalArgumentException if the value has the wrong type for the field; extra tags
+   *     only hold strings
+   */
+  public void setField(@NotNull String name, @Nullable Object value) {
+    switch (name) {
+      case "white" -> white = cast(name, value, String.class);
+      case "black" -> black = cast(name, value, String.class);
+      case "whiteElo" -> whiteElo = cast(name, value, Integer.class);
+      case "blackElo" -> blackElo = cast(name, value, Integer.class);
+      case "whiteTeam" -> whiteTeam = cast(name, value, String.class);
+      case "blackTeam" -> blackTeam = cast(name, value, String.class);
+      case "result" -> result = cast(name, value, GameResult.class);
+      case "lineEvaluation" -> lineEvaluation = cast(name, value, NAG.class);
+      case "date" -> date = cast(name, value, Date.class);
+      case "eco" -> eco = cast(name, value, Eco.class);
+      case "round" -> round = cast(name, value, Integer.class);
+      case "subRound" -> subRound = cast(name, value, Integer.class);
+      case "event" -> event = cast(name, value, String.class);
+      case "eventDate" -> eventDate = cast(name, value, Date.class);
+      case "eventEndDate" -> eventEndDate = cast(name, value, Date.class);
+      case "eventSite" -> eventSite = cast(name, value, String.class);
+      case "eventCountry" -> eventCountry = cast(name, value, String.class);
+      case "eventCategory" -> eventCategory = cast(name, value, Integer.class);
+      case "eventRounds" -> eventRounds = cast(name, value, Integer.class);
+      case "eventType" -> eventType = cast(name, value, String.class);
+      case "eventTimeControl" -> eventTimeControl = cast(name, value, String.class);
+      case "sourceTitle" -> sourceTitle = cast(name, value, String.class);
+      case "source" -> source = cast(name, value, String.class);
+      case "sourceDate" -> sourceDate = cast(name, value, Date.class);
+      case "annotator" -> annotator = cast(name, value, String.class);
+      case "gameTag" -> gameTag = cast(name, value, String.class);
+      default -> setExtraTag(name, cast(name, value, String.class));
+    }
+  }
+
+  public void unsetField(@NotNull String name) {
+    setField(name, null);
+  }
+
+  /**
+   * Gets every field that is set, standard fields first in {@link #STANDARD_FIELDS} order, then
+   * the extra tags. Entity ids are not included. Changing the map does not change the header.
+   */
+  public @NotNull Map<String, Object> getAllFields() {
+    LinkedHashMap<String, Object> fields = new LinkedHashMap<>();
+    for (String name : STANDARD_FIELDS) {
+      Object value = getField(name);
+      if (value != null) {
+        fields.put(name, value);
       }
-      return true;
     }
+    fields.putAll(extraTags);
+    return fields;
   }
 
-  private boolean internalUnsetField(String fieldName) {
-    return internalSetField(fieldName, null, true);
-  }
-
-  /**
-   * Unsets the header value for the specified field.
-   *
-   * @param fieldName the name of the field to unset
-   */
-  public void unsetField(@NotNull String fieldName) {
-    setField(fieldName, null);
-  }
-
-  /**
-   * Sets the header value for the specified field.
-   *
-   * @param fieldName the name of the field
-   * @param value the value of the field. If null, the field will be unset.
-   * @exception IllegalArgumentException thrown if the field is a predefined field and the type of
-   *     the value doesn't match
-   */
-  public void setField(@NotNull String fieldName, Object value) {
-    internalSetField(fieldName, value, false);
-    notifyHeaderChanged();
-  }
-
-  /**
-   * Sets the header values for the specified fields. If there are any type mismatches, those fields
-   * will be silently ignored.
-   *
-   * @param headerData a mapping of header fields to header values
-   */
-  public void setFields(@NotNull Map<String, Object> headerData) {
-    for (Map.Entry<String, Object> entry : headerData.entrySet()) {
-      internalSetField(entry.getKey(), entry.getValue(), true);
+  private static <T> T cast(@NotNull String name, @Nullable Object value, @NotNull Class<T> type) {
+    if (value != null && !type.isInstance(value)) {
+      throw new IllegalArgumentException(
+          "Header field " + name + " must be of type " + type.getSimpleName());
     }
-    notifyHeaderChanged();
+    return type.cast(value);
   }
 
-  /** Clears all the set header values */
+  // ── Whole header ────────────────────────────────────────────────────────
+
+  /** Unsets every field, entity id and extra tag. */
   public void clear() {
-    fields.keySet().forEach(this::internalUnsetField);
-    notifyHeaderChanged();
-  }
-
-  /**
-   * Replaces all the data in this header with the data from another header model.
-   *
-   * @param header the header model containing the new data
-   */
-  public void replaceAll(GameHeaderModel header) {
-    fields.keySet().forEach(this::internalUnsetField);
-    setFields(header.getAllFields());
-  }
-
-  /**
-   * Gets the header value for the specified field.
-   *
-   * @param fieldName the name of the field
-   * @return the value of the field, or null if not set
-   */
-  public Object getField(String fieldName) {
-    return fields.get(fieldName);
-  }
-
-  /**
-   * Gets the header value for the specified field.
-   *
-   * @param fieldName the name of the field
-   * @param defaultValue the value to return if the field isn't set
-   * @return the value of the field, or null if not set
-   */
-  public Object getField(String fieldName, Object defaultValue) {
-    return fields.getOrDefault(fieldName, defaultValue);
-  }
-
-  /**
-   * Gets a map of all header fields that have been set. Changing the contents of this map will not
-   * affect the header data.
-   *
-   * @return a map mapping field names to field values
-   */
-  public Map<String, Object> getAllFields() {
-    return Collections.unmodifiableMap(fields);
-  }
-
-  /**
-   * Adds a listener of header model changes
-   *
-   * @param listener the listener
-   */
-  public void addChangeListener(@NotNull GameHeaderModelChangeListener listener) {
-    this.changeListeners.add(listener);
-  }
-
-  /**
-   * Removes a listener of header model changes
-   *
-   * @param listener the listener
-   * @return true if the listener was removed
-   */
-  public boolean removeChangeListener(@NotNull GameHeaderModelChangeListener listener) {
-    return this.changeListeners.remove(listener);
-  }
-
-  protected void notifyHeaderChanged() {
-    for (GameHeaderModelChangeListener changeListener : changeListeners) {
-      changeListener.headerModelChanged(this);
+    for (String name : STANDARD_FIELDS) {
+      setField(name, null);
     }
+    clearEntityIds();
+    extraTags.clear();
   }
 
-  @Override
-  public int hashCode() {
-    int result = 0;
-    // We xor all the result since the order of the hash set is non-deterministic
-    for (String field : fields.keySet()) {
-      Object value = fields.get(field);
-      int hc1 = field.hashCode();
-      int hc2 = value == null ? 0 : value.hashCode();
-      result ^= (hc1 * 37 + hc2);
+  /** Replaces the whole contents of this header with a copy of another one. */
+  public void replaceAll(@NotNull GameHeaderModel other) {
+    clear();
+    for (String name : STANDARD_FIELDS) {
+      setField(name, other.getField(name));
     }
-    return result;
+    whiteId = other.whiteId;
+    blackId = other.blackId;
+    eventId = other.eventId;
+    annotatorId = other.annotatorId;
+    sourceId = other.sourceId;
+    whiteTeamId = other.whiteTeamId;
+    blackTeamId = other.blackTeamId;
+    gameTagId = other.gameTagId;
+    extraTags.putAll(other.extraTags);
+  }
+
+  private List<Long> entityIds() {
+    return Arrays.asList(
+        whiteId, blackId, eventId, annotatorId, sourceId, whiteTeamId, blackTeamId, gameTagId);
   }
 
   @Override
   public boolean equals(Object o) {
     if (this == o) return true;
-    if (o == null || getClass() != o.getClass()) return false;
+    if (!(o instanceof GameHeaderModel that)) return false;
+    return getAllFields().equals(that.getAllFields()) && entityIds().equals(that.entityIds());
+  }
 
-    GameHeaderModel that = (GameHeaderModel) o;
-    if (getAllFields().size() != that.getAllFields().size()) return false;
-    for (String field : getAllFields().keySet()) {
-      Object v1 = getField(field);
-      Object v2 = that.getField(field);
-      if (v1 == null && v2 != null) return false;
-      if (v1 != null && !v1.equals(v2)) return false;
-    }
-
-    return true;
+  @Override
+  public int hashCode() {
+    return Objects.hash(getAllFields(), entityIds());
   }
 
   @Override
   public String toString() {
-    StringBuilder sb = new StringBuilder("{ ");
-    for (String field : getAllFields().keySet()) {
-      if (sb.length() > 2) {
-        sb.append(", ");
+    List<String> parts = new ArrayList<>();
+    getAllFields().forEach((name, value) -> parts.add(name + " = " + value));
+    List<String> idNames =
+        List.of(
+            "whiteId",
+            "blackId",
+            "eventId",
+            "annotatorId",
+            "sourceId",
+            "whiteTeamId",
+            "blackTeamId",
+            "gameTagId");
+    List<Long> ids = entityIds();
+    for (int i = 0; i < ids.size(); i++) {
+      if (ids.get(i) != null) {
+        parts.add(idNames.get(i) + " = " + ids.get(i));
       }
-      sb.append(field).append(" = ").append(getField(field));
     }
-    sb.append(" }");
-    return sb.toString();
+    return "{ " + String.join(", ", parts) + " }";
   }
 }

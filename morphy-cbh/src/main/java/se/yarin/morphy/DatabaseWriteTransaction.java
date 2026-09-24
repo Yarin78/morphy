@@ -364,11 +364,12 @@ public class DatabaseWriteTransaction extends DatabaseTransaction {
   }
 
   /**
-   * Resolves an entity ID from the GameModel. If the ID is set (not -1) and valid in the current
-   * database, uses it. Otherwise creates/looks up the entity from model data.
+   * Resolves an entity id for a game being written. If the header is bound to an entity (the id is
+   * not -1), that entity must exist and is used as it is. Otherwise the entity is looked up by the
+   * data in the header, and created if it doesn't exist.
    *
    * @param headerModel the game header model
-   * @param currentId the entity ID from the model's internal fields (-1 if not set)
+   * @param currentId the entity id the header is bound to, or -1 if not bound
    * @param entityBuilder function to build entity from model data
    * @param transaction the entity transaction to validate/create in
    * @param idSetter consumer to set the resolved ID
@@ -407,7 +408,7 @@ public class DatabaseWriteTransaction extends DatabaseTransaction {
    * Resolves a tournament ID (special case with TournamentExtra).
    *
    * @param model the game model
-   * @param currentId the tournament ID from the model's internal fields (-1 if not set)
+   * @param currentId the tournament id the header is bound to, or -1 if not bound
    * @param tournamentBuilder function to build Tournament from model data
    * @param extraBuilder function to build TournamentExtra from model data
    * @param idSetter consumer to set the resolved ID
@@ -857,7 +858,7 @@ public class DatabaseWriteTransaction extends DatabaseTransaction {
             sourceTransaction(),
             headerBuilder::sourceId);
 
-    if (headerModel.getWhiteTeam() != null) {
+    if (headerModel.getWhiteTeam() != null || headerModel.getWhiteTeamId() != null) {
       doEntity(
               headerModel,
               extendedHeaderBuilder.build().whiteTeamId(),
@@ -866,7 +867,7 @@ public class DatabaseWriteTransaction extends DatabaseTransaction {
               extendedHeaderBuilder::whiteTeamId);
     }
 
-    if (headerModel.getBlackTeam() != null) {
+    if (headerModel.getBlackTeam() != null || headerModel.getBlackTeamId() != null) {
       doEntity(
               headerModel,
               extendedHeaderBuilder.build().blackTeamId(),
@@ -875,7 +876,7 @@ public class DatabaseWriteTransaction extends DatabaseTransaction {
               extendedHeaderBuilder::blackTeamId);
     }
 
-    if (headerModel.getGameTag() != null) {
+    if (headerModel.getGameTag() != null || headerModel.getGameTagId() != null) {
       doEntity(
               headerModel,
               extendedHeaderBuilder.build().gameTagId(),

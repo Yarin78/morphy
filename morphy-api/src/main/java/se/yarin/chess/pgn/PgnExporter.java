@@ -243,19 +243,11 @@ public class PgnExporter {
             writeTag(writer, "FEN", fen, null);
         }
 
-        // Custom fields (must start with upper-case letter, excluding SetUp and FEN)
-        Map<String, Object> allFields = header.getAllFields();
-        List<String> customFields = new ArrayList<>();
-        for (String field : allFields.keySet()) {
-            if (!isStandardField(field) && !field.equals("SetUp") && !field.equals("FEN") && !field.isEmpty() && Character.isUpperCase(field.charAt(0))) {
-                customFields.add(field);
-            }
-        }
-        Collections.sort(customFields);
-        for (String field : customFields) {
-            Object value = header.getField(field);
-            if (value != null) {
-                writeTag(writer, field, value.toString(), null);
+        // Tags without a field of their own, in the order they were read. SetUp and FEN are written
+        // from the moves above.
+        for (Map.Entry<String, String> tag : header.getExtraTags().entrySet()) {
+            if (!tag.getKey().equals("SetUp") && !tag.getKey().equals("FEN")) {
+                writeTag(writer, tag.getKey(), tag.getValue(), null);
             }
         }
     }
@@ -284,17 +276,6 @@ public class PgnExporter {
             return round + "." + subRound;
         }
         return String.valueOf(round);
-    }
-
-    private boolean isStandardField(String field) {
-        return switch (field) {
-            case "white", "black", "whiteElo", "blackElo", "whiteTeam", "blackTeam",
-                 "result", "lineEvaluation", "date", "eco", "round", "subRound",
-                 "event", "eventDate", "eventEndDate", "eventSite", "eventCountry",
-                 "eventCategory", "eventRounds", "eventType", "eventTimeControl",
-                 "sourceTitle", "source", "sourceDate", "annotator", "gameTag" -> true;
-            default -> false;
-        };
     }
 
     private void exportMoves(GameMovesModel moves, @Nullable GameResult result, Writer writer) throws IOException {

@@ -18,9 +18,9 @@ import se.yarin.morphy.text.TextModel;
  * Converts GameDto objects to GameModel or TextModel.
  *
  * <p>This class handles the conversion from the DTO representation to the internal model
- * representation. Entity IDs are stored in the GameHeaderModel's internal fields when present in
- * the DTO. The actual entity resolution (validation or creation) happens later when the model is
- * saved via DatabaseWriteTransaction.
+ * representation. An entity DTO that has an id binds the header to that existing entity; the
+ * entity itself is resolved (validated, or found or created by name) when the model is saved via
+ * DatabaseWriteTransaction.
  */
 public class GameDtoImporter {
   private static final Logger log = LoggerFactory.getLogger(GameDtoImporter.class);
@@ -60,7 +60,8 @@ public class GameDtoImporter {
   }
 
   /**
-   * Builds a GameHeaderModel from a GameDto. Stores entity IDs in internal fields when present.
+   * Builds a GameHeaderModel from a GameDto. An entity DTO with an id binds the header to that
+   * existing entity; one without is resolved by name when the game is written.
    *
    * @param dto the GameDto
    * @return the GameHeaderModel
@@ -93,12 +94,10 @@ public class GameDtoImporter {
 
       // Store entity IDs if present
       if (dto.whitePlayer() != null && dto.whitePlayer().id() != null) {
-        headerModel.setField(
-            se.yarin.morphy.GameAdapter.WHITE_ID, dto.whitePlayer().id().intValue());
+        headerModel.setWhiteId(dto.whitePlayer().id());
       }
       if (dto.blackPlayer() != null && dto.blackPlayer().id() != null) {
-        headerModel.setField(
-            se.yarin.morphy.GameAdapter.BLACK_ID, dto.blackPlayer().id().intValue());
+        headerModel.setBlackId(dto.blackPlayer().id());
       }
 
       // Set ELO ratings
@@ -110,19 +109,13 @@ public class GameDtoImporter {
       }
 
       // Set team information
-      if (dto.whiteTeam() != null && dto.whiteTeam().title() != null) {
+      if (dto.whiteTeam() != null) {
         headerModel.setWhiteTeam(dto.whiteTeam().title());
-        if (dto.whiteTeam().id() != null) {
-          headerModel.setField(
-              se.yarin.morphy.GameAdapter.WHITE_TEAM_ID, dto.whiteTeam().id().intValue());
-        }
+        headerModel.setWhiteTeamId(dto.whiteTeam().id());
       }
-      if (dto.blackTeam() != null && dto.blackTeam().title() != null) {
+      if (dto.blackTeam() != null) {
         headerModel.setBlackTeam(dto.blackTeam().title());
-        if (dto.blackTeam().id() != null) {
-          headerModel.setField(
-              se.yarin.morphy.GameAdapter.BLACK_TEAM_ID, dto.blackTeam().id().intValue());
-        }
+        headerModel.setBlackTeamId(dto.blackTeam().id());
       }
     }
 
@@ -157,8 +150,7 @@ public class GameDtoImporter {
         headerModel.setEvent(dto.tournament().title());
       }
       if (dto.tournament().id() != null) {
-        headerModel.setField(
-            se.yarin.morphy.GameAdapter.EVENT_ID, dto.tournament().id().intValue());
+        headerModel.setEventId(dto.tournament().id());
       }
       if (dto.tournament().startDate() != null) {
         headerModel.setEventDate(dto.tournament().startDate());
@@ -189,7 +181,7 @@ public class GameDtoImporter {
     // Set source information
     if (dto.source() != null) {
       if (dto.source().id() != null) {
-        headerModel.setField(se.yarin.morphy.GameAdapter.SOURCE_ID, dto.source().id().intValue());
+        headerModel.setSourceId(dto.source().id());
       }
       if (dto.source().title() != null) {
         headerModel.setSourceTitle(dto.source().title());
@@ -205,8 +197,7 @@ public class GameDtoImporter {
     // Set annotator information
     if (dto.annotator() != null) {
       if (dto.annotator().id() != null) {
-        headerModel.setField(
-            se.yarin.morphy.GameAdapter.ANNOTATOR_ID, dto.annotator().id().intValue());
+        headerModel.setAnnotatorId(dto.annotator().id());
       }
       if (dto.annotator().name() != null) {
         headerModel.setAnnotator(dto.annotator().name());
@@ -216,8 +207,7 @@ public class GameDtoImporter {
     // Set game tag information
     if (dto.gameTag() != null) {
       if (dto.gameTag().id() != null) {
-        headerModel.setField(
-            se.yarin.morphy.GameAdapter.GAME_TAG_ID, dto.gameTag().id().intValue());
+        headerModel.setGameTagId(dto.gameTag().id());
       }
       if (dto.gameTag().englishTitle() != null) {
         headerModel.setGameTag(dto.gameTag().englishTitle());
@@ -244,6 +234,8 @@ public class GameDtoImporter {
         // Parse the moves-only PGN directly
         PgnParser parser =
             new PgnParser((AnnotationConverter.getRoundTripConverter())::convertToChessBase);
+        // TODO: always parsed from the standard start position, since GameMovesDto carries no
+        // FEN. Games from a set-up position fail or come back wrong. See GameDtoConverter.
         movesModel = parser.parseMoves(dto.moves().pgn());
 
       } catch (PgnFormatException e) {

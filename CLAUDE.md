@@ -48,7 +48,8 @@ Key patterns:
 - `DatabaseCbh.java` (morphy-cbh) - The v1 engine; implements the `Database` facade directly (also exposes v1-specific indexes/transactions/queries)
 - `DatabaseReadTransaction` / `DatabaseWriteTransaction` - All v1 database operations
 - `Position.java` - Immutable board state with Zobrist hashing
-- `GameModel.java` - Complete game (header + move tree); an internal decode/encode structure, no longer the neutral interface
+- `GameModel.java` - The Java representation of a chess game: a `GameHeaderModel` (typed header fields, optional entity ids, extra PGN tags) plus a `GameMovesModel` (the move tree). Used by PGN, the format codecs, the CLI and tools; `GameDto` is the wire/view format at the boundary
+- `GameHeaderModel` entity ids (`whiteId`, `eventId`, …) bind a game to existing entities in one database; when unset, the writer finds or creates the entity by name. Call `clearEntityIds()` before writing a header to a different database
 
 ## Coding Conventions
 

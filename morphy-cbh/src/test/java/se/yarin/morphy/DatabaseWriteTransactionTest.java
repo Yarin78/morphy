@@ -586,10 +586,10 @@ public class DatabaseWriteTransactionTest extends DatabaseTestSetup {
 
   @Test(expected = MorphyInvalidDataException.class)
   public void addGameWithInvalidExplicitEntityIdSet() {
-    // WHITE_ID is set in a game model but pointing to a missing player
+    // The white player id is set in a game model but points to a missing player
     GameModel gameModel = testBase.getGameModel(1);
     assertEquals("Carlsen", gameModel.header().getWhite());
-    gameModel.header().setField(GameAdapter.WHITE_ID, 100);
+    gameModel.header().setWhiteId(100L);
 
     try (var txn = new DatabaseWriteTransaction(testBase)) {
       txn.addGame(gameModel);

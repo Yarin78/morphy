@@ -1,43 +1,31 @@
 package se.yarin.chess;
 
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.util.HashMap;
-
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNull;
 
 public class GameHeaderModelTest {
 
   private GameHeaderModel header;
-  private int numFiredChanges;
-  private GameHeaderModelChangeListener listener;
 
   @Before
   public void setup() {
     header = new GameHeaderModel();
-    this.listener = (headerModel) -> numFiredChanges++;
-    this.header.addChangeListener(listener);
-  }
-
-  @After
-  public void tearDown() {
-    this.header.removeChangeListener(listener);
   }
 
   @Test
   public void testEmptyHeader() {
     assertEquals(0, header.getAllFields().size());
-    assertEquals(0, numFiredChanges);
+    assertEquals(NAG.NONE, header.getLineEvaluation());
   }
 
   @Test
   public void testSetWhitePlayerName() {
     header.setField("white", "Mardell, Jimmy");
     assertEquals("Mardell, Jimmy", header.getWhite());
-    assertEquals(1, numFiredChanges);
   }
 
   @Test
@@ -47,6 +35,9 @@ public class GameHeaderModelTest {
 
     header.setBlackElo(2300);
     assertEquals(2300, (int) header.getBlackElo());
+
+    header.setBlackElo(null);
+    assertNull(header.getBlackElo());
   }
 
   @Test
@@ -71,27 +62,37 @@ public class GameHeaderModelTest {
   }
 
   @Test
-  public void testSetCustomField() {
-    header.setField("double", 100.0);
-    assertEquals(100.0, header.getField("double"));
+  public void testUnknownFieldIsExtraTag() {
+    header.setField("WhiteFideId", "1503014");
+    assertEquals("1503014", header.getField("WhiteFideId"));
+    assertEquals("1503014", header.getExtraTag("WhiteFideId"));
+    assertEquals(1, header.getExtraTags().size());
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void testExtraTagMustBeString() {
+    header.setField("custom", 100.0);
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void testExtraTagCantShadowStandardField() {
+    header.setExtraTag("white", "Jimmy");
   }
 
   @Test
   public void testUnsetField() {
     header.setField("white", "Jimmy");
     header.setField("black", "NA");
-    header.setField("custom", 8);
+    header.setField("Custom", "8");
     assertEquals(3, header.getAllFields().size());
-    assertEquals(3, numFiredChanges);
 
     header.setField("white", null);
     assertNull(header.getWhite());
     assertEquals(2, header.getAllFields().size());
 
-    header.unsetField("custom");
-    assertNull(header.getField("custom"));
+    header.unsetField("Custom");
+    assertNull(header.getField("Custom"));
     assertEquals(1, header.getAllFields().size());
-    assertEquals(5, numFiredChanges);
   }
 
   @Test(expected = IllegalArgumentException.class)
@@ -100,55 +101,68 @@ public class GameHeaderModelTest {
   }
 
   @Test
-  public void testSetMultipleFields() {
-    // include illegal
-    HashMap<String, Object> map = new HashMap<>();
-    map.put("white", "Jimmy");
-    map.put("whiteElo", 2123);
-    map.put("result", GameResult.NOT_FINISHED);
-    map.put("date", 123);
-    map.put("custom", "some data");
-    map.put("annotator", "Kasparov");
-    header.setFields(map);
-    assertEquals(1, numFiredChanges);
-    assertEquals("Jimmy", header.getWhite());
-    assertEquals(2123, (int) header.getWhiteElo());
-    assertEquals(GameResult.NOT_FINISHED, header.getResult());
-    assertEquals("some data", header.getField("custom"));
-    assertEquals("Kasparov", header.getAnnotator());
+  public void testAllFieldsExcludesEntityIds() {
+    header.setWhite("Carlsen, Magnus");
+    header.setWhiteId(17L);
+    assertEquals(1, header.getAllFields().size());
+    assertEquals(17L, (long) header.getWhiteId());
+  }
+
+  @Test
+  public void testClearEntityIds() {
+    header.setWhite("Carlsen, Magnus");
+    header.setWhiteId(17L);
+    header.setEventId(3L);
+    header.clearEntityIds();
+    assertNull(header.getWhiteId());
+    assertNull(header.getEventId());
+    assertEquals("Carlsen, Magnus", header.getWhite());
   }
 
   @Test
   public void testClear() {
     header.setField("white", "Jimmy");
     header.setField("black", "NA");
-    header.setField("custom", 8);
+    header.setField("Custom", "8");
+    header.setWhiteId(4L);
     assertEquals(3, header.getAllFields().size());
-    assertEquals("Jimmy", header.getWhite());
-    assertEquals(3, numFiredChanges);
 
     header.clear();
     assertEquals(0, header.getAllFields().size());
     assertNull(header.getWhite());
-    assertEquals(4, numFiredChanges);
+    assertNull(header.getWhiteId());
   }
 
   @Test
   public void testReplaceAll() {
     header.setField("white", "Jimmy");
     header.setField("black", "NA");
-    header.setField("custom", 8);
-    assertEquals(3, numFiredChanges);
+    header.setField("Custom", "8");
 
     GameHeaderModel newHeader = new GameHeaderModel();
     newHeader.setField("white", "Kasparov");
-    newHeader.setField("whiteTitle", "GM");
+    newHeader.setField("WhiteTitle", "GM");
+    newHeader.setWhiteId(12L);
     header.replaceAll(newHeader);
     assertEquals("Kasparov", header.getWhite());
-    assertEquals("GM", header.getField("whiteTitle"));
+    assertEquals("GM", header.getField("WhiteTitle"));
+    assertEquals(12L, (long) header.getWhiteId());
     assertNull(header.getBlack());
-    assertNull(header.getField("custom"));
+    assertNull(header.getField("Custom"));
+  }
 
-    assertEquals(4, numFiredChanges);
+  @Test
+  public void testCopyAndEquals() {
+    header.setWhite("Kasparov");
+    header.setWhiteElo(2851);
+    header.setWhiteId(12L);
+    header.setExtraTag("WhiteTitle", "GM");
+
+    GameHeaderModel copy = new GameHeaderModel(header);
+    assertEquals(header, copy);
+    assertEquals(header.hashCode(), copy.hashCode());
+
+    copy.setWhiteId(13L);
+    assertNotEquals(header, copy);
   }
 }

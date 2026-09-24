@@ -1,6 +1,7 @@
 package se.yarin.morphy;
 
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.chess.*;
@@ -23,15 +24,6 @@ import java.util.EnumSet;
 public class GameAdapter {
 
   private static final Logger log = LoggerFactory.getLogger(GameAdapter.class);
-
-  public static final String WHITE_ID = "_whiteId";
-  public static final String BLACK_ID = "_blackId";
-  public static final String EVENT_ID = "_eventId";
-  public static final String ANNOTATOR_ID = "_annotatorId";
-  public static final String SOURCE_ID = "_sourceId";
-  public static final String WHITE_TEAM_ID = "_whiteTeamId";
-  public static final String BLACK_TEAM_ID = "_blackTeamId";
-  public static final String GAME_TAG_ID = "_gameTagId";
 
   // ==========================================================
   // Functions for converting a Game into a GameModel/TextModel
@@ -108,21 +100,21 @@ public class GameAdapter {
     GameTag gameTag = game.gameTag();
 
     model.setWhite(whitePlayer.getFullName());
-    model.setField(WHITE_ID, whitePlayer.id());
+    model.setWhiteId((long) whitePlayer.id());
     if (game.whiteElo() > 0) {
       model.setWhiteElo(game.whiteElo());
     }
     if (whiteTeam != null) {
-      model.setField(WHITE_TEAM_ID, whiteTeam.id());
+      model.setWhiteTeamId((long) whiteTeam.id());
       model.setWhiteTeam(whiteTeam.title());
     }
     model.setBlack(blackPlayer.getFullName());
-    model.setField(BLACK_ID, blackPlayer.id());
+    model.setBlackId((long) blackPlayer.id());
     if (game.blackElo() > 0) {
       model.setBlackElo(game.blackElo());
     }
     if (blackTeam != null) {
-      model.setField(BLACK_TEAM_ID, blackTeam.id());
+      model.setBlackTeamId((long) blackTeam.id());
       model.setBlackTeam(blackTeam.title());
     }
     model.setResult(game.result());
@@ -136,7 +128,7 @@ public class GameAdapter {
     }
 
     model.setEvent(tournament.title());
-    model.setField(EVENT_ID, tournament.id());
+    model.setEventId((long) tournament.id());
     model.setEventDate(tournament.date());
     model.setEventSite(tournament.place());
     if (tournament.nation() != Nation.NONE) {
@@ -158,11 +150,12 @@ public class GameAdapter {
     model.setSourceTitle(source.title());
     model.setSource(source.publisher());
     model.setSourceDate(source.publication());
-    model.setField(SOURCE_ID, source.id());
+    model.setSourceId((long) source.id());
     model.setAnnotator(annotator.name());
-    model.setField(ANNOTATOR_ID, annotator.id());
+    model.setAnnotatorId((long) annotator.id());
     if (gameTag != null) {
-      model.setField(GAME_TAG_ID, gameTag.id());
+      model.setGameTagId((long) gameTag.id());
+      model.setGameTag(gameTag.englishTitle());
     }
 
     model.setLineEvaluation(game.lineEvaluation());
@@ -198,35 +191,25 @@ public class GameAdapter {
     setHeaderTextData(gameHeader, extendedGameHeader, model.header());
   }
 
-  /**
-   * Extracts an entity ID from the model's internal fields.
-   * Returns -1 if the field is not present or not an Integer, which indicates
-   * that the entity needs to be resolved from the model data.
-   */
-  private int getEntityId(@NotNull GameHeaderModel headerModel, @NotNull String fieldName) {
-    try {
-      Object value = headerModel.getField(fieldName);
-      return value instanceof Integer id ? id : -1;
-    } catch (ClassCastException e) {
-      log.warn("Internal id field {} was not an integer: {}", fieldName, e.getMessage());
-      return -1;
-    }
+  /** The v1 id of an entity the header is bound to, or -1 if the entity must be resolved by name. */
+  private static int v1Id(@Nullable Long id) {
+    return id == null ? -1 : Math.toIntExact(id);
   }
 
   public void setEntityIds(
       @NotNull ImmutableGameHeader.Builder gameHeader,
       @NotNull ImmutableExtendedGameHeader.Builder extendedGameHeader,
       @NotNull GameHeaderModel headerModel) {
-    // Extract entity IDs from internal fields if present, otherwise set to -1
-    // -1 indicates that the entity needs to be resolved from the model data
-    gameHeader.whitePlayerId(getEntityId(headerModel, WHITE_ID));
-    gameHeader.blackPlayerId(getEntityId(headerModel, BLACK_ID));
-    gameHeader.tournamentId(getEntityId(headerModel, EVENT_ID));
-    gameHeader.annotatorId(getEntityId(headerModel, ANNOTATOR_ID));
-    gameHeader.sourceId(getEntityId(headerModel, SOURCE_ID));
-    extendedGameHeader.whiteTeamId(getEntityId(headerModel, WHITE_TEAM_ID));
-    extendedGameHeader.blackTeamId(getEntityId(headerModel, BLACK_TEAM_ID));
-    extendedGameHeader.gameTagId(getEntityId(headerModel, GAME_TAG_ID));
+    // An entity id in the header binds the game to that existing entity; -1 means it is resolved
+    // (found or created) from the name when the game is written
+    gameHeader.whitePlayerId(v1Id(headerModel.getWhiteId()));
+    gameHeader.blackPlayerId(v1Id(headerModel.getBlackId()));
+    gameHeader.tournamentId(v1Id(headerModel.getEventId()));
+    gameHeader.annotatorId(v1Id(headerModel.getAnnotatorId()));
+    gameHeader.sourceId(v1Id(headerModel.getSourceId()));
+    extendedGameHeader.whiteTeamId(v1Id(headerModel.getWhiteTeamId()));
+    extendedGameHeader.blackTeamId(v1Id(headerModel.getBlackTeamId()));
+    extendedGameHeader.gameTagId(v1Id(headerModel.getGameTagId()));
   }
 
   public void setHeaderGameData(

@@ -182,6 +182,9 @@ public class GameDtoConverter {
             new PgnExporter(
                 PgnFormatOptions.DEFAULT,
                 (AnnotationConverter.getRoundTripConverter())::convertToPgn);
+        // TODO: exportMovesOnly drops SetUp/FEN, so a game from a set-up position (or Chess960)
+        // loses its start position through the DTO. Either add a fen field to GameMovesDto or make
+        // moves.pgn a full PGN with the SetUp/FEN tags. See also GameDtoImporter.
         moves = new GameMovesDto(exporter.exportMovesOnly(model.moves()));
 
         String built = model.moves().getNotation(20);

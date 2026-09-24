@@ -5,14 +5,12 @@ import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
-import se.yarin.chess.GameHeaderModel;
 import se.yarin.chess.GameModel;
 import se.yarin.morphy.DatabaseCbh;
 import se.yarin.morphy.DatabaseMode;
 import se.yarin.morphy.DatabaseReadTransaction;
 import se.yarin.morphy.DatabaseWriteTransaction;
 import se.yarin.morphy.Game;
-import se.yarin.morphy.GameAdapter;
 import se.yarin.morphy.cli.opening.OpeningRepertoireCache;
 import se.yarin.morphy.cli.update.GameUpdater;
 import se.yarin.morphy.cli.update.OpeningClassifyUpdater;
@@ -235,7 +233,7 @@ public class Update extends BaseCommand implements Callable<Integer> {
                 // The header carries internal entity-id references resolved against sourceDb;
                 // those are meaningless (or worse, refer to unrelated entities) in outputDb, so
                 // clear them and let addGame() resolve every entity by value instead.
-                clearInternalEntityIds(model.header());
+                model.header().clearEntityIds();
                 writeTxn.addGame(model);
               } else {
                 writeTxn.replaceGame(gameId, model);
@@ -249,16 +247,5 @@ public class Update extends BaseCommand implements Callable<Integer> {
       }
     }
     return updated;
-  }
-
-  static void clearInternalEntityIds(GameHeaderModel header) {
-    header.unsetField(GameAdapter.WHITE_ID);
-    header.unsetField(GameAdapter.BLACK_ID);
-    header.unsetField(GameAdapter.EVENT_ID);
-    header.unsetField(GameAdapter.ANNOTATOR_ID);
-    header.unsetField(GameAdapter.SOURCE_ID);
-    header.unsetField(GameAdapter.WHITE_TEAM_ID);
-    header.unsetField(GameAdapter.BLACK_TEAM_ID);
-    header.unsetField(GameAdapter.GAME_TAG_ID);
   }
 }

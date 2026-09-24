@@ -211,12 +211,15 @@ public class PgnParser {
     }
 
     private GameMovesModel createMovesModel(GameHeaderModel header) throws PgnFormatException {
-        // Check for FEN setup position
-        Object fenObj = header.getField("FEN");
-        Object setupObj = header.getField("SetUp");
+        // Check for FEN setup position. The start position belongs to the moves model, so the tags
+        // are removed from the header once used; the exporter writes them from the moves again.
+        String fenTag = header.getExtraTag("FEN");
+        String setupTag = header.getExtraTag("SetUp");
 
-        if (setupObj != null && "1".equals(setupObj.toString()) && fenObj != null) {
-            PositionState fen = PositionState.fromFen(fenObj.toString());
+        if ("1".equals(setupTag) && fenTag != null) {
+            PositionState fen = PositionState.fromFen(fenTag);
+            header.setExtraTag("FEN", null);
+            header.setExtraTag("SetUp", null);
             return new GameMovesModel(fen.position(), fen.fullMoveNumber());
         }
 

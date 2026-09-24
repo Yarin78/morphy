@@ -432,9 +432,12 @@ public class AnnotationConverter {
     private static final Pattern CLK_PATTERN = Pattern.compile("\\[%clk\\s+([^\\]]+)\\]");
     private static final Pattern CLKW_PATTERN = Pattern.compile("\\[%clkw\\s+([^\\]]+)\\]");
     private static final Pattern CLKB_PATTERN = Pattern.compile("\\[%clkb\\s+([^\\]]+)\\]");
-    private static final Pattern PRE_LANG_PATTERN = Pattern.compile("\\[%pre:([A-Z]{3})\\s+((?:[^\\]\\\\]|\\\\.)*)\\]");
-    private static final Pattern PRE_PATTERN = Pattern.compile("\\[%pre\\s+((?:[^\\]\\\\]|\\\\.)*)\\]");
-    private static final Pattern POST_LANG_PATTERN = Pattern.compile("\\[%post:([A-Z]{3})\\s+((?:[^\\]\\\\]|\\\\.)*)\\]");
+    // The text of a comment runs up to an unescaped ']'. It is matched in the "unrolled" form
+    // [^]\\]*(?:\\.[^]\\]*)* rather than (?:[^]\\]|\\.)*: the latter recurses once per
+    // character in java.util.regex and overflows the stack on long comments.
+    private static final Pattern PRE_LANG_PATTERN = Pattern.compile("\\[%pre:([A-Z]{3})\\s+([^\\]\\\\]*(?:\\\\.[^\\]\\\\]*)*)\\]");
+    private static final Pattern PRE_PATTERN = Pattern.compile("\\[%pre\\s+([^\\]\\\\]*(?:\\\\.[^\\]\\\\]*)*)\\]");
+    private static final Pattern POST_LANG_PATTERN = Pattern.compile("\\[%post:([A-Z]{3})\\s+([^\\]\\\\]*(?:\\\\.[^\\]\\\\]*)*)\\]");
 
     // ========== Public static conversion methods (for backward compatibility) ==========
 

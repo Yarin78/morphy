@@ -24,13 +24,11 @@ import java.util.stream.Collectors;
  * #root()}.
  *
  * <p>Important: A reference to a {@link Node} may become invalid after the model has been changed.
- * Use listeners to detect changes, and {@link Node#isValid()} to determine if a node is still in
- * the tree.
+ * Use {@link Node#isValid()} to determine if a node is still in the tree.
  */
 public class GameMovesModel {
 
   private Node root;
-  private List<GameMovesModelChangeListener> changeListeners = new ArrayList<>();
 
   /** Creates an empty {@link GameMovesModel} with the default chess starting position. */
   public GameMovesModel() {
@@ -52,8 +50,7 @@ public class GameMovesModel {
   }
 
   /**
-   * Creates a duplicate {@link GameMovesModel} by performing a deep clone of the game tree. The
-   * listeners are not copied.
+   * Creates a duplicate {@link GameMovesModel} by performing a deep clone of the game tree.
    *
    * @param model
    */
@@ -164,7 +161,6 @@ public class GameMovesModel {
     }
 
     this.root = new Node(startPosition, startPly);
-    notifyMovesChanged(this.root);
   }
 
   /** Clears the game tree and initializes a new one from the starting position */
@@ -174,8 +170,7 @@ public class GameMovesModel {
 
   /** Deletes all annotations in the game. */
   public void deleteAllAnnotations() {
-    root().traverseDepthFirst(node -> node.internalDeleteAnnotations(true));
-    notifyMovesChanged(this.root);
+    root().traverseDepthFirst(node -> node.internalDeleteAnnotations());
   }
 
   /** Deletes all variations in the game. */
@@ -185,12 +180,11 @@ public class GameMovesModel {
       if (current.hasVariations()) {
         ArrayList<Node> children = new ArrayList<>(current.children());
         for (int i = 1; i < children.size(); i++) {
-          children.get(i).internalRemoveNode(true);
+          children.get(i).internalRemoveNode();
         }
       }
       current = current.mainNode();
     }
-    notifyMovesChanged(this.root);
   }
 
   /**
@@ -200,32 +194,6 @@ public class GameMovesModel {
    */
   public void replaceAll(@NotNull GameMovesModel moves) {
     this.root = new Node(moves.root, (Node) null);
-    notifyMovesChanged(this.root);
-  }
-
-  /**
-   * Adds a listener of moves model changes
-   *
-   * @param listener the listener
-   */
-  public void addChangeListener(@NotNull GameMovesModelChangeListener listener) {
-    this.changeListeners.add(listener);
-  }
-
-  /**
-   * Removes a listener of moves model changes
-   *
-   * @param listener the listener
-   * @return true if the listener was removed
-   */
-  public boolean removeChangeListener(@NotNull GameMovesModelChangeListener listener) {
-    return this.changeListeners.remove(listener);
-  }
-
-  protected void notifyMovesChanged(Node node) {
-    for (GameMovesModelChangeListener changeListener : changeListeners) {
-      changeListener.moveModelChanged(this, node);
-    }
   }
 
   /** Represents a node in the game tree */
@@ -239,10 +207,9 @@ public class GameMovesModel {
     private final Position position;
     private final int ply;
 
-    // Developer note: Only methods prefixed with "internal" is allowed
-    // to modify the node tree. This is to ensure the integrity of the tree,
-    // and that listeners and undo functionality works properly.
-    // All internal methods should carry out their actions atomicly.
+    // Developer note: Only methods prefixed with "internal" are allowed
+    // to modify the node tree. This is to ensure the integrity of the tree.
+    // All internal methods should carry out their actions atomically.
 
     private Node(@NotNull Position position, int ply) {
       this.parent = null;
@@ -289,13 +256,11 @@ public class GameMovesModel {
      * Adds a new node to the game tree. Assumes that the move is legal
      *
      * @param move a legal move
-     * @param silent if true, don't notify listeners
      * @return the new node
      */
-    private Node internalAddNode(Move move, boolean silent) {
+    private Node internalAddNode(Move move) {
       Node node = new Node(this, move);
       this.children.add(node);
-      if (!silent) notifyMovesChanged(this);
       return node;
     }
 
@@ -304,9 +269,8 @@ public class GameMovesModel {
      *
      * @param node1 the first child
      * @param node2 the second child
-     * @param silent if true, don't notify listeners
      */
-    private void internalSwapNodes(Node node1, Node node2, boolean silent) {
+    private void internalSwapNodes(Node node1, Node node2) {
       if (node1.parent != this || node2.parent != this) {
         throw new RuntimeException("Can't only swap nodes to which this node is the parent");
       }
@@ -318,63 +282,52 @@ public class GameMovesModel {
           children.stream()
               .map(child -> child == node1 ? node2 : child == node2 ? node1 : child)
               .collect(Collectors.toList());
-      if (!silent) notifyMovesChanged(this);
     }
 
     /**
      * Removes the node itself from the game tree
      *
-     * @param silent if true, don't notify listeners
      */
-    private void internalRemoveNode(boolean silent) {
+    private void internalRemoveNode() {
       if (isRoot()) {
         throw new RuntimeException("Can't remove the root node");
       }
       parent().children.remove(this);
-      if (!silent) notifyMovesChanged(parent());
     }
 
     /**
      * Removes all children to this node from the game tree
      *
-     * @param silent if true, don't notify listeners
      */
-    private void internalRemoveAllChildren(boolean silent) {
+    private void internalRemoveAllChildren() {
       children.clear();
-      if (!silent) notifyMovesChanged(parent());
     }
 
     /**
      * Replaces the root node of the game tree with itself
      *
-     * @param silent if true, don't notify listeners
      */
-    private void internalReplaceRoot(boolean silent) {
+    private void internalReplaceRoot() {
       root = this;
       move = null;
       parent = null;
-      if (!silent) notifyMovesChanged(this);
     }
 
     /**
      * Adds an annotation to the node
      *
      * @param annotation the annotation to add
-     * @param silent if true, don't notify listeners
      */
-    private void internalAddAnnotation(Annotation annotation, boolean silent) {
+    private void internalAddAnnotation(Annotation annotation) {
       this.annotations.add(annotation);
-      if (!silent) notifyMovesChanged(this);
     }
 
     /**
      * Deletes all annotations from the node
      *
-     * @param silent if true, don't notify listeners
      */
-    private void internalDeleteAnnotations(boolean silent) {
+    private void internalDeleteAnnotations() {
       this.annotations.clear();
-      if (!silent) notifyMovesChanged(this);
     }
 
     // GETTERS
@@ -546,7 +499,7 @@ public class GameMovesModel {
      */
     public Node addMove(@NotNull Move move) {
       validateMove(move);
-      return internalAddNode(move, false);
+      return internalAddNode(move);
     }
 
     /**
@@ -558,7 +511,7 @@ public class GameMovesModel {
      * @return the node representing the position after the added move has been made
      */
     public Node addMoveUnsafe(@NotNull Move move) {
-      return internalAddNode(move, false);
+      return internalAddNode(move);
     }
 
     /**
@@ -610,9 +563,8 @@ public class GameMovesModel {
      */
     public Node overwriteMove(@NotNull Move move) {
       validateMove(move);
-      internalRemoveAllChildren(true);
-      Node node = internalAddNode(move, true);
-      notifyMovesChanged(parent);
+      internalRemoveAllChildren();
+      Node node = internalAddNode(move);
       return node;
     }
 
@@ -643,12 +595,11 @@ public class GameMovesModel {
       validateMove(move);
 
       Node oldNode = mainNode();
-      internalRemoveAllChildren(true);
-      Node newNode = internalAddNode(move, true);
+      internalRemoveAllChildren();
+      Node newNode = internalAddNode(move);
       if (oldNode != null) {
         copyLegalNodes(newNode, oldNode);
       }
-      notifyMovesChanged(this);
       return newNode;
     }
 
@@ -673,8 +624,7 @@ public class GameMovesModel {
      * @return this node
      */
     public Node deleteRemainingMoves() {
-      internalRemoveAllChildren(false);
-      notifyMovesChanged(this);
+      internalRemoveAllChildren();
       return this;
     }
 
@@ -684,7 +634,7 @@ public class GameMovesModel {
      * @return this node
      */
     public Node deletePreviousMoves() {
-      internalReplaceRoot(false);
+      internalReplaceRoot();
       return this;
     }
 
@@ -698,7 +648,7 @@ public class GameMovesModel {
       // Swaps the parents main move with this move
       if (isRoot()) return this;
 
-      parent.internalSwapNodes(this, parent.mainNode(), false);
+      parent.internalSwapNodes(this, parent.mainNode());
       return this;
     }
 
@@ -740,7 +690,7 @@ public class GameMovesModel {
      * @throws RuntimeException if the current node is the root
      */
     public Node deleteNode() {
-      internalRemoveNode(false);
+      internalRemoveNode();
       return parent();
     }
 
@@ -750,7 +700,7 @@ public class GameMovesModel {
      * @param annotation the annotation to add
      */
     public Node addAnnotation(Annotation annotation) {
-      internalAddAnnotation(annotation, false);
+      internalAddAnnotation(annotation);
       return this;
     }
 
@@ -776,7 +726,7 @@ public class GameMovesModel {
 
     /** Clears all annotations from the position. */
     public Node deleteAnnotations() {
-      internalDeleteAnnotations(false);
+      internalDeleteAnnotations();
       return this;
     }
 
@@ -824,7 +774,7 @@ public class GameMovesModel {
       newNode.annotations.addAll(oldNode.annotations);
       for (Node child : oldNode.children()) {
         if (newNode.position.isMoveLegal(child.lastMove())) {
-          Node newChildNode = newNode.internalAddNode(child.lastMove(), true);
+          Node newChildNode = newNode.internalAddNode(child.lastMove());
           copyLegalNodes(newChildNode, child);
         }
       }
