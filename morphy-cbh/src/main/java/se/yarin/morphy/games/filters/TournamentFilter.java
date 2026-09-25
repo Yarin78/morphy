@@ -84,4 +84,9 @@ public class TournamentFilter
   public int hashCode() {
     return tournamentIds.hashCode();
   }
+
+  @Override
+  public @NotNull ItemStorageFilter<GameHeader> gameHeaderFilter() {
+    return this;
+  }
 }

@@ -86,4 +86,9 @@ public class AnnotatorFilter
   public int hashCode() {
     return annotatorIds.hashCode();
   }
+
+  @Override
+  public @NotNull ItemStorageFilter<GameHeader> gameHeaderFilter() {
+    return this;
+  }
 }

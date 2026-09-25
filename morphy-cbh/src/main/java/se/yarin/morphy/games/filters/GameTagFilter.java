@@ -1,5 +1,6 @@
 package se.yarin.morphy.games.filters;
 
+import se.yarin.morphy.games.GameHeader;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import se.yarin.morphy.entities.EntityType;
@@ -79,5 +80,10 @@ public class GameTagFilter
   @Override
   public int hashCode() {
     return gameTagIds.hashCode();
+  }
+
+  @Override
+  public @Nullable ItemStorageFilter<GameHeader> gameHeaderFilter() {
+    return null;
   }
 }

@@ -1,5 +1,6 @@
 package se.yarin.morphy.games.filters;
 
+import se.yarin.morphy.games.GameHeader;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import se.yarin.chess.GameResult;
@@ -109,5 +110,10 @@ public class TeamFilter
   @Override
   public int hashCode() {
     return java.util.Objects.hash(teamIds, matchCondition);
+  }
+
+  @Override
+  public @Nullable ItemStorageFilter<GameHeader> gameHeaderFilter() {
+    return null;
   }
 }

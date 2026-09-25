@@ -1,5 +1,6 @@
 package se.yarin.morphy.games.filters;
 
+import se.yarin.morphy.games.GameHeader;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import se.yarin.morphy.games.ExtendedGameHeader;
@@ -61,5 +62,10 @@ public class RawExtendedHeaderFilter implements ItemStorageFilter<ExtendedGameHe
   @Override
   public int hashCode() {
     return filterExpression.hashCode();
+  }
+
+  @Override
+  public @Nullable ItemStorageFilter<GameHeader> gameHeaderFilter() {
+    return null;
   }
 }

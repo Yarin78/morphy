@@ -11,7 +11,11 @@ import static org.junit.Assert.assertTrue;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Predicate;
 import org.junit.Test;
 import se.yarin.chess.Date;
 import se.yarin.morphy.api.AccessMode;
@@ -260,6 +264,43 @@ public class DatabaseCbhTest {
       assertThrows(
           IllegalArgumentException.class,
           () -> db.updateEntity(EntityKind.PLAYER, steinitz.id(), clash));
+    }
+  }
+
+  @Test
+  public void headerFiltersFindExactlyTheMatchingGames() throws IOException {
+    try (Database db = Databases.open(worldChCbh(), AccessMode.READ_ONLY)) {
+      List<GameDto> all = new ArrayList<>();
+      for (long id = 1; id <= db.gameCount(); id++) {
+        all.add(db.getGame(id, HEADERS));
+      }
+      GameDto first = all.getFirst();
+      long tournamentId = first.tournament().id();
+      long annotatorId = first.annotator().id();
+      long sourceId = first.source().id();
+
+      Map<String, Predicate<GameDto>> filters = new LinkedHashMap<>();
+      filters.put("round:3", g -> Integer.valueOf(3).equals(g.round()));
+      filters.put("eco:C67", g -> g.eco() != null && g.eco().startsWith("C67"));
+      filters.put("eco:C6*", g -> g.eco() != null && g.eco().startsWith("C6"));
+      filters.put("eco:D*", g -> g.eco() != null && g.eco().startsWith("D"));
+      filters.put(
+          "tournamentid:" + tournamentId,
+          g -> g.tournament() != null && g.tournament().id() == tournamentId);
+      filters.put(
+          "annotatorid:" + annotatorId,
+          g -> g.annotator() != null && g.annotator().id() == annotatorId);
+      filters.put("sourceid:" + sourceId, g -> g.source() != null && g.source().id() == sourceId);
+
+      for (Map.Entry<String, Predicate<GameDto>> filter : filters.entrySet()) {
+        List<Long> expected = all.stream().filter(filter.getValue()).map(GameDto::id).toList();
+        List<Long> actual =
+            ids(
+                db.findGames(
+                    Query.of(filter.getKey(), Sort.natural(), 0, (int) db.gameCount()), HEADERS));
+        assertFalse(filter.getKey() + " should match some games", expected.isEmpty());
+        assertEquals(filter.getKey(), expected, actual);
+      }
     }
   }
 

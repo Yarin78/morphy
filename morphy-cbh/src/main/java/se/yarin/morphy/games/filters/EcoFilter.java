@@ -104,12 +104,14 @@ public class EcoFilter extends IsGameFilter {
     if (!super.matchesSerialized(id, buf)) {
       return false;
     }
-    int ecoInt = ByteBufferUtil.getUnsignedShortB(buf, 35);
-    if (ecoInt == 0xFFFF) {
-      // Unset ECO code
+    // Stored as (eco + 1) * 128 + subEco, with 0 for unset and the top 960 values for the start
+    // positions of Chess960 games; see CBUtil.decodeEco
+    int stored = ByteBufferUtil.getUnsignedShortB(buf, 35);
+    if (stored >= 65536 - 960) {
       return false;
     }
-    return ecoInt >= minEco && ecoInt <= maxEco;
+    int ecoInt = stored / 128 - 1;
+    return ecoInt >= 0 && ecoInt >= minEco && ecoInt <= maxEco;
   }
 
   @Override

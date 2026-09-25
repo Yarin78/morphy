@@ -86,4 +86,9 @@ public class SourceFilter
   public int hashCode() {
     return sourceIds.hashCode();
   }
+
+  @Override
+  public @NotNull ItemStorageFilter<GameHeader> gameHeaderFilter() {
+    return this;
+  }
 }

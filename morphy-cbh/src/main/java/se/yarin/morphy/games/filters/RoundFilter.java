@@ -123,4 +123,9 @@ public class RoundFilter implements ItemStorageFilter<GameHeader>, GameFilter {
   public int hashCode() {
     return java.util.Objects.hash(round, subRound, matchSubRound);
   }
+
+  @Override
+  public @NotNull ItemStorageFilter<GameHeader> gameHeaderFilter() {
+    return this;
+  }
 }

@@ -32,4 +32,9 @@ public class TextStorageFilter implements ItemStorageFilter<GameHeader>, GameFil
   public int hashCode() {
     return getClass().hashCode();
   }
+
+  @Override
+  public @NotNull ItemStorageFilter<GameHeader> gameHeaderFilter() {
+    return this;
+  }
 }
