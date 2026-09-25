@@ -1,6 +1,7 @@
 package se.yarin.morphy;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -95,6 +96,7 @@ public class DatabaseCbhFacade implements Database, CbhDiagnostics {
    */
   private record KindSupport<E extends Entity & Comparable<E>, D>(
       @NotNull EntityType type,
+      @NotNull String file,
       @NotNull AbstractEntityQueryBuilder<E> queryBuilder,
       @NotNull Function<DatabaseTransaction, EntityIndexTransaction<E>> index,
       @NotNull BiFunction<DatabaseTransaction, E, D> toDto) {}
@@ -107,36 +109,42 @@ public class DatabaseCbhFacade implements Database, CbhDiagnostics {
             EntityKind.PLAYER,
             new KindSupport<>(
                 EntityType.PLAYER,
+                ".cbp",
                 new PlayerQueryBuilder(),
                 DatabaseTransaction::playerTransaction,
                 (txn, p) -> players.toDto(p)),
             EntityKind.TOURNAMENT,
             new KindSupport<Tournament, TournamentDto>(
                 EntityType.TOURNAMENT,
+                ".cbt",
                 new TournamentQueryBuilder(),
                 DatabaseCbhFacade::tournamentIndex,
                 (txn, t) -> tournaments.toDto(t, txn.getTournamentExtra(t.id()))),
             EntityKind.ANNOTATOR,
             new KindSupport<>(
                 EntityType.ANNOTATOR,
+                ".cbc",
                 new AnnotatorQueryBuilder(),
                 DatabaseTransaction::annotatorTransaction,
                 (txn, a) -> annotators.toDto(a)),
             EntityKind.SOURCE,
             new KindSupport<>(
                 EntityType.SOURCE,
+                ".cbs",
                 new SourceQueryBuilder(),
                 DatabaseTransaction::sourceTransaction,
                 (txn, s) -> sources.toDto(s)),
             EntityKind.TEAM,
             new KindSupport<>(
                 EntityType.TEAM,
+                ".cbe",
                 new TeamQueryBuilder(),
                 DatabaseTransaction::teamTransaction,
                 (txn, t) -> teams.toDto(t)),
             EntityKind.GAME_TAG,
             new KindSupport<>(
                 EntityType.GAME_TAG,
+                ".cbl",
                 new GameTagQueryBuilder(),
                 DatabaseTransaction::gameTagTransaction,
                 (txn, g) -> gameTags.toDto(g)));
@@ -166,7 +174,7 @@ public class DatabaseCbhFacade implements Database, CbhDiagnostics {
   @Override
   public @NotNull Capabilities capabilities() {
     boolean writable = database.isWritable();
-    return new Capabilities(writable, true, writable, true);
+    return new Capabilities(writable, true, writable);
   }
 
   private void requireWritable() {
@@ -296,8 +304,7 @@ public class DatabaseCbhFacade implements Database, CbhDiagnostics {
         fetch.includeText(),
         fetch.includeEntityDetails(),
         fetch.includeEntityDetails(),
-        fetch.includeEntityDetails(),
-        fetch.includeRawData());
+        fetch.includeEntityDetails());
   }
 
   // ── Entities ─────────────────────────────────────────────────────────────
@@ -469,6 +476,50 @@ public class DatabaseCbhFacade implements Database, CbhDiagnostics {
         QueryDescriptionFormatter.format(entityQuery),
         context -> entityPlans(context, entityQuery),
         executeAllPlans);
+  }
+
+  @Override
+  public @NotNull List<RawRecord> rawGame(long id) {
+    if (id < 1 || id > database.count()) {
+      throw new IllegalArgumentException("No game with id " + id);
+    }
+    int gameId = (int) id;
+    try (DatabaseReadTransaction txn = new DatabaseReadTransaction(database)) {
+      Game game = txn.getGame(gameId);
+      List<RawRecord> records = new ArrayList<>();
+      records.add(new RawRecord(".cbh", bytes(database.gameHeaderIndex().getRaw(gameId))));
+      records.add(
+          new RawRecord(".cbj", bytes(database.extendedGameHeaderStorage().getRaw(gameId))));
+      records.add(new RawRecord(".cbg", bytes(game.getMovesBlob())));
+      if (game.getAnnotationOffset() != 0) {
+        records.add(new RawRecord(".cba", bytes(game.getAnnotationsBlob())));
+      }
+      return records;
+    }
+  }
+
+  @Override
+  public @NotNull List<RawRecord> rawEntity(@NotNull EntityKind<?> kind, long id) {
+    KindSupport<?, ?> support = support(kind);
+    if (id < 0 || id > Integer.MAX_VALUE) {
+      throw new IllegalArgumentException("No " + kind + " with id " + id);
+    }
+    int entityId = (int) id;
+    List<RawRecord> records = new ArrayList<>();
+    records.add(
+        new RawRecord(support.file(), database.entityIndex(support.type()).getRaw(entityId)));
+    if (kind == EntityKind.TOURNAMENT) {
+      records.add(
+          new RawRecord(".cbtt", bytes(database.tournamentExtraStorage().getRaw(entityId))));
+    }
+    return records;
+  }
+
+  private static byte[] bytes(ByteBuffer buffer) {
+    ByteBuffer copy = buffer.duplicate();
+    byte[] bytes = new byte[copy.remaining()];
+    copy.get(bytes);
+    return bytes;
   }
 
   /**

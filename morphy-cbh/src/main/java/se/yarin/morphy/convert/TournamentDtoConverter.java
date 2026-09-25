@@ -21,14 +21,6 @@ public class TournamentDtoConverter {
    * @return the TournamentDto
    */
   public TournamentDto toDto(@NotNull Tournament tournament, @NotNull TournamentExtra extra) {
-    return toDto(tournament, extra, null, null);
-  }
-
-  public TournamentDto toDto(
-      @NotNull Tournament tournament,
-      @NotNull TournamentExtra extra,
-      @Nullable byte[] rawData,
-      @Nullable byte[] rawExtraData) {
     return new TournamentDto(
         (long) tournament.id(),
         tournament.title(),
@@ -51,9 +43,7 @@ public class TournamentDtoConverter {
             : extra.tiebreakRules().stream().map(TiebreakRule::tiebreakName).toList(),
         extra.latitude() != 0.0 ? extra.latitude() : null,
         extra.longitude() != 0.0 ? extra.longitude() : null,
-        tournament.count() > 0 ? tournament.count() : null,
-        rawData,
-        rawExtraData);
+        tournament.count() > 0 ? tournament.count() : null);
   }
 
   /**

@@ -5,7 +5,6 @@ import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-import se.yarin.morphy.CbhDiagnostics;
 import se.yarin.morphy.api.Database;
 import se.yarin.morphy.api.GameFetchOptions;
 import se.yarin.morphy.api.query.Query;
@@ -16,8 +15,6 @@ import se.yarin.morphy.service.databases.DatabaseService;
 import se.yarin.morphy.service.games.dto.GameSearchRequest;
 import se.yarin.morphy.service.games.dto.GameSearchResponse;
 import se.yarin.morphy.service.games.search.GameSearchRequestConverter;
-import se.yarin.morphy.service.queryplans.QueryPlanDebugInfo;
-import se.yarin.morphy.service.queryplans.QueryPlanDtoConverter;
 import se.yarin.morphy.service.search.SearchMetadata;
 
 @Service
@@ -26,15 +23,11 @@ public class GamesService {
 
   private final DatabaseService databaseService;
   private final GameSearchRequestConverter searchRequestConverter;
-  private final QueryPlanDtoConverter queryPlanDtoConverter;
 
   public GamesService(
-      DatabaseService databaseService,
-      GameSearchRequestConverter searchRequestConverter,
-      QueryPlanDtoConverter queryPlanDtoConverter) {
+      DatabaseService databaseService, GameSearchRequestConverter searchRequestConverter) {
     this.databaseService = databaseService;
     this.searchRequestConverter = searchRequestConverter;
-    this.queryPlanDtoConverter = queryPlanDtoConverter;
   }
 
   /**
@@ -55,7 +48,7 @@ public class GamesService {
     GameSearchRequest request =
         new GameSearchRequest(
             offset, limit, null, includeMoves, includeText, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null, null, null, null, null, null);
+            null, null, null, null, null, null, null, null, null, null, null);
     return searchGames(databaseId, request);
   }
 
@@ -66,7 +59,7 @@ public class GamesService {
    */
   public @Nullable GameDto getGame(
       @NotNull String databaseId, long gameId, boolean includeMoves, boolean includeText) {
-    GameFetchOptions fetch = new GameFetchOptions(includeMoves, includeText, true, false);
+    GameFetchOptions fetch = new GameFetchOptions(includeMoves, includeText, true);
     return databaseService.read(databaseId, db -> db.getGame(gameId, fetch));
   }
 
@@ -128,36 +121,25 @@ public class GamesService {
    */
   public GameSearchResponse searchGames(
       @NotNull String databaseId, @NotNull GameSearchRequest request) {
+    return databaseService.read(databaseId, db -> search(db, request));
+  }
+
+  /** Searches for games in an open database; see {@link #searchGames}. */
+  public GameSearchResponse search(@NotNull Database db, @NotNull GameSearchRequest request) {
     long startTime = System.currentTimeMillis();
     Query query = searchRequestConverter.toQuery(request);
     GameFetchOptions fetch =
-        new GameFetchOptions(
-            request.includeMoves(), request.includeText(), false, request.debugRawData());
-
-    return databaseService.read(
-        databaseId,
-        db -> {
-          ResultPage<GameDto> page = db.findGames(query, fetch);
-          QueryPlanDebugInfo debugInfo =
-              request.debugQueryPlans()
-                  ? db.extension(CbhDiagnostics.class)
-                      .map(d -> d.explainGames(query, request.debugExecuteAllPlans()))
-                      .map(queryPlanDtoConverter::toDebugInfo)
-                      .orElse(null)
-                  : null;
-          SearchMetadata metadata =
-              new SearchMetadata(
-                  page.appliedFilter(),
-                  query.sort().toString(),
-                  System.currentTimeMillis() - startTime);
-          return new GameSearchResponse(
-              page.items(),
-              page.items().size(),
-              page.total() == null ? null : page.total().intValue(),
-              page.offset(),
-              page.limit(),
-              metadata,
-              debugInfo);
-        });
+        new GameFetchOptions(request.includeMoves(), request.includeText(), false);
+    ResultPage<GameDto> page = db.findGames(query, fetch);
+    SearchMetadata metadata =
+        new SearchMetadata(
+            page.appliedFilter(), query.sort().toString(), System.currentTimeMillis() - startTime);
+    return new GameSearchResponse(
+        page.items(),
+        page.items().size(),
+        page.total() == null ? null : page.total().intValue(),
+        page.offset(),
+        page.limit(),
+        metadata);
   }
 }

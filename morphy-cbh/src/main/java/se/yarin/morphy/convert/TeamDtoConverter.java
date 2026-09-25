@@ -18,10 +18,6 @@ public class TeamDtoConverter {
    * @return the TeamDto
    */
   public TeamDto toDto(@NotNull Team team) {
-    return toDto(team, null);
-  }
-
-  public TeamDto toDto(@NotNull Team team, @Nullable byte[] rawData) {
     return new TeamDto(
         (long) team.id(),
         team.title().isEmpty() ? null : team.title(),
@@ -29,8 +25,7 @@ public class TeamDtoConverter {
         team.season() ? true : null,
         team.year() == 0 ? null : team.year(),
         team.nation() != Nation.NONE ? team.nation().getIocCode() : null,
-        team.count() > 0 ? team.count() : null,
-        rawData);
+        team.count() > 0 ? team.count() : null);
   }
 
   /**

@@ -6,7 +6,7 @@ import org.jetbrains.annotations.Nullable;
 
 /** Detailed information about a chess player. */
 @JsonInclude(JsonInclude.Include.NON_NULL)
-@JsonPropertyOrder({"id", "lastName", "firstName", "gameCount", "fideId", "chessBaseId", "rawData"})
+@JsonPropertyOrder({"id", "lastName", "firstName", "gameCount", "fideId", "chessBaseId"})
 public record PlayerDto(
     Long id,
     @Nullable String lastName,
@@ -14,5 +14,4 @@ public record PlayerDto(
     @Nullable Integer gameCount,
     // v2 superset: links to ChessBase's external player data. Unset (null) for v1 databases.
     @Nullable Long fideId,
-    @Nullable Long chessBaseId,
-    @Nullable byte[] rawData) {}
+    @Nullable Long chessBaseId) implements EntityDto {}

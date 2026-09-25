@@ -49,13 +49,7 @@ public record GameSearchRequest(
     @Nullable Integer sourceId,
     @Nullable Integer teamId,
     @Nullable String teamPosition, // "white", "black", "any", "winner", "loser"
-    @Nullable Integer gameTagId,
-
-    // Debug options
-    @Nullable Boolean debugQueryPlans, // Include query plan debug info (default false)
-    @Nullable Boolean debugExecuteAllPlans, // Execute all candidate plans for comparison (default false)
-    @Nullable Boolean debugRawData // Include raw storage bytes in response (default false)
-    ) {
+    @Nullable Integer gameTagId) {
 
   public GameSearchRequest {
     // Set defaults for null values
@@ -84,15 +78,6 @@ public record GameSearchRequest(
     }
     if (teamPosition == null || teamPosition.isBlank()) {
       teamPosition = "any";
-    }
-    if (debugQueryPlans == null) {
-      debugQueryPlans = false;
-    }
-    if (debugExecuteAllPlans == null) {
-      debugExecuteAllPlans = false;
-    }
-    if (debugRawData == null) {
-      debugRawData = false;
     }
   }
 }

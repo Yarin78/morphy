@@ -148,7 +148,7 @@ public class StdoutGamesSummary extends GameConsumerBase {
     // Build the neutral row once; the columns render from it. Moves (PGN) are materialised only
     // when a selected column needs them; full entity details are cheap enough to always include.
     GameDto dto =
-        gameDtoConverter.toDto(game, needsMoves, false, true, true, true, false);
+        gameDtoConverter.toDto(game, needsMoves, false, true, true, true);
     GameRow row = new GameRow(dto, game, game.database().name());
 
     StringBuilder sb = new StringBuilder();

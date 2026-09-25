@@ -95,13 +95,8 @@ public abstract class EntityController<T> {
       @RequestParam(required = false) String filter,
       @RequestParam(required = false) Integer offset,
       @RequestParam(required = false) Integer limit,
-      @RequestParam(required = false) String sortBy,
-      @RequestParam(required = false) Boolean debugQueryPlans,
-      @RequestParam(required = false) Boolean debugExecuteAllPlans,
-      @RequestParam(required = false) Boolean debugRawData) {
-    EntitySearchRequest request =
-        new EntitySearchRequest(
-            filter, offset, limit, sortBy, debugQueryPlans, debugExecuteAllPlans, debugRawData);
+      @RequestParam(required = false) String sortBy) {
+    EntitySearchRequest request = new EntitySearchRequest(filter, offset, limit, sortBy);
     return ResponseEntity.ok(entitiesService.search(databaseId, kind, request));
   }
 }

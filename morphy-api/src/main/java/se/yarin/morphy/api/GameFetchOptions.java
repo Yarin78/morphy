@@ -10,38 +10,29 @@ package se.yarin.morphy.api;
  * @param includeText include the body of a guiding text
  * @param includeEntityDetails give the tournament, source and teams all their fields rather than
  *     just an id and a name
- * @param includeRawData include the raw storage bytes of the record (only where {@link
- *     Capabilities#hasRawData()})
  */
 public record GameFetchOptions(
-    boolean includeMoves,
-    boolean includeText,
-    boolean includeEntityDetails,
-    boolean includeRawData) {
+    boolean includeMoves, boolean includeText, boolean includeEntityDetails) {
 
-  /** Header only: no moves, text, entity details or raw bytes. Cheapest; good for listings. */
+  /** Header only: no moves, text or entity details. Cheapest; good for listings. */
   public static GameFetchOptions headersOnly() {
-    return new GameFetchOptions(false, false, false, false);
+    return new GameFetchOptions(false, false, false);
   }
 
-  /** Everything except raw bytes: moves, text and full entity details. Good for a single game. */
+  /** Everything: moves, text and full entity details. Good for a single game. */
   public static GameFetchOptions full() {
-    return new GameFetchOptions(true, true, true, false);
+    return new GameFetchOptions(true, true, true);
   }
 
   public GameFetchOptions withMoves(boolean value) {
-    return new GameFetchOptions(value, includeText, includeEntityDetails, includeRawData);
+    return new GameFetchOptions(value, includeText, includeEntityDetails);
   }
 
   public GameFetchOptions withText(boolean value) {
-    return new GameFetchOptions(includeMoves, value, includeEntityDetails, includeRawData);
+    return new GameFetchOptions(includeMoves, value, includeEntityDetails);
   }
 
   public GameFetchOptions withEntityDetails(boolean value) {
-    return new GameFetchOptions(includeMoves, includeText, value, includeRawData);
-  }
-
-  public GameFetchOptions withRawData(boolean value) {
-    return new GameFetchOptions(includeMoves, includeText, includeEntityDetails, value);
+    return new GameFetchOptions(includeMoves, includeText, value);
   }
 }

@@ -1,14 +1,11 @@
-import {
-  searchAnnotators,
-  searchGameTags,
-  searchGames,
-  searchPlayers,
-  searchSources,
-  searchTeams,
-  searchTournaments,
-} from './api/client';
-import type { EntitySearchRequest, GameSearchRequest } from './api/types';
-import type { FilterOptionsResponse } from './api/types';
+import { ApiError, debugSearch, search } from './api/client';
+import type {
+  EntitySearchResponse,
+  FilterOptionsResponse,
+  GameSearchResponse,
+  QueryPlanDebugInfo,
+  RawRecord,
+} from './api/types';
 import {
   ANNOTATOR_COLUMNS,
   GAME_COLUMNS,
@@ -163,189 +160,90 @@ export const SORTABLE_COLUMN_MAP: Record<EntityType, Record<string, string>> = {
   },
 };
 
-type FetchOpts = {
-  gameRequest?: GameSearchRequest;
-  entitySearchRequest?: EntitySearchRequest;
-};
-
 export interface EntityConfig {
+  /** The API path segment of the entity type; also keys its stored UI settings. */
   entityKey: string;
   columns: ColumnDef[];
   countLabel: string;
   emptyMessage: string;
   keyExtractor: (row: { id: number }) => number;
-  fetch: (
-    db: string,
-    opts: FetchOpts
-  ) => Promise<{
-    data: unknown[];
-    count: number;
-    metadata?: { executionTimeMs?: number };
-    debugInfo?: unknown;
-    rawResponse: unknown;
-  }>;
+}
+
+function entityConfig(
+  entityKey: string,
+  columns: unknown,
+  countLabel: string,
+  emptyMessage: string
+): EntityConfig {
+  return {
+    entityKey,
+    columns: columns as ColumnDef[],
+    countLabel,
+    emptyMessage,
+    keyExtractor: (row) => row.id,
+  };
 }
 
 export const ENTITY_CONFIG: Record<EntityType, EntityConfig> = {
-  Games: {
-    entityKey: 'games',
-    columns: GAME_COLUMNS as ColumnDef[],
-    countLabel: 'games',
-    emptyMessage: 'No games match the search criteria.',
-    keyExtractor: (g) => g.id,
-    fetch: async (db, opts) => {
-      const res = await searchGames(db, opts.gameRequest!);
-      return {
-        data: res.games,
-        count: res.count,
-        metadata: res.metadata,
-        debugInfo: res.debugInfo,
-        rawResponse: res,
-      };
-    },
-  },
-  Players: {
-    entityKey: 'players',
-    columns: PLAYER_COLUMNS as ColumnDef[],
-    countLabel: 'players',
-    emptyMessage: 'No players found.',
-    keyExtractor: (p) => p.id,
-    fetch: async (db, opts) => {
-      const req = opts.entitySearchRequest ?? {};
-      const res = await searchPlayers(db, {
-        filter: req.filter,
-        sortBy: req.sortBy ?? '+id',
-        debugQueryPlans: req.debugQueryPlans,
-        debugExecuteAllPlans: req.debugExecuteAllPlans,
-        debugRawData: req.debugRawData,
-      });
-      return {
-        data: res.items,
-        count: res.count,
-        metadata: { executionTimeMs: res.metadata.executionTimeMs },
-        debugInfo: res.debugInfo,
-        rawResponse: res,
-      };
-    },
-  },
-  Tournaments: {
-    entityKey: 'tournaments',
-    columns: TOURNAMENT_COLUMNS as ColumnDef[],
-    countLabel: 'tournaments',
-    emptyMessage: 'No tournaments found.',
-    keyExtractor: (t) => t.id,
-    fetch: async (db, opts) => {
-      const req = opts.entitySearchRequest ?? {};
-      const res = await searchTournaments(db, {
-        filter: req.filter,
-        sortBy: req.sortBy ?? '+id',
-        debugQueryPlans: req.debugQueryPlans,
-        debugExecuteAllPlans: req.debugExecuteAllPlans,
-        debugRawData: req.debugRawData,
-      });
-      return {
-        data: res.items,
-        count: res.count,
-        metadata: { executionTimeMs: res.metadata.executionTimeMs },
-        debugInfo: res.debugInfo,
-        rawResponse: res,
-      };
-    },
-  },
-  Annotators: {
-    entityKey: 'annotators',
-    columns: ANNOTATOR_COLUMNS as ColumnDef[],
-    countLabel: 'annotators',
-    emptyMessage: 'No annotators found.',
-    keyExtractor: (a) => a.id,
-    fetch: async (db, opts) => {
-      const req = opts.entitySearchRequest ?? {};
-      const res = await searchAnnotators(db, {
-        filter: req.filter,
-        sortBy: req.sortBy ?? '+id',
-        debugQueryPlans: req.debugQueryPlans,
-        debugExecuteAllPlans: req.debugExecuteAllPlans,
-        debugRawData: req.debugRawData,
-      });
-      return {
-        data: res.items,
-        count: res.count,
-        metadata: { executionTimeMs: res.metadata.executionTimeMs },
-        debugInfo: res.debugInfo,
-        rawResponse: res,
-      };
-    },
-  },
-  Sources: {
-    entityKey: 'sources',
-    columns: SOURCE_COLUMNS as ColumnDef[],
-    countLabel: 'sources',
-    emptyMessage: 'No sources found.',
-    keyExtractor: (s) => s.id,
-    fetch: async (db, opts) => {
-      const req = opts.entitySearchRequest ?? {};
-      const res = await searchSources(db, {
-        filter: req.filter,
-        sortBy: req.sortBy ?? '+id',
-        debugQueryPlans: req.debugQueryPlans,
-        debugExecuteAllPlans: req.debugExecuteAllPlans,
-        debugRawData: req.debugRawData,
-      });
-      return {
-        data: res.items,
-        count: res.count,
-        metadata: { executionTimeMs: res.metadata.executionTimeMs },
-        debugInfo: res.debugInfo,
-        rawResponse: res,
-      };
-    },
-  },
-  Teams: {
-    entityKey: 'teams',
-    columns: TEAM_COLUMNS as ColumnDef[],
-    countLabel: 'teams',
-    emptyMessage: 'No teams found.',
-    keyExtractor: (t) => t.id,
-    fetch: async (db, opts) => {
-      const req = opts.entitySearchRequest ?? {};
-      const res = await searchTeams(db, {
-        filter: req.filter,
-        sortBy: req.sortBy ?? '+id',
-        debugQueryPlans: req.debugQueryPlans,
-        debugExecuteAllPlans: req.debugExecuteAllPlans,
-        debugRawData: req.debugRawData,
-      });
-      return {
-        data: res.items,
-        count: res.count,
-        metadata: { executionTimeMs: res.metadata.executionTimeMs },
-        debugInfo: res.debugInfo,
-        rawResponse: res,
-      };
-    },
-  },
-  GameTags: {
-    entityKey: 'gametags',
-    columns: GAMETAG_COLUMNS as ColumnDef[],
-    countLabel: 'game tags',
-    emptyMessage: 'No game tags found.',
-    keyExtractor: (g) => g.id,
-    fetch: async (db, opts) => {
-      const req = opts.entitySearchRequest ?? {};
-      const res = await searchGameTags(db, {
-        filter: req.filter,
-        sortBy: req.sortBy ?? '+id',
-        debugQueryPlans: req.debugQueryPlans,
-        debugExecuteAllPlans: req.debugExecuteAllPlans,
-        debugRawData: req.debugRawData,
-      });
-      return {
-        data: res.items,
-        count: res.count,
-        metadata: { executionTimeMs: res.metadata.executionTimeMs },
-        debugInfo: res.debugInfo,
-        rawResponse: res,
-      };
-    },
-  },
+  Games: entityConfig('games', GAME_COLUMNS, 'games', 'No games match the search criteria.'),
+  Players: entityConfig('players', PLAYER_COLUMNS, 'players', 'No players found.'),
+  Tournaments: entityConfig('tournaments', TOURNAMENT_COLUMNS, 'tournaments', 'No tournaments found.'),
+  Annotators: entityConfig('annotators', ANNOTATOR_COLUMNS, 'annotators', 'No annotators found.'),
+  Sources: entityConfig('sources', SOURCE_COLUMNS, 'sources', 'No sources found.'),
+  Teams: entityConfig('teams', TEAM_COLUMNS, 'teams', 'No teams found.'),
+  GameTags: entityConfig('gametags', GAMETAG_COLUMNS, 'game tags', 'No game tags found.'),
 };
+
+/** What a search returned, whatever the entity type. */
+export interface SearchOutcome {
+  data: unknown[];
+  count: number;
+  executionTimeMs?: number;
+  /** The query plans; absent when the database has no diagnostics. */
+  debugInfo?: QueryPlanDebugInfo;
+  /** The raw records of every returned item, keyed by its id; absent without diagnostics. */
+  raw?: Record<string, RawRecord[]>;
+  rawResponse: unknown;
+}
+
+type SearchResponse = GameSearchResponse | EntitySearchResponse<unknown>;
+
+function rows(response: SearchResponse): unknown[] {
+  return 'games' in response ? response.games : response.items;
+}
+
+/**
+ * Searches games or an entity type through the debug endpoint, which also returns the query plans
+ * and raw records. A database without diagnostics (501) gets the normal search instead.
+ *
+ * @param request the search parameters: a GameSearchRequest for Games, an EntitySearchRequest
+ *     otherwise
+ */
+export async function runSearch(
+  entityType: EntityType,
+  databaseId: string,
+  request: object,
+  executeAllPlans: boolean
+): Promise<SearchOutcome> {
+  const path = ENTITY_CONFIG[entityType].entityKey;
+  try {
+    const res = await debugSearch<SearchResponse>(databaseId, path, request, executeAllPlans);
+    return {
+      data: rows(res.result),
+      count: res.result.count,
+      executionTimeMs: res.result.metadata.executionTimeMs,
+      debugInfo: res.plans,
+      raw: res.raw,
+      rawResponse: res,
+    };
+  } catch (err) {
+    if (!(err instanceof ApiError && err.status === 501)) throw err;
+    const res = await search<SearchResponse>(databaseId, path, request);
+    return {
+      data: rows(res),
+      count: res.count,
+      executionTimeMs: res.metadata.executionTimeMs,
+      rawResponse: res,
+    };
+  }
+}

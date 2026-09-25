@@ -9,17 +9,12 @@ import org.jetbrains.annotations.Nullable;
  * @param offset number of items to skip (default 0)
  * @param limit maximum number of items to return (default 50)
  * @param sortBy sort spec: comma-separated fields with optional +/- prefix (default "default")
- * @param debugQueryPlans include query plan debug info (default false)
- * @param debugExecuteAllPlans execute all candidate plans for comparison (default false)
  */
 public record EntitySearchRequest(
     @Nullable String filter,
     @Nullable Integer offset,
     @Nullable Integer limit,
-    @Nullable String sortBy,
-    @Nullable Boolean debugQueryPlans,
-    @Nullable Boolean debugExecuteAllPlans,
-    @Nullable Boolean debugRawData) {
+    @Nullable String sortBy) {
 
   public EntitySearchRequest {
     if (offset == null) {
@@ -30,15 +25,6 @@ public record EntitySearchRequest(
     }
     if (sortBy == null || sortBy.isBlank()) {
       sortBy = "default";
-    }
-    if (debugQueryPlans == null) {
-      debugQueryPlans = false;
-    }
-    if (debugExecuteAllPlans == null) {
-      debugExecuteAllPlans = false;
-    }
-    if (debugRawData == null) {
-      debugRawData = false;
     }
   }
 }

@@ -8,7 +8,5 @@ package se.yarin.morphy.api;
  * @param hasEntities the database has a separate entity store (players, tournaments, …) that can
  *     be read and searched
  * @param canEditEntities entities may be updated
- * @param hasRawData game and entity records can be returned with their raw storage bytes
  */
-public record Capabilities(
-    boolean canWrite, boolean hasEntities, boolean canEditEntities, boolean hasRawData) {}
+public record Capabilities(boolean canWrite, boolean hasEntities, boolean canEditEntities) {}

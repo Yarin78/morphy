@@ -19,10 +19,6 @@ public class SourceDtoConverter {
    * @return the SourceDto
    */
   public SourceDto toDto(@NotNull Source source) {
-    return toDto(source, null);
-  }
-
-  public SourceDto toDto(@NotNull Source source, @Nullable byte[] rawData) {
     return new SourceDto(
         (long) source.id(),
         source.title().isEmpty() ? null : source.title(),
@@ -31,8 +27,7 @@ public class SourceDtoConverter {
         source.date().isUnset() ? null : source.date(),
         source.version() == 0 ? null : source.version(),
         source.quality() == SourceQuality.UNSET ? null : source.quality().name(),
-        source.count() > 0 ? source.count() : null,
-        rawData);
+        source.count() > 0 ? source.count() : null);
   }
 
   /**

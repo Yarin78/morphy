@@ -19,15 +19,10 @@ public class AnnotatorDtoConverter {
    * @return the AnnotatorDto
    */
   public AnnotatorDto toDto(@NotNull Annotator annotator) {
-    return toDto(annotator, null);
-  }
-
-  public AnnotatorDto toDto(@NotNull Annotator annotator, @Nullable byte[] rawData) {
     return new AnnotatorDto(
         (long) annotator.id(),
         annotator.name().isEmpty() ? null : annotator.name(),
-        annotator.count() > 0 ? annotator.count() : null,
-        rawData);
+        annotator.count() > 0 ? annotator.count() : null);
   }
 
   /**

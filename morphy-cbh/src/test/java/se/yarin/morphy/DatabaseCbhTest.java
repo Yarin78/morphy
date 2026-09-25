@@ -1,5 +1,6 @@
 package se.yarin.morphy;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -9,6 +10,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.List;
 import org.junit.Test;
 import se.yarin.chess.Date;
@@ -174,6 +176,41 @@ public class DatabaseCbhTest {
     }
   }
 
+  @Test
+  public void rawRecordsMatchTheStorage() throws IOException {
+    DatabaseCbh engine = DatabaseCbh.open(worldChCbh(), DatabaseMode.READ_ONLY);
+    try (DatabaseCbhFacade db = new DatabaseCbhFacade(engine)) {
+      // Game 1 is annotated, game 73 is not
+      List<CbhDiagnostics.RawRecord> game = db.rawGame(1);
+      assertEquals(List.of(".cbh", ".cbj", ".cbg", ".cba"), files(game));
+      assertArrayEquals(bytes(engine.gameHeaderIndex().getRaw(1)), game.get(0).bytes());
+      assertArrayEquals(bytes(engine.extendedGameHeaderStorage().getRaw(1)), game.get(1).bytes());
+      assertArrayEquals(bytes(engine.getGame(1).getMovesBlob()), game.get(2).bytes());
+      assertArrayEquals(bytes(engine.getGame(1).getAnnotationsBlob()), game.get(3).bytes());
+      assertEquals(List.of(".cbh", ".cbj", ".cbg"), files(db.rawGame(73)));
+
+      List<CbhDiagnostics.RawRecord> player = db.rawEntity(EntityKind.PLAYER, 1);
+      assertEquals(List.of(".cbp"), files(player));
+      assertArrayEquals(engine.playerIndex().getRaw(1), player.get(0).bytes());
+
+      List<CbhDiagnostics.RawRecord> tournament = db.rawEntity(EntityKind.TOURNAMENT, 0);
+      assertEquals(List.of(".cbt", ".cbtt"), files(tournament));
+
+      assertThrows(IllegalArgumentException.class, () -> db.rawGame(100_000));
+    }
+  }
+
+  private static List<String> files(List<CbhDiagnostics.RawRecord> records) {
+    return records.stream().map(CbhDiagnostics.RawRecord::file).toList();
+  }
+
+  private static byte[] bytes(ByteBuffer buffer) {
+    ByteBuffer copy = buffer.duplicate();
+    byte[] bytes = new byte[copy.remaining()];
+    copy.get(bytes);
+    return bytes;
+  }
+
   // ── Entities ──────────────────────────────────────────────────────────────
 
   @Test
@@ -203,7 +240,7 @@ public class DatabaseCbhTest {
     try (Database db = Databases.open(worldChCbh(), AccessMode.READ_WRITE)) {
       PlayerDto steinitz = findPlayer(db, "Steinitz");
       PlayerDto renamed =
-          new PlayerDto(steinitz.id(), "Steinitz", "Wilhelm", null, null, null, null);
+          new PlayerDto(steinitz.id(), "Steinitz", "Wilhelm", null, null, null);
 
       PlayerDto updated = db.updateEntity(EntityKind.PLAYER, steinitz.id(), renamed);
       assertEquals("Wilhelm", updated.firstName());
@@ -219,7 +256,7 @@ public class DatabaseCbhTest {
       PlayerDto chigorin = findPlayer(db, "Chigorin");
       PlayerDto clash =
           new PlayerDto(
-              steinitz.id(), chigorin.lastName(), chigorin.firstName(), null, null, null, null);
+              steinitz.id(), chigorin.lastName(), chigorin.firstName(), null, null, null);
       assertThrows(
           IllegalArgumentException.class,
           () -> db.updateEntity(EntityKind.PLAYER, steinitz.id(), clash));

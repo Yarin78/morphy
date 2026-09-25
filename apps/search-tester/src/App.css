@@ -896,3 +896,10 @@
   border-color: #4a90d9;
   color: #4a90d9;
 }
+
+.results-panel .results-table .raw-data-subtable td.raw-data-file-cell {
+  width: 1%;
+  padding-left: 4px;
+  white-space: nowrap;
+  color: #5f6b7a;
+}

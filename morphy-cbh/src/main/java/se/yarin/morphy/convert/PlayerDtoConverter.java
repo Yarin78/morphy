@@ -17,18 +17,13 @@ public class PlayerDtoConverter {
    * @return the PlayerDto
    */
   public PlayerDto toDto(@NotNull Player player) {
-    return toDto(player, null);
-  }
-
-  public PlayerDto toDto(@NotNull Player player, @Nullable byte[] rawData) {
     return new PlayerDto(
         (long) player.id(),
         player.lastName().isEmpty() ? null : player.lastName(),
         player.firstName().isEmpty() ? null : player.firstName(),
         player.count() > 0 ? player.count() : null,
         null, // fideId — v2 only
-        null, // chessBaseId — v2 only
-        rawData);
+        null);
   }
 
   /**

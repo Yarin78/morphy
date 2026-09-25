@@ -26,9 +26,7 @@ import se.yarin.chess.Date;
   "tiebreakRules",
   "latitude",
   "longitude",
-  "gameCount",
-  "rawData",
-  "rawExtraData"
+  "gameCount"
 })
 public record TournamentDto(
     Long id,
@@ -48,6 +46,4 @@ public record TournamentDto(
     @Nullable List<String> tiebreakRules,
     @Nullable Double latitude,
     @Nullable Double longitude,
-    @Nullable Integer gameCount,
-    @Nullable byte[] rawData,
-    @Nullable byte[] rawExtraData) {}
+    @Nullable Integer gameCount) implements EntityDto {}

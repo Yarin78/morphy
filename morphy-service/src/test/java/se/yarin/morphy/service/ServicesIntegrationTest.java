@@ -17,7 +17,11 @@ import se.yarin.chess.NAG;
 import se.yarin.morphy.DatabaseCbh;
 import se.yarin.morphy.model.AnnotatorDto;
 import se.yarin.morphy.api.EntityKind;
+import java.util.List;
 import se.yarin.morphy.service.databases.DatabaseService;
+import se.yarin.morphy.service.debug.DebugService;
+import se.yarin.morphy.service.debug.RawRecordDto;
+import se.yarin.morphy.service.games.dto.GameSearchRequest;
 import se.yarin.morphy.service.entities.EntitiesService;
 import se.yarin.morphy.service.games.GamesService;
 import se.yarin.morphy.model.GameDto;
@@ -44,6 +48,7 @@ class ServicesIntegrationTest {
   @Autowired private DatabaseService databaseService;
   @Autowired private GamesService gamesService;
   @Autowired private EntitiesService entitiesService;
+  @Autowired private DebugService debugService;
 
   private String databaseId;
 
@@ -63,6 +68,48 @@ class ServicesIntegrationTest {
     // Unregister the database after each test
     if (databaseId != null) {
       databaseService.unregisterDatabase(databaseId);
+    }
+  }
+
+  @Test
+  void debugSearchReturnsPlansAndRawRecordsOfTheReturnedItems() {
+    gamesService.addGame(databaseId, createComprehensiveGame("Carlsen", "Magnus"));
+    gamesService.addGame(databaseId, createMinimalGame());
+
+    GameSearchRequest gameRequest =
+        new GameSearchRequest(
+            0, 10, null, false, false, "Carlsen", null, null, null, null, null, null, null, null,
+            null, null, null, null, null, null, null, null);
+    var games = debugService.searchGames(databaseId, gameRequest, true);
+    List<Long> gameIds = games.result().games().stream().map(GameDto::id).toList();
+    assertEquals(1, gameIds.size());
+    assertEquals(gameIds, List.copyOf(games.raw().keySet()));
+    List<String> gameFiles =
+        games.raw().get(gameIds.getFirst()).stream().map(RawRecordDto::file).toList();
+    assertEquals(List.of(".cbh", ".cbj", ".cbg", ".cba"), gameFiles);
+    assertFalse(games.plans().plans().isEmpty());
+
+    var players =
+        debugService.searchEntities(
+            databaseId, EntityKind.PLAYER, new EntitySearchRequest(null, 0, 10, null), false);
+    List<Long> playerIds = players.result().items().stream().map(PlayerDto::id).toList();
+    assertEquals(4, playerIds.size());
+    assertEquals(playerIds, List.copyOf(players.raw().keySet()));
+    players.raw().values().forEach(r -> assertEquals(".cbp", r.getFirst().file()));
+  }
+
+  @Test
+  void debugSearchIsRefusedForADatabaseWithoutDiagnostics() throws IOException {
+    File v2File = new File("../test-databases/wch2/wch2.2cbh");
+    databaseService.registerDatabase("v2-debug", "V2 Database", v2File.getAbsolutePath());
+    try {
+      assertThrows(
+          UnsupportedOperationException.class,
+          () ->
+              debugService.searchEntities(
+                  "v2-debug", EntityKind.PLAYER, new EntitySearchRequest(null, 0, 10, null), false));
+    } finally {
+      databaseService.unregisterDatabase("v2-debug");
     }
   }
 
@@ -127,13 +174,13 @@ class ServicesIntegrationTest {
             false,
             null,
             null,
-            null, null,null, null);
+            null, null);
     entitiesService.update(databaseId, EntityKind.TOURNAMENT, game2TournamentId, updatedTournament);
 
     // Step 6: Update team from game 1 with new metadata
     TeamDto updatedTeam =
         new TeamDto(
-            (long) game1WhiteTeamId, "Updated Team Title", 42, true, 2024, "NOR", null, null);
+            (long) game1WhiteTeamId, "Updated Team Title", 42, true, 2024, "NOR", null);
     entitiesService.update(databaseId, EntityKind.TEAM, game1WhiteTeamId, updatedTeam);
 
     // Step 7: Update source from game 2 with more data
@@ -146,7 +193,7 @@ class ServicesIntegrationTest {
             new Date(2024, 7, 1),
             2,
             "HIGH", // Must be enum value: UNSET, HIGH, MEDIUM, LOW
-            null, null);
+            null);
     entitiesService.update(databaseId, EntityKind.SOURCE, game2SourceId, updatedSource);
 
     // Step 8: Update game 2 - change moves slightly and add annotator
@@ -169,11 +216,11 @@ class ServicesIntegrationTest {
             NAG.WHITE_MODERATE_ADVANTAGE,
             game2.tournament(),
             game2.source(),
-            new AnnotatorDto(null, "GM Bobby Fischer", null, null),
+            new AnnotatorDto(null, "GM Bobby Fischer", null),
             null,
             null, null, null, null, null, null, null, null, null, null, null, null, null,
             new GameMovesDto("1. d4 Nf6 2. c4 e6 3. Nc3 Bb4 4. e3 O-O 5. Bd3 d5 1-0"),
-            null, null, null);
+            null);
     gamesService.replaceGame(databaseId, game2Id, game2Updated);
 
     // Step 9: Get first game and verify all fields match as expected
@@ -273,7 +320,7 @@ class ServicesIntegrationTest {
             null,
             null,
             null,
-            null, null, null, null);
+            null, null);
 
     TournamentDto tournament2 =
         new TournamentDto(
@@ -293,7 +340,7 @@ class ServicesIntegrationTest {
             null,
             null,
             null,
-            null, null, null, null);
+            null, null);
 
     // Create games with these tournaments to make them persist
     GameDto game1 = createMinimalGameWithTournament(tournament1);
@@ -324,7 +371,7 @@ class ServicesIntegrationTest {
             null,
             null,
             null,
-            null, null, null, null);
+            null, null);
 
     assertThrows(
         IllegalArgumentException.class,
@@ -353,7 +400,7 @@ class ServicesIntegrationTest {
             null,
             null,
             null,
-            null, null, null, null);
+            null, null);
 
     // Create game with this tournament
     GameDto game = createMinimalGameWithTournament(tournament);
@@ -379,7 +426,7 @@ class ServicesIntegrationTest {
             null,
             null,
             null,
-            null, null, null, null);
+            null, null);
 
     // Should not throw
     assertDoesNotThrow(
@@ -412,7 +459,7 @@ class ServicesIntegrationTest {
             null,
             null,
             null,
-            null, null, null, null);
+            null, null);
 
     // Create game with this tournament
     GameDto game = createMinimalGameWithTournament(tournament);
@@ -438,7 +485,7 @@ class ServicesIntegrationTest {
             false,
             null,
             null,
-            null, null, null, null);
+            null, null);
 
     // Should not throw
     assertDoesNotThrow(
@@ -463,7 +510,7 @@ class ServicesIntegrationTest {
     int player2Id = game2.whitePlayer().id().intValue();
 
     // Try to update player2 to match player1's name
-    PlayerDto duplicateUpdate = new PlayerDto((long) player2Id, "Carlsen", "Magnus", null, null, null, null);
+    PlayerDto duplicateUpdate = new PlayerDto((long) player2Id, "Carlsen", "Magnus", null, null, null);
 
     assertThrows(
         IllegalArgumentException.class,
@@ -483,7 +530,7 @@ class ServicesIntegrationTest {
     int annotator2Id = game2.annotator().id().intValue();
 
     // Try to update annotator2 to match annotator1's name
-    AnnotatorDto duplicateUpdate = new AnnotatorDto((long) annotator2Id, "GM Hikaru Nakamura", null, null);
+    AnnotatorDto duplicateUpdate = new AnnotatorDto((long) annotator2Id, "GM Hikaru Nakamura", null);
 
     assertThrows(
         IllegalArgumentException.class,
@@ -499,7 +546,7 @@ class ServicesIntegrationTest {
 
     // Search for "Candidates" - should match "Candidates Tournament 2024"
     EntitySearchResponse<TournamentDto> response =
-        entitiesService.search(databaseId, EntityKind.TOURNAMENT, new EntitySearchRequest("Candidates", null, null, null, null, null, null));
+        entitiesService.search(databaseId, EntityKind.TOURNAMENT, new EntitySearchRequest("Candidates", null, null, null));
 
     assertEquals(1, response.count());
     assertTrue(response.items().get(0).title().contains("Candidates"));
@@ -515,7 +562,7 @@ class ServicesIntegrationTest {
 
     // Empty filter should return all tournaments with games
     EntitySearchResponse<TournamentDto> response =
-        entitiesService.search(databaseId, EntityKind.TOURNAMENT, new EntitySearchRequest(null, null, null, null, null, null, null));
+        entitiesService.search(databaseId, EntityKind.TOURNAMENT, new EntitySearchRequest(null, null, null, null));
 
     assertEquals(2, response.count());
   }
@@ -527,13 +574,13 @@ class ServicesIntegrationTest {
 
     // Get first page (limit=1)
     EntitySearchResponse<TournamentDto> page1 =
-        entitiesService.search(databaseId, EntityKind.TOURNAMENT, new EntitySearchRequest(null, 0, 1, null, null, null, null));
+        entitiesService.search(databaseId, EntityKind.TOURNAMENT, new EntitySearchRequest(null, 0, 1, null));
     assertEquals(1, page1.count());
     assertEquals(2, page1.totalCount().intValue());
 
     // Get second page
     EntitySearchResponse<TournamentDto> page2 =
-        entitiesService.search(databaseId, EntityKind.TOURNAMENT, new EntitySearchRequest(null, 1, 1, null, null, null, null));
+        entitiesService.search(databaseId, EntityKind.TOURNAMENT, new EntitySearchRequest(null, 1, 1, null));
     assertEquals(1, page2.count());
 
     // Different tournaments on each page
@@ -547,7 +594,7 @@ class ServicesIntegrationTest {
 
     // Search for "Car" prefix - should match Carlsen and Caruana
     EntitySearchResponse<PlayerDto> response =
-        entitiesService.search(databaseId, EntityKind.PLAYER, new EntitySearchRequest("Car", null, null, null, null, null, null));
+        entitiesService.search(databaseId, EntityKind.PLAYER, new EntitySearchRequest("Car", null, null, null));
 
     assertEquals(2, response.count());
   }
@@ -559,11 +606,11 @@ class ServicesIntegrationTest {
 
     // Search all players sorted by name ascending
     EntitySearchResponse<PlayerDto> ascResponse =
-        entitiesService.search(databaseId, EntityKind.PLAYER, new EntitySearchRequest(null, null, null, "name", null, null, null));
+        entitiesService.search(databaseId, EntityKind.PLAYER, new EntitySearchRequest(null, null, null, "name"));
 
     // Search all players sorted by name descending
     EntitySearchResponse<PlayerDto> descResponse =
-        entitiesService.search(databaseId, EntityKind.PLAYER, new EntitySearchRequest(null, null, null, "-name", null, null, null));
+        entitiesService.search(databaseId, EntityKind.PLAYER, new EntitySearchRequest(null, null, null, "-name"));
 
     assertTrue(ascResponse.count() > 1);
     assertEquals(ascResponse.count(), descResponse.count());
@@ -580,7 +627,7 @@ class ServicesIntegrationTest {
 
     // Search for non-existent player
     EntitySearchResponse<PlayerDto> response =
-        entitiesService.search(databaseId, EntityKind.PLAYER, new EntitySearchRequest("Zzzzz", null, null, null, null, null, null));
+        entitiesService.search(databaseId, EntityKind.PLAYER, new EntitySearchRequest("Zzzzz", null, null, null));
 
     assertEquals(0, response.count());
     assertEquals(0, response.totalCount().intValue());
@@ -595,12 +642,12 @@ class ServicesIntegrationTest {
         null,
         "game",
         null,
-        new PlayerDto(null, whiteLastName, whiteFirstName, null, null, null, null),
+        new PlayerDto(null, whiteLastName, whiteFirstName, null, null, null),
         2863,
-        new PlayerDto(null, "Caruana", "Fabiano", null, null, null, null),
+        new PlayerDto(null, "Caruana", "Fabiano", null, null, null),
         2832,
-        new TeamDto(null, "Team Norway", 1, false, 2024, "NOR", null, null),
-        new TeamDto(null, "Team USA", 2, false, 2024, "USA", null, null),
+        new TeamDto(null, "Team Norway", 1, false, 2024, "NOR", null),
+        new TeamDto(null, "Team USA", 2, false, 2024, "USA", null),
         GameResult.WHITE_WINS,
         new Date(2024, 3, 15),
         "C42",
@@ -624,7 +671,7 @@ class ServicesIntegrationTest {
             false,
             null,
             null,
-            null, null, null, null),
+            null, null),
         new SourceDto(
             null,
             "FIDE Live Games",
@@ -633,15 +680,15 @@ class ServicesIntegrationTest {
             new Date(2024, 3, 15),
             1,
             null,
-            null, null),
-        new AnnotatorDto(null, "GM Hikaru Nakamura", null, null),
+            null),
+        new AnnotatorDto(null, "GM Hikaru Nakamura", null),
         null,
         null, null, null, null, null, null, null, null, null, null, null, null, null,
         new GameMovesDto(
             "1. e4 e5 {The King's Pawn opening.} (1... c5 {Sicilian Defense}) "
                 + "2. Nf3 Nc6 3. Bb5 a6 4. Ba4 Nf6 5. O-O Be7 6. Re1 b5 "
                 + "7. Bb3 d6 8. c3 O-O 9. h3 Nb8 10. d4 Nbd7 1-0"),
-        null, null, null);
+        null);
   }
 
   /**
@@ -653,9 +700,9 @@ class ServicesIntegrationTest {
         null,
         "game",
         null,
-        new PlayerDto(null, "Kasparov", "Garry", null, null, null, null),
+        new PlayerDto(null, "Kasparov", "Garry", null, null, null),
         null,
-        new PlayerDto(null, "Karpov", "Anatoly", null, null, null, null),
+        new PlayerDto(null, "Karpov", "Anatoly", null, null, null),
         null,
         null,
         null,
@@ -682,13 +729,13 @@ class ServicesIntegrationTest {
             null,
             null,
             null,
-            null, null, null, null),
-        new SourceDto(null, "ChessBase Database", "ChessBase", null, null, null, null, null, null),
+            null, null),
+        new SourceDto(null, "ChessBase Database", "ChessBase", null, null, null, null, null),
         null,
         null,
         null, null, null, null, null, null, null, null, null, null, null, null, null,
         new GameMovesDto("1. e4 c5 2. Nf3 d6 3. d4 cxd4 4. Nxd4 Nf6 *"),
-        null, null, null);
+        null);
   }
 
   /** Creates a minimal game with a specific tournament. */
@@ -697,9 +744,9 @@ class ServicesIntegrationTest {
         null,
         "game",
         null,
-        new PlayerDto(null, "Doe", "John", null, null, null, null),
+        new PlayerDto(null, "Doe", "John", null, null, null),
         null,
-        new PlayerDto(null, "Doe", "Jane", null, null, null, null),
+        new PlayerDto(null, "Doe", "Jane", null, null, null),
         null,
         null,
         null,
@@ -710,12 +757,12 @@ class ServicesIntegrationTest {
         null,
         null,
         tournament,
-        new SourceDto(null, "Test Source", "Test", null, null, null, null, null, null),
+        new SourceDto(null, "Test Source", "Test", null, null, null, null, null),
         null,
         null,
         null, null, null, null, null, null, null, null, null, null, null, null, null,
         new GameMovesDto("1. e4 e5 *"),
-        null, null, null);
+        null);
   }
 
   /** Creates a minimal game with a specific white player. */
@@ -724,9 +771,9 @@ class ServicesIntegrationTest {
         null,
         "game",
         null,
-        new PlayerDto(null, lastName, firstName, null, null, null, null),
+        new PlayerDto(null, lastName, firstName, null, null, null),
         null,
-        new PlayerDto(null, "Opponent", "Test", null, null, null, null),
+        new PlayerDto(null, "Opponent", "Test", null, null, null),
         null,
         null,
         null,
@@ -736,13 +783,13 @@ class ServicesIntegrationTest {
         null,
         null,
         null,
-        new TournamentDto(null, "Test Event", new Date(2024, 1, 1), null, "Test City", null, null, null, null, null, null, null, null, null, null, null, null, null, null, null),
-        new SourceDto(null, "Test Source", "Test", null, null, null, null, null, null),
+        new TournamentDto(null, "Test Event", new Date(2024, 1, 1), null, "Test City", null, null, null, null, null, null, null, null, null, null, null, null, null),
+        new SourceDto(null, "Test Source", "Test", null, null, null, null, null),
         null,
         null,
         null, null, null, null, null, null, null, null, null, null, null, null, null,
         new GameMovesDto("1. e4 e5 *"),
-        null, null, null);
+        null);
   }
 
   /** Creates a minimal game with a specific annotator. */
@@ -751,9 +798,9 @@ class ServicesIntegrationTest {
         null,
         "game",
         null,
-        new PlayerDto(null, "Player", "Test", null, null, null, null),
+        new PlayerDto(null, "Player", "Test", null, null, null),
         null,
-        new PlayerDto(null, "Opponent", "Test", null, null, null, null),
+        new PlayerDto(null, "Opponent", "Test", null, null, null),
         null,
         null,
         null,
@@ -763,12 +810,12 @@ class ServicesIntegrationTest {
         null,
         null,
         null,
-        new TournamentDto(null, "Test Event", new Date(2024, 1, 1), null, "Test City", null, null, null, null, null, null, null, null, null, null, null, null, null, null, null),
-        new SourceDto(null, "Test Source", "Test", null, null, null, null, null, null),
-        new AnnotatorDto(null, annotatorName, null, null),
+        new TournamentDto(null, "Test Event", new Date(2024, 1, 1), null, "Test City", null, null, null, null, null, null, null, null, null, null, null, null, null),
+        new SourceDto(null, "Test Source", "Test", null, null, null, null, null),
+        new AnnotatorDto(null, annotatorName, null),
         null,
         null, null, null, null, null, null, null, null, null, null, null, null, null,
         new GameMovesDto("1. e4 e5 *"),
-        null, null, null);
+        null);
   }
 }

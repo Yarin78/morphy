@@ -6,15 +6,13 @@ import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-import se.yarin.morphy.CbhDiagnostics;
+import se.yarin.morphy.api.Database;
 import se.yarin.morphy.api.EntityKind;
 import se.yarin.morphy.api.query.Query;
 import se.yarin.morphy.api.query.ResultPage;
 import se.yarin.morphy.api.query.Sort;
 import se.yarin.morphy.service.MorphyServiceException;
 import se.yarin.morphy.service.databases.DatabaseService;
-import se.yarin.morphy.service.queryplans.QueryPlanDebugInfo;
-import se.yarin.morphy.service.queryplans.QueryPlanDtoConverter;
 import se.yarin.morphy.service.search.EntitySearchRequest;
 import se.yarin.morphy.service.search.EntitySearchResponse;
 import se.yarin.morphy.service.search.SearchMetadata;
@@ -34,21 +32,15 @@ public class EntitiesService {
   public static final int MAX_LIMIT = 1000;
 
   private final DatabaseService databaseService;
-  private final QueryPlanDtoConverter queryPlanDtoConverter;
 
-  public EntitiesService(
-      DatabaseService databaseService, QueryPlanDtoConverter queryPlanDtoConverter) {
+  public EntitiesService(DatabaseService databaseService) {
     this.databaseService = databaseService;
-    this.queryPlanDtoConverter = queryPlanDtoConverter;
   }
 
   /** Lists the entities of a kind in their natural order. */
   public <T> EntitySearchResponse<T> list(
       @NotNull String databaseId, @NotNull EntityKind<T> kind, int offset, int limit) {
-    return search(
-        databaseId,
-        kind,
-        new EntitySearchRequest(null, offset, limit, null, false, false, false));
+    return search(databaseId, kind, new EntitySearchRequest(null, offset, limit, null));
   }
 
   /**
@@ -92,39 +84,35 @@ public class EntitiesService {
       @NotNull String databaseId,
       @NotNull EntityKind<T> kind,
       @NotNull EntitySearchRequest request) {
-    long startTime = System.currentTimeMillis();
-    Query query =
-        new Query(
-            request.filter(),
-            List.of(),
-            Sort.parse(request.sortBy()),
-            Math.max(0, request.offset()),
-            Math.min(MAX_LIMIT, Math.max(1, request.limit())));
+    return databaseService.read(databaseId, db -> search(db, kind, request));
+  }
 
-    return databaseService.read(
-        databaseId,
-        db -> {
-          ResultPage<T> page = db.findEntities(kind, query);
-          QueryPlanDebugInfo debugInfo =
-              request.debugQueryPlans()
-                  ? db.extension(CbhDiagnostics.class)
-                      .map(d -> d.explainEntities(kind, query, request.debugExecuteAllPlans()))
-                      .map(queryPlanDtoConverter::toDebugInfo)
-                      .orElse(null)
-                  : null;
-          SearchMetadata metadata =
-              new SearchMetadata(
-                  page.appliedFilter(),
-                  query.sort().toString(),
-                  System.currentTimeMillis() - startTime);
-          return new EntitySearchResponse<>(
-              page.items(),
-              page.items().size(),
-              page.total() == null ? null : page.total().intValue(),
-              page.offset(),
-              page.limit(),
-              metadata,
-              debugInfo);
-        });
+  /** Searches for entities of a kind in an already open database. */
+  public <T> EntitySearchResponse<T> search(
+      @NotNull Database db, @NotNull EntityKind<T> kind, @NotNull EntitySearchRequest request) {
+    long startTime = System.currentTimeMillis();
+    ResultPage<T> page = db.findEntities(kind, toQuery(request));
+    SearchMetadata metadata =
+        new SearchMetadata(
+            page.appliedFilter(),
+            Sort.parse(request.sortBy()).toString(),
+            System.currentTimeMillis() - startTime);
+    return new EntitySearchResponse<>(
+        page.items(),
+        page.items().size(),
+        page.total() == null ? null : page.total().intValue(),
+        page.offset(),
+        page.limit(),
+        metadata);
+  }
+
+  /** The query an entity search request runs; the window is clamped to {@link #MAX_LIMIT}. */
+  public static Query toQuery(@NotNull EntitySearchRequest request) {
+    return new Query(
+        request.filter(),
+        List.of(),
+        Sort.parse(request.sortBy()),
+        Math.max(0, request.offset()),
+        Math.min(MAX_LIMIT, Math.max(1, request.limit())));
   }
 }

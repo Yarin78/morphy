@@ -9,7 +9,8 @@ import se.yarin.morphy.queries.operations.QueryOperator;
 
 /**
  * Diagnostics specific to the v1 ({@code .cbh}) format, reached through {@link
- * se.yarin.morphy.api.Database#extension(Class)}: how the query planner executes a search.
+ * se.yarin.morphy.api.Database#extension(Class)}: how the query planner executes a search, and the
+ * raw records behind games and entities.
  */
 public interface CbhDiagnostics {
 
@@ -28,6 +29,32 @@ public interface CbhDiagnostics {
   @NotNull
   QueryExplanation explainEntities(
       @NotNull EntityKind<?> kind, @NotNull Query query, boolean executeAllPlans);
+
+  /**
+   * The raw records behind a game: its {@code .cbh} header, its {@code .cbj} extended header, its
+   * moves (or guiding text) in {@code .cbg}, and its annotations in {@code .cba} if it has any.
+   *
+   * @throws IllegalArgumentException if there is no game with that id
+   */
+  @NotNull
+  List<RawRecord> rawGame(long id);
+
+  /**
+   * The raw records behind an entity: its record in the entity's index file ({@code .cbp},
+   * {@code .cbt}, …), and for a tournament also its {@code .cbtt} record.
+   *
+   * @throws IllegalArgumentException if there is no entity of that kind with that id
+   */
+  @NotNull
+  List<RawRecord> rawEntity(@NotNull EntityKind<?> kind, long id);
+
+  /**
+   * One stored record.
+   *
+   * @param file the extension of the file it is stored in, e.g. {@code ".cbh"}
+   * @param bytes the record's bytes
+   */
+  record RawRecord(@NotNull String file, byte @NotNull [] bytes) {}
 
   /**
    * The candidate plans for a search.

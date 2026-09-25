@@ -25,6 +25,9 @@ This document describes the architecture of the Morphy library, explaining how c
 > **morphy-cbh**: `DatabaseCbh` is the engine, and `DatabaseCbhFacade` wraps it as the
 > `Database` facade. The v2 (`.2cbh`) stub `Database2Cbh` lives in **morphy-cb2**. Open
 > any format with `Databases.open(file)`.
+> Debugging data stays off the facade: `DatabaseCbhFacade` also offers `CbhDiagnostics`
+> through `Database.extension(CbhDiagnostics.class)`, with query-plan explanations and the
+> raw stored records of a game or entity. The service's `/debug/.../search` endpoints use it.
 > The rest of this document describes the v1 internals, which are unchanged.
 
 Morphy is structured as a layered library with clear separation of concerns:

@@ -94,8 +94,6 @@ class GameSearchRequestConverterTest {
     private Integer teamId;
     private String teamPosition;
     private Integer gameTagId;
-    private Boolean debugQueryPlans;
-    private Boolean debugExecuteAllPlans;
 
     TestRequestBuilder offset(Integer offset) {
       this.offset = offset;
@@ -207,16 +205,6 @@ class GameSearchRequestConverterTest {
       return this;
     }
 
-    TestRequestBuilder debugQueryPlans(Boolean debugQueryPlans) {
-      this.debugQueryPlans = debugQueryPlans;
-      return this;
-    }
-
-    TestRequestBuilder debugExecuteAllPlans(Boolean debugExecuteAllPlans) {
-      this.debugExecuteAllPlans = debugExecuteAllPlans;
-      return this;
-    }
-
     GameSearchRequest build() {
       return new GameSearchRequest(
           offset,
@@ -240,10 +228,7 @@ class GameSearchRequestConverterTest {
           sourceId,
           teamId,
           teamPosition,
-          gameTagId,
-          debugQueryPlans,
-          debugExecuteAllPlans,
-          null);
+          gameTagId);
     }
   }
 
@@ -696,7 +681,6 @@ class GameSearchRequestConverterTest {
       assertEquals(EntityType.SOURCE, join.getEntityType());
       assertEquals(1, join.entityQuery().filters().size());
     }
-
 
     @Test
     @DisplayName("should create GameEntityJoin for team.title filter")

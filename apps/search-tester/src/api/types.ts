@@ -47,9 +47,6 @@ export interface GameSearchRequest {
   teamId?: number;
   teamPosition?: string;
   gameTagId?: number;
-  debugQueryPlans?: boolean;
-  debugExecuteAllPlans?: boolean;
-  debugRawData?: boolean;
 }
 
 export interface SearchMetadata {
@@ -94,9 +91,6 @@ export interface GameDto {
   lastChanged?: string;
   moves?: unknown;
   text?: unknown;
-  /** Raw storage bytes (when debugRawData is true). Base64 in JSON. */
-  rawData?: string | number[];
-  rawExtendedData?: string | number[];
 }
 
 /** Operator-level cost (estimates and optionally actuals). */
@@ -156,7 +150,7 @@ export interface QueryPlanDto {
   resultsDifferFromSelected?: boolean | null;
 }
 
-/** Debug info returned when debugQueryPlans is true. */
+/** The query plans of a debug search. */
 export interface QueryPlanDebugInfo {
   queryDescription: string;
   selectedPlanIndex: number;
@@ -171,7 +165,6 @@ export interface GameSearchResponse {
   offset: number;
   limit: number;
   metadata: SearchMetadata;
-  debugInfo?: QueryPlanDebugInfo | null;
 }
 
 export interface PlayerDto {
@@ -179,15 +172,6 @@ export interface PlayerDto {
   lastName?: string;
   firstName?: string;
   gameCount?: number;
-  /** Raw storage bytes when debugRawData is true. Base64 in JSON. */
-  rawData?: string | number[];
-}
-
-export interface PlayerListResponse {
-  players: PlayerDto[];
-  count: number;
-  nextCursor: string | null;
-  hasMore: boolean;
 }
 
 export interface TournamentDto {
@@ -209,29 +193,12 @@ export interface TournamentDto {
   latitude?: number;
   longitude?: number;
   gameCount?: number;
-  rawData?: string | number[];
-  rawExtraData?: string | number[];
-}
-
-export interface TournamentListResponse {
-  tournaments: TournamentDto[];
-  count: number;
-  nextCursor: string | null;
-  hasMore: boolean;
 }
 
 export interface AnnotatorDto {
   id: number;
   name?: string;
   gameCount?: number;
-  rawData?: string | number[];
-}
-
-export interface AnnotatorListResponse {
-  annotators: AnnotatorDto[];
-  count: number;
-  nextCursor: string | null;
-  hasMore: boolean;
 }
 
 export interface SourceDto {
@@ -243,14 +210,6 @@ export interface SourceDto {
   version?: number;
   quality?: string;
   gameCount?: number;
-  rawData?: string | number[];
-}
-
-export interface SourceListResponse {
-  sources: SourceDto[];
-  count: number;
-  nextCursor: string | null;
-  hasMore: boolean;
 }
 
 export interface TeamDto {
@@ -261,14 +220,6 @@ export interface TeamDto {
   year?: number;
   nation?: string;
   gameCount?: number;
-  rawData?: string | number[];
-}
-
-export interface TeamListResponse {
-  teams: TeamDto[];
-  count: number;
-  nextCursor: string | null;
-  hasMore: boolean;
 }
 
 export interface GameTagDto {
@@ -285,14 +236,6 @@ export interface GameTagDto {
   slovenianTitle?: string;
   resTitle?: string;
   gameCount?: number;
-  rawData?: string | number[];
-}
-
-export interface GameTagListResponse {
-  gameTags: GameTagDto[];
-  count: number;
-  nextCursor: string | null;
-  hasMore: boolean;
 }
 
 /** Request for entity search (Players, Tournaments, etc.). sortBy uses +/- prefix (e.g. "+id", "-name"). */
@@ -301,9 +244,6 @@ export interface EntitySearchRequest {
   offset?: number | null;
   limit?: number | null;
   sortBy?: string | null;
-  debugQueryPlans?: boolean;
-  debugExecuteAllPlans?: boolean;
-  debugRawData?: boolean;
 }
 
 /** Response from entity search endpoints. */
@@ -318,5 +258,19 @@ export interface EntitySearchResponse<T> {
     sortBy: string;
     executionTimeMs: number;
   };
-  debugInfo?: QueryPlanDebugInfo | null;
+}
+
+/** The stored bytes of one record behind a returned item, from one file. Base64 in JSON. */
+export interface RawRecord {
+  /** The file extension the record comes from, e.g. ".cbh". */
+  file: string;
+  bytes: string;
+}
+
+/** Response from the debug search endpoints: the normal result, its query plans and raw records. */
+export interface DebugSearchResponse<R> {
+  result: R;
+  plans: QueryPlanDebugInfo;
+  /** The raw records of every returned item, keyed by its id. */
+  raw: Record<string, RawRecord[]>;
 }

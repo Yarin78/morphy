@@ -57,7 +57,7 @@ public class Database2Cbh implements Database {
   @Override
   public @NotNull Capabilities capabilities() {
     // Reads are not implemented yet; writing is not planned for the first version of the reader.
-    return new Capabilities(false, true, false, false);
+    return new Capabilities(false, true, false);
   }
 
   @Override

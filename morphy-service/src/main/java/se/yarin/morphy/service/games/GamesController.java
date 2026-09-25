@@ -1,6 +1,5 @@
 package se.yarin.morphy.service.games;
 
-import java.time.LocalDate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
@@ -132,7 +131,8 @@ public class GamesController {
   /**
    * Search for games using filters, sorting, and pagination.
    *
-   * <p>Supports both simple typed query parameters and a complex filter query language.
+   * <p>Supports both simple typed query parameters and a complex filter query language. The query
+   * parameters are the fields of {@link GameSearchRequest}.
    *
    * <p>Examples:
    * <ul>
@@ -141,91 +141,13 @@ public class GamesController {
    * </ul>
    *
    * @param databaseId The database ID
-   * @param offset Skip N games (default 0)
-   * @param limit Return max N games (default 50, max 1000)
-   * @param sortBy Sort spec: field with optional +/- prefix (e.g. "+id", "-date"; default "+id")
-   * @param includeMoves Whether to include game moves (default false)
-   * @param includeText Whether to include game text/commentary (default false)
-   * @param filter Complex filter query string (optional)
-   * @param result Game result filter (e.g., "1-0", "0-1", "1/2-1/2")
-   * @param dateFrom Filter games from this date (inclusive)
-   * @param dateTo Filter games to this date (inclusive)
-   * @param ecoCode ECO code filter (supports wildcards like "B9*")
-   * @param round Round number filter
-   * @param ratingMin Minimum rating filter
-   * @param ratingMax Maximum rating filter
-   * @param ratingMode Rating mode: "any", "both", "white", "black", "average", "difference"
-   * @param playerId Player ID filter
-   * @param playerPosition Player position: "white", "black", "any", "both", "winner", "loser"
-   * @param tournamentId Tournament ID filter
-   * @param annotatorId Annotator ID filter
-   * @param sourceId Source ID filter
-   * @param teamId Team ID filter
-   * @param teamPosition Team position: "white", "black", "any", "winner", "loser"
-   * @param gameTagId Game tag ID filter
-   * @param debugQueryPlans Include query plan debug info (default false)
-   * @param debugExecuteAllPlans Execute all candidate plans for comparison (default false)
+   * @param request The search request, bound from the query parameters
    * @return Search results with matching games and metadata
    */
   @GetMapping("/search")
   public ResponseEntity<GameSearchResponse> searchGames(
-      @PathVariable String databaseId,
-      @RequestParam(required = false) Integer offset,
-      @RequestParam(required = false) Integer limit,
-      @RequestParam(required = false) String sortBy,
-      @RequestParam(required = false) Boolean includeMoves,
-      @RequestParam(required = false) Boolean includeText,
-      @RequestParam(required = false) String filter,
-      @RequestParam(required = false) String result,
-      @RequestParam(required = false) LocalDate dateFrom,
-      @RequestParam(required = false) LocalDate dateTo,
-      @RequestParam(required = false) String ecoCode,
-      @RequestParam(required = false) Integer round,
-      @RequestParam(required = false) Integer ratingMin,
-      @RequestParam(required = false) Integer ratingMax,
-      @RequestParam(required = false) String ratingMode,
-      @RequestParam(required = false) Integer playerId,
-      @RequestParam(required = false) String playerPosition,
-      @RequestParam(required = false) Integer tournamentId,
-      @RequestParam(required = false) Integer annotatorId,
-      @RequestParam(required = false) Integer sourceId,
-      @RequestParam(required = false) Integer teamId,
-      @RequestParam(required = false) String teamPosition,
-      @RequestParam(required = false) Integer gameTagId,
-      @RequestParam(required = false) Boolean debugQueryPlans,
-      @RequestParam(required = false) Boolean debugExecuteAllPlans,
-      @RequestParam(required = false) Boolean debugRawData) {
-
-    GameSearchRequest request =
-        new GameSearchRequest(
-            offset,
-            limit,
-            sortBy,
-            includeMoves,
-            includeText,
-            filter,
-            result,
-            dateFrom,
-            dateTo,
-            ecoCode,
-            round,
-            ratingMin,
-            ratingMax,
-            ratingMode,
-            playerId,
-            playerPosition,
-            tournamentId,
-            annotatorId,
-            sourceId,
-            teamId,
-            teamPosition,
-            gameTagId,
-            debugQueryPlans,
-            debugExecuteAllPlans,
-            debugRawData);
-
-    GameSearchResponse response = gamesService.searchGames(databaseId, request);
-    return ResponseEntity.ok(response);
+      @PathVariable String databaseId, @ModelAttribute GameSearchRequest request) {
+    return ResponseEntity.ok(gamesService.searchGames(databaseId, request));
   }
 
   /**

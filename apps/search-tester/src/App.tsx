@@ -5,9 +5,11 @@ import { ResultsSection } from './ResultsSection';
 import { SearchPanel } from './SearchPanel';
 import { fetchDatabases, fetchFilterOptions } from './api/client';
 import type {
+  EntitySearchRequest,
   FilterOptionsResponse,
   GameSearchRequest,
   QueryPlanDebugInfo,
+  RawRecord,
 } from './api/types';
 import type { EntityType } from './entityConfig';
 import type { SavedSearch } from './savedSearchTypes';
@@ -15,6 +17,7 @@ import {
   ENTITY_CONFIG,
   getDefaultSortDirection,
   getSortOptions,
+  runSearch,
   SORTABLE_COLUMN_MAP,
 } from './entityConfig';
 import { useLocalStorage } from './hooks/useLocalStorage';
@@ -66,7 +69,8 @@ interface SearchResult {
   data: unknown[];
   count: number;
   executionTimeMs?: number;
-  debugInfo?: unknown;
+  debugInfo?: QueryPlanDebugInfo;
+  raw?: Record<string, RawRecord[]>;
   rawResponse?: unknown;
 }
 
@@ -90,17 +94,23 @@ function App() {
 
   const [savedSearches, setSavedSearches] = useState<SavedSearch[]>(loadSavedSearches);
 
-  // Session cache for filter options (static per entity type)
+  // Session cache for filter options, per database and entity type
   const [filterOptionsCache, setFilterOptionsCache] = useState<
-    Partial<Record<EntityType, FilterOptionsResponse>>
+    Record<string, FilterOptionsResponse>
   >({});
+  const filterOptionsFor = useCallback(
+    (db: string, type: EntityType): FilterOptionsResponse | null =>
+      filterOptionsCache[`${db}/${type}`] ?? null,
+    [filterOptionsCache]
+  );
   useEffect(() => {
-    if (filterOptionsCache[entityType]) return;
+    if (!selectedDb || filterOptionsFor(selectedDb, entityType)) return;
+    const cacheKey = `${selectedDb}/${entityType}`;
     let cancelled = false;
-    fetchFilterOptions(entityType)
+    fetchFilterOptions(selectedDb, ENTITY_CONFIG[entityType].entityKey)
       .then((data) => {
         if (!cancelled) {
-          setFilterOptionsCache((prev) => ({ ...prev, [entityType]: data }));
+          setFilterOptionsCache((prev) => ({ ...prev, [cacheKey]: data }));
         }
       })
       .catch(() => {
@@ -109,7 +119,7 @@ function App() {
     return () => {
       cancelled = true;
     };
-  }, [entityType]);
+  }, [selectedDb, entityType]); // eslint-disable-line react-hooks/exhaustive-deps -- fetch only when the database or entity type changes
 
   const toggleColumn = useCallback((entityKey: string, columnKey: string) => {
     setHiddenColumns((prev) => {
@@ -139,13 +149,13 @@ function App() {
       setEntityType(saved.entityType);
       setFilter(saved.filter);
       const defaultForSaved =
-        getSortOptions(saved.entityType, filterOptionsCache[saved.entityType] ?? null)[0];
+        getSortOptions(saved.entityType, filterOptionsFor(saved.selectedDb, saved.entityType))[0];
       setSortBy(saved.sortBy ?? defaultForSaved);
       setOrder(saved.order ?? 'asc');
       setIncludeMoves(saved.includeMoves ?? false);
       setIncludeRawData(saved.includeRawData ?? false);
     },
-    [filterOptionsCache]
+    [filterOptionsFor]
   );
 
   const saveCurrentSearch = useCallback(() => {
@@ -191,7 +201,7 @@ function App() {
   }, []);
 
   // Reset sortBy when entity type or filter options change so it stays valid
-  const sortOptions = getSortOptions(entityType, filterOptionsCache[entityType] ?? null);
+  const sortOptions = getSortOptions(entityType, filterOptionsFor(selectedDb, entityType));
   useEffect(() => {
     const valid = sortOptions.includes(sortBy);
     if (!valid) setSortBy(sortOptions[0]);
@@ -209,14 +219,11 @@ function App() {
       entityTypeChangedByUser.current = true;
       setEntityType(newType);
       setFilter('');
-      const defaultSortOptions = getSortOptions(
-        newType,
-        filterOptionsCache[newType] ?? null
-      );
+      const defaultSortOptions = getSortOptions(newType, filterOptionsFor(selectedDb, newType));
       setSortBy(defaultSortOptions[0]);
       setOrder('asc');
     },
-    [filterOptionsCache]
+    [filterOptionsFor, selectedDb]
   );
 
   const sortByParam =
@@ -225,18 +232,13 @@ function App() {
       : `${order === 'desc' ? '-' : '+'}${sortBy}`;
 
   const buildRequest = useCallback(
-    (executeAllPlans: boolean): GameSearchRequest => {
-      const req: GameSearchRequest = {
-        sortBy: sortByParam,
-        includeMoves,
-        debugQueryPlans: true,
-        debugRawData: includeRawData,
-      };
+    (sortBy: string): GameSearchRequest | EntitySearchRequest => {
+      const req: GameSearchRequest | EntitySearchRequest =
+        entityType === 'Games' ? { sortBy, includeMoves } : { sortBy };
       if (filter.trim()) req.filter = filter.trim();
-      if (executeAllPlans) req.debugExecuteAllPlans = true;
       return req;
     },
-    [sortByParam, includeMoves, includeRawData, filter]
+    [entityType, includeMoves, filter]
   );
 
   const handleSearch = useCallback(
@@ -264,44 +266,21 @@ function App() {
           ? 'default'
           : `${effectiveOrder === 'desc' ? '-' : '+'}${effectiveSortBy}`;
 
-      const config = ENTITY_CONFIG[entityType];
-      const opts = {
-        gameRequest:
-          entityType === 'Games'
-            ? {
-                ...buildRequest(effective),
-                sortBy: effectiveSortByParam,
-              }
-            : undefined,
-        entitySearchRequest:
-          entityType !== 'Games'
-            ? {
-                filter: filter.trim() || undefined,
-                sortBy: effectiveSortByParam,
-                debugQueryPlans: true,
-                debugExecuteAllPlans: effective,
-                debugRawData: includeRawData,
-              }
-            : undefined,
-      };
-
       try {
-        const res = await config.fetch(selectedDb, opts);
-      setResult({
-        entityType,
-        data: res.data,
-        count: res.count,
-        executionTimeMs: res.metadata?.executionTimeMs,
-        debugInfo: res.debugInfo,
-        rawResponse: res.rawResponse,
-      });
+        const res = await runSearch(
+          entityType,
+          selectedDb,
+          buildRequest(effectiveSortByParam),
+          effective
+        );
+        setResult({ entityType, ...res });
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Search failed');
       } finally {
         setLoading(false);
       }
     },
-    [selectedDb, entityType, filter, sortByParam, buildRequest, executeAllPlansDefault, includeRawData]
+    [selectedDb, entityType, sortBy, order, buildRequest, executeAllPlansDefault]
   );
 
   // When user changes entity type from dropdown: filter is cleared, trigger search
@@ -342,7 +321,7 @@ function App() {
       const map = SORTABLE_COLUMN_MAP[entityType];
       const sortField = map?.[columnKey];
       if (!sortField) return;
-      const filterOptions = filterOptionsCache[entityType] ?? null;
+      const filterOptions = filterOptionsFor(selectedDb, entityType);
       const defaultDirection = getDefaultSortDirection(filterOptions, sortField);
       const isCurrentSort = sortBy === sortField;
       const newOrder = isCurrentSort
@@ -352,29 +331,16 @@ function App() {
       setOrder(newOrder);
       handleSearch(undefined, { sortBy: sortField, order: newOrder });
     },
-    [entityType, sortBy, order, filterOptionsCache, handleSearch]
+    [entityType, sortBy, order, filterOptionsFor, selectedDb, handleSearch]
   );
 
-  const hasQueryPlan = Boolean(
-    result?.debugInfo &&
-      Array.isArray((result.debugInfo as { plans?: unknown[] }).plans) &&
-      (result.debugInfo as { plans: unknown[] }).plans.length > 0
-  );
+  const hasQueryPlan = Boolean(result?.debugInfo?.plans?.length);
 
-  const requestJson =
-    entityType === 'Games'
-      ? JSON.stringify(buildRequest(executeAllPlansDefault), null, 2)
-      : JSON.stringify(
-          {
-            filter: filter.trim() || undefined,
-            sortBy: sortByParam,
-            debugQueryPlans: true,
-            debugExecuteAllPlans: executeAllPlansDefault,
-            debugRawData: includeRawData,
-          },
-          null,
-          2
-        );
+  const requestJson = JSON.stringify(
+    { ...buildRequest(sortByParam), executeAllPlans: executeAllPlansDefault },
+    null,
+    2
+  );
 
   return (
     <div className="app">
@@ -394,7 +360,7 @@ function App() {
           onEntityTypeChange={handleEntityTypeChange}
           filter={filter}
           onFilterChange={setFilter}
-          filterOptions={filterOptionsCache[entityType] ?? null}
+          filterOptions={filterOptionsFor(selectedDb, entityType)}
           loading={loading}
           savedSearches={savedSearches}
           onLoadSavedSearch={loadSavedSearch}
@@ -416,7 +382,7 @@ function App() {
                   data: result.data,
                   count: result.count,
                   executionTimeMs: result.executionTimeMs,
-                  debugInfo: result.debugInfo,
+                  raw: includeRawData ? result.raw : undefined,
                 }
               : null
           }
@@ -442,7 +408,7 @@ function App() {
             hideLabel="Hide Query Plan"
             panelClass="query-plan-panel"
           >
-            <QueryPlanVisualiser debugInfo={result!.debugInfo as QueryPlanDebugInfo} />
+            <QueryPlanVisualiser debugInfo={result!.debugInfo!} />
           </CollapsiblePanel>
         )}
         {!showQueryPlan && hasQueryPlan && (

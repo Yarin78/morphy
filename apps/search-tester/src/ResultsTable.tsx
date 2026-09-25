@@ -4,6 +4,7 @@ import type {
   GameDto,
   GameTagDto,
   PlayerDto,
+  RawRecord,
   SourceDto,
   TeamDto,
   TournamentDto,
@@ -18,25 +19,12 @@ interface Column<T> {
   colSpan?: (row: T) => string[] | undefined;
 }
 
-/** Row type that may include raw bytes from the API (when debugRawData is set). */
-interface RowWithRawData {
-  rawData?: string | number[];
-  rawExtendedData?: string | number[];
-  rawExtraData?: string | number[];
-}
-
 const HEX_BLOCK_SIZE = 16;   /* hex chars per block (8 bytes) */
 const HEX_BLOCKS_PER_LINE = 8; /* line break after this many blocks (64 bytes per line) */
 const NBSP = '\u00A0';
 
-function rawPayloadToHex(payload: string | number[]): string {
-  let bytes: number[];
-  if (typeof payload === 'string') {
-    const binary = atob(payload);
-    bytes = Array.from(binary, (c) => c.charCodeAt(0));
-  } else {
-    bytes = payload;
-  }
+function rawPayloadToHex(payload: string): string {
+  const bytes = Array.from(atob(payload), (c) => c.charCodeAt(0));
   const hex = bytes.map((b) => (b & 0xff).toString(16).padStart(2, '0')).join('');
   const blocks: string[] = [];
   for (let i = 0; i < hex.length; i += HEX_BLOCK_SIZE) {
@@ -50,19 +38,12 @@ function rawPayloadToHex(payload: string | number[]): string {
   return lines.join('\n');
 }
 
-function getRawPayloads(row: unknown): (string | number[])[] {
-  const r = row as RowWithRawData;
-  const out: (string | number[])[] = [];
-  if (r.rawData != null) out.push(r.rawData);
-  if (r.rawExtendedData != null) out.push(r.rawExtendedData);
-  if (r.rawExtraData != null) out.push(r.rawExtraData);
-  return out;
-}
-
 interface ResultsTableProps<T> {
   columns: Column<T>[];
   data: T[];
   keyExtractor: (row: T) => string | number;
+  /** Raw records to show under each row, keyed by the row's key. */
+  rawRecords?: Record<string, RawRecord[]>;
   emptyMessage: string;
   /** Column keys that can be clicked to sort. */
   sortableColumnKeys?: Set<string>;
@@ -86,6 +67,7 @@ function ResultsTable<T>({
   columns,
   data,
   keyExtractor,
+  rawRecords,
   emptyMessage,
   sortableColumnKeys,
   sortColumnKey,
@@ -203,7 +185,7 @@ function ResultsTable<T>({
             </tr>
           ) : data.map((row, rowIndex) => {
             const key = keyExtractor(row);
-            const rawPayloads = getRawPayloads(row);
+            const records = rawRecords?.[String(key)] ?? [];
             const rowStripe = rowIndex % 2 === 0 ? 'results-table-row-even' : 'results-table-row-odd';
 
             /* Pre-compute which columns are absorbed by a colSpan from an earlier column. */
@@ -247,22 +229,23 @@ function ResultsTable<T>({
                   })}
                   <td className="results-table-filler" />
                 </tr>
-                {rawPayloads.length > 0 && (
+                {records.length > 0 && (
                   <tr className={`raw-data-row ${rowStripe}`} aria-hidden>
                     <td colSpan={columns.length + 1} className="raw-data-cell">
                       <table className="raw-data-subtable">
                         <tbody>
-                          {rawPayloads.map((payload, i) => (
+                          {records.map((record, i) => (
                             <tr
-                              key={i}
+                              key={record.file}
                               className={
                                 i === 0
                                   ? 'raw-data-hex-row raw-data-hex-row-primary'
                                   : 'raw-data-hex-row raw-data-hex-row-secondary'
                               }
                             >
+                              <td className="raw-data-file-cell">{record.file}</td>
                               <td className="raw-data-hex-cell">
-                                <span className="raw-data-hex">{rawPayloadToHex(payload)}</span>
+                                <span className="raw-data-hex">{rawPayloadToHex(record.bytes)}</span>
                               </td>
                             </tr>
                           ))}

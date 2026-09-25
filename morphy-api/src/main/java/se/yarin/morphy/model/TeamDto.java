@@ -13,8 +13,7 @@ import org.jetbrains.annotations.Nullable;
   "season",
   "year",
   "nation",
-  "gameCount",
-  "rawData"
+  "gameCount"
 })
 public record TeamDto(
     Long id,
@@ -23,5 +22,4 @@ public record TeamDto(
     @Nullable Boolean season,
     @Nullable Integer year,
     @Nullable String nation,
-    @Nullable Integer gameCount,
-    @Nullable byte[] rawData) {}
+    @Nullable Integer gameCount) implements EntityDto {}

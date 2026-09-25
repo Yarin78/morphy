@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { RawRecord } from './api/types';
 import { ColumnSelector } from './ColumnSelector';
 import { RowsPerPageSelector } from './RowsPerPageSelector';
 import ResultsTable from './ResultsTable';
@@ -40,7 +41,8 @@ interface SearchResult {
   data: unknown[];
   count: number;
   executionTimeMs?: number;
-  debugInfo?: unknown;
+  /** Raw records to show under each row, keyed by the row's id. */
+  raw?: Record<string, RawRecord[]>;
 }
 
 interface ResultsSectionProps {
@@ -167,6 +169,7 @@ export function ResultsSection({
         columns={visibleColumns}
         data={paginatedData.data}
         keyExtractor={(row) => config.keyExtractor(row as { id: number })}
+        rawRecords={result?.raw}
         emptyMessage={loading ? 'Searching…' : config.emptyMessage}
         sortableColumnKeys={columnSortConfig.sortableColumnKeys}
         sortColumnKey={columnSortConfig.sortColumnKey}

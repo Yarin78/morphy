@@ -24,8 +24,7 @@ import org.jetbrains.annotations.Nullable;
   "dutchTitle",
   "slovenianTitle",
   "resTitle",
-  "gameCount",
-  "rawData"
+  "gameCount"
 })
 public record GameTagDto(
     Long id,
@@ -40,5 +39,4 @@ public record GameTagDto(
     @Nullable String dutchTitle,
     @Nullable String slovenianTitle,
     @Nullable String resTitle,
-    @Nullable Integer gameCount,
-    @Nullable byte[] rawData) {}
+    @Nullable Integer gameCount) implements EntityDto {}

@@ -49,9 +49,7 @@ import se.yarin.chess.NAG;
   "creationTimestamp",
   "lastChanged",
   "moves",
-  "text",
-  "rawData",
-  "rawExtendedData"
+  "text"
 })
 public record GameDto(
     // Game identity
@@ -114,8 +112,4 @@ public record GameDto(
 
     // Game content (nullable for header-only queries)
     @Nullable GameMovesDto moves,
-    @Nullable GameTextDto text,
-
-    // Debug: raw storage bytes
-    @Nullable byte[] rawData,
-    @Nullable byte[] rawExtendedData) {}
+    @Nullable GameTextDto text) {}
