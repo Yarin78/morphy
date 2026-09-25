@@ -214,11 +214,16 @@ public class AnnotationConverter {
                 appendWithSpace(textAfterBuilder, afterMove.text());
             }
         } else {
-            // Round-trip mode: preserve language tags
+            // Round-trip mode: preserve language tags. The plain text goes first, trimmed, since
+            // that's where decoding puts back whatever text is left around the tags.
             for (TextAfterMoveAnnotation afterMove : afterMoveAnnotations) {
+                // trim() rather than strip(): a comment also loses its control characters
                 if (afterMove.language() == Nation.NONE) {
-                    appendWithSpace(textAfterBuilder, afterMove.text());
-                } else {
+                    appendWithSpace(textAfterBuilder, afterMove.text().trim());
+                }
+            }
+            for (TextAfterMoveAnnotation afterMove : afterMoveAnnotations) {
+                if (afterMove.language() != Nation.NONE) {
                     appendWithSpace(textAfterBuilder, "[%post:" + afterMove.language().getIocCode() + " " + AnnotationPgnUtil.escapeString(afterMove.text()) + "]");
                 }
             }
@@ -390,24 +395,20 @@ public class AnnotationConverter {
 
         // Parse text annotations with language
         // New format: [%pre text] and [%pre:LANG text]
+        // In the order they are written, with or without a language
         while (true) {
-            Matcher preLangMatcher = PRE_LANG_PATTERN.matcher(remainingText);
-            if (preLangMatcher.find()) {
-                Nation nation = Nation.fromIOC(preLangMatcher.group(1));
-                String text = AnnotationPgnUtil.unescapeString(preLangMatcher.group(2));
-                annotations.add(ImmutableTextBeforeMoveAnnotation.builder().text(text).language(nation).build());
-                remainingText = preLangMatcher.replaceFirst("").trim();
-                continue;
-            }
-
             Matcher preMatcher = PRE_PATTERN.matcher(remainingText);
-            if (preMatcher.find()) {
-                String text = AnnotationPgnUtil.unescapeString(preMatcher.group(1));
-                annotations.add(ImmutableTextBeforeMoveAnnotation.of(text));
-                remainingText = preMatcher.replaceFirst("").trim();
-                continue;
+            if (!preMatcher.find()) {
+                break;
             }
-            break;
+            String text = AnnotationPgnUtil.unescapeString(preMatcher.group(2));
+            if (preMatcher.group(1) == null) {
+                annotations.add(ImmutableTextBeforeMoveAnnotation.of(text));
+            } else {
+                Nation nation = Nation.fromIOC(preMatcher.group(1));
+                annotations.add(ImmutableTextBeforeMoveAnnotation.builder().text(text).language(nation).build());
+            }
+            remainingText = preMatcher.replaceFirst("").trim();
         }
 
         // [%post:LANG text] for after-move with specific language
@@ -435,9 +436,10 @@ public class AnnotationConverter {
     // The text of a comment runs up to an unescaped ']'. It is matched in the "unrolled" form
     // [^]\\]*(?:\\.[^]\\]*)* rather than (?:[^]\\]|\\.)*: the latter recurses once per
     // character in java.util.regex and overflows the stack on long comments.
-    private static final Pattern PRE_LANG_PATTERN = Pattern.compile("\\[%pre:([A-Z]{3})\\s+([^\\]\\\\]*(?:\\\\.[^\\]\\\\]*)*)\\]");
-    private static final Pattern PRE_PATTERN = Pattern.compile("\\[%pre\\s+([^\\]\\\\]*(?:\\\\.[^\\]\\\\]*)*)\\]");
-    private static final Pattern POST_LANG_PATTERN = Pattern.compile("\\[%post:([A-Z]{3})\\s+([^\\]\\\\]*(?:\\\\.[^\\]\\\\]*)*)\\]");
+    // The tag and the text are separated by exactly the one space the encoder writes, so that text
+    // starting with white space reads back unchanged.
+    private static final Pattern PRE_PATTERN = Pattern.compile("\\[%pre(?::([A-Z]{3}))? ([^\\]\\\\]*(?:\\\\.[^\\]\\\\]*)*)\\]");
+    private static final Pattern POST_LANG_PATTERN = Pattern.compile("\\[%post:([A-Z]{3}) ([^\\]\\\\]*(?:\\\\.[^\\]\\\\]*)*)\\]");
 
     // ========== Public static conversion methods (for backward compatibility) ==========
 
@@ -532,24 +534,20 @@ public class AnnotationConverter {
 
         // Parse text annotations with language
         // New format: [%pre text] and [%pre:LANG text]
+        // In the order they are written, with or without a language
         while (true) {
-            Matcher preLangMatcher = PRE_LANG_PATTERN.matcher(remainingText);
-            if (preLangMatcher.find()) {
-                Nation nation = Nation.fromIOC(preLangMatcher.group(1));
-                String text = AnnotationPgnUtil.unescapeString(preLangMatcher.group(2));
-                annotations.add(ImmutableTextBeforeMoveAnnotation.builder().text(text).language(nation).build());
-                remainingText = preLangMatcher.replaceFirst("").trim();
-                continue;
-            }
-
             Matcher preMatcher = PRE_PATTERN.matcher(remainingText);
-            if (preMatcher.find()) {
-                String text = AnnotationPgnUtil.unescapeString(preMatcher.group(1));
-                annotations.add(ImmutableTextBeforeMoveAnnotation.of(text));
-                remainingText = preMatcher.replaceFirst("").trim();
-                continue;
+            if (!preMatcher.find()) {
+                break;
             }
-            break;
+            String text = AnnotationPgnUtil.unescapeString(preMatcher.group(2));
+            if (preMatcher.group(1) == null) {
+                annotations.add(ImmutableTextBeforeMoveAnnotation.of(text));
+            } else {
+                Nation nation = Nation.fromIOC(preMatcher.group(1));
+                annotations.add(ImmutableTextBeforeMoveAnnotation.builder().text(text).language(nation).build());
+            }
+            remainingText = preMatcher.replaceFirst("").trim();
         }
 
         // [%post:LANG text] for after-move with specific language

@@ -294,7 +294,7 @@ public class PgnEdgeCasesTest {
 
         // Export without variations
         PgnFormatOptions options = new PgnFormatOptions(
-                79, false, false, false, false, false, false, "\n");
+                79, false, false, false, false, false, NagStyle.NUMERIC, "\n");
         PgnExporter exporter = new PgnExporter(options);
         String exported = exporter.exportGame(game);
 

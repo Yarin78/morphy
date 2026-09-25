@@ -1,5 +1,8 @@
 package se.yarin.chess;
 
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
 /**
  * Numerical annotation glyphs
  *
@@ -279,6 +282,28 @@ public enum NAG {
 
   public String toUnicodeString() {
     return unicode;
+  }
+
+  /**
+   * Whether this NAG is one of the six PGN move suffix annotations: {@code !}, {@code ?}, {@code
+   * !!}, {@code ??}, {@code !?} and {@code ?!} ($1 to $6), which is then its ASCII string.
+   */
+  public boolean isMoveSuffix() {
+    return ordinal() >= GOOD_MOVE.ordinal() && ordinal() <= DUBIOUS_MOVE.ordinal();
+  }
+
+  /**
+   * The NAG of a PGN move suffix annotation, such as {@code !?}.
+   *
+   * @return the NAG, or null if the text is not one of the six suffix annotations
+   */
+  public static @Nullable NAG fromMoveSuffix(@NotNull String suffix) {
+    for (int i = GOOD_MOVE.ordinal(); i <= DUBIOUS_MOVE.ordinal(); i++) {
+      if (values()[i].ascii.equals(suffix)) {
+        return values()[i];
+      }
+    }
+    return null;
   }
 
   NAG() {

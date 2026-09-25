@@ -5,6 +5,7 @@ import org.slf4j.LoggerFactory;
 import se.yarin.chess.GameModel;
 import se.yarin.chess.annotations.AnnotationTransformer;
 import se.yarin.chess.pgn.PgnExporter;
+import se.yarin.chess.pgn.NagStyle;
 import se.yarin.chess.pgn.PgnFormatOptions;
 import se.yarin.morphy.Game;
 import se.yarin.morphy.entities.Nation;
@@ -46,7 +47,7 @@ public class PgnDatabaseBuilder extends GameConsumerBase {
             true, // exportVariations
             true, // exportComments
             true, // exportNAGs
-            false, // useSymbolsForNAGs
+            NagStyle.NUMERIC, // nagStyle
             "\n" // lineEnding
             );
 

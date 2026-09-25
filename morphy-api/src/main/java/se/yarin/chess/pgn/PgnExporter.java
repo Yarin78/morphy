@@ -103,26 +103,43 @@ public class PgnExporter {
     }
 
     /**
-     * Exports only the moves as a single-line string without headers or result suffix.
-     * Useful for debugging and toString() implementations.
+     * Exports only the moves as a single-line string without headers or result suffix, with NAGs
+     * as symbols. Useful for debugging and toString() implementations; NAGs don't read back exactly.
      *
      * @param moves the moves to export
      * @return a single-line string of moves with variations and annotations
      */
     @NotNull
     public String exportMovesOnly(@NotNull GameMovesModel moves) {
-        return exportMovesOnly(moves.root());
+        return exportMovesOnly(moves.root(), NagStyle.SYMBOLS);
     }
 
     /**
      * Exports only the moves as a single-line string without headers or result suffix.
-     * Useful for debugging and toString() implementations.
+     *
+     * @param moves the moves to export
+     * @param nagStyle how to write the NAGs; anything but {@link NagStyle#SYMBOLS} reads back exactly
+     * @return a single-line string of moves with variations and annotations
+     */
+    @NotNull
+    public String exportMovesOnly(@NotNull GameMovesModel moves, @NotNull NagStyle nagStyle) {
+        return exportMovesOnly(moves.root(), nagStyle);
+    }
+
+    /**
+     * Exports only the moves as a single-line string without headers or result suffix, with NAGs
+     * as symbols. Useful for debugging and toString() implementations.
      *
      * @param node the game node to start export from
      * @return a single-line string of moves with variations and annotations
      */
     @NotNull
     public String exportMovesOnly(@NotNull GameMovesModel.Node node) {
+        return exportMovesOnly(node, NagStyle.SYMBOLS);
+    }
+
+    @NotNull
+    private String exportMovesOnly(@NotNull GameMovesModel.Node node, @NotNull NagStyle nagStyle) {
         try {
             StringWriter writer = new StringWriter();
             // Single-line options: unlimited line length, no line endings
@@ -133,7 +150,7 @@ public class PgnExporter {
                 options.exportVariations(),      // preserve setting
                 options.exportComments(),        // preserve setting
                 options.exportNAGs(),            // preserve setting
-                true,                            // useSymbolsForNAGs - use symbols for better readability
+                nagStyle,
                 ""                               // no line ending
             );
             PgnExporter exporter = new PgnExporter(singleLineOpts, this.annotationTransformer);
@@ -400,7 +417,7 @@ public class PgnExporter {
 
         List<NAGAnnotation> nags = transformedAnnotations.getAllByClass(NAGAnnotation.class);
 
-        if (options.exportNAGs() && options.useSymbolsForNAGs()) {
+        if (options.exportNAGs() && options.nagStyle() == NagStyle.SYMBOLS) {
             for (NAGAnnotation nag : nags) {
                 if (nag.getNag().getType() == NAGType.MOVE_PREFIX) {
                     String symbol = nag.getNag().toASCIIString();
@@ -420,24 +437,32 @@ public class PgnExporter {
         // Export NAG annotations
         if (options.exportNAGs()) {
             for (NAGAnnotation nag : nags) {
-                if (options.useSymbolsForNAGs()) {
-                    if (nag.getNag().getType() == NAGType.MOVE_PREFIX) {
-                        // Already handled
-                        continue;
-                    }
-                    String symbol = nag.getNag().toASCIIString();
-                    if (!symbol.isEmpty()) {
-                        // Symbols related to the move itself appear immediately after the move,
-                        // like !, ?, !?, ?! etc, and should thus have no space separator
-                        if (nag.getNag().getType() != NAGType.MOVE_COMMENT || Character.isLetter(symbol.charAt(0))) {
-                            moveStr.append(' ');
+                NAG glyph = nag.getNag();
+                switch (options.nagStyle()) {
+                    case NUMERIC -> moveStr.append(" $").append(glyph.ordinal());
+                    case SUFFIXES -> {
+                        if (glyph.isMoveSuffix()) {
+                            moveStr.append(glyph.toASCIIString());
+                        } else {
+                            moveStr.append(" $").append(glyph.ordinal());
                         }
-                        moveStr.append(symbol);
-                    } else {
-                        moveStr.append(" $").append(nag.getNag().ordinal());
                     }
-                } else {
-                    moveStr.append(" $").append(nag.getNag().ordinal());
+                    case SYMBOLS -> {
+                        if (glyph.getType() == NAGType.MOVE_PREFIX) {
+                            continue; // Already written before the move
+                        }
+                        String symbol = glyph.toASCIIString();
+                        if (!symbol.isEmpty()) {
+                            // Symbols related to the move itself appear immediately after the move,
+                            // like !, ?, !?, ?! etc, and should thus have no space separator
+                            if (glyph.getType() != NAGType.MOVE_COMMENT || Character.isLetter(symbol.charAt(0))) {
+                                moveStr.append(' ');
+                            }
+                            moveStr.append(symbol);
+                        } else {
+                            moveStr.append(" $").append(glyph.ordinal());
+                        }
+                    }
                 }
             }
         }

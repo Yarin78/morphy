@@ -2,6 +2,7 @@ package se.yarin.chess.pgn;
 
 import org.junit.Test;
 import se.yarin.chess.*;
+import se.yarin.chess.annotations.NAGAnnotation;
 
 import java.io.IOException;
 import java.io.StringReader;
@@ -390,5 +391,32 @@ public class PgnRoundTripTest {
         for (int i = 0; i < node1.numMoves(); i++) {
             assertNodesEqual(node1.children().get(i), node2.children().get(i));
         }
+    }
+
+    @Test
+    public void moveSuffixAnnotationsReadAsTheirNags() throws PgnFormatException {
+        GameMovesModel moves = new PgnParser().parseMoves("1. e4! e5? 2. Nf3!! Nc6?? 3. Bb5!? a6?! 4. Ba4 $14");
+
+        List<NAG> nags = moves.getAllNodes().stream()
+                .skip(1) // the root
+                .map(node -> node.getAnnotations().getAllByClass(NAGAnnotation.class).getFirst().getNag())
+                .toList();
+        assertEquals(List.of(NAG.GOOD_MOVE, NAG.BAD_MOVE, NAG.VERY_GOOD_MOVE, NAG.BLUNDER,
+                NAG.INTERESTING_MOVE, NAG.DUBIOUS_MOVE, NAG.WHITE_SLIGHT_ADVANTAGE), nags);
+    }
+
+    @Test(expected = PgnFormatException.class)
+    public void unknownMoveSuffixIsRejected() throws PgnFormatException {
+        new PgnParser().parseMoves("1. e4!!! e5");
+    }
+
+    @Test
+    public void suffixStyleExportReadsBackToTheSameNags() throws PgnFormatException {
+        String pgn = "1. e4!? e5 $10 2. Nf3?! $18 Nc6 $20 3. Bb5 $142";
+        PgnExporter exporter = new PgnExporter();
+
+        String exported = exporter.exportMovesOnly(new PgnParser().parseMoves(pgn), NagStyle.SUFFIXES);
+
+        assertEquals(pgn, exported);
     }
 }

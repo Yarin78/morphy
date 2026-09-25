@@ -1,6 +1,7 @@
 package se.yarin.chess.pgn;
 
 import org.jetbrains.annotations.NotNull;
+import se.yarin.chess.NAG;
 
 import java.io.IOException;
 import java.io.Reader;
@@ -82,6 +83,11 @@ public class PgnLexer {
         // NAG
         if (ch == '$') {
             return readNag();
+        }
+
+        // Move suffix annotation (!, ?, !!, ??, !?, ?!), read as its NAG
+        if (ch == '!' || ch == '?') {
+            return readMoveSuffix();
         }
 
         // Semicolon comment (escape to end of line)
@@ -209,6 +215,23 @@ public class PgnLexer {
         }
 
         return new PgnToken(PgnToken.TokenType.NAG, sb.toString(), startLine, startColumn);
+    }
+
+    private PgnToken readMoveSuffix() throws PgnFormatException {
+        int startLine = line;
+        int startColumn = column;
+        StringBuilder sb = new StringBuilder();
+        while (!eof && (currentChar == '!' || currentChar == '?')) {
+            sb.append((char) currentChar);
+            advance();
+        }
+
+        NAG nag = NAG.fromMoveSuffix(sb.toString());
+        if (nag == null) {
+            throw new PgnFormatException("Invalid move suffix annotation: " + sb, startLine, startColumn);
+        }
+
+        return new PgnToken(PgnToken.TokenType.NAG, "$" + nag.ordinal(), startLine, startColumn);
     }
 
     private boolean isSymbolStart(char ch) {

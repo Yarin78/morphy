@@ -10,14 +10,11 @@ import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.chess.GameModel;
-import se.yarin.chess.pgn.PgnExporter;
-import se.yarin.chess.pgn.PgnFormatOptions;
 import se.yarin.morphy.Game;
 import se.yarin.morphy.entities.*;
 import se.yarin.morphy.games.GameHeaderFlags;
 import se.yarin.morphy.games.Medal;
 import se.yarin.morphy.games.TopGamesStorage;
-import se.yarin.morphy.games.annotations.AnnotationConverter;
 import se.yarin.morphy.model.AnnotatorDto;
 import se.yarin.morphy.model.GameTagDto;
 import se.yarin.morphy.model.PlayerDto;
@@ -164,14 +161,7 @@ public class GameDtoConverter {
     if (includeMoves && !game.guidingText()) {
       try {
         GameModel model = game.getModel();
-        PgnExporter exporter =
-            new PgnExporter(
-                PgnFormatOptions.DEFAULT,
-                (AnnotationConverter.getRoundTripConverter())::convertToPgn);
-        // TODO: exportMovesOnly drops SetUp/FEN, so a game from a set-up position (or Chess960)
-        // loses its start position through the DTO. Either add a fen field to GameMovesDto or make
-        // moves.pgn a full PGN with the SetUp/FEN tags. See also GameDtoImporter.
-        moves = new GameMovesDto(exporter.exportMovesOnly(model.moves()));
+        moves = new GameMovesDto(GameMovesPgn.toPgn(model.moves()));
 
         String built = model.moves().getNotation(20);
         notation = built != null ? built : "--";

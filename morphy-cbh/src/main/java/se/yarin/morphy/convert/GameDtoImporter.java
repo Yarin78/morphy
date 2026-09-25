@@ -6,9 +6,6 @@ import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.chess.*;
-import se.yarin.chess.pgn.PgnFormatException;
-import se.yarin.chess.pgn.PgnParser;
-import se.yarin.morphy.games.annotations.AnnotationConverter;
 import se.yarin.morphy.text.ImmutableTextHeaderModel;
 import se.yarin.morphy.text.ImmutableTextModel;
 import se.yarin.morphy.text.TextContentsModel;
@@ -30,7 +27,8 @@ public class GameDtoImporter {
    *
    * @param dto the GameDto to convert (must be a regular game, not guiding text)
    * @return the GameModel
-   * @throws IllegalArgumentException if the DTO represents guiding text instead of a game
+   * @throws IllegalArgumentException if the DTO represents guiding text instead of a game, or its
+   *     moves can't be read
    */
   public GameModel toGameModel(@NotNull GameDto dto) {
     if ("text".equals(dto.type())) {
@@ -225,28 +223,10 @@ public class GameDtoImporter {
    * @return the GameModel
    */
   private GameModel buildGameModel(@NotNull GameHeaderModel headerModel, @NotNull GameDto dto) {
-
-    GameMovesModel movesModel;
-
-    // Parse moves if present
-    if (dto.moves() != null && dto.moves().pgn() != null && !dto.moves().pgn().isEmpty()) {
-      try {
-        // Parse the moves-only PGN directly
-        PgnParser parser =
-            new PgnParser((AnnotationConverter.getRoundTripConverter())::convertToChessBase);
-        // TODO: always parsed from the standard start position, since GameMovesDto carries no
-        // FEN. Games from a set-up position fail or come back wrong. See GameDtoConverter.
-        movesModel = parser.parseMoves(dto.moves().pgn());
-
-      } catch (PgnFormatException e) {
-        log.error("Failed to parse PGN from DTO: {}", e.getMessage());
-        // Fall back to empty moves
-        movesModel = new GameMovesModel();
-      }
-    } else {
-      // No moves provided, create empty moves model
-      movesModel = new GameMovesModel();
-    }
+    // Moves are required to read back; an unreadable movetext is an invalid game, not an empty one
+    String pgn = dto.moves() == null ? null : dto.moves().pgn();
+    GameMovesModel movesModel =
+        pgn == null || pgn.isEmpty() ? new GameMovesModel() : GameMovesPgn.fromPgn(pgn);
 
     // Build and return the complete GameModel
     return new GameModel(headerModel, movesModel);

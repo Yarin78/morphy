@@ -10,7 +10,7 @@ public record PgnFormatOptions(
         boolean exportVariations,
         boolean exportComments,
         boolean exportNAGs,
-        boolean useSymbolsForNAGs,
+        NagStyle nagStyle,
         String lineEnding
 ) {
     /**
@@ -23,7 +23,7 @@ public record PgnFormatOptions(
             true,    // exportVariations
             true,    // exportComments
             true,    // exportNAGs
-            false,   // useSymbolsForNAGs (use $N format)
+            NagStyle.NUMERIC, // nagStyle
             "\n"     // lineEnding
     );
 
@@ -34,7 +34,7 @@ public record PgnFormatOptions(
             true,    // exportVariations
             true,    // exportComments
             true,    // exportNAGs
-            false,   // useSymbolsForNAGs (use $N format)
+            NagStyle.NUMERIC, // nagStyle
             "\n"     // lineEnding
     );
 
@@ -48,13 +48,16 @@ public record PgnFormatOptions(
             false,   // exportVariations
             false,   // exportComments
             false,   // exportNAGs
-            false,   // useSymbolsForNAGs
+            NagStyle.NUMERIC, // nagStyle
             "\n"     // lineEnding
     );
 
     public PgnFormatOptions {
         if (maxLineLength < 20) {
             throw new IllegalArgumentException("maxLineLength must be at least 20");
+        }
+        if (nagStyle == null) {
+            nagStyle = NagStyle.NUMERIC;
         }
         if (lineEnding == null) {
             lineEnding = "\n";
