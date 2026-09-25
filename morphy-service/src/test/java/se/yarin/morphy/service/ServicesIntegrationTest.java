@@ -15,21 +15,18 @@ import se.yarin.chess.Date;
 import se.yarin.chess.GameResult;
 import se.yarin.chess.NAG;
 import se.yarin.morphy.DatabaseCbh;
-import se.yarin.morphy.service.annotators.AnnotatorsService;
 import se.yarin.morphy.model.AnnotatorDto;
+import se.yarin.morphy.api.EntityKind;
 import se.yarin.morphy.service.databases.DatabaseService;
+import se.yarin.morphy.service.entities.EntitiesService;
 import se.yarin.morphy.service.games.GamesService;
 import se.yarin.morphy.model.GameDto;
 import se.yarin.morphy.model.GameMovesDto;
-import se.yarin.morphy.service.players.PlayersService;
 import se.yarin.morphy.model.PlayerDto;
 import se.yarin.morphy.service.search.EntitySearchRequest;
 import se.yarin.morphy.service.search.EntitySearchResponse;
-import se.yarin.morphy.service.sources.SourcesService;
 import se.yarin.morphy.model.SourceDto;
-import se.yarin.morphy.service.teams.TeamsService;
 import se.yarin.morphy.model.TeamDto;
-import se.yarin.morphy.service.tournaments.TournamentsService;
 import se.yarin.morphy.model.TournamentDto;
 
 /**
@@ -46,11 +43,7 @@ class ServicesIntegrationTest {
 
   @Autowired private DatabaseService databaseService;
   @Autowired private GamesService gamesService;
-  @Autowired private PlayersService playersService;
-  @Autowired private TournamentsService tournamentsService;
-  @Autowired private TeamsService teamsService;
-  @Autowired private SourcesService sourcesService;
-  @Autowired private AnnotatorsService annotatorsService;
+  @Autowired private EntitiesService entitiesService;
 
   private String databaseId;
 
@@ -70,6 +63,22 @@ class ServicesIntegrationTest {
     // Unregister the database after each test
     if (databaseId != null) {
       databaseService.unregisterDatabase(databaseId);
+    }
+  }
+
+  @Test
+  void v2DatabaseIsServedThroughTheFacade() throws IOException {
+    // The v2 format is a stub: it opens and counts games, but can't read them yet
+    File v2File = new File("../test-databases/wch2/wch2.2cbh");
+    assertTrue(v2File.exists(), "sample .2cbh database not found: " + v2File.getAbsolutePath());
+    databaseService.registerDatabase("v2-db", "V2 Database", v2File.getAbsolutePath());
+    try {
+      assertEquals(1038, gamesService.getGameCount("v2-db"));
+      assertThrows(
+          UnsupportedOperationException.class,
+          () -> gamesService.getGames("v2-db", 0, 10, false, false));
+    } finally {
+      databaseService.unregisterDatabase("v2-db");
     }
   }
 
@@ -119,13 +128,13 @@ class ServicesIntegrationTest {
             null,
             null,
             null, null,null, null);
-    tournamentsService.updateTournament(databaseId, game2TournamentId, updatedTournament);
+    entitiesService.update(databaseId, EntityKind.TOURNAMENT, game2TournamentId, updatedTournament);
 
     // Step 6: Update team from game 1 with new metadata
     TeamDto updatedTeam =
         new TeamDto(
             (long) game1WhiteTeamId, "Updated Team Title", 42, true, 2024, "NOR", null, null);
-    teamsService.updateTeam(databaseId, game1WhiteTeamId, updatedTeam);
+    entitiesService.update(databaseId, EntityKind.TEAM, game1WhiteTeamId, updatedTeam);
 
     // Step 7: Update source from game 2 with more data
     SourceDto updatedSource =
@@ -138,7 +147,7 @@ class ServicesIntegrationTest {
             2,
             "HIGH", // Must be enum value: UNSET, HIGH, MEDIUM, LOW
             null, null);
-    sourcesService.updateSource(databaseId, game2SourceId, updatedSource);
+    entitiesService.update(databaseId, EntityKind.SOURCE, game2SourceId, updatedSource);
 
     // Step 8: Update game 2 - change moves slightly and add annotator
     GameDto game2Updated =
@@ -226,18 +235,18 @@ class ServicesIntegrationTest {
 
     // Step 11: Get the updated player from game 1 and verify it has gameCount=2
     PlayerDto updatedPlayerFromGame1 =
-        playersService.getPlayer(databaseId, game1UpdatedWhitePlayerId);
+        entitiesService.get(databaseId, EntityKind.PLAYER, game1UpdatedWhitePlayerId);
     assertNotNull(updatedPlayerFromGame1);
     assertEquals("Kasparov", updatedPlayerFromGame1.lastName());
     assertEquals("Garry", updatedPlayerFromGame1.firstName());
     assertEquals(2, updatedPlayerFromGame1.gameCount(), "Updated player should have gameCount=2");
 
     // Step 12: Verify that getting a missing player (out of range) returns null
-    PlayerDto missingPlayer = playersService.getPlayer(databaseId, 100);
+    PlayerDto missingPlayer = entitiesService.get(databaseId, EntityKind.PLAYER, 100);
     assertNull(missingPlayer, "Getting a missing player should return null");
 
     // Step 13: Verify that an "unused" player id also returns null
-    PlayerDto unusedPlayer = playersService.getPlayer(databaseId, game1WhitePlayerId);
+    PlayerDto unusedPlayer = entitiesService.get(databaseId, EntityKind.PLAYER, game1WhitePlayerId);
     assertNull(
         unusedPlayer,
         "Getting an unused player should return null");
@@ -319,7 +328,7 @@ class ServicesIntegrationTest {
 
     assertThrows(
         IllegalArgumentException.class,
-        () -> tournamentsService.updateTournament(databaseId, tournament2Id, duplicateUpdate),
+        () -> entitiesService.update(databaseId, EntityKind.TOURNAMENT, tournament2Id, duplicateUpdate),
         "Should throw IllegalArgumentException when updating to a duplicate key");
   }
 
@@ -374,10 +383,10 @@ class ServicesIntegrationTest {
 
     // Should not throw
     assertDoesNotThrow(
-        () -> tournamentsService.updateTournament(databaseId, tournamentId, uniqueUpdate));
+        () -> entitiesService.update(databaseId, EntityKind.TOURNAMENT, tournamentId, uniqueUpdate));
 
     // Verify the update was successful
-    TournamentDto retrieved = tournamentsService.getTournament(databaseId, tournamentId);
+    TournamentDto retrieved = entitiesService.get(databaseId, EntityKind.TOURNAMENT, tournamentId);
     assertNotNull(retrieved);
     assertEquals("Paris", retrieved.place());
   }
@@ -433,10 +442,10 @@ class ServicesIntegrationTest {
 
     // Should not throw
     assertDoesNotThrow(
-        () -> tournamentsService.updateTournament(databaseId, tournamentId, sameKeyUpdate));
+        () -> entitiesService.update(databaseId, EntityKind.TOURNAMENT, tournamentId, sameKeyUpdate));
 
     // Verify the update was successful
-    TournamentDto retrieved = tournamentsService.getTournament(databaseId, tournamentId);
+    TournamentDto retrieved = entitiesService.get(databaseId, EntityKind.TOURNAMENT, tournamentId);
     assertNotNull(retrieved);
     assertEquals(20, retrieved.category());
     assertEquals(10, retrieved.rounds());
@@ -458,7 +467,7 @@ class ServicesIntegrationTest {
 
     assertThrows(
         IllegalArgumentException.class,
-        () -> playersService.updatePlayer(databaseId, player2Id, duplicateUpdate),
+        () -> entitiesService.update(databaseId, EntityKind.PLAYER, player2Id, duplicateUpdate),
         "Should throw IllegalArgumentException when updating to a duplicate key");
   }
 
@@ -478,7 +487,7 @@ class ServicesIntegrationTest {
 
     assertThrows(
         IllegalArgumentException.class,
-        () -> annotatorsService.updateAnnotator(databaseId, annotator2Id, duplicateUpdate),
+        () -> entitiesService.update(databaseId, EntityKind.ANNOTATOR, annotator2Id, duplicateUpdate),
         "Should throw IllegalArgumentException when updating to a duplicate key");
   }
 
@@ -490,8 +499,7 @@ class ServicesIntegrationTest {
 
     // Search for "Candidates" - should match "Candidates Tournament 2024"
     EntitySearchResponse<TournamentDto> response =
-        tournamentsService.searchTournaments(
-            databaseId, new EntitySearchRequest("Candidates", null, null, null, null, null, null));
+        entitiesService.search(databaseId, EntityKind.TOURNAMENT, new EntitySearchRequest("Candidates", null, null, null, null, null, null));
 
     assertEquals(1, response.count());
     assertTrue(response.items().get(0).title().contains("Candidates"));
@@ -507,8 +515,7 @@ class ServicesIntegrationTest {
 
     // Empty filter should return all tournaments with games
     EntitySearchResponse<TournamentDto> response =
-        tournamentsService.searchTournaments(
-            databaseId, new EntitySearchRequest(null, null, null, null, null, null, null));
+        entitiesService.search(databaseId, EntityKind.TOURNAMENT, new EntitySearchRequest(null, null, null, null, null, null, null));
 
     assertEquals(2, response.count());
   }
@@ -520,15 +527,13 @@ class ServicesIntegrationTest {
 
     // Get first page (limit=1)
     EntitySearchResponse<TournamentDto> page1 =
-        tournamentsService.searchTournaments(
-            databaseId, new EntitySearchRequest(null, 0, 1, null, null, null, null));
+        entitiesService.search(databaseId, EntityKind.TOURNAMENT, new EntitySearchRequest(null, 0, 1, null, null, null, null));
     assertEquals(1, page1.count());
     assertEquals(2, page1.totalCount().intValue());
 
     // Get second page
     EntitySearchResponse<TournamentDto> page2 =
-        tournamentsService.searchTournaments(
-            databaseId, new EntitySearchRequest(null, 1, 1, null, null, null, null));
+        entitiesService.search(databaseId, EntityKind.TOURNAMENT, new EntitySearchRequest(null, 1, 1, null, null, null, null));
     assertEquals(1, page2.count());
 
     // Different tournaments on each page
@@ -542,8 +547,7 @@ class ServicesIntegrationTest {
 
     // Search for "Car" prefix - should match Carlsen and Caruana
     EntitySearchResponse<PlayerDto> response =
-        playersService.searchPlayers(
-            databaseId, new EntitySearchRequest("Car", null, null, null, null, null, null));
+        entitiesService.search(databaseId, EntityKind.PLAYER, new EntitySearchRequest("Car", null, null, null, null, null, null));
 
     assertEquals(2, response.count());
   }
@@ -555,13 +559,11 @@ class ServicesIntegrationTest {
 
     // Search all players sorted by name ascending
     EntitySearchResponse<PlayerDto> ascResponse =
-        playersService.searchPlayers(
-            databaseId, new EntitySearchRequest(null, null, null, "name", null, null, null));
+        entitiesService.search(databaseId, EntityKind.PLAYER, new EntitySearchRequest(null, null, null, "name", null, null, null));
 
     // Search all players sorted by name descending
     EntitySearchResponse<PlayerDto> descResponse =
-        playersService.searchPlayers(
-            databaseId, new EntitySearchRequest(null, null, null, "-name", null, null, null));
+        entitiesService.search(databaseId, EntityKind.PLAYER, new EntitySearchRequest(null, null, null, "-name", null, null, null));
 
     assertTrue(ascResponse.count() > 1);
     assertEquals(ascResponse.count(), descResponse.count());
@@ -578,8 +580,7 @@ class ServicesIntegrationTest {
 
     // Search for non-existent player
     EntitySearchResponse<PlayerDto> response =
-        playersService.searchPlayers(
-            databaseId, new EntitySearchRequest("Zzzzz", null, null, null, null, null, null));
+        entitiesService.search(databaseId, EntityKind.PLAYER, new EntitySearchRequest("Zzzzz", null, null, null, null, null, null));
 
     assertEquals(0, response.count());
     assertEquals(0, response.totalCount().intValue());

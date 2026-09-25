@@ -13,7 +13,13 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import se.yarin.chess.Date;
 import se.yarin.chess.Eco;
+import java.util.ArrayList;
+import java.util.List;
 import se.yarin.morphy.DatabaseCbh;
+import se.yarin.morphy.api.query.FilterCondition;
+import se.yarin.morphy.api.query.FilterQueryParser;
+import se.yarin.morphy.api.query.Query;
+import se.yarin.morphy.queries.filter.GameQueryBuilder;
 import se.yarin.morphy.entities.EntityType;
 import se.yarin.morphy.games.filters.*;
 import se.yarin.morphy.games.filters.RatingRangeFilter.RatingColor;
@@ -31,6 +37,27 @@ class GameSearchRequestConverterTest {
   void setUp() throws IOException {
     database = new DatabaseCbh();
     queryBuilder = new GameSearchRequestConverter();
+  }
+
+  /**
+   * Turns a request into the v1 query a database would run: the converter makes the neutral
+   * {@link Query}, and the v1 query builder compiles it, as {@code DatabaseCbh#findGames} does.
+   */
+  private GameQuery buildQuery(GameSearchRequest request) {
+    Query query = queryBuilder.toQuery(request);
+    GameQueryBuilder builder = new GameQueryBuilder();
+    List<FilterCondition> conditions = new ArrayList<>();
+    if (query.filter() != null && !query.filter().isBlank()) {
+      conditions.addAll(new FilterQueryParser(builder.defaultField()).parse(query.filter()));
+    }
+    conditions.addAll(query.conditions());
+    GameQuery base = builder.buildQuery(database, conditions);
+    return new GameQuery(
+        database,
+        base.gameFilters(),
+        new ArrayList<>(base.entityJoins()),
+        builder.buildSortOrder(query.sort()),
+        0);
   }
 
   @AfterEach
@@ -233,7 +260,7 @@ class GameSearchRequestConverterTest {
     void testResultParameter() {
       GameSearchRequest request = request().result("1-0").build();
 
-      GameQuery query = queryBuilder.buildQuery(database, request);
+      GameQuery query = buildQuery(request);
 
       assertEquals(1, query.gameFilters().size());
       assertEquals(new ResultsFilter("1-0"), query.gameFilters().get(0));
@@ -249,7 +276,7 @@ class GameSearchRequestConverterTest {
               .dateTo(LocalDate.of(2020, 12, 31))
               .build();
 
-      GameQuery query = queryBuilder.buildQuery(database, request);
+      GameQuery query = buildQuery(request);
 
       assertEquals(1, query.gameFilters().size());
       assertEquals(
@@ -263,7 +290,7 @@ class GameSearchRequestConverterTest {
     void testPartialDateRangeFrom() {
       GameSearchRequest request = request().dateFrom(LocalDate.of(2020, 1, 1)).build();
 
-      GameQuery query = queryBuilder.buildQuery(database, request);
+      GameQuery query = buildQuery(request);
 
       assertEquals(1, query.gameFilters().size());
       assertEquals(
@@ -275,7 +302,7 @@ class GameSearchRequestConverterTest {
     void testPartialDateRangeTo() {
       GameSearchRequest request = request().dateTo(LocalDate.of(2020, 12, 31)).build();
 
-      GameQuery query = queryBuilder.buildQuery(database, request);
+      GameQuery query = buildQuery(request);
 
       assertEquals(1, query.gameFilters().size());
       assertEquals(
@@ -287,7 +314,7 @@ class GameSearchRequestConverterTest {
     void testEcoParameter() {
       GameSearchRequest request = request().ecoCode("B90").build();
 
-      GameQuery query = queryBuilder.buildQuery(database, request);
+      GameQuery query = buildQuery(request);
 
       assertEquals(1, query.gameFilters().size());
       assertEquals(new EcoFilter("B90"), query.gameFilters().get(0));
@@ -299,7 +326,7 @@ class GameSearchRequestConverterTest {
     void testEcoWildcardParameter() {
       GameSearchRequest request = request().ecoCode("B9*").build();
 
-      GameQuery query = queryBuilder.buildQuery(database, request);
+      GameQuery query = buildQuery(request);
 
       assertEquals(1, query.gameFilters().size());
       assertEquals(new EcoFilter("B9*"), query.gameFilters().get(0));
@@ -310,7 +337,7 @@ class GameSearchRequestConverterTest {
     void testRoundParameter() {
       GameSearchRequest request = request().round(5).build();
 
-      GameQuery query = queryBuilder.buildQuery(database, request);
+      GameQuery query = buildQuery(request);
 
       assertEquals(1, query.gameFilters().size());
       assertEquals(new RoundFilter(5), query.gameFilters().get(0));
@@ -322,7 +349,7 @@ class GameSearchRequestConverterTest {
     void testRatingRangeParameter() {
       GameSearchRequest request = request().ratingMin(2600).ratingMax(2800).build();
 
-      GameQuery query = queryBuilder.buildQuery(database, request);
+      GameQuery query = buildQuery(request);
 
       assertEquals(1, query.gameFilters().size());
       assertEquals(
@@ -335,7 +362,7 @@ class GameSearchRequestConverterTest {
     void testRatingMinOnly() {
       GameSearchRequest request = request().ratingMin(2600).build();
 
-      GameQuery query = queryBuilder.buildQuery(database, request);
+      GameQuery query = buildQuery(request);
 
       assertEquals(1, query.gameFilters().size());
       assertEquals(
@@ -347,7 +374,7 @@ class GameSearchRequestConverterTest {
     void testRatingMaxOnly() {
       GameSearchRequest request = request().ratingMax(2800).build();
 
-      GameQuery query = queryBuilder.buildQuery(database, request);
+      GameQuery query = buildQuery(request);
 
       assertEquals(1, query.gameFilters().size());
       assertEquals(new RatingRangeFilter(0, 2800, RatingColor.ANY), query.gameFilters().get(0));
@@ -359,7 +386,7 @@ class GameSearchRequestConverterTest {
       GameSearchRequest request =
           request().ratingMin(2600).ratingMax(2800).ratingMode("white").build();
 
-      GameQuery query = queryBuilder.buildQuery(database, request);
+      GameQuery query = buildQuery(request);
 
       assertEquals(1, query.gameFilters().size());
       assertEquals(
@@ -371,7 +398,7 @@ class GameSearchRequestConverterTest {
     void testPlayerIdParameter() {
       GameSearchRequest request = request().playerId(123).build();
 
-      GameQuery query = queryBuilder.buildQuery(database, request);
+      GameQuery query = buildQuery(request);
 
       assertEquals(1, query.gameFilters().size());
       assertEquals(
@@ -384,7 +411,7 @@ class GameSearchRequestConverterTest {
     void testPlayerIdWithPosition() {
       GameSearchRequest request = request().playerId(123).playerPosition("white").build();
 
-      GameQuery query = queryBuilder.buildQuery(database, request);
+      GameQuery query = buildQuery(request);
 
       assertEquals(1, query.gameFilters().size());
       assertEquals(
@@ -396,7 +423,7 @@ class GameSearchRequestConverterTest {
     void testTournamentIdParameter() {
       GameSearchRequest request = request().tournamentId(456).build();
 
-      GameQuery query = queryBuilder.buildQuery(database, request);
+      GameQuery query = buildQuery(request);
 
       assertEquals(1, query.gameFilters().size());
       assertEquals(new TournamentFilter(456), query.gameFilters().get(0));
@@ -408,7 +435,7 @@ class GameSearchRequestConverterTest {
     void testAnnotatorIdParameter() {
       GameSearchRequest request = request().annotatorId(789).build();
 
-      GameQuery query = queryBuilder.buildQuery(database, request);
+      GameQuery query = buildQuery(request);
 
       assertEquals(1, query.gameFilters().size());
       assertEquals(new AnnotatorFilter(789), query.gameFilters().get(0));
@@ -420,7 +447,7 @@ class GameSearchRequestConverterTest {
     void testSourceIdParameter() {
       GameSearchRequest request = request().sourceId(321).build();
 
-      GameQuery query = queryBuilder.buildQuery(database, request);
+      GameQuery query = buildQuery(request);
 
       assertEquals(1, query.gameFilters().size());
       assertEquals(new SourceFilter(321), query.gameFilters().get(0));
@@ -432,7 +459,7 @@ class GameSearchRequestConverterTest {
     void testTeamIdParameter() {
       GameSearchRequest request = request().teamId(654).build();
 
-      GameQuery query = queryBuilder.buildQuery(database, request);
+      GameQuery query = buildQuery(request);
 
       assertEquals(1, query.gameFilters().size());
       assertEquals(new TeamFilter(654, GameEntityJoinCondition.ANY), query.gameFilters().get(0));
@@ -444,7 +471,7 @@ class GameSearchRequestConverterTest {
     void testTeamIdWithPosition() {
       GameSearchRequest request = request().teamId(654).teamPosition("black").build();
 
-      GameQuery query = queryBuilder.buildQuery(database, request);
+      GameQuery query = buildQuery(request);
 
       assertEquals(1, query.gameFilters().size());
       assertEquals(
@@ -456,7 +483,7 @@ class GameSearchRequestConverterTest {
     void testGameTagIdParameter() {
       GameSearchRequest request = request().gameTagId(987).build();
 
-      GameQuery query = queryBuilder.buildQuery(database, request);
+      GameQuery query = buildQuery(request);
 
       assertEquals(1, query.gameFilters().size());
       assertEquals(new GameTagFilter(987), query.gameFilters().get(0));
@@ -473,7 +500,7 @@ class GameSearchRequestConverterTest {
     void testQueryLanguageResult() {
       GameSearchRequest request = request().filter("result:1-0").build();
 
-      GameQuery query = queryBuilder.buildQuery(database, request);
+      GameQuery query = buildQuery(request);
 
       assertEquals(1, query.gameFilters().size());
       assertEquals(new ResultsFilter("1-0"), query.gameFilters().get(0));
@@ -484,7 +511,7 @@ class GameSearchRequestConverterTest {
     void testQueryLanguageSingleRating() {
       GameSearchRequest request = request().filter("rating:2600").build();
 
-      GameQuery query = queryBuilder.buildQuery(database, request);
+      GameQuery query = buildQuery(request);
 
       assertEquals(1, query.gameFilters().size());
       assertEquals(
@@ -496,7 +523,7 @@ class GameSearchRequestConverterTest {
     void testQueryLanguageMultipleFilters() {
       GameSearchRequest request = request().filter("result:1-0 AND eco:B90").build();
 
-      GameQuery query = queryBuilder.buildQuery(database, request);
+      GameQuery query = buildQuery(request);
 
       assertEquals(2, query.gameFilters().size());
       assertTrue(query.gameFilters().stream().anyMatch(f -> f.equals(new ResultsFilter("1-0"))));
@@ -508,7 +535,7 @@ class GameSearchRequestConverterTest {
     void testQueryLanguageEco() {
       GameSearchRequest request = request().filter("eco:B90").build();
 
-      GameQuery query = queryBuilder.buildQuery(database, request);
+      GameQuery query = buildQuery(request);
 
       assertEquals(1, query.gameFilters().size());
       assertEquals(new EcoFilter("B90"), query.gameFilters().get(0));
@@ -519,7 +546,7 @@ class GameSearchRequestConverterTest {
     void testQueryLanguageSingleDateWithExpansion() {
       GameSearchRequest request = request().filter("date:2020-06").build();
 
-      GameQuery query = queryBuilder.buildQuery(database, request);
+      GameQuery query = buildQuery(request);
 
       assertEquals(1, query.gameFilters().size());
       assertEquals(
@@ -532,7 +559,7 @@ class GameSearchRequestConverterTest {
     void testQueryLanguageSingleDate() {
       GameSearchRequest request = request().filter("date:2020").build();
 
-      GameQuery query = queryBuilder.buildQuery(database, request);
+      GameQuery query = buildQuery(request);
 
       assertEquals(1, query.gameFilters().size());
       assertEquals(
@@ -545,7 +572,7 @@ class GameSearchRequestConverterTest {
     void testQueryLanguagePlayerId() {
       GameSearchRequest request = request().filter("playerId:123").build();
 
-      GameQuery query = queryBuilder.buildQuery(database, request);
+      GameQuery query = buildQuery(request);
 
       assertEquals(1, query.gameFilters().size());
       assertEquals(
@@ -557,7 +584,7 @@ class GameSearchRequestConverterTest {
     void testQueryLanguagePlayerShorthand() {
       GameSearchRequest request = request().filter("player:123").build();
 
-      GameQuery query = queryBuilder.buildQuery(database, request);
+      GameQuery query = buildQuery(request);
 
       // player:123 is rewritten to player.name:123 (name search, not ID lookup)
       assertEquals(0, query.gameFilters().size());
@@ -575,7 +602,7 @@ class GameSearchRequestConverterTest {
     void testPlayerNameFilter() {
       GameSearchRequest request = request().filter("player.name:Carlsen").build();
 
-      GameQuery query = queryBuilder.buildQuery(database, request);
+      GameQuery query = buildQuery(request);
 
       assertEquals(0, query.gameFilters().size());
       assertEquals(1, query.entityJoins().size());
@@ -590,7 +617,7 @@ class GameSearchRequestConverterTest {
     void testPlayerNameFilterWithPosition() {
       GameSearchRequest request = request().filter("player.name:Carlsen,position=white").build();
 
-      GameQuery query = queryBuilder.buildQuery(database, request);
+      GameQuery query = buildQuery(request);
 
       assertEquals(0, query.gameFilters().size());
       assertEquals(1, query.entityJoins().size());
@@ -604,7 +631,7 @@ class GameSearchRequestConverterTest {
     void testTournamentTitleFilter() {
       GameSearchRequest request = request().filter("tournament.title:Candidates").build();
 
-      GameQuery query = queryBuilder.buildQuery(database, request);
+      GameQuery query = buildQuery(request);
 
       assertEquals(0, query.gameFilters().size());
       assertEquals(1, query.entityJoins().size());
@@ -619,7 +646,7 @@ class GameSearchRequestConverterTest {
     void testTournamentPlaceFilter() {
       GameSearchRequest request = request().filter("tournament.place:London").build();
 
-      GameQuery query = queryBuilder.buildQuery(database, request);
+      GameQuery query = buildQuery(request);
 
       assertEquals(0, query.gameFilters().size());
       assertEquals(1, query.entityJoins().size());
@@ -633,7 +660,7 @@ class GameSearchRequestConverterTest {
     void testTournamentDateFilter() {
       GameSearchRequest request = request().filter("tournament.date:2024").build();
 
-      GameQuery query = queryBuilder.buildQuery(database, request);
+      GameQuery query = buildQuery(request);
 
       assertEquals(0, query.gameFilters().size());
       assertEquals(1, query.entityJoins().size());
@@ -647,7 +674,7 @@ class GameSearchRequestConverterTest {
     void testAnnotatorNameFilter() {
       GameSearchRequest request = request().filter("annotator.name:Kasparov").build();
 
-      GameQuery query = queryBuilder.buildQuery(database, request);
+      GameQuery query = buildQuery(request);
 
       assertEquals(0, query.gameFilters().size());
       assertEquals(1, query.entityJoins().size());
@@ -661,7 +688,7 @@ class GameSearchRequestConverterTest {
     void testSourceTitleFilter() {
       GameSearchRequest request = request().filter("source.title:ChessBase").build();
 
-      GameQuery query = queryBuilder.buildQuery(database, request);
+      GameQuery query = buildQuery(request);
 
       assertEquals(0, query.gameFilters().size());
       assertEquals(1, query.entityJoins().size());
@@ -676,7 +703,7 @@ class GameSearchRequestConverterTest {
     void testTeamTitleFilter() {
       GameSearchRequest request = request().filter("team.title:Norway").build();
 
-      GameQuery query = queryBuilder.buildQuery(database, request);
+      GameQuery query = buildQuery(request);
 
       assertEquals(0, query.gameFilters().size());
       assertEquals(1, query.entityJoins().size());
@@ -691,7 +718,7 @@ class GameSearchRequestConverterTest {
     void testTeamNameWithPosition() {
       GameSearchRequest request = request().filter("team.name:Norway,position=white").build();
 
-      GameQuery query = queryBuilder.buildQuery(database, request);
+      GameQuery query = buildQuery(request);
 
       assertEquals(0, query.gameFilters().size());
       assertEquals(1, query.entityJoins().size());
@@ -705,7 +732,7 @@ class GameSearchRequestConverterTest {
     void testGameTagTitleFilter() {
       GameSearchRequest request = request().filter("gametag.title:Brilliant").build();
 
-      GameQuery query = queryBuilder.buildQuery(database, request);
+      GameQuery query = buildQuery(request);
 
       assertEquals(0, query.gameFilters().size());
       assertEquals(1, query.entityJoins().size());
@@ -719,7 +746,7 @@ class GameSearchRequestConverterTest {
     void testUnknownPlayerProperty() {
       GameSearchRequest request = request().filter("player.rating:2700").build();
 
-      assertThrows(IllegalArgumentException.class, () -> queryBuilder.buildQuery(database, request));
+      assertThrows(IllegalArgumentException.class, () -> buildQuery(request));
     }
 
     @Test
@@ -727,7 +754,7 @@ class GameSearchRequestConverterTest {
     void testUnknownTournamentProperty() {
       GameSearchRequest request = request().filter("tournament.round:5").build();
 
-      assertThrows(IllegalArgumentException.class, () -> queryBuilder.buildQuery(database, request));
+      assertThrows(IllegalArgumentException.class, () -> buildQuery(request));
     }
 
     @Test
@@ -735,7 +762,7 @@ class GameSearchRequestConverterTest {
     void testUnknownEntityType() {
       GameSearchRequest request = request().filter("unknown.property:value").build();
 
-      assertThrows(IllegalArgumentException.class, () -> queryBuilder.buildQuery(database, request));
+      assertThrows(IllegalArgumentException.class, () -> buildQuery(request));
     }
   }
 
@@ -749,7 +776,7 @@ class GameSearchRequestConverterTest {
       GameSearchRequest request =
           request().result("1-0").ratingMin(2600).filter("eco:B90 AND date:2024").build();
 
-      GameQuery query = queryBuilder.buildQuery(database, request);
+      GameQuery query = buildQuery(request);
 
       assertEquals(4, query.gameFilters().size());
       assertTrue(
@@ -775,7 +802,7 @@ class GameSearchRequestConverterTest {
       GameSearchRequest request =
           request().result("1-0").filter("player.name:Carlsen AND eco:B90").build();
 
-      GameQuery query = queryBuilder.buildQuery(database, request);
+      GameQuery query = buildQuery(request);
 
       assertEquals(2, query.gameFilters().size());
       assertTrue(
@@ -793,7 +820,7 @@ class GameSearchRequestConverterTest {
               .filter("player.name:Carlsen AND tournament.title:Candidates AND annotator.name:Kasparov")
               .build();
 
-      GameQuery query = queryBuilder.buildQuery(database, request);
+      GameQuery query = buildQuery(request);
 
       assertEquals(0, query.gameFilters().size());
       assertEquals(3, query.entityJoins().size());
@@ -810,7 +837,7 @@ class GameSearchRequestConverterTest {
     void testIdAndPropertyFiltersMix() {
       GameSearchRequest request = request().playerId(123).filter("player.name:Carlsen").build();
 
-      GameQuery query = queryBuilder.buildQuery(database, request);
+      GameQuery query = buildQuery(request);
 
       assertEquals(1, query.gameFilters().size());
       assertEquals(
@@ -832,7 +859,7 @@ class GameSearchRequestConverterTest {
               .gameTagId(6)
               .build();
 
-      GameQuery query = queryBuilder.buildQuery(database, request);
+      GameQuery query = buildQuery(request);
 
       assertEquals(6, query.gameFilters().size());
       assertTrue(
@@ -868,7 +895,7 @@ class GameSearchRequestConverterTest {
               .ratingMax(2800)
               .build();
 
-      GameQuery query = queryBuilder.buildQuery(database, request);
+      GameQuery query = buildQuery(request);
 
       assertEquals(5, query.gameFilters().size());
       assertTrue(
@@ -901,7 +928,7 @@ class GameSearchRequestConverterTest {
     void testSortById() {
       GameSearchRequest request = request().sortBy("+id").build();
 
-      GameQuery query = queryBuilder.buildQuery(database, request);
+      GameQuery query = buildQuery(request);
 
       assertNotNull(query.sortOrder());
       assertFalse(query.sortOrder().isNone());
@@ -912,7 +939,7 @@ class GameSearchRequestConverterTest {
     void testSortByDateAsc() {
       GameSearchRequest request = request().sortBy("+date").build();
 
-      GameQuery query = queryBuilder.buildQuery(database, request);
+      GameQuery query = buildQuery(request);
 
       assertNotNull(query.sortOrder());
       assertFalse(query.sortOrder().isNone());
@@ -923,21 +950,18 @@ class GameSearchRequestConverterTest {
     void testSortByDateDesc() {
       GameSearchRequest request = request().sortBy("-date").build();
 
-      GameQuery query = queryBuilder.buildQuery(database, request);
+      GameQuery query = buildQuery(request);
 
       assertNotNull(query.sortOrder());
       assertFalse(query.sortOrder().isNone());
     }
 
     @Test
-    @DisplayName("should create no sort order for unsupported sort field")
+    @DisplayName("should reject an unsupported sort field")
     void testUnsupportedSortField() {
       GameSearchRequest request = request().sortBy("-whiteEloMissing").build();
 
-      GameQuery query = queryBuilder.buildQuery(database, request);
-
-      assertNotNull(query.sortOrder());
-      assertTrue(query.sortOrder().isNone());
+      assertThrows(IllegalArgumentException.class, () -> buildQuery(request));
     }
 
     @Test
@@ -945,7 +969,7 @@ class GameSearchRequestConverterTest {
     void testDefaultSort() {
       GameSearchRequest request = request().build();
 
-      GameQuery query = queryBuilder.buildQuery(database, request);
+      GameQuery query = buildQuery(request);
 
       assertNotNull(query.sortOrder());
     }
@@ -960,7 +984,7 @@ class GameSearchRequestConverterTest {
     void testEmptyRequest() {
       GameSearchRequest request = request().build();
 
-      GameQuery query = queryBuilder.buildQuery(database, request);
+      GameQuery query = buildQuery(request);
 
       assertEquals(0, query.gameFilters().size());
       assertEquals(0, query.entityJoins().size());
@@ -972,7 +996,7 @@ class GameSearchRequestConverterTest {
     void testNullFilterString() {
       GameSearchRequest request = request().filter(null).build();
 
-      GameQuery query = queryBuilder.buildQuery(database, request);
+      GameQuery query = buildQuery(request);
 
       assertEquals(0, query.gameFilters().size());
       assertEquals(0, query.entityJoins().size());
@@ -983,7 +1007,7 @@ class GameSearchRequestConverterTest {
     void testEmptyFilterString() {
       GameSearchRequest request = request().filter("").build();
 
-      GameQuery query = queryBuilder.buildQuery(database, request);
+      GameQuery query = buildQuery(request);
 
       assertEquals(0, query.gameFilters().size());
       assertEquals(0, query.entityJoins().size());
@@ -994,7 +1018,7 @@ class GameSearchRequestConverterTest {
     void testBlankFilterString() {
       GameSearchRequest request = request().filter("   ").build();
 
-      GameQuery query = queryBuilder.buildQuery(database, request);
+      GameQuery query = buildQuery(request);
 
       assertEquals(0, query.gameFilters().size());
       assertEquals(0, query.entityJoins().size());
@@ -1005,7 +1029,7 @@ class GameSearchRequestConverterTest {
     void testInvalidResultValue() {
       GameSearchRequest request = request().result("invalid").build();
 
-      assertThrows(IllegalArgumentException.class, () -> queryBuilder.buildQuery(database, request));
+      assertThrows(IllegalArgumentException.class, () -> buildQuery(request));
     }
 
     @Test
@@ -1013,7 +1037,7 @@ class GameSearchRequestConverterTest {
     void testInvalidEcoCode() {
       GameSearchRequest request = request().ecoCode("Z99").build();
 
-      assertThrows(IllegalArgumentException.class, () -> queryBuilder.buildQuery(database, request));
+      assertThrows(IllegalArgumentException.class, () -> buildQuery(request));
     }
 
     @Test
@@ -1021,7 +1045,7 @@ class GameSearchRequestConverterTest {
     void testInvalidPlayerPosition() {
       GameSearchRequest request = request().playerId(123).playerPosition("invalid").build();
 
-      assertThrows(IllegalArgumentException.class, () -> queryBuilder.buildQuery(database, request));
+      assertThrows(IllegalArgumentException.class, () -> buildQuery(request));
     }
 
     @Test
@@ -1029,7 +1053,7 @@ class GameSearchRequestConverterTest {
     void testInvalidTeamPosition() {
       GameSearchRequest request = request().teamId(456).teamPosition("invalid").build();
 
-      assertThrows(IllegalArgumentException.class, () -> queryBuilder.buildQuery(database, request));
+      assertThrows(IllegalArgumentException.class, () -> buildQuery(request));
     }
 
     @Test
@@ -1038,7 +1062,7 @@ class GameSearchRequestConverterTest {
       GameSearchRequest request =
           request().ratingMin(2600).ratingMode("invalid").build();
 
-      assertThrows(IllegalArgumentException.class, () -> queryBuilder.buildQuery(database, request));
+      assertThrows(IllegalArgumentException.class, () -> buildQuery(request));
     }
 
     @Test
@@ -1055,7 +1079,7 @@ class GameSearchRequestConverterTest {
 
       for (var entry : positionMap.entrySet()) {
         GameSearchRequest request = request().playerId(123).playerPosition(entry.getKey()).build();
-        GameQuery query = queryBuilder.buildQuery(database, request);
+        GameQuery query = buildQuery(request);
         assertEquals(1, query.gameFilters().size());
         assertEquals(new PlayerFilter(123, entry.getValue()), query.gameFilters().get(0));
       }
@@ -1075,7 +1099,7 @@ class GameSearchRequestConverterTest {
 
       for (var entry : positionMap.entrySet()) {
         GameSearchRequest request = request().teamId(456).teamPosition(entry.getKey()).build();
-        GameQuery query = queryBuilder.buildQuery(database, request);
+        GameQuery query = buildQuery(request);
         assertEquals(1, query.gameFilters().size());
         assertEquals(new TeamFilter(456, entry.getValue()), query.gameFilters().get(0));
       }
@@ -1095,7 +1119,7 @@ class GameSearchRequestConverterTest {
 
       for (var entry : modeMap.entrySet()) {
         GameSearchRequest request = request().ratingMin(2600).ratingMode(entry.getKey()).build();
-        GameQuery query = queryBuilder.buildQuery(database, request);
+        GameQuery query = buildQuery(request);
         assertEquals(1, query.gameFilters().size());
         assertEquals(new RatingRangeFilter(2600, 9999, entry.getValue()), query.gameFilters().get(0));
       }
@@ -1106,7 +1130,7 @@ class GameSearchRequestConverterTest {
     void testQueryLimit() {
       GameSearchRequest request = request().limit(100).build();
 
-      GameQuery query = queryBuilder.buildQuery(database, request);
+      GameQuery query = buildQuery(request);
 
       assertEquals(0, query.limit());
     }
@@ -1120,7 +1144,7 @@ class GameSearchRequestConverterTest {
               + "annotator.name:Kasparov AND source.title:ChessBase";
       GameSearchRequest request = request().filter(longFilter).build();
 
-      GameQuery query = queryBuilder.buildQuery(database, request);
+      GameQuery query = buildQuery(request);
 
       assertEquals(4, query.gameFilters().size());
       assertEquals(4, query.entityJoins().size());

@@ -1,4 +1,4 @@
-package se.yarin.morphy.queries.filter;
+package se.yarin.morphy.api.query;
 
 import static org.junit.Assert.*;
 

@@ -1,204 +1,118 @@
 package se.yarin.morphy.service.games;
 
-import se.yarin.morphy.model.GameDto;
-
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-import se.yarin.chess.GameModel;
-import se.yarin.morphy.Game;
-import se.yarin.morphy.queries.GameQuery;
-import se.yarin.morphy.queries.QueryContext;
-import se.yarin.morphy.queries.operations.QueryData;
-import se.yarin.morphy.queries.operations.QueryOperator;
-import se.yarin.morphy.queries.visualisation.QueryDescriptionFormatter;
+import se.yarin.morphy.CbhDiagnostics;
+import se.yarin.morphy.api.Database;
+import se.yarin.morphy.api.GameFetchOptions;
+import se.yarin.morphy.api.query.Query;
+import se.yarin.morphy.api.query.ResultPage;
+import se.yarin.morphy.model.GameDto;
 import se.yarin.morphy.service.MorphyServiceException;
 import se.yarin.morphy.service.databases.DatabaseService;
-import se.yarin.morphy.convert.GameDtoConverter;
-import se.yarin.morphy.convert.GameDtoImporter;
-import se.yarin.morphy.service.games.dto.*;
-import se.yarin.morphy.service.search.SearchMetadata;
+import se.yarin.morphy.service.games.dto.GameSearchRequest;
+import se.yarin.morphy.service.games.dto.GameSearchResponse;
 import se.yarin.morphy.service.games.search.GameSearchRequestConverter;
 import se.yarin.morphy.service.queryplans.QueryPlanDebugInfo;
-import se.yarin.morphy.service.queryplans.QueryPlanDto;
 import se.yarin.morphy.service.queryplans.QueryPlanDtoConverter;
+import se.yarin.morphy.service.search.SearchMetadata;
 
 @Service
 public class GamesService {
   private static final Logger log = LoggerFactory.getLogger(GamesService.class);
-  private static final long MAX_PLAN_COST = 100_000;
 
   private final DatabaseService databaseService;
-  private final GameDtoConverter gameDtoConverter;
-  private final GameDtoImporter gameDtoImporter;
-  private final GameSearchRequestConverter gameQueryBuilder;
+  private final GameSearchRequestConverter searchRequestConverter;
   private final QueryPlanDtoConverter queryPlanDtoConverter;
 
   public GamesService(
       DatabaseService databaseService,
-      GameDtoConverter gameDtoConverter,
-      GameDtoImporter gameDtoImporter,
-      GameSearchRequestConverter gameQueryBuilder,
+      GameSearchRequestConverter searchRequestConverter,
       QueryPlanDtoConverter queryPlanDtoConverter) {
     this.databaseService = databaseService;
-    this.gameDtoConverter = gameDtoConverter;
-    this.gameDtoImporter = gameDtoImporter;
-    this.gameQueryBuilder = gameQueryBuilder;
+    this.searchRequestConverter = searchRequestConverter;
     this.queryPlanDtoConverter = queryPlanDtoConverter;
   }
 
   /**
-   * Get game headers starting from a specific game ID (cursor-based pagination).
+   * Lists the games of a database in id order.
    *
-   * @param databaseId The database ID to search in
-   * @param cursor The cursor (game ID) to start from, null for beginning
-   * @param limit Maximum number of games to return (max 1000)
-   * @param includeMoves Whether to include game moves in the response
-   * @param includeText Whether to include game text/commentary in the response
-   * @return Paginated response with games and pagination info
+   * @param databaseId the database ID
+   * @param offset the number of games to skip
+   * @param limit the maximum number of games to return (at most 1000)
+   * @param includeMoves whether to include the moves
+   * @param includeText whether to include the body of guiding texts
    */
-  public GameHeaderListResponse getGames(
+  public GameSearchResponse getGames(
       @NotNull String databaseId,
-      Integer cursor,
+      int offset,
       int limit,
       boolean includeMoves,
       boolean includeText) {
-    if (limit <= 0) {
-      log.warn("Limit must be positive, got: {}", limit);
-      return new GameHeaderListResponse(new ArrayList<>(), 0, null, false);
-    }
-    if (limit > 1000) {
-      log.warn("Too high limit provided ({}), reduced to 1000", limit);
-      limit = 1000;
-    }
-
-    final int finalLimit = limit;
-    // Fetch limit+1 to determine if there are more results
-    // For list queries, use minimal tournament/source/team details for better performance
-    List<GameDto> allGames =
-        databaseService.withReadTransaction(
-            databaseId,
-            txn ->
-                txn.stream(cursor, null)
-                    .limit(finalLimit + 1L)
-                    .map(
-                        game ->
-                            gameDtoConverter.toDto(
-                                game, includeMoves, includeText, false, false, false))
-                    .collect(Collectors.toList()));
-
-    boolean hasMore = allGames.size() > limit;
-    List<GameDto> games = hasMore ? allGames.subList(0, limit) : allGames;
-
-    String nextCursor = null;
-    if (hasMore && !games.isEmpty()) {
-      // The next cursor is the ID of the last game we're returning + 1
-      long lastGameId = games.get(games.size() - 1).id();
-      nextCursor = String.valueOf(lastGameId + 1);
-    }
-
-    return new GameHeaderListResponse(games, games.size(), nextCursor, hasMore);
+    GameSearchRequest request =
+        new GameSearchRequest(
+            offset, limit, null, includeMoves, includeText, null, null, null, null, null, null,
+            null, null, null, null, null, null, null, null, null, null, null, null, null, null);
+    return searchGames(databaseId, request);
   }
 
   /**
-   * Get a game as a DTO with optional moves and text.
+   * Gets a game, with full tournament, source and team details.
    *
-   * @param databaseId The database ID
-   * @param gameId The game ID
-   * @param includeMoves Whether to include game moves in the response
-   * @param includeText Whether to include game text/commentary in the response
-   * @return GameDto with the requested information (includes full tournament/source/team details),
-   *     or null if the game doesn't exist or is deleted
+   * @return the game, or null if there is no game with that id
    */
   public @Nullable GameDto getGame(
-      @NotNull String databaseId, int gameId, boolean includeMoves, boolean includeText) {
-    return databaseService.withReadTransaction(
-        databaseId,
-        txn -> {
-          try {
-            Game game = txn.getGame(gameId);
-            // For single game queries, include full tournament/source/team details
-            return gameDtoConverter.toDto(game, includeMoves, includeText, true, true, true);
-          } catch (IllegalArgumentException e) {
-            // Game doesn't exist or is deleted
-            return null;
-          }
-        });
+      @NotNull String databaseId, long gameId, boolean includeMoves, boolean includeText) {
+    GameFetchOptions fetch = new GameFetchOptions(includeMoves, includeText, true, false);
+    return databaseService.read(databaseId, db -> db.getGame(gameId, fetch));
+  }
+
+  /** The number of games in a database. */
+  public long getGameCount(@NotNull String databaseId) {
+    return databaseService.read(databaseId, Database::gameCount);
   }
 
   /**
-   * Get the total number of games in the specified database.
+   * Adds a game.
    *
-   * @param databaseId The database ID to count games in
-   * @return The total number of games in the database
-   */
-  public int getGameCount(@NotNull String databaseId) {
-    return databaseService.withReadTransaction(databaseId, txn -> txn.database().count());
-  }
-
-  /**
-   * Add a game from a DTO to the specified database.
-   *
-   * @param databaseId The database ID to add the game to
-   * @param gameDto The game DTO to add
-   * @return The complete GameDto of the added game (includes full tournament/source/team details)
-   * @throws MorphyServiceException if the game cannot be added
-   * @throws IllegalArgumentException if the DTO is invalid or represents guiding text
+   * @return the added game, as stored
+   * @throws IllegalArgumentException if the game is invalid
+   * @throws MorphyServiceException if the game can't be added
    */
   public GameDto addGame(@NotNull String databaseId, @NotNull GameDto gameDto) {
     try {
-      GameModel gameModel = gameDtoImporter.toGameModel(gameDto);
-      int gameId =
-          databaseService.withWriteTransaction(
-              databaseId,
-              txn -> {
-                Game game = txn.addGame(gameModel);
-                log.info("Successfully added game {} to database '{}'", game.id(), databaseId);
-                return game.id();
-              });
+      long gameId = databaseService.write(databaseId, db -> db.addGame(gameDto));
+      log.info("Successfully added game {} to database '{}'", gameId, databaseId);
       return getGame(databaseId, gameId, true, true);
-    } catch (IllegalArgumentException e) {
-      throw e; // Rethrow validation errors
-    } catch (MorphyServiceException e) {
-      throw e; // Rethrow service errors
+    } catch (IllegalArgumentException | MorphyServiceException e) {
+      throw e;
     } catch (Exception e) {
       throw new MorphyServiceException("Failed to add game to database '" + databaseId + "'", e);
     }
   }
 
   /**
-   * Replace a game from a DTO in the specified database.
+   * Replaces a game.
    *
-   * @param databaseId The database ID to replace the game in
-   * @param gameId The game ID to replace
-   * @param gameDto The game DTO to replace with
-   * @return The complete GameDto of the replaced game (includes full tournament/source/team
-   *     details)
-   * @throws MorphyServiceException if the game cannot be replaced
-   * @throws IllegalArgumentException if the DTO is invalid or represents guiding text
+   * @return the replaced game, as stored
+   * @throws IllegalArgumentException if the game is invalid or doesn't exist
+   * @throws MorphyServiceException if the game can't be replaced
    */
-  public GameDto replaceGame(@NotNull String databaseId, int gameId, @NotNull GameDto gameDto) {
+  public GameDto replaceGame(@NotNull String databaseId, long gameId, @NotNull GameDto gameDto) {
     try {
-      GameModel gameModel = gameDtoImporter.toGameModel(gameDto);
-      databaseService.withWriteTransaction(
+      databaseService.write(
           databaseId,
-          txn -> {
-            Game game = txn.replaceGame(gameId, gameModel);
-            log.info("Successfully replaced game {} in database '{}'", game.id(), databaseId);
-            return game.id();
+          db -> {
+            db.replaceGame(gameId, gameDto);
+            return null;
           });
+      log.info("Successfully replaced game {} in database '{}'", gameId, databaseId);
       return getGame(databaseId, gameId, true, true);
-    } catch (IllegalArgumentException e) {
-      throw e; // Rethrow validation errors
-    } catch (MorphyServiceException e) {
-      throw e; // Rethrow service errors
+    } catch (IllegalArgumentException | MorphyServiceException e) {
+      throw e;
     } catch (Exception e) {
       throw new MorphyServiceException(
           "Failed to replace game " + gameId + " in database '" + databaseId + "'", e);
@@ -206,199 +120,44 @@ public class GamesService {
   }
 
   /**
-   * Searches for games matching the given criteria.
+   * Searches for games.
    *
-   * @param databaseId The database ID to search in
-   * @param request The search request with filter criteria, sorting, and pagination
-   * @return Search response with matching games and metadata
+   * @param databaseId the database ID
+   * @param request the filter, typed parameters, sort order and window
+   * @return one page of matching games, with metadata
    */
   public GameSearchResponse searchGames(
       @NotNull String databaseId, @NotNull GameSearchRequest request) {
     long startTime = System.currentTimeMillis();
+    Query query = searchRequestConverter.toQuery(request);
+    GameFetchOptions fetch =
+        new GameFetchOptions(
+            request.includeMoves(), request.includeText(), false, request.debugRawData());
 
-    // Validate and apply limits
-    int offset = Math.max(0, request.offset());
-    int limit = Math.min(1000, Math.max(1, request.limit()));
-    boolean debugPlans = request.debugQueryPlans();
-    boolean executeAll = request.debugExecuteAllPlans();
-
-    return databaseService.withReadTransaction(
+    return databaseService.read(
         databaseId,
-        txn -> {
-          // 1. Build GameQuery from request
-          GameQuery gameQuery = gameQueryBuilder.buildQuery(txn.database(), request);
-
-          // 2. Create query context (enable traceCost when debug is on)
-          QueryContext context = new QueryContext(txn, debugPlans);
-
-          // 3. Generate query plans sorted by estimated cost (cheapest first)
-          List<QueryOperator<Game>> plans =
-              txn.database().queryPlanner().sortQueryPlansByCost(
-                  txn.database().queryPlanner().getGameQueryPlans(context, gameQuery, true));
-
-          // 4. Best plan is the first one (cheapest)
-          QueryOperator<Game> bestPlan = plans.getFirst();
-
-          log.debug(
-              "Selected query plan: {} (cost: {})",
-              bestPlan.getClass().getSimpleName(),
-              bestPlan.getQueryCost().estimatedTotalCost());
-
-          // 5. Execute query
-          List<Game> games;
-          List<QueryData<Game>> profiledResults = null;
-          if (debugPlans) {
-            // Use executeProfiled to capture actual costs
-            profiledResults = bestPlan.executeProfiled();
-            games =
-                profiledResults.stream()
-                    .map(QueryData::data)
-                    .collect(Collectors.toList());
-          } else {
-            Stream<QueryData<Game>> queryResults = bestPlan.stream();
-            games =
-                queryResults
-                    .map(QueryData::data)
-                    .collect(Collectors.toList());
-          }
-
-          // 6. Build debug info if requested
-          QueryPlanDebugInfo debugInfo = null;
-          if (debugPlans) {
-            debugInfo = buildDebugInfo(txn, gameQuery, plans, profiledResults, executeAll);
-          }
-
-          // 8. Apply pagination
-          int totalCount = games.size();
-          int fromIndex = Math.min(offset, totalCount);
-          int toIndex = Math.min(offset + limit, totalCount);
-          List<Game> paginatedGames = games.subList(fromIndex, toIndex);
-
-          // 9. Convert to DTOs
-          boolean debugRawData = request.debugRawData();
-          List<GameDto> gameDtos =
-              paginatedGames.stream()
-                  .map(
-                      game ->
-                          gameDtoConverter.toDto(
-                              game,
-                              request.includeMoves(),
-                              request.includeText(),
-                              false,
-                              false,
-                              false,
-                              debugRawData))
-                  .collect(Collectors.toList());
-
-          long endTime = System.currentTimeMillis();
-
-          // 10. Build metadata
+        db -> {
+          ResultPage<GameDto> page = db.findGames(query, fetch);
+          QueryPlanDebugInfo debugInfo =
+              request.debugQueryPlans()
+                  ? db.extension(CbhDiagnostics.class)
+                      .map(d -> d.explainGames(query, request.debugExecuteAllPlans()))
+                      .map(queryPlanDtoConverter::toDebugInfo)
+                      .orElse(null)
+                  : null;
           SearchMetadata metadata =
               new SearchMetadata(
-                  gameQuery.toString(), request.sortBy(), endTime - startTime);
-
+                  page.appliedFilter(),
+                  query.sort().toString(),
+                  System.currentTimeMillis() - startTime);
           return new GameSearchResponse(
-              gameDtos, gameDtos.size(), totalCount, offset, limit, metadata, debugInfo);
+              page.items(),
+              page.items().size(),
+              page.total() == null ? null : page.total().intValue(),
+              page.offset(),
+              page.limit(),
+              metadata,
+              debugInfo);
         });
-  }
-
-  private @NotNull QueryPlanDebugInfo buildDebugInfo(
-      @NotNull se.yarin.morphy.DatabaseReadTransaction txn,
-      @NotNull GameQuery gameQuery,
-      @NotNull List<QueryOperator<Game>> plans,
-      @NotNull List<QueryData<Game>> bestPlanResults,
-      boolean executeAll) {
-    String queryDescription = QueryDescriptionFormatter.format(gameQuery);
-
-    // Collect result IDs from the best plan for comparison
-    List<Integer> bestPlanResultIds = null;
-    if (executeAll) {
-      bestPlanResultIds = bestPlanResults.stream()
-          .map(QueryData::id)
-          .sorted()
-          .collect(Collectors.toList());
-    }
-
-    List<QueryPlanDto> planDtos = new ArrayList<>();
-    Boolean allPlansAgree = executeAll ? true : null;
-
-    for (int i = 0; i < plans.size(); i++) {
-      QueryOperator<Game> plan = plans.get(i);
-      String label = "Plan " + (i + 1);
-
-      if (i == 0) {
-        // Best plan (cheapest) was already executed via executeProfiled in searchGames
-        int resultCount = bestPlanResults.size();
-        planDtos.add(queryPlanDtoConverter.convertPlan(label, plan, true, resultCount, null));
-      } else if (executeAll) {
-        long estCost = (long) plan.getQueryCost().estimatedTotalCost();
-        if (estCost >= MAX_PLAN_COST) {
-          // Too expensive to execute — include with estimates only
-          log.debug("Skipping plan {} (estimated cost {})", i + 1, estCost);
-          planDtos.add(queryPlanDtoConverter.convertPlan(label, plan, false, null, null));
-        } else {
-          // Execute alternative plan with a fresh context to avoid shared operator state.
-          // Sort the fresh plans the same way so indices correspond to the original plans.
-          QueryContext freshContext = new QueryContext(txn, true);
-          var planner = txn.database().queryPlanner();
-          List<QueryOperator<Game>> freshPlans = planner.sortQueryPlansByCost(
-              planner.getGameQueryPlans(freshContext, gameQuery, true));
-          QueryOperator<Game> freshPlan = freshPlans.get(i);
-          List<QueryData<Game>> altResults = freshPlan.executeProfiled();
-          int resultCount = altResults.size();
-
-          List<Integer> altResultIds = altResults.stream()
-              .map(QueryData::id)
-              .sorted()
-              .collect(Collectors.toList());
-          boolean differs = !altResultIds.equals(bestPlanResultIds);
-          if (differs) {
-            allPlansAgree = false;
-          }
-
-          planDtos.add(queryPlanDtoConverter.convertPlan(label, freshPlan, true, resultCount,
-              differs));
-        }
-      } else {
-        // Not executed — estimates only
-        planDtos.add(queryPlanDtoConverter.convertPlan(label, plan, false, null, null));
-      }
-    }
-
-    return new QueryPlanDebugInfo(queryDescription, 0, allPlansAgree, planDtos);
-  }
-
-  /**
-   * Sorts games by the sort spec (field with optional +/- prefix, e.g. "-whiteElo").
-   *
-   * @param games the games to sort
-   * @param sortBy sort spec (whiteElo, blackElo, avgElo with optional + or - prefix)
-   * @return sorted list of games
-   */
-  private @NotNull List<Game> sortGames(@NotNull List<Game> games, @NotNull String sortBy) {
-    boolean descending = sortBy.startsWith("-");
-    String field = stripSortPrefix(sortBy).toLowerCase();
-    Comparator<Game> comparator =
-        switch (field) {
-          case "whiteelo" -> Comparator.comparingInt(Game::whiteElo);
-          case "blackelo" -> Comparator.comparingInt(Game::blackElo);
-          case "avgelo" ->
-              Comparator.comparingDouble(game -> (game.whiteElo() + game.blackElo()) / 2.0);
-          default -> throw new IllegalArgumentException("Cannot sort by field: " + sortBy);
-        };
-
-    if (descending) {
-      comparator = comparator.reversed();
-    }
-
-    return games.stream().sorted(comparator).collect(Collectors.toList());
-  }
-
-  private static @NotNull String stripSortPrefix(@NotNull String sortBy) {
-    sortBy = sortBy.trim();
-    if (sortBy.startsWith("+") || sortBy.startsWith("-")) {
-      return sortBy.substring(1).trim();
-    }
-    return sortBy;
   }
 }

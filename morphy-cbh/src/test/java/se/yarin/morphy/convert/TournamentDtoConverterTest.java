@@ -1,6 +1,5 @@
-package se.yarin.morphy.service.tournaments.dto;
+package se.yarin.morphy.convert;
 
-import se.yarin.morphy.convert.TournamentDtoConverter;
 
 import se.yarin.morphy.model.TournamentDto;
 

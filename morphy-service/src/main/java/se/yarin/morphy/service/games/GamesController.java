@@ -5,9 +5,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import se.yarin.morphy.service.CountResponse;
 import se.yarin.morphy.service.MorphyServiceException;
-import se.yarin.morphy.service.games.GameCountResponse;
-import se.yarin.morphy.service.games.GameHeaderListResponse;
 import se.yarin.morphy.service.games.GamesService;
 import se.yarin.morphy.model.GameDto;
 import se.yarin.morphy.service.games.dto.GameSearchRequest;
@@ -25,24 +24,24 @@ public class GamesController {
   }
 
   /**
-   * Get games with cursor-based pagination.
+   * Lists games in id order.
    *
    * @param databaseId The database ID
-   * @param cursor Optional cursor for pagination (game ID to start from)
+   * @param offset Number of games to skip (default 0)
    * @param limit Number of games to return (default 100, max 1000)
    * @param includeMoves Whether to include game moves (default false)
    * @param includeText Whether to include game text/commentary (default false)
-   * @return Paginated list of games
+   * @return One page of games, in the same form as a search result
    */
   @GetMapping
-  public ResponseEntity<GameHeaderListResponse> getGames(
+  public ResponseEntity<GameSearchResponse> getGames(
       @PathVariable String databaseId,
-      @RequestParam(required = false) Integer cursor,
+      @RequestParam(defaultValue = "0") int offset,
       @RequestParam(defaultValue = "100") int limit,
       @RequestParam(defaultValue = "false") boolean includeMoves,
       @RequestParam(defaultValue = "false") boolean includeText) {
-    GameHeaderListResponse response =
-        gamesService.getGames(databaseId, cursor, limit, includeMoves, includeText);
+    GameSearchResponse response =
+        gamesService.getGames(databaseId, offset, limit, includeMoves, includeText);
     return ResponseEntity.ok(response);
   }
 
@@ -58,7 +57,7 @@ public class GamesController {
   @GetMapping("/{gameId}")
   public ResponseEntity<GameDto> getGame(
       @PathVariable String databaseId,
-      @PathVariable int gameId,
+      @PathVariable long gameId,
       @RequestParam(defaultValue = "true") boolean includeMoves,
       @RequestParam(defaultValue = "false") boolean includeText) {
     try {
@@ -81,9 +80,8 @@ public class GamesController {
    * @return The count of games
    */
   @GetMapping("/count")
-  public ResponseEntity<GameCountResponse> getGameCount(@PathVariable String databaseId) {
-    int count = gamesService.getGameCount(databaseId);
-    return ResponseEntity.ok(new GameCountResponse(count));
+  public ResponseEntity<CountResponse> getGameCount(@PathVariable String databaseId) {
+    return ResponseEntity.ok(new CountResponse(gamesService.getGameCount(databaseId)));
   }
 
   /**
@@ -118,7 +116,7 @@ public class GamesController {
    */
   @PutMapping("/{gameId}")
   public ResponseEntity<GameDto> replaceGame(
-      @PathVariable String databaseId, @PathVariable int gameId, @RequestBody GameDto gameDto) {
+      @PathVariable String databaseId, @PathVariable long gameId, @RequestBody GameDto gameDto) {
     try {
       GameDto updatedGame = gamesService.replaceGame(databaseId, gameId, gameDto);
       return ResponseEntity.ok(updatedGame);

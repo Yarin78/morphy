@@ -1,5 +1,6 @@
 package se.yarin.morphy.queries.filter;
 
+import se.yarin.morphy.api.query.FilterCondition;
 import java.util.Map;
 import java.util.function.Function;
 import se.yarin.morphy.entities.Annotator;

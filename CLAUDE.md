@@ -17,7 +17,7 @@ mvn package -pl morphy-cli # Build CLI JAR with dependencies
 Morphy is a Java 21 library and CLI for reading/writing ChessBase databases (.cbh binary format). It uses Maven 3.6+ with these modules:
 
 - **morphy-api**: Vendor-neutral layer shared by every format — the format-independent chess core (`se.yarin.chess`), the neutral DTO records (`se.yarin.morphy.model`), and the `Database` facade interface (`se.yarin.morphy.api`)
-- **morphy-cbh**: The ChessBase v1 (`.cbh`) reader/writer and database API; its `DatabaseCbh` implements the `Database` facade directly and owns the v1↔DTO converters (`se.yarin.morphy.convert`)
+- **morphy-cbh**: The ChessBase v1 (`.cbh`) reader/writer and database API; `DatabaseCbh` is the v1 engine, and `DatabaseCbhFacade` wraps it as the `Database` facade, using the v1↔DTO converters (`se.yarin.morphy.convert`)
 - **morphy-cb2**: The ChessBase v2 (`.2cbh`) format — currently a stub, `Database2Cbh`, implementing the facade
 - **morphy-cli**: Command-line interface using Picocli
 - **morphy-tools**: Development utilities
@@ -45,7 +45,8 @@ Key patterns:
 
 - `Database` (morphy-api) - Vendor-neutral facade interface; open any format via `Databases.open(file)`
 - `GameDto` (`se.yarin.morphy.model`) - The neutral game representation crossing the facade (moves as PGN)
-- `DatabaseCbh.java` (morphy-cbh) - The v1 engine; implements the `Database` facade directly (also exposes v1-specific indexes/transactions/queries)
+- `DatabaseCbh.java` (morphy-cbh) - The v1 engine: indexes, transactions, the query planner
+- `DatabaseCbhFacade.java` (morphy-cbh) - The `Database` facade over a `DatabaseCbh`, returned by `Databases.open` for `.cbh` files; also offers `CbhDiagnostics` via `extension(...)`
 - `DatabaseReadTransaction` / `DatabaseWriteTransaction` - All v1 database operations
 - `Position.java` - Immutable board state with Zobrist hashing
 - `GameModel.java` - The Java representation of a chess game: a `GameHeaderModel` (typed header fields, optional entity ids, extra PGN tags) plus a `GameMovesModel` (the move tree). Used by PGN, the format codecs, the CLI and tools; `GameDto` is the wire/view format at the boundary

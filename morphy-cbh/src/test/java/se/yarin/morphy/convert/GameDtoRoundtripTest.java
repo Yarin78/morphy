@@ -1,4 +1,4 @@
-package se.yarin.morphy.service.games.dto;
+package se.yarin.morphy.convert;
 
 import se.yarin.morphy.model.GameDto;
 
@@ -17,14 +17,6 @@ import se.yarin.morphy.DatabaseCbh;
 import se.yarin.morphy.DatabaseWriteTransaction;
 import se.yarin.morphy.Game;
 import se.yarin.morphy.games.annotations.AnnotationConverter;
-import se.yarin.morphy.convert.GameDtoConverter;
-import se.yarin.morphy.convert.GameDtoImporter;
-import se.yarin.morphy.convert.AnnotatorDtoConverter;
-import se.yarin.morphy.convert.GameTagDtoConverter;
-import se.yarin.morphy.convert.PlayerDtoConverter;
-import se.yarin.morphy.convert.SourceDtoConverter;
-import se.yarin.morphy.convert.TeamDtoConverter;
-import se.yarin.morphy.convert.TournamentDtoConverter;
 import se.yarin.morphy.text.ImmutableTextHeaderModel;
 import se.yarin.morphy.text.ImmutableTextModel;
 import se.yarin.morphy.text.TextContentsModel;

@@ -7,12 +7,30 @@ import java.util.Map;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.stereotype.Component;
+import se.yarin.morphy.CbhDiagnostics;
 import se.yarin.morphy.queries.operations.OperatorCost;
 import se.yarin.morphy.queries.operations.QueryCost;
 import se.yarin.morphy.queries.operations.QueryOperator;
 
 @Component
 public class QueryPlanDtoConverter {
+
+  /** Converts a v1 query explanation into the debug info returned with a search. */
+  public @NotNull QueryPlanDebugInfo toDebugInfo(@NotNull CbhDiagnostics.QueryExplanation explanation) {
+    List<QueryPlanDto> plans = new ArrayList<>();
+    for (int i = 0; i < explanation.plans().size(); i++) {
+      CbhDiagnostics.ExplainedPlan plan = explanation.plans().get(i);
+      plans.add(
+          convertPlan(
+              "Plan " + (i + 1),
+              plan.operator(),
+              plan.executed(),
+              plan.resultCount(),
+              plan.differsFromBest()));
+    }
+    return new QueryPlanDebugInfo(
+        explanation.description(), 0, explanation.allPlansAgree(), plans);
+  }
 
   public @NotNull QueryPlanDto convertPlan(
       @NotNull String label,

@@ -34,6 +34,13 @@
             <artifactId>morphy-cbh</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <!-- ChessBase v2 format; found through the DatabaseProvider service loader -->
+        <dependency>
+            <groupId>se.yarin</groupId>
+            <artifactId>morphy-cb2</artifactId>
+            <version>${project.version}</version>
+            <scope>runtime</scope>
+        </dependency>
 
         <!-- Spring Boot Starters -->
         <dependency>

@@ -1,9 +1,6 @@
 package se.yarin.morphy.cb2;
 
 import java.io.File;
-import java.io.IOException;
-import java.io.UncheckedIOException;
-import java.util.function.Consumer;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import se.yarin.morphy.api.AccessMode;
@@ -12,13 +9,10 @@ import se.yarin.morphy.api.Database;
 import se.yarin.morphy.api.DatabaseFormat;
 import se.yarin.morphy.api.EntityKind;
 import se.yarin.morphy.api.GameFetchOptions;
-import se.yarin.morphy.model.AnnotatorDto;
+import se.yarin.morphy.api.query.Query;
+import se.yarin.morphy.api.query.ResultPage;
+import se.yarin.morphy.api.query.SearchSchema;
 import se.yarin.morphy.model.GameDto;
-import se.yarin.morphy.model.GameTagDto;
-import se.yarin.morphy.model.PlayerDto;
-import se.yarin.morphy.model.SourceDto;
-import se.yarin.morphy.model.TeamDto;
-import se.yarin.morphy.model.TournamentDto;
 
 /**
  * A {@link Database} over the ChessBase v2 ({@code .2cbh}) format.
@@ -34,9 +28,9 @@ public class Database2Cbh implements Database {
   static final int RECORD_SIZE = 192;
 
   private final String name;
-  private final int count;
+  private final long count;
 
-  private Database2Cbh(@NotNull String name, int count) {
+  private Database2Cbh(@NotNull String name, long count) {
     this.name = name;
     this.count = count;
   }
@@ -44,14 +38,9 @@ public class Database2Cbh implements Database {
   /** Opens a {@code .2cbh} database and reads its game count. */
   @NotNull
   public static Database2Cbh open(@NotNull File file, @NotNull AccessMode mode) {
-    long length;
-    try {
-      length = file.length();
-    } catch (SecurityException e) {
-      throw new UncheckedIOException(new IOException("Cannot read " + file, e));
-    }
+    long length = file.length();
     // The .2cbh file is a 192-byte header followed by one 192-byte record per game.
-    int count = length <= RECORD_SIZE ? 0 : (int) ((length - RECORD_SIZE) / RECORD_SIZE);
+    long count = length <= RECORD_SIZE ? 0 : (length - RECORD_SIZE) / RECORD_SIZE;
     return new Database2Cbh(file.getName(), count);
   }
 
@@ -67,12 +56,12 @@ public class Database2Cbh implements Database {
 
   @Override
   public @NotNull Capabilities capabilities() {
-    // Reads are not implemented yet, but advertise the eventual shape: read-only for now.
-    return Capabilities.readOnlyWithEntities();
+    // Reads are not implemented yet; writing is not planned for the first version of the reader.
+    return new Capabilities(false, true, false, false);
   }
 
   @Override
-  public int count() {
+  public long gameCount() {
     return count;
   }
 
@@ -81,63 +70,55 @@ public class Database2Cbh implements Database {
   }
 
   @Override
-  public @Nullable GameDto getGame(int gameId, @NotNull GameFetchOptions options) {
+  public @Nullable GameDto getGame(long id, @NotNull GameFetchOptions fetch) {
     throw notYet();
   }
 
   @Override
-  public void forEachGame(
-      @Nullable Integer startId,
-      @Nullable Integer endId,
-      @NotNull GameFetchOptions options,
-      @NotNull Consumer<GameDto> consumer) {
+  public @NotNull ResultPage<GameDto> findGames(
+      @NotNull Query query, @NotNull GameFetchOptions fetch) {
     throw notYet();
   }
 
   @Override
-  public long entityCount(@NotNull EntityKind kind) {
+  public @NotNull SearchSchema gameSearchSchema() {
     throw notYet();
   }
 
   @Override
-  public @Nullable PlayerDto getPlayer(long id, boolean includeRawData) {
+  public long addGame(@NotNull GameDto game) {
+    throw new UnsupportedOperationException("Database " + name + " is read-only");
+  }
+
+  @Override
+  public void replaceGame(long id, @NotNull GameDto game) {
+    throw new UnsupportedOperationException("Database " + name + " is read-only");
+  }
+
+  @Override
+  public long entityCount(@NotNull EntityKind<?> kind) {
     throw notYet();
   }
 
   @Override
-  public @Nullable TournamentDto getTournament(
-      long id, boolean includeDetails, boolean includeRawData) {
+  public <T> @Nullable T getEntity(@NotNull EntityKind<T> kind, long id) {
     throw notYet();
   }
 
   @Override
-  public @Nullable AnnotatorDto getAnnotator(long id, boolean includeRawData) {
+  public <T> @NotNull ResultPage<T> findEntities(
+      @NotNull EntityKind<T> kind, @NotNull Query query) {
     throw notYet();
   }
 
   @Override
-  public @Nullable SourceDto getSource(long id, boolean includeDetails, boolean includeRawData) {
+  public @NotNull SearchSchema entitySearchSchema(@NotNull EntityKind<?> kind) {
     throw notYet();
   }
 
   @Override
-  public @Nullable TeamDto getTeam(long id, boolean includeDetails, boolean includeRawData) {
-    throw notYet();
-  }
-
-  @Override
-  public @Nullable GameTagDto getGameTag(long id, boolean includeRawData) {
-    throw notYet();
-  }
-
-  @Override
-  public int addGame(@NotNull GameDto game) {
-    throw notYet();
-  }
-
-  @Override
-  public void replaceGame(int gameId, @NotNull GameDto game) {
-    throw notYet();
+  public <T> @NotNull T updateEntity(@NotNull EntityKind<T> kind, long id, @NotNull T entity) {
+    throw new UnsupportedOperationException("Database " + name + " is read-only");
   }
 
   @Override

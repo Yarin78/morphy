@@ -13,7 +13,6 @@ import java.time.format.DateTimeFormatter;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Consumer;
 import java.util.function.Function;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -21,10 +20,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import se.yarin.morphy.DatabaseCbh;
-import se.yarin.morphy.DatabaseMode;
-import se.yarin.morphy.DatabaseReadTransaction;
-import se.yarin.morphy.DatabaseWriteTransaction;
+import se.yarin.morphy.api.AccessMode;
+import se.yarin.morphy.api.Database;
+import se.yarin.morphy.api.Databases;
 import se.yarin.morphy.service.config.DatabaseConfig;
 
 @Service
@@ -68,78 +66,43 @@ public class DatabaseService {
   }
 
   /**
-   * Execute a read-only operation within a database transaction. The transaction is automatically
-   * managed and closed.
+   * Runs a read operation against a database. The database is opened on first use, and reopened
+   * when it may have been changed on disk.
    *
-   * @param databaseId The database ID to use
-   * @param operation The operation to execute within the transaction
-   * @param <T> The return type of the operation
-   * @return The result of the operation
+   * @param databaseId the database ID
+   * @param operation the operation
+   * @return the result of the operation
+   * @throws IllegalArgumentException if the database ID is unknown
+   * @throws IllegalStateException if the database could not be opened
    */
-  public <T> T withReadTransaction(
-      @NotNull String databaseId, @NotNull Function<DatabaseReadTransaction, T> operation) {
-    DatabaseCbh db = getDatabase(databaseId);
-    try (DatabaseReadTransaction txn = new DatabaseReadTransaction(db)) {
-      return operation.apply(txn);
-    }
+  public <T> T read(@NotNull String databaseId, @NotNull Function<Database, T> operation) {
+    return operation.apply(getDatabase(databaseId));
   }
 
   /**
-   * Execute a write operation within a database transaction. The transaction is automatically
-   * committed and closed. Updates the lastModifiedTime to prevent unnecessary reopening.
+   * Runs a write operation against a database, and records the database file's new modification
+   * time so that the service's own change doesn't trigger a reopen.
    *
-   * @param databaseId The database ID to use
-   * @param operation The operation to execute within the transaction
+   * @param databaseId the database ID
+   * @param operation the operation
+   * @return the result of the operation
+   * @throws IllegalArgumentException if the database ID is unknown
+   * @throws IllegalStateException if the database is read-only or could not be opened
    */
-  public void withWriteTransaction(
-      @NotNull String databaseId, @NotNull Consumer<DatabaseWriteTransaction> operation) {
+  public <T> T write(@NotNull String databaseId, @NotNull Function<Database, T> operation) {
     DatabaseState state = databaseStates.get(databaseId);
     if (state != null && state.config.isReadOnly()) {
       throw new IllegalStateException("Database '" + databaseId + "' is read-only");
     }
-    DatabaseCbh db = getDatabase(databaseId);
+    Database db = getDatabase(databaseId);
+    T result = operation.apply(db);
 
-    try (DatabaseWriteTransaction txn = new DatabaseWriteTransaction(db)) {
-      operation.accept(txn);
-      txn.commit();
-
-      // Update lastModifiedTime to prevent unnecessary reopening after internal write
-      File dbFile = new File(state.config.getPath());
-      state.lastModifiedTime = dbFile.lastModified();
-    }
+    // Update lastModifiedTime to prevent unnecessary reopening after internal write
+    state.lastModifiedTime = new File(state.config.getPath()).lastModified();
+    return result;
   }
 
-  /**
-   * Execute a write operation within a database transaction and return a result. The transaction is
-   * automatically committed and closed. Updates the lastModifiedTime to prevent unnecessary
-   * reopening.
-   *
-   * @param databaseId The database ID to use
-   * @param operation The operation to execute within the transaction
-   * @param <T> The return type of the operation
-   * @return The result of the operation
-   */
-  public <T> T withWriteTransaction(
-      @NotNull String databaseId, @NotNull Function<DatabaseWriteTransaction, T> operation) {
-    DatabaseState state = databaseStates.get(databaseId);
-    if (state != null && state.config.isReadOnly()) {
-      throw new IllegalStateException("Database '" + databaseId + "' is read-only");
-    }
-    DatabaseCbh db = getDatabase(databaseId);
-
-    try (DatabaseWriteTransaction txn = new DatabaseWriteTransaction(db)) {
-      T result = operation.apply(txn);
-      txn.commit();
-
-      // Update lastModifiedTime to prevent unnecessary reopening after internal write
-      File dbFile = new File(state.config.getPath());
-      state.lastModifiedTime = dbFile.lastModified();
-
-      return result;
-    }
-  }
-
-  private @NotNull DatabaseCbh getDatabase(@NotNull String databaseId) {
+  private @NotNull Database getDatabase(@NotNull String databaseId) {
     ensureDatabaseIsOpenAndFresh(databaseId);
 
     DatabaseState state = databaseStates.get(databaseId);
@@ -188,7 +151,7 @@ public class DatabaseService {
 
   private static class DatabaseState {
     final @NotNull DatabaseConfig config;
-    @Nullable DatabaseCbh database; // null = not yet opened or was closed
+    @Nullable Database database; // null = not yet opened or was closed
     long lastModifiedTime;
 
     long lastAccessTime;
@@ -295,8 +258,7 @@ public class DatabaseService {
             log.warn("Failed to create parent directories for '{}'", databaseId);
           }
         }
-        DatabaseCbh newDb = DatabaseCbh.create(dbFile, false);
-        newDb.close();
+        Databases.create(dbFile).close();
         log.info("Successfully created new database '{}'", databaseId);
       } catch (Exception e) {
         log.error("Failed to create database '{}': {}", databaseId, state.config.getPath(), e);
@@ -305,8 +267,8 @@ public class DatabaseService {
     }
 
     try {
-      DatabaseMode mode = state.config.isReadOnly() ? DatabaseMode.READ_ONLY : DatabaseMode.READ_WRITE;
-      state.database = DatabaseCbh.open(dbFile, mode);
+      AccessMode mode = state.config.isReadOnly() ? AccessMode.READ_ONLY : AccessMode.READ_WRITE;
+      state.database = Databases.open(dbFile, mode);
       state.lastModifiedTime = dbFile.lastModified();
       log.info(
           "Successfully opened chess database '{}' ({}): {} (last modified: {})",
@@ -425,8 +387,7 @@ public class DatabaseService {
         }
       }
 
-      DatabaseCbh newDb = DatabaseCbh.create(dbFile, false);
-      newDb.close();
+      Databases.create(dbFile).close();
       log.info("Successfully created new database '{}'", databaseId);
     } catch (IOException e) {
       log.error("Failed to create database '{}' at {}", databaseId, path, e);

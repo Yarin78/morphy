@@ -5,33 +5,13 @@ import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.chess.GameModel;
-import se.yarin.morphy.api.Capabilities;
-import se.yarin.morphy.api.Database;
-import se.yarin.morphy.api.DatabaseFormat;
-import se.yarin.morphy.api.EntityKind;
-import se.yarin.morphy.api.GameFetchOptions;
 import se.yarin.morphy.boosters.GameEntityIndex;
 import se.yarin.morphy.boosters.GameEventStorage;
-import se.yarin.morphy.convert.AnnotatorDtoConverter;
-import se.yarin.morphy.convert.GameDtoConverter;
-import se.yarin.morphy.convert.GameDtoImporter;
-import se.yarin.morphy.convert.GameTagDtoConverter;
-import se.yarin.morphy.convert.PlayerDtoConverter;
-import se.yarin.morphy.convert.SourceDtoConverter;
-import se.yarin.morphy.convert.TeamDtoConverter;
-import se.yarin.morphy.convert.TournamentDtoConverter;
 import se.yarin.morphy.entities.*;
 import se.yarin.morphy.exceptions.MorphyException;
 import se.yarin.morphy.exceptions.MorphyInvalidDataException;
 import se.yarin.morphy.games.*;
 import se.yarin.morphy.games.filters.GameFilter;
-import se.yarin.morphy.model.AnnotatorDto;
-import se.yarin.morphy.model.GameDto;
-import se.yarin.morphy.model.GameTagDto;
-import se.yarin.morphy.model.PlayerDto;
-import se.yarin.morphy.model.SourceDto;
-import se.yarin.morphy.model.TeamDto;
-import se.yarin.morphy.model.TournamentDto;
 import se.yarin.morphy.queries.QueryPlanner;
 import se.yarin.morphy.text.TextModel;
 import se.yarin.morphy.util.CBUtil;
@@ -40,7 +20,6 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.NoSuchFileException;
 import java.util.*;
-import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -50,35 +29,19 @@ import java.util.stream.Stream;
  * <p>A ChessBase database consists of multiple files on disk, storing different types of data such
  * as Game Headers, encoded moves and annotations, Player index, Tournament index etc
  *
- * <p>The {@link Database} class is a facade, exposing a simple API for common database operations
- * that underneath performs complex logic to update the database structures.
+ * <p>The {@link DatabaseCbh} class is the v1 engine, exposing a simple API for common database
+ * operations that underneath performs complex logic to update the database structures. The
+ * vendor-neutral {@link se.yarin.morphy.api.Database} over it is {@link DatabaseCbhFacade}.
  *
  * <p>More low-level functionality can be performed by invoking methods on the classes representing
  * the different indexes, such as {@link GameHeaderIndex}, {@link PlayerIndex} etc But beware that
  * invoking write operations on these may cause the database to end up in an inconsistent state.
  */
-public class DatabaseCbh implements EntityRetriever, Database {
+public class DatabaseCbh implements EntityRetriever, AutoCloseable {
   private static final Logger log = LoggerFactory.getLogger(DatabaseCbh.class);
 
-  // The vendor-neutral DTO converters. Declaration order matters: gameDtoConverter depends on the
-  // entity converters above it. Field initializers run in every constructor, so no constructor edit
-  // is needed.
-  @NotNull private final PlayerDtoConverter playerDtoConverter = new PlayerDtoConverter();
-  @NotNull private final AnnotatorDtoConverter annotatorDtoConverter = new AnnotatorDtoConverter();
-  @NotNull private final SourceDtoConverter sourceDtoConverter = new SourceDtoConverter();
-  @NotNull private final TeamDtoConverter teamDtoConverter = new TeamDtoConverter();
-  @NotNull private final TournamentDtoConverter tournamentDtoConverter =
-      new TournamentDtoConverter();
-  @NotNull private final GameTagDtoConverter gameTagDtoConverter = new GameTagDtoConverter();
-  @NotNull private final GameDtoConverter gameDtoConverter =
-      new GameDtoConverter(
-          playerDtoConverter,
-          tournamentDtoConverter,
-          annotatorDtoConverter,
-          sourceDtoConverter,
-          teamDtoConverter,
-          gameTagDtoConverter);
-  @NotNull private final GameDtoImporter gameDtoImporter = new GameDtoImporter();
+  // Whether games and entities may be written; false if opened read-only
+  private final boolean writable;
 
   // Not a complete list, but the files supported
   public static final List<String> MANDATORY_EXTENSIONS =
@@ -238,6 +201,7 @@ public class DatabaseCbh implements EntityRetriever, Database {
 
   public DatabaseCbh(@Nullable DatabaseConfig config) {
     this.context = new DatabaseContext(config);
+    this.writable = true;
 
     this.databaseName = "Scratch";
 
@@ -281,7 +245,8 @@ public class DatabaseCbh implements EntityRetriever, Database {
       @Nullable GameEntityIndex gameEntityIndexPrimary,
       @Nullable GameEntityIndex gameEntityIndexSecondary,
       @Nullable MoveOffsetStorage moveOffsetStorage,
-      @Nullable GameEventStorage gameEventStorage) {
+      @Nullable GameEventStorage gameEventStorage,
+      boolean writable) {
 
     Set<DatabaseContext> contexts =
         new HashSet<>(
@@ -317,6 +282,7 @@ public class DatabaseCbh implements EntityRetriever, Database {
 
     this.databaseName = name;
     this.context = context;
+    this.writable = writable;
     this.gameHeaderIndex = gameHeaderIndex;
     this.extendedGameHeaderStorage = extendedGameHeaderStorage;
     this.moveRepository = moveRepository;
@@ -410,7 +376,8 @@ public class DatabaseCbh implements EntityRetriever, Database {
         gameEntityIndex,
         gameEntityIndexSecondary,
         moveOffsetStorage,
-        gameEventStorage);
+        gameEventStorage,
+        true);
   }
 
   public static DatabaseCbh open(@NotNull File file) throws IOException {
@@ -579,7 +546,8 @@ public class DatabaseCbh implements EntityRetriever, Database {
         gameEntityIndex,
         gameEntityIndexSecondary,
         moveOffsetStorage,
-        gameEventStorage);
+        gameEventStorage,
+        mode == DatabaseMode.READ_WRITE || mode == DatabaseMode.IN_MEMORY);
   }
 
   /**
@@ -850,134 +818,12 @@ public class DatabaseCbh implements EntityRetriever, Database {
     };
   }
 
-  // ── Vendor-neutral facade (se.yarin.morphy.api.Database) ───────────────
-  // These produce and consume DTOs, so that consumers and other formats share one interface. The
-  // v1-specific API above (indexes, transactions, the query engine) stays available to callers that
-  // hold the concrete type.
-
-  @Override
-  public @NotNull DatabaseFormat format() {
-    return DatabaseFormat.CBH;
-  }
-
-  @Override
-  public @NotNull Capabilities capabilities() {
-    return Capabilities.full();
-  }
-
-  @Override
-  public @Nullable GameDto getGame(int gameId, @NotNull GameFetchOptions options) {
-    try (DatabaseReadTransaction txn = new DatabaseReadTransaction(this)) {
-      Game game;
-      try {
-        game = txn.getGame(gameId);
-      } catch (IllegalArgumentException e) {
-        return null;
-      }
-      return toDto(game, options);
-    }
-  }
-
-  @Override
-  public void forEachGame(
-      @Nullable Integer startId,
-      @Nullable Integer endId,
-      @NotNull GameFetchOptions options,
-      @NotNull Consumer<GameDto> consumer) {
-    try (DatabaseReadTransaction txn = new DatabaseReadTransaction(this)) {
-      for (Game game : txn.iterable(startId, endId)) {
-        consumer.accept(toDto(game, options));
-      }
-    }
-  }
-
-  private GameDto toDto(@NotNull Game game, @NotNull GameFetchOptions options) {
-    return gameDtoConverter.toDto(
-        game,
-        options.includeMoves(),
-        options.includeText(),
-        options.includeTournamentDetails(),
-        options.includeSourceDetails(),
-        options.includeTeamDetails(),
-        options.includeRawData());
-  }
-
-  @Override
-  public long entityCount(@NotNull EntityKind kind) {
-    return entityIndex(EntityType.valueOf(kind.name())).count();
-  }
-
-  // The includeRawData flag is not yet honoured for standalone entity reads.
-
-  @Override
-  public @Nullable PlayerDto getPlayer(long id, boolean includeRawData) {
-    try {
-      return playerDtoConverter.toDto(getPlayer((int) id));
-    } catch (RuntimeException e) {
-      return null;
-    }
-  }
-
-  @Override
-  public @Nullable TournamentDto getTournament(
-      long id, boolean includeDetails, boolean includeRawData) {
-    try {
-      return tournamentDtoConverter.toDto(getTournament((int) id), getTournamentExtra((int) id));
-    } catch (RuntimeException e) {
-      return null;
-    }
-  }
-
-  @Override
-  public @Nullable AnnotatorDto getAnnotator(long id, boolean includeRawData) {
-    try {
-      return annotatorDtoConverter.toDto(getAnnotator((int) id));
-    } catch (RuntimeException e) {
-      return null;
-    }
-  }
-
-  @Override
-  public @Nullable SourceDto getSource(long id, boolean includeDetails, boolean includeRawData) {
-    try {
-      return sourceDtoConverter.toDto(getSource((int) id));
-    } catch (RuntimeException e) {
-      return null;
-    }
-  }
-
-  @Override
-  public @Nullable TeamDto getTeam(long id, boolean includeDetails, boolean includeRawData) {
-    try {
-      return teamDtoConverter.toDto(getTeam((int) id));
-    } catch (RuntimeException e) {
-      return null;
-    }
-  }
-
-  @Override
-  public @Nullable GameTagDto getGameTag(long id, boolean includeRawData) {
-    try {
-      return gameTagDtoConverter.toDto(getGameTag((int) id));
-    } catch (RuntimeException e) {
-      return null;
-    }
-  }
-
-  @Override
-  public int addGame(@NotNull GameDto game) {
-    if ("text".equals(game.type())) {
-      return addText(gameDtoImporter.toTextModel(game));
-    }
-    return addGame(gameDtoImporter.toGameModel(game));
-  }
-
-  @Override
-  public void replaceGame(int gameId, @NotNull GameDto game) {
-    if ("text".equals(game.type())) {
-      replaceText(gameId, gameDtoImporter.toTextModel(game));
-    } else {
-      replaceGame(gameId, gameDtoImporter.toGameModel(game));
-    }
+  /**
+   * Whether games and entities may be written: false if the database was opened read-only.
+   *
+   * @return true if the database is writable
+   */
+  public boolean isWritable() {
+    return writable;
   }
 }

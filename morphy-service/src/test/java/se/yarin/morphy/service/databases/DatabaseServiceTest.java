@@ -14,6 +14,8 @@ import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.io.TempDir;
 import org.mockito.MockedStatic;
 import se.yarin.morphy.DatabaseCbh;
+import se.yarin.morphy.api.Database;
+import se.yarin.morphy.api.Databases;
 import se.yarin.morphy.DatabaseMode;
 import se.yarin.morphy.service.config.DatabaseConfig;
 
@@ -224,13 +226,13 @@ class DatabaseServiceTest {
     void createDatabase_Success() throws Exception {
       File dbFile = tempDir.resolve("new.cbh").toFile();
 
-      try (MockedStatic<DatabaseCbh> dbMock = mockStatic(DatabaseCbh.class)) {
-        DatabaseCbh mockDb = mock(DatabaseCbh.class);
-        dbMock.when(() -> DatabaseCbh.create(eq(dbFile), eq(false))).thenReturn(mockDb);
+      try (MockedStatic<Databases> dbMock = mockStatic(Databases.class)) {
+        Database mockDb = mock(Database.class);
+        dbMock.when(() -> Databases.create(eq(dbFile))).thenReturn(mockDb);
 
         service.createDatabase("new-db", "New Database", dbFile.getAbsolutePath());
 
-        dbMock.verify(() -> DatabaseCbh.create(eq(dbFile), eq(false)));
+        dbMock.verify(() -> Databases.create(eq(dbFile)));
         verify(mockDb).close();
       }
 
@@ -250,9 +252,9 @@ class DatabaseServiceTest {
           new DatabaseService("", 600000L, null, List.of(tempDir.toString(), subDir.toString()));
       testService.init();
 
-      try (MockedStatic<DatabaseCbh> dbMock = mockStatic(DatabaseCbh.class)) {
-        DatabaseCbh mockDb = mock(DatabaseCbh.class);
-        dbMock.when(() -> DatabaseCbh.create(eq(dbFile), eq(false))).thenReturn(mockDb);
+      try (MockedStatic<Databases> dbMock = mockStatic(Databases.class)) {
+        Database mockDb = mock(Database.class);
+        dbMock.when(() -> Databases.create(eq(dbFile))).thenReturn(mockDb);
 
         testService.createDatabase("new-db", "New Database", dbFile.getAbsolutePath());
 
@@ -281,9 +283,9 @@ class DatabaseServiceTest {
       File dbFile1 = tempDir.resolve("db1.cbh").toFile();
       File dbFile2 = tempDir.resolve("db2.cbh").toFile();
 
-      try (MockedStatic<DatabaseCbh> dbMock = mockStatic(DatabaseCbh.class)) {
-        DatabaseCbh mockDb = mock(DatabaseCbh.class);
-        dbMock.when(() -> DatabaseCbh.create(any(File.class), eq(false))).thenReturn(mockDb);
+      try (MockedStatic<Databases> dbMock = mockStatic(Databases.class)) {
+        Database mockDb = mock(Database.class);
+        dbMock.when(() -> Databases.create(any(File.class))).thenReturn(mockDb);
 
         service.createDatabase("test-db", "Database 1", dbFile1.getAbsolutePath());
 
@@ -332,7 +334,7 @@ class DatabaseServiceTest {
       service.registerDatabase("test-db", "Test", dbFile.getAbsolutePath());
 
       // Force database to open by accessing it
-      service.withReadTransaction("test-db", txn -> null);
+      service.read("test-db", db -> null);
 
       // Unregister should not throw exception
       assertDoesNotThrow(() -> service.unregisterDatabase("test-db"));
@@ -373,10 +375,10 @@ class DatabaseServiceTest {
 
       // Execute a real transaction and verify it works
       String result =
-          service.withReadTransaction(
+          service.read(
               "test-db",
-              txn -> {
-                assertNotNull(txn);
+              db -> {
+                assertNotNull(db);
                 return "success";
               });
 
@@ -394,14 +396,15 @@ class DatabaseServiceTest {
       // Execute a real write transaction - should not throw exception
       assertDoesNotThrow(
           () ->
-              service.withWriteTransaction(
+              service.write(
                   "test-db",
-                  txn -> {
-                    assertNotNull(txn);
+                  db -> {
+                    assertNotNull(db);
+                    return null;
                   }));
 
       // Verify database is still accessible after write
-      assertDoesNotThrow(() -> service.withReadTransaction("test-db", txn -> null));
+      assertDoesNotThrow(() -> service.read("test-db", db -> null));
     }
 
     @Test
@@ -414,10 +417,10 @@ class DatabaseServiceTest {
 
       // Execute a write transaction with return value
       Integer result =
-          service.withWriteTransaction(
+          service.write(
               "test-db",
-              txn -> {
-                assertNotNull(txn);
+              db -> {
+                assertNotNull(db);
                 return 42;
               });
 
@@ -430,7 +433,7 @@ class DatabaseServiceTest {
       IllegalArgumentException exception =
           assertThrows(
               IllegalArgumentException.class,
-              () -> service.withReadTransaction("unknown-db", txn -> null));
+              () -> service.read("unknown-db", db -> null));
 
       assertTrue(exception.getMessage().contains("Unknown database ID"));
     }
@@ -455,8 +458,8 @@ class DatabaseServiceTest {
       service.registerDatabase("test-db", "Test", dbFile.getAbsolutePath());
 
       // Access the database - this should trigger lazy opening without exception
-      assertDoesNotThrow(() -> service.withReadTransaction("test-db", txn -> {
-        assertNotNull(txn);
+      assertDoesNotThrow(() -> service.read("test-db", db -> {
+        assertNotNull(db);
         return null;
       }));
 
@@ -473,13 +476,13 @@ class DatabaseServiceTest {
       service.registerDatabase("test-db", "Test", dbFile.getAbsolutePath());
 
       // Open database by accessing it
-      service.withReadTransaction("test-db", txn -> null);
+      service.read("test-db", db -> null);
 
       // Manually refresh - should not throw exception
       assertDoesNotThrow(() -> service.refreshDatabase("test-db"));
 
       // Verify database is still accessible after refresh
-      service.withReadTransaction("test-db", txn -> null);
+      service.read("test-db", db -> null);
     }
 
     @Test
@@ -651,8 +654,8 @@ class DatabaseServiceTest {
       testService.registerDatabase("db2", "DB 2", dbFile2.getAbsolutePath());
 
       // Open both databases by accessing them
-      testService.withReadTransaction("db1", txn -> null);
-      testService.withReadTransaction("db2", txn -> null);
+      testService.read("db1", db -> null);
+      testService.read("db2", db -> null);
 
       // Cleanup should not throw exception
       assertDoesNotThrow(() -> testService.cleanup());

@@ -1,68 +1,49 @@
 package se.yarin.morphy.service.games.search;
 
 import java.time.LocalDate;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Component;
-import se.yarin.morphy.DatabaseCbh;
-import se.yarin.morphy.Game;
-import se.yarin.morphy.queries.*;
-import se.yarin.morphy.queries.filter.FilterCondition;
-import se.yarin.morphy.queries.filter.FilterQueryParser;
-import se.yarin.morphy.queries.filter.GameQueryBuilder;
+import se.yarin.morphy.api.query.FilterCondition;
+import se.yarin.morphy.api.query.Query;
+import se.yarin.morphy.api.query.Sort;
 import se.yarin.morphy.service.games.dto.GameSearchRequest;
 
 /**
- * Converts {@link GameSearchRequest} typed parameters into {@link FilterCondition}s and delegates
- * query building to the core {@link GameQueryBuilder}.
+ * Turns a {@link GameSearchRequest} into a {@link Query} for {@link
+ * se.yarin.morphy.api.Database#findGames}. The free-text filter is passed on as it is, for the
+ * database to parse; the typed parameters become extra {@link FilterCondition}s.
  */
 @Component
 public class GameSearchRequestConverter {
 
-  private final GameQueryBuilder coreBuilder = new GameQueryBuilder();
-  private final FilterQueryParser filterQueryParser = new FilterQueryParser("player.name");
+  /** The largest page a search may ask for. */
+  public static final int MAX_LIMIT = 1000;
 
   /**
-   * Builds a GameQuery from a GameSearchRequest.
+   * Builds the query for a search request.
    *
-   * @param database the database to query
-   * @param request the search request with filters and sort options
-   * @return GameQuery ready for execution via QueryPlanner
+   * @param request the search request
+   * @return the query; the window is clamped to at most {@link #MAX_LIMIT} games
    */
-  public @NotNull GameQuery buildQuery(
-      @NotNull DatabaseCbh database, @NotNull GameSearchRequest request) {
-    // 1. Parse all conditions (typed + query language)
-    List<FilterCondition> conditions = parseAllConditions(request);
-
-    // 2. Delegate to core builder
-    GameQuery baseQuery = coreBuilder.buildQuery(database, conditions);
-
-    // 3. Apply sort order (service-specific concern)
-    QuerySortOrder<Game> sortOrder = buildSortOrder(request);
-
-    return new GameQuery(
-        database,
-        baseQuery.gameFilters(),
-        new ArrayList<>(baseQuery.entityJoins()),
-        sortOrder,
-        0);
+  public @NotNull Query toQuery(@NotNull GameSearchRequest request) {
+    int offset = Math.max(0, request.offset());
+    int limit = Math.min(MAX_LIMIT, Math.max(1, request.limit()));
+    return new Query(
+        request.filter(), typedConditions(request), Sort.parse(request.sortBy()), offset, limit);
   }
 
   /**
-   * Parses all filter conditions from both typed parameters and query language.
+   * Turns the typed request parameters into filter conditions.
    *
    * @param request the search request
-   * @return list of all filter conditions
+   * @return the conditions, in addition to the free-text filter
    */
-  private @NotNull List<FilterCondition> parseAllConditions(@NotNull GameSearchRequest request) {
+  private @NotNull List<FilterCondition> typedConditions(@NotNull GameSearchRequest request) {
     List<FilterCondition> conditions = new ArrayList<>();
 
-    // Parse query language filter
-    if (request.filter() != null && !request.filter().isBlank()) {
-      conditions.addAll(filterQueryParser.parse(request.filter()));
-    }
-
-    // Add typed parameter filters
     if (request.result() != null) {
       conditions.add(new FilterCondition("result", ":", request.result()));
     }
@@ -121,86 +102,6 @@ public class GameSearchRequestConverter {
     }
 
     return conditions;
-  }
-
-  /**
-   * Builds a QuerySortOrder for the query. Only ID and date sorting are supported at the query
-   * level. Rating-based sorting must be done post-query. sortBy uses +/- prefix for direction
-   * (e.g. "+id", "-date").
-   */
-  private @NotNull QuerySortOrder<Game> buildSortOrder(@NotNull GameSearchRequest request) {
-    String sortBy = request.sortBy().trim();
-    boolean descending = sortBy.startsWith("-");
-    if (sortBy.startsWith("+") || sortBy.startsWith("-")) {
-      sortBy = sortBy.substring(1).trim();
-    }
-    sortBy = sortBy.toLowerCase();
-
-    QuerySortOrder.Direction direction =
-        descending ? QuerySortOrder.Direction.DESCENDING : QuerySortOrder.Direction.ASCENDING;
-
-    return switch (sortBy) {
-      case "id" -> new QuerySortOrder<>(List.of(QuerySortField.id()), List.of(direction));
-      case "date", "playeddate" ->
-          new QuerySortOrder<>(List.of(QuerySortField.playedDate()), List.of(direction));
-      case "whiteplayername" ->
-          new QuerySortOrder<>(List.of(QuerySortField.gameWhitePlayerName()), List.of(direction));
-      case "blackplayername" ->
-          new QuerySortOrder<>(List.of(QuerySortField.gameBlackPlayerName()), List.of(direction));
-      case "result" ->
-          new QuerySortOrder<>(List.of(QuerySortField.gameResult()), List.of(direction));
-      case "eco" ->
-          new QuerySortOrder<>(List.of(QuerySortField.gameEco()), List.of(direction));
-      case "round" ->
-          new QuerySortOrder<>(List.of(QuerySortField.gameRound()), List.of(direction));
-      case "tournament" ->
-          new QuerySortOrder<>(List.of(QuerySortField.gameTournamentTitle()), List.of(direction));
-      case "source" ->
-          new QuerySortOrder<>(List.of(QuerySortField.gameSourceTitle()), List.of(direction));
-      case "annotator" ->
-          new QuerySortOrder<>(List.of(QuerySortField.gameAnnotatorName()), List.of(direction));
-      case "gametag" ->
-          new QuerySortOrder<>(List.of(QuerySortField.gameGameTagTitle()), List.of(direction));
-      case "whiteelo" ->
-          new QuerySortOrder<>(List.of(QuerySortField.gameWhiteElo()), List.of(direction));
-      case "blackelo" ->
-          new QuerySortOrder<>(List.of(QuerySortField.gameBlackElo()), List.of(direction));
-      case "nomoves" ->
-          new QuerySortOrder<>(List.of(QuerySortField.gameNoMoves()), List.of(direction));
-      case "whiteteam" ->
-          new QuerySortOrder<>(List.of(QuerySortField.gameWhiteTeamTitle()), List.of(direction));
-      case "blackteam" ->
-          new QuerySortOrder<>(List.of(QuerySortField.gameBlackTeamTitle()), List.of(direction));
-      case "setupposition" ->
-          new QuerySortOrder<>(List.of(QuerySortField.gameSetupPosition()), List.of(direction));
-      case "topgame" ->
-          new QuerySortOrder<>(List.of(QuerySortField.gameTopGame()), List.of(direction));
-      case "ait" ->
-          new QuerySortOrder<>(List.of(QuerySortField.gameAit()), List.of(direction));
-      case "medals" ->
-          new QuerySortOrder<>(List.of(QuerySortField.gameMedals()), List.of(direction));
-      case "vcs" ->
-          new QuerySortOrder<>(List.of(QuerySortField.gameVcs()), List.of(direction));
-      case "finalmaterial" ->
-          new QuerySortOrder<>(List.of(QuerySortField.gameFinalMaterial()), List.of(direction));
-      case "gameversion" ->
-          new QuerySortOrder<>(List.of(QuerySortField.gameVersion()), List.of(direction));
-      case "creationtimestamp" ->
-          new QuerySortOrder<>(List.of(QuerySortField.gameCreationTimestamp()), List.of(direction));
-      case "lastchanged" ->
-          new QuerySortOrder<>(List.of(QuerySortField.gameLastChanged()), List.of(direction));
-      case "playedyear" ->
-          new QuerySortOrder<>(List.of(QuerySortField.gamePlayedYear()), List.of(direction));
-      case "eloavg" ->
-          new QuerySortOrder<>(List.of(QuerySortField.gameEloAvg()), List.of(direction));
-      case "elomax" ->
-          new QuerySortOrder<>(List.of(QuerySortField.gameEloMax()), List.of(direction));
-      case "notation" ->
-          new QuerySortOrder<>(List.of(QuerySortField.gameNotation()), List.of(direction));
-      case "variationmoves" ->
-          new QuerySortOrder<>(List.of(QuerySortField.gameVariationMoves()), List.of(direction));
-      default -> QuerySortOrder.none();
-    };
   }
 
   /**

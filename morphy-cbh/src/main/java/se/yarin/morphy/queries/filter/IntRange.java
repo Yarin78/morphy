@@ -1,5 +1,6 @@
 package se.yarin.morphy.queries.filter;
 
+import se.yarin.morphy.api.query.FilterCondition;
 import org.jetbrains.annotations.NotNull;
 
 /**

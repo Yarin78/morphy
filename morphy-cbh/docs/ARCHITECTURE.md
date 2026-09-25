@@ -22,9 +22,9 @@ This document describes the architecture of the Morphy library, explaining how c
 > The format-independent chess core (`se.yarin.chess`), the neutral DTO records
 > (`se.yarin.morphy.model`) and the `Database` facade interface (`se.yarin.morphy.api`)
 > live in **morphy-api**. The v1 (`.cbh`) implementation described below lives in
-> **morphy-cbh**, where `DatabaseCbh` implements the `Database` facade directly; the
-> v2 (`.2cbh`) stub `Database2Cbh` lives in **morphy-cb2**. Open any format with
-> `Databases.open(file)`.
+> **morphy-cbh**: `DatabaseCbh` is the engine, and `DatabaseCbhFacade` wraps it as the
+> `Database` facade. The v2 (`.2cbh`) stub `Database2Cbh` lives in **morphy-cb2**. Open
+> any format with `Databases.open(file)`.
 > The rest of this document describes the v1 internals, which are unchanged.
 
 Morphy is structured as a layered library with clear separation of concerns:

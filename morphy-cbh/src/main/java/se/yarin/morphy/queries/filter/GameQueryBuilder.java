@@ -1,5 +1,16 @@
 package se.yarin.morphy.queries.filter;
 
+import java.util.Map;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Locale;
+import se.yarin.morphy.Game;
+import se.yarin.morphy.queries.QuerySortOrder;
+import se.yarin.morphy.queries.QuerySortField;
+import se.yarin.morphy.api.query.Sort;
+import se.yarin.morphy.api.query.FilterQueryParser;
+import se.yarin.morphy.api.query.FilterCondition;
 import java.util.*;
 import java.util.function.Function;
 import org.jetbrains.annotations.NotNull;
@@ -193,6 +204,89 @@ public class GameQueryBuilder {
     String defaultProp = ENTITY_BUILDERS.get(builderKey).defaultField();
     return new FilterCondition(
         field + "." + defaultProp, condition.operator(), condition.value(), condition.modifiers());
+  }
+
+  /** The fields games can be sorted on, in display order. */
+  private static final List<QuerySortField<Game>> SORT_FIELDS =
+      List.of(
+          QuerySortField.id(),
+          QuerySortField.playedDate(),
+          QuerySortField.gameWhitePlayerName(),
+          QuerySortField.gameBlackPlayerName(),
+          QuerySortField.gameResult(),
+          QuerySortField.gameEco(),
+          QuerySortField.gameRound(),
+          QuerySortField.gameTournamentTitle(),
+          QuerySortField.gameSourceTitle(),
+          QuerySortField.gameAnnotatorName(),
+          QuerySortField.gameGameTagTitle(),
+          QuerySortField.gameWhiteElo(),
+          QuerySortField.gameBlackElo(),
+          QuerySortField.gameNoMoves(),
+          QuerySortField.gameWhiteTeamTitle(),
+          QuerySortField.gameBlackTeamTitle(),
+          QuerySortField.gameSetupPosition(),
+          QuerySortField.gameTopGame(),
+          QuerySortField.gameAit(),
+          QuerySortField.gameMedals(),
+          QuerySortField.gameVcs(),
+          QuerySortField.gameFinalMaterial(),
+          QuerySortField.gameVersion(),
+          QuerySortField.gameCreationTimestamp(),
+          QuerySortField.gameLastChanged(),
+          QuerySortField.gamePlayedYear(),
+          QuerySortField.gameEloAvg(),
+          QuerySortField.gameEloMax(),
+          QuerySortField.gameNotation(),
+          QuerySortField.gameVariationMoves());
+
+  /** Sort fields by lower-case name, plus the alias "date" for the played date. */
+  private static final Map<String, QuerySortField<Game>> SORT_FIELDS_BY_NAME = sortFieldsByName();
+
+  private static Map<String, QuerySortField<Game>> sortFieldsByName() {
+    Map<String, QuerySortField<Game>> map = new HashMap<>();
+    for (QuerySortField<Game> field : SORT_FIELDS) {
+      map.put(field.name().toLowerCase(Locale.ROOT), field);
+    }
+    map.put("date", QuerySortField.playedDate());
+    return Map.copyOf(map);
+  }
+
+  /** Returns the fields games can be sorted on, in display order. */
+  public @NotNull List<QuerySortField<Game>> availableSortFields() {
+    return SORT_FIELDS;
+  }
+
+  /**
+   * Builds the sort order of a game query. The natural order is by game id. A key without a
+   * direction uses the field's default direction.
+   *
+   * @throws IllegalArgumentException if a field is not a game sort field
+   */
+  public @NotNull QuerySortOrder<Game> buildSortOrder(@NotNull Sort sort) {
+    if (sort.isNatural()) {
+      return new QuerySortOrder<>(QuerySortField.id(), QuerySortOrder.Direction.ASCENDING);
+    }
+    List<QuerySortField<Game>> fields = new ArrayList<>();
+    List<QuerySortOrder.Direction> directions = new ArrayList<>();
+    for (Sort.Key key : sort.keys()) {
+      QuerySortField<Game> field = SORT_FIELDS_BY_NAME.get(key.field().toLowerCase(Locale.ROOT));
+      if (field == null) {
+        throw new IllegalArgumentException(
+            "Unknown sort field: '"
+                + key.field()
+                + "'. Available fields: "
+                + String.join(", ", SORT_FIELDS.stream().map(QuerySortField::name).toList()));
+      }
+      fields.add(field);
+      directions.add(
+          key.direction() == null
+              ? field.defaultDirection()
+              : key.direction() == Sort.Direction.DESCENDING
+                  ? QuerySortOrder.Direction.DESCENDING
+                  : QuerySortOrder.Direction.ASCENDING);
+    }
+    return new QuerySortOrder<>(fields, directions);
   }
 
   /** Returns the default field used when no field name is specified in a filter expression. */

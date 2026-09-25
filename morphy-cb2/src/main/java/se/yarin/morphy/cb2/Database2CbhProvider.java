@@ -25,4 +25,9 @@ public class Database2CbhProvider implements DatabaseProvider {
   public @NotNull Database open(@NotNull File file, @NotNull AccessMode mode) {
     return Database2Cbh.open(file, mode);
   }
+
+  @Override
+  public @NotNull Database create(@NotNull File file) {
+    throw new UnsupportedOperationException("Creating v2 (.2cbh) databases is not supported");
+  }
 }

@@ -30,7 +30,7 @@ class Database2CbhTest {
       assertInstanceOf(Database2Cbh.class, db);
       assertEquals(DatabaseFormat.CB2, db.format());
       // (199488 - 192) / 192
-      assertEquals(1038, db.count());
+      assertEquals(1038, db.gameCount());
       assertTrue(db.capabilities().hasEntities());
     }
   }

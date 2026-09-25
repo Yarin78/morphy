@@ -81,20 +81,21 @@ class DatabaseServiceIntegrationTest {
 
       // Use the database - read transaction
       String result =
-          databaseService.withReadTransaction(
+          databaseService.read(
               "e2e-db",
-              txn -> {
-                assertNotNull(txn);
+              db -> {
+                assertNotNull(db);
                 return "read-success";
               });
       assertEquals("read-success", result);
 
       // Use the database - write transaction
-      databaseService.withWriteTransaction(
+      databaseService.write(
           "e2e-db",
-          txn -> {
-            assertNotNull(txn);
+          db -> {
+            assertNotNull(db);
             // In a real scenario, we'd write data here
+            return null;
           });
 
       // Unregister
@@ -113,8 +114,7 @@ class DatabaseServiceIntegrationTest {
       File dbPath = tempDir.resolve("existing-test.cbh").toFile();
 
       // Create a database file manually
-      DatabaseCbh db = DatabaseCbh.create(dbPath, false);
-      db.close();
+      DatabaseCbh.create(dbPath, false).close();
 
       // Register it
       databaseService.registerDatabase(
@@ -123,20 +123,21 @@ class DatabaseServiceIntegrationTest {
       // Verify we can read from it
       assertDoesNotThrow(
           () ->
-              databaseService.withReadTransaction(
+              databaseService.read(
                   "existing-db",
-                  txn -> {
-                    assertNotNull(txn);
+                  db -> {
+                    assertNotNull(db);
                     return null;
                   }));
 
       // Verify we can write to it
       assertDoesNotThrow(
           () ->
-              databaseService.withWriteTransaction(
+              databaseService.write(
                   "existing-db",
-                  txn -> {
-                    assertNotNull(txn);
+                  db -> {
+                    assertNotNull(db);
+                    return null;
                   }));
 
       // Cleanup
@@ -189,10 +190,10 @@ class DatabaseServiceIntegrationTest {
       // Accessing it should open it (no exception)
       assertDoesNotThrow(
           () ->
-              databaseService.withReadTransaction(
+              databaseService.read(
                   "lazy-db",
-                  txn -> {
-                    assertNotNull(txn);
+                  db -> {
+                    assertNotNull(db);
                     return null;
                   }));
 
@@ -210,13 +211,13 @@ class DatabaseServiceIntegrationTest {
           "refresh-db", "Refresh Test Database", dbPath.getAbsolutePath());
 
       // Access it to open it
-      databaseService.withReadTransaction("refresh-db", txn -> null);
+      databaseService.read("refresh-db", db -> null);
 
       // Refresh should work without error
       assertDoesNotThrow(() -> databaseService.refreshDatabase("refresh-db"));
 
       // Database should still be accessible after refresh
-      assertDoesNotThrow(() -> databaseService.withReadTransaction("refresh-db", txn -> null));
+      assertDoesNotThrow(() -> databaseService.read("refresh-db", db -> null));
 
       // Cleanup
       databaseService.unregisterDatabase("refresh-db");
@@ -248,24 +249,25 @@ class DatabaseServiceIntegrationTest {
         final int dbNum = i;
         assertDoesNotThrow(
             () ->
-                databaseService.withReadTransaction(
+                databaseService.read(
                     "multi-db-" + dbNum,
-                    txn -> {
-                      assertNotNull(txn);
+                    db -> {
+                      assertNotNull(db);
                       return null;
                     }));
       }
 
       // Write to one database shouldn't affect others
-      databaseService.withWriteTransaction(
+      databaseService.write(
           "multi-db-2",
-          txn -> {
-            assertNotNull(txn);
+          db -> {
+            assertNotNull(db);
+            return null;
           });
 
       // All should still be accessible
-      assertDoesNotThrow(() -> databaseService.withReadTransaction("multi-db-1", txn -> null));
-      assertDoesNotThrow(() -> databaseService.withReadTransaction("multi-db-3", txn -> null));
+      assertDoesNotThrow(() -> databaseService.read("multi-db-1", db -> null));
+      assertDoesNotThrow(() -> databaseService.read("multi-db-3", db -> null));
 
       // Cleanup
       databaseService.unregisterDatabase("multi-db-1");
@@ -310,7 +312,7 @@ class DatabaseServiceIntegrationTest {
       IllegalArgumentException exception =
           assertThrows(
               IllegalArgumentException.class,
-              () -> databaseService.withReadTransaction("unknown-db", txn -> null));
+              () -> databaseService.read("unknown-db", db -> null));
 
       assertTrue(exception.getMessage().contains("Unknown database ID"));
     }

@@ -1,5 +1,6 @@
 package se.yarin.morphy.queries.filter;
 
+import se.yarin.morphy.api.query.FilterCondition;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;

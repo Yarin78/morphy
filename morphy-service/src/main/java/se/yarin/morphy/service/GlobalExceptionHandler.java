@@ -3,6 +3,7 @@ package se.yarin.morphy.service;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -15,5 +16,13 @@ public class GlobalExceptionHandler {
   public ResponseEntity<Map<String, String>> handleIllegalArgument(IllegalArgumentException e) {
     log.warn("Bad request: {}", e.getMessage());
     return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+  }
+
+  /** An operation the database's format doesn't support, e.g. reading a format that is a stub. */
+  @ExceptionHandler(UnsupportedOperationException.class)
+  public ResponseEntity<Map<String, String>> handleUnsupportedOperation(
+      UnsupportedOperationException e) {
+    log.warn("Not supported: {}", e.getMessage());
+    return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).body(Map.of("error", e.getMessage()));
   }
 }

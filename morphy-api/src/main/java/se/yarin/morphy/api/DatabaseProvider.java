@@ -1,6 +1,7 @@
 package se.yarin.morphy.api;
 
 import java.io.File;
+import java.io.IOException;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -22,7 +23,18 @@ public interface DatabaseProvider {
    *
    * @param file the primary database file
    * @param mode how the database should be accessed
+   * @throws IOException if the database can't be opened
    */
   @NotNull
-  Database open(@NotNull File file, @NotNull AccessMode mode);
+  Database open(@NotNull File file, @NotNull AccessMode mode) throws IOException;
+
+  /**
+   * Creates a new, empty database rooted at {@code file} and opens it for reading and writing.
+   *
+   * @param file the primary database file; no database with that name may exist
+   * @throws IOException if the database can't be created
+   * @throws UnsupportedOperationException if this format can't be written
+   */
+  @NotNull
+  Database create(@NotNull File file) throws IOException;
 }
