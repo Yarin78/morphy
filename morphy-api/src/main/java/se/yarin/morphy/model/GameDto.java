@@ -39,6 +39,7 @@ import se.yarin.chess.NAG;
   "deleted",
   "topGame",
   "setupPosition",
+  "variant",
   "noMoves",
   "notation",
   "variationMoves",
@@ -98,6 +99,7 @@ public record GameDto(
 
     // Flags
     @Nullable Boolean setupPosition,
+    @Nullable String variant, // the PGN Variant, "Chess960"; null for regular chess
 
     // Additional game metadata
     @Nullable Integer noMoves,

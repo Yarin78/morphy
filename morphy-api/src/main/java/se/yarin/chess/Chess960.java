@@ -1,6 +1,7 @@
 package se.yarin.chess;
 
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -31,6 +32,21 @@ public final class Chess960 {
       };
 
   public static final int REGULAR_CHESS_SP = 518;
+
+  /** The value of the PGN {@code Variant} tag, and of the game DTO's variant, for Chess960. */
+  public static final String VARIANT = "Chess960";
+
+  /**
+   * Whether a PGN {@code Variant} tag value names Chess960, allowing the spellings found in the
+   * wild ("Chess960", "chess 960", "Fischerandom", ...).
+   */
+  public static boolean isVariant(@Nullable String variant) {
+    if (variant == null) {
+      return false;
+    }
+    String v = variant.toLowerCase().replaceAll("[\\s_-]", "");
+    return v.equals("chess960") || v.equals("fischerandom") || v.equals("fischerrandom");
+  }
 
   private static Position sp[] = new Position[960];
   private static int pieceStartCol[][] = new int[960][];
@@ -125,6 +141,54 @@ public final class Chess960 {
       sb.append(stones[i * 8].toChar());
     }
     return getStartPositionNo(sb.toString());
+  }
+
+  /**
+   * Determines the start position number of a Chess960 game from a position in it, as when reading
+   * a FEN, which only says which castling rights remain. It is the start position that the pieces
+   * on the first rank form, if they form one that agrees with the castling rights; otherwise the
+   * first start position whose king and rook squares agree with them. The same heuristic is used
+   * when a stored start position number turns out to be wrong.
+   *
+   * @param stones the position, 64 elements
+   * @param castles the castling rights in the position
+   * @return the position number, between 0 and 959
+   * @throws IllegalArgumentException if no start position agrees with the castling rights
+   */
+  public static int getStartPositionNo(@NotNull Stone[] stones, @NotNull EnumSet<Castles> castles) {
+    try {
+      int no = getStartPositionNo(stones);
+      if (agreesWithCastles(no, stones, castles)) {
+        return no;
+      }
+    } catch (IllegalArgumentException ignored) {
+      // The first rank is not a start position
+    }
+    for (int no = 0; no < 960; no++) {
+      if (agreesWithCastles(no, stones, castles)) {
+        return no;
+      }
+    }
+    throw new IllegalArgumentException(
+        "No Chess960 start position agrees with the castling rights " + castles);
+  }
+
+  private static boolean agreesWithCastles(int no, Stone[] stones, EnumSet<Castles> castles) {
+    for (Castles castle : castles) {
+      Player player =
+          castle == Castles.WHITE_SHORT_CASTLE || castle == Castles.WHITE_LONG_CASTLE
+              ? Player.WHITE
+              : Player.BLACK;
+      boolean shortCastle =
+          castle == Castles.WHITE_SHORT_CASTLE || castle == Castles.BLACK_SHORT_CASTLE;
+      int rookSqi = shortCastle ? getHRookSqi(no, player) : getARookSqi(no, player);
+      Stone king = player == Player.WHITE ? Stone.WHITE_KING : Stone.BLACK_KING;
+      Stone rook = player == Player.WHITE ? Stone.WHITE_ROOK : Stone.BLACK_ROOK;
+      if (stones[getKingSqi(no, player)] != king || stones[rookSqi] != rook) {
+        return false;
+      }
+    }
+    return true;
   }
 
   /**

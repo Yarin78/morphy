@@ -223,10 +223,18 @@ public class GameDtoImporter {
    * @return the GameModel
    */
   private GameModel buildGameModel(@NotNull GameHeaderModel headerModel, @NotNull GameDto dto) {
+    boolean chess960 = dto.variant() != null;
+    if (chess960 && !Chess960.isVariant(dto.variant())) {
+      throw new IllegalArgumentException("Unsupported variant: " + dto.variant());
+    }
+
     // Moves are required to read back; an unreadable movetext is an invalid game, not an empty one
     String pgn = dto.moves() == null ? null : dto.moves().pgn();
-    GameMovesModel movesModel =
-        pgn == null || pgn.isEmpty() ? new GameMovesModel() : GameMovesPgn.fromPgn(pgn);
+    String fen = dto.moves() == null ? null : dto.moves().fen();
+    if ((pgn == null || pgn.isEmpty()) && fen == null) {
+      return new GameModel(headerModel, new GameMovesModel());
+    }
+    GameMovesModel movesModel = GameMovesPgn.fromPgn(pgn == null ? "" : pgn, fen, chess960);
 
     // Build and return the complete GameModel
     return new GameModel(headerModel, movesModel);

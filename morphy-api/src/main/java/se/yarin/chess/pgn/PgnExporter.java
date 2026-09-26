@@ -250,7 +250,11 @@ public class PgnExporter {
             writeTag(writer, "BlackTeam", header.getBlackTeam(), null);
         }
 
-        // SetUp and FEN for setup positions
+        // Variant, SetUp and FEN for Chess960 games and setup positions
+        boolean chess960 = !moves.root().position().isRegularChess();
+        if (chess960) {
+            writeTag(writer, "Variant", Chess960.VARIANT, null);
+        }
         if (moves.isSetupPosition()) {
             writeTag(writer, "SetUp", "1", null);
             // Generate FEN
@@ -260,10 +264,12 @@ public class PgnExporter {
             writeTag(writer, "FEN", fen, null);
         }
 
-        // Tags without a field of their own, in the order they were read. SetUp and FEN are written
-        // from the moves above.
+        // Tags without a field of their own, in the order they were read. SetUp and FEN, and the
+        // Variant of a Chess960 game, are written from the moves above.
         for (Map.Entry<String, String> tag : header.getExtraTags().entrySet()) {
-            if (!tag.getKey().equals("SetUp") && !tag.getKey().equals("FEN")) {
+            String name = tag.getKey();
+            if (!name.equals("SetUp") && !name.equals("Setup") && !name.equals("FEN")
+                    && !(chess960 && name.equals("Variant"))) {
                 writeTag(writer, tag.getKey(), tag.getValue(), null);
             }
         }

@@ -213,13 +213,20 @@ public class PgnParser {
     private GameMovesModel createMovesModel(GameHeaderModel header) throws PgnFormatException {
         // Check for FEN setup position. The start position belongs to the moves model, so the tags
         // are removed from the header once used; the exporter writes them from the moves again.
+        // The standard spelling is SetUp, but Setup is common enough to accept too.
         String fenTag = header.getExtraTag("FEN");
-        String setupTag = header.getExtraTag("SetUp");
+        String setupTagName = header.getExtraTag("SetUp") != null ? "SetUp" : "Setup";
+        String setupTag = header.getExtraTag(setupTagName);
 
         if ("1".equals(setupTag) && fenTag != null) {
-            PositionState fen = PositionState.fromFen(fenTag);
+            boolean chess960 = Chess960.isVariant(header.getExtraTag("Variant"));
+            PositionState fen = PositionState.fromFen(fenTag, chess960);
             header.setExtraTag("FEN", null);
-            header.setExtraTag("SetUp", null);
+            header.setExtraTag(setupTagName, null);
+            if (!fen.position().isRegularChess()) {
+                // Written again from the start position; kept when it changes nothing
+                header.setExtraTag("Variant", null);
+            }
             return new GameMovesModel(fen.position(), fen.fullMoveNumber());
         }
 

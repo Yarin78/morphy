@@ -1,22 +1,21 @@
 package se.yarin.morphy.convert;
 
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+import se.yarin.chess.Chess;
 import se.yarin.chess.GameMovesModel;
 import se.yarin.chess.pgn.NagStyle;
 import se.yarin.chess.pgn.PgnExporter;
 import se.yarin.chess.pgn.PgnFormatException;
 import se.yarin.chess.pgn.PgnFormatOptions;
 import se.yarin.chess.pgn.PgnParser;
+import se.yarin.chess.pgn.PositionState;
 import se.yarin.morphy.games.annotations.AnnotationConverter;
 
 /**
- * The movetext PGN that {@link se.yarin.morphy.model.GameMovesDto} carries, written by {@link
- * GameDtoConverter} and read by {@link GameDtoImporter}. What one writes, the other reads back to
- * the same moves.
- *
- * <p>TODO: the movetext has no SetUp/FEN, so a game from a set-up position (or Chess960) loses its
- * start position through the DTO. Either add a fen field to GameMovesDto or make moves.pgn a full
- * PGN with the SetUp/FEN tags.
+ * The moves of a game as {@link se.yarin.morphy.model.GameMovesDto} carries them: PGN movetext and
+ * the FEN of the start position, written by {@link GameDtoConverter} and read by {@link
+ * GameDtoImporter}. What one writes, the other reads back to the same moves.
  */
 final class GameMovesPgn {
 
@@ -30,15 +29,33 @@ final class GameMovesPgn {
     return exporter.exportMovesOnly(moves, NagStyle.SUFFIXES);
   }
 
+  /** The FEN of the start position, or null if it's the standard one. */
+  static @Nullable String toFen(@NotNull GameMovesModel moves) {
+    if (!moves.isSetupPosition()) {
+      return null;
+    }
+    return PositionState.toFen(moves.root().position(), moves.root().ply());
+  }
+
   /**
-   * Reads movetext, from the standard start position.
+   * Reads movetext.
    *
-   * @throws IllegalArgumentException if the movetext can't be read
+   * @param pgn the movetext
+   * @param fen the start position, or null for the standard one
+   * @param chess960 whether the game is a Chess960 game, which decides how castling in the start
+   *     position is read
+   * @throws IllegalArgumentException if the movetext or the FEN can't be read
    */
-  static @NotNull GameMovesModel fromPgn(@NotNull String pgn) {
+  static @NotNull GameMovesModel fromPgn(@NotNull String pgn, @Nullable String fen, boolean chess960) {
     PgnParser parser = new PgnParser(AnnotationConverter.getRoundTripConverter()::convertToChessBase);
     try {
-      return parser.parseMoves(pgn);
+      if (fen == null) {
+        return parser.parseMoves(pgn);
+      }
+      PositionState start = PositionState.fromFen(fen, chess960);
+      int startPly =
+          Chess.moveNumberToPly(start.fullMoveNumber(), start.position().playerToMove());
+      return parser.parseMoves(pgn, start.position(), startPly);
     } catch (PgnFormatException e) {
       throw new IllegalArgumentException("Invalid moves: " + e.getMessage(), e);
     }

@@ -218,7 +218,7 @@ class ServicesIntegrationTest {
             game2.source(),
             new AnnotatorDto(null, "GM Bobby Fischer", null),
             null,
-            null, null, null, null, null, null, null, null, null, null, null, null, null,
+            null, null, null, null, null, null, null, null, null, null, null, null, null, null,
             new GameMovesDto("1. d4 Nf6 2. c4 e6 3. Nc3 Bb4 4. e3 O-O 5. Bd3 d5 1-0"),
             null);
     gamesService.replaceGame(databaseId, game2Id, game2Updated);
@@ -683,7 +683,7 @@ class ServicesIntegrationTest {
             null),
         new AnnotatorDto(null, "GM Hikaru Nakamura", null),
         null,
-        null, null, null, null, null, null, null, null, null, null, null, null, null,
+        null, null, null, null, null, null, null, null, null, null, null, null, null, null,
         new GameMovesDto(
             "1. e4 e5 {The King's Pawn opening.} (1... c5 {Sicilian Defense}) "
                 + "2. Nf3 Nc6 3. Bb5 a6 4. Ba4 Nf6 5. O-O Be7 6. Re1 b5 "
@@ -733,7 +733,7 @@ class ServicesIntegrationTest {
         new SourceDto(null, "ChessBase Database", "ChessBase", null, null, null, null, null),
         null,
         null,
-        null, null, null, null, null, null, null, null, null, null, null, null, null,
+        null, null, null, null, null, null, null, null, null, null, null, null, null, null,
         new GameMovesDto("1. e4 c5 2. Nf3 d6 3. d4 cxd4 4. Nxd4 Nf6 *"),
         null);
   }
@@ -760,7 +760,7 @@ class ServicesIntegrationTest {
         new SourceDto(null, "Test Source", "Test", null, null, null, null, null),
         null,
         null,
-        null, null, null, null, null, null, null, null, null, null, null, null, null,
+        null, null, null, null, null, null, null, null, null, null, null, null, null, null,
         new GameMovesDto("1. e4 e5 *"),
         null);
   }
@@ -787,7 +787,7 @@ class ServicesIntegrationTest {
         new SourceDto(null, "Test Source", "Test", null, null, null, null, null),
         null,
         null,
-        null, null, null, null, null, null, null, null, null, null, null, null, null,
+        null, null, null, null, null, null, null, null, null, null, null, null, null, null,
         new GameMovesDto("1. e4 e5 *"),
         null);
   }
@@ -814,7 +814,7 @@ class ServicesIntegrationTest {
         new SourceDto(null, "Test Source", "Test", null, null, null, null, null),
         new AnnotatorDto(null, annotatorName, null),
         null,
-        null, null, null, null, null, null, null, null, null, null, null, null, null,
+        null, null, null, null, null, null, null, null, null, null, null, null, null, null,
         new GameMovesDto("1. e4 e5 *"),
         null);
   }

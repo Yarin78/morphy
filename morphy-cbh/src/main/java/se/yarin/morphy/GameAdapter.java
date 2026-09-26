@@ -266,6 +266,8 @@ public class GameAdapter {
     }
     if (!model.root().position().isRegularChess()) {
       gameFlags.add(GameHeaderFlags.UNORTHODOX);
+      // Stored in place of the ECO; without it, the game isn't known as Chess960 from its header
+      gameHeader.chess960StartPosition(model.root().position().chess960StartPosition());
     }
 
     // TODO: Stream flag (if it should be kept here!?)

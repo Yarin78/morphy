@@ -9,6 +9,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import se.yarin.chess.Chess960;
 import se.yarin.chess.GameModel;
 import se.yarin.morphy.Game;
 import se.yarin.morphy.entities.*;
@@ -142,6 +143,12 @@ public class GameDtoConverter {
 
     // Flags
     Boolean setupPosition = game.header().flags().contains(GameHeaderFlags.SETUP_POSITION) ? true : null;
+    // The start position number is in the header, so the variant is known without the moves
+    String variant =
+        game.header().chess960StartPosition() >= 0
+                || game.header().flags().contains(GameHeaderFlags.UNORTHODOX)
+            ? Chess960.VARIANT
+            : null;
 
     // Additional game metadata
     Integer noMoves = game.noMoves() == 0 ? null : game.noMoves();
@@ -161,7 +168,8 @@ public class GameDtoConverter {
     if (includeMoves && !game.guidingText()) {
       try {
         GameModel model = game.getModel();
-        moves = new GameMovesDto(GameMovesPgn.toPgn(model.moves()));
+        moves =
+            new GameMovesDto(GameMovesPgn.toPgn(model.moves()), GameMovesPgn.toFen(model.moves()));
 
         String built = model.moves().getNotation(20);
         notation = built != null ? built : "--";
@@ -199,6 +207,7 @@ public class GameDtoConverter {
         deleted,
         topGame,
         setupPosition,
+        variant,
         noMoves,
         notation,
         variationMoves,

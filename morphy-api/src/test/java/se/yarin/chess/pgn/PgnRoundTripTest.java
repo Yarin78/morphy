@@ -12,6 +12,7 @@ import java.util.Random;
 import java.util.stream.Stream;
 
 import static org.junit.Assert.*;
+import static se.yarin.chess.Chess.*;
 
 /**
  * Round-trip tests for PGN: parse → export → parse verification.
@@ -418,5 +419,89 @@ public class PgnRoundTripTest {
         String exported = exporter.exportMovesOnly(new PgnParser().parseMoves(pgn), NagStyle.SUFFIXES);
 
         assertEquals(pgn, exported);
+    }
+
+    @Test
+    public void chess960GameReadsFromItsVariantAndFen() throws PgnFormatException {
+        // As written by ChessBase, with Setup spelled that way
+        String pgn = """
+                [Event "?"]
+                [Site "?"]
+                [Date "????.??.??"]
+                [Round "?"]
+                [White "?"]
+                [Black "?"]
+                [Result "*"]
+                [FEN "nbqrknbr/pppppppp/8/8/8/8/PPPPPPPP/NBQRKNBR w KQkq - 0 1"]
+                [Setup "1"]
+                [Variant "Chess960"]
+
+                1. e4 e5 2. Ne3 Ne6 3. f3 f6 4. Bf2 Bf7 5. O-O O-O *
+                """;
+
+        GameModel game = new PgnParser().parseGame(pgn);
+
+        Position start = game.moves().root().position();
+        assertEquals(Chess960.getStartPositionNo("NBQRKNBR"), start.chess960StartPosition());
+        assertTrue(game.header().getExtraTags().isEmpty());
+        // Castling short puts the king on g1 and the h-rook on f1
+        GameMovesModel.Node node = game.moves().root();
+        while (node.numMoves() > 0) {
+            node = node.mainNode();
+        }
+        Position end = node.position();
+        assertEquals(Stone.WHITE_KING, end.stoneAt(G1));
+        assertEquals(Stone.WHITE_ROOK, end.stoneAt(F1));
+
+        String exported = new PgnExporter().exportGame(game);
+        assertTrue(exported, exported.contains("[Variant \"Chess960\"]"));
+        assertTrue(exported, exported.contains("[SetUp \"1\"]"));
+        assertTrue(exported, exported.contains(
+                "[FEN \"nbqrknbr/pppppppp/8/8/8/8/PPPPPPPP/NBQRKNBR w KQkq - 0 1\"]"));
+        assertEquals(game.moves().toString(), new PgnParser().parseGame(exported).moves().toString());
+    }
+
+    @Test
+    public void chess960FenAfterTheStartKeepsItsCastlingRights() throws PgnFormatException {
+        // The first rank is no longer a start position, so the king and rook squares decide
+        PositionState state = PositionState.fromFen(
+                "nbqrk1br/pppppppp/5n2/8/8/5N2/PPPPPPPP/NBQRK1BR w KQkq - 2 2", true);
+
+        Position position = state.position();
+        for (Castles castles : Castles.values()) {
+            assertTrue(castles.toString(), position.isCastles(castles));
+        }
+        int sp = position.chess960StartPosition();
+        assertEquals(Stone.WHITE_KING, position.stoneAt(Chess960.getKingSqi(sp, Player.WHITE)));
+        assertEquals(Stone.WHITE_ROOK, position.stoneAt(Chess960.getHRookSqi(sp, Player.WHITE)));
+        assertEquals(Stone.WHITE_ROOK, position.stoneAt(Chess960.getARookSqi(sp, Player.WHITE)));
+    }
+
+    @Test(expected = PgnFormatException.class)
+    public void chess960FenWithImpossibleCastlingIsRejected() throws PgnFormatException {
+        // White may castle, but has no rooks
+        PositionState.fromFen("nbqrknbr/pppppppp/8/8/8/8/PPPPPPPP/NBQ1KNB1 w KQkq - 0 1", true);
+    }
+
+    @Test
+    public void chess960TagWithoutSetUpIsKept() throws PgnFormatException {
+        String pgn = """
+                [Event "?"]
+                [Site "?"]
+                [Date "????.??.??"]
+                [Round "?"]
+                [White "?"]
+                [Black "?"]
+                [Result "*"]
+                [Variant "Chess960"]
+
+                1. e4 e5 *
+                """;
+
+        // A Chess960 game from the standard arrangement is regular chess; the tag is kept as is
+        GameModel game = new PgnParser().parseGame(pgn);
+
+        assertTrue(game.moves().root().position().isRegularChess());
+        assertEquals("Chess960", game.header().getExtraTag("Variant"));
     }
 }

@@ -74,6 +74,22 @@ public class PositionState {
      */
     @NotNull
     public static PositionState fromFen(@NotNull String fen) throws PgnFormatException {
+        return fromFen(fen, false);
+    }
+
+    /**
+     * Parses a FEN string, of a regular or a Chess960 position. In Chess960 the castling field is
+     * KQkq as in regular chess; the start position number, which says where the castling kings and
+     * rooks start, is determined from the position (see {@link Chess960#getStartPositionNo(Stone[],
+     * EnumSet)}).
+     *
+     * @param fen the FEN string to parse
+     * @param chess960 whether the position is from a Chess960 game
+     * @return the parsed position state
+     * @throws PgnFormatException if the FEN string is invalid
+     */
+    @NotNull
+    public static PositionState fromFen(@NotNull String fen, boolean chess960) throws PgnFormatException {
         String[] parts = fen.trim().split("\\s+");
 
         if (parts.length < 4 || parts.length > 6) {
@@ -118,9 +134,14 @@ public class PositionState {
             }
         }
 
-        // Determine if this is a Chess960 position
-        // For now, assume regular chess unless it's clearly Chess960
         int chess960sp = Chess960.REGULAR_CHESS_SP;
+        if (chess960) {
+            try {
+                chess960sp = Chess960.getStartPositionNo(board, castles);
+            } catch (IllegalArgumentException e) {
+                throw new PgnFormatException("Invalid Chess960 FEN: " + e.getMessage(), e);
+            }
+        }
 
         Position position = new Position(board, toMove, castles, epCol, chess960sp);
 

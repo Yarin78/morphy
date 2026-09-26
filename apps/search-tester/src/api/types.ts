@@ -80,6 +80,8 @@ export interface GameDto {
   deleted?: boolean;
   topGame?: boolean;
   setupPosition?: boolean;
+  /** "Chess960" for a Chess960 game; absent for regular chess. */
+  variant?: string;
   noMoves?: number;
   notation?: string;
   variationMoves?: number;
