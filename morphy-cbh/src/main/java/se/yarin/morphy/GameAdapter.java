@@ -18,6 +18,8 @@ import se.yarin.morphy.text.*;
 import java.util.EnumSet;
 import se.yarin.morphy.chessbase.*;
 import se.yarin.morphy.chessbase.text.*;
+import se.yarin.morphy.chessbase.TournamentType;
+import se.yarin.morphy.chessbase.TournamentTimeControl;
 
 /**
  * Contains the logic for mapping a {@link Game} to a {@link se.yarin.chess.GameModel} and vice

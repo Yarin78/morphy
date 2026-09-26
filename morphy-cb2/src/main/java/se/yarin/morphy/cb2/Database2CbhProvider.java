@@ -1,6 +1,7 @@
 package se.yarin.morphy.cb2;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.Locale;
 import org.jetbrains.annotations.NotNull;
 import se.yarin.morphy.api.AccessMode;
@@ -22,8 +23,8 @@ public class Database2CbhProvider implements DatabaseProvider {
   }
 
   @Override
-  public @NotNull Database open(@NotNull File file, @NotNull AccessMode mode) {
-    return Database2Cbh.open(file, mode);
+  public @NotNull Database open(@NotNull File file, @NotNull AccessMode mode) throws IOException {
+    return new Database2CbhFacade(Database2Cbh.open(file, mode));
   }
 
   @Override

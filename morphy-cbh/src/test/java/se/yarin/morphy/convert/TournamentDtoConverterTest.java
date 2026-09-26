@@ -10,6 +10,8 @@ import org.junit.jupiter.api.Test;
 import se.yarin.chess.Date;
 import se.yarin.morphy.entities.*;
 import se.yarin.morphy.chessbase.*;
+import se.yarin.morphy.chessbase.TournamentType;
+import se.yarin.morphy.chessbase.TournamentTimeControl;
 
 /**
  * Roundtrip test for TournamentDtoConverter. Validates that Tournament entities can be converted to

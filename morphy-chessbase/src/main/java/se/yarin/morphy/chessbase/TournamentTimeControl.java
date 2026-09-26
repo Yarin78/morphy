@@ -1,4 +1,4 @@
-package se.yarin.morphy.entities;
+package se.yarin.morphy.chessbase;
 
 import org.jetbrains.annotations.NotNull;
 

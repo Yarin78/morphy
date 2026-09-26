@@ -8,6 +8,8 @@ import org.jetbrains.annotations.Nullable;
 import se.yarin.chess.Date;
 import se.yarin.morphy.entities.*;
 import se.yarin.morphy.chessbase.*;
+import se.yarin.morphy.chessbase.TournamentType;
+import se.yarin.morphy.chessbase.TournamentTimeControl;
 
 /**
  * Converter for bidirectional transformation between Tournament entities and TournamentDto objects.

@@ -18,6 +18,8 @@ import java.util.List;
 
 import static org.junit.Assert.*;
 import se.yarin.morphy.chessbase.*;
+import se.yarin.morphy.chessbase.TournamentType;
+import se.yarin.morphy.chessbase.TournamentTimeControl;
 
 public class TournamentTest {
   @Rule public TemporaryFolder folder = new TemporaryFolder();

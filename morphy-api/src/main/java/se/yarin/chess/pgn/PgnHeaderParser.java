@@ -157,7 +157,7 @@ public class PgnHeaderParser {
     }
 
     // The tournament time-control names, as they appear in an EventType PGN tag.
-    // Kept in step with se.yarin.morphy.entities.TournamentTimeControl in the v1 module.
+    // Kept in step with se.yarin.morphy.chessbase.TournamentTimeControl in the v1 module.
     private static final String[] KNOWN_TIME_CONTROLS = {
         "normal", "blitz", "rapid", "corr"
     };

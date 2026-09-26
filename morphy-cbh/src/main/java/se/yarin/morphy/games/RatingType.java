@@ -3,7 +3,7 @@ package se.yarin.morphy.games;
 import org.immutables.value.Value;
 import org.jetbrains.annotations.Nullable;
 import se.yarin.morphy.chessbase.Nation;
-import se.yarin.morphy.entities.TournamentTimeControl;
+import se.yarin.morphy.chessbase.TournamentTimeControl;
 import se.yarin.morphy.util.CBUtil;
 import se.yarin.util.ByteBufferUtil;
 

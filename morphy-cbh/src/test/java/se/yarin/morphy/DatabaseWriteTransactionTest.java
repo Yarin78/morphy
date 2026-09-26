@@ -22,6 +22,7 @@ import java.util.function.Consumer;
 import static org.junit.Assert.*;
 import static se.yarin.chess.Chess.*;
 import se.yarin.morphy.chessbase.*;
+import se.yarin.morphy.chessbase.TournamentTimeControl;
 
 public class DatabaseWriteTransactionTest extends DatabaseTestSetup {
 

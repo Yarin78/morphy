@@ -7,8 +7,8 @@ import se.yarin.chess.Date;
 import se.yarin.chess.Eco;
 import se.yarin.chess.GameResult;
 import se.yarin.morphy.chessbase.Nation;
-import se.yarin.morphy.entities.TournamentTimeControl;
-import se.yarin.morphy.entities.TournamentType;
+import se.yarin.morphy.chessbase.TournamentTimeControl;
+import se.yarin.morphy.chessbase.TournamentType;
 
 import java.io.File;
 import java.nio.ByteBuffer;

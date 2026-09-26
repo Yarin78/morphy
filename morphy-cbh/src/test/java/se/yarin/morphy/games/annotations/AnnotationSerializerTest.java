@@ -4,8 +4,8 @@ import org.junit.Test;
 import se.yarin.chess.*;
 import se.yarin.chess.annotations.Annotation;
 import se.yarin.morphy.chessbase.Nation;
-import se.yarin.morphy.entities.TournamentTimeControl;
-import se.yarin.morphy.entities.TournamentType;
+import se.yarin.morphy.chessbase.TournamentTimeControl;
+import se.yarin.morphy.chessbase.TournamentType;
 import se.yarin.morphy.chessbase.Medal;
 
 import java.nio.ByteBuffer;

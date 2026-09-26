@@ -7,6 +7,8 @@ import org.slf4j.LoggerFactory;
 import se.yarin.chess.Date;
 import se.yarin.morphy.util.CBUtil;
 import se.yarin.morphy.chessbase.*;
+import se.yarin.morphy.chessbase.TournamentType;
+import se.yarin.morphy.chessbase.TournamentTimeControl;
 
 @Value.Immutable
 public abstract class Tournament extends Entity implements Comparable<Tournament> {

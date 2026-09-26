@@ -3,7 +3,7 @@ package se.yarin.morphy.entities.filters;
 import org.jetbrains.annotations.NotNull;
 import se.yarin.morphy.entities.EntityType;
 import se.yarin.morphy.entities.Tournament;
-import se.yarin.morphy.entities.TournamentType;
+import se.yarin.morphy.chessbase.TournamentType;
 import se.yarin.morphy.util.CBUtil;
 
 import java.util.Arrays;

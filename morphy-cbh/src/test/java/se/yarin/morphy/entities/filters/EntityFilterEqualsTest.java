@@ -5,8 +5,8 @@ import se.yarin.chess.Date;
 import se.yarin.morphy.entities.EntityType;
 import se.yarin.morphy.chessbase.Nation;
 import se.yarin.morphy.entities.Tournament;
-import se.yarin.morphy.entities.TournamentTimeControl;
-import se.yarin.morphy.entities.TournamentType;
+import se.yarin.morphy.chessbase.TournamentTimeControl;
+import se.yarin.morphy.chessbase.TournamentType;
 
 import java.util.Set;
 

@@ -146,8 +146,9 @@ public final class AnnotationCodec {
             ImmutableComputerEvaluationAnnotation.of(buf.getShort(), buf.getShort(), buf.getShort());
         case MEDALS -> ImmutableMedalAnnotation.of(Medal.decode(buf.getInt()));
         case VARIATION_COLOR -> {
+          // A little-endian int: the colour as a Windows COLORREF in the low bytes, the flags on top
+          int r = buf.get() & 0xFF, g = buf.get() & 0xFF, b = buf.get() & 0xFF;
           int flag = buf.get();
-          int b = buf.get() & 0xFF, g = buf.get() & 0xFF, r = buf.get() & 0xFF;
           yield ImmutableVariationColorAnnotation.of(r, g, b, (flag & 2) != 0, (flag & 1) != 0);
         }
         case TIME_CONTROL -> readTimeControl(buf, start);
@@ -383,10 +384,10 @@ public final class AnnotationCodec {
           buf.putShort((short) a.eval()).putShort((short) a.evalType()).putShort((short) a.ply());
       case MedalAnnotation a -> buf.putInt(Medal.encode(a.medals()));
       case VariationColorAnnotation a ->
-          buf.put((byte) ((a.onlyMainline() ? 1 : 0) | (a.onlyMoves() ? 2 : 0)))
-              .put((byte) a.blue())
+          buf.put((byte) a.red())
               .put((byte) a.green())
-              .put((byte) a.red());
+              .put((byte) a.blue())
+              .put((byte) ((a.onlyMainline() ? 1 : 0) | (a.onlyMoves() ? 2 : 0)));
       case TimeControlAnnotation a -> {
         buf.put((byte) 1);
         for (int i = 0; i < 3; i++) {

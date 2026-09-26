@@ -27,7 +27,7 @@ class Database2CbhTest {
   @Test
   void opensThroughFactoryAndCountsGames() throws IOException {
     try (Database db = Databases.open(sample(), AccessMode.READ_ONLY)) {
-      assertInstanceOf(Database2Cbh.class, db);
+      assertInstanceOf(Database2CbhFacade.class, db);
       assertEquals(DatabaseFormat.CB2, db.format());
       // (199488 - 192) / 192
       assertEquals(1038, db.gameCount());
