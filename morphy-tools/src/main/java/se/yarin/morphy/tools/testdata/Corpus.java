@@ -120,6 +120,16 @@ final class Corpus {
   static final Event LONDON_1851 =
       new Event("Casual game London 1851", "London", "ENG", new Date(1851, 6), null, null, null, null);
 
+  /**
+   * The events of the guiding texts. A text can say no more about its event than the title and the
+   * start date, so these have no more to say, and no game refers to them: a text that named an
+   * event of a game would get an event of its own, with the same title and less in it.
+   */
+  static final Event NOTES_OPENINGS =
+      new Event("Opening Notes 2023", null, null, new Date(2023, 1, 1), null, null, null, null);
+  static final Event NOTES_ENDGAMES =
+      new Event("Endgame Notes 2023", null, null, new Date(2023, 3, 1), null, null, null, null);
+
   /** The events the made-up modern games are spread over. */
   static final List<Event> MODERN_EVENTS =
       List.of(NORWAY_CHESS, CANDIDATES, WORLD_RAPID, WORLD_BLITZ, SINQUEFIELD, WCH_2021);
@@ -142,6 +152,9 @@ final class Corpus {
   static final SourceDto CBM_211 = source("CBM 211", "ChessBase", new Date(2023, 4, 1));
   static final SourceDto TWIC_1450 = source("The Week in Chess 1450", "Mark Crowther", new Date(2023, 1, 23));
   static final SourceDto ARCHIVE = source("Chess Archive", null, null);
+
+  /** The source of a guiding text, which can say no more than its title. */
+  static final SourceDto NOTES_SOURCE = source("Notes Vol. 1", null, null);
 
   static AnnotatorDto annotator(String name) {
     return new AnnotatorDto(null, name, null);

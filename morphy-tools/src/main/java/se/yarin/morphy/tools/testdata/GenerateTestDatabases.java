@@ -11,7 +11,6 @@ import java.util.stream.Stream;
 import se.yarin.morphy.api.AccessMode;
 import se.yarin.morphy.api.Database;
 import se.yarin.morphy.api.Databases;
-import se.yarin.morphy.model.GameDto;
 import se.yarin.morphy.tools.testdata.Versions.Version;
 
 /**
@@ -67,7 +66,7 @@ public class GenerateTestDatabases {
   }
 
   private static void generate(Path out, Format format) throws IOException {
-    List<GameDto> expected = new ArrayList<>();
+    State state = new State();
     Path previous = null;
     for (Version version : Versions.all()) {
       Path dir = out.resolve(format.dir).resolve(version.key());
@@ -85,18 +84,18 @@ public class GenerateTestDatabases {
       }
       List<String> manifest;
       try (db) {
-        session = new Session(format, db, expected);
+        session = new Session(format, db, state);
         version.apply().accept(session);
         session.verify(version.key() + " after writing");
         manifest = session.manifest;
       }
       try (Database reopened = Databases.open(file, AccessMode.READ_ONLY)) {
-        new Session(format, reopened, expected).verify(version.key() + " after reopening");
+        new Session(format, reopened, state).verify(version.key() + " after reopening");
       }
 
-      writeManifest(dir, format, version, expected.size(), manifest);
+      writeManifest(dir, format, version, state.expected.size(), manifest);
       System.out.println(
-          format.dir + "/" + version.key() + ": " + expected.size() + " games, verified");
+          format.dir + "/" + version.key() + ": " + state.expected.size() + " records, verified");
       previous = file.toPath();
     }
   }

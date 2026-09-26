@@ -26,6 +26,7 @@ Run development tools from the `se.yarin.morphy.tools` package.
 - `QueryTest` - Test database queries
 - `RipDbHeaders` - Extract database headers
 - `GenerateTestDatabase` - Generate test databases
+- `testdata.GenerateTestDatabases` - Generate the versioned test databases, in cbh, 2cbh and pgn, to open in ChessBase; writes to `test-databases/generated` (ignored) and takes an optional output directory and formats, e.g. `test-databases/generated cbh pgn`
 - `DumpMoves` - Write every game's move tree to a file, for checking a v2 (`.2cbg`) decoder against v1
 
 ## Instructions
