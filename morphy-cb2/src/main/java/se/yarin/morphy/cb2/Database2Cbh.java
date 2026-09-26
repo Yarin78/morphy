@@ -46,6 +46,7 @@ public final class Database2Cbh implements AutoCloseable {
   private final @NotNull EntityFile entities;
   private final @NotNull GameListFile gameLists;
   private final @NotNull SortIndexFile sortIndexes;
+  private final @NotNull EntityLookup entityLookup;
 
   private Database2Cbh(@NotNull String name, boolean writable, @NotNull ByteStore[] stores) {
     this.name = name;
@@ -56,6 +57,7 @@ public final class Database2Cbh implements AutoCloseable {
     this.entities = new EntityFile(stores[3], name + ".2lid");
     this.gameLists = new GameListFile(stores[4], name + ".2lgd");
     this.sortIndexes = new SortIndexFile(stores[5], name + ".2lcd");
+    this.entityLookup = new EntityLookup(entities);
     if (games.version() != GameHeaderFile.VERSION) {
       log.warn("{} has format version {}, not {}", name, games.version(), GameHeaderFile.VERSION);
     }
@@ -230,19 +232,38 @@ public final class Database2Cbh implements AutoCloseable {
     return sortIndexes;
   }
 
+  /** Finds existing entities by their fields, for the writer. */
+  @NotNull
+  EntityLookup entityLookup() {
+    return entityLookup;
+  }
+
   /** The number of records: games, guiding texts and analyses, deleted ones included. */
   public int count() {
     return games.count();
   }
 
   /**
-   * Gets a game.
+   * Reads a game as a model. To read more of it, or many games, use a {@link ReadTransaction}.
    *
    * @throws IllegalArgumentException if there is no game with that id
+   * @throws IllegalStateException if the record is a guiding text
    */
-  public @NotNull Game getGame(int id) {
+  public @NotNull GameModel getGameModel(int id) {
     try (ReadTransaction txn = new ReadTransaction(this)) {
-      return txn.getGame(id);
+      return txn.getGame(id).model();
+    }
+  }
+
+  /**
+   * Reads a guiding text as a model.
+   *
+   * @throws IllegalArgumentException if there is no record with that id
+   * @throws ClassCastException if the record is not a guiding text
+   */
+  public @NotNull TextModel getTextModel(int id) {
+    try (ReadTransaction txn = new ReadTransaction(this)) {
+      return txn.getGame(id).textModel();
     }
   }
 

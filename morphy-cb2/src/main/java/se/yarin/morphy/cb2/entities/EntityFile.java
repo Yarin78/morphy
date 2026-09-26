@@ -2,8 +2,10 @@ package se.yarin.morphy.cb2.entities;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.EnumMap;
+import java.util.List;
 import java.util.Map;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -105,6 +107,20 @@ public final class EntityFile implements AutoCloseable {
   /** The id of the most recently deleted entity of a type, -1 if none. */
   public long firstDeleted(@NotNull EntityType type) {
     return firstDeleted[type.index()];
+  }
+
+  /**
+   * The ids new entities of a type will get, in order, as far as the list of deleted entities
+   * reaches: that list's ids, most recent first. After them come {@link #count} and up.
+   */
+  public @NotNull List<Integer> freeIds(@NotNull EntityType type) {
+    List<Integer> free = new ArrayList<>();
+    long id = firstDeleted(type);
+    while (id >= 0) {
+      free.add((int) id);
+      id = nextDeleted(type, (int) id);
+    }
+    return free;
   }
 
   /** Whether an entity is deleted. */

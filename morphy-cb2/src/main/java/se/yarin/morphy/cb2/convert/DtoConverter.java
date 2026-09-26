@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -373,6 +374,121 @@ public final class DtoConverter {
       }
     }
     return "";
+  }
+
+  // ── From DTOs ────────────────────────────────────────────────────────────
+
+  /** A player with the names of a DTO, keeping the rest of an existing one. */
+  public @NotNull Player toPlayer(@NotNull PlayerDto dto, @NotNull Player existing) {
+    return new Player(
+        text(dto.lastName()),
+        text(dto.firstName()),
+        existing.unknown1(),
+        existing.unknown2(),
+        dto.chessBaseId() == null ? existing.chessBaseId() : dto.chessBaseId().intValue(),
+        existing.fideIdSize(),
+        dto.fideId() == null ? existing.fideId() : dto.fideId());
+  }
+
+  /** An annotator, a player, with the name of a DTO, keeping the rest of an existing one. */
+  public @NotNull Player toAnnotator(@NotNull AnnotatorDto dto, @NotNull Player existing) {
+    Player named = Player.ofFullName(text(dto.name()));
+    return existing.withNames(named.lastName(), named.firstName());
+  }
+
+  /** A tournament with the fields of a DTO, keeping those the DTO lacks from an existing one. */
+  public @NotNull Tournament toTournament(@NotNull TournamentDto dto, @NotNull Tournament existing) {
+    int type = dto.type() == null ? 0 : TournamentType.fromName(dto.type()).ordinal();
+    if (dto.timeControl() != null) {
+      type |=
+          switch (TournamentTimeControl.fromName(dto.timeControl())) {
+            case BLITZ -> 0x20;
+            case RAPID -> 0x40;
+            case CORRESPONDENCE -> 0x80;
+            case NORMAL -> 0;
+          };
+    }
+    int flags = existing.flags() & ~3;
+    if (Boolean.TRUE.equals(dto.complete())) {
+      flags |= 3;
+    }
+    return new Tournament(
+        text(dto.place()),
+        text(dto.title()),
+        dto.startDate() == null ? 0 : Dates.encode(dto.startDate()),
+        type,
+        Boolean.TRUE.equals(dto.teamTournament()) ? existing.teamFlags() | 1 : existing.teamFlags() & ~1,
+        nationCode(dto.nation()),
+        existing.unknown7(),
+        dto.category() == null ? 0 : dto.category(),
+        flags,
+        dto.rounds() == null ? 0 : dto.rounds(),
+        existing.unknown11(),
+        dto.latitude() == null ? 0f : dto.latitude().floatValue(),
+        dto.longitude() == null ? 0f : dto.longitude().floatValue(),
+        existing.placeNation(),
+        existing.unknown21(),
+        existing.tiebreaks(),
+        dto.endDate() == null ? 0 : Dates.encode(dto.endDate()),
+        existing.trailing());
+  }
+
+  /** A source with the fields of a DTO. */
+  public @NotNull Source toSource(@NotNull SourceDto dto) {
+    int quality = 0;
+    for (int i = 0; i < QUALITIES.length; i++) {
+      if (QUALITIES[i].equalsIgnoreCase(text(dto.quality()))) {
+        quality = i;
+      }
+    }
+    return new Source(
+        text(dto.title()),
+        text(dto.publisher()),
+        dto.publication() == null ? 0 : Dates.encode(dto.publication()),
+        dto.date() == null ? 0 : Dates.encode(dto.date()),
+        dto.version() == null ? 0 : dto.version(),
+        quality);
+  }
+
+  /** A team with the fields of a DTO. */
+  public @NotNull Team toTeam(@NotNull TeamDto dto) {
+    return new Team(
+        text(dto.title()),
+        dto.teamNumber() == null ? 0 : dto.teamNumber(),
+        Boolean.TRUE.equals(dto.season()) ? 1 : 0,
+        dto.year() == null ? 0 : dto.year(),
+        nationCode(dto.nation()));
+  }
+
+  /**
+   * A game tag with the titles of a DTO, in the languages it has; a DTO with only a title gives
+   * the English one.
+   */
+  public @NotNull GameTag toGameTag(@NotNull GameTagDto dto, @NotNull GameTag existing) {
+    Map<Integer, String> titles = new TreeMap<>();
+    for (GameTag.Title t : existing.titles()) {
+      titles.put(t.language(), "");
+    }
+    for (int language : GameTag.OFFERED_LANGUAGES) {
+      titles.putIfAbsent(language, "");
+    }
+    titles.put(42, text(dto.englishTitle() != null ? dto.englishTitle() : dto.title()));
+    titles.put(53, text(dto.germanTitle()));
+    titles.put(49, text(dto.frenchTitle()));
+    titles.put(43, text(dto.spanishTitle()));
+    titles.put(70, text(dto.italianTitle()));
+    titles.put(103, text(dto.dutchTitle()));
+    List<GameTag.Title> list = new ArrayList<>();
+    titles.forEach((language, title) -> list.add(new GameTag.Title(language, title)));
+    return new GameTag(list);
+  }
+
+  private static int nationCode(@Nullable String ioc) {
+    return ioc == null || ioc.isBlank() ? 0 : Nation.fromIOC(ioc).ordinal();
+  }
+
+  private static String text(@Nullable String s) {
+    return s == null ? "" : s;
   }
 
   // ── Helpers ──────────────────────────────────────────────────────────────

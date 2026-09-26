@@ -26,7 +26,8 @@ This document describes the architecture of the Morphy library, explaining how c
 > live in **morphy-chessbase** (`se.yarin.morphy.chessbase`); the v1 binary serializers for
 > them stay in morphy-cbh. The v1 (`.cbh`) implementation described below lives in
 > **morphy-cbh**: `DatabaseCbh` is the engine, and `DatabaseCbhFacade` wraps it as the
-> `Database` facade. The v2 (`.2cbh`) stub `Database2Cbh` lives in **morphy-cb2**. Open
+> `Database` facade. The v2 (`.2cbh`) implementation lives in **morphy-cb2**: `Database2Cbh`
+> is its engine and `Database2CbhFacade` its facade. Open
 > any format with `Databases.open(file)`.
 > Debugging data stays off the facade: `DatabaseCbhFacade` also offers `CbhDiagnostics`
 > through `Database.extension(CbhDiagnostics.class)`, with query-plan explanations and the

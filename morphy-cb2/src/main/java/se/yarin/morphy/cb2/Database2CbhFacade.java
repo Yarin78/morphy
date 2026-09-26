@@ -27,7 +27,14 @@ import se.yarin.morphy.cb2.entities.Team;
 import se.yarin.morphy.cb2.entities.Tournament;
 import se.yarin.morphy.cb2.query.EntitySearch;
 import se.yarin.morphy.cb2.query.GameSearch;
+import se.yarin.morphy.chessbase.convert.GameDtoImporter;
+import se.yarin.morphy.model.AnnotatorDto;
 import se.yarin.morphy.model.GameDto;
+import se.yarin.morphy.model.GameTagDto;
+import se.yarin.morphy.model.PlayerDto;
+import se.yarin.morphy.model.SourceDto;
+import se.yarin.morphy.model.TeamDto;
+import se.yarin.morphy.model.TournamentDto;
 
 /**
  * The vendor-neutral {@link Database} over a ChessBase v2 ({@code .2cbh}) database.
@@ -43,6 +50,7 @@ public class Database2CbhFacade implements Database {
 
   private final @NotNull Database2Cbh database;
   private final @NotNull DtoConverter converter = new DtoConverter();
+  private final @NotNull GameDtoImporter importer = new GameDtoImporter();
 
   /** Wraps an open v2 database; the facade takes over closing it. */
   public Database2CbhFacade(@NotNull Database2Cbh database) {
@@ -142,13 +150,23 @@ public class Database2CbhFacade implements Database {
   @Override
   public long addGame(@NotNull GameDto game) {
     requireWritable();
-    throw new UnsupportedOperationException("Writing v2 databases is not implemented yet");
+    if ("text".equals(game.type())) {
+      return database.addText(importer.toTextModel(game));
+    }
+    return database.addGame(importer.toGameModel(game));
   }
 
   @Override
   public void replaceGame(long id, @NotNull GameDto game) {
     requireWritable();
-    throw new UnsupportedOperationException("Writing v2 databases is not implemented yet");
+    if (id < 1 || id > database.count()) {
+      throw new IllegalArgumentException("No game with id " + id);
+    }
+    if ("text".equals(game.type())) {
+      database.replaceText((int) id, importer.toTextModel(game));
+    } else {
+      database.replaceGame((int) id, importer.toGameModel(game));
+    }
   }
 
   // ── Entities ─────────────────────────────────────────────────────────────
@@ -207,9 +225,33 @@ public class Database2CbhFacade implements Database {
   }
 
   @Override
-  public <T> @NotNull T updateEntity(@NotNull EntityKind<T> kind, long id, @NotNull T entity) {
+  public <T> @NotNull T updateEntity(@NotNull EntityKind<T> kind, long id, @NotNull T dto) {
     requireWritable();
-    throw new UnsupportedOperationException("Writing v2 databases is not implemented yet");
+    if (getEntity(kind, id) == null) {
+      throw new IllegalArgumentException("No " + kind + " with id " + id);
+    }
+    EntitySearch search = EntitySearch.of(kind);
+    try (WriteTransaction txn = new WriteTransaction(database)) {
+      Entity existing = txn.entity(search.type(), id);
+      Entity updated =
+          switch (existing) {
+            case Player p when kind == EntityKind.ANNOTATOR ->
+                converter.toAnnotator((AnnotatorDto) dto, p);
+            case Player p -> converter.toPlayer((PlayerDto) dto, p);
+            case Tournament t -> converter.toTournament((TournamentDto) dto, t);
+            case Source s -> converter.toSource((SourceDto) dto);
+            case Team t -> converter.toTeam((TeamDto) dto);
+            case GameTag g -> converter.toGameTag((GameTagDto) dto, g);
+            case null -> throw new IllegalArgumentException("No " + kind + " with id " + id);
+          };
+      txn.updateEntity(id, updated);
+      txn.commit();
+    }
+    T result = getEntity(kind, id);
+    if (result == null) {
+      throw new IllegalStateException("The updated " + kind + " " + id + " can't be read");
+    }
+    return result;
   }
 
   private Object toDto(DatabaseTransaction txn, EntityKind<?> kind, long id, Entity entity) {

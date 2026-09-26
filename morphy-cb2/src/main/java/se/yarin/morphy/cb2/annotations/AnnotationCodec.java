@@ -341,7 +341,28 @@ public final class AnnotationCodec {
     if (type == null) {
       return false;
     }
-    buf.putShort(type.shortValue());
+    int start = buf.position();
+    writeUnchecked(buf, type, annotation);
+    // Annotations kept as bytes may have come from another format, whose layout differs; one that
+    // doesn't read back as what was written would make the whole record unreadable
+    ByteBuffer written = buf.duplicate().order(buf.order()).position(start).limit(buf.position());
+    boolean readable;
+    try {
+      read(written);
+      readable = !written.hasRemaining();
+    } catch (UnreadableAnnotationException | RuntimeException e) {
+      readable = false;
+    }
+    if (!readable) {
+      log.warn("A {} doesn't fit the v2 layout and is not stored", annotation.getClass().getSimpleName());
+      buf.position(start);
+      return false;
+    }
+    return true;
+  }
+
+  private static void writeUnchecked(ByteBuffer buf, int type, Annotation annotation) {
+    buf.putShort((short) type);
     switch (annotation) {
       case TextAfterMoveAnnotation a -> writeText(buf, a.unknown(), a.language(), a.text());
       case TextBeforeMoveAnnotation a -> writeText(buf, a.unknown(), a.language(), a.text());
@@ -405,7 +426,6 @@ public final class AnnotationCodec {
       case UnknownAnnotation a -> buf.put(a.rawData());
       default -> throw new IllegalStateException("Unexpected annotation " + annotation);
     }
-    return true;
   }
 
   /** The v2 type of an annotation, or null if it has no v2 form. */
