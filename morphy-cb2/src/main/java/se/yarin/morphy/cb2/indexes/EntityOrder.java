@@ -21,7 +21,11 @@ public final class EntityOrder {
   /** The key of an entity whose sort fields are all empty, placing it first. */
   public static final long EMPTY_KEY = 1;
 
-  private static final String PLAYER_CHARS = "abcdefghijklmnopqrstuvwxyz0123456789 -";
+  // A hyphen is not among them: ChessBase's integrity check rejects a key that is built from one
+  // (checked with a player named Vachier-Lagrave, whose key has the hyphen as its 8th character)
+  // and writes 0 instead. Older databases hold keys with hyphens in them, and every ChessBase
+  // version reads a key of 0 as "compare in full", so 0 is safe for all of them.
+  private static final String PLAYER_CHARS = "abcdefghijklmnopqrstuvwxyz0123456789 ";
   private static final String TOURNAMENT_CHARS = "abcdefghijklmnopqrstuvwxyz0123456789";
 
   /**

@@ -127,7 +127,7 @@ by comparing the entities in full.
 
 | Entities | Key | Characters permitted |
 |---|---|---|
-| players, annotators | first 8 characters of the last name | `a-z`, digits, space, `-` |
+| players, annotators | first 8 characters of the last name | `a-z`, digits, space |
 | tournaments | the year as 2 bytes, then the first 6 characters of the title | `a-z` and digits |
 | sources, teams | first 8 characters of the title | any ASCII |
 | game tags | language (1 byte, a nation code), then the first 7 characters of the first title | any ASCII, checked over 8 characters |
@@ -137,6 +137,12 @@ characters it would be built from is not permitted** — the node still occupies
 its correct place in the tree, so a key of 0 simply means the entity must be
 compared in full. The permitted sets differ per entity because they are exactly
 the characters whose ASCII order agrees with the full comparison below.
+
+A hyphen is not permitted in the key of a player or an annotator, so a last name
+with one among its first 8 characters has the key 0. Databases written by
+earlier versions of ChessBase hold keys with a hyphen in them, and a reader
+takes them as they are. Whether the hyphen must be avoided at every position of
+the key, or only at some, is **unknown**.
 
 An entity whose sort fields are all empty takes the key 1, placing it first. A
 tournament with only a year takes the year followed by six zero bytes.

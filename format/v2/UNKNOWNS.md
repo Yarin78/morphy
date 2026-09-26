@@ -77,6 +77,9 @@ are not repeated here.
   0x18, which is the index's number within its entity type but whose purpose is
   unclear; the byte at 0x19, always 1; and the `int` at 0x00 of the file header,
   always 1.
+- **[Keys](5-indexes.md#keys)**: at which positions of the key a hyphen in a
+  player's or annotator's last name makes the key 0. A key of 0 is accepted for
+  every position; a key that holds a hyphen as its 8th character is rejected.
 - **[Nodes](5-indexes.md#nodes)**: which leaves hold −1 in place of their slot
   number.
 - **[How text is compared](5-indexes.md#how-text-is-compared)**: the exact
