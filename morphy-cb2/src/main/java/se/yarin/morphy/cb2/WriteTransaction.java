@@ -8,6 +8,7 @@ import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -624,8 +625,10 @@ public final class WriteTransaction extends DatabaseTransaction {
       GameHeaderFile headers = db.gameHeaderFile();
       int committedCount = headers.count();
 
-      // What the records referred to before, and will refer to after
-      Map<Ref, List<Integer>> removed = new HashMap<>(), added = new HashMap<>();
+      // What the records referred to before, and will refer to after. The order is that of the
+      // records and the roles in them, which decides the order the entities enter the sort orders
+      // and the blocks the lists take, and so the same changes give the same files every time
+      Map<Ref, List<Integer>> removed = new LinkedHashMap<>(), added = new LinkedHashMap<>();
       for (Pending p : pending.values()) {
         int id = p.record().id();
         if (id <= committedCount) {
@@ -640,7 +643,7 @@ public final class WriteTransaction extends DatabaseTransaction {
 
       // New entities first, in the order the transaction gave them ids, then changed ones
       EntityFile entities = db.entityFile();
-      Set<Ref> resorted = new HashSet<>();
+      Set<Ref> resorted = new LinkedHashSet<>();
       for (Map.Entry<EntityType, LinkedHashMap<Integer, Entity>> e : newEntities.entrySet()) {
         for (Map.Entry<Integer, Entity> created : e.getValue().entrySet()) {
           int id = entities.add(created.getValue());
@@ -770,7 +773,7 @@ public final class WriteTransaction extends DatabaseTransaction {
     GameListFile lists = db.gameListFile();
     SortIndexFile sort = db.sortIndexFile();
     EntityFile entities = db.entityFile();
-    Set<Ref> touched = new HashSet<>(removed.keySet());
+    Set<Ref> touched = new LinkedHashSet<>(removed.keySet());
     touched.addAll(added.keySet());
 
     // Entities whose fields changed leave their sort orders, to come back in their new place
