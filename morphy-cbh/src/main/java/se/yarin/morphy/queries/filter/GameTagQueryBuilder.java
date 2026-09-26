@@ -12,6 +12,7 @@ import se.yarin.morphy.entities.filters.GameTagLanguagesFilter;
 import se.yarin.morphy.entities.filters.GameTagTitleFilter;
 import se.yarin.morphy.queries.QuerySortField;
 import se.yarin.morphy.queries.QuerySortOrder;
+import se.yarin.morphy.api.query.IntRange;
 
 /**
  * Builds an {@link se.yarin.morphy.queries.EntityQuery} for {@link GameTag} from a filter

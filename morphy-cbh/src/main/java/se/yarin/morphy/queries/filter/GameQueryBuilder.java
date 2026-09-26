@@ -22,6 +22,8 @@ import se.yarin.morphy.chessbase.Medal;
 import se.yarin.morphy.games.TopGamesStorage;
 import se.yarin.morphy.games.filters.*;
 import se.yarin.morphy.queries.*;
+import se.yarin.morphy.api.query.IntRange;
+import se.yarin.morphy.api.query.PartialDateParser;
 
 /**
  * Builds a {@link GameQuery} from a filter expression string or a list of {@link FilterCondition}s.

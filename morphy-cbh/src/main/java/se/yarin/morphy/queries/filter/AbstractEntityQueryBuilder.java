@@ -18,6 +18,7 @@ import se.yarin.morphy.entities.filters.EntityIdFilter;
 import se.yarin.morphy.queries.EntityQuery;
 import se.yarin.morphy.queries.QuerySortField;
 import se.yarin.morphy.queries.QuerySortOrder;
+import se.yarin.morphy.api.query.IntRange;
 
 /**
  * Base class for entity query builders that parse filter expression strings into {@link

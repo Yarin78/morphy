@@ -115,15 +115,14 @@ class ServicesIntegrationTest {
 
   @Test
   void v2DatabaseIsServedThroughTheFacade() throws IOException {
-    // The v2 format is a stub: it opens and counts games, but can't read them yet
     File v2File = new File("../test-databases/wch2/wch2.2cbh");
     assertTrue(v2File.exists(), "sample .2cbh database not found: " + v2File.getAbsolutePath());
     databaseService.registerDatabase("v2-db", "V2 Database", v2File.getAbsolutePath());
     try {
       assertEquals(1038, gamesService.getGameCount("v2-db"));
-      assertThrows(
-          UnsupportedOperationException.class,
-          () -> gamesService.getGames("v2-db", 0, 10, false, false));
+      var games = gamesService.getGames("v2-db", 0, 10, false, false);
+      assertEquals(10, games.games().size());
+      assertNotNull(games.games().getFirst().whitePlayer());
     } finally {
       databaseService.unregisterDatabase("v2-db");
     }

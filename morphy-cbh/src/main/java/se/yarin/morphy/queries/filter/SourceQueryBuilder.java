@@ -15,6 +15,8 @@ import se.yarin.morphy.entities.filters.SourceTitleFilter;
 import se.yarin.morphy.entities.filters.SourceVersionFilter;
 import se.yarin.morphy.queries.QuerySortField;
 import se.yarin.morphy.queries.QuerySortOrder;
+import se.yarin.morphy.api.query.IntRange;
+import se.yarin.morphy.api.query.PartialDateParser;
 
 /**
  * Builds an {@link se.yarin.morphy.queries.EntityQuery} for {@link Source} from a filter expression

@@ -2,5 +2,10 @@
   "world-ch": {
     "displayName": "World Chess Championships",
     "path": "test-databases/world-ch/World-ch.cbh"
+  },
+  "wch2": {
+    "displayName": "World Chess Championships (v2 format)",
+    "path": "test-databases/wch2/wch2.2cbh",
+    "readOnly": true
   }
 }

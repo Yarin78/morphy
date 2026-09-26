@@ -27,9 +27,10 @@ format (the `.2cbh` family). It is the database the v2 specification in
 the v1 copy one for one, a field could be confirmed by decoding both and
 requiring them to agree.
 
-Read it with the Python tooling in [../morphy-py](../morphy-py). No Java code
-reads v2 yet; when it does, this will likely move next to the v1 copy in
-`morphy-cbh/src/test/resources`.
+It is read by the Java v2 implementation in [../morphy-cb2](../morphy-cb2), whose
+tests compare it game by game with the v1 copy, and by the Python tooling in
+[../morphy-py](../morphy-py). `databases.json` registers it with the service,
+read-only.
 
 ## scratch
 

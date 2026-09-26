@@ -12,6 +12,8 @@ import se.yarin.morphy.entities.Tournament;
 import se.yarin.morphy.entities.filters.*;
 import se.yarin.morphy.queries.QuerySortField;
 import se.yarin.morphy.queries.QuerySortOrder;
+import se.yarin.morphy.api.query.IntRange;
+import se.yarin.morphy.api.query.PartialDateParser;
 
 /**
  * Builds an {@link se.yarin.morphy.queries.EntityQuery} for {@link Tournament} from a filter

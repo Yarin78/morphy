@@ -1,6 +1,5 @@
-package se.yarin.morphy.queries.filter;
+package se.yarin.morphy.api.query;
 
-import se.yarin.morphy.api.query.FilterCondition;
 import java.time.YearMonth;
 import org.jetbrains.annotations.NotNull;
 import se.yarin.chess.Date;

@@ -45,14 +45,17 @@ public final class FinalMaterial {
     return white >= black ? new int[] {white, black} : new int[] {black, white};
   }
 
-  /** The material as text, e.g. {@code QRRBNPPPPP}. */
+  /** The material as text, e.g. {@code QRRBN5P}. */
   public static @NotNull String toString(int value) {
     StringBuilder sb = new StringBuilder();
     sb.append("Q".repeat((value >> 9) & 7));
     sb.append("R".repeat(value & 7));
     sb.append("B".repeat((value >> 3) & 7));
     sb.append("N".repeat((value >> 6) & 7));
-    sb.append("P".repeat((value >> 12) & 15));
+    int pawns = (value >> 12) & 15;
+    if (pawns > 0) {
+      sb.append(pawns).append('P');
+    }
     return sb.toString();
   }
 }

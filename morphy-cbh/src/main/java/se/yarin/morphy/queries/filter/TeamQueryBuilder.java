@@ -13,6 +13,7 @@ import se.yarin.morphy.entities.filters.TeamTitleFilter;
 import se.yarin.morphy.entities.filters.TeamYearFilter;
 import se.yarin.morphy.queries.QuerySortField;
 import se.yarin.morphy.queries.QuerySortOrder;
+import se.yarin.morphy.api.query.IntRange;
 
 /**
  * Builds an {@link se.yarin.morphy.queries.EntityQuery} for {@link Team} from a filter expression
