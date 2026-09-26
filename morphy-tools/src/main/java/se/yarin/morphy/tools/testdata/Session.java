@@ -15,6 +15,7 @@ import se.yarin.morphy.api.query.Query;
 import se.yarin.morphy.api.query.Sort;
 import se.yarin.morphy.model.AnnotatorDto;
 import se.yarin.morphy.model.GameDto;
+import se.yarin.morphy.model.GameTagDto;
 import se.yarin.morphy.model.PlayerDto;
 import se.yarin.morphy.model.SourceDto;
 import se.yarin.morphy.model.TeamDto;
@@ -278,6 +279,27 @@ final class Session {
   }
 
   /**
+   * Changes a game tag, in every game and in the database's entity if there is one. A PGN file has
+   * no game tags, and nothing is done to it.
+   */
+  void updateGameTag(String english, UnaryOperator<GameTagDto> change) {
+    update(
+        EntityKind.GAME_TAG,
+        "title:\"" + english + "\"",
+        e -> english.equals(Verifier.gameTag(e)),
+        change,
+        g -> {
+          if (!english.equals(Verifier.gameTag(g.gameTag()))) {
+            return null;
+          }
+          GameSpec spec = GameSpec.from(g);
+          spec.gameTag = change.apply(g.gameTag());
+          return spec;
+        },
+        false);
+  }
+
+  /**
    * Changes an entity everywhere it is used.
    *
    * @param edit the changed spec of a game, or null if the game doesn't hold the entity
@@ -288,6 +310,17 @@ final class Session {
       java.util.function.Predicate<T> isEntity,
       UnaryOperator<T> change,
       Function<GameDto, GameSpec> edit) {
+    update(kind, filter, isEntity, change, edit, true);
+  }
+
+  /** @param inGames whether a game, and so a database without entities, holds the entity */
+  private <T> void update(
+      EntityKind<T> kind,
+      String filter,
+      java.util.function.Predicate<T> isEntity,
+      UnaryOperator<T> change,
+      Function<GameDto, GameSpec> edit,
+      boolean inGames) {
     List<Integer> changedNow = new ArrayList<>();
     for (int id = 1; id <= state.expected.size(); id++) {
       GameSpec spec = edit.apply(state.expected.get(id - 1));
@@ -296,14 +329,16 @@ final class Session {
         changedNow.add(id);
       }
     }
-    changed.addAll(changedNow);
+    if (inGames || hasEntities()) {
+      changed.addAll(changedNow);
+    }
     if (changedNow.isEmpty()) {
       throw new IllegalArgumentException("No game holds the " + kind + " " + filter);
     }
     if (hasEntities()) {
       T entity = find(kind, filter, isEntity);
       db.updateEntity(kind, idOf(entity), change.apply(entity));
-    } else {
+    } else if (inGames) {
       for (int id : changedNow) {
         db.replaceGame(id, state.expected.get(id - 1));
       }
@@ -342,6 +377,7 @@ final class Session {
 
   private static long idOf(Object entity) {
     return switch (entity) {
+      case GameTagDto e -> e.id();
       case PlayerDto e -> e.id();
       case TournamentDto e -> e.id();
       case SourceDto e -> e.id();

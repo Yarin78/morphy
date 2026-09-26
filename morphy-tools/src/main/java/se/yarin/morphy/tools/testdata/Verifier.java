@@ -17,6 +17,7 @@ import se.yarin.morphy.api.query.ResultPage;
 import se.yarin.morphy.api.query.Sort;
 import se.yarin.morphy.model.AnnotatorDto;
 import se.yarin.morphy.model.GameDto;
+import se.yarin.morphy.model.GameTagDto;
 import se.yarin.morphy.model.PlayerDto;
 import se.yarin.morphy.model.SourceDto;
 import se.yarin.morphy.model.TeamDto;
@@ -51,6 +52,9 @@ final class Verifier {
       checkEntitySearch(session, problems);
     }
     checkSearch(session, problems);
+    if (session.db.capabilities().hasEntities()) {
+      checkTagSearch(session, problems);
+    }
 
     if (!problems.isEmpty()) {
       StringBuilder message =
@@ -64,6 +68,7 @@ final class Verifier {
 
     state.seenPlayers.addAll(players(state.expected));
     state.seenEvents.addAll(events(state.expected));
+    state.seenGameTags.addAll(gameTags(state.expected));
   }
 
   // ── Games ────────────────────────────────────────────────────────────────
@@ -111,6 +116,7 @@ final class Verifier {
     m.put("round", str(g.round()));
     m.put("subRound", str(g.subRound()));
     if (format != Format.PGN) {
+      m.put("gameTag", gameTag(g.gameTag()));
       m.put("lineEvaluation", g.lineEvaluation() == null || g.lineEvaluation() == NAG.NONE ? "" : str(g.lineEvaluation()));
     }
     TournamentDto t = g.tournament();
@@ -148,6 +154,11 @@ final class Verifier {
     return p.firstName() == null || p.firstName().isEmpty() ? p.lastName() : p.lastName() + ", " + p.firstName();
   }
 
+  /** The English title of a game tag. A PGN file can't hold one, and it is left out of the comparison. */
+  static String gameTag(@Nullable GameTagDto t) {
+    return t == null ? "" : str(t.englishTitle() != null ? t.englishTitle() : t.title());
+  }
+
   private static String title(@Nullable TeamDto t) {
     return t == null ? "" : str(t.title());
   }
@@ -161,6 +172,14 @@ final class Verifier {
       add(players, name(g.blackPlayer()));
     }
     return players;
+  }
+
+  static Set<String> gameTags(List<GameDto> games) {
+    Set<String> tags = new LinkedHashSet<>();
+    for (GameDto g : games) {
+      add(tags, gameTag(g.gameTag()));
+    }
+    return tags;
   }
 
   static Set<String> events(List<GameDto> games) {
@@ -184,8 +203,15 @@ final class Verifier {
     Set<String> sources = new LinkedHashSet<>();
     Set<String> annotators = new LinkedHashSet<>();
     Set<String> teams = new LinkedHashSet<>();
+    Set<String> tags = new LinkedHashSet<>();
     for (GameDto g : session.state.expected) {
       Map<String, String> e = essence(session.format, g);
+      // In 2cbh a game without a game tag refers to a tag with an empty title, which exists
+      if (session.format == Format.CB2 && g.type().equals("game")) {
+        tags.add(e.getOrDefault("gameTag", ""));
+      } else {
+        add(tags, e.getOrDefault("gameTag", ""));
+      }
       add(players, e.get("white"));
       add(players, e.get("black"));
       events.add(e.get("event"));
@@ -199,6 +225,7 @@ final class Verifier {
     expectCount(session, problems, EntityKind.SOURCE, "sources", sources);
     expectCount(session, problems, EntityKind.ANNOTATOR, "annotators", annotators);
     expectCount(session, problems, EntityKind.TEAM, "teams", teams);
+    expectCount(session, problems, EntityKind.GAME_TAG, "game tags", tags);
   }
 
   private static void add(Set<String> set, String value) {
@@ -224,6 +251,9 @@ final class Verifier {
     Set<String> events = events(session.state.expected);
     checkNames(session, problems, EntityKind.PLAYER, "player", players, session.state.seenPlayers);
     checkNames(session, problems, EntityKind.TOURNAMENT, "tournament", events, session.state.seenEvents);
+    checkNames(
+        session, problems, EntityKind.GAME_TAG, "game tag", gameTags(session.state.expected),
+        session.state.seenGameTags);
   }
 
   private static void checkNames(
@@ -279,6 +309,29 @@ final class Verifier {
       for (GameDto g : session.state.expected) {
         if (startsWith(name(g.whitePlayer()), player, lastNameOnly)
             || startsWith(name(g.blackPlayer()), player, lastNameOnly)) {
+          expected++;
+        }
+      }
+      try {
+        ResultPage<GameDto> page =
+            session.db.findGames(
+                Query.of(query, Sort.natural(), 0, 1), GameFetchOptions.headersOnly());
+        if (page.total() == null || page.total() != expected) {
+          problems.add("search " + query + ": found " + page.total() + ", expected " + expected);
+        }
+      } catch (RuntimeException e) {
+        problems.add("search " + query + " failed: " + e);
+      }
+    }
+  }
+
+  /** Every game tag is found in as many games as the expected games have it. */
+  private static void checkTagSearch(Session session, List<String> problems) {
+    for (String tag : gameTags(session.state.expected)) {
+      String query = "gametag:\"" + tag + "\"";
+      long expected = 0;
+      for (GameDto g : session.state.expected) {
+        if (startsWith(gameTag(g.gameTag()), tag, false)) {
           expected++;
         }
       }

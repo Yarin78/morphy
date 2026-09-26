@@ -8,6 +8,7 @@ import se.yarin.chess.NAG;
 import se.yarin.morphy.model.AnnotatorDto;
 import se.yarin.morphy.model.GameDto;
 import se.yarin.morphy.model.GameMovesDto;
+import se.yarin.morphy.model.GameTagDto;
 import se.yarin.morphy.model.GameTextDto;
 import se.yarin.morphy.model.PlayerDto;
 import se.yarin.morphy.model.SourceDto;
@@ -38,6 +39,7 @@ final class GameSpec {
   @Nullable TournamentDto tournament;
   @Nullable SourceDto source;
   @Nullable AnnotatorDto annotator;
+  @Nullable GameTagDto gameTag;
   @Nullable String variant;
   @Nullable Map<String, String> extraTags;
   @Nullable GameMovesDto moves = Moves.none();
@@ -99,6 +101,7 @@ final class GameSpec {
     spec.tournament = g.tournament();
     spec.source = g.source();
     spec.annotator = g.annotator();
+    spec.gameTag = g.gameTag();
     spec.variant = g.variant();
     spec.extraTags = g.extraTags();
     spec.moves = g.moves();
@@ -175,6 +178,12 @@ final class GameSpec {
     return this;
   }
 
+  /** A game tag, by its English title. */
+  GameSpec gameTag(@Nullable String title) {
+    gameTag = title == null ? null : Corpus.gameTag(title);
+    return this;
+  }
+
   GameSpec moves(GameMovesDto m) {
     moves = m;
     return this;
@@ -199,7 +208,7 @@ final class GameSpec {
   GameDto build() {
     return new GameDto(
         null, type, null, white, whiteElo, black, blackElo, whiteTeam, blackTeam, result, date,
-        eco, round, subRound, lineEvaluation, tournament, source, annotator, null, null, null,
+        eco, round, subRound, lineEvaluation, tournament, source, annotator, gameTag, null, null,
         null, null, variant, null, null, null, null, null, null, null, null, null, moves, text,
         extraTags);
   }

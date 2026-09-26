@@ -23,4 +23,6 @@ final class State {
   final Set<String> seenPlayers = new LinkedHashSet<>();
 
   final Set<String> seenEvents = new LinkedHashSet<>();
+
+  final Set<String> seenGameTags = new LinkedHashSet<>();
 }

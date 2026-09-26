@@ -5,6 +5,7 @@ import org.jetbrains.annotations.Nullable;
 import se.yarin.chess.Date;
 import se.yarin.chess.GameResult;
 import se.yarin.morphy.model.AnnotatorDto;
+import se.yarin.morphy.model.GameTagDto;
 import se.yarin.morphy.model.PlayerDto;
 import se.yarin.morphy.model.SourceDto;
 import se.yarin.morphy.model.TeamDto;
@@ -155,6 +156,19 @@ final class Corpus {
 
   /** The source of a guiding text, which can say no more than its title. */
   static final SourceDto NOTES_SOURCE = source("Notes Vol. 1", null, null);
+
+  /**
+   * A game tag, of which a game can say no more than the English title. Titles in other languages
+   * are given to the tag itself, see {@code Session#updateGameTag}.
+   */
+  static GameTagDto gameTag(String english) {
+    return new GameTagDto(
+        null, english, null, null, english, null, null, null, null, null, null, null, null);
+  }
+
+  /** Game tags in the ways ChessBase databases use them: a theme, or a kind of position. */
+  static final List<String> GAME_TAGS =
+      List.of("Opening trap", "Endgame technique", "Strat\u00e9gie", "Tactics (pins & forks)", "Model game");
 
   static AnnotatorDto annotator(String name) {
     return new AnnotatorDto(null, name, null);

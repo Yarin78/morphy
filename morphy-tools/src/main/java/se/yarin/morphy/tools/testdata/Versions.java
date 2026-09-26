@@ -11,6 +11,7 @@ import se.yarin.chess.Date;
 import se.yarin.chess.GameResult;
 import se.yarin.morphy.model.AnnotatorDto;
 import se.yarin.morphy.model.GameDto;
+import se.yarin.morphy.model.GameTagDto;
 import se.yarin.morphy.model.PlayerDto;
 import se.yarin.morphy.model.SourceDto;
 import se.yarin.morphy.model.TeamDto;
@@ -115,8 +116,9 @@ final class Versions {
 
     s.feature(
         "Ten made-up modern games spread over six events with full details (nation, category,"
-            + " rounds, type, time control), three sources with a publisher and a date, and"
-            + " two annotators.",
+            + " rounds, type, time control), three sources with a publisher and a date, two"
+            + " annotators, and game tags on four of them (four different tags; a tag has only an"
+            + " English title here, and one of them has an accent and one has punctuation).",
         () -> {
           for (int i = 0; i < 10; i++) {
             Event event = Corpus.MODERN_EVENTS.get(i % Corpus.MODERN_EVENTS.size());
@@ -142,6 +144,9 @@ final class Versions {
                     .moves(Moves.random(random, 20 + random.nextInt(60)));
             if (i % 2 == 0) {
               spec.annotator(i % 4 == 0 ? Corpus.FTACNIK : Corpus.RIBLI);
+            }
+            if (i % 3 == 0) {
+              spec.gameTag(Corpus.GAME_TAGS.get(i / 3 % Corpus.GAME_TAGS.size()));
             }
             s.add(spec);
           }
@@ -174,13 +179,15 @@ final class Versions {
         "Header values that are missing or unusual: year-only, year-and-month and unset dates,"
             + " an unfinished result, no ratings, no event, no ECO, and a player with no first"
             + " name. Also two players with the same surname, and names with an umlaut and an"
-            + " acute accent, which are in Latin-1.",
+            + " acute accent, which are in Latin-1. The first of them has a game tag that no other game"
+            + " has.",
         () -> {
           s.add(
               GameSpec.game()
                   .players(Corpus.GRUENFELD, Corpus.BOENSCH)
                   .result(GameResult.DRAW)
                   .date(new Date(1925))
+                  .gameTag("Puzzle of the day")
                   .moves(Moves.random(random, 30)));
           s.add(
               GameSpec.game()
@@ -470,7 +477,8 @@ final class Versions {
 
     s.feature(
         "About 150 more games between 120 made-up players in 30 made-up events, so that the"
-            + " entity trees get some depth. Some players and events have a single game.",
+            + " entity trees get some depth. Some players and events have a single game. Every"
+            + " fifth game has a game tag, from a set of five.",
         () -> {
           List<Person> players = Bulk.players(new Random(4040), 120);
           List<Event> events = Bulk.events(new Random(4041), 30);
@@ -497,6 +505,9 @@ final class Versions {
             if (i % 4 == 0) {
               spec.annotator(i % 8 == 0 ? Corpus.FTACNIK : Corpus.RIBLI);
             }
+            if (i % 5 == 0) {
+              spec.gameTag(Corpus.GAME_TAGS.get(i / 5 % Corpus.GAME_TAGS.size()));
+            }
             s.add(i == 75 ? "bulk-middle" : i == 149 ? "bulk-last" : null, spec);
           }
         });
@@ -520,6 +531,13 @@ final class Versions {
 
   private static TeamDto team(TeamDto t, String title, Integer year, String nation) {
     return new TeamDto(t.id(), title, t.teamNumber(), t.season(), year, nation, t.gameCount());
+  }
+
+  private static GameTagDto gameTag(GameTagDto t, String english) {
+    return new GameTagDto(
+        t.id(), english, t.languages(), t.languageCount(), english, t.germanTitle(), t.frenchTitle(),
+        t.spanishTitle(), t.italianTitle(), t.dutchTitle(), t.slovenianTitle(), t.resTitle(),
+        t.gameCount());
   }
 
   private static PlayerDto player(PlayerDto p, String last, String first) {
@@ -603,8 +621,9 @@ final class Versions {
             + " a player's first name completed (sort position kept, "
             + "a last name changed to sort last), a real player's name spelled differently, an event"
             + " renamed with a new category and round count and marked complete, a source renamed with"
-            + " a new publisher, an annotator renamed, and a team renamed with a year and nation. In a"
-            + " PGN file there are no entities, so the games that hold them are rewritten.",
+            + " a new publisher, an annotator renamed, a team renamed with a year and nation, and a game"
+            + " tag renamed. In a PGN file there are no entities, so the games that hold them are"
+            + " rewritten (except for the game tag, which a PGN file can't hold).",
         () -> {
         Map<String, Integer> players =
             counts(games, g -> List.of(Verifier.name(g.whitePlayer()), Verifier.name(g.blackPlayer())));
@@ -632,6 +651,7 @@ final class Versions {
         s.updateSource("CBM 210", t -> source(t, "CBM 210 (revised)", "ChessBase GmbH"));
         s.updateAnnotator("Ribli, Zoltan", t -> new AnnotatorDto(t.id(), "Ribli, Zolt\u00e1n", t.gameCount()));
         s.updateTeam("India 2", t -> team(t, "India B", 2022, "IND"));
+        s.updateGameTag("Opening trap", t -> gameTag(t, "Opening traps"));
         });
 
     s.note(
@@ -640,9 +660,9 @@ final class Versions {
     s.expectRefusedMerge("Giri, Anish", "Gukesh, D");
 
     s.note(
-        "Entities that lose their last game are removed: a player, an event with a single game, and"
-            + " the source of the six Olympiad games (Chess Archive), which all move to other entities."
-            + " Removed entities are not found by a search any more.");
+        "Entities that lose their last game are removed: a player, an event with a single game, a game"
+            + " tag, and the source of the six Olympiad games (Chess Archive), which all move to other"
+            + " entities. Removed entities are not found by a search any more.");
     Map<String, Integer> events =
         counts(games, g -> List.of(g.tournament() == null ? "" : g.tournament().title()));
     Map<String, Integer> whites = counts(games, g -> List.of(Verifier.name(g.whitePlayer()), Verifier.name(g.blackPlayer())));
@@ -660,17 +680,26 @@ final class Versions {
         soleEventGame = id;
       }
     }
+    int soleTagGame = 0;
+    for (int id = 1; id <= games.size() && soleTagGame == 0; id++) {
+      if ("Puzzle of the day".equals(Verifier.gameTag(games.get(id - 1).gameTag()))) {
+        soleTagGame = id;
+      }
+    }
     final int soleWhite = soleGame;
     final int soleEvent = soleEventGame;
+    final int soleTag = soleTagGame;
     s.feature(
         "The only game of a player, replaced so that it has another white player; the only game of an"
-            + " event, replaced so that it is played in another event; and the six games of the source"
-            + " Chess Archive, replaced so that they have another source.",
+            + " event, replaced so that it is played in another event; the only game with a game tag,"
+            + " replaced without one; and the six games of the source Chess Archive, replaced so that"
+            + " they have another source.",
         () -> {
           s.replace(
               soleWhite,
               s.spec(soleWhite).players(Corpus.NAKAMURA, Corpus.CARLSEN));
           s.replace(soleEvent, s.spec(soleEvent).event(Corpus.CANDIDATES));
+          s.replace(soleTag, s.spec(soleTag).gameTag(null));
           for (int id = 1; id <= games.size(); id++) {
             GameDto g = games.get(id - 1);
             if (g.source() != null && "Chess Archive".equals(g.source().title())) {
@@ -731,31 +760,6 @@ final class Versions {
     return String.format("%d:%02d:%02d", seconds / 3600, seconds / 60 % 60, seconds % 60);
   }
 
-  /**
-   * A training question with a time limit and points, and no question text or solutions, as far as
-   * the layout is known. The layout differs between the formats, and a payload of one is not valid
-   * in the other: the v2 layout is a fixed six bytes, then the time and points, then four empty lists
-   * and no solutions; the v1 layout has another start and the size of the rest, and is only partly
-   * known, so what follows the points is taken to be the same lists.
-   */
-  private static String training(Format format, int seconds, int points) {
-    java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
-    byte[] rest = new byte[4 + 2 + 4 * 2 + 1];
-    rest[0] = (byte) seconds;
-    rest[1] = (byte) (seconds >> 8);
-    rest[2] = (byte) (seconds >> 16);
-    rest[3] = (byte) (seconds >> 24);
-    rest[4] = (byte) points;
-    rest[5] = (byte) (points >> 8);
-    if (format == Format.CBH) {
-      out.writeBytes(new byte[] {0x01, 0x00, 0x01, (byte) rest.length, 0x00});
-    } else {
-      out.writeBytes(new byte[] {0x01, 0x01, 0x01, 0x00, 0x00, 0x00});
-    }
-    out.writeBytes(rest);
-    return java.util.Base64.getEncoder().encodeToString(out.toByteArray());
-  }
-
   private static String sentence(Random random) {
     String[] words = {
       "the", "pawn", "structure", "favours", "white", "because", "knight", "outpost", "bishop",
@@ -785,6 +789,7 @@ final class Versions {
                 between(Corpus.NEPOMNIACHTCHI, Corpus.CARLSEN, GameResult.BLACK_WINS, event, 1)
                     .annotator(Corpus.CHESSBASE)
                     .source(Corpus.CBM_211)
+                    .gameTag("Model game")
                     .moves(
                         Moves.annotated(
                             "1. e4 { [%clk 1:59:58] [%emt 0:00:02] [%eval +0.30/22] } e5 { [%clk 1:59:57]"
@@ -796,19 +801,6 @@ final class Versions {
                             "WhiteClock", "BlackClock", "TimeSpent", "ComputerEvaluation", "CriticalPosition",
                             "PawnStructure", "PiecePath", "WebLink", "VideoStreamTime", "TimeControl",
                             "VariationColor", "Medal", "TextAfterMove"))));
-
-    s.feature(
-        "A training question, alone in a game because its layout is only partly known (it is written"
-            + " to the layout of the format, and the text of the question and the solutions are left"
-            + " out). If a database won't open from here on, and not before, look at this game.",
-        () ->
-            s.add(
-                "training",
-                between(Corpus.CARLSEN, Corpus.DING, GameResult.WHITE_WINS, event, 10)
-                    .moves(
-                        Moves.annotated(
-                            "1. e4 e5 2. Nf3 { [%train " + training(s.format, 60, 10) + "] } Nc6",
-                            "Training"))));
 
     s.feature(
         "A game with a clock and a time-spent value on every move, as in a game from a server,"
@@ -975,11 +967,20 @@ final class Versions {
 
     s.feature(
         "Changes to entities once more, this time to ones from the earlier changes: a player renamed"
-            + " again, the event renamed in v5 renamed back, and a team of the Olympiad renamed.",
+            + " again, the event renamed in v5 renamed back, a team of the Olympiad renamed, and a game"
+            + " tag given titles in German and French (only the tag has them, the games say no more"
+            + " than the English title).",
         () -> {
           s.updatePlayer("Anand, Vishy", p -> new PlayerDto(p.id(), "Anand", "Viswanathan", p.gameCount(), p.fideId(), p.chessBaseId()));
           s.updateEvent("Altibox Norway Chess 2023", t -> event(t, "Norway Chess 2023", t.category(), t.rounds(), t.complete()));
           s.updateTeam("Norway", t -> team(t, "Norway 1", t.year(), t.nation()));
+          s.updateGameTag(
+              "Strat\u00e9gie",
+              t ->
+                  new GameTagDto(
+                      t.id(), t.title(), t.languages(), t.languageCount(), t.englishTitle(),
+                      "Strategie", "Strat\u00e9gie", t.spanishTitle(), t.italianTitle(), t.dutchTitle(),
+                      t.slovenianTitle(), t.resTitle(), t.gameCount()));
         });
   }
 }
