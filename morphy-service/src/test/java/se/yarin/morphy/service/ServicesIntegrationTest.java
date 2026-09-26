@@ -219,7 +219,8 @@ class ServicesIntegrationTest {
             null,
             null, null, null, null, null, null, null, null, null, null, null, null, null, null,
             new GameMovesDto("1. d4 Nf6 2. c4 e6 3. Nc3 Bb4 4. e3 O-O 5. Bd3 d5 1-0"),
-            null);
+            null,
+        null);
     gamesService.replaceGame(databaseId, game2Id, game2Updated);
 
     // Step 9: Get first game and verify all fields match as expected
@@ -687,6 +688,7 @@ class ServicesIntegrationTest {
             "1. e4 e5 {The King's Pawn opening.} (1... c5 {Sicilian Defense}) "
                 + "2. Nf3 Nc6 3. Bb5 a6 4. Ba4 Nf6 5. O-O Be7 6. Re1 b5 "
                 + "7. Bb3 d6 8. c3 O-O 9. h3 Nb8 10. d4 Nbd7 1-0"),
+        null,
         null);
   }
 
@@ -734,6 +736,7 @@ class ServicesIntegrationTest {
         null,
         null, null, null, null, null, null, null, null, null, null, null, null, null, null,
         new GameMovesDto("1. e4 c5 2. Nf3 d6 3. d4 cxd4 4. Nxd4 Nf6 *"),
+        null,
         null);
   }
 
@@ -761,6 +764,7 @@ class ServicesIntegrationTest {
         null,
         null, null, null, null, null, null, null, null, null, null, null, null, null, null,
         new GameMovesDto("1. e4 e5 *"),
+        null,
         null);
   }
 
@@ -788,6 +792,7 @@ class ServicesIntegrationTest {
         null,
         null, null, null, null, null, null, null, null, null, null, null, null, null, null,
         new GameMovesDto("1. e4 e5 *"),
+        null,
         null);
   }
 
@@ -815,6 +820,7 @@ class ServicesIntegrationTest {
         null,
         null, null, null, null, null, null, null, null, null, null, null, null, null, null,
         new GameMovesDto("1. e4 e5 *"),
+        null,
         null);
   }
 }

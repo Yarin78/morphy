@@ -15,8 +15,9 @@ import se.yarin.morphy.model.GameDto;
  * <p>A database holds games (and guiding texts) addressed by a 1-based game id, and the entities
  * those games refer to: players, tournaments, annotators, sources, teams and game tags.
  * Everything crossing this interface is a {@link se.yarin.morphy.model DTO}; the format-specific
- * storage classes never leak out. Implementations are {@code DatabaseCbh} (v1) and {@code
- * Database2Cbh} (v2); obtain one through {@link Databases#open}.
+ * storage classes never leak out. Implementations are {@code DatabaseCbh} (v1), {@code
+ * Database2Cbh} (v2) and {@link se.yarin.morphy.pgn.DatabasePgn} (a plain PGN file); obtain one
+ * through {@link Databases#open}.
  *
  * <h2>Searching</h2>
  *
@@ -30,7 +31,8 @@ import se.yarin.morphy.model.GameDto;
  *
  * An entity that no game refers to does not exist as far as this interface is concerned: {@link
  * #getEntity} returns null for it, and {@link #findEntities} and {@link #entityCount} leave it out.
- * The entity methods are only available when {@link Capabilities#hasEntities()}.
+ * The entity methods are only available when {@link Capabilities#hasEntities()}; without entities,
+ * as for a PGN file, they find nothing.
  *
  * <h2>Format-specific extensions</h2>
  *

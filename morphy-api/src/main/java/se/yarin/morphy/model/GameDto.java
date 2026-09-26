@@ -3,6 +3,7 @@ package se.yarin.morphy.model;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import java.util.List;
+import java.util.Map;
 import org.jetbrains.annotations.Nullable;
 import se.yarin.chess.Date;
 import se.yarin.chess.GameResult;
@@ -50,7 +51,8 @@ import se.yarin.chess.NAG;
   "creationTimestamp",
   "lastChanged",
   "moves",
-  "text"
+  "text",
+  "extraTags"
 })
 public record GameDto(
     // Game identity
@@ -114,4 +116,8 @@ public record GameDto(
 
     // Game content (nullable for header-only queries)
     @Nullable GameMovesDto moves,
-    @Nullable GameTextDto text) {}
+    @Nullable GameTextDto text,
+
+    // Tags of a PGN game that have no field of their own, in file order. Set by PGN databases
+    // only; null elsewhere.
+    @Nullable Map<String, String> extraTags) {}

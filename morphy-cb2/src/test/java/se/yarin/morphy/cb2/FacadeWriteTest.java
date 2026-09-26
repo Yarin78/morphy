@@ -108,6 +108,7 @@ class FacadeWriteTest {
         g.lineEvaluation(),
         g.tournament() == null ? null : new TournamentDto(null, g.tournament().title(), g.tournament().startDate(), g.tournament().endDate(), g.tournament().place(), g.tournament().nation(), g.tournament().category(), null, g.tournament().rounds(), g.tournament().type(), g.tournament().timeControl(), null, null, null, null, null, null, null),
         null, null, null, g.medals(), null, null, g.setupPosition(), g.variant(), null, null, null,
-        null, null, null, null, null, null, g.moves(), g.text());
+        null, null, null, null, null, null, g.moves(), g.text(),
+        null);
   }
 }

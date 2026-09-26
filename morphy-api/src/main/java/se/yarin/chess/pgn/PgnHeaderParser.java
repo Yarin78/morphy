@@ -31,8 +31,16 @@ public class PgnHeaderParser {
             case "White" -> header.setWhite(tagValue);
             case "Black" -> header.setBlack(tagValue);
             case "Result" -> header.setResult(parseResult(tagValue));
-            case "WhiteElo" -> header.setWhiteElo(parseInteger(tagValue, tagName));
-            case "BlackElo" -> header.setBlackElo(parseInteger(tagValue, tagName));
+            case "WhiteElo" -> {
+                if (!isUnknown(tagValue)) {
+                    header.setWhiteElo(parseInteger(tagValue, tagName));
+                }
+            }
+            case "BlackElo" -> {
+                if (!isUnknown(tagValue)) {
+                    header.setBlackElo(parseInteger(tagValue, tagName));
+                }
+            }
             case "ECO" -> header.setEco(parseEco(tagValue));
             case "Annotator" -> header.setAnnotator(tagValue);
             case "EventDate" -> header.setEventDate(parseDate(tagValue));
@@ -60,8 +68,16 @@ public class PgnHeaderParser {
                     }
                 }
             }
-            case "EventRounds" -> header.setEventRounds(parseInteger(tagValue, tagName));
-            case "EventCategory" -> header.setEventCategory(parseInteger(tagValue, tagName));
+            case "EventRounds" -> {
+                if (!isUnknown(tagValue)) {
+                    header.setEventRounds(parseInteger(tagValue, tagName));
+                }
+            }
+            case "EventCategory" -> {
+                if (!isUnknown(tagValue)) {
+                    header.setEventCategory(parseInteger(tagValue, tagName));
+                }
+            }
 
             // SetUp and FEN are special - they're handled separately during game creation
             case "SetUp", "FEN" -> {
@@ -120,6 +136,14 @@ public class PgnHeaderParser {
             case "0-0" -> GameResult.BOTH_LOST;
             default -> throw new PgnFormatException("Invalid result: " + value);
         };
+    }
+
+    /**
+     * Whether a value stands for an unknown number: PGN files in the wild write "?" or "-" for a
+     * rating they don't have, or leave the value empty.
+     */
+    private boolean isUnknown(String value) {
+        return value.isBlank() || value.equals("?") || value.equals("-");
     }
 
     /**

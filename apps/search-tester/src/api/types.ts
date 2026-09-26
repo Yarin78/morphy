@@ -93,6 +93,7 @@ export interface GameDto {
   lastChanged?: string;
   moves?: unknown;
   text?: unknown;
+  extraTags?: Record<string, string>;
 }
 
 /** Operator-level cost (estimates and optionally actuals). */

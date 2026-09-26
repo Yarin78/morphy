@@ -16,7 +16,7 @@ mvn package -pl morphy-cli # Build CLI JAR with dependencies
 
 Morphy is a Java 21 library and CLI for reading/writing ChessBase databases (.cbh binary format). It uses Maven 3.6+ with these modules:
 
-- **morphy-api**: Vendor-neutral layer shared by every format — the format-independent chess core (`se.yarin.chess`), the neutral DTO records (`se.yarin.morphy.model`), and the `Database` facade interface (`se.yarin.morphy.api`)
+- **morphy-api**: Vendor-neutral layer shared by every format — the format-independent chess core (`se.yarin.chess`), the neutral DTO records (`se.yarin.morphy.model`), and the `Database` facade interface (`se.yarin.morphy.api`); it also holds the PGN-file `Database` (`se.yarin.morphy.pgn`)
 - **morphy-chessbase**: ChessBase concepts shared by the v1 and v2 formats but independent of either on-disk layout (`se.yarin.morphy.chessbase`): the annotation models and their PGN codecs, `Nation`, `Medal`, `GameHeaderFlags`, the guiding text model, `GameDtoImporter`/`GameMovesPgn`, and the `DatabaseLocks` behind transactions. Each format module keeps its own binary serializers for these
 - **morphy-cbh**: The ChessBase v1 (`.cbh`) reader/writer and database API; `DatabaseCbh` is the v1 engine, and `DatabaseCbhFacade` wraps it as the `Database` facade, using the v1↔DTO converters (`se.yarin.morphy.convert`)
 - **morphy-cb2**: The ChessBase v2 (`.2cbh`) reader/writer; `Database2Cbh` is the v2 engine (read and write transactions over the six files), and `Database2CbhFacade` wraps it as the `Database` facade
@@ -49,6 +49,7 @@ Key patterns:
 - `DatabaseCbh.java` (morphy-cbh) - The v1 engine: indexes, transactions, the query planner
 - `DatabaseCbhFacade.java` (morphy-cbh) - The `Database` facade over a `DatabaseCbh`, returned by `Databases.open` for `.cbh` files; also offers `CbhDiagnostics` via `extension(...)`
 - `Database2Cbh.java` (morphy-cb2) - The v2 engine: `ReadTransaction`/`WriteTransaction` over the file classes in `se.yarin.morphy.cb2.*` (one package per file kind); `Database2CbhFacade` is its `Database` facade
+- `DatabasePgn.java` (morphy-api) - The `Database` over a plain `.pgn` file, with a `.pgi` offset index in ChessBase's format (rebuilt when missing or stale); no entities, search is a full scan; adds append, replaces rewrite the file
 - `DatabaseReadTransaction` / `DatabaseWriteTransaction` - All v1 database operations
 - `Position.java` - Immutable board state with Zobrist hashing
 - `GameModel.java` - The Java representation of a chess game: a `GameHeaderModel` (typed header fields, optional entity ids, extra PGN tags) plus a `GameMovesModel` (the move tree). Used by PGN, the format codecs, the CLI and tools; `GameDto` is the wire/view format at the boundary

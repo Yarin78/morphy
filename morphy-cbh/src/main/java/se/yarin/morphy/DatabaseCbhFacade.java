@@ -8,7 +8,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import se.yarin.morphy.api.Capabilities;
@@ -17,8 +16,8 @@ import se.yarin.morphy.api.DatabaseFormat;
 import se.yarin.morphy.api.EntityKind;
 import se.yarin.morphy.api.GameFetchOptions;
 import se.yarin.morphy.api.query.FilterCondition;
-import se.yarin.morphy.api.query.FilterQueryParser;
 import se.yarin.morphy.api.query.Query;
+import se.yarin.morphy.api.query.QuerySupport;
 import se.yarin.morphy.api.query.ResultPage;
 import se.yarin.morphy.api.query.SearchSchema;
 import se.yarin.morphy.api.query.Sort;
@@ -236,11 +235,11 @@ public class DatabaseCbhFacade implements Database, CbhDiagnostics {
   @Override
   public @NotNull ResultPage<GameDto> findGames(
       @NotNull Query query, @NotNull GameFetchOptions fetch) {
-    List<FilterCondition> conditions = conditions(query, gameQueryBuilder.defaultField());
+    List<FilterCondition> conditions = QuerySupport.conditions(query, gameQueryBuilder.defaultField());
     QuerySortOrder<Game> sortOrder = gameQueryBuilder.buildSortOrder(query.sort());
 
     try (DatabaseReadTransaction txn = new DatabaseReadTransaction(database)) {
-      if (conditions.isEmpty() && isIdOrder(query.sort())) {
+      if (conditions.isEmpty() && QuerySupport.isIdOrder(query.sort())) {
         return listGamesById(txn, query, fetch);
       }
 
@@ -249,9 +248,9 @@ public class DatabaseCbhFacade implements Database, CbhDiagnostics {
       List<Game> games = plan.stream().map(QueryData::data).toList();
 
       List<GameDto> page =
-          slice(games, query).stream().map(game -> toDto(game, fetch)).toList();
+          QuerySupport.slice(games, query).stream().map(game -> toDto(game, fetch)).toList();
       return new ResultPage<>(
-          page, query.offset(), query.limit(), (long) games.size(), describe(conditions));
+          page, query.offset(), query.limit(), (long) games.size(), QuerySupport.describe(conditions));
     }
   }
 
@@ -283,11 +282,6 @@ public class DatabaseCbhFacade implements Database, CbhDiagnostics {
   }
 
   /** Whether a sort is the natural order, or by id alone in either direction. */
-  private static boolean isIdOrder(Sort sort) {
-    return sort.isNatural()
-        || (sort.keys().size() == 1 && sort.keys().getFirst().field().equalsIgnoreCase("id"));
-  }
-
   @Override
   public @NotNull SearchSchema gameSearchSchema() {
     return new SearchSchema(
@@ -344,7 +338,7 @@ public class DatabaseCbhFacade implements Database, CbhDiagnostics {
 
   private <E extends Entity & Comparable<E>, D> ResultPage<D> findEntities(
       KindSupport<E, D> support, Query query) {
-    List<FilterCondition> conditions = conditions(query, support.queryBuilder().defaultField());
+    List<FilterCondition> conditions = QuerySupport.conditions(query, support.queryBuilder().defaultField());
     EntityQuery<E> entityQuery = entityQuery(support, conditions, query.sort());
 
     try (DatabaseReadTransaction txn = new DatabaseReadTransaction(database)) {
@@ -354,9 +348,9 @@ public class DatabaseCbhFacade implements Database, CbhDiagnostics {
           plan.stream().map(QueryData::data).filter(e -> e.count() > 0).toList();
 
       List<D> page =
-          slice(entities, query).stream().map(e -> support.toDto().apply(txn, e)).toList();
+          QuerySupport.slice(entities, query).stream().map(e -> support.toDto().apply(txn, e)).toList();
       return new ResultPage<>(
-          page, query.offset(), query.limit(), (long) entities.size(), describe(conditions));
+          page, query.offset(), query.limit(), (long) entities.size(), QuerySupport.describe(conditions));
     }
   }
 
@@ -454,7 +448,7 @@ public class DatabaseCbhFacade implements Database, CbhDiagnostics {
   @Override
   public @NotNull QueryExplanation explainGames(
       @NotNull Query query, boolean executeAllPlans) {
-    List<FilterCondition> conditions = conditions(query, gameQueryBuilder.defaultField());
+    List<FilterCondition> conditions = QuerySupport.conditions(query, gameQueryBuilder.defaultField());
     GameQuery gameQuery = gameQuery(conditions, gameQueryBuilder.buildSortOrder(query.sort()));
     return explain(
         QueryDescriptionFormatter.format(gameQuery),
@@ -470,7 +464,7 @@ public class DatabaseCbhFacade implements Database, CbhDiagnostics {
 
   private <E extends Entity & Comparable<E>> CbhDiagnostics.QueryExplanation explainEntities(
       KindSupport<E, ?> support, Query query, boolean executeAllPlans) {
-    List<FilterCondition> conditions = conditions(query, support.queryBuilder().defaultField());
+    List<FilterCondition> conditions = QuerySupport.conditions(query, support.queryBuilder().defaultField());
     EntityQuery<E> entityQuery = entityQuery(support, conditions, query.sort());
     return explain(
         QueryDescriptionFormatter.format(entityQuery),
@@ -566,38 +560,7 @@ public class DatabaseCbhFacade implements Database, CbhDiagnostics {
   // ── Helpers ──────────────────────────────────────────────────────────────
 
   /** The query's free-text filter, parsed with the target's default field, plus its conditions. */
-  private static List<FilterCondition> conditions(Query query, String defaultField) {
-    List<FilterCondition> conditions = new ArrayList<>();
-    if (query.filter() != null && !query.filter().isBlank()) {
-      conditions.addAll(new FilterQueryParser(defaultField).parse(query.filter()));
-    }
-    conditions.addAll(query.conditions());
-    return conditions;
-  }
-
-  private static <T> List<T> slice(List<T> items, Query query) {
-    int from = Math.min(query.offset(), items.size());
-    int to = Math.min(query.offset() + query.limit(), items.size());
-    return items.subList(from, to);
-  }
-
   /** A readable form of the applied conditions, e.g. {@code result:1-0 AND rating..2600..}. */
-  private static String describe(List<FilterCondition> conditions) {
-    return conditions.stream()
-        .map(
-            c -> {
-              String s = c.field() + c.operator() + c.value();
-              if (!c.modifiers().isEmpty()) {
-                s +=
-                    c.modifiers().entrySet().stream()
-                        .map(e -> "," + e.getKey() + "=" + e.getValue())
-                        .collect(Collectors.joining());
-              }
-              return s;
-            })
-        .collect(Collectors.joining(" AND "));
-  }
-
   private static <T extends IdObject> List<SearchSchema.SortField> sortFields(
       List<QuerySortField<T>> fields) {
     return fields.stream()

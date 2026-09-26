@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.function.Predicate;
-import java.util.stream.Collectors;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import se.yarin.morphy.api.Capabilities;
@@ -13,8 +12,8 @@ import se.yarin.morphy.api.DatabaseFormat;
 import se.yarin.morphy.api.EntityKind;
 import se.yarin.morphy.api.GameFetchOptions;
 import se.yarin.morphy.api.query.FilterCondition;
-import se.yarin.morphy.api.query.FilterQueryParser;
 import se.yarin.morphy.api.query.Query;
+import se.yarin.morphy.api.query.QuerySupport;
 import se.yarin.morphy.api.query.ResultPage;
 import se.yarin.morphy.api.query.SearchSchema;
 import se.yarin.morphy.api.query.Sort;
@@ -109,16 +108,16 @@ public class Database2CbhFacade implements Database {
   @Override
   public @NotNull ResultPage<GameDto> findGames(
       @NotNull Query query, @NotNull GameFetchOptions fetch) {
-    List<FilterCondition> conditions = conditions(query, GameSearch.DEFAULT_FIELD);
+    List<FilterCondition> conditions = QuerySupport.conditions(query, GameSearch.DEFAULT_FIELD);
     try (ReadTransaction txn = new ReadTransaction(database)) {
-      if (conditions.isEmpty() && isIdOrder(query.sort())) {
+      if (conditions.isEmpty() && QuerySupport.isIdOrder(query.sort())) {
         return listGamesById(txn, query, fetch);
       }
       List<Integer> ids = GameSearch.find(txn, conditions, query.sort());
       List<GameDto> page =
-          slice(ids, query).stream().map(id -> converter.toDto(txn.getGame(id), fetch)).toList();
+          QuerySupport.slice(ids, query).stream().map(id -> converter.toDto(txn.getGame(id), fetch)).toList();
       return new ResultPage<>(
-          page, query.offset(), query.limit(), (long) ids.size(), describe(conditions));
+          page, query.offset(), query.limit(), (long) ids.size(), QuerySupport.describe(conditions));
     }
   }
 
@@ -135,11 +134,6 @@ public class Database2CbhFacade implements Database {
       page.add(converter.toDto(txn.getGame(id), fetch));
     }
     return new ResultPage<>(page, query.offset(), query.limit(), (long) total, "");
-  }
-
-  private static boolean isIdOrder(Sort sort) {
-    return sort.isNatural()
-        || (sort.keys().size() == 1 && sort.keys().getFirst().field().equalsIgnoreCase("id"));
   }
 
   @Override
@@ -196,7 +190,7 @@ public class Database2CbhFacade implements Database {
   public <T> @NotNull ResultPage<T> findEntities(
       @NotNull EntityKind<T> kind, @NotNull Query query) {
     EntitySearch search = EntitySearch.of(kind);
-    List<FilterCondition> conditions = conditions(query, search.defaultField());
+    List<FilterCondition> conditions = QuerySupport.conditions(query, search.defaultField());
     Predicate<Entity> filter = search.filter(conditions);
     Comparator<EntitySearch.Row> comparator = search.comparator(query.sort());
     try (ReadTransaction txn = new ReadTransaction(database)) {
@@ -211,11 +205,11 @@ public class Database2CbhFacade implements Database {
         rows.sort(comparator);
       }
       List<T> page =
-          slice(rows, query).stream()
+          QuerySupport.slice(rows, query).stream()
               .map(row -> kind.dtoType().cast(toDto(txn, kind, row.id(), row.entity())))
               .toList();
       return new ResultPage<>(
-          page, query.offset(), query.limit(), (long) rows.size(), describe(conditions));
+          page, query.offset(), query.limit(), (long) rows.size(), QuerySupport.describe(conditions));
     }
   }
 
@@ -274,35 +268,5 @@ public class Database2CbhFacade implements Database {
   // ── Helpers ──────────────────────────────────────────────────────────────
 
   /** The query's free-text filter, parsed with the target's default field, plus its conditions. */
-  private static List<FilterCondition> conditions(Query query, String defaultField) {
-    List<FilterCondition> conditions = new ArrayList<>();
-    if (query.filter() != null && !query.filter().isBlank()) {
-      conditions.addAll(new FilterQueryParser(defaultField).parse(query.filter()));
-    }
-    conditions.addAll(query.conditions());
-    return conditions;
-  }
-
-  private static <T> List<T> slice(List<T> items, Query query) {
-    int from = Math.min(query.offset(), items.size());
-    int to = Math.min(query.offset() + query.limit(), items.size());
-    return items.subList(from, to);
-  }
-
   /** A readable form of the applied conditions, e.g. {@code result:1-0 AND rating..2600..}. */
-  private static String describe(List<FilterCondition> conditions) {
-    return conditions.stream()
-        .map(
-            c -> {
-              String s = c.field() + c.operator() + c.value();
-              if (!c.modifiers().isEmpty()) {
-                s +=
-                    c.modifiers().entrySet().stream()
-                        .map(e -> "," + e.getKey() + "=" + e.getValue())
-                        .collect(Collectors.joining());
-              }
-              return s;
-            })
-        .collect(Collectors.joining(" AND "));
-  }
 }

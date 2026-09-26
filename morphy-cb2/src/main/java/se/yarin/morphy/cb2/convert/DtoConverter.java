@@ -241,7 +241,8 @@ public final class DtoConverter {
         creationTimestamp,
         lastChanged,
         moves,
-        text);
+        text,
+        null);
   }
 
   private @Nullable PlayerDto player(DatabaseTransaction txn, long id, @Nullable Player player) {

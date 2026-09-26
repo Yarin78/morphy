@@ -219,7 +219,8 @@ public class GameDtoConverter {
         creationTimestamp,
         lastChanged,
         moves,
-        text);
+        text,
+        null);
   }
 
   @Nullable

@@ -12,6 +12,9 @@ module se.yarin.morphy.api {
     exports se.yarin.morphy.model;
     exports se.yarin.morphy.api;
     exports se.yarin.morphy.api.query;
+    exports se.yarin.morphy.pgn;
 
     uses se.yarin.morphy.api.DatabaseProvider;
+    provides se.yarin.morphy.api.DatabaseProvider with
+            se.yarin.morphy.pgn.DatabasePgnProvider;
 }

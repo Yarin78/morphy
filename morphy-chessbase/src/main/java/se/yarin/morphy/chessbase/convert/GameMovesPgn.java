@@ -2,39 +2,35 @@ package se.yarin.morphy.chessbase.convert;
 
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import se.yarin.chess.Chess;
 import se.yarin.chess.GameMovesModel;
-import se.yarin.chess.pgn.NagStyle;
-import se.yarin.chess.pgn.PgnExporter;
-import se.yarin.chess.pgn.PgnFormatException;
-import se.yarin.chess.pgn.PgnFormatOptions;
-import se.yarin.chess.pgn.PgnParser;
-import se.yarin.chess.pgn.PositionState;
 import se.yarin.morphy.chessbase.annotations.AnnotationConverter;
+import se.yarin.morphy.pgn.PgnMoves;
 
 /**
  * The moves of a game as {@link se.yarin.morphy.model.GameMovesDto} carries them: PGN movetext and
  * the FEN of the start position, written by {@link GameDtoConverter} and read by {@link
  * GameDtoImporter}. What one writes, the other reads back to the same moves.
+ *
+ * <p>This is {@link PgnMoves} with ChessBase annotations, kept in the PGN as comments.
  */
 public final class GameMovesPgn {
+
+  /** The moves with ChessBase annotations round-tripped through PGN comments. */
+  static final @NotNull PgnMoves ROUND_TRIP =
+      new PgnMoves(
+          AnnotationConverter.getRoundTripConverter()::convertToPgn,
+          AnnotationConverter.getRoundTripConverter()::convertToChessBase);
 
   private GameMovesPgn() {}
 
   /** The moves as single-line movetext, without headers or result. */
   public static @NotNull String toPgn(@NotNull GameMovesModel moves) {
-    PgnExporter exporter =
-        new PgnExporter(
-            PgnFormatOptions.DEFAULT, AnnotationConverter.getRoundTripConverter()::convertToPgn);
-    return exporter.exportMovesOnly(moves, NagStyle.SUFFIXES);
+    return ROUND_TRIP.toPgn(moves);
   }
 
   /** The FEN of the start position, or null if it's the standard one. */
   public static @Nullable String toFen(@NotNull GameMovesModel moves) {
-    if (!moves.isSetupPosition()) {
-      return null;
-    }
-    return PositionState.toFen(moves.root().position(), moves.root().ply());
+    return ROUND_TRIP.toFen(moves);
   }
 
   /**
@@ -46,18 +42,8 @@ public final class GameMovesPgn {
    *     position is read
    * @throws IllegalArgumentException if the movetext or the FEN can't be read
    */
-  public static @NotNull GameMovesModel fromPgn(@NotNull String pgn, @Nullable String fen, boolean chess960) {
-    PgnParser parser = new PgnParser(AnnotationConverter.getRoundTripConverter()::convertToChessBase);
-    try {
-      if (fen == null) {
-        return parser.parseMoves(pgn);
-      }
-      PositionState start = PositionState.fromFen(fen, chess960);
-      int startPly =
-          Chess.moveNumberToPly(start.fullMoveNumber(), start.position().playerToMove());
-      return parser.parseMoves(pgn, start.position(), startPly);
-    } catch (PgnFormatException e) {
-      throw new IllegalArgumentException("Invalid moves: " + e.getMessage(), e);
-    }
+  public static @NotNull GameMovesModel fromPgn(
+      @NotNull String pgn, @Nullable String fen, boolean chess960) {
+    return ROUND_TRIP.fromPgn(pgn, fen, chess960);
   }
 }
