@@ -8,6 +8,7 @@ import se.yarin.morphy.DatabaseContext;
 import se.yarin.morphy.TransactionBase;
 import se.yarin.morphy.entities.filters.EntityFilter;
 import se.yarin.morphy.exceptions.MorphyInternalException;
+import se.yarin.morphy.chessbase.DatabaseLocks;
 
 public abstract class EntityIndexTransaction<T extends Entity & Comparable<T>>
     extends TransactionBase {
@@ -16,7 +17,7 @@ public abstract class EntityIndexTransaction<T extends Entity & Comparable<T>>
   private final @NotNull EntityIndex<T> index;
 
   protected EntityIndexTransaction(
-      @NotNull DatabaseContext.DatabaseLock lock, @NotNull EntityIndex<T> index) {
+      @NotNull DatabaseLocks.Lock lock, @NotNull EntityIndex<T> index) {
     super(lock, index.context());
 
     this.index = index;

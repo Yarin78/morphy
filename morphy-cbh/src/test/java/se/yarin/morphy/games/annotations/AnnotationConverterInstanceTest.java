@@ -5,9 +5,10 @@ import se.yarin.chess.annotations.Annotation;
 import se.yarin.chess.annotations.Annotations;
 import se.yarin.chess.annotations.CommentaryAfterMoveAnnotation;
 import se.yarin.chess.annotations.CommentaryBeforeMoveAnnotation;
-import se.yarin.morphy.entities.Nation;
+import se.yarin.morphy.chessbase.Nation;
 
 import static org.junit.jupiter.api.Assertions.*;
+import se.yarin.morphy.chessbase.annotations.*;
 
 /**
  * Tests for instance-based AnnotationConverter methods.

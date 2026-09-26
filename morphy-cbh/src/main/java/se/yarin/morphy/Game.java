@@ -11,18 +11,19 @@ import se.yarin.morphy.entities.*;
 import se.yarin.morphy.entities.Player;
 import se.yarin.morphy.exceptions.MorphyException;
 import se.yarin.morphy.games.*;
-import se.yarin.morphy.text.TextContentsModel;
-import se.yarin.morphy.text.TextModel;
+import se.yarin.morphy.chessbase.text.TextContentsModel;
+import se.yarin.morphy.chessbase.text.TextModel;
 
 import java.nio.ByteBuffer;
 import java.time.Instant;
 
-import static se.yarin.morphy.games.GameHeaderFlags.ANNO_TYPE_1A;
-import static se.yarin.morphy.games.GameHeaderFlags.CRITICAL_POSITION;
-import static se.yarin.morphy.games.GameHeaderFlags.EMBEDDED_AUDIO;
-import static se.yarin.morphy.games.GameHeaderFlags.EMBEDDED_PICTURE;
-import static se.yarin.morphy.games.GameHeaderFlags.EMBEDDED_VIDEO;
-import static se.yarin.morphy.games.GameHeaderFlags.GAME_QUOTATION;
+import static se.yarin.morphy.chessbase.GameHeaderFlags.ANNO_TYPE_1A;
+import static se.yarin.morphy.chessbase.GameHeaderFlags.CRITICAL_POSITION;
+import static se.yarin.morphy.chessbase.GameHeaderFlags.EMBEDDED_AUDIO;
+import static se.yarin.morphy.chessbase.GameHeaderFlags.EMBEDDED_PICTURE;
+import static se.yarin.morphy.chessbase.GameHeaderFlags.EMBEDDED_VIDEO;
+import static se.yarin.morphy.chessbase.GameHeaderFlags.GAME_QUOTATION;
+import se.yarin.morphy.text.TextContentsSerializer;
 
 /** Class that represents a game that is bound to a {@link Database}. */
 public class Game implements IdObject {
@@ -330,7 +331,7 @@ public class Game implements IdObject {
   }
 
   public @NotNull String getTextTitle() {
-    return TextContentsModel.deserializeTitle(id(), getMovesBlob());
+    return TextContentsSerializer.deserializeTitle(id(), getMovesBlob());
   }
 
   public @NotNull ByteBuffer getMovesBlob() {

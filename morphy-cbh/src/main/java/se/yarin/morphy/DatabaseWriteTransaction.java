@@ -11,12 +11,14 @@ import se.yarin.morphy.boosters.GameEvents;
 import se.yarin.morphy.entities.*;
 import se.yarin.morphy.exceptions.MorphyInvalidDataException;
 import se.yarin.morphy.games.*;
-import se.yarin.morphy.text.TextHeaderModel;
-import se.yarin.morphy.text.TextModel;
+import se.yarin.morphy.chessbase.text.TextHeaderModel;
+import se.yarin.morphy.chessbase.text.TextModel;
 
 import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.function.BiPredicate;
+import se.yarin.morphy.text.TextContentsSerializer;
+import se.yarin.morphy.chessbase.DatabaseLocks;
 
 /**
  * Represents an in-memory transaction of operations done on a {@link Database}.
@@ -177,7 +179,7 @@ public class DatabaseWriteTransaction extends DatabaseTransaction {
    * @param database the target database
    */
   public DatabaseWriteTransaction(@NotNull DatabaseCbh database) {
-    super(DatabaseContext.DatabaseLock.UPDATE, database);
+    super(DatabaseLocks.Lock.UPDATE, database);
     this.currentGameCount = database.gameHeaderIndex().count();
     this.version = database.context().currentVersion();
 
@@ -461,7 +463,7 @@ public class DatabaseWriteTransaction extends DatabaseTransaction {
         gameId,
         header,
         extendedHeader,
-        model.contents().serialize(),
+        TextContentsSerializer.serialize(model.contents()),
         null,
         TopGamesStorage.TopGameStatus.UNKNOWN,
         createGameEvents() ? new GameEvents() : null);
@@ -563,7 +565,7 @@ public class DatabaseWriteTransaction extends DatabaseTransaction {
     // Don't attempt to grab the write lock before ensuring that we still have the update lock
     ensureTransactionIsOpen();
 
-    acquireLock(DatabaseContext.DatabaseLock.WRITE);
+    acquireLock(DatabaseLocks.Lock.WRITE);
 
     MoveOffsetStorage moveOffsetStorage = database().moveOffsetStorage();
     try {
@@ -779,7 +781,7 @@ public class DatabaseWriteTransaction extends DatabaseTransaction {
       // Clear transaction, enabling further commits
       clearChanges();
     } finally {
-      releaseLock(DatabaseContext.DatabaseLock.WRITE);
+      releaseLock(DatabaseLocks.Lock.WRITE);
     }
   }
 

@@ -28,6 +28,7 @@ import java.util.Set;
 
 import static java.nio.file.StandardOpenOption.*;
 import static se.yarin.morphy.storage.MorphyOpenOption.IGNORE_NON_CRITICAL_ERRORS;
+import se.yarin.morphy.chessbase.*;
 
 public class GameHeaderIndex
     implements ItemStorageSerializer<GameHeaderIndex.Prolog, GameHeader>, MetricsProvider {

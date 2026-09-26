@@ -13,8 +13,8 @@ import se.yarin.chess.Chess960;
 import se.yarin.chess.GameModel;
 import se.yarin.morphy.Game;
 import se.yarin.morphy.entities.*;
-import se.yarin.morphy.games.GameHeaderFlags;
-import se.yarin.morphy.games.Medal;
+import se.yarin.morphy.chessbase.GameHeaderFlags;
+import se.yarin.morphy.chessbase.Medal;
 import se.yarin.morphy.games.TopGamesStorage;
 import se.yarin.morphy.model.AnnotatorDto;
 import se.yarin.morphy.model.GameTagDto;
@@ -22,7 +22,8 @@ import se.yarin.morphy.model.PlayerDto;
 import se.yarin.morphy.model.SourceDto;
 import se.yarin.morphy.model.TeamDto;
 import se.yarin.morphy.model.TournamentDto;
-import se.yarin.morphy.text.TextModel;
+import se.yarin.morphy.chessbase.text.TextModel;
+import se.yarin.morphy.chessbase.convert.*;
 
 /**
  * Converter for transforming Game entities from the database into GameDto objects for API

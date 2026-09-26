@@ -17,6 +17,7 @@ import se.yarin.morphy.DatabaseCbhFacade;
 import se.yarin.morphy.TestGames;
 import se.yarin.morphy.api.GameFetchOptions;
 import se.yarin.morphy.model.GameDto;
+import se.yarin.morphy.chessbase.convert.*;
 
 /**
  * The start position of a game survives the DTO: a set-up position as its FEN, and a Chess960 game

@@ -8,6 +8,7 @@ import se.yarin.morphy.games.annotations.*;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
+import se.yarin.morphy.chessbase.annotations.*;
 
 /**
  * Tool to generate a small test database with various annotation types.

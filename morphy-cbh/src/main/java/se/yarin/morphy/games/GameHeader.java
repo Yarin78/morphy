@@ -9,6 +9,7 @@ import se.yarin.chess.NAG;
 import se.yarin.morphy.IdObject;
 
 import java.util.EnumSet;
+import se.yarin.morphy.chessbase.*;
 
 /** A game header record in the CBH file. */
 @Value.Immutable

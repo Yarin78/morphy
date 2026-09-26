@@ -19,6 +19,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.Assert.*;
+import se.yarin.morphy.chessbase.annotations.*;
 
 /**
  * Integration tests for PGN round-trips through the database.

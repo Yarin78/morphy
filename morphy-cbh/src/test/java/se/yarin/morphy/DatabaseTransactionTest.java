@@ -2,7 +2,7 @@ package se.yarin.morphy;
 
 import org.junit.Test;
 import se.yarin.chess.GameResult;
-import se.yarin.morphy.entities.Nation;
+import se.yarin.morphy.chessbase.Nation;
 import se.yarin.morphy.games.RatingType;
 import se.yarin.morphy.util.CBUtil;
 

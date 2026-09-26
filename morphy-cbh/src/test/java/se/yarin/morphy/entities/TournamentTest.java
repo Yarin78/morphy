@@ -17,6 +17,7 @@ import java.nio.ByteBuffer;
 import java.util.List;
 
 import static org.junit.Assert.*;
+import se.yarin.morphy.chessbase.*;
 
 public class TournamentTest {
   @Rule public TemporaryFolder folder = new TemporaryFolder();

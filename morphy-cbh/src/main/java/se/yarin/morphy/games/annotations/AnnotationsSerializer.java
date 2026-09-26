@@ -15,6 +15,7 @@ import se.yarin.chess.annotations.Annotation;
 import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 import java.util.*;
+import se.yarin.morphy.chessbase.annotations.*;
 
 public final class AnnotationsSerializer {
 
@@ -37,29 +38,29 @@ public final class AnnotationsSerializer {
 
   static {
     Arrays.asList(
-            new ImmutableBlackClockAnnotation.Serializer(),
-            new ImmutableSymbolAnnotation.Serializer(),
-            new ImmutableComputerEvaluationAnnotation.Serializer(),
-            new ImmutableCorrespondenceMoveAnnotation.Serializer(),
-            new ImmutableCriticalPositionAnnotation.Serializer(),
-            new GameQuotationAnnotation.Serializer(),
-            new ImmutableGraphicalArrowsAnnotation.Serializer(),
-            new ImmutableGraphicalSquaresAnnotation.Serializer(),
-            new ImmutableMedalAnnotation.Serializer(),
-            new ImmutablePawnStructureAnnotation.Serializer(),
-            new ImmutablePictureAnnotation.Serializer(),
-            new ImmutablePiecePathAnnotation.Serializer(),
-            new ImmutableSoundAnnotation.Serializer(),
-            new ImmutableTextAfterMoveAnnotation.Serializer(),
-            new ImmutableTextBeforeMoveAnnotation.Serializer(),
-            new ImmutableTimeControlAnnotation.Serializer(),
-            new ImmutableTimeSpentAnnotation.Serializer(),
-            new ImmutableTrainingAnnotation.Serializer(),
-            new ImmutableVariationColorAnnotation.Serializer(),
-            new ImmutableVideoAnnotation.Serializer(),
-            new ImmutableVideoStreamTimeAnnotation.Serializer(),
-            new ImmutableWebLinkAnnotation.Serializer(),
-            new ImmutableWhiteClockAnnotation.Serializer())
+            new BlackClockAnnotationSerializer(),
+            new SymbolAnnotationSerializer(),
+            new ComputerEvaluationAnnotationSerializer(),
+            new CorrespondenceMoveAnnotationSerializer(),
+            new CriticalPositionAnnotationSerializer(),
+            new GameQuotationAnnotationSerializer(),
+            new GraphicalArrowsAnnotationSerializer(),
+            new GraphicalSquaresAnnotationSerializer(),
+            new MedalAnnotationSerializer(),
+            new PawnStructureAnnotationSerializer(),
+            new PictureAnnotationSerializer(),
+            new PiecePathAnnotationSerializer(),
+            new SoundAnnotationSerializer(),
+            new TextAfterMoveAnnotationSerializer(),
+            new TextBeforeMoveAnnotationSerializer(),
+            new TimeControlAnnotationSerializer(),
+            new TimeSpentAnnotationSerializer(),
+            new TrainingAnnotationSerializer(),
+            new VariationColorAnnotationSerializer(),
+            new VideoAnnotationSerializer(),
+            new VideoStreamTimeAnnotationSerializer(),
+            new WebLinkAnnotationSerializer(),
+            new WhiteClockAnnotationSerializer())
         .forEach(AnnotationsSerializer::registerAnnotationSerializer);
   }
 

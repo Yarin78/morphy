@@ -7,8 +7,8 @@ import se.yarin.chess.annotations.Annotations;
 import se.yarin.chess.annotations.CommentaryAfterMoveAnnotation;
 import se.yarin.chess.annotations.CommentaryBeforeMoveAnnotation;
 import se.yarin.chess.annotations.NAGAnnotation;
-import se.yarin.morphy.entities.Nation;
-import se.yarin.morphy.games.Medal;
+import se.yarin.morphy.chessbase.Nation;
+import se.yarin.morphy.chessbase.Medal;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -17,6 +17,7 @@ import java.util.List;
 
 import static org.junit.Assert.*;
 import static se.yarin.chess.Chess.*;
+import se.yarin.morphy.chessbase.annotations.*;
 
 public class AnnotationConverterTest {
     

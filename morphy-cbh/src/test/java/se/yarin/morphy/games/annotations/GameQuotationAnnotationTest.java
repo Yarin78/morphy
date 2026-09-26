@@ -14,6 +14,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static se.yarin.chess.Chess.*;
 import static se.yarin.chess.Chess.C5;
+import se.yarin.morphy.chessbase.annotations.*;
 
 public class GameQuotationAnnotationTest {
   @Test
@@ -81,7 +82,7 @@ public class GameQuotationAnnotationTest {
 
     GameQuotationAnnotation before = new GameQuotationAnnotation(model);
 
-    GameQuotationAnnotation.Serializer serializer = new GameQuotationAnnotation.Serializer();
+    GameQuotationAnnotationSerializer serializer = new GameQuotationAnnotationSerializer();
     ByteBuffer buf = ByteBuffer.allocate(200);
     serializer.serialize(buf, before);
     buf.flip();

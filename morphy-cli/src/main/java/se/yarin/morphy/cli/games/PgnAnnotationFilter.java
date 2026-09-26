@@ -4,10 +4,11 @@ import se.yarin.chess.Player;
 import se.yarin.chess.annotations.Annotation;
 import se.yarin.chess.annotations.AnnotationTransformer;
 import se.yarin.chess.annotations.Annotations;
-import se.yarin.morphy.entities.Nation;
+import se.yarin.morphy.chessbase.Nation;
 import se.yarin.morphy.games.annotations.*;
 
 import java.util.Set;
+import se.yarin.morphy.chessbase.annotations.*;
 
 public class PgnAnnotationFilter implements AnnotationTransformer {
 

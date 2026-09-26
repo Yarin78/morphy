@@ -2,13 +2,14 @@ package se.yarin.morphy;
 
 import se.yarin.chess.*;
 import se.yarin.chess.annotations.Annotation;
-import se.yarin.morphy.games.Medal;
+import se.yarin.morphy.chessbase.Medal;
 import se.yarin.morphy.games.annotations.*;
 
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Random;
+import se.yarin.morphy.chessbase.annotations.*;
 
 /**
  * Class that generates random games, with random meta data, random variations and random

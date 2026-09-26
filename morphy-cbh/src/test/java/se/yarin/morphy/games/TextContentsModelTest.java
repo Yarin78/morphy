@@ -16,6 +16,8 @@ import java.io.File;
 import java.io.IOException;
 
 import static org.junit.Assert.*;
+import se.yarin.morphy.chessbase.text.*;
+import se.yarin.morphy.text.TextContentsSerializer;
 
 public class TextContentsModelTest {
 
@@ -125,7 +127,7 @@ public class TextContentsModelTest {
         TextModel textModel = game.getTextModel();
         byte[] expected = new byte[game.getMovesBlob().limit()];
         game.getMovesBlob().get(expected);
-        byte[] actual = textModel.contents().serialize().array();
+        byte[] actual = TextContentsSerializer.serialize(textModel.contents()).array();
         assertArrayEquals(expected, actual);
       }
     }

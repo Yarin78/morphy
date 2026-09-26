@@ -11,7 +11,7 @@ import se.yarin.morphy.exceptions.MorphyInvalidDataException;
 import se.yarin.morphy.exceptions.MorphyMoveDecodingException;
 import se.yarin.morphy.games.moves.MoveSerializer;
 import se.yarin.morphy.storage.*;
-import se.yarin.morphy.text.TextContentsModel;
+import se.yarin.morphy.chessbase.text.TextContentsModel;
 import se.yarin.util.ByteBufferUtil;
 
 import java.io.File;
@@ -22,6 +22,7 @@ import java.nio.file.OpenOption;
 import java.util.Set;
 
 import static java.nio.file.StandardOpenOption.*;
+import se.yarin.morphy.text.TextContentsSerializer;
 
 public class MoveRepository implements BlobSizeRetriever {
 
@@ -190,7 +191,7 @@ public class MoveRepository implements BlobSizeRetriever {
    */
   public TextContentsModel getText(long offset, int gameId) throws MorphyMoveDecodingException {
     ByteBuffer blob = storage.getBlob(offset);
-    return TextContentsModel.deserialize(gameId, blob);
+    return TextContentsSerializer.deserialize(gameId, blob);
   }
 
   /**
@@ -219,7 +220,7 @@ public class MoveRepository implements BlobSizeRetriever {
    *     the moves
    */
   public long putText(long ofs, TextContentsModel model) {
-    ByteBuffer buf = model.serialize();
+    ByteBuffer buf = TextContentsSerializer.serialize(model);
     return putMovesBlob(ofs, buf);
   }
 

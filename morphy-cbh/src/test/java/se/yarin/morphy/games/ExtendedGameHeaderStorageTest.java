@@ -5,7 +5,7 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import se.yarin.morphy.DatabaseMode;
 import se.yarin.morphy.ResourceLoader;
-import se.yarin.morphy.entities.Nation;
+import se.yarin.morphy.chessbase.Nation;
 import se.yarin.morphy.util.CBUtil;
 
 import java.io.File;

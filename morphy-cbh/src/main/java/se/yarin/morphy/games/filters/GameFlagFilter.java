@@ -5,7 +5,7 @@ import java.util.Objects;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import se.yarin.morphy.games.GameHeader;
-import se.yarin.morphy.games.GameHeaderFlags;
+import se.yarin.morphy.chessbase.GameHeaderFlags;
 import se.yarin.morphy.storage.ItemStorageFilter;
 import se.yarin.util.ByteBufferUtil;
 

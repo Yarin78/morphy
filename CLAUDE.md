@@ -17,13 +17,14 @@ mvn package -pl morphy-cli # Build CLI JAR with dependencies
 Morphy is a Java 21 library and CLI for reading/writing ChessBase databases (.cbh binary format). It uses Maven 3.6+ with these modules:
 
 - **morphy-api**: Vendor-neutral layer shared by every format — the format-independent chess core (`se.yarin.chess`), the neutral DTO records (`se.yarin.morphy.model`), and the `Database` facade interface (`se.yarin.morphy.api`)
+- **morphy-chessbase**: ChessBase concepts shared by the v1 and v2 formats but independent of either on-disk layout (`se.yarin.morphy.chessbase`): the annotation models and their PGN codecs, `Nation`, `Medal`, `GameHeaderFlags`, the guiding text model, `GameDtoImporter`/`GameMovesPgn`, and the `DatabaseLocks` behind transactions. Each format module keeps its own binary serializers for these
 - **morphy-cbh**: The ChessBase v1 (`.cbh`) reader/writer and database API; `DatabaseCbh` is the v1 engine, and `DatabaseCbhFacade` wraps it as the `Database` facade, using the v1↔DTO converters (`se.yarin.morphy.convert`)
 - **morphy-cb2**: The ChessBase v2 (`.2cbh`) format — currently a stub, `Database2Cbh`, implementing the facade
 - **morphy-cli**: Command-line interface using Picocli
 - **morphy-tools**: Development utilities
 - **morphy-service**: Spring Boot backend exposing the DTOs over HTTP for the NodeJS frontend
 
-Module dependencies point downward only: everything depends on **morphy-api**, and the v1/v2 modules never depend on each other. A `DatabaseProvider` SPI + `Databases.open` factory dispatch to the right format by file extension.
+Module dependencies point downward only: everything depends on **morphy-api**, the v1/v2 modules also depend on **morphy-chessbase**, and they never depend on each other (morphy-cb2 uses morphy-cbh in tests only, to compare the two formats). A `DatabaseProvider` SPI + `Databases.open` factory dispatch to the right format by file extension.
 
 This is an internal project! There is no need to keep things around for backward compatibility, unless explicitly told to do so.
 

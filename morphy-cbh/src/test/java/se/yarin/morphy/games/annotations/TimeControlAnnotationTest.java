@@ -5,6 +5,7 @@ import org.junit.Test;
 import java.nio.ByteBuffer;
 
 import static org.junit.Assert.assertEquals;
+import se.yarin.morphy.chessbase.annotations.*;
 
 public class TimeControlAnnotationTest {
 
@@ -15,7 +16,7 @@ public class TimeControlAnnotationTest {
     }
     buf.flip();
     return (TimeControlAnnotation)
-        new TimeControlAnnotation.Serializer().deserialize(buf, bytes.length);
+        new TimeControlAnnotationSerializer().deserialize(buf, bytes.length);
   }
 
   @Test

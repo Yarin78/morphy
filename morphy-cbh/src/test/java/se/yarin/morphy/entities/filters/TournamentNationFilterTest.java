@@ -3,7 +3,7 @@ package se.yarin.morphy.entities.filters;
 import org.junit.Test;
 import se.yarin.morphy.DatabaseCbh;
 import se.yarin.morphy.ResourceLoader;
-import se.yarin.morphy.entities.Nation;
+import se.yarin.morphy.chessbase.Nation;
 import se.yarin.morphy.entities.Tournament;
 
 import java.util.HashMap;

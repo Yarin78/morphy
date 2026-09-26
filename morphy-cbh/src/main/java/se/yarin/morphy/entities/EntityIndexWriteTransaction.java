@@ -10,6 +10,7 @@ import se.yarin.morphy.exceptions.MorphyEntityIndexException;
 import java.nio.ByteBuffer;
 import java.util.Map;
 import java.util.TreeMap;
+import se.yarin.morphy.chessbase.DatabaseLocks;
 
 public class EntityIndexWriteTransaction<T extends Entity & Comparable<T>>
     extends EntityIndexTransaction<T> {
@@ -28,7 +29,7 @@ public class EntityIndexWriteTransaction<T extends Entity & Comparable<T>>
   private final Map<Integer, EntityNode> changes;
 
   public EntityIndexWriteTransaction(@NotNull EntityIndex<T> index) {
-    super(DatabaseContext.DatabaseLock.UPDATE, index);
+    super(DatabaseLocks.Lock.UPDATE, index);
     this.header = index.storage.getHeader();
     this.version = index.currentVersion();
     this.changes = new TreeMap<>();
@@ -109,7 +110,7 @@ public class EntityIndexWriteTransaction<T extends Entity & Comparable<T>>
     // Don't attempt to grab the write lock before ensuring that we still have the update lock
     ensureTransactionIsOpen();
 
-    acquireLock(DatabaseContext.DatabaseLock.WRITE);
+    acquireLock(DatabaseLocks.Lock.WRITE);
     try {
       validateCommit();
 
@@ -130,7 +131,7 @@ public class EntityIndexWriteTransaction<T extends Entity & Comparable<T>>
       index().bumpVersion();
       clearChanges();
     } finally {
-      releaseLock(DatabaseContext.DatabaseLock.WRITE);
+      releaseLock(DatabaseLocks.Lock.WRITE);
     }
   }
 

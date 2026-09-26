@@ -8,8 +8,8 @@ import se.yarin.chess.pgn.PgnExporter;
 import se.yarin.chess.pgn.NagStyle;
 import se.yarin.chess.pgn.PgnFormatOptions;
 import se.yarin.morphy.Game;
-import se.yarin.morphy.entities.Nation;
-import se.yarin.morphy.games.annotations.AnnotationConverter;
+import se.yarin.morphy.chessbase.Nation;
+import se.yarin.morphy.chessbase.annotations.AnnotationConverter;
 
 import java.io.File;
 import java.io.FileWriter;

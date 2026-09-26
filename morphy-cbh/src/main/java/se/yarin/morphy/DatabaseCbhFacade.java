@@ -24,7 +24,7 @@ import se.yarin.morphy.api.query.SearchSchema;
 import se.yarin.morphy.api.query.Sort;
 import se.yarin.morphy.convert.AnnotatorDtoConverter;
 import se.yarin.morphy.convert.GameDtoConverter;
-import se.yarin.morphy.convert.GameDtoImporter;
+import se.yarin.morphy.chessbase.convert.GameDtoImporter;
 import se.yarin.morphy.convert.GameTagDtoConverter;
 import se.yarin.morphy.convert.PlayerDtoConverter;
 import se.yarin.morphy.convert.SourceDtoConverter;

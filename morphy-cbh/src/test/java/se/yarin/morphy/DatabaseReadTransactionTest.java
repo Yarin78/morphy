@@ -2,8 +2,8 @@ package se.yarin.morphy;
 
 import org.junit.Test;
 import se.yarin.chess.Date;
-import se.yarin.morphy.text.TextLanguage;
-import se.yarin.morphy.text.TextModel;
+import se.yarin.morphy.chessbase.text.TextLanguage;
+import se.yarin.morphy.chessbase.text.TextModel;
 
 import java.util.Set;
 

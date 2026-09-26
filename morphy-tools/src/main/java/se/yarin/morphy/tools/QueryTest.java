@@ -16,6 +16,7 @@ import se.yarin.morphy.queries.*;
 import se.yarin.morphy.queries.GameEntityJoin;
 import se.yarin.morphy.queries.operations.*;
 import se.yarin.morphy.queries.visualisation.QueryVisualiser;
+import se.yarin.morphy.chessbase.*;
 
 public class QueryTest {
   private final DatabaseCbh db;

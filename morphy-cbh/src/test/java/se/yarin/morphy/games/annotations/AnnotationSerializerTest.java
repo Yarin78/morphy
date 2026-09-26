@@ -3,10 +3,10 @@ package se.yarin.morphy.games.annotations;
 import org.junit.Test;
 import se.yarin.chess.*;
 import se.yarin.chess.annotations.Annotation;
-import se.yarin.morphy.entities.Nation;
+import se.yarin.morphy.chessbase.Nation;
 import se.yarin.morphy.entities.TournamentTimeControl;
 import se.yarin.morphy.entities.TournamentType;
-import se.yarin.morphy.games.Medal;
+import se.yarin.morphy.chessbase.Medal;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -14,6 +14,7 @@ import java.util.EnumSet;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import se.yarin.morphy.chessbase.annotations.*;
 
 public class AnnotationSerializerTest {
   // Test serialize and deserialize individual annotations

@@ -10,6 +10,7 @@
     <version>0.1-SNAPSHOT</version>
     <modules>
         <module>morphy-api</module>
+        <module>morphy-chessbase</module>
         <module>morphy-cbh</module>
         <module>morphy-cb2</module>
         <module>morphy-cli</module>
@@ -28,6 +29,11 @@
             <dependency>
                 <groupId>se.yarin</groupId>
                 <artifactId>morphy-api</artifactId>
+                <version>0.1-SNAPSHOT</version>
+            </dependency>
+            <dependency>
+                <groupId>se.yarin</groupId>
+                <artifactId>morphy-chessbase</artifactId>
                 <version>0.1-SNAPSHOT</version>
             </dependency>
             <dependency>

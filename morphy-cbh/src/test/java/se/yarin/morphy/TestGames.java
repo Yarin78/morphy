@@ -1,7 +1,7 @@
 package se.yarin.morphy;
 
 import se.yarin.chess.*;
-import se.yarin.morphy.games.annotations.ImmutableTextAfterMoveAnnotation;
+import se.yarin.morphy.chessbase.annotations.ImmutableTextAfterMoveAnnotation;
 
 import static se.yarin.chess.Chess.*;
 import static se.yarin.chess.Chess.F1;

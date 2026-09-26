@@ -1,7 +1,7 @@
 package se.yarin.morphy.games;
 
 import org.junit.Test;
-import se.yarin.morphy.entities.Nation;
+import se.yarin.morphy.chessbase.Nation;
 import se.yarin.morphy.entities.TournamentTimeControl;
 
 import java.nio.ByteBuffer;

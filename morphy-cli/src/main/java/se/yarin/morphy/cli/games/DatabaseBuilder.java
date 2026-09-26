@@ -8,7 +8,7 @@ import se.yarin.morphy.DatabaseWriteTransaction;
 import se.yarin.morphy.Game;
 import se.yarin.morphy.exceptions.MorphyException;
 import se.yarin.morphy.exceptions.MorphyInvalidDataException;
-import se.yarin.morphy.text.TextModel;
+import se.yarin.morphy.chessbase.text.TextModel;
 
 import java.io.File;
 import java.io.IOException;

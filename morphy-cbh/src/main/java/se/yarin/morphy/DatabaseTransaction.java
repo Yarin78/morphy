@@ -9,6 +9,7 @@ import se.yarin.morphy.games.ExtendedGameHeaderStorage;
 import se.yarin.morphy.games.GameHeader;
 import se.yarin.morphy.metrics.Metrics;
 import se.yarin.morphy.metrics.MetricsRepository;
+import se.yarin.morphy.chessbase.DatabaseLocks;
 
 public abstract class DatabaseTransaction extends TransactionBase implements EntityRetriever {
   private static final Logger log = LoggerFactory.getLogger(DatabaseTransaction.class);
@@ -44,7 +45,7 @@ public abstract class DatabaseTransaction extends TransactionBase implements Ent
   public abstract EntityIndexTransaction<GameTag> gameTagTransaction();
 
   public DatabaseTransaction(
-      @NotNull DatabaseContext.DatabaseLock lock, @NotNull DatabaseCbh database) {
+      @NotNull DatabaseLocks.Lock lock, @NotNull DatabaseCbh database) {
     super(lock, database.context());
 
     this.database = database;

@@ -5,7 +5,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import org.jetbrains.annotations.NotNull;
 import se.yarin.morphy.entities.EntityType;
-import se.yarin.morphy.entities.Nation;
+import se.yarin.morphy.chessbase.Nation;
 import se.yarin.morphy.entities.Team;
 
 public class TeamNationFilter implements EntityFilter<Team> {

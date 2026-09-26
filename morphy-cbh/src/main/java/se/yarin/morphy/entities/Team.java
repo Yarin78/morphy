@@ -4,6 +4,7 @@ import org.immutables.value.Value;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import se.yarin.morphy.util.CBUtil;
+import se.yarin.morphy.chessbase.*;
 
 @Value.Immutable
 public abstract class Team extends Entity implements Comparable<Team> {

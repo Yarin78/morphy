@@ -513,7 +513,7 @@ These annotations have a priority system that controls export order in PGN forma
 
 ### ChessBase Annotations (Storage Layer)
 
-**Package:** `se.yarin.morphy.games.annotations`
+**Package:** `se.yarin.morphy.chessbase.annotations` (module morphy-chessbase); the v1 binary serializers, one `…Serializer` class per annotation, are in `se.yarin.morphy.games.annotations` (morphy-cbh)
 
 ChessBase-specific annotations with additional features:
 - **SymbolAnnotation** - Compact storage for up to 3 NAGs per move
@@ -525,15 +525,15 @@ ChessBase-specific annotations with additional features:
 - **Training annotations** - Critical positions, training questions, pawn structures
 - **GameQuotationAnnotation** - References to other games
 
-Each ChessBase annotation has a unique type code (e.g., 0x03, 0x04) and serializer for binary encoding. Unrecognized annotations are preserved as `UnknownAnnotation` for round-trip fidelity.
+Each ChessBase annotation has a unique type code (e.g., 0x03, 0x04), and each format has a serializer for its binary encoding. Unrecognized annotations are preserved as `UnknownAnnotation` for round-trip fidelity.
 
 ### Annotation Statistics
 
-The `AnnotationStatistics` class (in `se.yarin.morphy.games.annotations`) aggregates annotation data for game headers, calculating magnitude values used for filtering and display in the database.
+The `AnnotationStatistics` class (in `se.yarin.morphy.chessbase.annotations`) aggregates annotation data for game headers, calculating magnitude values used for filtering and display in the database.
 
 ### Annotation Conversion: Bridging PGN and ChessBase Annotations
 
-**Package:** `se.yarin.morphy.games.annotations`
+**Package:** `se.yarin.morphy.chessbase.annotations`
 **Class:** `AnnotationConverter`
 
 #### Purpose

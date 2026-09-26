@@ -14,6 +14,7 @@ import se.yarin.morphy.games.annotations.*;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import se.yarin.morphy.chessbase.annotations.*;
 
 /**
  * Throw-away tool to test PGN round-tripping.

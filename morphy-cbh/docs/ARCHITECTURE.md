@@ -21,7 +21,10 @@ This document describes the architecture of the Morphy library, explaining how c
 > **Note (module split):** The project is now split into per-format Maven modules.
 > The format-independent chess core (`se.yarin.chess`), the neutral DTO records
 > (`se.yarin.morphy.model`) and the `Database` facade interface (`se.yarin.morphy.api`)
-> live in **morphy-api**. The v1 (`.cbh`) implementation described below lives in
+> live in **morphy-api**. ChessBase concepts shared by v1 and v2 — the annotation models and
+> their PGN codecs, `Nation`, `Medal`, `GameHeaderFlags`, the text model and `DatabaseLocks` —
+> live in **morphy-chessbase** (`se.yarin.morphy.chessbase`); the v1 binary serializers for
+> them stay in morphy-cbh. The v1 (`.cbh`) implementation described below lives in
 > **morphy-cbh**: `DatabaseCbh` is the engine, and `DatabaseCbhFacade` wraps it as the
 > `Database` facade. The v2 (`.2cbh`) stub `Database2Cbh` lives in **morphy-cb2**. Open
 > any format with `Databases.open(file)`.

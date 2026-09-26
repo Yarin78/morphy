@@ -14,6 +14,7 @@ import java.nio.ByteBuffer;
 import static junit.framework.TestCase.assertFalse;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import se.yarin.morphy.chessbase.*;
 
 public class TeamTest {
   @Rule public TemporaryFolder folder = new TemporaryFolder();

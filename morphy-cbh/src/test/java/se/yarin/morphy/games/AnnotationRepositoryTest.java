@@ -6,10 +6,10 @@ import se.yarin.chess.NAG;
 import se.yarin.chess.pgn.PgnExporter;
 import se.yarin.chess.pgn.PgnFormatOptions;
 import se.yarin.morphy.exceptions.MorphyInvalidDataException;
-import se.yarin.morphy.games.annotations.AnnotationConverter;
-import se.yarin.morphy.games.annotations.ImmutableTextAfterMoveAnnotation;
-import se.yarin.morphy.games.annotations.ImmutableTextBeforeMoveAnnotation;
-import se.yarin.morphy.games.annotations.SymbolAnnotation;
+import se.yarin.morphy.chessbase.annotations.AnnotationConverter;
+import se.yarin.morphy.chessbase.annotations.ImmutableTextAfterMoveAnnotation;
+import se.yarin.morphy.chessbase.annotations.ImmutableTextBeforeMoveAnnotation;
+import se.yarin.morphy.chessbase.annotations.SymbolAnnotation;
 import se.yarin.morphy.storage.BlobStorageHeader;
 
 import static org.junit.Assert.assertEquals;

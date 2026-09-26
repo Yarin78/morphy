@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
+import se.yarin.morphy.chessbase.DatabaseLocks;
 
 public class EntityIndexReadTransaction<T extends Entity & Comparable<T>>
     extends EntityIndexTransaction<T> {
@@ -21,7 +22,7 @@ public class EntityIndexReadTransaction<T extends Entity & Comparable<T>>
   private final int version;
 
   public EntityIndexReadTransaction(@NotNull EntityIndex<T> index) {
-    super(DatabaseContext.DatabaseLock.READ, index);
+    super(DatabaseLocks.Lock.READ, index);
 
     this.version = index.currentVersion();
   }

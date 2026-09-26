@@ -5,7 +5,7 @@ import se.yarin.morphy.model.TeamDto;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import se.yarin.morphy.entities.ImmutableTeam;
-import se.yarin.morphy.entities.Nation;
+import se.yarin.morphy.chessbase.Nation;
 import se.yarin.morphy.entities.Team;
 
 /** Converter for bidirectional transformation between Team entities and TeamDto objects. */

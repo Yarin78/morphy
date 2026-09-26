@@ -18,7 +18,7 @@ import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.morphy.DatabaseCbh;
-import se.yarin.morphy.games.Medal;
+import se.yarin.morphy.chessbase.Medal;
 import se.yarin.morphy.games.TopGamesStorage;
 import se.yarin.morphy.games.filters.*;
 import se.yarin.morphy.queries.*;

@@ -1,11 +1,10 @@
 module se.yarin.morphy.cbh {
-    requires transitive se.yarin.morphy.api;
+    requires transitive se.yarin.morphy.chessbase;
     requires org.slf4j;
     requires static org.immutables.value;
     requires me.tongfei.progressbar;
     requires java.compiler;
     requires org.jetbrains.annotations;
-    requires concurrent.locks;
     requires com.github.albfernandez.juniversalchardet;
     requires org.jline.terminal;
 

@@ -13,9 +13,9 @@ import se.yarin.morphy.DatabaseCbh;
 import se.yarin.morphy.DatabaseMode;
 import se.yarin.morphy.DatabaseReadTransaction;
 import se.yarin.morphy.Game;
-import se.yarin.morphy.games.annotations.AnnotationConverter;
-import se.yarin.morphy.games.annotations.TextAfterMoveAnnotation;
-import se.yarin.morphy.games.annotations.TextBeforeMoveAnnotation;
+import se.yarin.morphy.chessbase.annotations.AnnotationConverter;
+import se.yarin.morphy.chessbase.annotations.TextAfterMoveAnnotation;
+import se.yarin.morphy.chessbase.annotations.TextBeforeMoveAnnotation;
 
 import java.io.File;
 import java.io.IOException;

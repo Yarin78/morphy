@@ -9,9 +9,9 @@ import se.yarin.chess.GameMovesModel;
 import se.yarin.chess.Move;
 import se.yarin.chess.NAG;
 import se.yarin.morphy.DatabaseCbh;
-import se.yarin.morphy.games.annotations.ImmutableTextAfterMoveAnnotation;
-import se.yarin.morphy.games.annotations.SymbolAnnotation;
-import se.yarin.morphy.games.annotations.TextAfterMoveAnnotation;
+import se.yarin.morphy.chessbase.annotations.ImmutableTextAfterMoveAnnotation;
+import se.yarin.morphy.chessbase.annotations.SymbolAnnotation;
+import se.yarin.morphy.chessbase.annotations.TextAfterMoveAnnotation;
 
 import java.io.File;
 import java.io.IOException;

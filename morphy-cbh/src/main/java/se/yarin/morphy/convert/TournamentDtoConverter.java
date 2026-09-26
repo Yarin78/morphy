@@ -7,6 +7,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import se.yarin.chess.Date;
 import se.yarin.morphy.entities.*;
+import se.yarin.morphy.chessbase.*;
 
 /**
  * Converter for bidirectional transformation between Tournament entities and TournamentDto objects.

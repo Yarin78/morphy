@@ -3,6 +3,7 @@ package se.yarin.morphy.games.annotations;
 import org.junit.Test;
 
 import static org.junit.Assert.assertTrue;
+import se.yarin.morphy.chessbase.annotations.*;
 
 public class VideoAnnotationTest {
 

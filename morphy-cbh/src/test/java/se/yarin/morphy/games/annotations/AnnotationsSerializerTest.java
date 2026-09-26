@@ -24,6 +24,7 @@ import static junit.framework.TestCase.assertFalse;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static se.yarin.chess.Chess.*;
+import se.yarin.morphy.chessbase.annotations.*;
 
 public class AnnotationsSerializerTest {
   private final AnnotationsSerializer annotationsSerializer = new AnnotationsSerializer();

@@ -9,10 +9,10 @@ import se.yarin.morphy.exceptions.MorphyInvalidDataException;
 import se.yarin.morphy.games.TopGamesStorage;
 import se.yarin.morphy.metrics.ItemMetrics;
 import se.yarin.morphy.metrics.MetricsRepository;
-import se.yarin.morphy.text.ImmutableTextHeaderModel;
-import se.yarin.morphy.text.ImmutableTextModel;
-import se.yarin.morphy.text.TextContentsModel;
-import se.yarin.morphy.text.TextModel;
+import se.yarin.morphy.chessbase.text.ImmutableTextHeaderModel;
+import se.yarin.morphy.chessbase.text.ImmutableTextModel;
+import se.yarin.morphy.chessbase.text.TextContentsModel;
+import se.yarin.morphy.chessbase.text.TextModel;
 
 import java.util.Arrays;
 import java.util.List;
@@ -21,6 +21,7 @@ import java.util.function.Consumer;
 
 import static org.junit.Assert.*;
 import static se.yarin.chess.Chess.*;
+import se.yarin.morphy.chessbase.*;
 
 public class DatabaseWriteTransactionTest extends DatabaseTestSetup {
 

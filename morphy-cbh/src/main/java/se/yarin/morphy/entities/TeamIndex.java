@@ -19,6 +19,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import static java.nio.file.StandardOpenOption.*;
+import se.yarin.morphy.chessbase.*;
 
 public class TeamIndex extends EntityIndex<Team> {
 

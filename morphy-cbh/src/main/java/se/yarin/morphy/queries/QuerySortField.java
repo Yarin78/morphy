@@ -8,8 +8,8 @@ import org.jetbrains.annotations.Nullable;
 import se.yarin.morphy.Game;
 import se.yarin.morphy.IdObject;
 import se.yarin.morphy.entities.*;
-import se.yarin.morphy.games.GameHeaderFlags;
-import se.yarin.morphy.games.Medal;
+import se.yarin.morphy.chessbase.GameHeaderFlags;
+import se.yarin.morphy.chessbase.Medal;
 import se.yarin.morphy.queries.operations.GameEntityLookup;
 import se.yarin.morphy.queries.operations.GameMovesInfo;
 import se.yarin.morphy.queries.operations.GameMovesInfoLookup;
@@ -17,10 +17,10 @@ import se.yarin.morphy.queries.operations.QueryData;
 import se.yarin.morphy.queries.operations.QueryOperator;
 import se.yarin.morphy.queries.operations.TournamentExtraLookup;
 
-import static se.yarin.morphy.games.GameHeaderFlags.ANNO_TYPE_1A;
-import static se.yarin.morphy.games.GameHeaderFlags.EMBEDDED_AUDIO;
-import static se.yarin.morphy.games.GameHeaderFlags.EMBEDDED_PICTURE;
-import static se.yarin.morphy.games.GameHeaderFlags.EMBEDDED_VIDEO;
+import static se.yarin.morphy.chessbase.GameHeaderFlags.ANNO_TYPE_1A;
+import static se.yarin.morphy.chessbase.GameHeaderFlags.EMBEDDED_AUDIO;
+import static se.yarin.morphy.chessbase.GameHeaderFlags.EMBEDDED_PICTURE;
+import static se.yarin.morphy.chessbase.GameHeaderFlags.EMBEDDED_VIDEO;
 
 public class QuerySortField<T extends IdObject> {
   private final @NotNull Comparator<QueryData<T>> comparator;

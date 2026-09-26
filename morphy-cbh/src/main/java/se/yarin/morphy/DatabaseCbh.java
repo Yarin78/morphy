@@ -13,7 +13,7 @@ import se.yarin.morphy.exceptions.MorphyInvalidDataException;
 import se.yarin.morphy.games.*;
 import se.yarin.morphy.games.filters.GameFilter;
 import se.yarin.morphy.queries.QueryPlanner;
-import se.yarin.morphy.text.TextModel;
+import se.yarin.morphy.chessbase.text.TextModel;
 import se.yarin.morphy.util.CBUtil;
 
 import java.io.File;

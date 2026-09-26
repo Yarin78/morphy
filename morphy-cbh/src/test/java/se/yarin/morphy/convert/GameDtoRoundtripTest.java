@@ -16,11 +16,12 @@ import se.yarin.chess.pgn.PgnParser;
 import se.yarin.morphy.DatabaseCbh;
 import se.yarin.morphy.DatabaseWriteTransaction;
 import se.yarin.morphy.Game;
-import se.yarin.morphy.games.annotations.AnnotationConverter;
-import se.yarin.morphy.text.ImmutableTextHeaderModel;
-import se.yarin.morphy.text.ImmutableTextModel;
-import se.yarin.morphy.text.TextContentsModel;
-import se.yarin.morphy.text.TextModel;
+import se.yarin.morphy.chessbase.annotations.AnnotationConverter;
+import se.yarin.morphy.chessbase.text.ImmutableTextHeaderModel;
+import se.yarin.morphy.chessbase.text.ImmutableTextModel;
+import se.yarin.morphy.chessbase.text.TextContentsModel;
+import se.yarin.morphy.chessbase.text.TextModel;
+import se.yarin.morphy.chessbase.convert.*;
 
 /**
  * Roundtrip test for GameDto conversion. This is a bit messy since the GameDtoConverter and

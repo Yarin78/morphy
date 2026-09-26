@@ -11,11 +11,13 @@ import se.yarin.morphy.entities.Player;
 import se.yarin.morphy.exceptions.MorphyException;
 import se.yarin.morphy.exceptions.MorphyInvalidDataException;
 import se.yarin.morphy.games.*;
-import se.yarin.morphy.games.annotations.AnnotationStatistics;
-import se.yarin.morphy.games.annotations.StatisticalAnnotation;
+import se.yarin.morphy.chessbase.annotations.AnnotationStatistics;
+import se.yarin.morphy.chessbase.annotations.StatisticalAnnotation;
 import se.yarin.morphy.text.*;
 
 import java.util.EnumSet;
+import se.yarin.morphy.chessbase.*;
+import se.yarin.morphy.chessbase.text.*;
 
 /**
  * Contains the logic for mapping a {@link Game} to a {@link se.yarin.chess.GameModel} and vice

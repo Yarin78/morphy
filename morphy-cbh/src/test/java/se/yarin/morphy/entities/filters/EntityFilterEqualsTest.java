@@ -3,7 +3,7 @@ package se.yarin.morphy.entities.filters;
 import org.junit.jupiter.api.Test;
 import se.yarin.chess.Date;
 import se.yarin.morphy.entities.EntityType;
-import se.yarin.morphy.entities.Nation;
+import se.yarin.morphy.chessbase.Nation;
 import se.yarin.morphy.entities.Tournament;
 import se.yarin.morphy.entities.TournamentTimeControl;
 import se.yarin.morphy.entities.TournamentType;

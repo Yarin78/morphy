@@ -7,6 +7,7 @@ import se.yarin.morphy.games.filters.GameFilter;
 
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
+import se.yarin.morphy.chessbase.DatabaseLocks;
 
 public class DatabaseReadTransaction extends DatabaseTransaction {
   private final int version;
@@ -19,7 +20,7 @@ public class DatabaseReadTransaction extends DatabaseTransaction {
   private final EntityIndexReadTransaction<GameTag> gameTagTransaction;
 
   public DatabaseReadTransaction(@NotNull DatabaseCbh database) {
-    super(DatabaseContext.DatabaseLock.READ, database);
+    super(DatabaseLocks.Lock.READ, database);
 
     this.version = database.context().currentVersion();
     this.playerTransaction = database.playerIndex().beginReadTransaction();

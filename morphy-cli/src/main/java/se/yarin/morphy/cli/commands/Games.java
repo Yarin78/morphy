@@ -10,7 +10,7 @@ import se.yarin.morphy.DatabaseReadTransaction;
 import se.yarin.morphy.Game;
 import se.yarin.morphy.cli.games.*;
 import se.yarin.morphy.cli.columns.*;
-import se.yarin.morphy.entities.Nation;
+import se.yarin.morphy.chessbase.Nation;
 import se.yarin.morphy.games.filters.*;
 import se.yarin.morphy.queries.*;
 import se.yarin.morphy.queries.filter.GameQueryBuilder;
