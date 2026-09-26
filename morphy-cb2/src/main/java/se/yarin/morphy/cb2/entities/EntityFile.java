@@ -52,7 +52,9 @@ public final class EntityFile implements AutoCloseable {
     ByteBuffer start = store.read(0, 8).order(ByteOrder.BIG_ENDIAN);
     this.headerSize = start.getInt();
     int typeCount = start.getInt();
-    if (typeCount != EntityType.values().length || headerSize < TYPES_OFFSET + typeCount * 20) {
+    // A file can declare more types than are known here, which then take room in every block but
+    // are never read or written
+    if (typeCount < EntityType.values().length || headerSize < TYPES_OFFSET + typeCount * 20) {
       throw new InvalidDataException("Unexpected entity file header in " + name);
     }
     ByteBuffer header = store.read(0, headerSize).order(ByteOrder.BIG_ENDIAN);

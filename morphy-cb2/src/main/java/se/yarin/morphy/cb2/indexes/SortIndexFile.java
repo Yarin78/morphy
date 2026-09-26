@@ -12,6 +12,8 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import se.yarin.morphy.cb2.InvalidDataException;
 import se.yarin.morphy.cb2.entities.EntityType;
 import se.yarin.morphy.cb2.storage.ByteStore;
@@ -26,6 +28,7 @@ import se.yarin.morphy.cb2.storage.ByteStore;
  * header and catalog are big-endian, the other pages little-endian.
  */
 public final class SortIndexFile implements AutoCloseable {
+  private static final Logger log = LoggerFactory.getLogger(SortIndexFile.class);
 
   public static final int PAGE_SIZE = 4096;
   public static final int NODE_SIZE = 40;
@@ -82,9 +85,21 @@ public final class SortIndexFile implements AutoCloseable {
     }
   }
 
+  /**
+   * A catalog entry that is not an index of any entity type this class knows, such as the index of
+   * time controls that newer versions of ChessBase add. It is left as it is in the file.
+   *
+   * @param catalogSlot the position in the catalog
+   * @param name the name of the index
+   * @param typeCode the byte for the entity type, which is the type's index plus 1
+   * @param count the number of entities in it
+   */
+  public record UnknownIndex(int catalogSlot, @NotNull String name, int typeCode, long count) {}
+
   private final @NotNull ByteStore store;
   private final @NotNull String name;
   private final List<Index> indexes = new ArrayList<>();
+  private final List<UnknownIndex> unknownIndexes = new ArrayList<>();
   private int pageCount;
 
   public SortIndexFile(@NotNull ByteStore store, @NotNull String name) {
@@ -108,11 +123,28 @@ public final class SortIndexFile implements AutoCloseable {
       }
       byte[] indexName = new byte[nameLength];
       catalog.get(at + 0x1c, indexName);
+      String indexNameText = new String(indexName, StandardCharsets.ISO_8859_1);
+      int typeCode = catalog.get(at + 0x16) & 0xFF;
+      if (typeCode < 1 || typeCode > EntityType.values().length) {
+        // An index of a kind of entity that this version doesn't know
+        UnknownIndex unknown = new UnknownIndex(i, indexNameText, typeCode, catalog.getLong(at + 0x0e));
+        unknownIndexes.add(unknown);
+        if (unknown.count() > 0) {
+          log.warn(
+              "The index {} of {} holds {} entities and isn't kept up to date by changes to the"
+                  + " database",
+              indexNameText,
+              name,
+              unknown.count());
+        }
+        continue;
+      }
       indexes.add(
           new Index(
               i,
-              new String(indexName, StandardCharsets.ISO_8859_1),
-              EntityType.of((catalog.get(at + 0x16) & 0xFF) - 1),
+              indexNameText,
+              EntityType.of(typeCode - 1),
+              catalog.get(at + 0x18) & 0xFF,
               catalog.getShort(at),
               catalog.getInt(at + 2),
               catalog.getLong(at + 6),
@@ -151,18 +183,35 @@ public final class SortIndexFile implements AutoCloseable {
     return store;
   }
 
-  /** The indexes, in catalog order. */
+  /** The indexes of the entity types that are known, in catalog order. */
   public @NotNull List<Index> indexes() {
     return indexes;
   }
 
+  /** The catalog entries that are not indexes of a known entity type. */
+  public @NotNull List<UnknownIndex> unknownIndexes() {
+    return unknownIndexes;
+  }
+
   /**
-   * The index at a position of the catalog, which for a database created by ChessBase is the
-   * {@link StandardIndex} of that ordinal.
+   * The index of a standard kind. It is found by the entity type and number in its catalog entry,
+   * and among the entries that have both the same, by their order: the three indexes of game tags
+   * are the titles of games, of guiding texts and of analyses, in that order. Neither the position in
+   * the catalog nor the name is used, since newer versions of ChessBase put an index of their own
+   * among them, and the names can be changed.
    */
   public @NotNull Index index(@NotNull StandardIndex standard) {
+    int occurrence = 0;
+    for (StandardIndex other : StandardIndex.values()) {
+      if (other == standard) {
+        break;
+      }
+      if (other.type == standard.type && other.number == standard.number) {
+        occurrence++;
+      }
+    }
     for (Index index : indexes) {
-      if (index.catalogSlot == standard.ordinal()) {
+      if (index.type == standard.type && index.number == standard.number && occurrence-- == 0) {
         return index;
       }
     }
@@ -182,6 +231,7 @@ public final class SortIndexFile implements AutoCloseable {
     private final int catalogSlot;
     private final @NotNull String indexName;
     private final @NotNull EntityType type;
+    private final int number;
     private int depth;
     private int topPage;
     private long root;
@@ -192,6 +242,7 @@ public final class SortIndexFile implements AutoCloseable {
         int catalogSlot,
         @NotNull String indexName,
         @NotNull EntityType type,
+        int number,
         int depth,
         int topPage,
         long root,
@@ -199,6 +250,7 @@ public final class SortIndexFile implements AutoCloseable {
       this.catalogSlot = catalogSlot;
       this.indexName = indexName;
       this.type = type;
+      this.number = number;
       this.depth = depth;
       this.topPage = topPage;
       this.root = root;
