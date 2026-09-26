@@ -118,7 +118,6 @@ public abstract class TimeControlAnnotation extends Annotation {
           int start = 0;
           int increment = 0;
           int moves = 1000; // Default: rest of game
-          int type = 0;
 
           // Check for /moves suffix
           int slashIdx = period.lastIndexOf('/');
@@ -143,6 +142,9 @@ public abstract class TimeControlAnnotation extends Annotation {
             start = AnnotationPgnUtil.parseTimeControlDuration(period);
           }
 
+          // The type is not in the text. It follows from the rest: a stage of a set number of
+          // moves, otherwise the rest of the game, which has an increment or hasn't
+          int type = moves < 1000 ? 1 : increment > 0 ? 3 : 0;
           series.add(ImmutableTimeSerie.of(start, increment, moves, type));
         }
 
