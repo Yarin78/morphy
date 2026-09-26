@@ -14,6 +14,9 @@ __pycache__/
 # test-databases/scratch/sync.sh, not part of the repository.
 /test-databases/scratch/
 
+# Databases written by morphy-tools GenerateTestDatabases, in every format and version.
+/test-databases/generated/
+
 # The working notes behind the format specifications mention personal databases,
 # and the superseded v1 documents are only of use with them. They live in a
 # private repository, morphy-notes, next to this one, and are linked in here; see
