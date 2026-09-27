@@ -1,0 +1,65 @@
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.topbar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  background: #2c2c2c;
+  color: #f5f0e8;
+}
+
+.topbar h1 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.topbar .status {
+  color: #c9b8a6;
+  font-size: 0.9rem;
+}
+
+.topbar button {
+  background: #8b6f47;
+  color: #f5f0e8;
+  border: 1px solid #6b5d47;
+  border-radius: 4px;
+  padding: 6px 14px;
+  font-size: 0.9rem;
+}
+
+.topbar button:disabled {
+  background: #555;
+  border-color: #444;
+  color: #999;
+  cursor: not-allowed;
+}
+
+.topbar .save-message {
+  color: #9fd99f;
+  font-size: 0.85rem;
+}
+
+.topbar .error-message {
+  color: #e08a8a;
+  font-size: 0.85rem;
+}
+
+main {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  padding: 1rem;
+}
+
+/* GameView's root element - let it fill the available space. */
+main > * {
+  flex: 1;
+  min-width: 0;
+}
