@@ -1,5 +1,15 @@
 /**
  * Types matching the morphy-service REST API.
+ *
+ * The DTOs below (GameDto and everything it embeds) are a hand-written mirror of
+ * morphy-service's JSON DTOs (se.yarin.morphy.model.*), no codegen - verified against the
+ * actual Java records and Jackson's defaults, not the stale morphy-service/GAME_DTO_USAGE.md
+ * doc (which shows a fictitious /api/v1/... path and a "WIN_WHITE" result value that doesn't
+ * match the real enum):
+ *   - `result` serializes as the Java enum constant name (e.g. "WHITE_WINS"), not a PGN symbol.
+ *   - `date` (and other Date fields) serializes as {year, month, day}, not a string.
+ * This is also what a search response's embedded entities look like (confirmed against a
+ * running service) - they're not trimmed down to id+main-field as search results.
  */
 
 export interface DatabaseResponse {
@@ -31,6 +41,7 @@ export interface GameSearchRequest {
   includeMoves?: boolean;
   includeText?: boolean;
   filter?: string;
+  /** A PGN-style result filter value (e.g. "1-0"), not the GameDto.result wire value. */
   result?: string;
   dateFrom?: string;
   dateTo?: string;
@@ -55,27 +66,126 @@ export interface SearchMetadata {
   executionTimeMs: number;
 }
 
-/** Sub-entities in GameDto return minimal fields (id + main field) when embedded in search results. */
-export interface GameDto {
-  id: number;
+export type GameResultDto =
+  | 'WHITE_WINS'
+  | 'BLACK_WINS'
+  | 'DRAW'
+  | 'NOT_FINISHED'
+  | 'WHITE_WINS_ON_FORFEIT'
+  | 'BLACK_WINS_ON_FORFEIT'
+  | 'DRAW_ON_FORFEIT'
+  | 'BOTH_LOST';
+
+export interface DateDto {
+  year: number;
+  month: number;
+  day: number;
+}
+
+export interface PlayerDto {
+  id: number | null;
+  lastName?: string;
+  firstName?: string;
+  gameCount?: number;
+  fideId?: number;
+  chessBaseId?: number;
+}
+
+export interface TeamDto {
+  id: number | null;
+  title?: string;
+  teamNumber?: number;
+  season?: boolean;
+  year?: number;
+  nation?: string;
+  gameCount?: number;
+}
+
+export interface TournamentDto {
+  id: number | null;
+  title?: string;
+  startDate?: DateDto;
+  endDate?: DateDto;
+  place?: string;
+  nation?: string;
+  category?: number;
+  categoryRoman?: string;
+  rounds?: number;
   type?: string;
+  timeControl?: string;
+  typeCombined?: string;
+  complete?: boolean;
+  teamTournament?: boolean;
+  tiebreakRules?: string[];
+  latitude?: number;
+  longitude?: number;
+  gameCount?: number;
+}
+
+export interface SourceDto {
+  id: number | null;
+  title?: string;
+  publisher?: string;
+  publication?: DateDto;
+  date?: DateDto;
+  version?: number;
+  quality?: string;
+  gameCount?: number;
+}
+
+export interface AnnotatorDto {
+  id: number | null;
+  name?: string;
+  gameCount?: number;
+}
+
+export interface GameTagDto {
+  id: number | null;
+  title?: string;
+  languages?: string;
+  languageCount?: number;
+  englishTitle?: string;
+  germanTitle?: string;
+  frenchTitle?: string;
+  spanishTitle?: string;
+  italianTitle?: string;
+  dutchTitle?: string;
+  slovenianTitle?: string;
+  resTitle?: string;
+  gameCount?: number;
+}
+
+export interface GameMovesDto {
+  /** Movetext only - no [Tag "value"] headers. */
+  pgn?: string;
+  /** Non-null only for setup positions (non-standard starting position). */
+  fen?: string;
+}
+
+export interface GameTextDto {
+  contents?: string;
+}
+
+export interface GameDto {
+  id: number | null;
+  type: string;
   textTitle?: string;
-  whitePlayer?: { id: number; lastName?: string; firstName?: string };
+  whitePlayer?: PlayerDto;
   whiteElo?: number;
-  blackPlayer?: { id: number; lastName?: string; firstName?: string };
+  blackPlayer?: PlayerDto;
   blackElo?: number;
-  whiteTeam?: { id: number; title?: string };
-  blackTeam?: { id: number; title?: string };
-  result: string;
-  date: string;
+  whiteTeam?: TeamDto;
+  blackTeam?: TeamDto;
+  result: GameResultDto;
+  date: DateDto;
   eco?: string;
   round?: number;
   subRound?: number;
   lineEvaluation?: string;
-  tournament?: { id: number; title?: string };
-  source?: { id: number; title?: string };
-  annotator?: { id: number; name?: string };
-  gameTag?: { id: number; englishTitle?: string; germanTitle?: string; [key: string]: unknown };
+  tournament?: TournamentDto;
+  source?: SourceDto;
+  annotator?: AnnotatorDto;
+  gameTag?: GameTagDto;
   medals?: string[];
   deleted?: boolean;
   topGame?: boolean;
@@ -91,8 +201,8 @@ export interface GameDto {
   gameVersion?: number;
   creationTimestamp?: number;
   lastChanged?: string;
-  moves?: unknown;
-  text?: unknown;
+  moves?: GameMovesDto;
+  text?: GameTextDto;
   extraTags?: Record<string, string>;
 }
 
@@ -168,77 +278,6 @@ export interface GameSearchResponse {
   offset: number;
   limit: number;
   metadata: SearchMetadata;
-}
-
-export interface PlayerDto {
-  id: number;
-  lastName?: string;
-  firstName?: string;
-  gameCount?: number;
-}
-
-export interface TournamentDto {
-  id: number;
-  title: string;
-  startDate?: string;
-  endDate?: string;
-  place?: string;
-  nation?: string;
-  category?: number;
-  categoryRoman?: string;
-  rounds?: number;
-  type?: string;
-  timeControl?: string;
-  typeCombined?: string;
-  complete?: boolean;
-  teamTournament?: boolean;
-  tiebreakRules?: string[];
-  latitude?: number;
-  longitude?: number;
-  gameCount?: number;
-}
-
-export interface AnnotatorDto {
-  id: number;
-  name?: string;
-  gameCount?: number;
-}
-
-export interface SourceDto {
-  id: number;
-  title?: string;
-  publisher?: string;
-  publication?: string;
-  date?: string;
-  version?: number;
-  quality?: string;
-  gameCount?: number;
-}
-
-export interface TeamDto {
-  id: number;
-  title?: string;
-  teamNumber?: number;
-  season?: boolean;
-  year?: number;
-  nation?: string;
-  gameCount?: number;
-}
-
-export interface GameTagDto {
-  id: number;
-  title?: string;
-  languages?: string;
-  languageCount?: number;
-  englishTitle?: string;
-  germanTitle?: string;
-  frenchTitle?: string;
-  spanishTitle?: string;
-  italianTitle?: string;
-  dutchTitle?: string;
-  slovenianTitle?: string;
-  resTitle?: string;
-  gameCount?: number;
 }
 
 /** Request for entity search (Players, Tournaments, etc.). sortBy uses +/- prefix (e.g. "+id", "-name"). */

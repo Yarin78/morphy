@@ -1,5 +1,5 @@
 import type { Chess } from '@jackstenglein/chess';
-import type { DateDto, GameDto, GameResultDto } from './types';
+import type { DateDto, GameDto, GameResultDto } from '../api/types';
 
 // Bridges morphy-service's GameDto (flattened header fields + a movetext-only
 // moves.pgn) and the single full-PGN-string (headers + movetext) that

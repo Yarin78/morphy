@@ -8,7 +8,7 @@ import type {
   SourceDto,
   TeamDto,
   TournamentDto,
-} from './api/types';
+} from '../api/types';
 
 interface Column<T> {
   key: string;
@@ -319,12 +319,12 @@ function getGameTagTitle(gt: GameDto['gameTag']): string {
   const titles = [
     gt.englishTitle,
     gt.germanTitle,
-    (gt as Record<string, unknown>).frenchTitle,
-    (gt as Record<string, unknown>).spanishTitle,
-    (gt as Record<string, unknown>).italianTitle,
-    (gt as Record<string, unknown>).dutchTitle,
-    (gt as Record<string, unknown>).slovenianTitle,
-    (gt as Record<string, unknown>).resTitle,
+    gt.frenchTitle,
+    gt.spanishTitle,
+    gt.italianTitle,
+    gt.dutchTitle,
+    gt.slovenianTitle,
+    gt.resTitle,
   ];
   const found = titles.find((t): t is string => typeof t === 'string');
   return found ?? '';
@@ -459,15 +459,7 @@ export const GAME_COLUMNS: Column<GameDto>[] = [
     key: 'year',
     label: 'Year',
     width: 60,
-    render: (g) => {
-      if (g.date == null) return '';
-      if (typeof g.date === 'string') {
-        const m = g.date.match(/^(\d{4})/);
-        return m ? m[1] : '';
-      }
-      const d = g.date as unknown as DateObject;
-      return d.year ? String(d.year) : '';
-    },
+    render: (g) => (g.date.year ? String(g.date.year) : ''),
   },
   {
     key: 'notation',

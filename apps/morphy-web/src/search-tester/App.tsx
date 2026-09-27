@@ -3,14 +3,14 @@ import { CollapsiblePanel, ShowPanelButton } from './CollapsiblePanel';
 import { QueryPlanVisualiser } from './QueryPlanVisualiser';
 import { ResultsSection } from './ResultsSection';
 import { SearchPanel } from './SearchPanel';
-import { fetchDatabases, fetchFilterOptions } from './api/client';
+import { fetchDatabases, fetchFilterOptions } from '../api/client';
 import type {
   EntitySearchRequest,
   FilterOptionsResponse,
   GameSearchRequest,
   QueryPlanDebugInfo,
   RawRecord,
-} from './api/types';
+} from '../api/types';
 import type { EntityType } from './entityConfig';
 import type { SavedSearch } from './savedSearchTypes';
 import {
@@ -399,6 +399,7 @@ function App() {
           order={order}
           onColumnSort={handleColumnSort}
           entityType={entityType}
+          selectedDb={selectedDb}
         />
 
         {showQueryPlan && hasQueryPlan && (

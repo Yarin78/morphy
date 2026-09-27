@@ -3,8 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "workspaces": [
-    "search-tester",
-    "board-tester",
+    "morphy-web",
     "packages/*"
   ]
 }

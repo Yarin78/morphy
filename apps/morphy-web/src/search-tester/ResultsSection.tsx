@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { RawRecord } from './api/types';
+import type { RawRecord } from '../api/types';
 import { ColumnSelector } from './ColumnSelector';
 import { RowsPerPageSelector } from './RowsPerPageSelector';
 import ResultsTable from './ResultsTable';
@@ -65,6 +65,8 @@ interface ResultsSectionProps {
   onColumnSort?: (columnKey: string) => void;
   /** Current entity type – used to keep columns visible while loading. */
   entityType: EntityType;
+  /** The database games belong to – used to link a game row to the board tester. */
+  selectedDb: string;
 }
 
 export function ResultsSection({
@@ -82,6 +84,7 @@ export function ResultsSection({
   order,
   onColumnSort,
   entityType,
+  selectedDb,
 }: ResultsSectionProps) {
   /* Use the result's entity config when available, otherwise fall back to the
      current entityType so we can still show columns/headers while loading. */
@@ -116,9 +119,31 @@ export function ResultsSection({
   const hasCustomWidths = Object.keys(columnWidths).length > 0;
 
   const hiddenSet = new Set(hiddenColumns[config.entityKey] ?? []);
-  const visibleColumns = config.columns.filter((c) => !hiddenSet.has(c.key));
-
   const effectiveEntityType = result?.entityType ?? entityType;
+  const baseColumns = config.columns.filter((c) => !hiddenSet.has(c.key));
+  // Games: make the id cell a link that opens the same game in the board tester, in a new tab.
+  const visibleColumns =
+    effectiveEntityType === 'Games' && selectedDb
+      ? baseColumns.map((col) =>
+          col.key !== 'id'
+            ? col
+            : {
+                ...col,
+                render: (row: unknown) => (
+                  <a
+                    className="game-link"
+                    href={`/board-tester.html?db=${encodeURIComponent(selectedDb)}&game=${(row as { id: number }).id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title="Open in board tester"
+                  >
+                    {col.render(row)}
+                  </a>
+                ),
+              }
+        )
+      : baseColumns;
+
   const columnSortConfig = useMemo(() => {
     const map = SORTABLE_COLUMN_MAP[effectiveEntityType] ?? {};
     const sortableColumnKeys = new Set(Object.keys(map));

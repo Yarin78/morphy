@@ -1,11 +1,11 @@
-import { ApiError, debugSearch, search } from './api/client';
+import { ApiError, debugSearch, search } from '../api/client';
 import type {
   EntitySearchResponse,
   FilterOptionsResponse,
   GameSearchResponse,
   QueryPlanDebugInfo,
   RawRecord,
-} from './api/types';
+} from '../api/types';
 import {
   ANNOTATOR_COLUMNS,
   GAME_COLUMNS,

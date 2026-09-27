@@ -2,9 +2,9 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Chess } from '@jackstenglein/chess';
 import { GameView } from 'game-view';
 import type { ChessGame } from 'game-view';
-import { ApiError, createGame, fetchDatabases, fetchGame, replaceGame } from './api/client';
-import { gameDtoToPgn, pgnToGamePatch } from './api/gameDtoAdapter';
-import type { DatabaseResponse, GameDto } from './api/types';
+import { ApiError, createGame, fetchDatabases, fetchGame, replaceGame } from '../api/client';
+import { gameDtoToPgn, pgnToGamePatch } from './gameDtoAdapter';
+import type { DatabaseResponse, GameDto } from '../api/types';
 import { useDbGameParams } from './hooks/useDbGameParams';
 import './App.css';
 

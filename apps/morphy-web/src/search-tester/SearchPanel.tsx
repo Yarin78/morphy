@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import type { DatabaseResponse, FilterOptionsResponse } from './api/types';
+import type { DatabaseResponse, FilterOptionsResponse } from '../api/types';
 import type { EntityType } from './entityConfig';
 import type { SavedSearch } from './savedSearchTypes';
 import { ENTITY_TYPES } from './entityConfig';

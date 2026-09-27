@@ -5,7 +5,7 @@ import type {
   QueryPlanDebugInfo,
   QueryPlanDto,
   QueryOperatorNodeDto,
-} from './api/types';
+} from '../api/types';
 import './QueryPlanVisualiser.css';
 
 const HEADER_H = 24;

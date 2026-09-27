@@ -801,6 +801,17 @@
   padding: 12px 8px;
 }
 
+.game-link {
+  color: inherit;
+  text-decoration: none;
+  border-bottom: 1px dotted #999;
+}
+
+.game-link:hover {
+  color: #2456c9;
+  border-bottom-color: #2456c9;
+}
+
 /* Game column styling */
 .results-panel .results-table td[data-col="white"],
 .results-panel .results-table td[data-col="black"],
