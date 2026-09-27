@@ -115,6 +115,10 @@ public class ExtendedGameHeaderStorage
     return new ExtendedGameHeaderStorage(file, mode.openOptions(), context);
   }
 
+  public @NotNull ItemStorage<ExtProlog, ExtendedGameHeader> storage() {
+    return storage;
+  }
+
   public DatabaseContext context() {
     return context;
   }

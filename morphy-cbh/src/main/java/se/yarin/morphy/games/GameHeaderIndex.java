@@ -39,6 +39,10 @@ public class GameHeaderIndex
   private final @NotNull DatabaseContext context;
   private final @NotNull MetricsRef<ItemMetrics> itemMetricsRef;
 
+  public @NotNull ItemStorage<GameHeaderIndex.Prolog, GameHeader> storage() {
+    return storage;
+  }
+
   public GameHeaderIndex() {
     this(null);
   }

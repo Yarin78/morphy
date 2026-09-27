@@ -22,6 +22,8 @@ Detailed documentation for each package:
 
 - **[`se.yarin.morphy`](morphy-package.md)**: Modern API for working with ChessBase databases. Provides transaction-based, type-safe interfaces for reading and writing chess games and entities.
 
+- **[Node-based query engine](NODE-QUERY-ENGINE.md)**: an alternate, currently-inactive query engine (`se.yarin.morphy.query`), not yet reachable through `Database.findGames`/`findEntities`. The default engine (`se.yarin.morphy.queries`) is unaffected.
+
 ### File Format Specification
 
 - **[CBH Format](../../format/v1/README.md)**: Reverse-engineered specification of the ChessBase database format, including game headers, moves, annotations, and entity indexes.
