@@ -134,10 +134,6 @@ public class Check extends BaseCommand implements Callable<Integer> {
                   db.moveRepository().moveSerializer().setLogDetailedErrors(true);
                   validator.validate(db, checks, true, false, showProgressBar);
                   log.info("Database OK: {}", file);
-
-                  if (showInstrumentation()) {
-                    db.context().instrumentation().show();
-                  }
                 } catch (MorphyException e) {
                   // At least one error that the ChessBase integrity checker would consider an error
                   // found

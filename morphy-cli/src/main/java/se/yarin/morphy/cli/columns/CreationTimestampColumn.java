@@ -1,7 +1,6 @@
 package se.yarin.morphy.cli.columns;
 
-import se.yarin.morphy.Game;
-
+import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 
@@ -17,11 +16,8 @@ public class CreationTimestampColumn implements GameColumn {
 
   @Override
   public String getValue(GameRow row) {
-    Game game = row.game();
-    if (game == null || game.creationTimestamp() == 0) {
-      return "";
-    }
-    return FORMATTER.format(game.creationTime());
+    Long timestamp = row.dto().creationTimestamp();
+    return timestamp == null ? "" : FORMATTER.format(Instant.ofEpochMilli(timestamp));
   }
 
   @Override

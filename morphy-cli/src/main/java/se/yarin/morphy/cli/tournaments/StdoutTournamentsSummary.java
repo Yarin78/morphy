@@ -2,36 +2,31 @@ package se.yarin.morphy.cli.tournaments;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import se.yarin.morphy.DatabaseCbh;
-import se.yarin.morphy.cli.columns.GameColumn;
+import se.yarin.morphy.api.Database;
 import se.yarin.morphy.cli.columns.TournamentColumn;
-import se.yarin.morphy.entities.Tournament;
-import se.yarin.morphy.cli.queries.QueryResult;
+import se.yarin.morphy.cli.columns.TournamentRow;
+import se.yarin.morphy.model.TournamentDto;
 
 import java.util.*;
 
 public class StdoutTournamentsSummary implements TournamentConsumer {
   private static final Logger log = LoggerFactory.getLogger(StdoutTournamentsSummary.class);
 
-  private DatabaseCbh currentDatabase; // Ugly hack, remove when the raw columns have been removed
-
-  private final boolean showTotal;
   private final Collection<TournamentColumn> columns;
+  private String databaseName;
 
-  protected int totalFoundTournaments = 0;
-  protected int totalConsumedTournaments = 0;
+  protected long totalFoundTournaments = 0;
+  protected long totalConsumedTournaments = 0;
   protected long totalSearchTime = 0;
 
   public static final String DEFAULT_COLUMNS =
       "title,place,date,type,nation,category,rounds,count,complete";
 
-  public StdoutTournamentsSummary(boolean showTotal, Collection<TournamentColumn> columns) {
-    this.showTotal = showTotal;
+  public StdoutTournamentsSummary(Collection<TournamentColumn> columns) {
     this.columns = columns;
   }
 
   public static List<TournamentColumn> parseColumns(String columnSpec) {
-    // TODO: This is duplicated in StdoutGamesSummary - move to separate class
     HashMap<String, Integer> specColumns = new HashMap<>();
     boolean isRelative = true;
     for (String col : columnSpec.split(",")) {
@@ -47,9 +42,9 @@ public class StdoutTournamentsSummary implements TournamentConsumer {
       }
       if (strippedCol.endsWith("*")) {
         String prefix = strippedCol.substring(0, strippedCol.length() - 1);
-        for (GameColumn gc : GameColumn.ALL) {
-          if (gc.getId().startsWith(prefix)) {
-            specColumns.put(gc.getId(), val);
+        for (TournamentColumn tc : TournamentColumn.ALL) {
+          if (tc.getTournamentId().startsWith(prefix)) {
+            specColumns.put(tc.getTournamentId(), val);
           }
         }
       } else {
@@ -92,28 +87,29 @@ public class StdoutTournamentsSummary implements TournamentConsumer {
 
   @Override
   public void finish() {
-    if (showTotal) {
-      if (totalFoundTournaments == 0) {
-        System.out.printf("No hits (%.2f s)%n", totalSearchTime / 1000.0);
+    if (totalFoundTournaments == 0) {
+      System.out.printf("No hits (%.2f s)%n", totalSearchTime / 1000.0);
+    } else {
+      System.out.println();
+      if (totalConsumedTournaments < totalFoundTournaments) {
+        System.out.printf(
+            "%d out of %d hits displayed (%.2f s)%n",
+            totalConsumedTournaments, totalFoundTournaments, totalSearchTime / 1000.0);
       } else {
-        System.out.println();
-        if (totalConsumedTournaments < totalFoundTournaments) {
-          System.out.printf(
-              "%d out of %d hits displayed (%.2f s)%n",
-              totalConsumedTournaments, totalFoundTournaments, totalSearchTime / 1000.0);
-        } else {
-          System.out.printf("%d hits  (%.2f s)%n", totalFoundTournaments, totalSearchTime / 1000.0);
-        }
+        System.out.printf("%d hits  (%.2f s)%n", totalFoundTournaments, totalSearchTime / 1000.0);
       }
     }
   }
 
-  public void setCurrentDatabase(DatabaseCbh database) {
-    this.currentDatabase = database;
+  @Override
+  public void setCurrentDatabase(Database database) {
+    this.databaseName = database.name();
   }
 
   @Override
-  public void accept(Tournament tournament) {
+  public void accept(TournamentDto tournament) {
+    TournamentRow row = new TournamentRow(tournament, databaseName);
+
     StringBuilder sb = new StringBuilder();
     TournamentColumn lastColumn = null;
     for (TournamentColumn column : columns) {
@@ -122,7 +118,7 @@ public class StdoutTournamentsSummary implements TournamentConsumer {
       sb.append(" ".repeat(marginBefore));
       lastColumn = column;
 
-      String value = column.getTournamentValue(currentDatabase, tournament);
+      String value = column.getTournamentValue(row);
       if (column.trimValueToWidth() && value.length() > column.width()) {
         value = value.substring(0, column.width());
       }
@@ -154,9 +150,9 @@ public class StdoutTournamentsSummary implements TournamentConsumer {
   }
 
   @Override
-  public void searchDone(QueryResult<Tournament> result) {
-    totalFoundTournaments += result.total();
-    totalConsumedTournaments += result.consumed();
-    totalSearchTime += result.elapsedTime();
+  public void searchDone(long total, long consumed, long elapsedMillis) {
+    totalFoundTournaments += total;
+    totalConsumedTournaments += consumed;
+    totalSearchTime += elapsedMillis;
   }
 }

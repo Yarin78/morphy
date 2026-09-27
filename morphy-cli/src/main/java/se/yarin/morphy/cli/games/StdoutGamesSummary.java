@@ -2,16 +2,9 @@ package se.yarin.morphy.cli.games;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import se.yarin.morphy.Game;
+import se.yarin.morphy.api.Database;
 import se.yarin.morphy.cli.columns.GameColumn;
 import se.yarin.morphy.cli.columns.GameRow;
-import se.yarin.morphy.convert.AnnotatorDtoConverter;
-import se.yarin.morphy.convert.GameDtoConverter;
-import se.yarin.morphy.convert.GameTagDtoConverter;
-import se.yarin.morphy.convert.PlayerDtoConverter;
-import se.yarin.morphy.convert.SourceDtoConverter;
-import se.yarin.morphy.convert.TeamDtoConverter;
-import se.yarin.morphy.convert.TournamentDtoConverter;
 import se.yarin.morphy.model.GameDto;
 
 import java.util.*;
@@ -19,33 +12,30 @@ import java.util.*;
 public class StdoutGamesSummary extends GameConsumerBase {
   private static final Logger log = LoggerFactory.getLogger(StdoutGamesSummary.class);
 
-  private final boolean showTotal;
   private final Collection<GameColumn> columns;
   private final boolean needsMoves;
-  private final GameDtoConverter gameDtoConverter =
-      new GameDtoConverter(
-          new PlayerDtoConverter(),
-          new TournamentDtoConverter(),
-          new AnnotatorDtoConverter(),
-          new SourceDtoConverter(),
-          new TeamDtoConverter(),
-          new GameTagDtoConverter());
+  private String databaseName;
 
   public static final String DEFAULT_COLUMNS =
       "id,name,rating,result,num-moves,eco,tournament,date";
 
-  public StdoutGamesSummary(boolean showTotal) {
-    this(showTotal, parseColumns(DEFAULT_COLUMNS));
-  }
-
-  public StdoutGamesSummary(boolean showTotal, Collection<GameColumn> columns) {
-    this.showTotal = showTotal;
+  public StdoutGamesSummary(Collection<GameColumn> columns) {
     this.columns = columns;
 
-    if (this.columns.size() == 0) {
+    if (this.columns.isEmpty()) {
       throw new IllegalArgumentException("No columns specified");
     }
     this.needsMoves = columns.stream().anyMatch(GameColumn::needsMoves);
+  }
+
+  @Override
+  public boolean needsMoves() {
+    return needsMoves;
+  }
+
+  @Override
+  public void setCurrentDatabase(Database database) {
+    this.databaseName = database.name();
   }
 
   public static List<GameColumn> parseColumns(String columnSpec) {
@@ -109,18 +99,16 @@ public class StdoutGamesSummary extends GameConsumerBase {
 
   @Override
   public void finish() {
-    if (showTotal) {
-      if (totalFoundGames == 0) {
-        System.out.printf("No hits (%.2f s)%n", totalSearchTime / 1000.0);
+    if (totalFoundGames == 0) {
+      System.out.printf("No hits (%.2f s)%n", totalSearchTime / 1000.0);
+    } else {
+      System.out.println();
+      if (totalConsumedGames < totalFoundGames) {
+        System.out.printf(
+            "%d out of %d hits displayed (%.2f s)%n",
+            totalConsumedGames, totalFoundGames, totalSearchTime / 1000.0);
       } else {
-        System.out.println();
-        if (totalConsumedGames < totalFoundGames) {
-          System.out.printf(
-              "%d out of %d hits displayed (%.2f s)%n",
-              totalConsumedGames, totalFoundGames, totalSearchTime / 1000.0);
-        } else {
-          System.out.printf("%d hits  (%.2f s)%n", totalFoundGames, totalSearchTime / 1000.0);
-        }
+        System.out.printf("%d hits  (%.2f s)%n", totalFoundGames, totalSearchTime / 1000.0);
       }
     }
   }
@@ -144,12 +132,8 @@ public class StdoutGamesSummary extends GameConsumerBase {
   }
 
   @Override
-  public void accept(Game game) {
-    // Build the neutral row once; the columns render from it. Moves (PGN) are materialised only
-    // when a selected column needs them; full entity details are cheap enough to always include.
-    GameDto dto =
-        gameDtoConverter.toDto(game, needsMoves, false, true, true, true);
-    GameRow row = new GameRow(dto, game, game.database().name());
+  public void accept(GameDto dto) {
+    GameRow row = new GameRow(dto, databaseName);
 
     StringBuilder sb = new StringBuilder();
     GameColumn lastColumn = null;

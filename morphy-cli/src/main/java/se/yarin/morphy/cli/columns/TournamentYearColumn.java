@@ -1,7 +1,6 @@
 package se.yarin.morphy.cli.columns;
 
-import se.yarin.morphy.DatabaseCbh;
-import se.yarin.morphy.entities.Tournament;
+import se.yarin.chess.Date;
 
 public class TournamentYearColumn extends TournamentBaseColumn {
   @Override
@@ -10,8 +9,9 @@ public class TournamentYearColumn extends TournamentBaseColumn {
   }
 
   @Override
-  public String getTournamentValue(DatabaseCbh database, Tournament tournament) {
-    int year = tournament.date().year();
+  public String getTournamentValue(TournamentRow row) {
+    Date date = row.dto().startDate();
+    int year = date == null ? 0 : date.year();
     return year == 0 ? "????" : String.format("%4d", year);
   }
 

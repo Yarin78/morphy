@@ -1,17 +1,16 @@
 package se.yarin.morphy.cli.tournaments;
 
-import se.yarin.morphy.DatabaseCbh;
-import se.yarin.morphy.entities.Tournament;
-import se.yarin.morphy.cli.queries.QueryResult;
+import se.yarin.morphy.api.Database;
+import se.yarin.morphy.model.TournamentDto;
 
 import java.util.function.Consumer;
 
-public interface TournamentConsumer extends Consumer<Tournament> {
-  void setCurrentDatabase(DatabaseCbh database);
+public interface TournamentConsumer extends Consumer<TournamentDto> {
+  default void setCurrentDatabase(Database database) {}
 
   void init();
 
-  void searchDone(QueryResult<Tournament> queryResult);
+  void searchDone(long total, long consumed, long elapsedMillis);
 
   void finish();
 }

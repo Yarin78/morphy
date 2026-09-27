@@ -5,6 +5,7 @@ import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.LoggerContext;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
+import se.yarin.morphy.api.DatabaseProvider;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -13,7 +14,9 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
+import java.util.ServiceLoader;
 import java.util.stream.Stream;
 
 public abstract class BaseCommand {
@@ -33,9 +36,6 @@ public abstract class BaseCommand {
       description = "Output info logging; use twice for debug logging")
   private boolean[] verbose;
 
-  @CommandLine.Option(names = "--iostats", description = "Show instrumentation statistics")
-  private boolean iostats = false;
-
   protected void setupGlobalOptions() {
     if (verbose != null) {
       Level level = verbose.length == 1 ? Level.INFO : Level.DEBUG;
@@ -50,16 +50,14 @@ public abstract class BaseCommand {
     return verbose == null ? 0 : verbose.length;
   }
 
-  public boolean showInstrumentation() {
-    return iostats;
-  }
-
   protected Stream<File> getDatabaseStream() throws IOException {
     if (file.isDirectory()) {
+      List<DatabaseProvider> providers = new ArrayList<>();
+      ServiceLoader.load(DatabaseProvider.class).forEach(providers::add);
       return Files.walk(file.toPath(), recursive ? 30 : 1)
-          .filter(path -> path.toString().toLowerCase().endsWith(".cbh"))
           .filter(path -> !path.getFileName().toString().startsWith("._"))
-          .map(Path::toFile);
+          .map(Path::toFile)
+          .filter(f -> providers.stream().anyMatch(p -> p.handles(f)));
     }
 
     if (!file.isFile()) {

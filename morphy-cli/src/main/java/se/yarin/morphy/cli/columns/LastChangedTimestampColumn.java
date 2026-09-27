@@ -1,7 +1,6 @@
 package se.yarin.morphy.cli.columns;
 
-import se.yarin.morphy.Game;
-
+import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 
@@ -17,11 +16,8 @@ public class LastChangedTimestampColumn implements GameColumn {
 
   @Override
   public String getValue(GameRow row) {
-    Game game = row.game();
-    if (game == null || game.lastChangedTimestamp() == 0) {
-      return "";
-    }
-    return FORMATTER.format(game.lastChangedTime());
+    String lastChanged = row.dto().lastChanged();
+    return lastChanged == null ? "" : FORMATTER.format(Instant.parse(lastChanged));
   }
 
   @Override

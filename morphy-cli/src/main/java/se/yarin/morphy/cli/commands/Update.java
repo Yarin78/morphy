@@ -149,10 +149,6 @@ public class Update extends BaseCommand implements Callable<Integer> {
                         applyUpdates(db, outputDb, matchingGameIds, updaters, batchSize);
                     totalUpdated.addAndGet(updatedInDb);
                   }
-
-                  if (showInstrumentation()) {
-                    db.context().instrumentation().show();
-                  }
                 } catch (IOException e) {
                   System.err.println("IO error when processing " + file);
                   numDatabaseErrors.incrementAndGet();

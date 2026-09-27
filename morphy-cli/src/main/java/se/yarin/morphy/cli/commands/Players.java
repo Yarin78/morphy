@@ -3,18 +3,16 @@ package se.yarin.morphy.cli.commands;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
-import se.yarin.morphy.DatabaseCbh;
-import se.yarin.morphy.DatabaseMode;
-import se.yarin.morphy.DatabaseReadTransaction;
-import se.yarin.morphy.entities.Player;
-import se.yarin.morphy.queries.*;
-import se.yarin.morphy.util.CBUtil;
-import se.yarin.morphy.queries.filter.PlayerQueryBuilder;
-import se.yarin.morphy.queries.operations.QueryData;
-import se.yarin.morphy.queries.operations.QueryOperator;
+import se.yarin.morphy.api.AccessMode;
+import se.yarin.morphy.api.Database;
+import se.yarin.morphy.api.Databases;
+import se.yarin.morphy.api.EntityKind;
+import se.yarin.morphy.api.query.Query;
+import se.yarin.morphy.api.query.Sort;
+import se.yarin.morphy.cli.queries.FacadeQuerySupport;
+import se.yarin.morphy.model.PlayerDto;
 
 import java.io.IOException;
-import java.util.List;
 import java.util.concurrent.Callable;
 
 @CommandLine.Command(name = "players", mixinStandardHelpOptions = true)
@@ -31,16 +29,6 @@ public class Players extends BaseCommand implements Callable<Integer> {
   @CommandLine.Option(names = "--limit", description = "Max number of players to list")
   int limit = 20;
 
-  @CommandLine.Option(
-      names = "--count-all",
-      description = "Count all hits, even beyond the limit (if specified)")
-  private boolean countAll = false;
-
-  @CommandLine.Option(names = "--hex", description = "Show player key in hexadecimal")
-  boolean hex = false;
-
-  private final PlayerQueryBuilder playerQueryBuilder = new PlayerQueryBuilder();
-
   @Override
   public Integer call() throws IOException {
     setupGlobalOptions();
@@ -49,68 +37,28 @@ public class Players extends BaseCommand implements Callable<Integer> {
         .forEach(
             file -> {
               log.info("Opening {}", file);
-              try (DatabaseCbh db = DatabaseCbh.open(file, DatabaseMode.READ_ONLY)) {
-                try (var txn = new DatabaseReadTransaction(db)) {
-                  EntityQuery<Player> playerQuery = null;
-                  try {
-                    playerQuery = playerQueryBuilder.buildQuery(db, filterExpression);
-                  } catch (IllegalArgumentException e) {
-                    System.err.println(e.getMessage());
-                    System.exit(1);
-                  }
-                  assert playerQuery != null;
+              try (Database db = Databases.open(file, AccessMode.READ_ONLY)) {
+                Query query = Query.of(filterExpression, Sort.natural(), 0, 1);
 
-                  QueryContext qc = new QueryContext(txn, false);
-                  List<QueryOperator<Player>> plans =
-                      db.queryPlanner().getEntityQueryPlans(qc, playerQuery, true);
-                  QueryOperator<Player> bestPlan = db.queryPlanner().selectBestQueryPlan(plans);
-
-                  int consumed = 0;
-                  int total = 0;
-                  for (var qd : (Iterable<QueryData<Player>>) bestPlan.stream()::iterator) {
-                    Player player = qd.data();
-                    if (player == null) continue;
-                    total++;
-
-                    if (limit > 0 && consumed >= limit) {
-                      if (!countAll) break;
-                      continue;
-                    }
-
-                    consumed++;
-                    String line;
-                    if (hex) {
-                      byte[] raw = db.playerIndex().getRaw(player.id());
-                      line =
-                          String.format(
-                              "%7d:  %-30s %-30s %6d",
-                              player.id(),
-                              CBUtil.toHexString(raw).substring(0, 30),
-                              player.getFullName(),
-                              player.count());
-                    } else {
-                      line =
-                          String.format(
-                              "%7d:  %-30s %6d",
-                              player.id(), player.getFullName(), player.count());
-                    }
-                    System.out.println(line);
-                  }
-
-                  System.out.println();
-                  if (countAll) {
-                    if (consumed < total) {
-                      System.out.printf("%d out of %d hits%n", consumed, total);
-                    } else {
-                      System.out.printf("%d hits%n", total);
-                    }
-                  } else {
-                    System.out.println("Total: " + db.playerIndex().count());
-                  }
+                FacadeQuerySupport.Result result;
+                try {
+                  result =
+                      FacadeQuerySupport.stream(
+                          query,
+                          limit,
+                          pageQuery -> db.findEntities(EntityKind.PLAYER, pageQuery),
+                          Players::printPlayer);
+                } catch (IllegalArgumentException e) {
+                  System.err.println(e.getMessage());
+                  System.exit(1);
+                  return;
                 }
 
-                if (showInstrumentation()) {
-                  db.context().instrumentation().show();
+                System.out.println();
+                if (result.consumed() < result.total()) {
+                  System.out.printf("%d out of %d hits%n", result.consumed(), result.total());
+                } else {
+                  System.out.printf("%d hits%n", result.total());
                 }
               } catch (IOException e) {
                 System.err.println("IO error when processing " + file);
@@ -121,5 +69,23 @@ public class Players extends BaseCommand implements Callable<Integer> {
             });
 
     return 0;
+  }
+
+  private static void printPlayer(PlayerDto player) {
+    System.out.printf(
+        "%7d:  %-30s %6d%n",
+        player.id(), fullName(player), player.gameCount() == null ? 0 : player.gameCount());
+  }
+
+  private static String fullName(PlayerDto player) {
+    String last = player.lastName() == null ? "" : player.lastName();
+    String first = player.firstName() == null ? "" : player.firstName();
+    if (last.isEmpty()) {
+      return first;
+    }
+    if (first.isEmpty()) {
+      return last;
+    }
+    return last + ", " + first;
   }
 }

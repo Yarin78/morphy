@@ -1,9 +1,5 @@
 package se.yarin.morphy.cli.columns;
 
-import se.yarin.morphy.DatabaseCbh;
-import se.yarin.morphy.Game;
-import se.yarin.morphy.entities.Tournament;
-
 public class DatabaseColumn implements GameColumn, TournamentColumn {
   @Override
   public String getHeader() {
@@ -31,16 +27,15 @@ public class DatabaseColumn implements GameColumn, TournamentColumn {
   }
 
   @Override
-  public String getTournamentValue(DatabaseCbh db, Tournament tournament) {
-    return db.name();
+  public String getTournamentValue(TournamentRow row) {
+    String name = row.databaseName();
+    return name == null ? "" : name;
   }
 
   @Override
   public String getValue(GameRow row) {
-    if (row.databaseName() != null) {
-      return row.databaseName();
-    }
-    return row.game() == null ? "" : row.game().database().name();
+    String name = row.databaseName();
+    return name == null ? "" : name;
   }
 
   @Override

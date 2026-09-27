@@ -132,10 +132,6 @@ public class SummarizeOpening extends BaseCommand implements Callable<Integer> {
                   }
                 }
                 totalGames.addAndGet(matchingGameIds.size());
-
-                if (showInstrumentation()) {
-                  db.context().instrumentation().show();
-                }
               } catch (IOException e) {
                 System.err.println("IO error when processing " + file);
                 numDatabaseErrors.incrementAndGet();

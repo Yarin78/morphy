@@ -7,7 +7,6 @@ import se.yarin.chess.annotations.AnnotationTransformer;
 import se.yarin.chess.pgn.PgnExporter;
 import se.yarin.chess.pgn.NagStyle;
 import se.yarin.chess.pgn.PgnFormatOptions;
-import se.yarin.morphy.Game;
 import se.yarin.morphy.chessbase.Nation;
 import se.yarin.morphy.chessbase.annotations.AnnotationConverter;
 
@@ -16,7 +15,12 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Set;
 
-public class PgnDatabaseBuilder extends GameConsumerBase {
+/**
+ * Writes {@link GameModel}s to a PGN file. Used only by {@code summarize-opening}, which
+ * synthesizes new annotated move trees that the {@code Database} facade's flattened PGN-text
+ * {@code GameMovesDto} can't represent, so it stays on this raw writer rather than the facade.
+ */
+public class PgnDatabaseBuilder {
   private static final Logger log = LoggerFactory.getLogger(PgnDatabaseBuilder.class);
 
   private final FileWriter pgnFileWriter;
@@ -65,21 +69,11 @@ public class PgnDatabaseBuilder extends GameConsumerBase {
     this.exporter = new PgnExporter(options, transformer);
   }
 
-  @Override
   public void finish() {
     try {
       this.pgnFileWriter.close();
     } catch (IOException e) {
       log.warn("Failed to close output database", e);
-    }
-  }
-
-  @Override
-  public void accept(Game game) {
-    try {
-      writeModel(game.getModel());
-    } catch (IOException e) {
-      log.warn("Failed to write to PGN database", e);
     }
   }
 

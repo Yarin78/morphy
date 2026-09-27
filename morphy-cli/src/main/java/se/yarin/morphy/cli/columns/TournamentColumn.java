@@ -1,8 +1,5 @@
 package se.yarin.morphy.cli.columns;
 
-import se.yarin.morphy.DatabaseCbh;
-import se.yarin.morphy.entities.Tournament;
-
 import java.util.Arrays;
 import java.util.stream.Collectors;
 
@@ -25,7 +22,7 @@ public interface TournamentColumn {
     return true;
   }
 
-  String getTournamentValue(DatabaseCbh db, Tournament tournament);
+  String getTournamentValue(TournamentRow row);
 
   String getTournamentId();
 
@@ -40,7 +37,6 @@ public interface TournamentColumn {
     new TournamentCategoryColumn(),
     new TournamentRoundsColumn(),
     new TournamentNumGamesColumn(),
-    new TournamentFirstGameColumn(),
     new TournamentCompleteColumn(),
     new TournamentTimeControlColumn(),
     new DatabaseColumn()

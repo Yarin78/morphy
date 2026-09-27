@@ -1,8 +1,5 @@
 package se.yarin.morphy.cli.columns;
 
-import se.yarin.morphy.DatabaseCbh;
-import se.yarin.morphy.entities.Tournament;
-
 public class TournamentCompleteColumn implements TournamentColumn {
   @Override
   public String getHeader() {
@@ -10,8 +7,8 @@ public class TournamentCompleteColumn implements TournamentColumn {
   }
 
   @Override
-  public String getTournamentValue(DatabaseCbh db, Tournament tournament) {
-    return tournament.complete() ? "Yes" : "-";
+  public String getTournamentValue(TournamentRow row) {
+    return Boolean.TRUE.equals(row.dto().complete()) ? "Yes" : "-";
   }
 
   @Override
