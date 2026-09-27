@@ -1,0 +1,292 @@
+/*
+ * Styles for GameView and the elements it renders directly (board wrapper,
+ * navigation bar, resize handle, notation area). Extracted from yarin-chess's
+ * App.css, keeping only the rules GameView itself depends on - none of that
+ * app's header/sidebar/game-list chrome.
+ */
+
+.game-view-container {
+  display: flex;
+  align-items: stretch;
+  height: 100%;
+  min-height: 0;
+  border: 2px solid #8b6f47;
+  background: #f5f0e8;
+  gap: 0;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.chess-board-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  height: 100%;
+  background: #e8ddd4;
+  flex-shrink: 0;
+}
+
+.chess-board-container {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  position: relative;
+  padding: 1rem;
+}
+
+.game-navigation {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  position: relative;
+  z-index: 10;
+  pointer-events: auto;
+  padding: 0.5rem 0rem;
+  background: #d4c4b0;
+  border-top: 1px solid #b8a896;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.navigation-controls {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  align-items: center;
+  position: relative;
+}
+
+.nav-button {
+  background: #c9b8a6;
+  color: #5a3a1f;
+  border: 1px solid #a89584;
+  padding: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+  z-index: 100;
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  height: 36px;
+  opacity: 0.85;
+}
+
+.nav-button:hover:not(:disabled) {
+  background: #b8a794;
+  opacity: 1;
+  border-color: #988876;
+}
+
+.nav-button:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.nav-button.edit-mode-active {
+  background: #8b6f47;
+  color: #f5f0e8;
+  border-color: #6b5d47;
+  opacity: 1;
+}
+
+.sidebar-menu-button {
+  display: none;
+  background: #8b6f47;
+  color: #f5f0e8;
+  border: 2px solid #6b5d47;
+  padding: 8px 12px;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: absolute;
+  left: 0.5rem;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
+  height: 36px;
+  border-radius: 6px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  z-index: 101;
+}
+
+.sidebar-menu-button:hover {
+  background: #6b5d47;
+  border-color: #5a4a3a;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.edit-mode-button {
+  background: #c9b8a6;
+  color: #5a3a1f;
+  border: 1px solid #a89584;
+  padding: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: absolute;
+  right: 0.5rem;
+  z-index: 10;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.edit-mode-button:hover {
+  background: #b8a794;
+  opacity: 1;
+  border-color: #988876;
+}
+
+.edit-mode-button.active {
+  background: #8b6f47;
+  color: #f5f0e8;
+  border-color: #6b5d47;
+  opacity: 1;
+}
+
+.notation-area {
+  background: #ede6dc;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  color: #666;
+  border: 1px solid #d4c4b0;
+  flex: 1 0 320px;
+  min-width: 320px;
+}
+
+.resize-handle {
+  width: 8px;
+  background: #8b6f47;
+  cursor: col-resize;
+  flex-shrink: 0;
+  position: relative;
+  transition: background-color 0.2s;
+}
+
+.resize-handle:hover {
+  background: #6b5d47;
+}
+
+.resize-handle.resizing {
+  background: #5a4a3a;
+}
+
+.resize-handle::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: rgba(255, 255, 255, 0.3);
+  transform: translateX(-50%);
+}
+
+.notation-divider {
+  height: 2px;
+  background: #8b6f47;
+  border: none;
+}
+
+.notation-area > *:not(.game-notation-container) {
+  flex-shrink: 0;
+}
+
+.notation-area .game-notation-container {
+  flex: 1;
+  min-height: 0;
+}
+
+/* iPad and below (< 1200px) - show the hamburger menu button when rendered */
+@media (max-width: 1199px) {
+  .sidebar-menu-button {
+    display: flex;
+  }
+}
+
+/* Mobile devices (< 768px) - Stack board and notation vertically */
+@media (max-width: 767px) {
+  .game-view-container {
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+    flex: 1;
+    border: 0;
+  }
+
+  .chess-board-wrapper {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 100% !important;
+    height: auto;
+    min-height: auto;
+  }
+
+  .chess-board-container {
+    padding: 0;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  /* Hide coordinates on mobile */
+  coords.ranks, coords.files {
+    display: none !important;
+  }
+
+  .resize-handle {
+    display: none;
+  }
+
+  .notation-area {
+    width: 100%;
+    flex: 1 1 auto;
+    min-width: 100%;
+    max-width: 100%;
+    min-height: 0;
+    position: relative;
+    z-index: 1;
+    pointer-events: auto;
+    border: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .game-navigation {
+    padding: 0.5rem 0.5rem;
+    border-bottom: 1px solid #8b6f47;
+  }
+
+  .navigation-controls {
+    gap: 1.25rem;
+  }
+
+  .nav-button {
+    min-width: 32px;
+    height: 32px;
+    font-size: 0.9rem;
+  }
+
+  .notation-divider {
+    display: none;
+  }
+
+  .game-notation-container {
+    border: 0;
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+}

@@ -1,0 +1,45 @@
+.game-header {
+  background: #e0d5c8;
+  padding: 1rem;
+  margin-bottom: 0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.game-header-line {
+  font-size: 1.15rem;
+  color: #333;
+  line-height: 1.6;
+  text-align: center;
+}
+
+@media (max-width: 767px) {
+  .game-header {
+    padding: 0.4rem 0.5rem;
+  }
+
+  .game-header-line {
+    font-size: 0.75rem;
+    line-height: 1.2;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    hyphens: auto;
+  }
+
+  .game-header-line strong {
+    font-weight: 600;
+  }
+}
+
+.game-header-line strong {
+  font-weight: 700;
+  color: #333;
+}
+
+.game-header-line span {
+  color: #666;
+}
+
+.game-header-line .annotator {
+  font-style: italic;
+  color: #666;
+}
