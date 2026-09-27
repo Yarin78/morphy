@@ -22,6 +22,13 @@ export interface GameViewProps {
   initialOrientation: 'white' | 'black';
   initialMoveToShow?: (chess: Chess) => Move | null;
   startInEditMode?: boolean;
+  /**
+   * Called with the live (mutable) Chess instance whenever it's (re)created - i.e. whenever
+   * selectedGame changes. GameView never lifts the board state itself, so a caller that wants
+   * to save edits should stash this reference and read chess.renderPgn()/chess.header() from
+   * it on demand (e.g. on a Save button click), rather than re-rendering on every move.
+   */
+  onChessReady?: (chess: Chess) => void;
 }
 
 export const GameView: React.FC<GameViewProps> = ({
@@ -31,6 +38,7 @@ export const GameView: React.FC<GameViewProps> = ({
   initialOrientation,
   initialMoveToShow,
   startInEditMode = false,
+  onChessReady,
 }) => {
   const {
     chess,
@@ -46,6 +54,10 @@ export const GameView: React.FC<GameViewProps> = ({
     seekToMove,
     loadPgn,
   } = useChessGame();
+
+  useEffect(() => {
+    onChessReady?.(chess);
+  }, [chess, onChessReady]);
 
   const [boardOrientation, setBoardOrientation] = useState<'white' | 'black'>('white');
   const [isEditMode, setIsEditMode] = useState(false);
