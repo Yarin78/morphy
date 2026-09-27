@@ -2,10 +2,8 @@ package se.yarin.morphy.cli.games;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import se.yarin.morphy.DatabaseCbh;
 import se.yarin.morphy.api.Database;
 import se.yarin.morphy.api.Databases;
-import se.yarin.morphy.cb2.Database2Cbh;
 import se.yarin.morphy.model.*;
 
 import java.io.File;
@@ -25,22 +23,8 @@ public class OutputDatabaseWriter extends GameConsumerBase {
 
   public OutputDatabaseWriter(File file, boolean overwrite) throws IOException {
     this.file = file;
-    if (overwrite && file.exists()) {
-      delete(file);
-    }
+    OutputDatabases.prepareForOverwrite(file, overwrite);
     this.output = Databases.create(file);
-  }
-
-  private static void delete(File file) throws IOException {
-    String name = file.getName().toLowerCase();
-    if (name.endsWith(".cbh")) {
-      DatabaseCbh.delete(file);
-    } else if (name.endsWith(".2cbh")) {
-      Database2Cbh.delete(file);
-    } else {
-      // TODO: A pgn database may have additional index files that should be deleted as well
-      file.delete();
-    }
   }
 
   @Override

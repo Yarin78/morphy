@@ -19,7 +19,6 @@ import se.yarin.morphy.cli.queries.FacadeQuerySupport;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.FileAlreadyExistsException;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -150,11 +149,7 @@ public class Games extends BaseCommand implements Callable<Integer> {
         gameConsumer = new StatsGameConsumer();
       }
     } else {
-      File file = new File(output);
-      if (!overwrite && file.exists()) {
-        throw new FileAlreadyExistsException(output);
-      }
-      gameConsumer = new OutputDatabaseWriter(file, overwrite);
+      gameConsumer = new OutputDatabaseWriter(new File(output), overwrite);
     }
     return gameConsumer;
   }

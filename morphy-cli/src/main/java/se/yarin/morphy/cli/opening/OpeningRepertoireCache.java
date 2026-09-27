@@ -9,13 +9,17 @@ import se.yarin.chess.Player;
 import se.yarin.chess.Position;
 import se.yarin.chess.annotations.CommentaryAfterMoveAnnotation;
 import se.yarin.chess.annotations.NAGAnnotation;
-import se.yarin.morphy.DatabaseCbh;
-import se.yarin.morphy.DatabaseMode;
-import se.yarin.morphy.DatabaseReadTransaction;
-import se.yarin.morphy.Game;
+import se.yarin.morphy.api.AccessMode;
+import se.yarin.morphy.api.Database;
+import se.yarin.morphy.api.Databases;
+import se.yarin.morphy.api.GameFetchOptions;
+import se.yarin.morphy.api.query.Query;
 import se.yarin.morphy.chessbase.annotations.AnnotationConverter;
 import se.yarin.morphy.chessbase.annotations.TextAfterMoveAnnotation;
 import se.yarin.morphy.chessbase.annotations.TextBeforeMoveAnnotation;
+import se.yarin.morphy.chessbase.convert.GameDtoImporter;
+import se.yarin.morphy.cli.queries.FacadeQuerySupport;
+import se.yarin.morphy.model.PlayerDto;
 
 import java.io.File;
 import java.io.IOException;
@@ -44,9 +48,11 @@ import java.util.Optional;
  * must contain the word "white" or "black" (case-insensitively).
  */
 public class OpeningRepertoireCache {
-  // Newly added NAG/commentary annotations are in the format-independent se.yarin.chess
-  // representation and must be converted to their ChessBase-native equivalents before the game
-  // can be persisted.
+  // annotate() mutates the caller's own GameModel in place for a direct write via the raw v1
+  // engine (used only by `update --annotate-opening`), so its newly added NAG/commentary
+  // annotations must be converted to their ChessBase-native equivalents there. summarize()'s
+  // output goes through the Database facade instead, which does that conversion itself when the
+  // resulting GameDto is written, so it keeps its annotations in the neutral se.yarin.chess form.
   private static final AnnotationConverter ANNOTATION_CONVERTER =
       AnnotationConverter.getRoundTripConverter();
 
@@ -356,7 +362,6 @@ public class OpeningRepertoireCache {
 
   private static void addCountAnnotation(GameMovesModel.Node node, String text) {
     node.addAnnotation(new CommentaryAfterMoveAnnotation(text));
-    ANNOTATION_CONVERTER.convertToChessBase(node.getAnnotations());
   }
 
   private static String playedText(int count) {
@@ -380,29 +385,48 @@ public class OpeningRepertoireCache {
     Map<Position, Match> positionCache = new HashMap<>();
     Map<Entry, Map<Position, List<Move>>> bookMoves = new HashMap<>();
     Map<Entry, GameMovesModel> entryMoves = new HashMap<>();
-    try (DatabaseCbh db = DatabaseCbh.open(file, DatabaseMode.READ_ONLY)) {
-      try (DatabaseReadTransaction txn = new DatabaseReadTransaction(db)) {
-        for (Game game : txn.iterable()) {
-          if (game.guidingText() || game.deleted()) {
-            continue;
-          }
-          String whiteName = game.white().getFullName();
-          String blackName = game.black().getFullName();
-          String title = whiteName + " - " + blackName;
-          Entry entry =
-              new Entry(game.id(), title, whiteName, blackName, game.tournament().title());
-          entries.add(entry);
+    GameDtoImporter importer = new GameDtoImporter();
+    try (Database db = Databases.open(file, AccessMode.READ_ONLY)) {
+      FacadeQuerySupport.stream(
+          Query.all(0, 1),
+          0,
+          query -> db.findGames(query, GameFetchOptions.full()),
+          dto -> {
+            if ("text".equals(dto.type()) || Boolean.TRUE.equals(dto.deleted())) {
+              return;
+            }
+            String whiteName = fullName(dto.whitePlayer());
+            String blackName = fullName(dto.blackPlayer());
+            String title = whiteName + " - " + blackName;
+            String eventTitle = dto.tournament() == null ? "" : orEmpty(dto.tournament().title());
+            Entry entry = new Entry(dto.id().intValue(), title, whiteName, blackName, eventTitle);
+            entries.add(entry);
 
-          GameMovesModel moves = game.getModel().moves();
-          entryMoves.put(entry, moves);
+            GameMovesModel moves = importer.toGameModel(dto).moves();
+            entryMoves.put(entry, moves);
 
-          Map<Position, List<Move>> book = new HashMap<>();
-          bookMoves.put(entry, book);
-          indexNode(moves.root(), 0.0, 1.0, entry, positionCache, book);
-        }
-      }
+            Map<Position, List<Move>> book = new HashMap<>();
+            bookMoves.put(entry, book);
+            indexNode(moves.root(), 0.0, 1.0, entry, positionCache, book);
+          });
     }
     return new OpeningRepertoireCache(name, myColor, entries, positionCache, bookMoves, entryMoves);
+  }
+
+  /** Mirrors the "Lastname, Firstname" format {@link se.yarin.morphy.pgn.PgnGameMapper} expects. */
+  private static String fullName(PlayerDto player) {
+    if (player == null || player.lastName() == null) {
+      return "?";
+    }
+    String name = player.lastName();
+    if (player.firstName() != null && !player.firstName().isEmpty()) {
+      name += ", " + player.firstName();
+    }
+    return name;
+  }
+
+  private static String orEmpty(String s) {
+    return s == null ? "" : s;
   }
 
   /**

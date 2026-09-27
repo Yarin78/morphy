@@ -5,25 +5,22 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
 import se.yarin.chess.GameModel;
-import se.yarin.morphy.DatabaseCbh;
-import se.yarin.morphy.DatabaseMode;
-import se.yarin.morphy.DatabaseReadTransaction;
-import se.yarin.morphy.DatabaseWriteTransaction;
-import se.yarin.morphy.Game;
-import se.yarin.morphy.cli.games.PgnDatabaseBuilder;
+import se.yarin.chess.GameMovesModel;
+import se.yarin.morphy.api.AccessMode;
+import se.yarin.morphy.api.Database;
+import se.yarin.morphy.api.Databases;
+import se.yarin.morphy.api.GameFetchOptions;
+import se.yarin.morphy.api.query.Query;
+import se.yarin.morphy.api.query.Sort;
+import se.yarin.morphy.chessbase.convert.GameDtoImporter;
+import se.yarin.morphy.cli.games.OutputDatabases;
 import se.yarin.morphy.cli.opening.OpeningRepertoireCache;
-import se.yarin.morphy.queries.GameQuery;
-import se.yarin.morphy.queries.QueryContext;
-import se.yarin.morphy.queries.filter.GameQueryBuilder;
-import se.yarin.morphy.queries.operations.QueryOperator;
-import se.yarin.morphy.cli.queries.QueryAdapter;
+import se.yarin.morphy.cli.queries.FacadeQuerySupport;
+import se.yarin.morphy.pgn.PgnGameMapper;
+import se.yarin.morphy.pgn.PgnMoves;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.FileAlreadyExistsException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
 import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -38,6 +35,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class SummarizeOpening extends BaseCommand implements Callable<Integer> {
   private static final Logger log = LoggerFactory.getLogger(SummarizeOpening.class);
 
+  // The synthesized summary carries only plain PGN-representable annotations (comments and NAGs),
+  // so a plain PgnMoves codec is enough to turn it into a GameDto; each target format's own
+  // Database.addGame(dto) then re-encodes those annotations however it needs to.
+  private static final PgnGameMapper MAPPER = new PgnGameMapper(PgnMoves.PLAIN);
+
   @CommandLine.Parameters(
       index = "1",
       arity = "0..1",
@@ -50,7 +52,7 @@ public class SummarizeOpening extends BaseCommand implements Callable<Integer> {
 
   @CommandLine.Parameters(
       index = "3",
-      description = "The database to write the summary games to (.cbh or .pgn)")
+      description = "The database to write the summary games to (.cbh, .2cbh or .pgn)")
   private File output;
 
   @CommandLine.Option(
@@ -64,8 +66,6 @@ public class SummarizeOpening extends BaseCommand implements Callable<Integer> {
           "Also annotate moves that match the repertoire with how many times they were played, "
               + "not just deviations and end-of-line positions.")
   private boolean annotateAllMoves;
-
-  private final GameQueryBuilder gameQueryBuilder = new GameQueryBuilder();
 
   @Override
   public Integer call() throws IOException {
@@ -89,49 +89,40 @@ public class SummarizeOpening extends BaseCommand implements Callable<Integer> {
         .forEach(
             file -> {
               log.info("Opening {}", file);
-              try (DatabaseCbh db = DatabaseCbh.open(file, DatabaseMode.READ_ONLY)) {
-                db.moveRepository().setValidateDecodedMoves(false);
+              try (Database db = Databases.open(file, AccessMode.READ_ONLY)) {
+                Query query = Query.of(filterExpression, Sort.natural(), 0, 1);
+                GameFetchOptions fetchOptions = new GameFetchOptions(true, false, false);
+                GameDtoImporter importer = new GameDtoImporter();
 
-                List<Integer> matchingGameIds = new ArrayList<>();
-                try (var readTxn = new DatabaseReadTransaction(db)) {
-                  GameQuery gameQuery;
-                  try {
-                    gameQuery = gameQueryBuilder.buildQuery(db, filterExpression);
-                  } catch (IllegalArgumentException e) {
-                    System.err.println(e.getMessage());
-                    System.exit(1);
-                    return;
-                  }
-
-                  QueryContext qc = new QueryContext(readTxn, false);
-                  List<QueryOperator<Game>> plans =
-                      db.queryPlanner().getGameQueryPlans(qc, gameQuery, true);
-                  QueryOperator<Game> bestPlan = db.queryPlanner().selectBestQueryPlan(plans);
-
-                  try (ProgressBar pb = new ProgressBar("Searching", db.count())) {
-                    QueryAdapter.execute(
-                        bestPlan,
-                        0,
-                        false,
-                        game -> matchingGameIds.add(game.id()),
-                        game -> pb.stepTo(game.id()));
-                  }
-                }
-
-                try (ProgressBar pb = new ProgressBar("Classifying", matchingGameIds.size())) {
-                  for (int gameId : matchingGameIds) {
-                    GameModel model = db.getGame(gameId).getModel();
-                    openingRepertoire
-                        .classify(model.moves())
-                        .ifPresent(
-                            entry -> {
-                              openingRepertoire.recordGame(model.moves(), entry);
-                              totalClassified.incrementAndGet();
+                FacadeQuerySupport.Result result;
+                try {
+                  try (ProgressBar pb = new ProgressBar("Classifying", db.gameCount())) {
+                    result =
+                        FacadeQuerySupport.stream(
+                            query,
+                            0,
+                            pageQuery -> db.findGames(pageQuery, fetchOptions),
+                            dto -> {
+                              if (!"text".equals(dto.type())) {
+                                GameMovesModel moves = importer.toGameModel(dto).moves();
+                                openingRepertoire
+                                    .classify(moves)
+                                    .ifPresent(
+                                        entry -> {
+                                          openingRepertoire.recordGame(moves, entry);
+                                          totalClassified.incrementAndGet();
+                                        });
+                              }
+                              pb.stepTo(dto.id());
                             });
-                    pb.step();
                   }
+                } catch (IllegalArgumentException e) {
+                  System.err.println(e.getMessage());
+                  System.exit(1);
+                  return;
                 }
-                totalGames.addAndGet(matchingGameIds.size());
+
+                totalGames.addAndGet((int) result.consumed());
               } catch (IOException e) {
                 System.err.println("IO error when processing " + file);
                 numDatabaseErrors.incrementAndGet();
@@ -148,14 +139,11 @@ public class SummarizeOpening extends BaseCommand implements Callable<Integer> {
               }
             });
 
-    String outputName = output.getName().toLowerCase(Locale.ROOT);
     int entriesWritten;
-    if (outputName.endsWith(".cbh")) {
-      entriesWritten = writeToDatabase(openingRepertoire);
-    } else if (outputName.endsWith(".pgn")) {
-      entriesWritten = writeToPgn(openingRepertoire);
-    } else {
-      System.err.println("Unknown output format: " + output + " (must end with .cbh or .pgn)");
+    try {
+      entriesWritten = writeOutput(openingRepertoire);
+    } catch (RuntimeException e) {
+      System.err.println("Unknown output format: " + output + " (" + e.getMessage() + ")");
       return 1;
     }
 
@@ -169,41 +157,17 @@ public class SummarizeOpening extends BaseCommand implements Callable<Integer> {
     return 0;
   }
 
-  private int writeToDatabase(OpeningRepertoireCache repertoire) throws IOException {
+  private int writeOutput(OpeningRepertoireCache repertoire) throws IOException {
+    OutputDatabases.prepareForOverwrite(output, overwrite);
     int entriesWritten = 0;
-    try (DatabaseCbh outputDb = DatabaseCbh.create(output, overwrite)) {
-      try (var writeTxn = new DatabaseWriteTransaction(outputDb)) {
-        for (OpeningRepertoireCache.Entry entry : repertoire.entries()) {
-          Optional<GameModel> summary = repertoire.summarize(entry, annotateAllMoves);
-          if (summary.isPresent()) {
-            GameModel model = summary.get();
-            model.header().clearEntityIds();
-            writeTxn.addGame(model);
-            entriesWritten++;
-          }
-        }
-        writeTxn.commit();
-      }
-    }
-    return entriesWritten;
-  }
-
-  private int writeToPgn(OpeningRepertoireCache repertoire) throws IOException {
-    if (!overwrite && output.exists()) {
-      throw new FileAlreadyExistsException(output.toString());
-    }
-    int entriesWritten = 0;
-    PgnDatabaseBuilder pgnBuilder = new PgnDatabaseBuilder(output);
-    try {
+    try (Database outputDb = Databases.create(output)) {
       for (OpeningRepertoireCache.Entry entry : repertoire.entries()) {
         Optional<GameModel> summary = repertoire.summarize(entry, annotateAllMoves);
         if (summary.isPresent()) {
-          pgnBuilder.writeModel(summary.get());
+          outputDb.addGame(MAPPER.toDto(summary.get(), null, true));
           entriesWritten++;
         }
       }
-    } finally {
-      pgnBuilder.finish();
     }
     return entriesWritten;
   }

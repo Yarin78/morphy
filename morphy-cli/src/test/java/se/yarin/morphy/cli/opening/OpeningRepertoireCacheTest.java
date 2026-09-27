@@ -8,6 +8,8 @@ import se.yarin.chess.GameModel;
 import se.yarin.chess.GameMovesModel;
 import se.yarin.chess.Move;
 import se.yarin.chess.NAG;
+import se.yarin.chess.annotations.CommentaryAfterMoveAnnotation;
+import se.yarin.chess.annotations.NAGAnnotation;
 import se.yarin.morphy.DatabaseCbh;
 import se.yarin.morphy.chessbase.annotations.ImmutableTextAfterMoveAnnotation;
 import se.yarin.morphy.chessbase.annotations.SymbolAnnotation;
@@ -119,7 +121,7 @@ public class OpeningRepertoireCacheTest {
     GameMovesModel.Node root = summary.moves().root();
     assertEquals(
         entry.title() + " (4 games recorded)",
-        root.getAnnotations().getByClass(TextAfterMoveAnnotation.class).text());
+        root.getAnnotations().getByClass(CommentaryAfterMoveAnnotation.class).getCommentary());
     assertEquals(2, root.children().size());
 
     // The e4 branch: pre-existing text comment must be gone.
@@ -151,28 +153,30 @@ public class OpeningRepertoireCacheTest {
     assertEquals(NAG.GOOD_MOVE, sideline.moveComment());
 
     // The opponent deviation: annotated, but not marked as a bad move of mine.
-    TextAfterMoveAnnotation d6Comment = afterD6.getAnnotations().getByClass(TextAfterMoveAnnotation.class);
-    assertEquals("Not in repertoire, Played 1 time", d6Comment.text());
+    CommentaryAfterMoveAnnotation d6Comment =
+        afterD6.getAnnotations().getByClass(CommentaryAfterMoveAnnotation.class);
+    assertEquals("Not in repertoire, Played 1 time", d6Comment.getCommentary());
     assertNull(afterD6.getAnnotations().getByClass(SymbolAnnotation.class));
 
     // Position after 1.e4 e5: main child plus one new bad-move-of-mine variation.
     assertEquals(2, afterE5.children().size());
     GameMovesModel.Node afterNc3 = afterE5.children().get(1);
     assertMove(B1, C3, afterNc3.lastMove());
-    SymbolAnnotation nc3Symbol = afterNc3.getAnnotations().getByClass(SymbolAnnotation.class);
-    assertEquals(NAG.BAD_MOVE, nc3Symbol.moveComment());
-    TextAfterMoveAnnotation nc3Comment = afterNc3.getAnnotations().getByClass(TextAfterMoveAnnotation.class);
-    assertEquals("Played 1 time", nc3Comment.text());
+    NAGAnnotation nc3Nag = afterNc3.getAnnotations().getByClass(NAGAnnotation.class);
+    assertEquals(NAG.BAD_MOVE, nc3Nag.getNag());
+    CommentaryAfterMoveAnnotation nc3Comment =
+        afterNc3.getAnnotations().getByClass(CommentaryAfterMoveAnnotation.class);
+    assertEquals("Played 1 time", nc3Comment.getCommentary());
 
     // Both leaves at the end of the prepared book were each reached once.
     GameMovesModel.Node afterBb5 = afterNc6.mainNode();
     assertEquals(
         "Reached end of line 1 time",
-        afterBb5.getAnnotations().getByClass(TextAfterMoveAnnotation.class).text());
+        afterBb5.getAnnotations().getByClass(CommentaryAfterMoveAnnotation.class).getCommentary());
     GameMovesModel.Node afterBc4 = afterNf6.mainNode();
     assertEquals(
         "Reached end of line 1 time",
-        afterBc4.getAnnotations().getByClass(TextAfterMoveAnnotation.class).text());
+        afterBc4.getAnnotations().getByClass(CommentaryAfterMoveAnnotation.class).getCommentary());
   }
 
   @Test
@@ -186,16 +190,17 @@ public class OpeningRepertoireCacheTest {
     GameModel summary = repertoire.summarize(entry, true).orElseThrow();
     GameMovesModel.Node afterE4 = summary.moves().root().mainNode();
     assertEquals(
-        "Played 2 times", afterE4.getAnnotations().getByClass(TextAfterMoveAnnotation.class).text());
+        "Played 2 times",
+        afterE4.getAnnotations().getByClass(CommentaryAfterMoveAnnotation.class).getCommentary());
 
     GameMovesModel.Node afterNf3 = afterE4.mainNode().mainNode();
     List<GameMovesModel.Node> children = afterNf3.children();
     assertEquals(
         "Played 1 time",
-        children.get(0).getAnnotations().getByClass(TextAfterMoveAnnotation.class).text());
+        children.get(0).getAnnotations().getByClass(CommentaryAfterMoveAnnotation.class).getCommentary());
     assertEquals(
         "Played 1 time",
-        children.get(1).getAnnotations().getByClass(TextAfterMoveAnnotation.class).text());
+        children.get(1).getAnnotations().getByClass(CommentaryAfterMoveAnnotation.class).getCommentary());
   }
 
   @Test
