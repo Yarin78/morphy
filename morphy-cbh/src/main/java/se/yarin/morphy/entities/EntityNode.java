@@ -1,6 +1,8 @@
 package se.yarin.morphy.entities;
 
-public class EntityNode {
+import se.yarin.morphy.IdObject;
+
+public class EntityNode implements IdObject {
 
   private int id;
 
@@ -15,6 +17,11 @@ public class EntityNode {
   private int firstGameId;
 
   public int getId() {
+    return id;
+  }
+
+  @Override
+  public int id() {
     return id;
   }
 

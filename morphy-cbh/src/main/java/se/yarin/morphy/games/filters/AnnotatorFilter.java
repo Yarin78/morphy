@@ -45,12 +45,12 @@ public class AnnotatorFilter
   }
 
   @Override
-  public boolean matches(int id, @NotNull GameHeader gameHeader) {
+  public boolean matches(@NotNull GameHeader gameHeader) {
     return annotatorIds.contains(gameHeader.annotatorId());
   }
 
   @Override
-  public boolean matchesSerialized(int id, @NotNull ByteBuffer buf) {
+  public boolean matchesSerialized(@NotNull ByteBuffer buf) {
     int annotatorId;
 
     if (IsGameFilter.isGame(buf)) {

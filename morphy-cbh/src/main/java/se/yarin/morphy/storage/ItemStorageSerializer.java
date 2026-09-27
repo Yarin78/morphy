@@ -1,11 +1,12 @@
 package se.yarin.morphy.storage;
 
 import org.jetbrains.annotations.NotNull;
+import se.yarin.morphy.IdObject;
 import se.yarin.morphy.exceptions.MorphyInvalidDataException;
 
 import java.nio.ByteBuffer;
 
-public interface ItemStorageSerializer<THeader, TItem> {
+public interface ItemStorageSerializer<THeader, TItem extends IdObject> {
   /**
    * The number of bytes the header will occupy when serializing it.
    *

@@ -65,12 +65,12 @@ public class IndexBlockSerializer
     }
     buf.position(prevPos + header.itemSize());
 
-    return new IndexBlockItem(nextBlockId, unknown, Collections.unmodifiableList(gameIds));
+    return new IndexBlockItem(id, nextBlockId, unknown, Collections.unmodifiableList(gameIds));
   }
 
   @Override
   public @NotNull IndexBlockItem emptyItem(int id) {
-    return IndexBlockItem.empty();
+    return IndexBlockItem.empty(id);
   }
 
   @Override

@@ -90,7 +90,7 @@ public class ExtendedGameHeaderStorageTest {
   public void putItemInMemory() {
     ExtendedGameHeaderStorage storage = new ExtendedGameHeaderStorage();
 
-    storage.put(1, ExtendedGameHeader.empty(1, 2).withGameTagId(2).withWhiteTeamId(3));
+    storage.put(1, ExtendedGameHeader.empty(1, 1, 2).withGameTagId(2).withWhiteTeamId(3));
 
     ExtendedGameHeader item = storage.get(1);
     assertEquals(1, item.annotationOffset());
@@ -106,7 +106,7 @@ public class ExtendedGameHeaderStorageTest {
     file.delete();
     ExtendedGameHeaderStorage storage = ExtendedGameHeaderStorage.create(file, null);
 
-    storage.put(1, ExtendedGameHeader.empty(1, 2).withGameTagId(2).withWhiteTeamId(3));
+    storage.put(1, ExtendedGameHeader.empty(1, 1, 2).withGameTagId(2).withWhiteTeamId(3));
 
     ExtendedGameHeader item = storage.get(1);
     assertEquals(1, item.annotationOffset());

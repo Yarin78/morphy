@@ -2,9 +2,16 @@ package se.yarin.morphy.storage;
 
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import se.yarin.morphy.IdObject;
 import se.yarin.morphy.exceptions.MorphyIOException;
 
+import java.util.Iterator;
 import java.util.List;
+import java.util.NoSuchElementException;
+import java.util.Spliterator;
+import java.util.Spliterators;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 /**
  * Interface of a simple structured storage containing items of the same type. Items are referenced
@@ -15,7 +22,7 @@ import java.util.List;
  * @param <THeader> the type of the header
  * @param <TItem> the type of the item
  */
-public interface ItemStorage<THeader, TItem> {
+public interface ItemStorage<THeader, TItem extends IdObject> {
   /**
    * Gets the header from the storage
    *
@@ -112,6 +119,62 @@ public interface ItemStorage<THeader, TItem> {
    */
   @NotNull
   List<TItem> getItems(int index, int count, @Nullable ItemStorageFilter<TItem> filter);
+
+  /**
+   * Returns a stream of all items in the given range, reading in batches. Non-matching items (null
+   * values from filtered reads) are excluded.
+   *
+   * @param startIndex the index of the first item (inclusive)
+   * @param endIndex the index past the last item (exclusive)
+   * @param filter an optional filter to apply
+   * @return a stream of items
+   */
+  default @NotNull Stream<TItem> stream(
+      int startIndex, int endIndex, @Nullable ItemStorageFilter<TItem> filter) {
+    int batchSize = 1000;
+    Iterator<TItem> iterator =
+        new Iterator<>() {
+          private int nextBatchStart = startIndex;
+          private List<TItem> currentBatch = List.of();
+          private int indexInBatch = 0;
+          private TItem next = null;
+
+          @Override
+          public boolean hasNext() {
+            while (next == null) {
+              if (indexInBatch < currentBatch.size()) {
+                TItem item = currentBatch.get(indexInBatch);
+                indexInBatch++;
+                if (item != null) {
+                  next = item;
+                  return true;
+                }
+              } else if (nextBatchStart < endIndex) {
+                int count = Math.min(batchSize, endIndex - nextBatchStart);
+                currentBatch = getItems(nextBatchStart, count, filter);
+                nextBatchStart += count;
+                indexInBatch = 0;
+              } else {
+                return false;
+              }
+            }
+            return true;
+          }
+
+          @Override
+          public TItem next() {
+            if (!hasNext()) {
+              throw new NoSuchElementException();
+            }
+            TItem result = next;
+            next = null;
+            return result;
+          }
+        };
+    return StreamSupport.stream(
+        Spliterators.spliteratorUnknownSize(iterator, Spliterator.ORDERED | Spliterator.NONNULL),
+        false);
+  }
 
   /**
    * Closes the estorage

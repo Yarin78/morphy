@@ -77,15 +77,15 @@ public class GameIterator implements Iterator<Game> {
           ItemStorageFilter<ExtendedGameHeader> shortCircuitedFilter =
               new ItemStorageFilter<>() {
                 @Override
-                public boolean matches(int id, @NotNull ExtendedGameHeader extendedGameHeader) {
-                  return gameHeaders.get(id - nextBatchStart) != null
-                      && (extendedFilter == null || extendedFilter.matches(id, extendedGameHeader));
+                public boolean matches(@NotNull ExtendedGameHeader extendedGameHeader) {
+                  return gameHeaders.get(extendedGameHeader.id() - nextBatchStart) != null
+                      && (extendedFilter == null || extendedFilter.matches(extendedGameHeader));
                 }
 
                 @Override
-                public boolean matchesSerialized(int id, @NotNull ByteBuffer buf) {
-                  return gameHeaders.get(id - nextBatchStart) != null
-                      && (extendedFilter == null || extendedFilter.matchesSerialized(id, buf));
+                public boolean matchesSerialized(@NotNull ByteBuffer buf) {
+                  // The id isn't known here; fall through to matches() for the id-dependent check.
+                  return extendedFilter == null || extendedFilter.matchesSerialized(buf);
                 }
               };
           extendedGameHeaders =

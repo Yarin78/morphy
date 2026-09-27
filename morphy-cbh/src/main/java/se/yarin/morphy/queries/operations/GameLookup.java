@@ -47,8 +47,7 @@ public class GameLookup extends QueryOperator<Game> {
     if (gameFilter != null) {
       if (gameFilter.gameHeaderFilter() != null) {
         stream =
-            stream.filter(
-                game -> gameFilter.gameHeaderFilter().matches(game.id(), game.data().header()));
+            stream.filter(game -> gameFilter.gameHeaderFilter().matches(game.data().header()));
       }
       if (gameFilter.extendedGameHeaderFilter() != null) {
         stream =
@@ -56,7 +55,7 @@ public class GameLookup extends QueryOperator<Game> {
                 game ->
                     gameFilter
                         .extendedGameHeaderFilter()
-                        .matches(game.id(), game.data().extendedHeader()));
+                        .matches(game.data().extendedHeader()));
       }
     }
     return stream;

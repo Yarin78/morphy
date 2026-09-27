@@ -24,7 +24,7 @@ public class MedalFilter implements ItemStorageFilter<GameHeader>, GameFilter {
   }
 
   @Override
-  public boolean matches(int id, @NotNull GameHeader gameHeader) {
+  public boolean matches(@NotNull GameHeader gameHeader) {
     if (specificMedal != null) {
       return gameHeader.medals().contains(specificMedal);
     }
@@ -32,7 +32,7 @@ public class MedalFilter implements ItemStorageFilter<GameHeader>, GameFilter {
   }
 
   @Override
-  public boolean matchesSerialized(int id, @NotNull ByteBuffer buf) {
+  public boolean matchesSerialized(@NotNull ByteBuffer buf) {
     int medalBits = ByteBufferUtil.getUnsignedShortB(buf, 37);
     if (specificMedal != null) {
       return (medalBits & (1 << specificMedal.ordinal())) != 0;

@@ -23,7 +23,7 @@ public class ManualFilter implements ItemStorageFilter<GameHeader>, GameFilter {
   }
 
   @Override
-  public boolean matches(int id, @NotNull GameHeader gameHeader) {
+  public boolean matches(@NotNull GameHeader gameHeader) {
     return gameHeaderIds.contains(gameHeader.id());
   }
 

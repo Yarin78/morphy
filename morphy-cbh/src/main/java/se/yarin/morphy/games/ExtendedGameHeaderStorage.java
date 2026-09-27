@@ -425,6 +425,7 @@ public class ExtendedGameHeaderStorage
 
     int itemSize = header.serializedItemSize();
     ImmutableExtendedGameHeader.Builder builder = ImmutableExtendedGameHeader.builder();
+    builder.id(id);
     try {
       builder.whiteTeamId(ByteBufferUtil.getIntB(buf));
       builder.blackTeamId(ByteBufferUtil.getIntB(buf));
@@ -553,7 +554,7 @@ public class ExtendedGameHeaderStorage
 
   @Override
   public @NotNull ExtendedGameHeader emptyItem(int id) {
-    return ExtendedGameHeader.empty(0, 0);
+    return ExtendedGameHeader.empty(id, 0, 0);
   }
 
   public void close() {

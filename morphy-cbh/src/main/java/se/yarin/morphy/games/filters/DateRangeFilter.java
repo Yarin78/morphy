@@ -70,13 +70,13 @@ public class DateRangeFilter extends IsGameFilter {
   }
 
   @Override
-  public boolean matches(int id, @NotNull GameHeader gameHeader) {
-    return super.matches(id, gameHeader) && matches(gameHeader.playedDate());
+  public boolean matches(@NotNull GameHeader gameHeader) {
+    return super.matches(gameHeader) && matches(gameHeader.playedDate());
   }
 
   @Override
-  public boolean matchesSerialized(int id, @NotNull ByteBuffer buf) {
-    return super.matchesSerialized(id, buf)
+  public boolean matchesSerialized(@NotNull ByteBuffer buf) {
+    return super.matchesSerialized(buf)
         && matches(CBUtil.decodeDate(ByteBufferUtil.getUnsigned24BitB(buf, 24)));
   }
 

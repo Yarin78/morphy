@@ -3,6 +3,7 @@ package se.yarin.morphy.storage;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import se.yarin.morphy.DatabaseContext;
+import se.yarin.morphy.IdObject;
 import se.yarin.morphy.exceptions.MorphyException;
 import se.yarin.morphy.exceptions.MorphyIOException;
 import se.yarin.morphy.exceptions.MorphyInvalidDataException;
@@ -24,7 +25,7 @@ import java.util.Set;
 
 import static java.nio.file.StandardOpenOption.*;
 
-public class FileItemStorage<THeader, TItem>
+public class FileItemStorage<THeader, TItem extends IdObject>
     implements ItemStorage<THeader, TItem>, MetricsProvider {
   private final MetricsRef<ItemMetrics> itemMetricsRef;
   private long fileSize;
@@ -202,9 +203,9 @@ public class FileItemStorage<THeader, TItem>
       if (filter == null) {
         result.add(serializer.deserializeItem(index + i, buf, this.header));
       } else {
-        if (filter.matchesSerialized(index + i, buf)) {
+        if (filter.matchesSerialized(buf)) {
           TItem item = serializer.deserializeItem(index + i, buf, this.header);
-          result.add(filter.matches(index + i, item) ? item : null);
+          result.add(filter.matches(item) ? item : null);
         } else {
           buf.position(buf.position() + serializedItemSize);
           result.add(null);
@@ -219,7 +220,7 @@ public class FileItemStorage<THeader, TItem>
     ArrayList<TItem> result = new ArrayList<>(count);
     for (int i = 0; i < count; i++) {
       TItem item = getItem(index + i);
-      result.add(filter == null || filter.matches(index + i, item) ? item : null);
+      result.add(filter == null || filter.matches(item) ? item : null);
     }
     return result;
   }
