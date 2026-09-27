@@ -48,6 +48,7 @@ import se.yarin.morphy.model.TournamentDto;
 import se.yarin.morphy.queries.EntityQuery;
 import se.yarin.morphy.queries.GameQuery;
 import se.yarin.morphy.queries.QueryContext;
+import se.yarin.morphy.queries.QueryEngineKind;
 import se.yarin.morphy.queries.QueryPlanner;
 import se.yarin.morphy.queries.QuerySortField;
 import se.yarin.morphy.queries.QuerySortOrder;
@@ -88,6 +89,7 @@ public class DatabaseCbhFacade implements Database, CbhDiagnostics {
   private final @NotNull GameDtoImporter gameDtoImporter = new GameDtoImporter();
   private final @NotNull GameQueryBuilder gameQueryBuilder = new GameQueryBuilder();
   private final @NotNull Map<EntityKind<?>, KindSupport<?, ?>> kinds;
+  private final @NotNull QueryEngineKind engine;
 
   /**
    * How one entity kind maps onto v1: its entity type, query builder, index transaction and DTO
@@ -100,9 +102,20 @@ public class DatabaseCbhFacade implements Database, CbhDiagnostics {
       @NotNull Function<DatabaseTransaction, EntityIndexTransaction<E>> index,
       @NotNull BiFunction<DatabaseTransaction, E, D> toDto) {}
 
-  /** Wraps an open v1 database; the facade takes over closing it. */
+  /** Wraps an open v1 database, searching with the default (legacy) query engine. */
   public DatabaseCbhFacade(@NotNull DatabaseCbh database) {
+    this(database, QueryEngineKind.LEGACY);
+  }
+
+  /**
+   * Wraps an open v1 database; the facade takes over closing it.
+   *
+   * @param engine which query engine {@link #findGames}/{@link #findEntities} use. {@link
+   *     QueryEngineKind#NODE} is not yet implemented; see {@link QueryEngineKind}.
+   */
+  public DatabaseCbhFacade(@NotNull DatabaseCbh database, @NotNull QueryEngineKind engine) {
     this.database = database;
+    this.engine = engine;
     this.kinds =
         Map.of(
             EntityKind.PLAYER,
@@ -235,6 +248,7 @@ public class DatabaseCbhFacade implements Database, CbhDiagnostics {
   @Override
   public @NotNull ResultPage<GameDto> findGames(
       @NotNull Query query, @NotNull GameFetchOptions fetch) {
+    requireLegacyEngine();
     List<FilterCondition> conditions = QuerySupport.conditions(query, gameQueryBuilder.defaultField());
     QuerySortOrder<Game> sortOrder = gameQueryBuilder.buildSortOrder(query.sort());
 
@@ -251,6 +265,21 @@ public class DatabaseCbhFacade implements Database, CbhDiagnostics {
           QuerySupport.slice(games, query).stream().map(game -> toDto(game, fetch)).toList();
       return new ResultPage<>(
           page, query.offset(), query.limit(), (long) games.size(), QuerySupport.describe(conditions));
+    }
+  }
+
+  /**
+   * Throws unless {@link #engine} is {@link QueryEngineKind#LEGACY}. {@link QueryEngineKind#NODE}
+   * has no logical-query-to-physical-plan translator yet, so it can't execute a search; see {@code
+   * morphy-cbh/docs/NODE-QUERY-ENGINE.md}.
+   */
+  private void requireLegacyEngine() {
+    if (engine != QueryEngineKind.LEGACY) {
+      throw new UnsupportedOperationException(
+          "The "
+              + engine
+              + " query engine is not yet wired into findGames/findEntities; see"
+              + " morphy-cbh/docs/NODE-QUERY-ENGINE.md");
     }
   }
 
@@ -338,6 +367,7 @@ public class DatabaseCbhFacade implements Database, CbhDiagnostics {
 
   private <E extends Entity & Comparable<E>, D> ResultPage<D> findEntities(
       KindSupport<E, D> support, Query query) {
+    requireLegacyEngine();
     List<FilterCondition> conditions = QuerySupport.conditions(query, support.queryBuilder().defaultField());
     EntityQuery<E> entityQuery = entityQuery(support, conditions, query.sort());
 
