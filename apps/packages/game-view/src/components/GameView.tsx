@@ -88,7 +88,9 @@ export const GameView: React.FC<GameViewProps> = ({
   const previousMoveRef = useRef<any>(null);
   const [autoShapes, setAutoShapes] = useState<any[]>([]);
   const [userDrawnShapes, setUserDrawnShapes] = useState<any[]>([]);
-  const animationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  // ReturnType<typeof setTimeout>, not NodeJS.Timeout: this is browser code, and setTimeout's
+  // return type depends on which lib is in scope for whoever compiles this file.
+  const animationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [leftPanelWidth, setLeftPanelWidth] = useState<number>(550);
   const [boardSize, setBoardSize] = useState<number>(512);
   const [isResizing, setIsResizing] = useState(false);
