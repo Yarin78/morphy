@@ -56,9 +56,11 @@ public record Date(int year, int month, int day) implements Comparable<Date> {
   }
 
   public String toPrettyString() {
-    // Either "YYYY" or "YYYY-MM-DD"
+    // "YYYY", "YYYY-MM" or "YYYY-MM-DD"
     if (year > 0 && month > 0 && day > 0) {
       return String.format("%04d-%02d-%02d", year, month, day);
+    } else if (year > 0 && month > 0) {
+      return String.format("%04d-%02d", year, month);
     } else if (year > 0) {
       return String.format("%04d", year);
     } else {
