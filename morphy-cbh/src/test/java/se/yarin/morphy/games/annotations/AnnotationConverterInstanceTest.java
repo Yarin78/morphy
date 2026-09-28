@@ -150,7 +150,7 @@ public class AnnotationConverterInstanceTest {
         assertTrue(commentary.contains("[%csl"));
         assertTrue(commentary.contains("[%clk"));
         assertTrue(commentary.contains("Good move"));
-        assertFalse(commentary.contains("[%post:"));
+        assertFalse(commentary.contains("[%post_"));
     }
 
     @Test
@@ -170,7 +170,7 @@ public class AnnotationConverterInstanceTest {
         assertEquals(1, annotations.size());
         assertTrue(annotations.get(0) instanceof CommentaryAfterMoveAnnotation);
         String commentary = ((CommentaryAfterMoveAnnotation) annotations.get(0)).getCommentary();
-        assertTrue(commentary.contains("[%post:GER"));
+        assertTrue(commentary.contains("[%post_GER"));
         assertTrue(commentary.contains("Ein Kommentar"));
     }
 

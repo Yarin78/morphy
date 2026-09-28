@@ -42,13 +42,14 @@ public class AnnotationPgnUtil {
     /**
      * Escapes special characters in a string for PGN annotation encoding.
      * Backslashes are escaped first, then quotes, brackets, and curly braces.
+     * The result never contains a literal ']', '{' or '}', since common PGN parsers end a
+     * [%cmd ...] at the first ']' and a comment at the first '}', ignoring backslashes.
      */
     public static String escapeString(@NotNull String s) {
         // Escape backslashes first, then other special characters
-        // Replace curly braces with placeholders since PGN comments don't support escaping them
         return s.replace("\\", "\\\\")
                 .replace("\"", "\\\"")
-                .replace("]", "\\]")
+                .replace("]", "\\)")  // Use \) as placeholder for ]
                 .replace("{", "\\<")  // Use \< as placeholder for {
                 .replace("}", "\\>");  // Use \> as placeholder for }
     }
@@ -62,7 +63,9 @@ public class AnnotationPgnUtil {
         for (char c : s.toCharArray()) {
             if (escaped) {
                 // Map escape sequences back to original characters
-                if (c == '<') {
+                if (c == ')') {
+                    sb.append(']');
+                } else if (c == '<') {
                     sb.append('{');
                 } else if (c == '>') {
                     sb.append('}');

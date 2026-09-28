@@ -609,7 +609,7 @@ public class AnnotationConverterTest {
         roundTripConverter.convertToPgn(annotations);
 
         String commentary = ((CommentaryBeforeMoveAnnotation) annotations.get(0)).getCommentary();
-        assertTrue(commentary.contains("[%pre:GER Dies ist auf Deutsch]"));
+        assertTrue(commentary.contains("[%pre_GER Dies ist auf Deutsch]"));
     }
 
     @Test
@@ -623,7 +623,7 @@ public class AnnotationConverterTest {
         roundTripConverter.convertToPgn(annotations);
 
         String commentary = ((CommentaryAfterMoveAnnotation) annotations.get(0)).getCommentary();
-        assertTrue(commentary.contains("[%post:FRA Ceci est en français]"));
+        assertTrue(commentary.contains("[%post_FRA Ceci est en français]"));
     }
 
     @Test
@@ -641,7 +641,7 @@ public class AnnotationConverterTest {
     @Test
     public void testTextBeforeMoveAnnotationDecodingWithLanguage() {
         Annotations annotations = new Annotations();
-        annotations.add(new CommentaryAfterMoveAnnotation("[%pre:GER Eine wichtige Entscheidung]"));
+        annotations.add(new CommentaryAfterMoveAnnotation("[%pre_GER Eine wichtige Entscheidung]"));
 
         roundTripConverter.convertToChessBase(annotations);
 
@@ -654,7 +654,7 @@ public class AnnotationConverterTest {
     @Test
     public void testTextAfterMoveWithLanguageDecoding() {
         Annotations annotations = new Annotations();
-        annotations.add(new CommentaryAfterMoveAnnotation("[%post:FRA Un bon coup]"));
+        annotations.add(new CommentaryAfterMoveAnnotation("[%post_FRA Un bon coup]"));
 
         roundTripConverter.convertToChessBase(annotations);
 
@@ -662,6 +662,53 @@ public class AnnotationConverterTest {
         assertNotNull(text);
         assertEquals("Un bon coup", text.text());
         assertEquals(Nation.FRANCE, text.language());
+    }
+
+    @Test
+    public void testTextWithBracketsAndBracesHasNoLiteralDelimiters() {
+        // PGN parsers that don't know about backslash escapes end a [%...] command at the first
+        // ']' and a comment at the first '}', so the encoded text must contain neither
+        String original = "See [1] and {2}, path C:\\dir, \"quoted\"";
+        Annotations annotations = new Annotations();
+        annotations.add(ImmutableTextAfterMoveAnnotation.builder()
+                .text(original)
+                .language(Nation.ENGLAND)
+                .build());
+
+        roundTripConverter.convertToPgn(annotations);
+
+        String commentary = ((CommentaryAfterMoveAnnotation) annotations.get(0)).getCommentary();
+        String payload = commentary.substring(commentary.indexOf(' ') + 1, commentary.length() - 1);
+        assertFalse(payload.contains("]"));
+        assertFalse(payload.contains("{"));
+        assertFalse(payload.contains("}"));
+
+        roundTripConverter.convertToChessBase(annotations);
+
+        TextAfterMoveAnnotation text = annotations.getByClass(TextAfterMoveAnnotation.class);
+        assertNotNull(text);
+        assertEquals(original, text.text());
+    }
+
+    @Test
+    public void testTextWithLanguageCodeContainingDigitRoundTrips() {
+        Annotations annotations = new Annotations();
+        annotations.add(ImmutableTextBeforeMoveAnnotation.builder()
+                .text("Vorher")
+                .language(Nation.GERMAN_EMPIRE)
+                .build());
+
+        roundTripConverter.convertToPgn(annotations);
+
+        String commentary = ((CommentaryBeforeMoveAnnotation) annotations.get(0)).getCommentary();
+        assertEquals("[%pre_GE2 Vorher]", commentary);
+
+        roundTripConverter.convertToChessBase(annotations);
+
+        TextBeforeMoveAnnotation text = annotations.getByClass(TextBeforeMoveAnnotation.class);
+        assertNotNull(text);
+        assertEquals("Vorher", text.text());
+        assertEquals(Nation.GERMAN_EMPIRE, text.language());
     }
 
     // ========== Tests for Game Quotation ==========

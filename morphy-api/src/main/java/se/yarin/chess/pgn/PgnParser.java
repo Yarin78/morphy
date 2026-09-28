@@ -267,7 +267,7 @@ public class PgnParser {
 
                 case COMMENT:
                     // Determine what this comment attaches to:
-                    // 1. If it contains before-move markers ([%pre ...] or [%pre:XXX ...]), it's
+                    // 1. If it contains before-move markers ([%pre ...] or [%pre_XXX ...]), it's
                     //    explicitly about the next move, wherever we are.
                     // 2. Otherwise, a plain comment before the game's very first move is a
                     //    whole-game preface, not really "about" move 1.
@@ -323,10 +323,10 @@ public class PgnParser {
 
     /**
      * Checks if a comment contains markers that indicate it's a before-move comment.
-     * These markers are: [%pre ...] or [%pre:XXX ...]
+     * These markers are: [%pre ...] or [%pre_XXX ...]
      */
     private static boolean isBeforeMoveComment(String comment) {
         return comment.contains("[%pre ") ||
-               comment.contains("[%pre:");
+               comment.contains("[%pre_");
     }
 }

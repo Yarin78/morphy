@@ -91,9 +91,16 @@ Characters that need escaping inside `[%...]` blocks:
 
 | Character | Escape Sequence | Notes |
 |-----------|-----------------|-------|
-| `]` | `\]` | Closes the bracket block |
+| `]` | `\)` | Closes the bracket block |
+| `{` | `\<` | Opens a comment |
+| `}` | `\>` | Closes the comment |
 | `\` | `\\` | Escape character itself |
 | `"` | `\"` | Inside quoted strings |
+
+The escaped text never contains a literal `]`, `{` or `}`. Common PGN parsers (for example
+`@jackstenglein/pgn-parser`, used by the web app) don't know about backslash escapes and end a
+`[%...]` block at the first `]` and a comment at the first `}`, so these get placeholders rather
+than a backslash in front of the character itself.
 
 ### Example
 ```
@@ -125,16 +132,20 @@ The default assumption is that comments belong **after** the preceding move. Use
 
 | Position | Default Language | Specific Language |
 |----------|------------------|-------------------|
-| After-move | Plain text | `[%post:LANG text]` |
-| Before-move | `[%pre text]` | `[%pre:LANG text]` |
+| After-move | Plain text | `[%post_LANG text]` |
+| Before-move | `[%pre text]` | `[%pre_LANG text]` |
 
-Where `LANG` is a 3-letter IOC language code (e.g., `ENG`, `GER`, `FRA`).
+Where `LANG` is a 3-character IOC language code (e.g., `ENG`, `GER`, `FRA`).
 
 ### Design Rationale
 
 This approach separates two concerns:
 1. **Position** (before/after): `%pre` and `%post` indicate position
-2. **Language**: Optional `:LANG` suffix specifies language
+2. **Language**: Optional `_LANG` suffix specifies language
+
+The suffix is joined with `_`, not `:`, since command names in common PGN parsers only allow
+letters, digits, `_`, `-` and `.`. Keeping the language in the command name, rather than in the
+text, keeps it unambiguous and gives each language its own command.
 
 Most comments are after-move with default language, so they require no special encoding—keeping the common case simple.
 
@@ -157,7 +168,7 @@ The `{` immediately follows `(`, so the comment must be a before-move comment. U
 
 **After-move comment (with language):**
 ```
-1.e4 { [%post:GER Dies ist ein deutscher Kommentar] }
+1.e4 { [%post_GER Dies ist ein deutscher Kommentar] }
 ```
 
 **Before-move comment (default language):**
@@ -167,7 +178,7 @@ The `{` immediately follows `(`, so the comment must be a before-move comment. U
 
 **Before-move comment (with language):**
 ```
-1.e4 { [%pre:FRA Ce commentaire est avant le coup des Noirs] } e5
+1.e4 { [%pre_FRA Ce commentaire est avant le coup des Noirs] } e5
 ```
 
 **Before-move in variation (no marker needed):**
@@ -252,9 +263,9 @@ Green arrow e2→e4, red arrow d7→d5, yellow arrow b1→c3.
 **Format:**
 ```
 Plain text                    # After-move, default language
-[%post:LANG text]             # After-move, specified language
+[%post_LANG text]             # After-move, specified language
 [%pre text]                   # Before-move, default language
-[%pre:LANG text]              # Before-move, specified language
+[%pre_LANG text]              # Before-move, specified language
 ```
 
 **Parameters:**
@@ -275,17 +286,17 @@ Plain text                    # After-move, default language
 
 **Encoding Rules:**
 - After-move with default language: use plain text (no encoding needed)
-- After-move with specific language: use `[%post:LANG text]`
+- After-move with specific language: use `[%post_LANG text]`
 - Before-move with default language: use `[%pre text]`
-- Before-move with specific language: use `[%pre:LANG text]`
+- Before-move with specific language: use `[%pre_LANG text]`
 - Before first move in a variation: plain text (position is unambiguous)
 
 **Examples:**
 ```
 { This is after the move }
-{ [%post:GER Dies ist Deutsch] }
+{ [%post_GER Dies ist Deutsch] }
 { [%pre This is before the next move] }
-{ [%pre:FRA Ceci est en français avant le coup] }
+{ [%pre_FRA Ceci est en français avant le coup] }
 ({ No marker needed before first move in variation } 2...Nc6)
 ```
 
@@ -576,6 +587,7 @@ time/moves
 **Escaping:**
 - Quotes within strings: `\"`
 - Backslashes: `\\`
+- `]`, `{` and `}`: `\)`, `\<` and `\>` (see [Character Escaping](#character-escaping))
 
 **Example:**
 ```

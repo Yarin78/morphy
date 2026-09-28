@@ -126,7 +126,7 @@ public class AnnotationConverter {
     /**
      * Creates a simplified PGN converter for human-readable output.
      * <ul>
-     *   <li>Text annotations output as plain text (no [%pre]/[%post:LANG] tags)</li>
+     *   <li>Text annotations output as plain text (no [%pre]/[%post_LANG] tags)</li>
      *   <li>Language information is lost</li>
      *   <li>Graphical annotations ([%csl], [%cal]) still encoded</li>
      *   <li>Clock, eval, and other [%...] annotations still encoded</li>
@@ -224,7 +224,7 @@ public class AnnotationConverter {
             }
             for (TextAfterMoveAnnotation afterMove : afterMoveAnnotations) {
                 if (afterMove.language() != Nation.NONE) {
-                    appendWithSpace(textAfterBuilder, "[%post:" + afterMove.language().getIocCode() + " " + AnnotationPgnUtil.escapeString(afterMove.text()) + "]");
+                    appendWithSpace(textAfterBuilder, "[%post_" + afterMove.language().getIocCode() + " " + AnnotationPgnUtil.escapeString(afterMove.text()) + "]");
                 }
             }
         }
@@ -252,7 +252,7 @@ public class AnnotationConverter {
                     if (beforeMove.language() == Nation.NONE) {
                         appendWithSpace(textBeforeBuilder, "[%pre " + AnnotationPgnUtil.escapeString(beforeMove.text()) + "]");
                     } else {
-                        appendWithSpace(textBeforeBuilder, "[%pre:" + beforeMove.language().getIocCode() + " " + AnnotationPgnUtil.escapeString(beforeMove.text()) + "]");
+                        appendWithSpace(textBeforeBuilder, "[%pre_" + beforeMove.language().getIocCode() + " " + AnnotationPgnUtil.escapeString(beforeMove.text()) + "]");
                     }
                 }
                 if (!textBeforeBuilder.isEmpty()) {
@@ -394,7 +394,7 @@ public class AnnotationConverter {
         });
 
         // Parse text annotations with language
-        // New format: [%pre text] and [%pre:LANG text]
+        // [%pre text] and [%pre_LANG text]
         // In the order they are written, with or without a language
         while (true) {
             Matcher preMatcher = PRE_PATTERN.matcher(remainingText);
@@ -411,7 +411,7 @@ public class AnnotationConverter {
             remainingText = preMatcher.replaceFirst("").trim();
         }
 
-        // [%post:LANG text] for after-move with specific language
+        // [%post_LANG text] for after-move with specific language
         while (true) {
             Matcher postLangMatcher = POST_LANG_PATTERN.matcher(remainingText);
             if (postLangMatcher.find()) {
@@ -438,8 +438,8 @@ public class AnnotationConverter {
     // character in java.util.regex and overflows the stack on long comments.
     // The tag and the text are separated by exactly the one space the encoder writes, so that text
     // starting with white space reads back unchanged.
-    private static final Pattern PRE_PATTERN = Pattern.compile("\\[%pre(?::([A-Z]{3}))? ([^\\]\\\\]*(?:\\\\.[^\\]\\\\]*)*)\\]");
-    private static final Pattern POST_LANG_PATTERN = Pattern.compile("\\[%post:([A-Z]{3}) ([^\\]\\\\]*(?:\\\\.[^\\]\\\\]*)*)\\]");
+    private static final Pattern PRE_PATTERN = Pattern.compile("\\[%pre(?:_([A-Z0-9]{3}))? ([^\\]\\\\]*(?:\\\\.[^\\]\\\\]*)*)\\]");
+    private static final Pattern POST_LANG_PATTERN = Pattern.compile("\\[%post_([A-Z0-9]{3}) ([^\\]\\\\]*(?:\\\\.[^\\]\\\\]*)*)\\]");
 
     // ========== Public static conversion methods (for backward compatibility) ==========
 
@@ -533,7 +533,7 @@ public class AnnotationConverter {
         });
 
         // Parse text annotations with language
-        // New format: [%pre text] and [%pre:LANG text]
+        // [%pre text] and [%pre_LANG text]
         // In the order they are written, with or without a language
         while (true) {
             Matcher preMatcher = PRE_PATTERN.matcher(remainingText);
@@ -550,7 +550,7 @@ public class AnnotationConverter {
             remainingText = preMatcher.replaceFirst("").trim();
         }
 
-        // [%post:LANG text] for after-move with specific language
+        // [%post_LANG text] for after-move with specific language
         while (true) {
             Matcher postLangMatcher = POST_LANG_PATTERN.matcher(remainingText);
             if (postLangMatcher.find()) {

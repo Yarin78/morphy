@@ -388,7 +388,7 @@ final class Versions {
     Event event = Corpus.SINQUEFIELD;
 
     s.feature(
-        "Text commentary: after moves, before moves (a [%pre] tag), in German (a [%post:GER] tag),"
+        "Text commentary: after moves, before moves (a [%pre] tag), in German (a [%post_GER] tag),"
             + " and inside variations.",
         () -> {
           s.add(
@@ -398,7 +398,7 @@ final class Versions {
                   .moves(
                       Moves.annotated(
                           "1. e4 { The most popular first move. } e5 { Symmetrical. } 2. Nf3 Nc6 3. Bb5"
-                              + " { [%post:GER Die Spanische Partie] } (3. Bc4 { The Italian Game. } Bc5)"
+                              + " { [%post_GER Die Spanische Partie] } (3. Bc4 { The Italian Game. } Bc5)"
                               + " 3... a6 { [%pre The Morphy Defence] } 4. Ba4 Nf6 5. O-O Be7",
                           "TextAfterMove", "TextBeforeMove")));
           s.add(
@@ -797,7 +797,7 @@ final class Versions {
                                 + " Nc6 { [%path e5 3] } 3. Bb5 { [%vst 1234] [%weblink \"https://en.wikipedia.org/wiki/Ruy_Lopez\""
                                 + " \"Ruy Lopez\"] } a6 { [%tc 90m/40+30m] [%varcolor #FF8800 ML] }"
                                 + " 4. Ba4 { [%medal best,novelty] } Nf6"
-                                + " 5. O-O Be7 { [%eval #-3/25] [%post:GER Ein Kommentar] [%post:FRA Un commentaire] }",
+                                + " 5. O-O Be7 { [%eval #-3/25] [%post_GER Ein Kommentar] [%post_FRA Un commentaire] }",
                             "WhiteClock", "BlackClock", "TimeSpent", "ComputerEvaluation", "CriticalPosition",
                             "PawnStructure", "PiecePath", "WebLink", "VideoStreamTime", "TimeControl",
                             "VariationColor", "Medal", "TextAfterMove"))));
@@ -845,9 +845,9 @@ final class Versions {
                 between(Corpus.GIRI, Corpus.DUBOV, GameResult.DRAW, event, 4)
                     .moves(
                         Moves.annotated(
-                            "1. e4 { [%post:ENG Kings pawn.] } e5 { [%post:GER Königsbauer.] } 2. Nf3"
-                                + " { [%post:FRA Le cavalier.] } Nc6 { [%post:ESP El caballo.] } 3. Bb5"
-                                + " { [%post:ITA L'alfiere.] } a6 { [%pre:GER Vorher.] } 4. Ba4",
+                            "1. e4 { [%post_ENG Kings pawn.] } e5 { [%post_GER Königsbauer.] } 2. Nf3"
+                                + " { [%post_FRA Le cavalier.] } Nc6 { [%post_ESP El caballo.] } 3. Bb5"
+                                + " { [%post_ITA L'alfiere.] } a6 { [%pre_GER Vorher.] } 4. Ba4",
                             "TextAfterMove", "TextBeforeMove"))));
 
     s.feature(
