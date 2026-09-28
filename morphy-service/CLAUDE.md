@@ -19,7 +19,7 @@ mvn test                   # Run tests
 ## Configuration
 
 - **Port**: 8080
-- **Database config**: Loaded from `test-databases/databases.json` at startup
+- **Database config**: Loaded from `test-databases/databases.json` at startup. Each entry has a `displayName` and a `path` (the format follows from its extension), and optionally `readOnly` and `createIfMissing`. Databases open on first access; a missing one is created empty only with `createIfMissing`, and otherwise fails to open
 - **Freshness check**: 600,000ms (10 min) - reopens stale database connections
 - **Allowed paths**: Configurable for security when registering/creating databases
 

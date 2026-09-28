@@ -241,10 +241,10 @@ public class DatabaseService {
   private void openDatabaseFile(@NotNull String databaseId, @NotNull DatabaseState state) {
     File dbFile = new File(state.config.getPath());
 
-    // Create database file if it doesn't exist (only for writable databases)
+    // Create the database if it doesn't exist, but only if the configuration asks for it
     if (!dbFile.exists()) {
-      if (state.config.isReadOnly()) {
-        log.error("Database file not found for read-only database '{}': {}", databaseId, state.config.getPath());
+      if (!state.config.isCreateIfMissing()) {
+        log.error("Database file not found for '{}': {}", databaseId, state.config.getPath());
         return;
       }
       try {

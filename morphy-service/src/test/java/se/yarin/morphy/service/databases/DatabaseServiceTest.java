@@ -486,6 +486,51 @@ class DatabaseServiceTest {
     }
 
     @Test
+    @DisplayName("should not create a missing database unless configured to")
+    void missingDatabase_NotCreated() throws Exception {
+      File dbFile = tempDir.resolve("missing.cbh").toFile();
+      DatabaseService testService = serviceWithDatabase(dbFile, false);
+
+      IllegalStateException exception =
+          assertThrows(IllegalStateException.class, () -> testService.read("db", db -> null));
+
+      assertTrue(exception.getMessage().contains("failed to open"));
+      assertFalse(dbFile.exists());
+    }
+
+    @Test
+    @DisplayName("should create a missing database when configured to")
+    void missingDatabase_CreatedIfMissing() throws Exception {
+      File dbFile = tempDir.resolve("scratch").resolve("scratch.cbh").toFile();
+      DatabaseService testService = serviceWithDatabase(dbFile, true);
+
+      long gameCount = testService.read("db", Database::gameCount);
+
+      assertEquals(0L, gameCount);
+      assertTrue(dbFile.exists());
+    }
+
+    private DatabaseService serviceWithDatabase(File dbFile, boolean createIfMissing)
+        throws IOException {
+      String config =
+          String.format(
+              """
+              {
+                "db": {
+                  "displayName": "Database",
+                  "path": "%s",
+                  "createIfMissing": %s
+                }
+              }
+              """,
+              dbFile.getAbsolutePath().replace("\\", "\\\\"), createIfMissing);
+      DatabaseService testService =
+          new DatabaseService(createConfigFile(config).getAbsolutePath(), 600000L, null, null);
+      testService.init();
+      return testService;
+    }
+
+    @Test
     @DisplayName("should reject refresh of unknown database")
     void refreshDatabase_UnknownDatabase() {
       IllegalArgumentException exception =

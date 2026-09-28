@@ -7,5 +7,10 @@
     "displayName": "World Chess Championships (v2 format)",
     "path": "test-databases/wch2/wch2.2cbh",
     "readOnly": true
+  },
+  "scratch": {
+    "displayName": "Scratch",
+    "path": "test-databases/scratch/scratch.2cbh",
+    "createIfMissing": true
   }
 }

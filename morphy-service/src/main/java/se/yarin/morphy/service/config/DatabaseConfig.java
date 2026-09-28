@@ -1,5 +1,7 @@
 package se.yarin.morphy.service.config;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+
 /**
  * Configuration model for a ChessBase database. Loaded from JSON configuration file.
  */
@@ -8,6 +10,13 @@ public class DatabaseConfig {
   private String displayName;
   private String path;
   private boolean readOnly;
+
+  /**
+   * Whether to create an empty database, in the format its path's extension names, when there is
+   * none at the path. Without it, a missing database fails to open.
+   */
+  @JsonInclude(JsonInclude.Include.NON_DEFAULT)
+  private boolean createIfMissing;
 
   public DatabaseConfig() {}
 
@@ -54,6 +63,14 @@ public class DatabaseConfig {
     this.readOnly = readOnly;
   }
 
+  public boolean isCreateIfMissing() {
+    return createIfMissing;
+  }
+
+  public void setCreateIfMissing(boolean createIfMissing) {
+    this.createIfMissing = createIfMissing;
+  }
+
   @Override
   public String toString() {
     return "DatabaseConfig{"
@@ -66,6 +83,10 @@ public class DatabaseConfig {
         + ", path='"
         + path
         + '\''
+        + ", readOnly="
+        + readOnly
+        + ", createIfMissing="
+        + createIfMissing
         + '}';
   }
 }
