@@ -78,6 +78,61 @@ function nagToGlyph(nag: number): string {
   return NAG_MAP[nag] || '';
 }
 
+// TODO: Language-tagged commentary ([%pre_XXX ...] and [%post_XXX ...], see
+// morphy-cbh/docs/ANNOTATION-TEXT-ENCODING.md) is always shown in English, and text in other
+// languages is hidden. Make the language selectable. Also, @jackstenglein/chess drops the commands
+// of a comment at the start of a variation, so language-tagged text there is lost (and is lost
+// when the game is saved); this goes away once the library is replaced.
+const DISPLAY_LANGUAGE = 'ENG';
+
+type CommandMap = Record<string, unknown> | undefined;
+
+/**
+ * Reverses the escaping the server applies to text inside a [%...] command:
+ * \) is ']', \< is '{', \> is '}', and \x is x for any other character.
+ */
+function unescapeCommandText(text: string): string {
+  return text.replace(/\\(.)/gs, (_, c: string) => (c === ')' ? ']' : c === '<' ? '{' : c === '>' ? '}' : c));
+}
+
+function commandText(commands: CommandMap, name: string): string {
+  const value = commands?.[name];
+  return typeof value === 'string' ? unescapeCommandText(value.trim()) : '';
+}
+
+function joinTexts(...texts: string[]): string {
+  return texts.filter((t) => t).join(' ');
+}
+
+/** The before-move text held in the [%pre] and [%pre_XXX] commands of a comment. */
+function beforeMoveCommandText(commands: CommandMap): string {
+  return joinTexts(commandText(commands, 'pre'), commandText(commands, `pre_${DISPLAY_LANGUAGE}`));
+}
+
+/**
+ * The text of the comment before a move. The chess library keeps only the plain text of such a
+ * comment on the move itself; its commands end up on the previous move in the same line.
+ */
+function commentBeforeMove(chess: Chess, m: Move): string {
+  const previousCommands = m.previous && m.previous.next === m ? m.previous.commentDiag : undefined;
+  return joinTexts(chess.getComment(CommentType.Before, m), beforeMoveCommandText(previousCommands));
+}
+
+function commentAfterMove(chess: Chess, m: Move): string {
+  return joinTexts(
+    chess.getComment(CommentType.After, m),
+    commandText(m.commentDiag, `post_${DISPLAY_LANGUAGE}`)
+  );
+}
+
+/** The text of the comment before the game's first move. */
+function gameComment(chess: Chess): string {
+  return joinTexts(
+    chess.getComment(CommentType.Before, null),
+    beforeMoveCommandText(chess.pgn.gameComment)
+  );
+}
+
 /**
  * Processes comment text and converts [text](database-id:game-id:global-move-index) to a link
  * Returns HTML string with the comment text and link (if pattern found)
@@ -172,16 +227,11 @@ function traverseGameTree(
 
   // Check if line has comments (before or after moves)
   // For the main line (level 0) starting at the first move, also check for game-level comment
-  let hasComments = moves.some((m: any) => {
-    const commentBefore = chess.getComment(CommentType.Before, m);
-    const commentAfter = chess.getComment(CommentType.After, m);
-    return commentBefore || commentAfter;
-  });
+  let hasComments = moves.some((m) => commentBeforeMove(chess, m) || commentAfterMove(chess, m));
 
   // If this is the main line and we're at the first move (parentMoveIndex === 0), check for game-level comment
   if (level === 0 && parentMoveIndex === 0 && moves.length > 0) {
-    const gameCommentBefore = chess.getComment(CommentType.Before, null);
-    if (gameCommentBefore) {
+    if (gameComment(chess)) {
       hasComments = true;
     }
   }
@@ -239,8 +289,7 @@ function traverseGameTree(
     }
 
     // Add comment before move if present
-    // Use the Chess library's getComment method with CommentType.Before
-    const commentBefore = chess.getComment(CommentType.Before, m);
+    const commentBefore = commentBeforeMove(chess, m);
     if (commentBefore) {
       parts.push(
         `<span class="cbcomment" data-inx-mv="${localMoveIndex}" data-linecnt="${lineDepth}">${escapeHtml(commentBefore)}</span>`
@@ -262,8 +311,7 @@ function traverseGameTree(
     }
 
     // Add comment after move if present
-    // Use the Chess library's getComment method with CommentType.After
-    const commentAfter = chess.getComment(CommentType.After, m);
+    const commentAfter = commentAfterMove(chess, m);
     if (commentAfter) {
       parts.push(
         `<span class="cbcomment" data-inx-mv="${localMoveIndex}" data-linecnt="${lineDepth}">${processCommentWithLink(commentAfter)}</span>`
@@ -354,7 +402,7 @@ export function generateNotationHtml(chess: Chess): NotationHtmlResult {
 
   // Check for game-level comment before the first move
   // Comments before the first move are stored as game comments, accessible via getComment(null)
-  const gameCommentBefore = chess.getComment(CommentType.Before, null);
+  const gameCommentBefore = gameComment(chess);
   const parts: string[] = [];
 
   // Initialize line index for level 0
