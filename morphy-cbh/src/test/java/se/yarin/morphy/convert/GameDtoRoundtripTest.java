@@ -87,6 +87,27 @@ class GameDtoRoundtripTest {
 
     // 4. Compare the models
     assertGameModelsEqual(originalModel, recreatedModel);
+    // A finished game has no line evaluation
+    assertNull(dto.lineEvaluation());
+  }
+
+  @Test
+  void testLineGameRoundtrip() throws Exception {
+    // A line (an unfinished game) carries an evaluation of the final position
+    GameModel originalModel = createMinimalGameModel();
+    originalModel.header().setResult(GameResult.NOT_FINISHED);
+    originalModel.header().setLineEvaluation(NAG.WHITE_MODERATE_ADVANTAGE);
+
+    int gameId;
+    try (DatabaseWriteTransaction txn = new DatabaseWriteTransaction(database)) {
+      gameId = txn.addGame(originalModel).id();
+      txn.commit();
+    }
+
+    GameDto dto = converter.toDto(database.getGame(gameId), true, false, true, true, true);
+    assertEquals(NAG.WHITE_MODERATE_ADVANTAGE, dto.lineEvaluation());
+
+    assertGameModelsEqual(originalModel, importer.toGameModel(dto));
   }
 
   @Test
@@ -180,7 +201,6 @@ class GameDtoRoundtripTest {
 
     // Add additional fields that PGN doesn't support
     model.header().setSubRound(1);
-    model.header().setLineEvaluation(NAG.WHITE_MODERATE_ADVANTAGE);
 
     return model;
   }

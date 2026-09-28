@@ -11,6 +11,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.chess.Chess960;
 import se.yarin.chess.GameModel;
+import se.yarin.chess.GameResult;
+import se.yarin.chess.NAG;
 import se.yarin.morphy.Game;
 import se.yarin.morphy.entities.*;
 import se.yarin.morphy.chessbase.GameHeaderFlags;
@@ -115,7 +117,10 @@ public class GameDtoConverter {
     String eco = !game.eco().isSet() ? null : game.eco().toString();
     Integer round = game.round() == 0 ? null : game.round();
     Integer subRound = game.subRound() == 0 ? null : game.subRound();
-    var lineEvaluation = game.lineEvaluation();
+    NAG lineEvaluation =
+        result == GameResult.NOT_FINISHED && game.lineEvaluation() != NAG.NONE
+            ? game.lineEvaluation()
+            : null;
 
     // Tournament information
     TournamentDto tournament = convertTournament(game, includeTournamentDetails);

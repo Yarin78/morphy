@@ -17,7 +17,8 @@ public class ResultsColumn implements GameColumn {
       result = row.dto().result().toString();
       if (row.dto().result() == GameResult.DRAW) {
         result = "½-½";
-      } else if (row.dto().result() == GameResult.NOT_FINISHED) {
+      } else if (row.dto().result() == GameResult.NOT_FINISHED
+          && row.dto().lineEvaluation() != null) {
         result = row.dto().lineEvaluation().toASCIIString();
       }
     }
