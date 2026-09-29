@@ -166,14 +166,25 @@ export interface GameTextDto {
   contents?: string;
 }
 
+/** What kind of rating an elo is, from se.yarin.chess.EloType. */
+export interface EloTypeDto {
+  kind: 'INTERNATIONAL' | 'NATIONAL' | 'SERVER';
+  timeControl: 'NORMAL' | 'BULLET' | 'BLITZ' | 'RAPID' | 'CORRESPONDENCE';
+  nation?: string;
+  name?: string;
+}
+
 export interface GameDto {
   id: number | null;
   type: string;
   textTitle?: string;
   whitePlayer?: PlayerDto;
   whiteElo?: number;
+  /** Present with an elo: what kind of rating it is. */
+  whiteEloType?: EloTypeDto;
   blackPlayer?: PlayerDto;
   blackElo?: number;
+  blackEloType?: EloTypeDto;
   whiteTeam?: TeamDto;
   blackTeam?: TeamDto;
   result: GameResultDto;

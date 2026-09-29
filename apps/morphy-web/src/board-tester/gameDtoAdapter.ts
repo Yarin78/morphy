@@ -1,5 +1,8 @@
 import type { Chess } from '@jackstenglein/chess';
 import {
+  decodeEloType,
+  ELO_TYPE_TAGS,
+  encodeEloType,
   LINE_EVALUATION_TAG,
   PLAYER_ID_TAGS,
   splitPlayerName,
@@ -115,7 +118,7 @@ export function tournamentDto(t: TournamentInfo): TournamentDto {
 }
 
 const KNOWN_TAGS = new Set<string>([
-  ...Object.values(TOURNAMENT_TAGS), ...Object.values(PLAYER_ID_TAGS), 'Date', 'Round', 'White', 'Black', 'Result',
+  ...Object.values(TOURNAMENT_TAGS), ...Object.values(PLAYER_ID_TAGS), ...Object.values(ELO_TYPE_TAGS), 'Date', 'Round', 'White', 'Black', 'Result',
   'WhiteElo', 'BlackElo', 'Board', 'ECO', 'Annotator', 'FEN', 'SetUp', LINE_EVALUATION_TAG,
 ]);
 
@@ -144,7 +147,9 @@ export function gameDtoToPgn(game: GameDto): string {
   tags.push(['Result', RESULT_TO_PGN[game.result] ?? '*']);
   if (game.result === 'NOT_FINISHED') pushIfSet(LINE_EVALUATION_TAG, game.lineEvaluation);
   pushIfSet('WhiteElo', game.whiteElo == null ? undefined : String(game.whiteElo));
+  pushIfSet(ELO_TYPE_TAGS.white, encodeEloType(game.whiteEloType ?? null));
   pushIfSet('BlackElo', game.blackElo == null ? undefined : String(game.blackElo));
+  pushIfSet(ELO_TYPE_TAGS.black, encodeEloType(game.blackEloType ?? null));
   pushIfSet('Board', game.board == null ? undefined : String(game.board));
   pushIfSet('ECO', game.eco);
   pushIfSet('Annotator', game.annotator?.name);
@@ -201,7 +206,9 @@ export function pgnToGamePatch(chess: Chess, base: GameDto): GameDto {
     whitePlayer: playerFromTags(tagValues.White, tagValues[PLAYER_ID_TAGS.white]),
     blackPlayer: playerFromTags(tagValues.Black, tagValues[PLAYER_ID_TAGS.black]),
     whiteElo: tagValues.WhiteElo ? parseInt(tagValues.WhiteElo, 10) : undefined,
+    whiteEloType: tagValues.WhiteElo ? decodeEloType(tagValues[ELO_TYPE_TAGS.white] ?? '') ?? undefined : undefined,
     blackElo: tagValues.BlackElo ? parseInt(tagValues.BlackElo, 10) : undefined,
+    blackEloType: tagValues.BlackElo ? decodeEloType(tagValues[ELO_TYPE_TAGS.black] ?? '') ?? undefined : undefined,
     result,
     lineEvaluation: result === 'NOT_FINISHED' ? tagValues[LINE_EVALUATION_TAG] || undefined : undefined,
     date: parseDateTag(tagValues.Date, base.date),

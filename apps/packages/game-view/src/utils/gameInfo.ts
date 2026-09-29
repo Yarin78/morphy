@@ -1,4 +1,6 @@
 import type { Chess } from '@jackstenglein/chess';
+import { decodeEloType, ELO_TYPE_TAGS, encodeEloType } from './eloType';
+import type { EloTypeInfo } from './eloType';
 import { normalizePlayerName, PLAYER_ID_TAGS } from './player';
 import type { PlayerInfo, PlayerService } from './player';
 import { tournamentFromTags, tournamentToTags } from './tournament';
@@ -21,8 +23,11 @@ export interface GameInfoServices {
 export interface GameInfo {
   white: PlayerInfo;
   whiteElo: string;
+  /** Null when not known, which is saved as FIDE. */
+  whiteEloType: EloTypeInfo | null;
   black: PlayerInfo;
   blackElo: string;
+  blackEloType: EloTypeInfo | null;
   /** A PGN Result tag value: one of the RESULTS values. */
   result: string;
   /** For a line (result '*'), a NAG name like 'WHITE_SLIGHT_ADVANTAGE'; see LINE_EVALUATIONS. */
@@ -104,8 +109,10 @@ export function readGameInfo(chess: Chess): GameInfo {
   return {
     white: readPlayer(chess, 'White', PLAYER_ID_TAGS.white),
     whiteElo: tagValue(chess, 'WhiteElo'),
+    whiteEloType: decodeEloType(tagValue(chess, ELO_TYPE_TAGS.white)),
     black: readPlayer(chess, 'Black', PLAYER_ID_TAGS.black),
     blackElo: tagValue(chess, 'BlackElo'),
+    blackEloType: decodeEloType(tagValue(chess, ELO_TYPE_TAGS.black)),
     result: RESULTS.some((r) => r.value === result) ? result : LINE_RESULT,
     lineEvaluation: tagValue(chess, LINE_EVALUATION_TAG),
     year: numberPart(year),
@@ -141,6 +148,11 @@ export function validateGameInfo(info: GameInfo): GameInfoErrors {
   const errors: GameInfoErrors = {};
   checkNumber(errors, info, 'whiteElo', 0, 9999);
   checkNumber(errors, info, 'blackElo', 0, 9999);
+  for (const [elo, type] of [['whiteElo', info.whiteEloType], ['blackElo', info.blackEloType]] as const) {
+    if (!errors[elo] && info[elo].trim() && type?.kind === 'NATIONAL' && !/^[A-Z0-9]{3}$/.test(type.nation ?? '')) {
+      errors[elo] = 'Needs a nation';
+    }
+  }
   checkNumber(errors, info, 'year', 1, 9999);
   checkNumber(errors, info, 'month', 1, 12);
   checkNumber(errors, info, 'day', 1, 31);
@@ -162,8 +174,11 @@ export function writeGameInfo(chess: Chess, info: GameInfo) {
 
   writePlayer(chess, 'White', PLAYER_ID_TAGS.white, info.white);
   chess.setHeader('WhiteElo', info.whiteElo.trim());
+  // A type only means something with an elo
+  chess.setHeader(ELO_TYPE_TAGS.white, info.whiteElo.trim() ? encodeEloType(info.whiteEloType) : '');
   writePlayer(chess, 'Black', PLAYER_ID_TAGS.black, info.black);
   chess.setHeader('BlackElo', info.blackElo.trim());
+  chess.setHeader(ELO_TYPE_TAGS.black, info.blackElo.trim() ? encodeEloType(info.blackEloType) : '');
   chess.setHeader('Result', info.result);
   chess.setHeader(LINE_EVALUATION_TAG, info.result === LINE_RESULT ? info.lineEvaluation : '');
   chess.setHeader('Date', `${pad(info.year, 4)}.${pad(info.month, 2)}.${pad(info.day, 2)}`);

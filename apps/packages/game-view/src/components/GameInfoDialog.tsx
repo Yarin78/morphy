@@ -8,9 +8,12 @@ import {
 } from '../utils/gameInfo';
 import type { GameInfo, GameInfoErrors, GameInfoServices, GameInfoTextField } from '../utils/gameInfo';
 import type { PlayerInfo } from '../utils/player';
+import { sameEloType } from '../utils/eloType';
+import type { EloTypeInfo } from '../utils/eloType';
 import { newTournament } from '../utils/tournament';
 import type { TournamentInfo } from '../utils/tournament';
 import { PlayerField } from './PlayerField';
+import { RatingField } from './RatingField';
 import { TournamentDialog } from './TournamentDialog';
 import { TournamentField } from './TournamentField';
 import './GameInfoDialog.css';
@@ -66,6 +69,24 @@ export const GameInfoDialog: React.FC<GameInfoDialogProps> = ({ initial, service
 
   const setTournament = (tournament: TournamentInfo | null) => setInfo((i) => ({ ...i, tournament }));
   const setPlayer = (color: 'white' | 'black') => (player: PlayerInfo) => setInfo((i) => ({ ...i, [color]: player }));
+
+  // Both ratings are usually of the same type, so a change to one changes both, unless asked not to
+  const [differentEloTypes, setDifferentEloTypes] = useState(
+    () => !sameEloType(initial.whiteEloType, initial.blackEloType)
+  );
+  const setEloType = (color: 'white' | 'black') => (type: EloTypeInfo | null) =>
+    setInfo((i) =>
+      differentEloTypes
+        ? { ...i, [`${color}EloType`]: type }
+        : { ...i, whiteEloType: type, blackEloType: type }
+    );
+  const setDifferent = (color: 'white' | 'black') => (different: boolean) => {
+    setDifferentEloTypes(different);
+    if (!different) {
+      // Back to one type for both: this one
+      setInfo((i) => ({ ...i, whiteEloType: i[`${color}EloType`], blackEloType: i[`${color}EloType`] }));
+    }
+  };
 
   // The site and year are the tournament's place and start year: only a new tournament's can be
   // changed here
@@ -128,11 +149,6 @@ export const GameInfoDialog: React.FC<GameInfoDialogProps> = ({ initial, service
     </label>
   );
 
-  /** An input in the Players grid, labelled by its row and column headings. */
-  const playerField = (name: GameInfoTextField, label: string, props: InputProps = {}) => (
-    <div className={`game-info-field game-info-field-${name}`}>{input(name, { 'aria-label': label, ...props })}</div>
-  );
-
   const numberProps = { inputMode: 'numeric' as const };
 
   // Keep an evaluation the list doesn't offer selectable, rather than silently dropping it.
@@ -169,11 +185,29 @@ export const GameInfoDialog: React.FC<GameInfoDialogProps> = ({ initial, service
             label="White player"
             inputRef={firstFieldRef}
           />
-          {playerField('whiteElo', 'White rating', numberProps)}
+          <RatingField
+            elo={info.whiteElo}
+            onEloChange={(whiteElo) => setInfo((i) => ({ ...i, whiteElo }))}
+            type={info.whiteEloType}
+            onTypeChange={setEloType('white')}
+            player="White"
+            error={errors.whiteElo}
+            differentTypes={differentEloTypes}
+            onDifferentTypesChange={setDifferent('white')}
+          />
 
           <span className="game-info-row-label">Black</span>
           <PlayerField value={info.black} onChange={setPlayer('black')} service={services?.players} label="Black player" />
-          {playerField('blackElo', 'Black rating', numberProps)}
+          <RatingField
+            elo={info.blackElo}
+            onEloChange={(blackElo) => setInfo((i) => ({ ...i, blackElo }))}
+            type={info.blackEloType}
+            onTypeChange={setEloType('black')}
+            player="Black"
+            error={errors.blackElo}
+            differentTypes={differentEloTypes}
+            onDifferentTypesChange={setDifferent('black')}
+          />
         </fieldset>
 
         <fieldset className="game-info-tournament">

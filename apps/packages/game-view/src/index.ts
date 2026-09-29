@@ -15,3 +15,5 @@ export type { DateParts, TournamentInfo, TournamentService } from './utils/tourn
 export { PLAYER_ID_TAGS, splitPlayerName } from './utils/player';
 export type { PlayerInfo, PlayerService } from './utils/player';
 export type { GameInfoServices } from './utils/gameInfo';
+export { decodeEloType, ELO_TYPE_TAGS, encodeEloType } from './utils/eloType';
+export type { EloTypeInfo } from './utils/eloType';

@@ -61,7 +61,7 @@
 }
 
 .game-info-dialog fieldset.game-info-players {
-  grid-template-columns: auto 1fr 5rem;
+  grid-template-columns: auto 1fr 10rem;
   row-gap: 0.3rem;
 }
 
@@ -212,7 +212,7 @@
 
 @media (max-width: 480px) {
   .game-info-dialog fieldset.game-info-players {
-    grid-template-columns: auto 1fr 4rem;
+    grid-template-columns: auto 1fr 8.5rem;
   }
 }
 
@@ -417,4 +417,110 @@
   transform: translateY(-50%);
   margin-left: 0;
   pointer-events: none;
+}
+
+/* A rating: its type as a button in front of the number, looking like one field */
+.rating-input {
+  display: flex;
+  border: 1px solid #b8a896;
+  border-radius: 4px;
+  background: #fbf8f4;
+}
+
+.rating-input:focus-within {
+  outline: 2px solid #8b6f47;
+  outline-offset: -1px;
+  border-color: #8b6f47;
+}
+
+.rating-input.invalid {
+  border-color: #b3261e;
+}
+
+.game-info-dialog .rating-input input {
+  flex: 1;
+  width: 100%;
+  border: none;
+  background: transparent;
+  outline: none;
+}
+
+.rating-type-button {
+  font: inherit;
+  font-size: 0.75rem;
+  flex: 0 1 auto;
+  max-width: 6rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 0 0.45rem;
+  border: none;
+  border-right: 1px solid #d4c4b0;
+  border-radius: 3px 0 0 3px;
+  background: #efe6da;
+  color: #5a3a1f;
+  cursor: pointer;
+}
+
+.rating-type-button:hover {
+  background: #e3d6c4;
+}
+
+.rating-type-button::after {
+  content: ' ▾';
+  font-size: 0.65rem;
+  color: #8a7a68;
+}
+
+.rating-type-popover {
+  position: fixed;
+  z-index: 10001;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.7rem 0.8rem;
+  background: #fbf8f4;
+  border: 1px solid #b8a896;
+  border-radius: 6px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
+  color: #333;
+  font-size: 0.9rem;
+}
+
+.rating-type-kinds {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.rating-type-kind {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.rating-type-popover input[type='text'],
+.rating-type-popover select {
+  font: inherit;
+  font-size: 0.9rem;
+  padding: 0.3rem 0.45rem;
+  border: 1px solid #b8a896;
+  border-radius: 4px;
+  background: #fff;
+  color: #333;
+}
+
+.rating-type-popover input[type='text'] {
+  width: 4rem;
+}
+
+.rating-type-different {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding-top: 0.45rem;
+  border-top: 1px solid #e0d5c8;
+  font-size: 0.85rem;
+  color: #5a4a3a;
 }
