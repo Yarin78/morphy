@@ -112,6 +112,36 @@ class FacadeWriteTest {
     }
   }
 
+  @Test
+  void newTournamentTakesItsFlagsFromTheGame() throws Exception {
+    File file = new File(tempDir, "flags.2cbh");
+    try (Database v1 = Databases.open(TestDatabases.worldCh(), AccessMode.READ_ONLY);
+        Database v2 = Databases.create(file)) {
+      GameDto g = unbind(v1.getGame(1, GameFetchOptions.full()));
+      TournamentDto t = g.tournament();
+      TournamentDto flagged =
+          new TournamentDto(
+              null, t.title(), t.startDate(), t.endDate(), t.place(), t.nation(), t.category(),
+              null, t.rounds(), t.type(), t.timeControl(), null, true, true, null, null, null,
+              null);
+      long id = v2.addGame(withTournament(g, flagged));
+      TournamentDto back = v2.getGame(id, GameFetchOptions.full()).tournament();
+      assertEquals(true, back.complete());
+      assertEquals(true, back.teamTournament());
+    }
+  }
+
+  private static GameDto withTournament(GameDto g, TournamentDto tournament) {
+    return new GameDto(
+        g.id(), g.type(), g.textTitle(), g.whitePlayer(), g.whiteElo(), g.blackPlayer(),
+        g.blackElo(), g.whiteTeam(), g.blackTeam(), g.result(), g.date(), g.eco(), g.round(),
+        g.subRound(), g.board(), g.lineEvaluation(), tournament, g.source(), g.annotator(),
+        g.gameTag(), g.medals(), g.deleted(), g.topGame(), g.setupPosition(), g.variant(),
+        g.noMoves(), g.notation(), g.variationMoves(), g.ait(), g.vcs(), g.finalMaterial(),
+        g.gameVersion(), g.creationTimestamp(), g.lastChanged(), g.moves(), g.text(),
+        g.extraTags());
+  }
+
   private static GameDto withBoard(GameDto g, Integer board) {
     return new GameDto(
         g.id(), g.type(), g.textTitle(), g.whitePlayer(), g.whiteElo(), g.blackPlayer(),

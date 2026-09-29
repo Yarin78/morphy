@@ -235,6 +235,7 @@ public class AnnotationPgnUtil {
                 }
             }
             case "result" -> parseGameResult(valueStr);
+            case "eventComplete", "eventTeamTournament" -> Boolean.parseBoolean(valueStr);
             case "lineEvaluation" -> {
                 try {
                     yield NAG.valueOf(valueStr);

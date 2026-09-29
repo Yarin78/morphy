@@ -55,6 +55,8 @@ public class GameHeaderModel {
           "eventRounds",
           "eventType",
           "eventTimeControl",
+          "eventComplete",
+          "eventTeamTournament",
           "sourceTitle",
           "source",
           "sourceDate",
@@ -84,6 +86,8 @@ public class GameHeaderModel {
   private @Nullable Integer eventRounds;
   private @Nullable String eventType;
   private @Nullable String eventTimeControl;
+  private @Nullable Boolean eventComplete;
+  private @Nullable Boolean eventTeamTournament;
 
   private @Nullable String sourceTitle;
   private @Nullable String source;
@@ -292,6 +296,23 @@ public class GameHeaderModel {
     this.eventTimeControl = eventTimeControl;
   }
 
+  /** Whether the tournament's games are all in the database. */
+  public @Nullable Boolean getEventComplete() {
+    return eventComplete;
+  }
+
+  public void setEventComplete(@Nullable Boolean eventComplete) {
+    this.eventComplete = eventComplete;
+  }
+
+  public @Nullable Boolean getEventTeamTournament() {
+    return eventTeamTournament;
+  }
+
+  public void setEventTeamTournament(@Nullable Boolean eventTeamTournament) {
+    this.eventTeamTournament = eventTeamTournament;
+  }
+
   // ── Source, annotator, tag ──────────────────────────────────────────────
 
   public @Nullable String getSourceTitle() {
@@ -475,6 +496,8 @@ public class GameHeaderModel {
       case "eventRounds" -> eventRounds;
       case "eventType" -> eventType;
       case "eventTimeControl" -> eventTimeControl;
+      case "eventComplete" -> eventComplete;
+      case "eventTeamTournament" -> eventTeamTournament;
       case "sourceTitle" -> sourceTitle;
       case "source" -> source;
       case "sourceDate" -> sourceDate;
@@ -515,6 +538,8 @@ public class GameHeaderModel {
       case "eventRounds" -> eventRounds = cast(name, value, Integer.class);
       case "eventType" -> eventType = cast(name, value, String.class);
       case "eventTimeControl" -> eventTimeControl = cast(name, value, String.class);
+      case "eventComplete" -> eventComplete = cast(name, value, Boolean.class);
+      case "eventTeamTournament" -> eventTeamTournament = cast(name, value, Boolean.class);
       case "sourceTitle" -> sourceTitle = cast(name, value, String.class);
       case "source" -> source = cast(name, value, String.class);
       case "sourceDate" -> sourceDate = cast(name, value, Date.class);

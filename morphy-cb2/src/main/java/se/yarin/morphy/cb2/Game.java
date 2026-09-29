@@ -362,6 +362,12 @@ public final class Game {
     if (t.rounds() > 0) {
       model.setEventRounds(t.rounds());
     }
+    if (t.complete()) {
+      model.setEventComplete(true);
+    }
+    if (t.teamTournament()) {
+      model.setEventTeamTournament(true);
+    }
   }
 
   private static GameResult result(int value) {

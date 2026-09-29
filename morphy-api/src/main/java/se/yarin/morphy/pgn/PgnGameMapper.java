@@ -169,6 +169,12 @@ public final class PgnGameMapper {
       if (tournament.timeControl() != null) {
         headerModel.setEventTimeControl(tournament.timeControl());
       }
+      if (tournament.complete() != null) {
+        headerModel.setEventComplete(tournament.complete());
+      }
+      if (tournament.teamTournament() != null) {
+        headerModel.setEventTeamTournament(tournament.teamTournament());
+      }
     }
 
     if (dto.source() != null) {
@@ -337,7 +343,9 @@ public final class PgnGameMapper {
         && header.getEventCategory() == null
         && header.getEventRounds() == null
         && header.getEventType() == null
-        && header.getEventTimeControl() == null) {
+        && header.getEventTimeControl() == null
+        && header.getEventComplete() == null
+        && header.getEventTeamTournament() == null) {
       return null;
     }
     return new TournamentDto(
@@ -353,8 +361,8 @@ public final class PgnGameMapper {
         header.getEventType(),
         header.getEventTimeControl(),
         null,
-        null,
-        null,
+        header.getEventComplete(),
+        header.getEventTeamTournament(),
         null,
         null,
         null,

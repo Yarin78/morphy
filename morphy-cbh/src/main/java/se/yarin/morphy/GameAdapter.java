@@ -150,6 +150,12 @@ public class GameAdapter {
     if (tournament.rounds() > 0) {
       model.setEventRounds(tournament.rounds());
     }
+    if (tournament.complete()) {
+      model.setEventComplete(true);
+    }
+    if (tournament.teamTournament()) {
+      model.setEventTeamTournament(true);
+    }
 
     model.setSourceTitle(source.title());
     model.setSource(source.publisher());
@@ -361,6 +367,14 @@ public class GameAdapter {
     }
     if (headerModel.getEventRounds() != null) {
       builder.rounds(headerModel.getEventRounds());
+    }
+    if (Boolean.TRUE.equals(headerModel.getEventComplete())) {
+      // ChessBase sets both complete bits; see TournamentIndex
+      builder.complete(true);
+      builder.legacyComplete(true);
+    }
+    if (Boolean.TRUE.equals(headerModel.getEventTeamTournament())) {
+      builder.teamTournament(true);
     }
     return builder.build();
   }
