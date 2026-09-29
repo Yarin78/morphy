@@ -73,6 +73,11 @@ public class PgnHeaderParser {
                     header.setEventRounds(parseInteger(tagValue, tagName));
                 }
             }
+            case "Board" -> {
+                if (!isUnknown(tagValue)) {
+                    header.setBoard(parseInteger(tagValue, tagName));
+                }
+            }
             case "EventCategory" -> {
                 if (!isUnknown(tagValue)) {
                     header.setEventCategory(parseInteger(tagValue, tagName));

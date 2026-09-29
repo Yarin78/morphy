@@ -85,7 +85,7 @@ public class DatabasePgnTest {
       GameDto g, String type, Integer whiteElo, GameResult result, Map<String, String> extraTags) {
     return new GameDto(
         null, type, null, g.whitePlayer(), whiteElo, g.blackPlayer(), g.blackElo(), g.whiteTeam(),
-        g.blackTeam(), result, g.date(), g.eco(), g.round(), g.subRound(), g.lineEvaluation(),
+        g.blackTeam(), result, g.date(), g.eco(), g.round(), g.subRound(), g.board(), g.lineEvaluation(),
         g.tournament(), g.source(), g.annotator(), g.gameTag(), g.medals(), g.deleted(),
         g.topGame(), g.setupPosition(), g.variant(), g.noMoves(), g.notation(),
         g.variationMoves(), g.ait(), g.vcs(), g.finalMaterial(), g.gameVersion(),
@@ -476,7 +476,7 @@ public class DatabasePgnTest {
       GameDto longer = variant(shorter, "game", null, GameResult.NOT_FINISHED, shorter.extraTags());
       longer = new GameDto(
           longer.id(), longer.type(), null, longer.whitePlayer(), null, longer.blackPlayer(), null,
-          null, null, longer.result(), longer.date(), null, longer.round(), null, null,
+          null, null, longer.result(), longer.date(), null, longer.round(), null, null, null,
           longer.tournament(), null, null, null, null, null, null, null, null, null, null, null,
           null, null, null, null, null, null,
           new se.yarin.morphy.model.GameMovesDto("1. e4 e5 2. Nf3 Nc6"), null, longer.extraTags());

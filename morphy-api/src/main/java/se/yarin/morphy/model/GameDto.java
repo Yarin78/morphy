@@ -31,6 +31,7 @@ import se.yarin.chess.NAG;
   "eco",
   "round",
   "subRound",
+  "board",
   "lineEvaluation",
   "tournament",
   "source",
@@ -76,6 +77,7 @@ public record GameDto(
     @Nullable String eco,
     @Nullable Integer round,
     @Nullable Integer subRound,
+    @Nullable Integer board, // the board in a team match; not stored by every format
     @Nullable NAG lineEvaluation,
 
     // Tournament information

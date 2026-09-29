@@ -45,6 +45,7 @@ public class GameHeaderModel {
           "eco",
           "round",
           "subRound",
+          "board",
           "event",
           "eventDate",
           "eventEndDate",
@@ -72,6 +73,7 @@ public class GameHeaderModel {
   private @Nullable Eco eco;
   private @Nullable Integer round;
   private @Nullable Integer subRound;
+  private @Nullable Integer board;
 
   private @Nullable String event;
   private @Nullable Date eventDate;
@@ -205,6 +207,15 @@ public class GameHeaderModel {
 
   public void setSubRound(@Nullable Integer subRound) {
     this.subRound = subRound;
+  }
+
+  /** The board the game was played on in a team match. */
+  public @Nullable Integer getBoard() {
+    return board;
+  }
+
+  public void setBoard(@Nullable Integer board) {
+    this.board = board;
   }
 
   // ── Tournament ──────────────────────────────────────────────────────────
@@ -454,6 +465,7 @@ public class GameHeaderModel {
       case "eco" -> eco;
       case "round" -> round;
       case "subRound" -> subRound;
+      case "board" -> board;
       case "event" -> event;
       case "eventDate" -> eventDate;
       case "eventEndDate" -> eventEndDate;
@@ -493,6 +505,7 @@ public class GameHeaderModel {
       case "eco" -> eco = cast(name, value, Eco.class);
       case "round" -> round = cast(name, value, Integer.class);
       case "subRound" -> subRound = cast(name, value, Integer.class);
+      case "board" -> board = cast(name, value, Integer.class);
       case "event" -> event = cast(name, value, String.class);
       case "eventDate" -> eventDate = cast(name, value, Date.class);
       case "eventEndDate" -> eventEndDate = cast(name, value, Date.class);

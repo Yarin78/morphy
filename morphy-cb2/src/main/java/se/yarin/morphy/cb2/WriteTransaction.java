@@ -284,7 +284,7 @@ public final class WriteTransaction extends DatabaseTransaction {
             result == GameResult.NOT_FINISHED && lineEvaluation != null ? lineEvaluation.ordinal() : 0,
             h.getRound() == null ? 0 : h.getRound(),
             h.getSubRound() == null ? 0 : h.getSubRound(),
-            previous == null ? 0 : previous.board(),
+            h.getBoard() == null ? 0 : h.getBoard(),
             whiteElo,
             whiteElo > 0 ? ratingType(previous, true) : RatingType.NONE,
             blackElo,

@@ -213,7 +213,7 @@ public class AnnotationPgnUtil {
 
         // Try to determine the type based on field name and parse accordingly
         return switch (fieldName) {
-            case "whiteElo", "blackElo", "round", "subRound", "eventCategory", "eventRounds" -> {
+            case "whiteElo", "blackElo", "round", "subRound", "board", "eventCategory", "eventRounds" -> {
                 try {
                     yield Integer.parseInt(valueStr);
                 } catch (NumberFormatException e) {

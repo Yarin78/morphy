@@ -130,6 +130,9 @@ public final class PgnGameMapper {
     if (dto.subRound() != null) {
       headerModel.setSubRound(dto.subRound());
     }
+    if (dto.board() != null) {
+      headerModel.setBoard(dto.board());
+    }
     if (dto.lineEvaluation() != null) {
       headerModel.setLineEvaluation(dto.lineEvaluation());
     }
@@ -269,6 +272,7 @@ public final class PgnGameMapper {
         eco != null && eco.isSet() ? eco.toString() : null,
         header.getRound(),
         header.getSubRound(),
+        header.getBoard(),
         lineEvaluation == null || lineEvaluation == NAG.NONE ? null : lineEvaluation,
         tournament(header),
         source(header),

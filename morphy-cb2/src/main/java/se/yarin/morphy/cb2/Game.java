@@ -301,6 +301,9 @@ public final class Game {
       if (g.subRound() > 0) {
         model.setSubRound(g.subRound());
       }
+      if (g.board() > 0) {
+        model.setBoard(g.board());
+      }
       setTournament(model, g.tournamentId());
     }
     Source source = source();

@@ -100,7 +100,7 @@ public final class DtoConverter {
     GameResult result = GameResult.NOT_FINISHED;
     Date date = Date.unset();
     String eco = null;
-    Integer round = null, subRound = null;
+    Integer round = null, subRound = null, board = null;
     NAG lineEvaluation = null;
     List<String> medals = null;
     Boolean setupPosition = null;
@@ -125,6 +125,7 @@ public final class DtoConverter {
       }
       round = g.round() > 0 ? g.round() : null;
       subRound = g.subRound() > 0 ? g.subRound() : null;
+      board = g.board() > 0 ? g.board() : null;
       lineEvaluation = g.result() == GameResult.NOT_FINISHED.ordinal() ? nag(g.lineEvaluation()) : null;
       EnumSet<Medal> medalSet = Medal.decode(g.medals());
       medals = medalSet.isEmpty() ? null : medalSet.stream().map(Medal::name).toList();
@@ -221,6 +222,7 @@ public final class DtoConverter {
         eco,
         round,
         subRound,
+        board,
         lineEvaluation,
         tournamentDto,
         sourceDto,

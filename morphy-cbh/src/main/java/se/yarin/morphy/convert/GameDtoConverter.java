@@ -204,6 +204,7 @@ public class GameDtoConverter {
         eco,
         round,
         subRound,
+        null, // the v1 format has no board
         lineEvaluation,
         tournament,
         source,

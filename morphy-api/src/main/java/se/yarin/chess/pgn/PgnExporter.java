@@ -189,6 +189,9 @@ public class PgnExporter {
         if (header.getBlackElo() != null) {
             writeTag(writer, "BlackElo", header.getBlackElo().toString(), null);
         }
+        if (header.getBoard() != null) {
+            writeTag(writer, "Board", header.getBoard().toString(), null);
+        }
 
         // TODO: WhiteFideId
         // TODO: BlackFideId

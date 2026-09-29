@@ -97,6 +97,32 @@ class FacadeWriteTest {
     }
   }
 
+  @Test
+  void boardRoundTrips() throws Exception {
+    File file = new File(tempDir, "board.2cbh");
+    try (Database v1 = Databases.open(TestDatabases.worldCh(), AccessMode.READ_ONLY);
+        Database v2 = Databases.create(file)) {
+      GameDto game = withBoard(unbind(v1.getGame(1, GameFetchOptions.full())), 4);
+      long id = v2.addGame(game);
+      assertEquals(4, v2.getGame(id, GameFetchOptions.full()).board());
+
+      // Replacing the game without a board clears it
+      v2.replaceGame(id, withBoard(game, null));
+      assertEquals(null, v2.getGame(id, GameFetchOptions.full()).board());
+    }
+  }
+
+  private static GameDto withBoard(GameDto g, Integer board) {
+    return new GameDto(
+        g.id(), g.type(), g.textTitle(), g.whitePlayer(), g.whiteElo(), g.blackPlayer(),
+        g.blackElo(), g.whiteTeam(), g.blackTeam(), g.result(), g.date(), g.eco(), g.round(),
+        g.subRound(), board, g.lineEvaluation(), g.tournament(), g.source(), g.annotator(),
+        g.gameTag(), g.medals(), g.deleted(), g.topGame(), g.setupPosition(), g.variant(),
+        g.noMoves(), g.notation(), g.variationMoves(), g.ait(), g.vcs(), g.finalMaterial(),
+        g.gameVersion(), g.creationTimestamp(), g.lastChanged(), g.moves(), g.text(),
+        g.extraTags());
+  }
+
   /** A game with its entity ids dropped, so its entities are found or created by name. */
   private static GameDto unbind(GameDto g) {
     return new GameDto(
@@ -105,7 +131,7 @@ class FacadeWriteTest {
         g.whiteElo(),
         g.blackPlayer() == null ? null : new PlayerDto(null, g.blackPlayer().lastName(), g.blackPlayer().firstName(), null, null, null),
         g.blackElo(), null, null, g.result(), g.date(), g.eco(), g.round(), g.subRound(),
-        g.lineEvaluation(),
+        g.board(), g.lineEvaluation(),
         g.tournament() == null ? null : new TournamentDto(null, g.tournament().title(), g.tournament().startDate(), g.tournament().endDate(), g.tournament().place(), g.tournament().nation(), g.tournament().category(), null, g.tournament().rounds(), g.tournament().type(), g.tournament().timeControl(), null, null, null, null, null, null, null),
         null, null, null, g.medals(), null, null, g.setupPosition(), g.variant(), null, null, null,
         null, null, null, null, null, null, g.moves(), g.text(),
