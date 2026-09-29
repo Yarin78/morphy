@@ -16,6 +16,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
+/**
+ * A file read through a small cache of pages. It's safe to use from several threads: all file access
+ * is by position, never through the channel's own position, and the methods that touch the page
+ * cache or the size are synchronized.
+ */
 public class PagedBlobChannel implements BlobChannel, MetricsProvider {
   public static final int PAGE_SIZE = 16384;
   private static final int DEFAULT_INSERT_CHUNK_SIZE = 1024 * 1024;
@@ -52,17 +57,35 @@ public class PagedBlobChannel implements BlobChannel, MetricsProvider {
     this.chunkSize = chunkSize;
   }
 
-  public long size() {
+  public synchronized long size() {
     return size;
   }
 
   private ByteBuffer readPageUncached(int page) throws IOException {
     fileMetricsRef.update(metrics -> metrics.addPhysicalReads(1));
     ByteBuffer buf = ByteBuffer.allocate(PAGE_SIZE);
-    channel.position((long) page * PAGE_SIZE);
-    channel.read(buf);
+    readFully(buf, (long) page * PAGE_SIZE);
     buf.flip();
     return buf;
+  }
+
+  /** Reads from the position until the buffer is full or the file ends. */
+  private void readFully(ByteBuffer buf, long position) throws IOException {
+    long start = position - buf.position();
+    while (buf.hasRemaining()) {
+      if (channel.read(buf, start + buf.position()) < 0) {
+        break;
+      }
+    }
+  }
+
+  /** Writes all of the buffer at the position. */
+  private int writeFully(ByteBuffer buf, long position) throws IOException {
+    int written = 0;
+    while (buf.hasRemaining()) {
+      written += channel.write(buf, position + written);
+    }
+    return written;
   }
 
   private List<ByteBuffer> getPages(int firstPage, int lastPage) throws IOException {
@@ -81,7 +104,7 @@ public class PagedBlobChannel implements BlobChannel, MetricsProvider {
     return pages;
   }
 
-  public void read(long offset, ByteBuffer buf) throws IOException {
+  public synchronized void read(long offset, ByteBuffer buf) throws IOException {
     int length = buf.remaining();
 
     int startPage = (int) (offset / PAGE_SIZE), lastPage = (int) ((offset + length) / PAGE_SIZE);
@@ -109,7 +132,7 @@ public class PagedBlobChannel implements BlobChannel, MetricsProvider {
     }
   }
 
-  public ByteBuffer read(long offset, int length) throws IOException {
+  public synchronized ByteBuffer read(long offset, int length) throws IOException {
     if (length == 0) {
       return ByteBuffer.allocate(0);
     }
@@ -120,14 +143,13 @@ public class PagedBlobChannel implements BlobChannel, MetricsProvider {
     return buf;
   }
 
-  public int append(ByteBuffer buf) throws IOException {
+  public synchronized int append(ByteBuffer buf) throws IOException {
     pageCache.evict((int) (size / PAGE_SIZE));
     return write(size, buf);
   }
 
-  public int write(long offset, ByteBuffer buf) throws IOException {
-    channel.position(offset);
-    int written = channel.write(buf);
+  public synchronized int write(long offset, ByteBuffer buf) throws IOException {
+    int written = writeFully(buf, offset);
     size = Math.max(size, offset + written);
 
     int startPage = (int) (offset / PAGE_SIZE),
@@ -139,7 +161,7 @@ public class PagedBlobChannel implements BlobChannel, MetricsProvider {
     return written;
   }
 
-  public void insert(long offset, long noBytes) throws IOException {
+  public synchronized void insert(long offset, long noBytes) throws IOException {
     if (noBytes < 0) {
       throw new IllegalArgumentException("Number of bytes to insert must be non-negative");
     }
@@ -157,13 +179,11 @@ public class PagedBlobChannel implements BlobChannel, MetricsProvider {
         pos = offset;
       }
       int numPages = (length + PAGE_SIZE - 1) / PAGE_SIZE; // round up
-      channel.position(pos);
       buf.limit(length);
-      channel.read(buf);
+      readFully(buf, pos);
       fileMetricsRef.update(metrics -> metrics.addPhysicalReads(numPages));
       buf.flip();
-      channel.position(pos + noBytes);
-      channel.write(buf);
+      writeFully(buf, pos + noBytes);
       fileMetricsRef.update(metrics -> metrics.addWrites(numPages));
       buf.clear();
     }
@@ -171,7 +191,7 @@ public class PagedBlobChannel implements BlobChannel, MetricsProvider {
     pageCache.clear();
   }
 
-  public void close() throws IOException {
+  public synchronized void close() throws IOException {
     channel.close();
     pageCache.clear();
   }
