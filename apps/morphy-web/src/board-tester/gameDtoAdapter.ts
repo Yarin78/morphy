@@ -1,7 +1,14 @@
 import type { Chess } from '@jackstenglein/chess';
-import { LINE_EVALUATION_TAG, TOURNAMENT_TAGS, tournamentFromTags, tournamentToTags } from 'game-view';
+import {
+  LINE_EVALUATION_TAG,
+  PLAYER_ID_TAGS,
+  splitPlayerName,
+  TOURNAMENT_TAGS,
+  tournamentFromTags,
+  tournamentToTags,
+} from 'game-view';
 import type { TournamentInfo } from 'game-view';
-import type { DateDto, GameDto, GameResultDto, TournamentDto } from '../api/types';
+import type { DateDto, GameDto, GameResultDto, PlayerDto, TournamentDto } from '../api/types';
 
 // Bridges morphy-service's GameDto (flattened header fields + a movetext-only
 // moves.pgn) and the single full-PGN-string (headers + movetext) that
@@ -52,11 +59,18 @@ function formatPlayerNameTag(player: { lastName?: string; firstName?: string } |
   return player?.firstName ? `${lastName}, ${player.firstName}` : lastName;
 }
 
-function parsePlayerNameTag(value: string | undefined): { lastName?: string; firstName?: string } | undefined {
-  if (!value) return undefined;
-  const [lastName = '', firstName] = value.split(',').map((s) => s.trim());
+/**
+ * A player from its name and id tags. With an id, the game is put with that existing player; without
+ * one, the player is found by name, or created.
+ */
+function playerFromTags(name: string | undefined, id: string | undefined): PlayerDto | undefined {
+  const { lastName, firstName } = splitPlayerName(name ?? '');
   if (!lastName && !firstName) return undefined;
-  return firstName ? { lastName, firstName } : { lastName };
+  return {
+    id: id && /^\d+$/.test(id) ? parseInt(id, 10) : null,
+    lastName,
+    ...(firstName ? { firstName } : {}),
+  };
 }
 
 /** A tournament as the Edit Game Info dialog has it. */
@@ -101,7 +115,7 @@ export function tournamentDto(t: TournamentInfo): TournamentDto {
 }
 
 const KNOWN_TAGS = new Set<string>([
-  ...Object.values(TOURNAMENT_TAGS), 'Date', 'Round', 'White', 'Black', 'Result',
+  ...Object.values(TOURNAMENT_TAGS), ...Object.values(PLAYER_ID_TAGS), 'Date', 'Round', 'White', 'Black', 'Result',
   'WhiteElo', 'BlackElo', 'Board', 'ECO', 'Annotator', 'FEN', 'SetUp', LINE_EVALUATION_TAG,
 ]);
 
@@ -124,7 +138,9 @@ export function gameDtoToPgn(game: GameDto): string {
     game.round == null ? undefined : game.subRound ? `${game.round}.${game.subRound}` : String(game.round)
   );
   pushIfSet('White', formatPlayerNameTag(game.whitePlayer) || undefined);
+  pushIfSet(PLAYER_ID_TAGS.white, game.whitePlayer?.id == null ? undefined : String(game.whitePlayer.id));
   pushIfSet('Black', formatPlayerNameTag(game.blackPlayer) || undefined);
+  pushIfSet(PLAYER_ID_TAGS.black, game.blackPlayer?.id == null ? undefined : String(game.blackPlayer.id));
   tags.push(['Result', RESULT_TO_PGN[game.result] ?? '*']);
   if (game.result === 'NOT_FINISHED') pushIfSet(LINE_EVALUATION_TAG, game.lineEvaluation);
   pushIfSet('WhiteElo', game.whiteElo == null ? undefined : String(game.whiteElo));
@@ -163,10 +179,6 @@ export function gameDtoToPgn(game: GameDto): string {
 export function pgnToGamePatch(chess: Chess, base: GameDto): GameDto {
   const tagValues = chess.header().valueMap();
 
-  const white = parsePlayerNameTag(tagValues.White);
-  const black = parsePlayerNameTag(tagValues.Black);
-  const whiteNameUnchanged = formatPlayerNameTag(white) === formatPlayerNameTag(base.whitePlayer);
-  const blackNameUnchanged = formatPlayerNameTag(black) === formatPlayerNameTag(base.blackPlayer);
 
   const tournament = tournamentFromTags((name) => tagValues[name] ?? '');
 
@@ -186,12 +198,8 @@ export function pgnToGamePatch(chess: Chess, base: GameDto): GameDto {
 
   return {
     ...base,
-    whitePlayer: white
-      ? { id: whiteNameUnchanged ? base.whitePlayer?.id ?? null : null, ...white }
-      : undefined,
-    blackPlayer: black
-      ? { id: blackNameUnchanged ? base.blackPlayer?.id ?? null : null, ...black }
-      : undefined,
+    whitePlayer: playerFromTags(tagValues.White, tagValues[PLAYER_ID_TAGS.white]),
+    blackPlayer: playerFromTags(tagValues.Black, tagValues[PLAYER_ID_TAGS.black]),
     whiteElo: tagValues.WhiteElo ? parseInt(tagValues.WhiteElo, 10) : undefined,
     blackElo: tagValues.BlackElo ? parseInt(tagValues.BlackElo, 10) : undefined,
     result,

@@ -1,6 +1,17 @@
 import type { Chess } from '@jackstenglein/chess';
+import { normalizePlayerName, PLAYER_ID_TAGS } from './player';
+import type { PlayerInfo, PlayerService } from './player';
 import { tournamentFromTags, tournamentToTags } from './tournament';
-import type { TournamentInfo } from './tournament';
+import type { TournamentInfo, TournamentService } from './tournament';
+
+/**
+ * How the Edit Game Info dialog finds existing entities; without one, that kind of entity is just
+ * a name.
+ */
+export interface GameInfoServices {
+  players?: PlayerService;
+  tournaments?: TournamentService;
+}
 
 /**
  * The game header information edited in the Edit Game Info dialog, as form values. Everything is
@@ -8,11 +19,9 @@ import type { TournamentInfo } from './tournament';
  * Chess instance's PGN tags, so whoever saves the game picks the changes up from there.
  */
 export interface GameInfo {
-  whiteLastName: string;
-  whiteFirstName: string;
+  white: PlayerInfo;
   whiteElo: string;
-  blackLastName: string;
-  blackFirstName: string;
+  black: PlayerInfo;
   blackElo: string;
   /** A PGN Result tag value: one of the RESULTS values. */
   result: string;
@@ -70,16 +79,14 @@ function tagValue(chess: Chess, name: string): string {
   return /^\?*$/.test(value) ? '' : value;
 }
 
-/** Splits a "Lastname, Firstname" player tag. */
-function splitName(name: string): [string, string] {
-  const comma = name.indexOf(',');
-  return comma < 0 ? [name, ''] : [name.slice(0, comma).trim(), name.slice(comma + 1).trim()];
+function readPlayer(chess: Chess, nameTag: string, idTag: string): PlayerInfo {
+  const id = tagValue(chess, idTag);
+  return { id: /^\d+$/.test(id) ? parseInt(id, 10) : null, name: tagValue(chess, nameTag) };
 }
 
-function joinName(lastName: string, firstName: string): string {
-  const last = lastName.trim();
-  const first = firstName.trim();
-  return first ? `${last}, ${first}` : last;
+function writePlayer(chess: Chess, nameTag: string, idTag: string, player: PlayerInfo) {
+  chess.setHeader(nameTag, normalizePlayerName(player.name));
+  chess.setHeader(idTag, player.id != null ? String(player.id) : '');
 }
 
 /**
@@ -91,17 +98,13 @@ function numberPart(part: string | undefined): string {
 }
 
 export function readGameInfo(chess: Chess): GameInfo {
-  const [whiteLastName, whiteFirstName] = splitName(tagValue(chess, 'White'));
-  const [blackLastName, blackFirstName] = splitName(tagValue(chess, 'Black'));
   const [year, month, day] = tagValue(chess, 'Date').split('.');
   const [round, subRound] = tagValue(chess, 'Round').split('.');
   const result = tagValue(chess, 'Result') || LINE_RESULT;
   return {
-    whiteLastName,
-    whiteFirstName,
+    white: readPlayer(chess, 'White', PLAYER_ID_TAGS.white),
     whiteElo: tagValue(chess, 'WhiteElo'),
-    blackLastName,
-    blackFirstName,
+    black: readPlayer(chess, 'Black', PLAYER_ID_TAGS.black),
     blackElo: tagValue(chess, 'BlackElo'),
     result: RESULTS.some((r) => r.value === result) ? result : LINE_RESULT,
     lineEvaluation: tagValue(chess, LINE_EVALUATION_TAG),
@@ -157,9 +160,9 @@ export function writeGameInfo(chess: Chess, info: GameInfo) {
   const round = info.round.trim();
   const subRound = info.subRound.trim();
 
-  chess.setHeader('White', joinName(info.whiteLastName, info.whiteFirstName));
+  writePlayer(chess, 'White', PLAYER_ID_TAGS.white, info.white);
   chess.setHeader('WhiteElo', info.whiteElo.trim());
-  chess.setHeader('Black', joinName(info.blackLastName, info.blackFirstName));
+  writePlayer(chess, 'Black', PLAYER_ID_TAGS.black, info.black);
   chess.setHeader('BlackElo', info.blackElo.trim());
   chess.setHeader('Result', info.result);
   chess.setHeader(LINE_EVALUATION_TAG, info.result === LINE_RESULT ? info.lineEvaluation : '');

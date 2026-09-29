@@ -6,24 +6,27 @@ import {
   lineEvaluationSymbol,
   validateGameInfo,
 } from '../utils/gameInfo';
-import type { GameInfo, GameInfoErrors, GameInfoTextField } from '../utils/gameInfo';
+import type { GameInfo, GameInfoErrors, GameInfoServices, GameInfoTextField } from '../utils/gameInfo';
+import type { PlayerInfo } from '../utils/player';
 import { newTournament } from '../utils/tournament';
-import type { TournamentInfo, TournamentService } from '../utils/tournament';
+import type { TournamentInfo } from '../utils/tournament';
+import { PlayerField } from './PlayerField';
 import { TournamentDialog } from './TournamentDialog';
 import { TournamentField } from './TournamentField';
 import './GameInfoDialog.css';
 
 interface GameInfoDialogProps {
   initial: GameInfo;
-  /** Finds and changes existing tournaments; without it, the tournament is just a name. */
-  tournamentService?: TournamentService;
+  /** Finds existing players and tournaments. */
+  services?: GameInfoServices;
   onSave: (info: GameInfo) => void;
   onCancel: () => void;
 }
 
 type InputProps = React.InputHTMLAttributes<HTMLInputElement> & { ref?: React.Ref<HTMLInputElement> };
 
-export const GameInfoDialog: React.FC<GameInfoDialogProps> = ({ initial, tournamentService, onSave, onCancel }) => {
+export const GameInfoDialog: React.FC<GameInfoDialogProps> = ({ initial, services, onSave, onCancel }) => {
+  const tournamentService = services?.tournaments;
   const [info, setInfo] = useState<GameInfo>(initial);
   const [errors, setErrors] = useState<GameInfoErrors>({});
   const [detailsOpen, setDetailsOpen] = useState(false);
@@ -62,6 +65,7 @@ export const GameInfoDialog: React.FC<GameInfoDialogProps> = ({ initial, tournam
   }, [tournamentService, initialTournamentId]);
 
   const setTournament = (tournament: TournamentInfo | null) => setInfo((i) => ({ ...i, tournament }));
+  const setPlayer = (color: 'white' | 'black') => (player: PlayerInfo) => setInfo((i) => ({ ...i, [color]: player }));
 
   // The site and year are the tournament's place and start year: only a new tournament's can be
   // changed here
@@ -154,18 +158,21 @@ export const GameInfoDialog: React.FC<GameInfoDialogProps> = ({ initial, tournam
         <fieldset className="game-info-players">
           <legend>Players</legend>
           <span />
-          <span className="game-info-label">Last name</span>
-          <span className="game-info-label">First name</span>
+          <span className="game-info-label">Name</span>
           <span className="game-info-label">Rating</span>
 
           <span className="game-info-row-label">White</span>
-          {playerField('whiteLastName', 'White last name', { ref: firstFieldRef })}
-          {playerField('whiteFirstName', 'White first name')}
+          <PlayerField
+            value={info.white}
+            onChange={setPlayer('white')}
+            service={services?.players}
+            label="White player"
+            inputRef={firstFieldRef}
+          />
           {playerField('whiteElo', 'White rating', numberProps)}
 
           <span className="game-info-row-label">Black</span>
-          {playerField('blackLastName', 'Black last name')}
-          {playerField('blackFirstName', 'Black first name')}
+          <PlayerField value={info.black} onChange={setPlayer('black')} service={services?.players} label="Black player" />
           {playerField('blackElo', 'Black rating', numberProps)}
         </fieldset>
 

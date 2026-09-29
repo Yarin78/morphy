@@ -207,7 +207,7 @@ export const TournamentDialog: React.FC<TournamentDialogProps> = ({ tournament, 
       >
         <h3 id="tournament-dialog-title">
           Tournament
-          <span className={`tournament-badge tournament-badge-${mode === 'new' ? 'new' : 'existing'}`}>
+          <span className={`entity-badge entity-badge-${mode === 'new' ? 'new' : 'existing'}`}>
             {mode === 'new' ? 'New' : 'Existing'}
           </span>
         </h3>

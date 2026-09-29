@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Chess } from '@jackstenglein/chess';
 import { GameView } from 'game-view';
-import type { ChessGame, TournamentService } from 'game-view';
+import type { ChessGame, GameInfoServices, PlayerService, TournamentService } from 'game-view';
 import {
   ApiError,
   createGame,
@@ -13,7 +13,7 @@ import {
   updateTournament,
 } from '../api/client';
 import { gameDtoToPgn, pgnToGamePatch, tournamentDto, tournamentInfo } from './gameDtoAdapter';
-import type { DatabaseResponse, EntitySearchResponse, GameDto, TournamentDto } from '../api/types';
+import type { DatabaseResponse, EntitySearchResponse, GameDto, PlayerDto, TournamentDto } from '../api/types';
 import { useDbGameParams } from './hooks/useDbGameParams';
 import './App.css';
 
@@ -32,15 +32,36 @@ const BLANK_GAME: GameDto = {
   date: { year: 0, month: 0, day: 0 },
 };
 
+/** A quoted filter value matches names and titles that start with the whole text. */
+function prefixFilter(text: string): string {
+  return `"${text.replace(/"/g, '')}"`;
+}
+
+/** Existing players of a database, for the Edit Game Info dialog. */
+function playerService(databaseId: string): PlayerService {
+  return {
+    async search(text) {
+      const response = await search<EntitySearchResponse<PlayerDto>>(databaseId, 'players', {
+        filter: prefixFilter(text),
+        limit: 20,
+        sortBy: '-count',
+      });
+      return response.items.map((p) => ({
+        id: p.id,
+        name: p.firstName ? `${p.lastName ?? ''}, ${p.firstName}` : p.lastName ?? '',
+        gameCount: p.gameCount,
+      }));
+    },
+  };
+}
+
 /** Existing tournaments of a database, for the Edit Game Info dialog. */
 function tournamentService(databaseId: string): TournamentService {
   const info = (dto: TournamentDto) => tournamentInfo(dto)!;
   return {
     async search(text) {
-      // A quoted value matches titles that start with the whole text
-      const filter = `"${text.replace(/"/g, '')}"`;
       const response = await search<EntitySearchResponse<TournamentDto>>(databaseId, 'tournaments', {
-        filter,
+        filter: prefixFilter(text),
         limit: 20,
         sortBy: '-startDate',
       });
@@ -69,7 +90,10 @@ function App() {
   const saveMessage = saveMessageFor?.paramsKey === paramsKey ? saveMessageFor.message : null;
   const [saving, setSaving] = useState(false);
   const chessRef = useRef<Chess | null>(null);
-  const tournaments = useMemo(() => (databaseId ? tournamentService(databaseId) : undefined), [databaseId]);
+  const gameInfoServices = useMemo<GameInfoServices | undefined>(
+    () => (databaseId ? { players: playerService(databaseId), tournaments: tournamentService(databaseId) } : undefined),
+    [databaseId]
+  );
 
   // Load the database list once, both for the status bar and to catch an unknown db.
   useEffect(() => {
@@ -190,7 +214,7 @@ function App() {
           onChessReady={(chess) => {
             chessRef.current = chess;
           }}
-          tournamentService={tournaments}
+          gameInfoServices={gameInfoServices}
         />
       </main>
     </div>

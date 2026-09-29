@@ -61,7 +61,7 @@
 }
 
 .game-info-dialog fieldset.game-info-players {
-  grid-template-columns: auto 1fr 1fr 5rem;
+  grid-template-columns: auto 1fr 5rem;
   row-gap: 0.3rem;
 }
 
@@ -212,7 +212,7 @@
 
 @media (max-width: 480px) {
   .game-info-dialog fieldset.game-info-players {
-    grid-template-columns: auto 1fr 1fr 4rem;
+    grid-template-columns: auto 1fr 4rem;
   }
 }
 
@@ -224,19 +224,13 @@
   background: rgba(0, 0, 0, 0.25);
 }
 
-.tournament-name {
-  display: flex;
-  gap: 0.4rem;
-  align-items: flex-start;
-}
-
-.tournament-combobox {
+.entity-combobox {
   position: relative;
   flex: 1;
   min-width: 0;
 }
 
-.tournament-combobox input {
+.entity-combobox input {
   width: 100%;
 }
 
@@ -261,7 +255,7 @@
   cursor: default;
 }
 
-.tournament-badge {
+.entity-badge {
   display: inline-block;
   margin-left: 0.5rem;
   padding: 0 0.45rem;
@@ -272,17 +266,17 @@
   vertical-align: 1px;
 }
 
-.tournament-badge-existing {
+.entity-badge-existing {
   background: #dfe8f3;
   color: #2d4f7c;
 }
 
-.tournament-badge-new {
+.entity-badge-new {
   background: #e3efd9;
   color: #3d6b1f;
 }
 
-.tournament-options {
+.entity-options {
   position: fixed;
   z-index: 10001;
   margin: 0;
@@ -297,27 +291,27 @@
   color: #333;
 }
 
-.tournament-options li {
+.entity-options li {
   display: flex;
   flex-direction: column;
   padding: 0.35rem 0.7rem;
   cursor: pointer;
 }
 
-.tournament-options li.highlighted {
+.entity-options li.highlighted {
   background: #eadfd1;
 }
 
-.tournament-option-title {
+.entity-option-title {
   font-size: 0.9rem;
 }
 
-.tournament-option-subtitle {
+.entity-option-subtitle {
   color: #777;
   font-size: 0.75rem;
 }
 
-.tournament-option-new {
+.entity-option-new {
   color: #3d6b1f;
   font-weight: 600;
 }
@@ -405,4 +399,22 @@
 
 .game-info-buttons .tournament-danger:hover {
   background: #7f4214;
+}
+
+/* A badge inside a field, at its right end */
+.game-info-field-player {
+  position: relative;
+}
+
+.game-info-field-player.with-badge input {
+  padding-right: 3.2rem;
+}
+
+.entity-badge-inline {
+  position: absolute;
+  right: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  margin-left: 0;
+  pointer-events: none;
 }
