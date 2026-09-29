@@ -3,6 +3,7 @@ import type {
   DebugSearchResponse,
   FilterOptionsResponse,
   GameDto,
+  TournamentDto,
 } from './types';
 
 const API_BASE = '/api';
@@ -122,4 +123,17 @@ export async function replaceGame(
   game: GameDto
 ): Promise<GameDto> {
   return sendJson('PUT', `${databaseUrl(databaseId)}/games/${gameId}`, game, 'Replace game');
+}
+
+/** Fetches one tournament. */
+export async function fetchTournament(databaseId: string, id: number): Promise<TournamentDto> {
+  return getJson(`${databaseUrl(databaseId)}/tournaments/${id}`, 'Fetch tournament');
+}
+
+/**
+ * Replaces a tournament's fields, for every game in it. The whole entity is replaced: a field left
+ * out is cleared.
+ */
+export async function updateTournament(databaseId: string, tournament: TournamentDto): Promise<TournamentDto> {
+  return sendJson('PUT', `${databaseUrl(databaseId)}/tournaments/${tournament.id}`, tournament, 'Update tournament');
 }

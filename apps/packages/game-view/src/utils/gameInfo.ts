@@ -1,4 +1,6 @@
 import type { Chess } from '@jackstenglein/chess';
+import { tournamentFromTags, tournamentToTags } from './tournament';
+import type { TournamentInfo } from './tournament';
 
 /**
  * The game header information edited in the Edit Game Info dialog, as form values. Everything is
@@ -19,7 +21,8 @@ export interface GameInfo {
   year: string;
   month: string;
   day: string;
-  tournament: string;
+  /** Null when the game has no tournament. */
+  tournament: TournamentInfo | null;
   round: string;
   subRound: string;
   board: string;
@@ -105,20 +108,23 @@ export function readGameInfo(chess: Chess): GameInfo {
     year: numberPart(year),
     month: numberPart(month),
     day: numberPart(day),
-    tournament: tagValue(chess, 'Event'),
+    tournament: tournamentFromTags((name) => chess.header().getRawValue(name)),
     round: numberPart(round),
     subRound: numberPart(subRound),
     board: numberPart(tagValue(chess, 'Board')),
   };
 }
 
+/** The GameInfo fields that are typed in as text. */
+export type GameInfoTextField = { [K in keyof GameInfo]: GameInfo[K] extends string ? K : never }[keyof GameInfo];
+
 /** A problem with a form value, keyed by the GameInfo field it's about. */
-export type GameInfoErrors = Partial<Record<keyof GameInfo, string>>;
+export type GameInfoErrors = Partial<Record<GameInfoTextField, string>>;
 
 function checkNumber(
   errors: GameInfoErrors,
   info: GameInfo,
-  field: keyof GameInfo,
+  field: GameInfoTextField,
   min: number,
   max: number
 ) {
@@ -158,7 +164,11 @@ export function writeGameInfo(chess: Chess, info: GameInfo) {
   chess.setHeader('Result', info.result);
   chess.setHeader(LINE_EVALUATION_TAG, info.result === LINE_RESULT ? info.lineEvaluation : '');
   chess.setHeader('Date', `${pad(info.year, 4)}.${pad(info.month, 2)}.${pad(info.day, 2)}`);
-  chess.setHeader('Event', info.tournament.trim());
+  const t = info.tournament;
+  const tournament = t && (t.title.trim() || t.id != null || t.place?.trim()) ? { ...t, title: t.title.trim() } : null;
+  for (const [name, value] of Object.entries(tournamentToTags(tournament))) {
+    chess.setHeader(name, value);
+  }
   chess.setHeader('Round', round && subRound ? `${round}.${subRound}` : round);
   chess.setHeader('Board', info.board.trim());
 }

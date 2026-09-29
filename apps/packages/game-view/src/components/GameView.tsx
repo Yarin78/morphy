@@ -13,6 +13,7 @@ import { useChessGame } from '../hooks/useChessGame';
 import { useKeyboardNavigation } from '../hooks/useKeyboardNavigation';
 import { readGameInfo, writeGameInfo } from '../utils/gameInfo';
 import type { GameInfo } from '../utils/gameInfo';
+import type { TournamentService } from '../utils/tournament';
 import { Chess } from '@jackstenglein/chess';
 import type { Move, Square } from '@jackstenglein/chess';
 import './GameView.css';
@@ -32,6 +33,8 @@ export interface GameViewProps {
    * it on demand (e.g. on a Save button click), rather than re-rendering on every move.
    */
   onChessReady?: (chess: Chess) => void;
+  /** Lets the Edit Game Info dialog pick existing tournaments; without it, a tournament is a name. */
+  tournamentService?: TournamentService;
 }
 
 export const GameView: React.FC<GameViewProps> = ({
@@ -42,6 +45,7 @@ export const GameView: React.FC<GameViewProps> = ({
   initialMoveToShow,
   startInEditMode = false,
   onChessReady,
+  tournamentService,
 }) => {
   const {
     chess,
@@ -553,6 +557,7 @@ export const GameView: React.FC<GameViewProps> = ({
       {editingGameInfo && (
         <GameInfoDialog
           initial={editingGameInfo}
+          tournamentService={tournamentService}
           onSave={handleGameInfoSave}
           onCancel={handleGameInfoCancel}
         />

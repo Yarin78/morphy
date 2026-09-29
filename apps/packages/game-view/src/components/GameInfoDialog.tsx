@@ -6,20 +6,27 @@ import {
   lineEvaluationSymbol,
   validateGameInfo,
 } from '../utils/gameInfo';
-import type { GameInfo, GameInfoErrors } from '../utils/gameInfo';
+import type { GameInfo, GameInfoErrors, GameInfoTextField } from '../utils/gameInfo';
+import { newTournament } from '../utils/tournament';
+import type { TournamentInfo, TournamentService } from '../utils/tournament';
+import { TournamentDialog } from './TournamentDialog';
+import { TournamentField } from './TournamentField';
 import './GameInfoDialog.css';
 
 interface GameInfoDialogProps {
   initial: GameInfo;
+  /** Finds and changes existing tournaments; without it, the tournament is just a name. */
+  tournamentService?: TournamentService;
   onSave: (info: GameInfo) => void;
   onCancel: () => void;
 }
 
 type InputProps = React.InputHTMLAttributes<HTMLInputElement> & { ref?: React.Ref<HTMLInputElement> };
 
-export const GameInfoDialog: React.FC<GameInfoDialogProps> = ({ initial, onSave, onCancel }) => {
+export const GameInfoDialog: React.FC<GameInfoDialogProps> = ({ initial, tournamentService, onSave, onCancel }) => {
   const [info, setInfo] = useState<GameInfo>(initial);
   const [errors, setErrors] = useState<GameInfoErrors>({});
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const firstFieldRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -27,14 +34,62 @@ export const GameInfoDialog: React.FC<GameInfoDialogProps> = ({ initial, onSave,
   }, []);
 
   useEffect(() => {
+    // The tournament dialog on top handles Esc itself
+    if (detailsOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onCancel();
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onCancel]);
+  }, [onCancel, detailsOpen]);
 
-  const set = (field: keyof GameInfo) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
+  // An existing tournament's details, as saved now rather than when the game was loaded, and its
+  // number of games
+  const initialTournamentId = initial.tournament?.id;
+  useEffect(() => {
+    if (!tournamentService || initialTournamentId == null) return;
+    let cancelled = false;
+    tournamentService
+      .get(initialTournamentId)
+      .then((current) => {
+        if (cancelled) return;
+        setInfo((i) => (i.tournament?.id === current.id ? { ...i, tournament: current } : i));
+      })
+      .catch((err) => console.error('Failed to load the tournament:', err));
+    return () => {
+      cancelled = true;
+    };
+  }, [tournamentService, initialTournamentId]);
+
+  const setTournament = (tournament: TournamentInfo | null) => setInfo((i) => ({ ...i, tournament }));
+
+  // The site and year are the tournament's place and start year: only a new tournament's can be
+  // changed here
+  const existingTournament = info.tournament?.id != null;
+  const changeTournament = (change: (t: TournamentInfo) => TournamentInfo) =>
+    setInfo((i) => (i.tournament?.id != null ? i : { ...i, tournament: change(i.tournament ?? newTournament('')) }));
+  const setSite = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const place = e.target.value;
+    changeTournament((t) => ({ ...t, place: place || undefined }));
+  };
+  const setYear = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const year = e.target.value.replace(/\D/g, '').slice(0, 4);
+    // Only the year is known now: a month and day kept from another year would be wrong
+    changeTournament((t) => ({ ...t, startDate: year ? { year: parseInt(year, 10), month: 0, day: 0 } : undefined }));
+  };
+  const tournamentInput = (props: React.InputHTMLAttributes<HTMLInputElement>) => (
+    <input
+      type="text"
+      readOnly={existingTournament}
+      title={existingTournament ? "The existing tournament's; see Details" : undefined}
+      autoComplete="off"
+      data-1p-ignore
+      data-lpignore="true"
+      {...props}
+    />
+  );
+
+  const set = (field: GameInfoTextField) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setInfo((current) => ({ ...current, [field]: e.target.value }));
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -44,7 +99,7 @@ export const GameInfoDialog: React.FC<GameInfoDialogProps> = ({ initial, onSave,
     if (Object.keys(found).length === 0) onSave(info);
   };
 
-  const input = (name: keyof GameInfo, props: InputProps = {}) => (
+  const input = (name: GameInfoTextField, props: InputProps = {}) => (
     <>
       <input
         type="text"
@@ -62,7 +117,7 @@ export const GameInfoDialog: React.FC<GameInfoDialogProps> = ({ initial, onSave,
   );
 
   /** An input with its label above it. */
-  const field = (name: keyof GameInfo, label: string, props: InputProps = {}) => (
+  const field = (name: GameInfoTextField, label: string, props: InputProps = {}) => (
     <label className={`game-info-field game-info-field-${name}`}>
       <span className="game-info-label">{label}</span>
       {input(name, props)}
@@ -70,7 +125,7 @@ export const GameInfoDialog: React.FC<GameInfoDialogProps> = ({ initial, onSave,
   );
 
   /** An input in the Players grid, labelled by its row and column headings. */
-  const playerField = (name: keyof GameInfo, label: string, props: InputProps = {}) => (
+  const playerField = (name: GameInfoTextField, label: string, props: InputProps = {}) => (
     <div className={`game-info-field game-info-field-${name}`}>{input(name, { 'aria-label': label, ...props })}</div>
   );
 
@@ -83,6 +138,7 @@ export const GameInfoDialog: React.FC<GameInfoDialogProps> = ({ initial, onSave,
       : [...LINE_EVALUATIONS, { value: initial.lineEvaluation, symbol: lineEvaluationSymbol(initial.lineEvaluation) }];
 
   return (
+    <>
     <div className="game-info-overlay" onMouseDown={onCancel}>
       <form
         className="game-info-dialog"
@@ -113,12 +169,34 @@ export const GameInfoDialog: React.FC<GameInfoDialogProps> = ({ initial, onSave,
           {playerField('blackElo', 'Black rating', numberProps)}
         </fieldset>
 
-        <fieldset className="game-info-row">
+        <fieldset className="game-info-tournament">
           <legend>Tournament</legend>
-          {field('tournament', 'Name')}
+          <TournamentField value={info.tournament} onChange={setTournament} service={tournamentService} />
           {field('round', 'Round', numberProps)}
           {field('subRound', 'Sub-round', numberProps)}
           {field('board', 'Board', numberProps)}
+
+          <label className="game-info-field">
+            <span className="game-info-label">Site</span>
+            {tournamentInput({ value: info.tournament?.place ?? '', onChange: setSite })}
+          </label>
+          <label className="game-info-field">
+            <span className="game-info-label">Year</span>
+            {tournamentInput({
+              value: info.tournament?.startDate?.year ? String(info.tournament.startDate.year) : '',
+              onChange: setYear,
+              inputMode: 'numeric',
+              placeholder: 'yyyy',
+            })}
+          </label>
+          <button
+            type="button"
+            className="tournament-details-button"
+            onClick={() => setDetailsOpen(true)}
+            disabled={!info.tournament}
+          >
+            Details…
+          </button>
         </fieldset>
 
         <div className="game-info-pair">
@@ -167,5 +245,14 @@ export const GameInfoDialog: React.FC<GameInfoDialogProps> = ({ initial, onSave,
         </div>
       </form>
     </div>
+    {detailsOpen && info.tournament && (
+      <TournamentDialog
+        tournament={info.tournament}
+        service={tournamentService}
+        onApply={setTournament}
+        onClose={() => setDetailsOpen(false)}
+      />
+    )}
+    </>
   );
 };

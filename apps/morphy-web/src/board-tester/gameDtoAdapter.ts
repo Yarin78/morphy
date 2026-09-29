@@ -1,6 +1,7 @@
 import type { Chess } from '@jackstenglein/chess';
-import { LINE_EVALUATION_TAG } from 'game-view';
-import type { DateDto, GameDto, GameResultDto } from '../api/types';
+import { LINE_EVALUATION_TAG, TOURNAMENT_TAGS, tournamentFromTags, tournamentToTags } from 'game-view';
+import type { TournamentInfo } from 'game-view';
+import type { DateDto, GameDto, GameResultDto, TournamentDto } from '../api/types';
 
 // Bridges morphy-service's GameDto (flattened header fields + a movetext-only
 // moves.pgn) and the single full-PGN-string (headers + movetext) that
@@ -58,8 +59,49 @@ function parsePlayerNameTag(value: string | undefined): { lastName?: string; fir
   return firstName ? { lastName, firstName } : { lastName };
 }
 
-const KNOWN_TAGS = new Set([
-  'Event', 'Site', 'Date', 'Round', 'White', 'Black', 'Result',
+/** A tournament as the Edit Game Info dialog has it. */
+export function tournamentInfo(dto: TournamentDto | undefined): TournamentInfo | null {
+  if (!dto) return null;
+  return {
+    id: dto.id,
+    title: dto.title ?? '',
+    startDate: dto.startDate,
+    endDate: dto.endDate,
+    place: dto.place,
+    nation: dto.nation,
+    type: dto.type,
+    timeControl: dto.timeControl,
+    rounds: dto.rounds,
+    category: dto.category,
+    complete: dto.complete,
+    teamTournament: dto.teamTournament,
+    gameCount: dto.gameCount,
+  };
+}
+
+/**
+ * A tournament for the server. With an id, the game is put in that existing tournament and the
+ * other fields are ignored; without one, the tournament with these fields is found, or created.
+ */
+export function tournamentDto(t: TournamentInfo): TournamentDto {
+  return {
+    id: t.id,
+    title: t.title,
+    startDate: t.startDate,
+    endDate: t.endDate,
+    place: t.place,
+    nation: t.nation,
+    type: t.type,
+    timeControl: t.timeControl,
+    rounds: t.rounds,
+    category: t.category,
+    complete: t.complete,
+    teamTournament: t.teamTournament,
+  };
+}
+
+const KNOWN_TAGS = new Set<string>([
+  ...Object.values(TOURNAMENT_TAGS), 'Date', 'Round', 'White', 'Black', 'Result',
   'WhiteElo', 'BlackElo', 'Board', 'ECO', 'Annotator', 'FEN', 'SetUp', LINE_EVALUATION_TAG,
 ]);
 
@@ -73,8 +115,9 @@ export function gameDtoToPgn(game: GameDto): string {
     if (value) tags.push([name, value]);
   };
 
-  pushIfSet('Event', game.tournament?.title);
-  pushIfSet('Site', game.tournament?.place);
+  for (const [name, value] of Object.entries(tournamentToTags(tournamentInfo(game.tournament)))) {
+    pushIfSet(name, value);
+  }
   tags.push(['Date', formatDateDto(game.date)]);
   pushIfSet(
     'Round',
@@ -125,8 +168,7 @@ export function pgnToGamePatch(chess: Chess, base: GameDto): GameDto {
   const whiteNameUnchanged = formatPlayerNameTag(white) === formatPlayerNameTag(base.whitePlayer);
   const blackNameUnchanged = formatPlayerNameTag(black) === formatPlayerNameTag(base.blackPlayer);
 
-  const tournamentTitle = tagValues.Event || undefined;
-  const tournamentUnchanged = tournamentTitle === base.tournament?.title;
+  const tournament = tournamentFromTags((name) => tagValues[name] ?? '');
 
   const annotatorName = tagValues.Annotator || undefined;
   const annotatorUnchanged = annotatorName === base.annotator?.name;
@@ -159,14 +201,7 @@ export function pgnToGamePatch(chess: Chess, base: GameDto): GameDto {
     round: round?.[0] ? parseInt(round[0], 10) : undefined,
     subRound: round?.[1] ? parseInt(round[1], 10) : undefined,
     board: tagValues.Board ? parseInt(tagValues.Board, 10) : undefined,
-    tournament: tournamentTitle
-      ? {
-          ...base.tournament,
-          id: tournamentUnchanged ? base.tournament?.id ?? null : null,
-          title: tournamentTitle,
-          place: tagValues.Site || undefined,
-        }
-      : undefined,
+    tournament: tournament ? tournamentDto(tournament) : undefined,
     annotator: annotatorName
       ? { id: annotatorUnchanged ? base.annotator?.id ?? null : null, name: annotatorName }
       : undefined,

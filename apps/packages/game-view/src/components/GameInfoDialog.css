@@ -16,7 +16,7 @@
   border-radius: 8px;
   padding: 1.25rem 1.5rem;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-  width: min(560px, 100%);
+  width: min(620px, 100%);
   max-height: calc(100vh - 2rem);
   overflow-y: auto;
   box-sizing: border-box;
@@ -100,8 +100,29 @@
   min-width: 0;
 }
 
-.game-info-field-tournament {
-  flex: 1 1 14rem;
+/*
+ * Name, round, sub-round, board
+ * Site, year, details
+ */
+.game-info-dialog fieldset.game-info-tournament {
+  grid-template-columns: 1fr repeat(3, 4.5rem);
+}
+
+.game-info-tournament input {
+  width: 100%;
+}
+
+.game-info-tournament .tournament-details-button {
+  grid-column: span 2;
+  align-self: end;
+  /* As tall as the inputs beside it */
+  box-sizing: border-box;
+  height: 2.25rem;
+}
+
+.game-info-dialog input[readonly] {
+  background: #efe8de;
+  color: #555;
 }
 
 .game-info-field-year input {
@@ -109,16 +130,14 @@
 }
 
 .game-info-field-month input,
-.game-info-field-day input,
-.game-info-field-round input,
-.game-info-field-subRound input,
-.game-info-field-board input {
+.game-info-field-day input {
   width: 3.5rem;
 }
 
 .game-info-label {
   font-size: 0.75rem;
   color: #666;
+  white-space: nowrap;
 }
 
 .game-info-dialog input,
@@ -168,6 +187,7 @@
   border-radius: 4px;
   cursor: pointer;
   transition: background-color 0.15s ease;
+  white-space: nowrap;
 }
 
 .game-info-cancel {
@@ -194,4 +214,195 @@
   .game-info-dialog fieldset.game-info-players {
     grid-template-columns: auto 1fr 1fr 4rem;
   }
+}
+
+/* ── Tournament ─────────────────────────────────────────────────────────── */
+
+/* A dialog opened from another, on top of it */
+.game-info-overlay-stacked {
+  z-index: 10000;
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.tournament-name {
+  display: flex;
+  gap: 0.4rem;
+  align-items: flex-start;
+}
+
+.tournament-combobox {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+.tournament-combobox input {
+  width: 100%;
+}
+
+.tournament-details-button {
+  font: inherit;
+  font-size: 0.85rem;
+  padding: 0.35rem 0.6rem;
+  border: 1px solid #a89584;
+  border-radius: 4px;
+  background: transparent;
+  color: #5a3a1f;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.tournament-details-button:hover:not(:disabled) {
+  background: #c9b8a6;
+}
+
+.tournament-details-button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.tournament-badge {
+  display: inline-block;
+  margin-left: 0.5rem;
+  padding: 0 0.45rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  line-height: 1.4;
+  vertical-align: 1px;
+}
+
+.tournament-badge-existing {
+  background: #dfe8f3;
+  color: #2d4f7c;
+}
+
+.tournament-badge-new {
+  background: #e3efd9;
+  color: #3d6b1f;
+}
+
+.tournament-options {
+  position: fixed;
+  z-index: 10001;
+  margin: 0;
+  padding: 0.2rem 0;
+  list-style: none;
+  background: #fbf8f4;
+  border: 1px solid #b8a896;
+  border-radius: 4px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
+  overflow-y: auto;
+  box-sizing: border-box;
+  color: #333;
+}
+
+.tournament-options li {
+  display: flex;
+  flex-direction: column;
+  padding: 0.35rem 0.7rem;
+  cursor: pointer;
+}
+
+.tournament-options li.highlighted {
+  background: #eadfd1;
+}
+
+.tournament-option-title {
+  font-size: 0.9rem;
+}
+
+.tournament-option-subtitle {
+  color: #777;
+  font-size: 0.75rem;
+}
+
+.tournament-option-new {
+  color: #3d6b1f;
+  font-weight: 600;
+}
+
+/* The tournament details dialog */
+.tournament-dialog h3 {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tournament-note {
+  margin: 0 0 0.75rem 0;
+  padding: 0.5rem 0.75rem;
+  border-radius: 4px;
+  background: #e4dccf;
+  color: #5a4a3a;
+  font-size: 0.85rem;
+}
+
+.tournament-warning {
+  background: #f6e3c7;
+  color: #7a4a0c;
+  border: 1px solid #e0b877;
+}
+
+.tournament-error {
+  background: #f5d9d6;
+  color: #8b1d15;
+}
+
+.tournament-field-title {
+  flex: 3 1 13rem;
+}
+
+.tournament-field-place {
+  flex: 2 1 8rem;
+}
+
+.tournament-field-startYear input,
+.tournament-field-endYear input {
+  width: 4.5rem;
+}
+
+.tournament-field-startMonth input,
+.tournament-field-startDay input,
+.tournament-field-endMonth input,
+.tournament-field-endDay input,
+.tournament-field-nation input,
+.tournament-field-rounds input,
+.tournament-field-category input {
+  width: 3.5rem;
+}
+
+.tournament-dialog.read-only input,
+.tournament-dialog.read-only select {
+  background: #efe8de;
+  color: #555;
+}
+
+.tournament-flags {
+  align-items: center;
+  gap: 1.25rem !important;
+}
+
+.tournament-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.9rem;
+}
+
+.tournament-checkbox input {
+  width: auto;
+}
+
+.game-info-buttons .tournament-left {
+  margin-right: auto;
+}
+
+.game-info-buttons .tournament-danger {
+  background: #a3561c;
+  border-color: #7f4214;
+}
+
+.game-info-buttons .tournament-danger:hover {
+  background: #7f4214;
 }
