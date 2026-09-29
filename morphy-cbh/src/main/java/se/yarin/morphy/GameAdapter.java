@@ -107,6 +107,7 @@ public class GameAdapter {
     model.setWhiteId((long) whitePlayer.id());
     if (game.whiteElo() > 0) {
       model.setWhiteElo(game.whiteElo());
+      model.setWhiteEloType(game.whiteRatingType().toEloType());
     }
     if (whiteTeam != null) {
       model.setWhiteTeamId((long) whiteTeam.id());
@@ -116,6 +117,7 @@ public class GameAdapter {
     model.setBlackId((long) blackPlayer.id());
     if (game.blackElo() > 0) {
       model.setBlackElo(game.blackElo());
+      model.setBlackEloType(game.blackRatingType().toEloType());
     }
     if (blackTeam != null) {
       model.setBlackTeamId((long) blackTeam.id());
@@ -246,8 +248,14 @@ public class GameAdapter {
     gameHeader.lineEvaluation(headerModel.getLineEvaluation());
 
     extendedGameHeader
-        .whiteRatingType(RatingType.international(TournamentTimeControl.NORMAL))
-        .blackRatingType(RatingType.international(TournamentTimeControl.NORMAL));
+        .whiteRatingType(ratingType(headerModel.getWhiteEloType()))
+        .blackRatingType(ratingType(headerModel.getBlackEloType()));
+  }
+
+  /** An elo type as v1 stores it; FIDE for none, and for one v1 can't store. */
+  private static @NotNull RatingType ratingType(@Nullable EloType type) {
+    RatingType ratingType = type == null ? null : RatingType.of(type);
+    return ratingType == null ? RatingType.unspecified() : ratingType;
   }
 
   private void setMovesGameData(

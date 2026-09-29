@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 import se.yarin.chess.Chess960;
 import se.yarin.chess.Date;
 import se.yarin.chess.Eco;
+import se.yarin.chess.EloType;
 import se.yarin.chess.GameHeaderModel;
 import se.yarin.chess.GameModel;
 import se.yarin.chess.GameMovesModel;
@@ -97,9 +98,11 @@ public final class PgnGameMapper {
 
       if (dto.whiteElo() != null) {
         headerModel.setWhiteElo(dto.whiteElo());
+        headerModel.setWhiteEloType(dto.whiteEloType());
       }
       if (dto.blackElo() != null) {
         headerModel.setBlackElo(dto.blackElo());
+        headerModel.setBlackEloType(dto.blackEloType());
       }
 
       if (dto.whiteTeam() != null) {
@@ -269,8 +272,10 @@ public final class PgnGameMapper {
         null,
         player(header.getWhite()),
         header.getWhiteElo(),
+        eloType(header.getWhiteElo(), header.getWhiteEloType()),
         player(header.getBlack()),
         header.getBlackElo(),
+        eloType(header.getBlackElo(), header.getBlackEloType()),
         team(header.getWhiteTeam()),
         team(header.getBlackTeam()),
         header.getResult() != null ? header.getResult() : GameResult.NOT_FINISHED,
@@ -328,6 +333,11 @@ public final class PgnGameMapper {
         ? null
         : new GameTagDto(
             null, title, null, null, title, null, null, null, null, null, null, null, null);
+  }
+
+  /** The type of an elo, which only means something when there is one. */
+  private static @Nullable EloType eloType(@Nullable Integer elo, @Nullable EloType type) {
+    return elo == null || elo == 0 ? null : type;
   }
 
   private static @Nullable TournamentDto tournament(@NotNull GameHeaderModel header) {

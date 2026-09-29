@@ -22,6 +22,7 @@ import se.yarin.chess.Chess;
 import se.yarin.chess.Chess960;
 import se.yarin.chess.Date;
 import se.yarin.chess.Eco;
+import se.yarin.chess.EloType;
 import se.yarin.chess.GameHeaderModel;
 import se.yarin.chess.GameModel;
 import se.yarin.chess.GameMovesModel;
@@ -286,9 +287,9 @@ public final class WriteTransaction extends DatabaseTransaction {
             h.getSubRound() == null ? 0 : h.getSubRound(),
             h.getBoard() == null ? 0 : h.getBoard(),
             whiteElo,
-            whiteElo > 0 ? ratingType(previous, true) : RatingType.NONE,
+            whiteElo > 0 ? ratingType(previous, true, h.getWhiteEloType()) : RatingType.NONE,
             blackElo,
-            blackElo > 0 ? ratingType(previous, false) : RatingType.NONE,
+            blackElo > 0 ? ratingType(previous, false, h.getBlackEloType()) : RatingType.NONE,
             chess960 ? EcoField.ofChess960(sp) : EcoField.of(eco),
             Medal.encode(statistics(moves).getMedals()),
             flags(moves),
@@ -311,14 +312,20 @@ public final class WriteTransaction extends DatabaseTransaction {
             annotations));
   }
 
-  private static RatingType ratingType(@Nullable GameHeader previous, boolean white) {
-    if (previous != null) {
-      RatingType kept = white ? previous.whiteRating() : previous.blackRating();
-      if (!kept.equals(RatingType.NONE)) {
-        return kept;
-      }
+  /**
+   * The rating type to store with an elo. An unchanged one is kept as stored; a game without one
+   * keeps the one it had, or gets FIDE.
+   */
+  private static RatingType ratingType(@Nullable GameHeader previous, boolean white, @Nullable EloType type) {
+    RatingType kept = previous == null ? RatingType.NONE : white ? previous.whiteRating() : previous.blackRating();
+    if (type == null || type.equals(kept.toEloType())) {
+      return kept.equals(RatingType.NONE) ? RatingType.FIDE : kept;
     }
-    return RatingType.FIDE;
+    RatingType stored = RatingType.of(type);
+    if (stored == null) {
+      throw new IllegalArgumentException("A rating of type " + type.encode() + " can't be stored");
+    }
+    return stored;
   }
 
   /**

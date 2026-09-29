@@ -1,7 +1,9 @@
 package se.yarin.morphy.games;
 
 import org.immutables.value.Value;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import se.yarin.chess.EloType;
 import se.yarin.morphy.chessbase.Nation;
 import se.yarin.morphy.chessbase.TournamentTimeControl;
 import se.yarin.morphy.util.CBUtil;
@@ -81,6 +83,50 @@ public abstract class RatingType {
     }
 
     return RatingType.international(TournamentTimeControl.NORMAL);
+  }
+
+  /** This rating type in the neutral form. */
+  public @NotNull EloType toEloType() {
+    if (isNational()) {
+      return EloType.national(timeControl(national()), nation().getIocCode());
+    }
+    EloType.TimeControl timeControl = timeControl(international());
+    return name() == null || name().isEmpty()
+        ? EloType.international(timeControl)
+        : new EloType(EloType.Kind.INTERNATIONAL, timeControl, null, name());
+  }
+
+  /**
+   * An elo type as a v1 rating type; null for one v1 can't store, which has no server ratings and no
+   * bullet time control.
+   */
+  public static @Nullable RatingType of(@NotNull EloType type) {
+    TournamentTimeControl timeControl =
+        switch (type.timeControl()) {
+          case NORMAL -> TournamentTimeControl.NORMAL;
+          case BLITZ -> TournamentTimeControl.BLITZ;
+          case RAPID -> TournamentTimeControl.RAPID;
+          case CORRESPONDENCE -> TournamentTimeControl.CORRESPONDENCE;
+          case BULLET -> null;
+        };
+    if (timeControl == null) {
+      return null;
+    }
+    return switch (type.kind()) {
+      case INTERNATIONAL ->
+          type.name() == null ? international(timeControl) : ImmutableRatingType.of(timeControl, null, null, type.name());
+      case NATIONAL -> type.nation() == null ? null : national(timeControl, Nation.fromIOC(type.nation()));
+      case SERVER -> null;
+    };
+  }
+
+  private static EloType.TimeControl timeControl(TournamentTimeControl timeControl) {
+    return switch (timeControl) {
+      case NORMAL -> EloType.TimeControl.NORMAL;
+      case BLITZ -> EloType.TimeControl.BLITZ;
+      case RAPID -> EloType.TimeControl.RAPID;
+      case CORRESPONDENCE -> EloType.TimeControl.CORRESPONDENCE;
+    };
   }
 
   @Override

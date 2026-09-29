@@ -37,6 +37,8 @@ public class GameHeaderModel {
           "black",
           "whiteElo",
           "blackElo",
+          "whiteEloType",
+          "blackEloType",
           "whiteTeam",
           "blackTeam",
           "result",
@@ -67,6 +69,8 @@ public class GameHeaderModel {
   private @Nullable String black;
   private @Nullable Integer whiteElo;
   private @Nullable Integer blackElo;
+  private @Nullable EloType whiteEloType;
+  private @Nullable EloType blackEloType;
   private @Nullable String whiteTeam;
   private @Nullable String blackTeam;
   private @Nullable GameResult result;
@@ -146,6 +150,23 @@ public class GameHeaderModel {
 
   public void setBlackElo(@Nullable Integer blackElo) {
     this.blackElo = blackElo;
+  }
+
+  /** What kind of rating white's elo is; null when not known, which a format stores as FIDE. */
+  public @Nullable EloType getWhiteEloType() {
+    return whiteEloType;
+  }
+
+  public void setWhiteEloType(@Nullable EloType whiteEloType) {
+    this.whiteEloType = whiteEloType;
+  }
+
+  public @Nullable EloType getBlackEloType() {
+    return blackEloType;
+  }
+
+  public void setBlackEloType(@Nullable EloType blackEloType) {
+    this.blackEloType = blackEloType;
   }
 
   public @Nullable String getWhiteTeam() {
@@ -478,6 +499,8 @@ public class GameHeaderModel {
       case "black" -> black;
       case "whiteElo" -> whiteElo;
       case "blackElo" -> blackElo;
+      case "whiteEloType" -> whiteEloType;
+      case "blackEloType" -> blackEloType;
       case "whiteTeam" -> whiteTeam;
       case "blackTeam" -> blackTeam;
       case "result" -> result;
@@ -520,6 +543,8 @@ public class GameHeaderModel {
       case "black" -> black = cast(name, value, String.class);
       case "whiteElo" -> whiteElo = cast(name, value, Integer.class);
       case "blackElo" -> blackElo = cast(name, value, Integer.class);
+      case "whiteEloType" -> whiteEloType = cast(name, value, EloType.class);
+      case "blackEloType" -> blackEloType = cast(name, value, EloType.class);
       case "whiteTeam" -> whiteTeam = cast(name, value, String.class);
       case "blackTeam" -> blackTeam = cast(name, value, String.class);
       case "result" -> result = cast(name, value, GameResult.class);

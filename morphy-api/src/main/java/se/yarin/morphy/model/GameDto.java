@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 import org.jetbrains.annotations.Nullable;
 import se.yarin.chess.Date;
+import se.yarin.chess.EloType;
 import se.yarin.chess.GameResult;
 import se.yarin.chess.NAG;
 
@@ -22,8 +23,10 @@ import se.yarin.chess.NAG;
   "textTitle",
   "whitePlayer",
   "whiteElo",
+  "whiteEloType",
   "blackPlayer",
   "blackElo",
+  "blackEloType",
   "whiteTeam",
   "blackTeam",
   "result",
@@ -64,8 +67,10 @@ public record GameDto(
     // Player information
     @Nullable PlayerDto whitePlayer,
     @Nullable Integer whiteElo,
+    @Nullable EloType whiteEloType, // null when there's no elo
     @Nullable PlayerDto blackPlayer,
     @Nullable Integer blackElo,
+    @Nullable EloType blackEloType,
 
     // Team information
     @Nullable TeamDto whiteTeam,

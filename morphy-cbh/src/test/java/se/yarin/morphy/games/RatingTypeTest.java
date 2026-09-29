@@ -1,12 +1,14 @@
 package se.yarin.morphy.games;
 
 import org.junit.Test;
+import se.yarin.chess.EloType;
 import se.yarin.morphy.chessbase.Nation;
 import se.yarin.morphy.chessbase.TournamentTimeControl;
 
 import java.nio.ByteBuffer;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 
 public class RatingTypeTest {
 
@@ -57,5 +59,25 @@ public class RatingTypeTest {
       assertEquals(ratingType.national(), after.national());
       assertEquals(ratingType.nation(), after.nation());
     }
+  }
+
+  @Test
+  public void testEloTypeRoundTrip() {
+    for (EloType type :
+        new EloType[] {
+          EloType.FIDE,
+          EloType.international(EloType.TimeControl.BLITZ),
+          EloType.international(EloType.TimeControl.CORRESPONDENCE),
+          EloType.national(EloType.TimeControl.RAPID, "SWE"),
+        }) {
+      assertEquals(type, RatingType.of(type).toEloType());
+    }
+  }
+
+  @Test
+  public void testEloTypesWithoutV1Form() {
+    // v1 has no server ratings and no bullet time control
+    assertNull(RatingType.of(EloType.server(EloType.TimeControl.BLITZ, EloType.LICHESS)));
+    assertNull(RatingType.of(EloType.international(EloType.TimeControl.BULLET)));
   }
 }

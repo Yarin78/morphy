@@ -274,9 +274,11 @@ public final class Game {
       }
       if (g.whiteElo() > 0) {
         model.setWhiteElo(g.whiteElo());
+        model.setWhiteEloType(g.whiteRating().toEloType());
       }
       if (g.blackElo() > 0) {
         model.setBlackElo(g.blackElo());
+        model.setBlackEloType(g.blackRating().toEloType());
       }
       Team whiteTeam = whiteTeam(), blackTeam = blackTeam();
       if (whiteTeam != null) {

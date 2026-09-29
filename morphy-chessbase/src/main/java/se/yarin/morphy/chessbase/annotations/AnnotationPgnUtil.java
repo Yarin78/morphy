@@ -198,6 +198,9 @@ public class AnnotationPgnUtil {
         if (value instanceof NAG n) {
             return n.toString();
         }
+        if (value instanceof EloType t) {
+            return t.encode();
+        }
         // Fallback for any other type
         return value.toString();
     }
@@ -236,6 +239,7 @@ public class AnnotationPgnUtil {
             }
             case "result" -> parseGameResult(valueStr);
             case "eventComplete", "eventTeamTournament" -> Boolean.parseBoolean(valueStr);
+            case "whiteEloType", "blackEloType" -> EloType.decode(valueStr);
             case "lineEvaluation" -> {
                 try {
                     yield NAG.valueOf(valueStr);

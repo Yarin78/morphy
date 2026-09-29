@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.io.File;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import se.yarin.chess.EloType;
 import se.yarin.morphy.api.AccessMode;
 import se.yarin.morphy.api.Database;
 import se.yarin.morphy.api.Databases;
@@ -131,10 +132,51 @@ class FacadeWriteTest {
     }
   }
 
+  @Test
+  void eloTypesRoundTrip() throws Exception {
+    File file = new File(tempDir, "elo.2cbh");
+    try (Database v1 = Databases.open(TestDatabases.worldCh(), AccessMode.READ_ONLY);
+        Database v2 = Databases.create(file)) {
+      GameDto g = unbind(v1.getGame(1, GameFetchOptions.full()));
+      EloType national = EloType.national(EloType.TimeControl.BLITZ, "NOR");
+      EloType lichess = EloType.server(EloType.TimeControl.RAPID, EloType.LICHESS);
+      long id = v2.addGame(withElos(g, 2100, national, 2300, lichess));
+      GameDto back = v2.getGame(id, GameFetchOptions.full());
+      assertEquals(national, back.whiteEloType());
+      assertEquals(lichess, back.blackEloType());
+
+      // An elo without a type gets a FIDE one
+      id = v2.addGame(withElos(g, 2100, null, 2300, null));
+      assertEquals(EloType.FIDE, v2.getGame(id, GameFetchOptions.full()).whiteEloType());
+
+      // Types whose rating list isn't known are stored too
+      EloType lichessBullet = EloType.server(EloType.TimeControl.BULLET, EloType.LICHESS);
+      EloType chessCom = EloType.server(EloType.TimeControl.BLITZ, EloType.CHESS_COM);
+      id = v2.addGame(withElos(g, 2100, lichessBullet, 2300, chessCom));
+      back = v2.getGame(id, GameFetchOptions.full());
+      assertEquals(lichessBullet, back.whiteEloType());
+      assertEquals(chessCom, back.blackEloType());
+
+      // A national rating needs a nation
+      EloType nowhere = new EloType(EloType.Kind.NATIONAL, EloType.TimeControl.NORMAL, null, null);
+      assertThrows(IllegalArgumentException.class, () -> v2.addGame(withElos(g, 2100, nowhere, 2300, null)));
+    }
+  }
+
+  private static GameDto withElos(GameDto g, Integer whiteElo, EloType whiteType, Integer blackElo, EloType blackType) {
+    return new GameDto(
+        g.id(), g.type(), g.textTitle(), g.whitePlayer(), whiteElo, whiteType, g.blackPlayer(), blackElo,
+        blackType, g.whiteTeam(), g.blackTeam(), g.result(), g.date(), g.eco(), g.round(), g.subRound(),
+        g.board(), g.lineEvaluation(), g.tournament(), g.source(), g.annotator(), g.gameTag(), g.medals(),
+        g.deleted(), g.topGame(), g.setupPosition(), g.variant(), g.noMoves(), g.notation(),
+        g.variationMoves(), g.ait(), g.vcs(), g.finalMaterial(), g.gameVersion(), g.creationTimestamp(),
+        g.lastChanged(), g.moves(), g.text(), g.extraTags());
+  }
+
   private static GameDto withTournament(GameDto g, TournamentDto tournament) {
     return new GameDto(
-        g.id(), g.type(), g.textTitle(), g.whitePlayer(), g.whiteElo(), g.blackPlayer(),
-        g.blackElo(), g.whiteTeam(), g.blackTeam(), g.result(), g.date(), g.eco(), g.round(),
+        g.id(), g.type(), g.textTitle(), g.whitePlayer(), g.whiteElo(), g.whiteEloType(),
+        g.blackPlayer(), g.blackElo(), g.blackEloType(), g.whiteTeam(), g.blackTeam(), g.result(), g.date(), g.eco(), g.round(),
         g.subRound(), g.board(), g.lineEvaluation(), tournament, g.source(), g.annotator(),
         g.gameTag(), g.medals(), g.deleted(), g.topGame(), g.setupPosition(), g.variant(),
         g.noMoves(), g.notation(), g.variationMoves(), g.ait(), g.vcs(), g.finalMaterial(),
@@ -144,8 +186,8 @@ class FacadeWriteTest {
 
   private static GameDto withBoard(GameDto g, Integer board) {
     return new GameDto(
-        g.id(), g.type(), g.textTitle(), g.whitePlayer(), g.whiteElo(), g.blackPlayer(),
-        g.blackElo(), g.whiteTeam(), g.blackTeam(), g.result(), g.date(), g.eco(), g.round(),
+        g.id(), g.type(), g.textTitle(), g.whitePlayer(), g.whiteElo(), g.whiteEloType(),
+        g.blackPlayer(), g.blackElo(), g.blackEloType(), g.whiteTeam(), g.blackTeam(), g.result(), g.date(), g.eco(), g.round(),
         g.subRound(), board, g.lineEvaluation(), g.tournament(), g.source(), g.annotator(),
         g.gameTag(), g.medals(), g.deleted(), g.topGame(), g.setupPosition(), g.variant(),
         g.noMoves(), g.notation(), g.variationMoves(), g.ait(), g.vcs(), g.finalMaterial(),
@@ -159,8 +201,9 @@ class FacadeWriteTest {
         null, g.type(), g.textTitle(),
         g.whitePlayer() == null ? null : new PlayerDto(null, g.whitePlayer().lastName(), g.whitePlayer().firstName(), null, null, null),
         g.whiteElo(),
+        g.whiteEloType(),
         g.blackPlayer() == null ? null : new PlayerDto(null, g.blackPlayer().lastName(), g.blackPlayer().firstName(), null, null, null),
-        g.blackElo(), null, null, g.result(), g.date(), g.eco(), g.round(), g.subRound(),
+        g.blackElo(), g.blackEloType(), null, null, g.result(), g.date(), g.eco(), g.round(), g.subRound(),
         g.board(), g.lineEvaluation(),
         g.tournament() == null ? null : new TournamentDto(null, g.tournament().title(), g.tournament().startDate(), g.tournament().endDate(), g.tournament().place(), g.tournament().nation(), g.tournament().category(), null, g.tournament().rounds(), g.tournament().type(), g.tournament().timeControl(), null, null, null, null, null, null, null),
         null, null, null, g.medals(), null, null, g.setupPosition(), g.variant(), null, null, null,

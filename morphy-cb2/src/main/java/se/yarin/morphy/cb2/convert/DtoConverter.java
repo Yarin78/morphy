@@ -12,6 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.chess.Chess960;
 import se.yarin.chess.Date;
+import se.yarin.chess.EloType;
 import se.yarin.chess.GameMovesModel;
 import se.yarin.chess.GameResult;
 import se.yarin.chess.NAG;
@@ -96,6 +97,7 @@ public final class DtoConverter {
 
     PlayerDto white = null, black = null;
     Integer whiteElo = null, blackElo = null;
+    EloType whiteEloType = null, blackEloType = null;
     TeamDto whiteTeam = null, blackTeam = null;
     GameResult result = GameResult.NOT_FINISHED;
     Date date = Date.unset();
@@ -116,6 +118,8 @@ public final class DtoConverter {
       black = player(txn, g.blackId(), game.black());
       whiteElo = g.whiteElo() > 0 ? g.whiteElo() : null;
       blackElo = g.blackElo() > 0 ? g.blackElo() : null;
+      whiteEloType = whiteElo == null ? null : g.whiteRating().toEloType();
+      blackEloType = blackElo == null ? null : g.blackRating().toEloType();
       whiteTeam = team(txn, g.whiteTeamId(), game.whiteTeam(), details);
       blackTeam = team(txn, g.blackTeamId(), game.blackTeam(), details);
       result = result(g.result());
@@ -213,8 +217,10 @@ public final class DtoConverter {
         textTitle,
         white,
         whiteElo,
+        whiteEloType,
         black,
         blackElo,
+        blackEloType,
         whiteTeam,
         blackTeam,
         result,

@@ -207,7 +207,7 @@ final class GameSpec {
 
   GameDto build() {
     return new GameDto(
-        null, type, null, white, whiteElo, black, blackElo, whiteTeam, blackTeam, result, date,
+        null, type, null, white, whiteElo, null, black, blackElo, null, whiteTeam, blackTeam, result, date,
         eco, round, subRound, null, lineEvaluation, tournament, source, annotator, gameTag, null, null,
         null, null, variant, null, null, null, null, null, null, null, null, null, moves, text,
         extraTags);
