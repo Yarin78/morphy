@@ -43,3 +43,22 @@
   font-style: italic;
   color: #666;
 }
+
+.game-header-clickable {
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.game-header-clickable:hover {
+  background: #d6c8b7;
+}
+
+.game-header-clickable:focus-visible {
+  outline: 2px solid #8b6f47;
+  outline-offset: -2px;
+}
+
+.game-header-line.game-header-placeholder {
+  color: #8a7a68;
+  font-style: italic;
+}

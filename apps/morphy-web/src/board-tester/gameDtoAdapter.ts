@@ -1,4 +1,5 @@
 import type { Chess } from '@jackstenglein/chess';
+import { LINE_EVALUATION_TAG } from 'game-view';
 import type { DateDto, GameDto, GameResultDto } from '../api/types';
 
 // Bridges morphy-service's GameDto (flattened header fields + a movetext-only
@@ -46,20 +47,20 @@ function parseDateTag(value: string | undefined, fallback: DateDto): DateDto {
 
 /** "Lastname, Firstname" (or just "Lastname"), the usual PGN convention for player tags. */
 function formatPlayerNameTag(player: { lastName?: string; firstName?: string } | undefined): string {
-  if (!player?.lastName) return '';
-  return player.firstName ? `${player.lastName}, ${player.firstName}` : player.lastName;
+  const lastName = player?.lastName ?? '';
+  return player?.firstName ? `${lastName}, ${player.firstName}` : lastName;
 }
 
 function parsePlayerNameTag(value: string | undefined): { lastName?: string; firstName?: string } | undefined {
   if (!value) return undefined;
-  const [lastName, firstName] = value.split(',').map((s) => s.trim());
-  if (!lastName) return undefined;
+  const [lastName = '', firstName] = value.split(',').map((s) => s.trim());
+  if (!lastName && !firstName) return undefined;
   return firstName ? { lastName, firstName } : { lastName };
 }
 
 const KNOWN_TAGS = new Set([
   'Event', 'Site', 'Date', 'Round', 'White', 'Black', 'Result',
-  'WhiteElo', 'BlackElo', 'ECO', 'Annotator', 'FEN', 'SetUp',
+  'WhiteElo', 'BlackElo', 'Board', 'ECO', 'Annotator', 'FEN', 'SetUp', LINE_EVALUATION_TAG,
 ]);
 
 /**
@@ -82,8 +83,10 @@ export function gameDtoToPgn(game: GameDto): string {
   pushIfSet('White', formatPlayerNameTag(game.whitePlayer) || undefined);
   pushIfSet('Black', formatPlayerNameTag(game.blackPlayer) || undefined);
   tags.push(['Result', RESULT_TO_PGN[game.result] ?? '*']);
+  if (game.result === 'NOT_FINISHED') pushIfSet(LINE_EVALUATION_TAG, game.lineEvaluation);
   pushIfSet('WhiteElo', game.whiteElo == null ? undefined : String(game.whiteElo));
   pushIfSet('BlackElo', game.blackElo == null ? undefined : String(game.blackElo));
+  pushIfSet('Board', game.board == null ? undefined : String(game.board));
   pushIfSet('ECO', game.eco);
   pushIfSet('Annotator', game.annotator?.name);
   if (game.setupPosition && game.moves?.fen) {
@@ -128,6 +131,7 @@ export function pgnToGamePatch(chess: Chess, base: GameDto): GameDto {
   const annotatorName = tagValues.Annotator || undefined;
   const annotatorUnchanged = annotatorName === base.annotator?.name;
 
+  const result = PGN_TO_RESULT[tagValues.Result ?? ''] ?? base.result;
   const round = tagValues.Round?.split('.');
   const setupPosition = tagValues.SetUp === '1';
 
@@ -148,11 +152,13 @@ export function pgnToGamePatch(chess: Chess, base: GameDto): GameDto {
       : undefined,
     whiteElo: tagValues.WhiteElo ? parseInt(tagValues.WhiteElo, 10) : undefined,
     blackElo: tagValues.BlackElo ? parseInt(tagValues.BlackElo, 10) : undefined,
-    result: PGN_TO_RESULT[tagValues.Result ?? ''] ?? base.result,
+    result,
+    lineEvaluation: result === 'NOT_FINISHED' ? tagValues[LINE_EVALUATION_TAG] || undefined : undefined,
     date: parseDateTag(tagValues.Date, base.date),
     eco: tagValues.ECO || undefined,
     round: round?.[0] ? parseInt(round[0], 10) : undefined,
     subRound: round?.[1] ? parseInt(round[1], 10) : undefined,
+    board: tagValues.Board ? parseInt(tagValues.Board, 10) : undefined,
     tournament: tournamentTitle
       ? {
           ...base.tournament,

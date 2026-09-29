@@ -1,0 +1,197 @@
+.game-info-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(2px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.game-info-dialog {
+  background: #ede6dc;
+  border: 2px solid #a89584;
+  border-radius: 8px;
+  padding: 1.25rem 1.5rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  width: min(560px, 100%);
+  max-height: calc(100vh - 2rem);
+  overflow-y: auto;
+  box-sizing: border-box;
+  animation: game-info-appear 0.15s ease-out;
+  color: #333;
+}
+
+@keyframes game-info-appear {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.game-info-dialog h3 {
+  margin: 0 0 0.75rem 0;
+  color: #5a3a1f;
+  text-align: center;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.game-info-dialog fieldset {
+  border: none;
+  border-top: 1px solid #c9b8a6;
+  margin: 0;
+  padding: 0.5rem 0 0.75rem 0;
+  display: grid;
+  gap: 0.5rem;
+  align-items: start;
+}
+
+.game-info-dialog legend {
+  color: #5a3a1f;
+  font-weight: 600;
+  font-size: 0.85rem;
+  padding: 0 0.4rem 0 0;
+}
+
+.game-info-dialog fieldset.game-info-players {
+  grid-template-columns: auto 1fr 1fr 5rem;
+  row-gap: 0.3rem;
+}
+
+.game-info-players .game-info-label {
+  align-self: end;
+}
+
+/* "White" and "Black", in line with the text of the inputs next to them */
+.game-info-row-label {
+  font-size: 0.85rem;
+  color: #5a3a1f;
+  line-height: 2.1rem;
+  padding-right: 0.25rem;
+}
+
+/* Two groups on one row, the second kept to the right */
+.game-info-pair {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 1.5rem;
+}
+
+.game-info-pair > fieldset:first-child {
+  flex: 1;
+}
+
+.game-info-dialog fieldset.game-info-row {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.game-info-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.game-info-field-tournament {
+  flex: 1 1 14rem;
+}
+
+.game-info-field-year input {
+  width: 4.5rem;
+}
+
+.game-info-field-month input,
+.game-info-field-day input,
+.game-info-field-round input,
+.game-info-field-subRound input,
+.game-info-field-board input {
+  width: 3.5rem;
+}
+
+.game-info-label {
+  font-size: 0.75rem;
+  color: #666;
+}
+
+.game-info-dialog input,
+.game-info-dialog select {
+  font: inherit;
+  font-size: 0.95rem;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid #b8a896;
+  border-radius: 4px;
+  background: #fbf8f4;
+  color: #333;
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+.game-info-dialog input:focus,
+.game-info-dialog select:focus {
+  outline: 2px solid #8b6f47;
+  outline-offset: -1px;
+  border-color: #8b6f47;
+}
+
+.game-info-dialog input[aria-invalid='true'] {
+  border-color: #b3261e;
+}
+
+.game-info-error {
+  font-size: 0.7rem;
+  color: #b3261e;
+  /* Wrap within the field rather than widening it */
+  width: 0;
+  min-width: 100%;
+}
+
+.game-info-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #c9b8a6;
+}
+
+.game-info-buttons button {
+  font: inherit;
+  font-size: 0.9rem;
+  padding: 0.45rem 1.1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.game-info-cancel {
+  background: transparent;
+  border: 1px solid #a89584;
+  color: #5a3a1f;
+}
+
+.game-info-cancel:hover {
+  background: #c9b8a6;
+}
+
+.game-info-ok {
+  background: #8b6f47;
+  border: 1px solid #6b5d47;
+  color: #f5f0e8;
+}
+
+.game-info-ok:hover {
+  background: #6b5d47;
+}
+
+@media (max-width: 480px) {
+  .game-info-dialog fieldset.game-info-players {
+    grid-template-columns: auto 1fr 1fr 4rem;
+  }
+}

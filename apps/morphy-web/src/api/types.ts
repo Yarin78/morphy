@@ -181,6 +181,8 @@ export interface GameDto {
   eco?: string;
   round?: number;
   subRound?: number;
+  /** The board in a team match; not stored by every format. */
+  board?: number;
   lineEvaluation?: string;
   tournament?: TournamentDto;
   source?: SourceDto;

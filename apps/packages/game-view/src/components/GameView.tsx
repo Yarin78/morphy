@@ -3,6 +3,7 @@ import Chessground from 'react-chessground';
 import 'react-chessground/dist/styles/chessground.css';
 import { GameNotation } from './GameNotation';
 import { GameHeader } from './GameHeader';
+import { GameInfoDialog } from './GameInfoDialog';
 import { PromotionDialog } from './PromotionDialog';
 import { convertMoveDrawablesToAutoShapes, convertShapesToPGN } from '../utils/drawableConverter';
 import { createMovedPieceFen } from '../utils/fenUtils';
@@ -10,6 +11,8 @@ import { IoPlaySkipBack, IoChevronBack, IoChevronForward, IoPlaySkipForward, IoR
 import type { ChessGame } from '../types/chess';
 import { useChessGame } from '../hooks/useChessGame';
 import { useKeyboardNavigation } from '../hooks/useKeyboardNavigation';
+import { readGameInfo, writeGameInfo } from '../utils/gameInfo';
+import type { GameInfo } from '../utils/gameInfo';
 import { Chess } from '@jackstenglein/chess';
 import type { Move, Square } from '@jackstenglein/chess';
 import './GameView.css';
@@ -63,6 +66,8 @@ export const GameView: React.FC<GameViewProps> = ({
   const [isEditMode, setIsEditMode] = useState(false);
   const [promotionPending, setPromotionPending] = useState<{ from: Square; to: Square } | null>(null);
   const [promotionPreviewFen, setPromotionPreviewFen] = useState<string | null>(null);
+  // The game info being edited in the Edit Game Info dialog, or null when it isn't open
+  const [editingGameInfo, setEditingGameInfo] = useState<GameInfo | null>(null);
 
   // Load PGN when a game is selected and set edit mode
   useEffect(() => {
@@ -365,9 +370,17 @@ export const GameView: React.FC<GameViewProps> = ({
     setReverseMoveMap(moveMap);
   }, []);
 
+  const handleGameInfoSave = useCallback((info: GameInfo) => {
+    writeGameInfo(chess, info);
+    setEditingGameInfo(null);
+    triggerUpdate();
+  }, [chess, triggerUpdate]);
+
+  const handleGameInfoCancel = useCallback(() => setEditingGameInfo(null), []);
+
   // Keyboard navigation
   useKeyboardNavigation({
-    enabled: !!selectedGame,
+    enabled: !!selectedGame && !editingGameInfo,
     canGoBack,
     canGoForward,
     goToPreviousMove,
@@ -523,7 +536,7 @@ export const GameView: React.FC<GameViewProps> = ({
       <div className="notation-area">
         {selectedGame ? (
           <>
-            <GameHeader chess={chess} />
+            <GameHeader chess={chess} onClick={() => setEditingGameInfo(readGameInfo(chess))} />
             <div className="notation-divider"></div>
             <GameNotation
               chess={chess}
@@ -536,6 +549,14 @@ export const GameView: React.FC<GameViewProps> = ({
           <></>
         )}
       </div>
+
+      {editingGameInfo && (
+        <GameInfoDialog
+          initial={editingGameInfo}
+          onSave={handleGameInfoSave}
+          onCancel={handleGameInfoCancel}
+        />
+      )}
     </div>
   );
 };
