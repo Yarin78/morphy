@@ -1,6 +1,14 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ELO_KINDS, ELO_SERVERS, ELO_TIME_CONTROLS, eloTypeLabel, FIDE, internationalEloType } from '../utils/eloType';
+import {
+  ELO_KINDS,
+  ELO_SERVERS,
+  ELO_TIME_CONTROLS,
+  eloTimeControls,
+  eloTypeLabel,
+  FIDE,
+  internationalEloType,
+} from '../utils/eloType';
 import type { EloKind, EloTimeControl, EloTypeInfo } from '../utils/eloType';
 
 interface RatingFieldProps {
@@ -73,10 +81,10 @@ export const RatingField: React.FC<RatingFieldProps> = ({
 
   const current = type ?? FIDE;
 
-  // The time control stays as it is when the kind or the server changes
+  // The time control stays as it is when the kind changes, if the new kind has it
   const setKind = (kind: EloKind) => {
     if (kind === current.kind) return;
-    const timeControl = current.timeControl;
+    const timeControl = eloTimeControls(kind).includes(current.timeControl) ? current.timeControl : 'NORMAL';
     if (kind === 'INTERNATIONAL') {
       onTypeChange(internationalEloType(timeControl));
     } else if (kind === 'NATIONAL') {
@@ -91,8 +99,11 @@ export const RatingField: React.FC<RatingFieldProps> = ({
 
   const setServer = (name: string) => onTypeChange({ ...current, name });
 
-  // A server stored under another name stays selectable, rather than being changed by just opening
-  // the popover
+  // A stored type ChessBase wouldn't offer stays selectable, rather than being changed by just
+  // opening the popover
+  const timeControls = ELO_TIME_CONTROLS.filter(
+    (t) => eloTimeControls(current.kind).includes(t.value) || t.value === current.timeControl
+  );
   const servers = [...ELO_SERVERS];
   if (current.kind === 'SERVER' && current.name && !servers.includes(current.name)) servers.push(current.name);
 
@@ -186,7 +197,7 @@ export const RatingField: React.FC<RatingFieldProps> = ({
             <label className="game-info-field">
               <span className="game-info-label">Time control</span>
               <select value={current.timeControl} onChange={(e) => setTimeControl(e.target.value as EloTimeControl)}>
-                {ELO_TIME_CONTROLS.map((t) => (
+                {timeControls.map((t) => (
                   <option key={t.value} value={t.value}>
                     {t.label}
                   </option>

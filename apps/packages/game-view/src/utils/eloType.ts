@@ -28,6 +28,20 @@ export const ELO_TIME_CONTROLS: { value: EloTimeControl; label: string }[] = [
 /** The chess servers a rating can be from, by the names the server side has for them. */
 export const ELO_SERVERS = ['ChessBase', 'chess.com', 'lichess'];
 
+/**
+ * The time controls ChessBase offers for each kind of rating: an international rating is FIDE at
+ * normal, blitz or rapid, or ICCF at correspondence; a server rating can't be correspondence.
+ */
+const TIME_CONTROLS_BY_KIND: Record<EloKind, EloTimeControl[]> = {
+  INTERNATIONAL: ['NORMAL', 'BLITZ', 'RAPID', 'CORRESPONDENCE'],
+  NATIONAL: ['NORMAL', 'BULLET', 'BLITZ', 'RAPID', 'CORRESPONDENCE'],
+  SERVER: ['NORMAL', 'BULLET', 'BLITZ', 'RAPID'],
+};
+
+export function eloTimeControls(kind: EloKind): EloTimeControl[] {
+  return TIME_CONTROLS_BY_KIND[kind];
+}
+
 /** An international rating: ICCF for correspondence, otherwise FIDE. */
 export function internationalEloType(timeControl: EloTimeControl): EloTypeInfo {
   return { kind: 'INTERNATIONAL', timeControl, name: timeControl === 'CORRESPONDENCE' ? 'ICCF' : 'FIDE' };
