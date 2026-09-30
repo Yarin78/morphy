@@ -161,7 +161,14 @@ public class GameAdapter {
 
     model.setSourceTitle(source.title());
     model.setSource(source.publisher());
-    model.setSourceDate(source.publication());
+    model.setSourceDate(source.date());
+    model.setSourcePublication(source.publication());
+    if (source.version() > 0) {
+      model.setSourceVersion(source.version());
+    }
+    if (source.quality() != SourceQuality.UNSET) {
+      model.setSourceQuality(source.quality().name());
+    }
     model.setSourceId((long) source.id());
     model.setAnnotator(annotator.name());
     model.setAnnotatorId((long) annotator.id());
@@ -336,6 +343,14 @@ public class GameAdapter {
     }
   }
 
+  private static @NotNull SourceQuality sourceQuality(@NotNull String name) {
+    try {
+      return SourceQuality.valueOf(name.toUpperCase());
+    } catch (IllegalArgumentException e) {
+      return SourceQuality.UNSET;
+    }
+  }
+
   public @NotNull Source toSource(@NotNull GameHeaderModel headerModel) {
     ImmutableSource.Builder builder = ImmutableSource.builder();
     if (headerModel.getSourceTitle() != null) {
@@ -346,6 +361,15 @@ public class GameAdapter {
     }
     if (headerModel.getSourceDate() != null) {
       builder.date(headerModel.getSourceDate());
+    }
+    if (headerModel.getSourcePublication() != null) {
+      builder.publication(headerModel.getSourcePublication());
+    }
+    if (headerModel.getSourceVersion() != null) {
+      builder.version(headerModel.getSourceVersion());
+    }
+    if (headerModel.getSourceQuality() != null) {
+      builder.quality(sourceQuality(headerModel.getSourceQuality()));
     }
     return builder.build();
   }

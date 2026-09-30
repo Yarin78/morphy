@@ -2,6 +2,7 @@ package se.yarin.morphy.cb2.entities;
 
 import java.nio.ByteBuffer;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * A source.
@@ -23,8 +24,26 @@ public record Source(
     int quality)
     implements Entity {
 
+  /** The qualities by their stored numbers, 0 being unset. */
+  private static final String[] QUALITIES = {"UNSET", "HIGH", "MEDIUM", "LOW"};
+
   public static @NotNull Source of(@NotNull String title) {
     return new Source(title, "", 0, 0, 0, 0);
+  }
+
+  /** The stored number of a quality named HIGH, MEDIUM or LOW; 0, unset, for anything else. */
+  public static int quality(@Nullable String name) {
+    for (int i = 1; i < QUALITIES.length; i++) {
+      if (QUALITIES[i].equalsIgnoreCase(name)) {
+        return i;
+      }
+    }
+    return 0;
+  }
+
+  /** The name of this source's quality: HIGH, MEDIUM or LOW; null when unset. */
+  public @Nullable String qualityName() {
+    return quality > 0 && quality < QUALITIES.length ? QUALITIES[quality] : null;
   }
 
   @Override

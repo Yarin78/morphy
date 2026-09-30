@@ -194,6 +194,15 @@ public final class PgnGameMapper {
       if (source.date() != null) {
         headerModel.setSourceDate(source.date());
       }
+      if (source.publication() != null) {
+        headerModel.setSourcePublication(source.publication());
+      }
+      if (source.version() != null) {
+        headerModel.setSourceVersion(source.version());
+      }
+      if (source.quality() != null) {
+        headerModel.setSourceQuality(source.quality());
+      }
     }
 
     if (dto.annotator() != null) {
@@ -380,11 +389,28 @@ public final class PgnGameMapper {
   }
 
   private static @Nullable SourceDto source(@NotNull GameHeaderModel header) {
-    Date date = header.getSourceDate() == null || header.getSourceDate().isUnset() ? null : header.getSourceDate();
-    if (header.getSourceTitle() == null && header.getSource() == null && date == null) {
+    Date date = known(header.getSourceDate());
+    Date publication = known(header.getSourcePublication());
+    if (header.getSourceTitle() == null
+        && header.getSource() == null
+        && date == null
+        && publication == null
+        && header.getSourceVersion() == null
+        && header.getSourceQuality() == null) {
       return null;
     }
     return new SourceDto(
-        null, header.getSourceTitle(), header.getSource(), null, date, null, null, null);
+        null,
+        header.getSourceTitle(),
+        header.getSource(),
+        publication,
+        date,
+        header.getSourceVersion(),
+        header.getSourceQuality(),
+        null);
+  }
+
+  private static @Nullable Date known(@Nullable Date date) {
+    return date == null || date.isUnset() ? null : date;
   }
 }

@@ -216,14 +216,14 @@ public class AnnotationPgnUtil {
 
         // Try to determine the type based on field name and parse accordingly
         return switch (fieldName) {
-            case "whiteElo", "blackElo", "round", "subRound", "board", "eventCategory", "eventRounds" -> {
+            case "whiteElo", "blackElo", "round", "subRound", "board", "eventCategory", "eventRounds", "sourceVersion" -> {
                 try {
                     yield Integer.parseInt(valueStr);
                 } catch (NumberFormatException e) {
                     yield null;
                 }
             }
-            case "date", "eventDate", "eventEndDate", "sourceDate" -> {
+            case "date", "eventDate", "eventEndDate", "sourceDate", "sourcePublication" -> {
                 try {
                     yield parsePgnDate(valueStr);
                 } catch (Exception e) {

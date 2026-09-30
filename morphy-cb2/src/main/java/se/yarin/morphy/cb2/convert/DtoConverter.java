@@ -76,8 +76,6 @@ public final class DtoConverter {
           Map.entry(19, "Sonneborn-Berger"),
           Map.entry(21, "Koya"));
 
-  private static final String[] QUALITIES = {"UNSET", "HIGH", "MEDIUM", "LOW"};
-
   /**
    * Converts a game, text or analysis.
    *
@@ -331,7 +329,7 @@ public final class DtoConverter {
         publication.isUnset() ? null : publication,
         date.isUnset() ? null : date,
         s.version() == 0 ? null : s.version(),
-        s.quality() > 0 && s.quality() < QUALITIES.length ? QUALITIES[s.quality()] : null,
+        s.qualityName(),
         withCount ? count(txn, id, Role.SOURCE) : null);
   }
 
@@ -444,19 +442,13 @@ public final class DtoConverter {
 
   /** A source with the fields of a DTO. */
   public @NotNull Source toSource(@NotNull SourceDto dto) {
-    int quality = 0;
-    for (int i = 0; i < QUALITIES.length; i++) {
-      if (QUALITIES[i].equalsIgnoreCase(text(dto.quality()))) {
-        quality = i;
-      }
-    }
     return new Source(
         text(dto.title()),
         text(dto.publisher()),
         dto.publication() == null ? 0 : Dates.encode(dto.publication()),
         dto.date() == null ? 0 : Dates.encode(dto.date()),
         dto.version() == null ? 0 : dto.version(),
-        quality);
+        Source.quality(dto.quality()));
   }
 
   /** A team with the fields of a DTO. */

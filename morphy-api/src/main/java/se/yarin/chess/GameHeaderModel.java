@@ -62,6 +62,9 @@ public class GameHeaderModel {
           "sourceTitle",
           "source",
           "sourceDate",
+          "sourcePublication",
+          "sourceVersion",
+          "sourceQuality",
           "annotator",
           "gameTag");
 
@@ -96,6 +99,9 @@ public class GameHeaderModel {
   private @Nullable String sourceTitle;
   private @Nullable String source;
   private @Nullable Date sourceDate;
+  private @Nullable Date sourcePublication;
+  private @Nullable Integer sourceVersion;
+  private @Nullable String sourceQuality;
   private @Nullable String annotator;
   private @Nullable String gameTag;
 
@@ -361,6 +367,32 @@ public class GameHeaderModel {
     this.sourceDate = sourceDate;
   }
 
+  /** When the source was published; {@link #getSourceDate()} is the source's other date. */
+  public @Nullable Date getSourcePublication() {
+    return sourcePublication;
+  }
+
+  public void setSourcePublication(@Nullable Date sourcePublication) {
+    this.sourcePublication = sourcePublication;
+  }
+
+  public @Nullable Integer getSourceVersion() {
+    return sourceVersion;
+  }
+
+  public void setSourceVersion(@Nullable Integer sourceVersion) {
+    this.sourceVersion = sourceVersion;
+  }
+
+  /** The quality of the source's games: HIGH, MEDIUM or LOW. */
+  public @Nullable String getSourceQuality() {
+    return sourceQuality;
+  }
+
+  public void setSourceQuality(@Nullable String sourceQuality) {
+    this.sourceQuality = sourceQuality;
+  }
+
   public @Nullable String getAnnotator() {
     return annotator;
   }
@@ -524,6 +556,9 @@ public class GameHeaderModel {
       case "sourceTitle" -> sourceTitle;
       case "source" -> source;
       case "sourceDate" -> sourceDate;
+      case "sourcePublication" -> sourcePublication;
+      case "sourceVersion" -> sourceVersion;
+      case "sourceQuality" -> sourceQuality;
       case "annotator" -> annotator;
       case "gameTag" -> gameTag;
       default -> extraTags.get(name);
@@ -568,6 +603,9 @@ public class GameHeaderModel {
       case "sourceTitle" -> sourceTitle = cast(name, value, String.class);
       case "source" -> source = cast(name, value, String.class);
       case "sourceDate" -> sourceDate = cast(name, value, Date.class);
+      case "sourcePublication" -> sourcePublication = cast(name, value, Date.class);
+      case "sourceVersion" -> sourceVersion = cast(name, value, Integer.class);
+      case "sourceQuality" -> sourceQuality = cast(name, value, String.class);
       case "annotator" -> annotator = cast(name, value, String.class);
       case "gameTag" -> gameTag = cast(name, value, String.class);
       default -> setExtraTag(name, cast(name, value, String.class));

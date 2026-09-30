@@ -237,10 +237,10 @@ public final class WriteTransaction extends DatabaseTransaction {
                 new Source(
                     text(h.getSourceTitle()),
                     text(h.getSource()),
+                    h.getSourcePublication() == null ? 0 : Dates.encode(h.getSourcePublication()),
                     h.getSourceDate() == null ? 0 : Dates.encode(h.getSourceDate()),
-                    0,
-                    0,
-                    0));
+                    h.getSourceVersion() == null ? 0 : h.getSourceVersion(),
+                    Source.quality(h.getSourceQuality())));
     long whiteTeamId = teamId(h.getWhiteTeamId(), h.getWhiteTeam());
     long blackTeamId = teamId(h.getBlackTeamId(), h.getBlackTeam());
     long gameTagId =

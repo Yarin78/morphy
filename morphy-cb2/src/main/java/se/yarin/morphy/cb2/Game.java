@@ -313,7 +313,14 @@ public final class Game {
     if (source != null && !source.isEmpty()) {
       model.setSourceTitle(source.title());
       model.setSource(source.publisher());
-      model.setSourceDate(Dates.decode(source.publicationDate()));
+      model.setSourceDate(Dates.decode(source.date()));
+      model.setSourcePublication(Dates.decode(source.publicationDate()));
+      if (source.version() > 0) {
+        model.setSourceVersion(source.version());
+      }
+      if (source.qualityName() != null) {
+        model.setSourceQuality(source.qualityName());
+      }
     }
     Player annotator = annotator();
     model.setAnnotatorId(annotatorId());
