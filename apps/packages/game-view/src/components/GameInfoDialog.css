@@ -125,14 +125,6 @@
   color: #555;
 }
 
-.game-info-field-year input {
-  width: 4.5rem;
-}
-
-.game-info-field-month input,
-.game-info-field-day input {
-  width: 3.5rem;
-}
 
 .game-info-label {
   font-size: 0.75rem;
@@ -351,15 +343,6 @@
   flex: 2 1 8rem;
 }
 
-.tournament-field-startYear input,
-.tournament-field-endYear input {
-  width: 4.5rem;
-}
-
-.tournament-field-startMonth input,
-.tournament-field-startDay input,
-.tournament-field-endMonth input,
-.tournament-field-endDay input,
 .tournament-field-nation input,
 .tournament-field-rounds input,
 .tournament-field-category input {
@@ -771,28 +754,8 @@ img.elo-flag {
   flex: 2 1 9rem;
 }
 
-/* Publication, date and edition side by side, so their fields are a little narrower */
-.source-dialog-dates {
-  display: flex;
-  flex-wrap: wrap;
-  column-gap: 1rem;
-}
-
-.source-dialog-dates > fieldset {
-  flex: 1 1 auto;
-}
-
-.source-field-publicationYear input,
-.source-field-dateYear input,
 .source-field-version input {
   width: 4rem;
-}
-
-.source-field-publicationMonth input,
-.source-field-publicationDay input,
-.source-field-dateMonth input,
-.source-field-dateDay input {
-  width: 3rem;
 }
 
 /* Result, date and opening on one row, the opening taking the room that's left */
@@ -825,16 +788,16 @@ img.elo-flag {
 }
 
 /* The players' teams: White and Black rows, each a title and its Details button */
+/* One grid for both rows, so the titles line up whatever the labels' widths */
 .game-info-dialog fieldset.game-info-teams {
   display: grid;
-  gap: 0.35rem;
+  grid-template-columns: auto 1fr auto;
+  gap: 0.35rem 0.5rem;
+  align-items: center;
 }
 
 .game-info-team-row {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  gap: 0.5rem;
-  align-items: center;
+  display: contents;
 }
 
 .game-info-field-team input {
@@ -866,4 +829,71 @@ img.elo-flag {
 
 .team-field-nation {
   flex: 1 1 12rem;
+}
+
+/* A date typed as yyyy-mm-dd, with a button for the browser's date picker, looking like one field */
+.date-field-input {
+  position: relative;
+  display: flex;
+  width: 9.5rem;
+  border: 1px solid #b8a896;
+  border-radius: 4px;
+  background: #fbf8f4;
+}
+
+.date-field-input:focus-within {
+  outline: 2px solid #8b6f47;
+  outline-offset: -1px;
+  border-color: #8b6f47;
+}
+
+.date-field-input.invalid {
+  border-color: #b3261e;
+}
+
+.game-info-dialog .date-field-input input[type='text'] {
+  flex: 1;
+  width: 100%;
+  border: none;
+  background: transparent;
+  outline: none;
+}
+
+.date-field-picker-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 0.45rem;
+  border: none;
+  border-left: 1px solid #d4c4b0;
+  border-radius: 0 3px 3px 0;
+  background: #efe6da;
+  color: #6b5d47;
+  cursor: pointer;
+}
+
+.date-field-picker-button:hover:not(:disabled) {
+  background: #e3d6c4;
+}
+
+.date-field-picker-button:disabled {
+  cursor: default;
+  color: #b8a896;
+}
+
+/* Only there for its picker, which opens below the button */
+.date-field-picker {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.entity-dialog.read-only .date-field-input {
+  background: #efe8de;
 }

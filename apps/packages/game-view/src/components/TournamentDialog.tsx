@@ -1,5 +1,7 @@
 import { TIME_CONTROLS, TOURNAMENT_TYPES } from '../utils/tournament';
-import type { DateParts, TournamentInfo, TournamentService } from '../utils/tournament';
+import { dateTextError, formatDateText, parseDateText } from '../utils/dateText';
+import type { TournamentInfo, TournamentService } from '../utils/tournament';
+import { DateField } from './DateField';
 import { EntityDetailsDialog } from './EntityDetailsDialog';
 
 interface TournamentDialogProps {
@@ -12,12 +14,8 @@ interface TournamentDialogProps {
 
 type Form = {
   title: string;
-  startYear: string;
-  startMonth: string;
-  startDay: string;
-  endYear: string;
-  endMonth: string;
-  endDay: string;
+  start: string;
+  end: string;
   place: string;
   nation: string;
   type: string;
@@ -35,12 +33,8 @@ const part = (value: number | undefined) => (value ? String(value) : '');
 function toForm(t: TournamentInfo): Form {
   return {
     title: t.title,
-    startYear: part(t.startDate?.year),
-    startMonth: part(t.startDate?.month),
-    startDay: part(t.startDate?.day),
-    endYear: part(t.endDate?.year),
-    endMonth: part(t.endDate?.month),
-    endDay: part(t.endDate?.day),
+    start: formatDateText(t.startDate),
+    end: formatDateText(t.endDate),
     place: t.place ?? '',
     nation: t.nation ?? '',
     type: t.type ?? '',
@@ -61,12 +55,10 @@ function validate(form: Form): Errors {
     }
   };
   if (!form.title.trim()) errors.title = 'Needs a name';
-  number('startYear', 1, 9999);
-  number('startMonth', 1, 12);
-  number('startDay', 1, 31);
-  number('endYear', 1, 9999);
-  number('endMonth', 1, 12);
-  number('endDay', 1, 31);
+  for (const field of ['start', 'end'] as const) {
+    const error = dateTextError(form[field]);
+    if (error) errors[field] = error;
+  }
   number('rounds', 1, 255);
   number('category', 1, 255);
   if (form.nation.trim() && !/^[A-Za-z0-9]{3}$/.test(form.nation.trim())) {
@@ -77,13 +69,11 @@ function validate(form: Form): Errors {
 
 function fromForm(form: Form, base: TournamentInfo, id: number | null): TournamentInfo {
   const n = (value: string) => (value.trim() ? parseInt(value, 10) : undefined);
-  const date = (y: string, m: string, d: string): DateParts | undefined =>
-    n(y) || n(m) || n(d) ? { year: n(y) ?? 0, month: n(m) ?? 0, day: n(d) ?? 0 } : undefined;
   return {
     id,
     title: form.title.trim(),
-    startDate: date(form.startYear, form.startMonth, form.startDay),
-    endDate: date(form.endYear, form.endMonth, form.endDay),
+    startDate: parseDateText(form.start) ?? undefined,
+    endDate: parseDateText(form.end) ?? undefined,
     place: form.place.trim() || undefined,
     nation: form.nation.trim().toUpperCase() || undefined,
     type: form.type || undefined,
@@ -110,7 +100,7 @@ export const TournamentDialog: React.FC<TournamentDialogProps> = ({ tournament, 
     basedOn={(form) => ({ ...form, complete: false })}
     onApply={onApply}
     onClose={onClose}
-    renderFields={({ form, set, readOnly, input }) => {
+    renderFields={({ form, set, setValue, readOnly, errors, input }) => {
       const numberProps = { inputMode: 'numeric' as const };
       return (
         <>
@@ -120,20 +110,23 @@ export const TournamentDialog: React.FC<TournamentDialogProps> = ({ tournament, 
             {input('nation', 'Nation', { placeholder: 'IOC', maxLength: 3 })}
           </fieldset>
 
-          <div className="game-info-pair">
-            <fieldset className="game-info-row">
-              <legend>Start</legend>
-              {input('startYear', 'Year', { ...numberProps, placeholder: 'yyyy' })}
-              {input('startMonth', 'Month', { ...numberProps, placeholder: 'mm' })}
-              {input('startDay', 'Day', { ...numberProps, placeholder: 'dd' })}
-            </fieldset>
-            <fieldset className="game-info-row">
-              <legend>End</legend>
-              {input('endYear', 'Year', { ...numberProps, placeholder: 'yyyy' })}
-              {input('endMonth', 'Month', { ...numberProps, placeholder: 'mm' })}
-              {input('endDay', 'Day', { ...numberProps, placeholder: 'dd' })}
-            </fieldset>
-          </div>
+          <fieldset className="game-info-row">
+            <legend>Dates</legend>
+            <DateField
+              value={form.start}
+              onChange={(value) => setValue('start', value)}
+              label="Start"
+              error={errors.start}
+              readOnly={readOnly}
+            />
+            <DateField
+              value={form.end}
+              onChange={(value) => setValue('end', value)}
+              label="End"
+              error={errors.end}
+              readOnly={readOnly}
+            />
+          </fieldset>
 
           <fieldset className="game-info-row">
             <legend>Format</legend>

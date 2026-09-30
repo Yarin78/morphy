@@ -12,6 +12,7 @@ import { sameEloType } from '../utils/eloType';
 import type { EloTypeInfo } from '../utils/eloType';
 import { newTournament } from '../utils/tournament';
 import type { TournamentInfo } from '../utils/tournament';
+import { DateField } from './DateField';
 import { PlayerField } from './PlayerField';
 import { RatingField } from './RatingField';
 import type { SourceInfo } from '../utils/source';
@@ -321,9 +322,13 @@ export const GameInfoDialog: React.FC<GameInfoDialogProps> = ({ initial, service
 
           <fieldset className="game-info-row">
             <legend>Date</legend>
-            {field('year', 'Year', { ...numberProps, placeholder: 'yyyy' })}
-            {field('month', 'Month', { ...numberProps, placeholder: 'mm' })}
-            {field('day', 'Day', { ...numberProps, placeholder: 'dd' })}
+            <DateField
+              value={info.date}
+              onChange={(date) => setInfo((i) => ({ ...i, date }))}
+              label="Date"
+              error={errors.date}
+              className="game-info-field-date"
+            />
           </fieldset>
 
           <fieldset className="game-info-row game-info-opening">

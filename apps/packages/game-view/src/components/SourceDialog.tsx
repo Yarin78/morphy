@@ -1,6 +1,7 @@
 import { SOURCE_QUALITIES } from '../utils/source';
 import type { SourceInfo, SourceService } from '../utils/source';
-import type { DateParts } from '../utils/tournament';
+import { dateTextError, formatDateText, parseDateText } from '../utils/dateText';
+import { DateField } from './DateField';
 import { EntityDetailsDialog } from './EntityDetailsDialog';
 
 interface SourceDialogProps {
@@ -14,12 +15,8 @@ interface SourceDialogProps {
 type Form = {
   title: string;
   publisher: string;
-  publicationYear: string;
-  publicationMonth: string;
-  publicationDay: string;
-  dateYear: string;
-  dateMonth: string;
-  dateDay: string;
+  publication: string;
+  date: string;
   version: string;
   quality: string;
 };
@@ -30,12 +27,8 @@ function toForm(s: SourceInfo): Form {
   return {
     title: s.title,
     publisher: s.publisher ?? '',
-    publicationYear: part(s.publication?.year),
-    publicationMonth: part(s.publication?.month),
-    publicationDay: part(s.publication?.day),
-    dateYear: part(s.date?.year),
-    dateMonth: part(s.date?.month),
-    dateDay: part(s.date?.day),
+    publication: formatDateText(s.publication),
+    date: formatDateText(s.date),
     version: part(s.version),
     quality: s.quality ?? '',
   };
@@ -50,26 +43,22 @@ function validate(form: Form): Partial<Record<keyof Form, string>> {
     }
   };
   if (!form.title.trim()) errors.title = 'Needs a title';
-  number('publicationYear', 1, 9999);
-  number('publicationMonth', 1, 12);
-  number('publicationDay', 1, 31);
-  number('dateYear', 1, 9999);
-  number('dateMonth', 1, 12);
-  number('dateDay', 1, 31);
+  for (const field of ['publication', 'date'] as const) {
+    const error = dateTextError(form[field]);
+    if (error) errors[field] = error;
+  }
   number('version', 1, 32767);
   return errors;
 }
 
 function fromForm(form: Form, base: SourceInfo, id: number | null): SourceInfo {
   const n = (value: string) => (value.trim() ? parseInt(value, 10) : undefined);
-  const date = (y: string, m: string, d: string): DateParts | undefined =>
-    n(y) || n(m) || n(d) ? { year: n(y) ?? 0, month: n(m) ?? 0, day: n(d) ?? 0 } : undefined;
   return {
     id,
     title: form.title.trim(),
     publisher: form.publisher.trim() || undefined,
-    publication: date(form.publicationYear, form.publicationMonth, form.publicationDay),
-    date: date(form.dateYear, form.dateMonth, form.dateDay),
+    publication: parseDateText(form.publication) ?? undefined,
+    date: parseDateText(form.date) ?? undefined,
     version: n(form.version),
     quality: form.quality || undefined,
     gameCount: id != null ? base.gameCount : undefined,
@@ -87,7 +76,7 @@ export const SourceDialog: React.FC<SourceDialogProps> = ({ source, service, onA
     fromForm={fromForm}
     onApply={onApply}
     onClose={onClose}
-    renderFields={({ form, set, readOnly, input }) => {
+    renderFields={({ form, set, setValue, readOnly, errors, input }) => {
       const numberProps = { inputMode: 'numeric' as const };
       return (
         <>
@@ -96,35 +85,35 @@ export const SourceDialog: React.FC<SourceDialogProps> = ({ source, service, onA
             {input('publisher', 'Publisher')}
           </fieldset>
 
-          <div className="source-dialog-dates">
-            <fieldset className="game-info-row">
-              <legend>Publication</legend>
-              {input('publicationYear', 'Year', { ...numberProps, placeholder: 'yyyy' })}
-              {input('publicationMonth', 'Month', { ...numberProps, placeholder: 'mm' })}
-              {input('publicationDay', 'Day', { ...numberProps, placeholder: 'dd' })}
-            </fieldset>
-            <fieldset className="game-info-row">
-              <legend>Date</legend>
-              {input('dateYear', 'Year', { ...numberProps, placeholder: 'yyyy' })}
-              {input('dateMonth', 'Month', { ...numberProps, placeholder: 'mm' })}
-              {input('dateDay', 'Day', { ...numberProps, placeholder: 'dd' })}
-            </fieldset>
-            <fieldset className="game-info-row">
-              <legend>Edition</legend>
-              {input('version', 'Version', numberProps)}
-              <label className="game-info-field">
-                <span className="game-info-label">Quality</span>
-                <select value={form.quality} onChange={set('quality')} disabled={readOnly}>
-                  <option value=""></option>
-                  {SOURCE_QUALITIES.map((q) => (
-                    <option key={q.value} value={q.value}>
-                      {q.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </fieldset>
-          </div>
+          <fieldset className="game-info-row">
+            <legend>Edition</legend>
+            <DateField
+              value={form.publication}
+              onChange={(value) => setValue('publication', value)}
+              label="Publication"
+              error={errors.publication}
+              readOnly={readOnly}
+            />
+            <DateField
+              value={form.date}
+              onChange={(value) => setValue('date', value)}
+              label="Date"
+              error={errors.date}
+              readOnly={readOnly}
+            />
+            {input('version', 'Version', numberProps)}
+            <label className="game-info-field">
+              <span className="game-info-label">Quality</span>
+              <select value={form.quality} onChange={set('quality')} disabled={readOnly}>
+                <option value=""></option>
+                {SOURCE_QUALITIES.map((q) => (
+                  <option key={q.value} value={q.value}>
+                    {q.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </fieldset>
         </>
       );
     }}

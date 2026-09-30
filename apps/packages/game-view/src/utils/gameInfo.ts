@@ -1,4 +1,5 @@
 import type { Chess } from '@jackstenglein/chess';
+import { dateTextError, formatDateText, parseDateText } from './dateText';
 import { decodeEloType, ELO_TYPE_TAGS, encodeEloType } from './eloType';
 import type { EloTypeInfo } from './eloType';
 import { normalizePlayerName, PLAYER_ID_TAGS } from './player';
@@ -7,7 +8,7 @@ import { sourceFromTags, sourceToTags } from './source';
 import type { SourceInfo, SourceService } from './source';
 import { teamFromTags, teamToTags } from './team';
 import type { TeamInfo, TeamService } from './team';
-import { tournamentFromTags, tournamentToTags } from './tournament';
+import { formatDateTag, parseDateTag, tournamentFromTags, tournamentToTags } from './tournament';
 import type { TournamentInfo, TournamentService } from './tournament';
 
 /**
@@ -43,9 +44,8 @@ export interface GameInfo {
   result: string;
   /** For a line (result '*'), a NAG name like 'WHITE_SLIGHT_ADVANTAGE'; see LINE_EVALUATIONS. */
   lineEvaluation: string;
-  year: string;
-  month: string;
-  day: string;
+  /** As typed: yyyy-mm-dd, or yyyy-mm or yyyy when not all of it is known. */
+  date: string;
   /** Null when the game has no tournament. */
   tournament: TournamentInfo | null;
   round: string;
@@ -125,7 +125,6 @@ function numberPart(part: string | undefined): string {
 }
 
 export function readGameInfo(chess: Chess): GameInfo {
-  const [year, month, day] = tagValue(chess, 'Date').split('.');
   const [round, subRound] = tagValue(chess, 'Round').split('.');
   const result = tagValue(chess, 'Result') || LINE_RESULT;
   return {
@@ -137,9 +136,7 @@ export function readGameInfo(chess: Chess): GameInfo {
     blackEloType: decodeEloType(tagValue(chess, ELO_TYPE_TAGS.black)),
     result: RESULTS.some((r) => r.value === result) ? result : LINE_RESULT,
     lineEvaluation: tagValue(chess, LINE_EVALUATION_TAG),
-    year: numberPart(year),
-    month: numberPart(month),
-    day: numberPart(day),
+    date: formatDateText(parseDateTag(tagValue(chess, 'Date'))),
     tournament: tournamentFromTags((name) => chess.header().getRawValue(name)),
     round: numberPart(round),
     subRound: numberPart(subRound),
@@ -181,9 +178,8 @@ export function validateGameInfo(info: GameInfo): GameInfoErrors {
       errors[elo] = 'Needs a nation';
     }
   }
-  checkNumber(errors, info, 'year', 1, 9999);
-  checkNumber(errors, info, 'month', 1, 12);
-  checkNumber(errors, info, 'day', 1, 31);
+  const dateError = dateTextError(info.date);
+  if (dateError) errors.date = dateError;
   checkNumber(errors, info, 'round', 1, 255);
   checkNumber(errors, info, 'subRound', 1, 255);
   checkNumber(errors, info, 'board', 1, 32767);
@@ -198,8 +194,6 @@ export function validateGameInfo(info: GameInfo): GameInfoErrors {
 
 /** Writes validated form values back to the Chess instance's PGN tags. */
 export function writeGameInfo(chess: Chess, info: GameInfo) {
-  const pad = (value: string, width: number) =>
-    value.trim() ? value.trim().padStart(width, '0') : '?'.repeat(width);
   const round = info.round.trim();
   const subRound = info.subRound.trim();
 
@@ -212,7 +206,7 @@ export function writeGameInfo(chess: Chess, info: GameInfo) {
   chess.setHeader(ELO_TYPE_TAGS.black, info.blackElo.trim() ? encodeEloType(info.blackEloType) : '');
   chess.setHeader('Result', info.result);
   chess.setHeader(LINE_EVALUATION_TAG, info.result === LINE_RESULT ? info.lineEvaluation : '');
-  chess.setHeader('Date', `${pad(info.year, 4)}.${pad(info.month, 2)}.${pad(info.day, 2)}`);
+  chess.setHeader('Date', formatDateTag(parseDateText(info.date) ?? undefined));
   const t = info.tournament;
   const tournament = t && (t.title.trim() || t.id != null || t.place?.trim()) ? { ...t, title: t.title.trim() } : null;
   for (const [name, value] of Object.entries(tournamentToTags(tournament))) {
