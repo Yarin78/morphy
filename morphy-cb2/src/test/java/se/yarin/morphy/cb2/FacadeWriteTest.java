@@ -149,7 +149,7 @@ class FacadeWriteTest {
       id = v2.addGame(withElos(g, 2100, null, 2300, null));
       assertEquals(EloType.FIDE, v2.getGame(id, GameFetchOptions.full()).whiteEloType());
 
-      // Types whose rating list isn't known are stored too
+      // Server ratings at any of their time controls
       EloType lichessBullet = EloType.server(EloType.TimeControl.BULLET, EloType.LICHESS);
       EloType chessCom = EloType.server(EloType.TimeControl.BLITZ, EloType.CHESS_COM);
       id = v2.addGame(withElos(g, 2100, lichessBullet, 2300, chessCom));
@@ -157,9 +157,15 @@ class FacadeWriteTest {
       assertEquals(lichessBullet, back.whiteEloType());
       assertEquals(chessCom, back.blackEloType());
 
-      // A national rating needs a nation
-      EloType nowhere = new EloType(EloType.Kind.NATIONAL, EloType.TimeControl.NORMAL, null, null);
-      assertThrows(IllegalArgumentException.class, () -> v2.addGame(withElos(g, 2100, nowhere, 2300, null)));
+      // Types ChessBase doesn't offer can't be stored, and a national rating needs a nation
+      for (EloType invalid :
+          new EloType[] {
+            EloType.international(EloType.TimeControl.BULLET),
+            EloType.server(EloType.TimeControl.CORRESPONDENCE, EloType.LICHESS),
+            new EloType(EloType.Kind.NATIONAL, EloType.TimeControl.NORMAL, null, null),
+          }) {
+        assertThrows(IllegalArgumentException.class, () -> v2.addGame(withElos(g, 2100, invalid, 2300, null)));
+      }
     }
   }
 

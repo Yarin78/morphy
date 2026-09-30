@@ -308,24 +308,31 @@ above them:
 | | | 3 | rapid |
 | | | 4 | correspondence |
 
+A rapid rating on the ChessBase server has time control 5 rather than 3.
+
+An international rating is FIDE at normal, blitz or rapid, or ICCF at
+correspondence; there is no international bullet rating. A server rating is at
+normal, bullet, blitz or rapid.
+
 The **rating list** identifies the particular list, one entry per provider and
 time control. A national rating always uses 100, whatever the nation, so it does
-not encode the nation. The values known:
+not encode the nation.
 
-| Id | List | Id | List |
-|---|---|---|---|
-| 1 | FIDE standard | 10 | chess.com |
-| 2 | FIDE blitz | 16 | LiChess blitz |
-| 3 | FIDE rapid | 17 | LiChess rapid |
-| 4 | ICCF | 100 | any national rating |
-| 6 | ChessBase server, bullet | | |
+| List | Normal | Bullet | Blitz | Rapid | Correspondence |
+|---|---|---|---|---|---|
+| international | 1 (FIDE) | | 2 (FIDE) | 3 (FIDE) | 4 (ICCF) |
+| ChessBase server | 5 | 6 | 7 | 8 | |
+| chess.com | 10 | 11 | 12 | 13 | |
+| LiChess | 14 | 15 | 16 | 17 | |
+| national | 100 | 100 | 100 | 100 | 100 |
 
 The **nation** is the nation of a national rating. A server rating uses 196
-(`NET`, the internet), except chess.com, which stores 0 — whether deliberately is
-**unknown**. An international rating stores 0.
+(`NET`, the internet); ChessBase sometimes stores 0 for a chess.com rating
+instead, with the same meaning. An international rating stores 0.
 
 The **name** is at most 8 bytes and has no terminator when it fills the field, so
-`chess.com` is stored truncated as `chess.co`. A national rating has no name; the
+`chess.com` is stored truncated as `chess.co`. The servers are named `CB`,
+`chess.co` and `LiChess`. A national rating has no name; the
 nation identifies it. An international rating is named `ICCF` at the
 correspondence time control and `FIDE` otherwise, so choosing ICCF and choosing
 correspondence produce identical records.

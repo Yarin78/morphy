@@ -25,8 +25,6 @@ are not repeated here.
 - **[Analyses](1-game-headers.md#analyses)**: the five fields from 0x30 to 0x50.
   Two hold large values that could be timestamps, two hold small numbers, and
   one is always 776.
-- **[Rating type](1-game-headers.md#rating-type)**: why a chess.com rating
-  stores nation 0 where the other servers store 196.
 - **[File header](1-game-headers.md#file-header)**: the 38 at 0x08, and the
   first 8 bytes.
 

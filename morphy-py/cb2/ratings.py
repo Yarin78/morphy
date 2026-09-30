@@ -16,6 +16,9 @@ RATING_KINDS = {1: "International", 2: "National", 3: "Server"}
 # The rest of that field. Bullet is new here; v1 has no such time control.
 RATING_TIME_CONTROLS = ["Normal", "Bullet", "Blitz", "Rapid", "Correspondence"]
 
+# A rapid rating on the ChessBase server has this time control rather than 3.
+CHESSBASE_RAPID = 5
+
 KIND_MASK = 7
 TIME_CONTROL_SHIFT = 3
 
@@ -60,6 +63,8 @@ class RatingType:
         value = self.kind_value >> TIME_CONTROL_SHIFT
         if value < len(RATING_TIME_CONTROLS):
             return RATING_TIME_CONTROLS[value]
+        if value == CHESSBASE_RAPID:
+            return "Rapid"
         return f"?{value}"
 
     @property

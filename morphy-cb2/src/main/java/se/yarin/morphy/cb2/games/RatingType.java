@@ -46,13 +46,33 @@ public record RatingType(int kindAndTimeControl, int list, int nation, @NotNull 
     return kindAndTimeControl >> 3;
   }
 
+  /**
+   * ChessBase stores a rapid rating on its own server with this time control rather than the usual
+   * one for rapid.
+   */
+  private static final int CHESSBASE_RAPID = 5;
+
+  /**
+   * The rating lists of the servers, at normal, bullet, blitz and rapid; the only time controls a
+   * server rating can have.
+   */
+  private static final Map<String, int[]> SERVER_LISTS =
+      Map.of(
+          EloType.CHESSBASE, new int[] {5, 6, 7, 8},
+          EloType.CHESS_COM, new int[] {10, 11, 12, 13},
+          EloType.LICHESS, new int[] {14, 15, 16, 17});
+
   /** This rating type in the neutral form; null when it has no kind. */
   public @Nullable EloType toEloType() {
     EloType.TimeControl[] timeControls = EloType.TimeControl.values();
-    if (timeControl() >= timeControls.length) {
+    EloType.TimeControl timeControl;
+    if (timeControl() == CHESSBASE_RAPID) {
+      timeControl = EloType.TimeControl.RAPID;
+    } else if (timeControl() < timeControls.length) {
+      timeControl = timeControls[timeControl()];
+    } else {
       return null;
     }
-    EloType.TimeControl timeControl = timeControls[timeControl()];
     return switch (kind()) {
       case INTERNATIONAL -> new EloType(EloType.Kind.INTERNATIONAL, timeControl, null, name.isEmpty() ? null : name);
       case NATIONAL ->
@@ -65,13 +85,14 @@ public record RatingType(int kindAndTimeControl, int list, int nation, @NotNull 
   }
 
   /**
-   * An elo type as stored; null for a national rating without a known nation. Each international
-   * and server rating list is one provider at one time control, and not all their ids are known: an
-   * unknown one is stored as 0, and a chess.com rating always as 10, the only chess.com list known.
-   * A national rating is list 100 whatever its nation and time control.
+   * An elo type as stored; null for one that can't be: an international rating at bullet, a server
+   * rating at correspondence or on an unknown server, or a national rating without a known nation.
+   * International ratings are FIDE at normal, blitz and rapid (lists 1 to 3) and ICCF at
+   * correspondence (4); a national rating is list 100 whatever its nation and time control; each
+   * server has a list per time control, see {@link #SERVER_LISTS}.
    */
   public static @Nullable RatingType of(@NotNull EloType type) {
-    int kindAndTimeControl = type.timeControl().ordinal() << 3;
+    int timeControl = type.timeControl().ordinal();
     return switch (type.kind()) {
       case INTERNATIONAL -> {
         int list =
@@ -83,31 +104,24 @@ public record RatingType(int kindAndTimeControl, int list, int nation, @NotNull 
               case BULLET -> 0;
             };
         String name = type.timeControl() == EloType.TimeControl.CORRESPONDENCE ? "ICCF" : "FIDE";
-        yield new RatingType(INTERNATIONAL | kindAndTimeControl, list, 0, name);
+        yield list == 0 ? null : new RatingType(INTERNATIONAL | timeControl << 3, list, 0, name);
       }
       case NATIONAL -> {
         Nation nation = type.nation() == null ? Nation.NONE : Nation.fromIOC(type.nation());
         yield nation == Nation.NONE
             ? null
-            : new RatingType(NATIONAL | kindAndTimeControl, NATIONAL_LIST, nation.ordinal(), "");
+            : new RatingType(NATIONAL | timeControl << 3, NATIONAL_LIST, nation.ordinal(), "");
       }
       case SERVER -> {
-        String name = type.name() == null ? "" : type.name();
-        int list =
-            switch (name) {
-              case EloType.CHESSBASE -> type.timeControl() == EloType.TimeControl.BULLET ? 6 : 0;
-              case EloType.CHESS_COM -> 10;
-              case EloType.LICHESS ->
-                  switch (type.timeControl()) {
-                    case BLITZ -> 16;
-                    case RAPID -> 17;
-                    default -> 0;
-                  };
-              default -> 0;
-            };
-        // chess.com is the one server stored without the internet as its nation
-        int nation = name.equals(EloType.CHESS_COM) ? 0 : Nation.INTERNET.ordinal();
-        yield new RatingType(SERVER | kindAndTimeControl, list, nation, storedServerName(name));
+        int[] lists = type.name() == null ? null : SERVER_LISTS.get(type.name());
+        if (lists == null || timeControl >= lists.length) {
+          yield null;
+        }
+        if (type.name().equals(EloType.CHESSBASE) && type.timeControl() == EloType.TimeControl.RAPID) {
+          timeControl = CHESSBASE_RAPID;
+        }
+        yield new RatingType(
+            SERVER | timeControl << 3, lists[type.timeControl().ordinal()], Nation.INTERNET.ordinal(), storedServerName(type.name()));
       }
     };
   }
