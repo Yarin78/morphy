@@ -216,7 +216,8 @@ public class AnnotationPgnUtil {
 
         // Try to determine the type based on field name and parse accordingly
         return switch (fieldName) {
-            case "whiteElo", "blackElo", "round", "subRound", "board", "eventCategory", "eventRounds", "sourceVersion" -> {
+            case "whiteElo", "blackElo", "round", "subRound", "board", "eventCategory", "eventRounds", "sourceVersion",
+                 "whiteTeamNumber", "whiteTeamYear", "blackTeamNumber", "blackTeamYear" -> {
                 try {
                     yield Integer.parseInt(valueStr);
                 } catch (NumberFormatException e) {
@@ -238,7 +239,7 @@ public class AnnotationPgnUtil {
                 }
             }
             case "result" -> parseGameResult(valueStr);
-            case "eventComplete", "eventTeamTournament" -> Boolean.parseBoolean(valueStr);
+            case "eventComplete", "eventTeamTournament", "whiteTeamSeason", "blackTeamSeason" -> Boolean.parseBoolean(valueStr);
             case "whiteEloType", "blackEloType" -> EloType.decode(valueStr);
             case "lineEvaluation" -> {
                 try {

@@ -869,7 +869,7 @@ public class DatabaseWriteTransaction extends DatabaseTransaction {
       doEntity(
               headerModel,
               extendedHeaderBuilder.build().whiteTeamId(),
-              m -> Team.of(m.getWhiteTeam()),
+              m -> gameAdapter().toTeam(m, true),
               teamTransaction(),
               extendedHeaderBuilder::whiteTeamId);
     }
@@ -878,7 +878,7 @@ public class DatabaseWriteTransaction extends DatabaseTransaction {
       doEntity(
               headerModel,
               extendedHeaderBuilder.build().blackTeamId(),
-              m -> Team.of(m.getBlackTeam()),
+              m -> gameAdapter().toTeam(m, false),
               teamTransaction(),
               extendedHeaderBuilder::blackTeamId);
     }

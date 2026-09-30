@@ -284,10 +284,34 @@ public final class Game {
       if (whiteTeam != null) {
         model.setWhiteTeamId(g.whiteTeamId());
         model.setWhiteTeam(whiteTeam.title());
+        if (whiteTeam.number() > 0) {
+          model.setWhiteTeamNumber(whiteTeam.number());
+        }
+        if (whiteTeam.season()) {
+          model.setWhiteTeamSeason(true);
+        }
+        if (whiteTeam.year() > 0) {
+          model.setWhiteTeamYear(whiteTeam.year());
+        }
+        if (whiteTeam.nation() > 0 && whiteTeam.nation() < Nation.values().length) {
+          model.setWhiteTeamNation(Nation.values()[whiteTeam.nation()].getIocCode());
+        }
       }
       if (blackTeam != null) {
         model.setBlackTeamId(g.blackTeamId());
         model.setBlackTeam(blackTeam.title());
+        if (blackTeam.number() > 0) {
+          model.setBlackTeamNumber(blackTeam.number());
+        }
+        if (blackTeam.season()) {
+          model.setBlackTeamSeason(true);
+        }
+        if (blackTeam.year() > 0) {
+          model.setBlackTeamYear(blackTeam.year());
+        }
+        if (blackTeam.nation() > 0 && blackTeam.nation() < Nation.values().length) {
+          model.setBlackTeamNation(Nation.values()[blackTeam.nation()].getIocCode());
+        }
       }
       model.setResult(result(g.result()));
       if (g.result() == GameResult.NOT_FINISHED.ordinal() && g.lineEvaluation() > 0) {

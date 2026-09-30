@@ -20,6 +20,7 @@ import se.yarin.morphy.api.query.Sort;
 import se.yarin.morphy.model.GameDto;
 import se.yarin.morphy.model.PlayerDto;
 import se.yarin.morphy.model.SourceDto;
+import se.yarin.morphy.model.TeamDto;
 import se.yarin.morphy.model.TournamentDto;
 
 /** Games copied through the facade from a v1 database into a new v2 one read back the same. */
@@ -198,6 +199,36 @@ class FacadeWriteTest {
       assertEquals(3, back.version());
       assertEquals("MEDIUM", back.quality());
     }
+  }
+
+  @Test
+  void newTeamsTakeTheirDetailsFromTheGame() throws Exception {
+    File file = new File(tempDir, "teams.2cbh");
+    try (Database v1 = Databases.open(TestDatabases.worldCh(), AccessMode.READ_ONLY);
+        Database v2 = Databases.create(file)) {
+      GameDto g = unbind(v1.getGame(1, GameFetchOptions.full()));
+      TeamDto white = new TeamDto(null, "Norway", 1, true, 2024, "NOR", null);
+      TeamDto black = new TeamDto(null, "Sweden", 2, null, 2023, null, null);
+      long id = v2.addGame(withTeams(g, white, black));
+      GameDto back = v2.getGame(id, GameFetchOptions.full());
+      assertEquals(new TeamDto(back.whiteTeam().id(), "Norway", 1, true, 2024, "NOR", null), back.whiteTeam());
+      assertEquals("Sweden", back.blackTeam().title());
+      assertEquals(2, back.blackTeam().teamNumber());
+      assertEquals(2023, back.blackTeam().year());
+
+      // A game without teams has none
+      assertEquals(null, v2.getGame(v2.addGame(g), GameFetchOptions.full()).whiteTeam());
+    }
+  }
+
+  private static GameDto withTeams(GameDto g, TeamDto white, TeamDto black) {
+    return new GameDto(
+        g.id(), g.type(), g.textTitle(), g.whitePlayer(), g.whiteElo(), g.whiteEloType(), g.blackPlayer(),
+        g.blackElo(), g.blackEloType(), white, black, g.result(), g.date(), g.eco(), g.round(), g.subRound(),
+        g.board(), g.lineEvaluation(), g.tournament(), g.source(), g.annotator(), g.gameTag(), g.medals(),
+        g.deleted(), g.topGame(), g.setupPosition(), g.variant(), g.noMoves(), g.notation(),
+        g.variationMoves(), g.ait(), g.vcs(), g.finalMaterial(), g.gameVersion(), g.creationTimestamp(),
+        g.lastChanged(), g.moves(), g.text(), g.extraTags());
   }
 
   private static GameDto withSource(GameDto g, SourceDto source) {

@@ -241,8 +241,22 @@ public final class WriteTransaction extends DatabaseTransaction {
                     h.getSourceDate() == null ? 0 : Dates.encode(h.getSourceDate()),
                     h.getSourceVersion() == null ? 0 : h.getSourceVersion(),
                     Source.quality(h.getSourceQuality())));
-    long whiteTeamId = teamId(h.getWhiteTeamId(), h.getWhiteTeam());
-    long blackTeamId = teamId(h.getBlackTeamId(), h.getBlackTeam());
+    long whiteTeamId =
+        teamId(
+            h.getWhiteTeamId(),
+            h.getWhiteTeam(),
+            h.getWhiteTeamNumber(),
+            h.getWhiteTeamSeason(),
+            h.getWhiteTeamYear(),
+            h.getWhiteTeamNation());
+    long blackTeamId =
+        teamId(
+            h.getBlackTeamId(),
+            h.getBlackTeam(),
+            h.getBlackTeamNumber(),
+            h.getBlackTeamSeason(),
+            h.getBlackTeamYear(),
+            h.getBlackTeamNation());
     long gameTagId =
         entityId(
             EntityType.GAME_TAG,
@@ -462,11 +476,30 @@ public final class WriteTransaction extends DatabaseTransaction {
     return createEntity(e);
   }
 
-  private long teamId(@Nullable Long bound, @Nullable String title) {
+  /**
+   * A game's team: none without a title, otherwise the bound one, or one found or created with these
+   * details.
+   */
+  private long teamId(
+      @Nullable Long bound,
+      @Nullable String title,
+      @Nullable Integer number,
+      @Nullable Boolean season,
+      @Nullable Integer year,
+      @Nullable String nation) {
     if (bound == null && text(title).isEmpty()) {
       return -1;
     }
-    return entityId(EntityType.TEAM, bound, () -> Team.of(text(title)));
+    return entityId(
+        EntityType.TEAM,
+        bound,
+        () ->
+            new Team(
+                text(title),
+                number == null ? 0 : number,
+                Boolean.TRUE.equals(season) ? 1 : 0,
+                year == null ? 0 : year,
+                nation == null ? 0 : Nation.fromIOC(nation).ordinal()));
   }
 
   private int createEntity(Entity entity) {

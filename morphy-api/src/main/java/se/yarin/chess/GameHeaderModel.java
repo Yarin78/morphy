@@ -41,6 +41,14 @@ public class GameHeaderModel {
           "blackEloType",
           "whiteTeam",
           "blackTeam",
+          "whiteTeamNumber",
+          "whiteTeamSeason",
+          "whiteTeamYear",
+          "whiteTeamNation",
+          "blackTeamNumber",
+          "blackTeamSeason",
+          "blackTeamYear",
+          "blackTeamNation",
           "result",
           "lineEvaluation",
           "date",
@@ -76,6 +84,14 @@ public class GameHeaderModel {
   private @Nullable EloType blackEloType;
   private @Nullable String whiteTeam;
   private @Nullable String blackTeam;
+  private @Nullable Integer whiteTeamNumber;
+  private @Nullable Boolean whiteTeamSeason;
+  private @Nullable Integer whiteTeamYear;
+  private @Nullable String whiteTeamNation;
+  private @Nullable Integer blackTeamNumber;
+  private @Nullable Boolean blackTeamSeason;
+  private @Nullable Integer blackTeamYear;
+  private @Nullable String blackTeamNation;
   private @Nullable GameResult result;
   private @Nullable NAG lineEvaluation;
   private @Nullable Date date;
@@ -189,6 +205,78 @@ public class GameHeaderModel {
 
   public void setBlackTeam(@Nullable String blackTeam) {
     this.blackTeam = blackTeam;
+  }
+
+  /** Of the white team: the team's number. */
+  public @Nullable Integer getWhiteTeamNumber() {
+    return whiteTeamNumber;
+  }
+
+  public void setWhiteTeamNumber(@Nullable Integer whiteTeamNumber) {
+    this.whiteTeamNumber = whiteTeamNumber;
+  }
+
+  /** Of the white team: whether the year is a season spanning two years. */
+  public @Nullable Boolean getWhiteTeamSeason() {
+    return whiteTeamSeason;
+  }
+
+  public void setWhiteTeamSeason(@Nullable Boolean whiteTeamSeason) {
+    this.whiteTeamSeason = whiteTeamSeason;
+  }
+
+  /** Of the white team: the year. */
+  public @Nullable Integer getWhiteTeamYear() {
+    return whiteTeamYear;
+  }
+
+  public void setWhiteTeamYear(@Nullable Integer whiteTeamYear) {
+    this.whiteTeamYear = whiteTeamYear;
+  }
+
+  /** Of the white team: the IOC code of the team's nation. */
+  public @Nullable String getWhiteTeamNation() {
+    return whiteTeamNation;
+  }
+
+  public void setWhiteTeamNation(@Nullable String whiteTeamNation) {
+    this.whiteTeamNation = whiteTeamNation;
+  }
+
+  /** Of the black team: the team's number. */
+  public @Nullable Integer getBlackTeamNumber() {
+    return blackTeamNumber;
+  }
+
+  public void setBlackTeamNumber(@Nullable Integer blackTeamNumber) {
+    this.blackTeamNumber = blackTeamNumber;
+  }
+
+  /** Of the black team: whether the year is a season spanning two years. */
+  public @Nullable Boolean getBlackTeamSeason() {
+    return blackTeamSeason;
+  }
+
+  public void setBlackTeamSeason(@Nullable Boolean blackTeamSeason) {
+    this.blackTeamSeason = blackTeamSeason;
+  }
+
+  /** Of the black team: the year. */
+  public @Nullable Integer getBlackTeamYear() {
+    return blackTeamYear;
+  }
+
+  public void setBlackTeamYear(@Nullable Integer blackTeamYear) {
+    this.blackTeamYear = blackTeamYear;
+  }
+
+  /** Of the black team: the IOC code of the team's nation. */
+  public @Nullable String getBlackTeamNation() {
+    return blackTeamNation;
+  }
+
+  public void setBlackTeamNation(@Nullable String blackTeamNation) {
+    this.blackTeamNation = blackTeamNation;
   }
 
   public @Nullable GameResult getResult() {
@@ -535,6 +623,14 @@ public class GameHeaderModel {
       case "blackEloType" -> blackEloType;
       case "whiteTeam" -> whiteTeam;
       case "blackTeam" -> blackTeam;
+      case "whiteTeamNumber" -> whiteTeamNumber;
+      case "whiteTeamSeason" -> whiteTeamSeason;
+      case "whiteTeamYear" -> whiteTeamYear;
+      case "whiteTeamNation" -> whiteTeamNation;
+      case "blackTeamNumber" -> blackTeamNumber;
+      case "blackTeamSeason" -> blackTeamSeason;
+      case "blackTeamYear" -> blackTeamYear;
+      case "blackTeamNation" -> blackTeamNation;
       case "result" -> result;
       case "lineEvaluation" -> lineEvaluation;
       case "date" -> date;
@@ -582,6 +678,14 @@ public class GameHeaderModel {
       case "blackEloType" -> blackEloType = cast(name, value, EloType.class);
       case "whiteTeam" -> whiteTeam = cast(name, value, String.class);
       case "blackTeam" -> blackTeam = cast(name, value, String.class);
+      case "whiteTeamNumber" -> whiteTeamNumber = cast(name, value, Integer.class);
+      case "whiteTeamSeason" -> whiteTeamSeason = cast(name, value, Boolean.class);
+      case "whiteTeamYear" -> whiteTeamYear = cast(name, value, Integer.class);
+      case "whiteTeamNation" -> whiteTeamNation = cast(name, value, String.class);
+      case "blackTeamNumber" -> blackTeamNumber = cast(name, value, Integer.class);
+      case "blackTeamSeason" -> blackTeamSeason = cast(name, value, Boolean.class);
+      case "blackTeamYear" -> blackTeamYear = cast(name, value, Integer.class);
+      case "blackTeamNation" -> blackTeamNation = cast(name, value, String.class);
       case "result" -> result = cast(name, value, GameResult.class);
       case "lineEvaluation" -> lineEvaluation = cast(name, value, NAG.class);
       case "date" -> date = cast(name, value, Date.class);

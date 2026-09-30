@@ -112,6 +112,18 @@ public class GameAdapter {
     if (whiteTeam != null) {
       model.setWhiteTeamId((long) whiteTeam.id());
       model.setWhiteTeam(whiteTeam.title());
+      if (whiteTeam.teamNumber() > 0) {
+        model.setWhiteTeamNumber(whiteTeam.teamNumber());
+      }
+      if (whiteTeam.season()) {
+        model.setWhiteTeamSeason(true);
+      }
+      if (whiteTeam.year() > 0) {
+        model.setWhiteTeamYear(whiteTeam.year());
+      }
+      if (whiteTeam.nation() != Nation.NONE) {
+        model.setWhiteTeamNation(whiteTeam.nation().getIocCode());
+      }
     }
     model.setBlack(blackPlayer.getFullName());
     model.setBlackId((long) blackPlayer.id());
@@ -122,6 +134,18 @@ public class GameAdapter {
     if (blackTeam != null) {
       model.setBlackTeamId((long) blackTeam.id());
       model.setBlackTeam(blackTeam.title());
+      if (blackTeam.teamNumber() > 0) {
+        model.setBlackTeamNumber(blackTeam.teamNumber());
+      }
+      if (blackTeam.season()) {
+        model.setBlackTeamSeason(true);
+      }
+      if (blackTeam.year() > 0) {
+        model.setBlackTeamYear(blackTeam.year());
+      }
+      if (blackTeam.nation() != Nation.NONE) {
+        model.setBlackTeamNation(blackTeam.nation().getIocCode());
+      }
     }
     model.setResult(game.result());
     model.setDate(game.playedDate());
@@ -370,6 +394,32 @@ public class GameAdapter {
     }
     if (headerModel.getSourceQuality() != null) {
       builder.quality(sourceQuality(headerModel.getSourceQuality()));
+    }
+    return builder.build();
+  }
+
+  /** A team with the details the header has for white's or black's. */
+  public @NotNull Team toTeam(@NotNull GameHeaderModel headerModel, boolean white) {
+    String title = white ? headerModel.getWhiteTeam() : headerModel.getBlackTeam();
+    Integer number = white ? headerModel.getWhiteTeamNumber() : headerModel.getBlackTeamNumber();
+    Boolean season = white ? headerModel.getWhiteTeamSeason() : headerModel.getBlackTeamSeason();
+    Integer year = white ? headerModel.getWhiteTeamYear() : headerModel.getBlackTeamYear();
+    String nation = white ? headerModel.getWhiteTeamNation() : headerModel.getBlackTeamNation();
+    ImmutableTeam.Builder builder = ImmutableTeam.builder();
+    if (title != null) {
+      builder.title(title);
+    }
+    if (number != null) {
+      builder.teamNumber(number);
+    }
+    if (season != null) {
+      builder.season(season);
+    }
+    if (year != null) {
+      builder.year(year);
+    }
+    if (nation != null) {
+      builder.nation(Nation.fromIOC(nation));
     }
     return builder.build();
   }

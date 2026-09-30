@@ -106,12 +106,22 @@ public final class PgnGameMapper {
       }
 
       if (dto.whiteTeam() != null) {
-        headerModel.setWhiteTeam(dto.whiteTeam().title());
-        headerModel.setWhiteTeamId(dto.whiteTeam().id());
+        TeamDto team = dto.whiteTeam();
+        headerModel.setWhiteTeam(team.title());
+        headerModel.setWhiteTeamId(team.id());
+        headerModel.setWhiteTeamNumber(team.teamNumber());
+        headerModel.setWhiteTeamSeason(team.season());
+        headerModel.setWhiteTeamYear(team.year());
+        headerModel.setWhiteTeamNation(team.nation());
       }
       if (dto.blackTeam() != null) {
-        headerModel.setBlackTeam(dto.blackTeam().title());
-        headerModel.setBlackTeamId(dto.blackTeam().id());
+        TeamDto team = dto.blackTeam();
+        headerModel.setBlackTeam(team.title());
+        headerModel.setBlackTeamId(team.id());
+        headerModel.setBlackTeamNumber(team.teamNumber());
+        headerModel.setBlackTeamSeason(team.season());
+        headerModel.setBlackTeamYear(team.year());
+        headerModel.setBlackTeamNation(team.nation());
       }
     }
 
@@ -285,8 +295,18 @@ public final class PgnGameMapper {
         player(header.getBlack()),
         header.getBlackElo(),
         eloType(header.getBlackElo(), header.getBlackEloType()),
-        team(header.getWhiteTeam()),
-        team(header.getBlackTeam()),
+        team(
+            header.getWhiteTeam(),
+            header.getWhiteTeamNumber(),
+            header.getWhiteTeamSeason(),
+            header.getWhiteTeamYear(),
+            header.getWhiteTeamNation()),
+        team(
+            header.getBlackTeam(),
+            header.getBlackTeamNumber(),
+            header.getBlackTeamSeason(),
+            header.getBlackTeamYear(),
+            header.getBlackTeamNation()),
         header.getResult() != null ? header.getResult() : GameResult.NOT_FINISHED,
         header.getDate() != null ? header.getDate() : Date.unset(),
         eco != null && eco.isSet() ? eco.toString() : null,
@@ -333,8 +353,13 @@ public final class PgnGameMapper {
         null, lastName, firstName == null || firstName.isEmpty() ? null : firstName, null, null, null);
   }
 
-  private static @Nullable TeamDto team(@Nullable String title) {
-    return known(title) == null ? null : new TeamDto(null, title, null, null, null, null, null);
+  private static @Nullable TeamDto team(
+      @Nullable String title,
+      @Nullable Integer number,
+      @Nullable Boolean season,
+      @Nullable Integer year,
+      @Nullable String nation) {
+    return known(title) == null ? null : new TeamDto(null, title, number, season, year, nation, null);
   }
 
   private static @Nullable GameTagDto gameTag(@Nullable String title) {
