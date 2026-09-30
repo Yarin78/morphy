@@ -1,19 +1,29 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Chess } from '@jackstenglein/chess';
 import { GameView } from 'game-view';
-import type { ChessGame, GameInfoServices, PlayerService, TournamentService } from 'game-view';
+import type { ChessGame, GameInfoServices, PlayerService, SourceService, TournamentService } from 'game-view';
 import {
   ApiError,
   createGame,
   fetchDatabases,
   fetchGame,
+  fetchSource,
   fetchTournament,
   replaceGame,
   search,
+  updateSource,
   updateTournament,
 } from '../api/client';
-import { gameDtoToPgn, pgnToGamePatch, tournamentDto, tournamentInfo } from './gameDtoAdapter';
-import type { DatabaseResponse, EntitySearchResponse, GameDto, PlayerDto, TournamentDto } from '../api/types';
+import { gameDtoToPgn, pgnToGamePatch, sourceDto, sourceInfo, tournamentDto, tournamentInfo } from './gameDtoAdapter';
+import type {
+  AnnotatorDto,
+  DatabaseResponse,
+  EntitySearchResponse,
+  GameDto,
+  PlayerDto,
+  SourceDto,
+  TournamentDto,
+} from '../api/types';
 import { useDbGameParams } from './hooks/useDbGameParams';
 import './App.css';
 
@@ -55,6 +65,43 @@ function playerService(databaseId: string): PlayerService {
   };
 }
 
+/** Existing annotators of a database, for the Edit Game Info dialog. */
+function annotatorService(databaseId: string): PlayerService {
+  return {
+    async search(text) {
+      const response = await search<EntitySearchResponse<AnnotatorDto>>(databaseId, 'annotators', {
+        filter: prefixFilter(text),
+        limit: 20,
+        sortBy: '-count',
+      });
+      return response.items.map((a) => ({ id: a.id, name: a.name ?? '', gameCount: a.gameCount }));
+    },
+  };
+}
+
+/** Existing sources of a database, for the Edit Game Info dialog. */
+function sourceService(databaseId: string): SourceService {
+  const info = (dto: SourceDto) => sourceInfo(dto)!;
+  return {
+    async search(text) {
+      const response = await search<EntitySearchResponse<SourceDto>>(databaseId, 'sources', {
+        filter: prefixFilter(text),
+        limit: 20,
+        sortBy: '-count',
+      });
+      return response.items.map(info);
+    },
+    async get(id) {
+      return info(await fetchSource(databaseId, id));
+    },
+    async update(source) {
+      // The whole entity is replaced, so start from it as saved
+      const current = await fetchSource(databaseId, source.id!);
+      return info(await updateSource(databaseId, { ...current, ...sourceDto(source) }));
+    },
+  };
+}
+
 /** Existing tournaments of a database, for the Edit Game Info dialog. */
 function tournamentService(databaseId: string): TournamentService {
   const info = (dto: TournamentDto) => tournamentInfo(dto)!;
@@ -91,7 +138,15 @@ function App() {
   const [saving, setSaving] = useState(false);
   const chessRef = useRef<Chess | null>(null);
   const gameInfoServices = useMemo<GameInfoServices | undefined>(
-    () => (databaseId ? { players: playerService(databaseId), tournaments: tournamentService(databaseId) } : undefined),
+    () =>
+      databaseId
+        ? {
+            players: playerService(databaseId),
+            annotators: annotatorService(databaseId),
+            tournaments: tournamentService(databaseId),
+            sources: sourceService(databaseId),
+          }
+        : undefined,
     [databaseId]
   );
 

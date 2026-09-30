@@ -3,6 +3,8 @@ import { decodeEloType, ELO_TYPE_TAGS, encodeEloType } from './eloType';
 import type { EloTypeInfo } from './eloType';
 import { normalizePlayerName, PLAYER_ID_TAGS } from './player';
 import type { PlayerInfo, PlayerService } from './player';
+import { sourceFromTags, sourceToTags } from './source';
+import type { SourceInfo, SourceService } from './source';
 import { tournamentFromTags, tournamentToTags } from './tournament';
 import type { TournamentInfo, TournamentService } from './tournament';
 
@@ -12,8 +14,14 @@ import type { TournamentInfo, TournamentService } from './tournament';
  */
 export interface GameInfoServices {
   players?: PlayerService;
+  /** The annotators, who are players too. */
+  annotators?: PlayerService;
   tournaments?: TournamentService;
+  sources?: SourceService;
 }
+
+/** Not a standard PGN tag: the id of the existing annotator. */
+export const ANNOTATOR_ID_TAG = 'AnnotatorId';
 
 /**
  * The game header information edited in the Edit Game Info dialog, as form values. Everything is
@@ -40,6 +48,10 @@ export interface GameInfo {
   round: string;
   subRound: string;
   board: string;
+  /** Its name as typed, not split into last and first name like a player's. */
+  annotator: PlayerInfo;
+  /** Null when the game has no source. */
+  source: SourceInfo | null;
 }
 
 /**
@@ -122,6 +134,8 @@ export function readGameInfo(chess: Chess): GameInfo {
     round: numberPart(round),
     subRound: numberPart(subRound),
     board: numberPart(tagValue(chess, 'Board')),
+    annotator: readPlayer(chess, 'Annotator', ANNOTATOR_ID_TAG),
+    source: sourceFromTags((name) => chess.header().getRawValue(name)),
   };
 }
 
@@ -189,4 +203,13 @@ export function writeGameInfo(chess: Chess, info: GameInfo) {
   }
   chess.setHeader('Round', round && subRound ? `${round}.${subRound}` : round);
   chess.setHeader('Board', info.board.trim());
+  // Not normalized like a player's name: ChessBase has annotators like "Gutman,L"
+  chess.setHeader('Annotator', info.annotator.name.trim());
+  chess.setHeader(ANNOTATOR_ID_TAG, info.annotator.id != null ? String(info.annotator.id) : '');
+  const source = info.source && (info.source.title.trim() || info.source.id != null || info.source.publisher?.trim())
+    ? { ...info.source, title: info.source.title.trim() }
+    : null;
+  for (const [name, value] of Object.entries(sourceToTags(source))) {
+    chess.setHeader(name, value);
+  }
 }

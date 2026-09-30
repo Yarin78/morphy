@@ -8,14 +8,25 @@ interface PlayerFieldProps {
   /** What the field is, e.g. "White player". */
   label: string;
   inputRef?: React.Ref<HTMLInputElement>;
+  /** What a new one is called in the suggestions: "player" by default. */
+  newWhat?: string;
+  placeholder?: string;
 }
 
 /**
  * A player's name, "Lastname, Firstname", with suggestions of existing players to pick from while
  * typing. A badge marks a name that isn't an existing player picked from the suggestions: saving
- * finds the player by name, or creates one.
+ * finds the player by name, or creates one. The annotator, who is a player too, uses it as well.
  */
-export const PlayerField: React.FC<PlayerFieldProps> = ({ value, onChange, service, label, inputRef }) => {
+export const PlayerField: React.FC<PlayerFieldProps> = ({
+  value,
+  onChange,
+  service,
+  label,
+  inputRef,
+  newWhat = 'player',
+  placeholder = 'Last name, First name',
+}) => {
   const isNew = Boolean(service) && value.id == null && value.name.trim() !== '';
   return (
     <div className={`game-info-field game-info-field-player${isNew ? ' with-badge' : ''}`}>
@@ -28,8 +39,8 @@ export const PlayerField: React.FC<PlayerFieldProps> = ({ value, onChange, servi
         optionKey={(p) => p.id ?? p.name}
         optionTitle={(p) => p.name}
         optionSubtitle={(p) => gameCountText(p.gameCount) ?? ''}
-        newWhat="player"
-        inputProps={{ 'aria-label': label, placeholder: 'Last name, First name', ref: inputRef }}
+        newWhat={newWhat}
+        inputProps={{ 'aria-label': label, placeholder, ref: inputRef }}
       />
       {isNew && <span className="entity-badge entity-badge-new entity-badge-inline">New</span>}
     </div>

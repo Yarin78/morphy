@@ -14,6 +14,9 @@ import { newTournament } from '../utils/tournament';
 import type { TournamentInfo } from '../utils/tournament';
 import { PlayerField } from './PlayerField';
 import { RatingField } from './RatingField';
+import type { SourceInfo } from '../utils/source';
+import { SourceDialog } from './SourceDialog';
+import { SourceField } from './SourceField';
 import { TournamentDialog } from './TournamentDialog';
 import { TournamentField } from './TournamentField';
 import './GameInfoDialog.css';
@@ -30,9 +33,11 @@ type InputProps = React.InputHTMLAttributes<HTMLInputElement> & { ref?: React.Re
 
 export const GameInfoDialog: React.FC<GameInfoDialogProps> = ({ initial, services, onSave, onCancel }) => {
   const tournamentService = services?.tournaments;
+  const sourceService = services?.sources;
   const [info, setInfo] = useState<GameInfo>(initial);
   const [errors, setErrors] = useState<GameInfoErrors>({});
-  const [detailsOpen, setDetailsOpen] = useState(false);
+  // Whose details are open in a dialog on top of this one
+  const [detailsOpen, setDetailsOpen] = useState<'tournament' | 'source' | null>(null);
   const firstFieldRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -40,7 +45,7 @@ export const GameInfoDialog: React.FC<GameInfoDialogProps> = ({ initial, service
   }, []);
 
   useEffect(() => {
-    // The tournament dialog on top handles Esc itself
+    // The details dialog on top handles Esc itself
     if (detailsOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onCancel();
@@ -66,6 +71,25 @@ export const GameInfoDialog: React.FC<GameInfoDialogProps> = ({ initial, service
       cancelled = true;
     };
   }, [tournamentService, initialTournamentId]);
+
+  // The same for an existing source
+  const initialSourceId = initial.source?.id;
+  useEffect(() => {
+    if (!sourceService || initialSourceId == null) return;
+    let cancelled = false;
+    sourceService
+      .get(initialSourceId)
+      .then((current) => {
+        if (cancelled) return;
+        setInfo((i) => (i.source?.id === current.id ? { ...i, source: current } : i));
+      })
+      .catch((err) => console.error('Failed to load the source:', err));
+    return () => {
+      cancelled = true;
+    };
+  }, [sourceService, initialSourceId]);
+
+  const setSource = (source: SourceInfo | null) => setInfo((i) => ({ ...i, source }));
 
   const setTournament = (tournament: TournamentInfo | null) => setInfo((i) => ({ ...i, tournament }));
   const setPlayer = (color: 'white' | 'black') => (player: PlayerInfo) => setInfo((i) => ({ ...i, [color]: player }));
@@ -233,7 +257,7 @@ export const GameInfoDialog: React.FC<GameInfoDialogProps> = ({ initial, service
           <button
             type="button"
             className="tournament-details-button"
-            onClick={() => setDetailsOpen(true)}
+            onClick={() => setDetailsOpen('tournament')}
             disabled={!info.tournament}
           >
             Details…
@@ -276,6 +300,35 @@ export const GameInfoDialog: React.FC<GameInfoDialogProps> = ({ initial, service
           </fieldset>
         </div>
 
+        <div className="game-info-pair game-info-annotation">
+          <fieldset className="game-info-row">
+            <legend>Annotator</legend>
+            <div className="game-info-field game-info-field-annotator">
+              <span className="game-info-label">Name</span>
+              <PlayerField
+                value={info.annotator}
+                onChange={(annotator) => setInfo((i) => ({ ...i, annotator }))}
+                service={services?.annotators}
+                label="Annotator"
+                newWhat="annotator"
+              />
+            </div>
+          </fieldset>
+
+          <fieldset className="game-info-row game-info-source">
+            <legend>Source</legend>
+            <SourceField value={info.source} onChange={setSource} service={sourceService} />
+            <button
+              type="button"
+              className="tournament-details-button"
+              onClick={() => setDetailsOpen('source')}
+              disabled={!info.source}
+            >
+              Details…
+            </button>
+          </fieldset>
+        </div>
+
         <div className="game-info-buttons">
           <button type="button" className="game-info-cancel" onClick={onCancel}>
             Cancel
@@ -286,12 +339,20 @@ export const GameInfoDialog: React.FC<GameInfoDialogProps> = ({ initial, service
         </div>
       </form>
     </div>
-    {detailsOpen && info.tournament && (
+    {detailsOpen === 'tournament' && info.tournament && (
       <TournamentDialog
         tournament={info.tournament}
         service={tournamentService}
         onApply={setTournament}
-        onClose={() => setDetailsOpen(false)}
+        onClose={() => setDetailsOpen(null)}
+      />
+    )}
+    {detailsOpen === 'source' && info.source && (
+      <SourceDialog
+        source={info.source}
+        service={sourceService}
+        onApply={setSource}
+        onClose={() => setDetailsOpen(null)}
       />
     )}
     </>

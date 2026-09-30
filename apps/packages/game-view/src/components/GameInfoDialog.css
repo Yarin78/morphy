@@ -317,13 +317,13 @@
 }
 
 /* The tournament details dialog */
-.tournament-dialog h3 {
+.entity-dialog h3 {
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.tournament-note {
+.entity-note {
   margin: 0 0 0.75rem 0;
   padding: 0.5rem 0.75rem;
   border-radius: 4px;
@@ -332,13 +332,13 @@
   font-size: 0.85rem;
 }
 
-.tournament-warning {
+.entity-warning {
   background: #f6e3c7;
   color: #7a4a0c;
   border: 1px solid #e0b877;
 }
 
-.tournament-error {
+.entity-error {
   background: #f5d9d6;
   color: #8b1d15;
 }
@@ -366,8 +366,8 @@
   width: 3.5rem;
 }
 
-.tournament-dialog.read-only input,
-.tournament-dialog.read-only select {
+.entity-dialog.read-only input,
+.entity-dialog.read-only select {
   background: #efe8de;
   color: #555;
 }
@@ -388,16 +388,16 @@
   width: auto;
 }
 
-.game-info-buttons .tournament-left {
+.game-info-buttons .entity-left {
   margin-right: auto;
 }
 
-.game-info-buttons .tournament-danger {
+.game-info-buttons .entity-danger {
   background: #a3561c;
   border-color: #7f4214;
 }
 
-.game-info-buttons .tournament-danger:hover {
+.game-info-buttons .entity-danger:hover {
   background: #7f4214;
 }
 
@@ -730,4 +730,65 @@ img.elo-flag {
   font-size: 0.6rem;
   font-weight: 700;
   line-height: 1;
+}
+
+/* Annotator and source share a row; the source's title stretches, with its Details button beside it */
+.game-info-annotation > fieldset {
+  flex: 1 1 12rem;
+}
+
+.game-info-field-annotator {
+  flex: 1 1 auto;
+}
+
+.game-info-field-annotator input {
+  width: 100%;
+}
+
+.game-info-dialog fieldset.game-info-source {
+  flex-wrap: nowrap;
+  align-items: flex-end;
+}
+
+.game-info-field-source {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.game-info-source .tournament-details-button {
+  box-sizing: border-box;
+  height: 2.25rem;
+}
+
+/* The source dialog's fields */
+.source-field-title {
+  flex: 3 1 13rem;
+}
+
+.source-field-publisher {
+  flex: 2 1 9rem;
+}
+
+/* Publication, date and edition side by side, so their fields are a little narrower */
+.source-dialog-dates {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 1rem;
+}
+
+.source-dialog-dates > fieldset {
+  flex: 1 1 auto;
+}
+
+.source-field-publicationYear input,
+.source-field-dateYear input,
+.source-field-version input {
+  width: 4rem;
+}
+
+.source-field-publicationMonth input,
+.source-field-publicationDay input,
+.source-field-dateMonth input,
+.source-field-dateDay input {
+  width: 3rem;
 }

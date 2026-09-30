@@ -1,17 +1,21 @@
 import type { Chess } from '@jackstenglein/chess';
 import {
+  ANNOTATOR_ID_TAG,
   decodeEloType,
   ELO_TYPE_TAGS,
   encodeEloType,
   LINE_EVALUATION_TAG,
   PLAYER_ID_TAGS,
+  SOURCE_TAGS,
+  sourceFromTags,
+  sourceToTags,
   splitPlayerName,
   TOURNAMENT_TAGS,
   tournamentFromTags,
   tournamentToTags,
 } from 'game-view';
-import type { TournamentInfo } from 'game-view';
-import type { DateDto, GameDto, GameResultDto, PlayerDto, TournamentDto } from '../api/types';
+import type { SourceInfo, TournamentInfo } from 'game-view';
+import type { DateDto, GameDto, GameResultDto, PlayerDto, SourceDto, TournamentDto } from '../api/types';
 
 // Bridges morphy-service's GameDto (flattened header fields + a movetext-only
 // moves.pgn) and the single full-PGN-string (headers + movetext) that
@@ -117,7 +121,39 @@ export function tournamentDto(t: TournamentInfo): TournamentDto {
   };
 }
 
+/** A source as the Edit Game Info dialog has it. */
+export function sourceInfo(dto: SourceDto | undefined): SourceInfo | null {
+  if (!dto) return null;
+  return {
+    id: dto.id,
+    title: dto.title ?? '',
+    publisher: dto.publisher,
+    publication: dto.publication,
+    date: dto.date,
+    version: dto.version,
+    quality: dto.quality,
+    gameCount: dto.gameCount,
+  };
+}
+
+/**
+ * A source for the server. With an id, the game is put with that existing source and the other
+ * fields are ignored; without one, the source with these fields is found, or created.
+ */
+export function sourceDto(s: SourceInfo): SourceDto {
+  return {
+    id: s.id,
+    title: s.title,
+    publisher: s.publisher,
+    publication: s.publication,
+    date: s.date,
+    version: s.version,
+    quality: s.quality,
+  };
+}
+
 const KNOWN_TAGS = new Set<string>([
+  ...Object.values(SOURCE_TAGS), ANNOTATOR_ID_TAG,
   ...Object.values(TOURNAMENT_TAGS), ...Object.values(PLAYER_ID_TAGS), ...Object.values(ELO_TYPE_TAGS), 'Date', 'Round', 'White', 'Black', 'Result',
   'WhiteElo', 'BlackElo', 'Board', 'ECO', 'Annotator', 'FEN', 'SetUp', LINE_EVALUATION_TAG,
 ]);
@@ -153,6 +189,10 @@ export function gameDtoToPgn(game: GameDto): string {
   pushIfSet('Board', game.board == null ? undefined : String(game.board));
   pushIfSet('ECO', game.eco);
   pushIfSet('Annotator', game.annotator?.name);
+  pushIfSet(ANNOTATOR_ID_TAG, game.annotator?.id == null ? undefined : String(game.annotator.id));
+  for (const [name, value] of Object.entries(sourceToTags(sourceInfo(game.source)))) {
+    pushIfSet(name, value);
+  }
   if (game.setupPosition && game.moves?.fen) {
     tags.push(['FEN', game.moves.fen]);
     tags.push(['SetUp', '1']);
@@ -187,8 +227,9 @@ export function pgnToGamePatch(chess: Chess, base: GameDto): GameDto {
 
   const tournament = tournamentFromTags((name) => tagValues[name] ?? '');
 
-  const annotatorName = tagValues.Annotator || undefined;
-  const annotatorUnchanged = annotatorName === base.annotator?.name;
+  const annotatorName = tagValues.Annotator?.trim() || undefined;
+  const annotatorId = tagValues[ANNOTATOR_ID_TAG];
+  const source = sourceFromTags((name) => tagValues[name] ?? '');
 
   const result = PGN_TO_RESULT[tagValues.Result ?? ''] ?? base.result;
   const round = tagValues.Round?.split('.');
@@ -218,8 +259,9 @@ export function pgnToGamePatch(chess: Chess, base: GameDto): GameDto {
     board: tagValues.Board ? parseInt(tagValues.Board, 10) : undefined,
     tournament: tournament ? tournamentDto(tournament) : undefined,
     annotator: annotatorName
-      ? { id: annotatorUnchanged ? base.annotator?.id ?? null : null, name: annotatorName }
+      ? { id: annotatorId && /^\d+$/.test(annotatorId) ? parseInt(annotatorId, 10) : null, name: annotatorName }
       : undefined,
+    source: source ? sourceDto(source) : undefined,
     setupPosition,
     moves: {
       pgn: chess.renderPgn({ skipHeader: true }).trim(),
