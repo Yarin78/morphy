@@ -145,6 +145,16 @@
   min-width: 0;
 }
 
+/* The browser's own arrow sits too close to the border: the same arrow as the icon dropdowns' */
+.game-info-dialog select,
+.rating-type-popover select {
+  appearance: none;
+  padding-right: 1.6rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath d='M0 0h8L4 5z' fill='%238a7a68'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.55rem center;
+}
+
 .game-info-dialog input:focus,
 .game-info-dialog select:focus {
   outline: 2px solid #8b6f47;
@@ -351,7 +361,7 @@
 
 .entity-dialog.read-only input,
 .entity-dialog.read-only select {
-  background: #efe8de;
+  background-color: #efe8de;
   color: #555;
 }
 
@@ -489,7 +499,7 @@
   padding: 0.3rem 0.45rem;
   border: 1px solid #b8a896;
   border-radius: 4px;
-  background: #fff;
+  background-color: #fff;
   color: #333;
 }
 
@@ -758,19 +768,8 @@ img.elo-flag {
   width: 4rem;
 }
 
-/* Result, date and opening on one row, the opening taking the room that's left */
-.game-info-result-row {
-  display: flex;
-  flex-wrap: wrap;
-  column-gap: 1.25rem;
-}
-
-.game-info-result-row > fieldset {
-  flex: 0 0 auto;
-}
-
-.game-info-dialog .game-info-result-row > fieldset.game-info-opening {
-  flex: 1 1 12rem;
+/* Result, date and opening on one row, the opening name taking the room that's left */
+.game-info-dialog fieldset.game-info-game {
   flex-wrap: nowrap;
 }
 

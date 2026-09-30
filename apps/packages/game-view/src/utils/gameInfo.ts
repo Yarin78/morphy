@@ -72,16 +72,19 @@ export const LINE_EVALUATION_TAG = 'LineEvaluation';
 
 export const LINE_RESULT = '*';
 
-export const RESULTS: { value: string; label: string }[] = [
-  { value: '1-0', label: '1-0' },
-  { value: '1/2-1/2', label: '½-½' },
-  { value: '0-1', label: '0-1' },
-  { value: LINE_RESULT, label: 'Line' },
+/** A game's result: a played game's, a line's (which has an evaluation instead), or another kind. */
+export type ResultGroup = 'game' | 'line' | 'other';
+
+export const RESULTS: { value: string; label: string; group: ResultGroup }[] = [
+  { value: '1-0', label: '1-0', group: 'game' },
+  { value: '1/2-1/2', label: '½-½', group: 'game' },
+  { value: '0-1', label: '0-1', group: 'game' },
+  { value: LINE_RESULT, label: 'Line', group: 'line' },
   // Forfeits, and a game both players lost
-  { value: '+:-', label: '+ -' },
-  { value: '=:=', label: '= =' },
-  { value: '-:+', label: '- +' },
-  { value: '0-0', label: '0-0' },
+  { value: '+:-', label: '+ -', group: 'other' },
+  { value: '=:=', label: '= =', group: 'other' },
+  { value: '-:+', label: '- +', group: 'other' },
+  { value: '0-0', label: '0-0', group: 'other' },
 ];
 
 export const LINE_EVALUATIONS: { value: string; symbol: string }[] = [

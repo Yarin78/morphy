@@ -6,7 +6,7 @@ import {
   lineEvaluationSymbol,
   validateGameInfo,
 } from '../utils/gameInfo';
-import type { GameInfo, GameInfoErrors, GameInfoServices, GameInfoTextField } from '../utils/gameInfo';
+import type { GameInfo, GameInfoErrors, GameInfoServices, GameInfoTextField, ResultGroup } from '../utils/gameInfo';
 import type { PlayerInfo } from '../utils/player';
 import { sameEloType } from '../utils/eloType';
 import type { EloTypeInfo } from '../utils/eloType';
@@ -34,6 +34,9 @@ interface GameInfoDialogProps {
 }
 
 type InputProps = React.InputHTMLAttributes<HTMLInputElement> & { ref?: React.Ref<HTMLInputElement> };
+
+/** Between a line's result and its evaluation in the result dropdown's values; in neither of them. */
+const RESULT_EVALUATION_SEPARATOR = '|';
 
 export const GameInfoDialog: React.FC<GameInfoDialogProps> = ({ initial, services, onSave, onCancel }) => {
   const tournamentService = services?.tournaments;
@@ -209,6 +212,21 @@ export const GameInfoDialog: React.FC<GameInfoDialogProps> = ({ initial, service
       ? LINE_EVALUATIONS
       : [...LINE_EVALUATIONS, { value: initial.lineEvaluation, symbol: lineEvaluationSymbol(initial.lineEvaluation) }];
 
+  // The result and a line's evaluation are picked together, as one choice: a line's option is its
+  // result followed by the evaluation, if any.
+  const resultChoice = (result: string, lineEvaluation: string) =>
+    result === LINE_RESULT && lineEvaluation ? `${LINE_RESULT}${RESULT_EVALUATION_SEPARATOR}${lineEvaluation}` : result;
+  const chooseResult = (choice: string) => {
+    const [result, lineEvaluation = ''] = choice.split(RESULT_EVALUATION_SEPARATOR);
+    setInfo((current) => ({ ...current, result, lineEvaluation }));
+  };
+  const resultOptions = (group: ResultGroup) =>
+    RESULTS.filter((r) => r.group === group).map((r) => (
+      <option key={r.value} value={r.value}>
+        {r.label}
+      </option>
+    ));
+
   return (
     <>
     <div className="game-info-overlay" onMouseDown={onCancel}>
@@ -292,51 +310,36 @@ export const GameInfoDialog: React.FC<GameInfoDialogProps> = ({ initial, service
           </button>
         </fieldset>
 
-        <div className="game-info-result-row">
-          <fieldset className="game-info-row">
-            <legend>Result</legend>
-            <label className="game-info-field">
-              <span className="game-info-label">Result</span>
-              <select value={info.result} onChange={set('result')}>
-                {RESULTS.map((r) => (
-                  <option key={r.value} value={r.value}>
-                    {r.label}
+        <fieldset className="game-info-row game-info-game">
+          <legend>Game Info</legend>
+          <label className="game-info-field game-info-field-result">
+            <span className="game-info-label">Result</span>
+            <select
+              value={resultChoice(info.result, info.lineEvaluation)}
+              onChange={(e) => chooseResult(e.target.value)}
+            >
+              {resultOptions('game')}
+              <optgroup label="Line, with its evaluation">
+                {resultOptions('line')}
+                {evaluations.map((e) => (
+                  <option key={e.value} value={resultChoice(LINE_RESULT, e.value)}>
+                    Line {e.symbol}
                   </option>
                 ))}
-              </select>
-            </label>
-            {info.result === LINE_RESULT && (
-              <label className="game-info-field">
-                <span className="game-info-label">Evaluation</span>
-                <select value={info.lineEvaluation} onChange={set('lineEvaluation')}>
-                  <option value=""></option>
-                  {evaluations.map((e) => (
-                    <option key={e.value} value={e.value}>
-                      {e.symbol}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            )}
-          </fieldset>
-
-          <fieldset className="game-info-row">
-            <legend>Date</legend>
-            <DateField
-              value={info.date}
-              onChange={(date) => setInfo((i) => ({ ...i, date }))}
-              label="Date"
-              error={errors.date}
-              className="game-info-field-date"
-            />
-          </fieldset>
-
-          <fieldset className="game-info-row game-info-opening">
-            <legend>Opening</legend>
-            {field('eco', 'ECO', { placeholder: 'A00', maxLength: 6 })}
-            {field('opening', 'Name')}
-          </fieldset>
-        </div>
+              </optgroup>
+              <optgroup label="Forfeits, both lost">{resultOptions('other')}</optgroup>
+            </select>
+          </label>
+          <DateField
+            value={info.date}
+            onChange={(date) => setInfo((i) => ({ ...i, date }))}
+            label="Date"
+            error={errors.date}
+            className="game-info-field-date"
+          />
+          {field('eco', 'ECO', { placeholder: 'A00', maxLength: 6 })}
+          {field('opening', 'Opening')}
+        </fieldset>
 
         <div className="game-info-pair game-info-annotation">
           <fieldset className="game-info-row">
