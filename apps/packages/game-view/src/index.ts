@@ -18,5 +18,7 @@ export type { GameInfoServices } from './utils/gameInfo';
 export { ANNOTATOR_ID_TAG } from './utils/gameInfo';
 export { SOURCE_TAGS, sourceFromTags, sourceToTags } from './utils/source';
 export type { SourceInfo, SourceService } from './utils/source';
+export { teamFromTags, teamTags, teamToTags } from './utils/team';
+export type { TeamColor, TeamInfo, TeamService } from './utils/team';
 export { decodeEloType, ELO_TYPE_TAGS, encodeEloType } from './utils/eloType';
 export type { EloTypeInfo } from './utils/eloType';

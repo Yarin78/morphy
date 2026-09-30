@@ -402,11 +402,13 @@
 }
 
 /* A badge inside a field, at its right end */
-.game-info-field-player {
+.game-info-field-player,
+.game-info-field-team {
   position: relative;
 }
 
-.game-info-field-player.with-badge input {
+.game-info-field-player.with-badge input,
+.game-info-field-team.with-badge input {
   padding-right: 3.2rem;
 }
 
@@ -820,4 +822,48 @@ img.elo-flag {
 
 .game-info-field-opening input {
   width: 100%;
+}
+
+/* The players' teams: White and Black rows, each a title and its Details button */
+.game-info-dialog fieldset.game-info-teams {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.game-info-team-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.game-info-field-team input {
+  width: 100%;
+}
+
+.game-info-team-row .tournament-details-button {
+  box-sizing: border-box;
+  height: 2.25rem;
+}
+
+/* The team dialog's fields */
+.team-field-title {
+  flex: 3 1 13rem;
+}
+
+.team-field-number input,
+.team-field-year input {
+  width: 4.5rem;
+}
+
+.game-info-dialog fieldset.team-dialog-details {
+  align-items: flex-end;
+}
+
+.team-season {
+  height: 2.25rem;
+}
+
+.team-field-nation {
+  flex: 1 1 12rem;
 }

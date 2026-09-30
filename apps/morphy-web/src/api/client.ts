@@ -4,6 +4,7 @@ import type {
   FilterOptionsResponse,
   GameDto,
   SourceDto,
+  TeamDto,
   TournamentDto,
 } from './types';
 
@@ -147,4 +148,14 @@ export async function fetchSource(databaseId: string, id: number): Promise<Sourc
 /** Replaces a source's fields, for every game from it. As for tournaments, a field left out is cleared. */
 export async function updateSource(databaseId: string, source: SourceDto): Promise<SourceDto> {
   return sendJson('PUT', `${databaseUrl(databaseId)}/sources/${source.id}`, source, 'Update source');
+}
+
+/** Fetches one team. */
+export async function fetchTeam(databaseId: string, id: number): Promise<TeamDto> {
+  return getJson(`${databaseUrl(databaseId)}/teams/${id}`, 'Fetch team');
+}
+
+/** Replaces a team's fields, for every game of it. As for tournaments, a field left out is cleared. */
+export async function updateTeam(databaseId: string, team: TeamDto): Promise<TeamDto> {
+  return sendJson('PUT', `${databaseUrl(databaseId)}/teams/${team.id}`, team, 'Update team');
 }

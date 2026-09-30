@@ -5,6 +5,8 @@ import { normalizePlayerName, PLAYER_ID_TAGS } from './player';
 import type { PlayerInfo, PlayerService } from './player';
 import { sourceFromTags, sourceToTags } from './source';
 import type { SourceInfo, SourceService } from './source';
+import { teamFromTags, teamToTags } from './team';
+import type { TeamInfo, TeamService } from './team';
 import { tournamentFromTags, tournamentToTags } from './tournament';
 import type { TournamentInfo, TournamentService } from './tournament';
 
@@ -18,6 +20,7 @@ export interface GameInfoServices {
   annotators?: PlayerService;
   tournaments?: TournamentService;
   sources?: SourceService;
+  teams?: TeamService;
 }
 
 /** Not a standard PGN tag: the id of the existing annotator. */
@@ -56,6 +59,9 @@ export interface GameInfo {
   annotator: PlayerInfo;
   /** Null when the game has no source. */
   source: SourceInfo | null;
+  /** Null when the player has no team, as usual. */
+  whiteTeam: TeamInfo | null;
+  blackTeam: TeamInfo | null;
 }
 
 /**
@@ -142,6 +148,8 @@ export function readGameInfo(chess: Chess): GameInfo {
     opening: tagValue(chess, 'Opening'),
     annotator: readPlayer(chess, 'Annotator', ANNOTATOR_ID_TAG),
     source: sourceFromTags((name) => chess.header().getRawValue(name)),
+    whiteTeam: teamFromTags('white', (name) => chess.header().getRawValue(name)),
+    blackTeam: teamFromTags('black', (name) => chess.header().getRawValue(name)),
   };
 }
 
@@ -222,5 +230,12 @@ export function writeGameInfo(chess: Chess, info: GameInfo) {
     : null;
   for (const [name, value] of Object.entries(sourceToTags(source))) {
     chess.setHeader(name, value);
+  }
+  for (const color of ['white', 'black'] as const) {
+    const t = info[`${color}Team`];
+    const team = t && (t.title.trim() || t.id != null) ? { ...t, title: t.title.trim() } : null;
+    for (const [name, value] of Object.entries(teamToTags(color, team))) {
+      chess.setHeader(name, value);
+    }
   }
 }

@@ -17,6 +17,9 @@ import { RatingField } from './RatingField';
 import type { SourceInfo } from '../utils/source';
 import { SourceDialog } from './SourceDialog';
 import { SourceField } from './SourceField';
+import type { TeamColor, TeamInfo } from '../utils/team';
+import { TeamDialog } from './TeamDialog';
+import { TeamField } from './TeamField';
 import { TournamentDialog } from './TournamentDialog';
 import { TournamentField } from './TournamentField';
 import './GameInfoDialog.css';
@@ -37,7 +40,8 @@ export const GameInfoDialog: React.FC<GameInfoDialogProps> = ({ initial, service
   const [info, setInfo] = useState<GameInfo>(initial);
   const [errors, setErrors] = useState<GameInfoErrors>({});
   // Whose details are open in a dialog on top of this one
-  const [detailsOpen, setDetailsOpen] = useState<'tournament' | 'source' | null>(null);
+  const [detailsOpen, setDetailsOpen] = useState<'tournament' | 'source' | TeamColor | null>(null);
+  const teamService = services?.teams;
   const firstFieldRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -90,6 +94,29 @@ export const GameInfoDialog: React.FC<GameInfoDialogProps> = ({ initial, service
   }, [sourceService, initialSourceId]);
 
   const setSource = (source: SourceInfo | null) => setInfo((i) => ({ ...i, source }));
+
+  // The same for the players' existing teams
+  const initialWhiteTeamId = initial.whiteTeam?.id;
+  const initialBlackTeamId = initial.blackTeam?.id;
+  useEffect(() => {
+    if (!teamService) return;
+    let cancelled = false;
+    for (const [color, id] of [['white', initialWhiteTeamId], ['black', initialBlackTeamId]] as const) {
+      if (id == null) continue;
+      teamService
+        .get(id)
+        .then((current) => {
+          if (cancelled) return;
+          setInfo((i) => (i[`${color}Team`]?.id === current.id ? { ...i, [`${color}Team`]: current } : i));
+        })
+        .catch((err) => console.error('Failed to load the team:', err));
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, [teamService, initialWhiteTeamId, initialBlackTeamId]);
+
+  const setTeam = (color: TeamColor) => (team: TeamInfo | null) => setInfo((i) => ({ ...i, [`${color}Team`]: team }));
 
   const setTournament = (tournament: TournamentInfo | null) => setInfo((i) => ({ ...i, tournament }));
   const setPlayer = (color: 'white' | 'black') => (player: PlayerInfo) => setInfo((i) => ({ ...i, [color]: player }));
@@ -335,6 +362,29 @@ export const GameInfoDialog: React.FC<GameInfoDialogProps> = ({ initial, service
           </fieldset>
         </div>
 
+        <fieldset className="game-info-teams">
+          <legend>Teams</legend>
+          {(['white', 'black'] as const).map((color) => (
+            <div key={color} className="game-info-team-row">
+              <span className="game-info-row-label">{color === 'white' ? 'White' : 'Black'}</span>
+              <TeamField
+                value={info[`${color}Team`]}
+                onChange={setTeam(color)}
+                service={teamService}
+                label={`${color === 'white' ? 'White' : 'Black'} team`}
+              />
+              <button
+                type="button"
+                className="tournament-details-button"
+                onClick={() => setDetailsOpen(color)}
+                disabled={!info[`${color}Team`]}
+              >
+                Details…
+              </button>
+            </div>
+          ))}
+        </fieldset>
+
         <div className="game-info-buttons">
           <button type="button" className="game-info-cancel" onClick={onCancel}>
             Cancel
@@ -350,6 +400,14 @@ export const GameInfoDialog: React.FC<GameInfoDialogProps> = ({ initial, service
         tournament={info.tournament}
         service={tournamentService}
         onApply={setTournament}
+        onClose={() => setDetailsOpen(null)}
+      />
+    )}
+    {(detailsOpen === 'white' || detailsOpen === 'black') && info[`${detailsOpen}Team`] && (
+      <TeamDialog
+        team={info[`${detailsOpen}Team`]!}
+        service={teamService}
+        onApply={setTeam(detailsOpen)}
         onClose={() => setDetailsOpen(null)}
       />
     )}

@@ -1,20 +1,38 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Chess } from '@jackstenglein/chess';
 import { GameView } from 'game-view';
-import type { ChessGame, GameInfoServices, PlayerService, SourceService, TournamentService } from 'game-view';
+import type {
+  ChessGame,
+  GameInfoServices,
+  PlayerService,
+  SourceService,
+  TeamService,
+  TournamentService,
+} from 'game-view';
 import {
   ApiError,
   createGame,
   fetchDatabases,
   fetchGame,
   fetchSource,
+  fetchTeam,
   fetchTournament,
   replaceGame,
   search,
   updateSource,
+  updateTeam,
   updateTournament,
 } from '../api/client';
-import { gameDtoToPgn, pgnToGamePatch, sourceDto, sourceInfo, tournamentDto, tournamentInfo } from './gameDtoAdapter';
+import {
+  gameDtoToPgn,
+  pgnToGamePatch,
+  sourceDto,
+  sourceInfo,
+  teamDto,
+  teamInfo,
+  tournamentDto,
+  tournamentInfo,
+} from './gameDtoAdapter';
 import type {
   AnnotatorDto,
   DatabaseResponse,
@@ -22,6 +40,7 @@ import type {
   GameDto,
   PlayerDto,
   SourceDto,
+  TeamDto,
   TournamentDto,
 } from '../api/types';
 import { useDbGameParams } from './hooks/useDbGameParams';
@@ -102,6 +121,29 @@ function sourceService(databaseId: string): SourceService {
   };
 }
 
+/** Existing teams of a database, for the Edit Game Info dialog. */
+function teamService(databaseId: string): TeamService {
+  const info = (dto: TeamDto) => teamInfo(dto)!;
+  return {
+    async search(text) {
+      const response = await search<EntitySearchResponse<TeamDto>>(databaseId, 'teams', {
+        filter: prefixFilter(text),
+        limit: 20,
+        sortBy: '-count',
+      });
+      return response.items.map(info);
+    },
+    async get(id) {
+      return info(await fetchTeam(databaseId, id));
+    },
+    async update(team) {
+      // The whole entity is replaced, so start from it as saved
+      const current = await fetchTeam(databaseId, team.id!);
+      return info(await updateTeam(databaseId, { ...current, ...teamDto(team) }));
+    },
+  };
+}
+
 /** Existing tournaments of a database, for the Edit Game Info dialog. */
 function tournamentService(databaseId: string): TournamentService {
   const info = (dto: TournamentDto) => tournamentInfo(dto)!;
@@ -145,6 +187,7 @@ function App() {
             annotators: annotatorService(databaseId),
             tournaments: tournamentService(databaseId),
             sources: sourceService(databaseId),
+            teams: teamService(databaseId),
           }
         : undefined,
     [databaseId]

@@ -14,6 +14,8 @@ type FormValues = Record<string, string | boolean>;
 export interface EntityFieldsContext<F extends FormValues> {
   form: F;
   set: (field: keyof F & string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
+  /** Sets a field from something other than an input, like a dropdown with icons. */
+  setValue: (field: keyof F & string, value: string | boolean) => void;
   readOnly: boolean;
   errors: Partial<Record<keyof F, string>>;
   /** A text input with its label above it; the first field gets the focus while editing. */
@@ -89,6 +91,9 @@ export function EntityDetailsDialog<E extends SharedEntity, F extends FormValues
     const value = e.target instanceof HTMLInputElement && e.target.type === 'checkbox' ? e.target.checked : e.target.value;
     setForm((current) => ({ ...current, [field]: value }));
   };
+
+  const setValue = (field: keyof F & string, value: string | boolean) =>
+    setForm((current) => ({ ...current, [field]: value }));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -176,7 +181,7 @@ export function EntityDetailsDialog<E extends SharedEntity, F extends FormValues
           </p>
         )}
 
-        {renderFields({ form, set, readOnly, errors, input })}
+        {renderFields({ form, set, setValue, readOnly, errors, input })}
 
         {saveError && <p className="entity-note entity-error">{saveError}</p>}
 

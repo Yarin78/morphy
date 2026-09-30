@@ -13,6 +13,7 @@ interface IconSelectProps<T> {
   label: string;
   /** With it, the list has a search field, and shows the options it matches. */
   matches?: (option: T, query: string) => boolean;
+  disabled?: boolean;
 }
 
 /**
@@ -28,6 +29,7 @@ export function IconSelect<T>({
   placeholder,
   label,
   matches,
+  disabled,
 }: IconSelectProps<T>) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -94,6 +96,7 @@ export function IconSelect<T>({
         ref={buttonRef}
         className="icon-select-button"
         onClick={() => (open ? close() : openList())}
+        disabled={disabled}
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-label={label}

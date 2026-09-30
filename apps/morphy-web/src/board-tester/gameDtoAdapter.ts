@@ -10,12 +10,15 @@ import {
   sourceFromTags,
   sourceToTags,
   splitPlayerName,
+  teamFromTags,
+  teamTags,
+  teamToTags,
   TOURNAMENT_TAGS,
   tournamentFromTags,
   tournamentToTags,
 } from 'game-view';
-import type { SourceInfo, TournamentInfo } from 'game-view';
-import type { DateDto, GameDto, GameResultDto, PlayerDto, SourceDto, TournamentDto } from '../api/types';
+import type { SourceInfo, TeamInfo, TournamentInfo } from 'game-view';
+import type { DateDto, GameDto, GameResultDto, PlayerDto, SourceDto, TeamDto, TournamentDto } from '../api/types';
 
 // Bridges morphy-service's GameDto (flattened header fields + a movetext-only
 // moves.pgn) and the single full-PGN-string (headers + movetext) that
@@ -152,7 +155,30 @@ export function sourceDto(s: SourceInfo): SourceDto {
   };
 }
 
+/** A team as the Edit Game Info dialog has it. */
+export function teamInfo(dto: TeamDto | undefined): TeamInfo | null {
+  if (!dto) return null;
+  return {
+    id: dto.id,
+    title: dto.title ?? '',
+    number: dto.teamNumber,
+    season: dto.season,
+    year: dto.year,
+    nation: dto.nation,
+    gameCount: dto.gameCount,
+  };
+}
+
+/**
+ * A team for the server. With an id, the player is put in that existing team and the other fields
+ * are ignored; without one, the team with these fields is found, or created.
+ */
+export function teamDto(t: TeamInfo): TeamDto {
+  return { id: t.id, title: t.title, teamNumber: t.number, season: t.season, year: t.year, nation: t.nation };
+}
+
 const KNOWN_TAGS = new Set<string>([
+  ...Object.values(teamTags('white')), ...Object.values(teamTags('black')),
   ...Object.values(SOURCE_TAGS), ANNOTATOR_ID_TAG,
   ...Object.values(TOURNAMENT_TAGS), ...Object.values(PLAYER_ID_TAGS), ...Object.values(ELO_TYPE_TAGS), 'Date', 'Round', 'White', 'Black', 'Result',
   'WhiteElo', 'BlackElo', 'Board', 'ECO', 'Annotator', 'FEN', 'SetUp', LINE_EVALUATION_TAG,
@@ -193,6 +219,12 @@ export function gameDtoToPgn(game: GameDto): string {
   for (const [name, value] of Object.entries(sourceToTags(sourceInfo(game.source)))) {
     pushIfSet(name, value);
   }
+  for (const [name, value] of Object.entries(teamToTags('white', teamInfo(game.whiteTeam)))) {
+    pushIfSet(name, value);
+  }
+  for (const [name, value] of Object.entries(teamToTags('black', teamInfo(game.blackTeam)))) {
+    pushIfSet(name, value);
+  }
   if (game.setupPosition && game.moves?.fen) {
     tags.push(['FEN', game.moves.fen]);
     tags.push(['SetUp', '1']);
@@ -230,6 +262,8 @@ export function pgnToGamePatch(chess: Chess, base: GameDto): GameDto {
   const annotatorName = tagValues.Annotator?.trim() || undefined;
   const annotatorId = tagValues[ANNOTATOR_ID_TAG];
   const source = sourceFromTags((name) => tagValues[name] ?? '');
+  const whiteTeam = teamFromTags('white', (name) => tagValues[name] ?? '');
+  const blackTeam = teamFromTags('black', (name) => tagValues[name] ?? '');
 
   const result = PGN_TO_RESULT[tagValues.Result ?? ''] ?? base.result;
   const round = tagValues.Round?.split('.');
@@ -262,6 +296,9 @@ export function pgnToGamePatch(chess: Chess, base: GameDto): GameDto {
       ? { id: annotatorId && /^\d+$/.test(annotatorId) ? parseInt(annotatorId, 10) : null, name: annotatorName }
       : undefined,
     source: source ? sourceDto(source) : undefined,
+    // A player without a team tag has no team
+    whiteTeam: whiteTeam ? teamDto(whiteTeam) : undefined,
+    blackTeam: blackTeam ? teamDto(blackTeam) : undefined,
     setupPosition,
     moves: {
       pgn: chess.renderPgn({ skipHeader: true }).trim(),
