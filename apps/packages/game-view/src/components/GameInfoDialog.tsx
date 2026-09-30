@@ -264,7 +264,7 @@ export const GameInfoDialog: React.FC<GameInfoDialogProps> = ({ initial, service
           </button>
         </fieldset>
 
-        <div className="game-info-pair">
+        <div className="game-info-result-row">
           <fieldset className="game-info-row">
             <legend>Result</legend>
             <label className="game-info-field">
@@ -297,6 +297,12 @@ export const GameInfoDialog: React.FC<GameInfoDialogProps> = ({ initial, service
             {field('year', 'Year', { ...numberProps, placeholder: 'yyyy' })}
             {field('month', 'Month', { ...numberProps, placeholder: 'mm' })}
             {field('day', 'Day', { ...numberProps, placeholder: 'dd' })}
+          </fieldset>
+
+          <fieldset className="game-info-row game-info-opening">
+            <legend>Opening</legend>
+            {field('eco', 'ECO', { placeholder: 'A00', maxLength: 6 })}
+            {field('opening', 'Name')}
           </fieldset>
         </div>
 

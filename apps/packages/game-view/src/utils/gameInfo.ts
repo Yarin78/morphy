@@ -48,6 +48,10 @@ export interface GameInfo {
   round: string;
   subRound: string;
   board: string;
+  /** An ECO code like 'E25', or with a sub-code, 'E25/03'. */
+  eco: string;
+  /** The opening's name, the PGN Opening tag; ChessBase has no field for it. */
+  opening: string;
   /** Its name as typed, not split into last and first name like a player's. */
   annotator: PlayerInfo;
   /** Null when the game has no source. */
@@ -134,6 +138,8 @@ export function readGameInfo(chess: Chess): GameInfo {
     round: numberPart(round),
     subRound: numberPart(subRound),
     board: numberPart(tagValue(chess, 'Board')),
+    eco: tagValue(chess, 'ECO'),
+    opening: tagValue(chess, 'Opening'),
     annotator: readPlayer(chess, 'Annotator', ANNOTATOR_ID_TAG),
     source: sourceFromTags((name) => chess.header().getRawValue(name)),
   };
@@ -176,6 +182,9 @@ export function validateGameInfo(info: GameInfo): GameInfoErrors {
   if (info.subRound.trim() && !info.round.trim()) {
     errors.subRound = 'Needs a round';
   }
+  if (info.eco.trim() && !/^[A-E]\d\d(\/\d\d)?$/i.test(info.eco.trim())) {
+    errors.eco = 'Like E25 or E25/03';
+  }
   return errors;
 }
 
@@ -203,6 +212,8 @@ export function writeGameInfo(chess: Chess, info: GameInfo) {
   }
   chess.setHeader('Round', round && subRound ? `${round}.${subRound}` : round);
   chess.setHeader('Board', info.board.trim());
+  chess.setHeader('ECO', info.eco.trim().toUpperCase());
+  chess.setHeader('Opening', info.opening.trim());
   // Not normalized like a player's name: ChessBase has annotators like "Gutman,L"
   chess.setHeader('Annotator', info.annotator.name.trim());
   chess.setHeader(ANNOTATOR_ID_TAG, info.annotator.id != null ? String(info.annotator.id) : '');

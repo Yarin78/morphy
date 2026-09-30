@@ -792,3 +792,32 @@ img.elo-flag {
 .source-field-dateDay input {
   width: 3rem;
 }
+
+/* Result, date and opening on one row, the opening taking the room that's left */
+.game-info-result-row {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 1.25rem;
+}
+
+.game-info-result-row > fieldset {
+  flex: 0 0 auto;
+}
+
+.game-info-dialog .game-info-result-row > fieldset.game-info-opening {
+  flex: 1 1 12rem;
+  flex-wrap: nowrap;
+}
+
+.game-info-field-eco input {
+  width: 4.5rem;
+}
+
+.game-info-field-opening {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.game-info-field-opening input {
+  width: 100%;
+}
