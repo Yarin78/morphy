@@ -10,6 +10,16 @@ import {
   internationalEloType,
 } from '../utils/eloType';
 import type { EloKind, EloTimeControl, EloTypeInfo } from '../utils/eloType';
+import { NATIONS, nationInfo } from '../utils/nations';
+import type { NationInfo } from '../utils/nations';
+import { EloTypeIcons, NationFlag, ServerLogo, TimeControlIcon } from './EloTypeIcons';
+import { IconSelect } from './IconSelect';
+
+/** Whether a nation matches what's typed in the search: its name, or the start of its code. */
+function nationMatches(nation: NationInfo, query: string): boolean {
+  const q = query.toLowerCase();
+  return nation.name.toLowerCase().includes(q) || nation.ioc.toLowerCase().startsWith(q);
+}
 
 interface RatingFieldProps {
   elo: string;
@@ -118,9 +128,8 @@ export const RatingField: React.FC<RatingFieldProps> = ({
           aria-haspopup="dialog"
           aria-expanded={open}
           aria-label={`${player} rating type: ${eloTypeLabel(type)}`}
-          title="Rating type"
         >
-          {eloTypeLabel(type)}
+          <EloTypeIcons type={type} />
         </button>
         <input
           type="text"
@@ -168,42 +177,69 @@ export const RatingField: React.FC<RatingFieldProps> = ({
               ))}
             </div>
             {current.kind === 'NATIONAL' && (
-              <label className="game-info-field">
+              <div className="game-info-field">
                 <span className="game-info-label">Nation</span>
-                <input
-                  type="text"
-                  value={current.nation ?? ''}
-                  onChange={(e) => onTypeChange({ ...current, nation: e.target.value.toUpperCase().slice(0, 3) })}
-                  placeholder="IOC"
-                  maxLength={3}
-                  autoComplete="off"
-                  data-1p-ignore
-                  data-lpignore="true"
+                <IconSelect<NationInfo>
+                  options={NATIONS}
+                  value={nationInfo(current.nation)}
+                  onChange={(nation) => onTypeChange({ ...current, nation: nation.ioc })}
+                  optionKey={(nation) => nation.ioc}
+                  renderOption={(nation) => (
+                    <>
+                      <NationFlag nation={nation.ioc} />
+                      <span>{nation.name}</span>
+                    </>
+                  )}
+                  placeholder={
+                    <>
+                      <NationFlag nation={undefined} />
+                      <span className="icon-select-placeholder">Choose a nation</span>
+                    </>
+                  }
+                  label="Nation"
+                  matches={nationMatches}
                 />
-              </label>
+              </div>
             )}
             {current.kind === 'SERVER' && (
-              <label className="game-info-field">
+              <div className="game-info-field">
                 <span className="game-info-label">Server</span>
-                <select value={current.name ?? ''} onChange={(e) => setServer(e.target.value)}>
-                  {servers.map((name) => (
-                    <option key={name} value={name}>
-                      {name}
-                    </option>
-                  ))}
-                </select>
-              </label>
+                <IconSelect<string>
+                  options={servers}
+                  value={current.name}
+                  onChange={setServer}
+                  optionKey={(name) => name}
+                  renderOption={(name) => (
+                    <>
+                      <ServerLogo name={name} />
+                      <span>{name}</span>
+                    </>
+                  )}
+                  placeholder={<span className="icon-select-placeholder">Choose a server</span>}
+                  label="Server"
+                />
+              </div>
             )}
-            <label className="game-info-field">
+            <div className="game-info-field">
               <span className="game-info-label">Time control</span>
-              <select value={current.timeControl} onChange={(e) => setTimeControl(e.target.value as EloTimeControl)}>
+              <div className="rating-type-choices" role="radiogroup" aria-label="Time control">
                 {timeControls.map((t) => (
-                  <option key={t.value} value={t.value}>
-                    {t.label}
-                  </option>
+                  <button
+                    key={t.value}
+                    type="button"
+                    role="radio"
+                    aria-checked={current.timeControl === t.value}
+                    aria-label={t.label}
+                    title={t.label}
+                    className={`rating-type-choice${current.timeControl === t.value ? ' selected' : ''}`}
+                    onClick={() => setTimeControl(t.value)}
+                  >
+                    {/* Normal has no icon, so it's spelled out */}
+                    {t.value === 'NORMAL' ? <span className="elo-type-text">Normal</span> : <TimeControlIcon timeControl={t.value} />}
+                  </button>
                 ))}
-              </select>
-            </label>
+              </div>
+            </div>
             <label className="rating-type-different">
               <input type="checkbox" checked={differentTypes} onChange={(e) => onDifferentTypesChange(e.target.checked)} />
               Different rating types

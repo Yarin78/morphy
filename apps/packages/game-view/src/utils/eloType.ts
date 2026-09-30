@@ -1,3 +1,5 @@
+import { nationInfo } from './nations';
+
 /** What kind of rating an elo is; see se.yarin.chess.EloType on the server. */
 export interface EloTypeInfo {
   kind: EloKind;
@@ -25,8 +27,11 @@ export const ELO_TIME_CONTROLS: { value: EloTimeControl; label: string }[] = [
   { value: 'CORRESPONDENCE', label: 'Correspondence' },
 ];
 
-/** The chess servers a rating can be from, by the names the server side has for them. */
-export const ELO_SERVERS = ['ChessBase', 'chess.com', 'lichess'];
+/**
+ * The chess servers a rating can be from, by the names the server side has for them, in the order
+ * offered; the first is the one picked when a rating becomes a server rating.
+ */
+export const ELO_SERVERS = ['chess.com', 'lichess', 'ChessBase'];
 
 /**
  * The time controls ChessBase offers for each kind of rating: an international rating is FIDE at
@@ -49,10 +54,13 @@ export function internationalEloType(timeControl: EloTimeControl): EloTypeInfo {
 
 export const FIDE: EloTypeInfo = internationalEloType('NORMAL');
 
-/** A short label: "FIDE", "FIDE blitz", "ICCF", "NOR rapid", "lichess blitz". */
+/** A short label: "FIDE", "FIDE blitz", "ICCF", "Norway rapid", "lichess blitz". */
 export function eloTypeLabel(type: EloTypeInfo | null): string {
   const t = type ?? FIDE;
-  const what = t.kind === 'NATIONAL' ? t.nation || 'National' : t.name || (t.kind === 'SERVER' ? 'Server' : 'FIDE');
+  const what =
+    t.kind === 'NATIONAL'
+      ? (nationInfo(t.nation)?.name ?? 'Unknown nation')
+      : t.name || (t.kind === 'SERVER' ? 'Server' : 'FIDE');
   // Normal is the default, and ICCF is correspondence by definition
   const showTimeControl = t.timeControl !== 'NORMAL' && !(t.kind === 'INTERNATIONAL' && t.timeControl === 'CORRESPONDENCE');
   return showTimeControl ? `${what} ${t.timeControl.toLowerCase()}` : what;

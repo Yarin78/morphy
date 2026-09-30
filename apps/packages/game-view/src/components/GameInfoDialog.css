@@ -448,10 +448,7 @@
 .rating-type-button {
   font: inherit;
   font-size: 0.75rem;
-  flex: 0 1 auto;
-  max-width: 6rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  flex: 0 0 auto;
   white-space: nowrap;
   padding: 0 0.45rem;
   border: none;
@@ -523,4 +520,214 @@
   border-top: 1px solid #e0d5c8;
   font-size: 0.85rem;
   color: #5a4a3a;
+}
+
+/* Rating types as icons: a server's logo, a nation's flag or FIDE/ICCF, and the time control */
+.elo-type-icons {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  line-height: 1;
+}
+
+.elo-server-logo {
+  width: 1rem;
+  height: 1rem;
+  border-radius: 2px;
+  object-fit: contain;
+}
+
+.elo-flag {
+  width: 1.2rem;
+  height: 0.9rem;
+  border-radius: 1px;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.12);
+}
+
+.elo-time-control-icon {
+  width: 0.9rem;
+  height: 0.9rem;
+  color: #6b5d47;
+}
+
+.rating-type-button .elo-type-text {
+  font-size: 0.75rem;
+}
+
+.rating-type-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+}
+
+/* A row of buttons to pick one of, like radio buttons */
+.rating-type-choices {
+  display: flex;
+  gap: 0.3rem;
+}
+
+.rating-type-choice {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2rem;
+  height: 1.9rem;
+  padding: 0 0.4rem;
+  border: 1px solid #d4c4b0;
+  border-radius: 4px;
+  background: #fff;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.8rem;
+  color: #5a3a1f;
+}
+
+.rating-type-choice:hover {
+  background: #f3ece2;
+}
+
+.rating-type-choice.selected {
+  border-color: #8b6f47;
+  background: #eadfd1;
+  box-shadow: inset 0 0 0 1px #8b6f47;
+}
+
+.rating-type-choice .elo-server-logo {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.rating-type-choice .elo-time-control-icon {
+  width: 1.05rem;
+  height: 1.05rem;
+}
+
+.rating-type-nation {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+/* A dropdown whose options have icons */
+.icon-select {
+  position: relative;
+}
+
+.icon-select-button {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 2rem;
+  padding: 0.25rem 1.6rem 0.25rem 0.45rem;
+  border: 1px solid #b8a896;
+  border-radius: 4px;
+  background: #fff;
+  color: #333;
+  font: inherit;
+  font-size: 0.9rem;
+  text-align: left;
+  cursor: pointer;
+  position: relative;
+}
+
+.icon-select-button::after {
+  content: '▾';
+  position: absolute;
+  right: 0.5rem;
+  color: #8a7a68;
+  font-size: 0.75rem;
+}
+
+.icon-select-button:focus-visible {
+  outline: 2px solid #8b6f47;
+  outline-offset: -1px;
+}
+
+.icon-select-value,
+.icon-select-list li {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.icon-select-placeholder {
+  color: #8a7a68;
+}
+
+.icon-select-dropdown {
+  position: absolute;
+  top: calc(100% + 2px);
+  left: 0;
+  z-index: 1;
+  min-width: 100%;
+  width: max-content;
+  max-width: 18rem;
+  background: #fbf8f4;
+  border: 1px solid #b8a896;
+  border-radius: 4px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
+  overflow: hidden;
+}
+
+.rating-type-popover input.icon-select-search {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  border: none;
+  border-bottom: 1px solid #e0d5c8;
+  border-radius: 0;
+  padding: 0.4rem 0.55rem;
+  outline: none;
+}
+
+.icon-select-list {
+  list-style: none;
+  margin: 0;
+  padding: 0.2rem 0;
+  max-height: 14rem;
+  overflow-y: auto;
+  outline: none;
+}
+
+.icon-select-list li {
+  padding: 0.3rem 0.6rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.icon-select-list li.highlighted {
+  background: #eadfd1;
+}
+
+.icon-select-list li.icon-select-none {
+  color: #8a7a68;
+  cursor: default;
+}
+
+.icon-select .elo-server-logo {
+  width: 1.1rem;
+  height: 1.1rem;
+}
+
+.icon-select .elo-flag {
+  flex: 0 0 auto;
+}
+
+/* A historic flag is an image of any shape; fit it to the flag-icons 4:3 */
+img.elo-flag {
+  object-fit: cover;
+}
+
+/* A flag for no nation, or one without a flag of its own */
+.elo-flag-unknown {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #d9ccb9;
+  color: #6b5d47;
+  font-size: 0.6rem;
+  font-weight: 700;
+  line-height: 1;
 }
