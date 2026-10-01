@@ -7,6 +7,8 @@ interface IconSelectProps<T> {
   optionKey: (option: T) => string;
   /** An option as shown in the list and on the button, typically an icon and a name. */
   renderOption: (option: T) => React.ReactNode;
+  /** The chosen option as the button shows it, if not as in the list: just an icon, say. */
+  renderValue?: (option: T) => React.ReactNode;
   /** What the button shows when nothing is chosen. */
   placeholder: React.ReactNode;
   /** What the field is, for screen readers: "Nation". */
@@ -14,6 +16,9 @@ interface IconSelectProps<T> {
   /** With it, the list has a search field, and shows the options it matches. */
   matches?: (option: T, query: string) => boolean;
   disabled?: boolean;
+  /** Also the tooltip of the button. */
+  title?: string;
+  className?: string;
 }
 
 /**
@@ -26,10 +31,13 @@ export function IconSelect<T>({
   onChange,
   optionKey,
   renderOption,
+  renderValue = renderOption,
   placeholder,
   label,
   matches,
   disabled,
+  title,
+  className,
 }: IconSelectProps<T>) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -90,7 +98,7 @@ export function IconSelect<T>({
   };
 
   return (
-    <div className="icon-select" ref={wrapperRef}>
+    <div className={`icon-select${className ? ` ${className}` : ''}`} ref={wrapperRef}>
       <button
         type="button"
         ref={buttonRef}
@@ -100,8 +108,9 @@ export function IconSelect<T>({
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-label={label}
+        title={title}
       >
-        <span className="icon-select-value">{value === undefined ? placeholder : renderOption(value)}</span>
+        <span className="icon-select-value">{value === undefined ? placeholder : renderValue(value)}</span>
       </button>
       {open && (
         <div className="icon-select-dropdown" onKeyDown={handleKeyDown}>

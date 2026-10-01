@@ -3,6 +3,7 @@ import type {
   DebugSearchResponse,
   FilterOptionsResponse,
   GameDto,
+  GameTagDto,
   SourceDto,
   TeamDto,
   TournamentDto,
@@ -148,6 +149,16 @@ export async function fetchSource(databaseId: string, id: number): Promise<Sourc
 /** Replaces a source's fields, for every game from it. As for tournaments, a field left out is cleared. */
 export async function updateSource(databaseId: string, source: SourceDto): Promise<SourceDto> {
   return sendJson('PUT', `${databaseUrl(databaseId)}/sources/${source.id}`, source, 'Update source');
+}
+
+/** Fetches one game tag. */
+export async function fetchGameTag(databaseId: string, id: number): Promise<GameTagDto> {
+  return getJson(`${databaseUrl(databaseId)}/gametags/${id}`, 'Fetch game tag');
+}
+
+/** Replaces a game tag's titles, for every game of it. A title left out is cleared. */
+export async function updateGameTag(databaseId: string, gameTag: GameTagDto): Promise<GameTagDto> {
+  return sendJson('PUT', `${databaseUrl(databaseId)}/gametags/${gameTag.id}`, gameTag, 'Update game tag');
 }
 
 /** Fetches one team. */

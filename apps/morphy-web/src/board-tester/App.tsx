@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Chess } from '@jackstenglein/chess';
-import { GameView } from 'game-view';
+import { GameView, gameTagLanguages } from 'game-view';
 import type {
   ChessGame,
   GameInfoServices,
+  GameTagLanguage,
+  GameTagService,
   PlayerService,
   SourceService,
   TeamService,
@@ -14,17 +16,21 @@ import {
   createGame,
   fetchDatabases,
   fetchGame,
+  fetchGameTag,
   fetchSource,
   fetchTeam,
   fetchTournament,
   replaceGame,
   search,
+  updateGameTag,
   updateSource,
   updateTeam,
   updateTournament,
 } from '../api/client';
 import {
   gameDtoToPgn,
+  gameTagDto,
+  gameTagInfo,
   pgnToGamePatch,
   sourceDto,
   sourceInfo,
@@ -38,6 +44,7 @@ import type {
   DatabaseResponse,
   EntitySearchResponse,
   GameDto,
+  GameTagDto,
   PlayerDto,
   SourceDto,
   TeamDto,
@@ -144,6 +151,30 @@ function teamService(databaseId: string): TeamService {
   };
 }
 
+/** Existing game tags of a database, for the Edit Game Info dialog. */
+function gameTagService(databaseId: string, languages: GameTagLanguage[]): GameTagService {
+  const info = (dto: GameTagDto) => gameTagInfo(dto) ?? { id: dto.id, titles: {}, gameCount: dto.gameCount };
+  return {
+    languages,
+    async search(text) {
+      const response = await search<EntitySearchResponse<GameTagDto>>(databaseId, 'gametags', {
+        filter: prefixFilter(text),
+        limit: 20,
+        sortBy: '-count',
+      });
+      return response.items.map(info);
+    },
+    async get(id) {
+      return info(await fetchGameTag(databaseId, id));
+    },
+    async update(gameTag) {
+      // The whole entity is replaced, so start from it as saved
+      const current = await fetchGameTag(databaseId, gameTag.id!);
+      return info(await updateGameTag(databaseId, { ...current, ...gameTagDto(gameTag) }));
+    },
+  };
+}
+
 /** Existing tournaments of a database, for the Edit Game Info dialog. */
 function tournamentService(databaseId: string): TournamentService {
   const info = (dto: TournamentDto) => tournamentInfo(dto)!;
@@ -179,6 +210,9 @@ function App() {
   const saveMessage = saveMessageFor?.paramsKey === paramsKey ? saveMessageFor.message : null;
   const [saving, setSaving] = useState(false);
   const chessRef = useRef<Chess | null>(null);
+  // The format decides the languages a game tag can have titles in
+  const databasePath = databases?.find((db) => db.id === databaseId)?.path;
+  const databaseFormat = databasePath?.endsWith('.2cbh') ? '2cbh' : databasePath?.endsWith('.cbh') ? 'cbh' : undefined;
   const gameInfoServices = useMemo<GameInfoServices | undefined>(
     () =>
       databaseId
@@ -188,9 +222,10 @@ function App() {
             tournaments: tournamentService(databaseId),
             sources: sourceService(databaseId),
             teams: teamService(databaseId),
+            gameTags: gameTagService(databaseId, gameTagLanguages(databaseFormat)),
           }
         : undefined,
-    [databaseId]
+    [databaseId, databaseFormat]
   );
 
   // Load the database list once, both for the status bar and to catch an unknown db.

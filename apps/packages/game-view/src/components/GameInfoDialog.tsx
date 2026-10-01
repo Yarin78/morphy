@@ -19,6 +19,9 @@ import type { SourceInfo } from '../utils/source';
 import { SourceDialog } from './SourceDialog';
 import { SourceField } from './SourceField';
 import type { TeamColor, TeamInfo } from '../utils/team';
+import type { GameTagInfo } from '../utils/gameTag';
+import { GameTagDialog } from './GameTagDialog';
+import { GameTagField } from './GameTagField';
 import { TeamDialog } from './TeamDialog';
 import { TeamField } from './TeamField';
 import { TournamentDialog } from './TournamentDialog';
@@ -44,8 +47,9 @@ export const GameInfoDialog: React.FC<GameInfoDialogProps> = ({ initial, service
   const [info, setInfo] = useState<GameInfo>(initial);
   const [errors, setErrors] = useState<GameInfoErrors>({});
   // Whose details are open in a dialog on top of this one
-  const [detailsOpen, setDetailsOpen] = useState<'tournament' | 'source' | TeamColor | null>(null);
+  const [detailsOpen, setDetailsOpen] = useState<'tournament' | 'source' | TeamColor | 'gameTag' | null>(null);
   const teamService = services?.teams;
+  const gameTagService = services?.gameTags;
   const firstFieldRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -119,6 +123,25 @@ export const GameInfoDialog: React.FC<GameInfoDialogProps> = ({ initial, service
       cancelled = true;
     };
   }, [teamService, initialWhiteTeamId, initialBlackTeamId]);
+
+  // The same for the existing game tag
+  const initialGameTagId = initial.gameTag?.id;
+  useEffect(() => {
+    if (!gameTagService || initialGameTagId == null) return;
+    let cancelled = false;
+    gameTagService
+      .get(initialGameTagId)
+      .then((current) => {
+        if (cancelled) return;
+        setInfo((i) => (i.gameTag?.id === current.id ? { ...i, gameTag: current } : i));
+      })
+      .catch((err) => console.error('Failed to load the game tag:', err));
+    return () => {
+      cancelled = true;
+    };
+  }, [gameTagService, initialGameTagId]);
+
+  const setGameTag = (gameTag: GameTagInfo | null) => setInfo((i) => ({ ...i, gameTag }));
 
   const setTeam = (color: TeamColor) => (team: TeamInfo | null) => setInfo((i) => ({ ...i, [`${color}Team`]: team }));
 
@@ -393,6 +416,19 @@ export const GameInfoDialog: React.FC<GameInfoDialogProps> = ({ initial, service
           ))}
         </fieldset>
 
+        <fieldset className="game-info-row game-info-game-tag">
+          <legend>Game Tag</legend>
+          <GameTagField value={info.gameTag} onChange={setGameTag} service={gameTagService} />
+          <button
+            type="button"
+            className="tournament-details-button"
+            onClick={() => setDetailsOpen('gameTag')}
+            disabled={!info.gameTag}
+          >
+            Details…
+          </button>
+        </fieldset>
+
         <div className="game-info-buttons">
           <button type="button" className="game-info-cancel" onClick={onCancel}>
             Cancel
@@ -416,6 +452,14 @@ export const GameInfoDialog: React.FC<GameInfoDialogProps> = ({ initial, service
         team={info[`${detailsOpen}Team`]!}
         service={teamService}
         onApply={setTeam(detailsOpen)}
+        onClose={() => setDetailsOpen(null)}
+      />
+    )}
+    {detailsOpen === 'gameTag' && info.gameTag && (
+      <GameTagDialog
+        gameTag={info.gameTag}
+        service={gameTagService}
+        onApply={setGameTag}
         onClose={() => setDetailsOpen(null)}
       />
     )}

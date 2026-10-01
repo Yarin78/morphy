@@ -39,9 +39,13 @@ export const ServerLogo: React.FC<{ name: string }> = ({ name }) =>
   );
 
 /** A nation's flag; an unknown flag for no nation, or one without a flag. */
-export const NationFlag: React.FC<{ nation: string | undefined }> = ({ nation }) => {
+export const NationFlag: React.FC<{
+  nation: string | undefined;
+  /** What the flag stands for, if not the nation: a language, say. */
+  label?: string;
+}> = ({ nation, label }) => {
   const info = nationInfo(nation);
-  const name = info?.name ?? 'Unknown nation';
+  const name = label ?? info?.name ?? 'Unknown nation';
   if (info?.flagImage) {
     return <img className="elo-flag" src={info.flagImage} alt={name} title={name} />;
   }

@@ -4,6 +4,11 @@ import {
   decodeEloType,
   ELO_TYPE_TAGS,
   encodeEloType,
+  GAME_TAG_LANGUAGES,
+  GAME_TAG_TAGS,
+  gameTagFromTags,
+  gameTagTitle,
+  gameTagToTags,
   LINE_EVALUATION_TAG,
   PLAYER_ID_TAGS,
   SOURCE_TAGS,
@@ -17,8 +22,17 @@ import {
   tournamentFromTags,
   tournamentToTags,
 } from 'game-view';
-import type { SourceInfo, TeamInfo, TournamentInfo } from 'game-view';
-import type { DateDto, GameDto, GameResultDto, PlayerDto, SourceDto, TeamDto, TournamentDto } from '../api/types';
+import type { GameTagInfo, GameTagLanguage, SourceInfo, TeamInfo, TournamentInfo } from 'game-view';
+import type {
+  DateDto,
+  GameDto,
+  GameResultDto,
+  GameTagDto,
+  PlayerDto,
+  SourceDto,
+  TeamDto,
+  TournamentDto,
+} from '../api/types';
 
 // Bridges morphy-service's GameDto (flattened header fields + a movetext-only
 // moves.pgn) and the single full-PGN-string (headers + movetext) that
@@ -177,7 +191,45 @@ export function teamDto(t: TeamInfo): TeamDto {
   return { id: t.id, title: t.title, teamNumber: t.number, season: t.season, year: t.year, nation: t.nation };
 }
 
+/** The GameTagDto field with a game tag's title in each language. */
+const GAME_TAG_TITLE_FIELDS: Record<GameTagLanguage, `${string}Title` & keyof GameTagDto> = {
+  ENG: 'englishTitle',
+  GER: 'germanTitle',
+  FRA: 'frenchTitle',
+  ESP: 'spanishTitle',
+  ITA: 'italianTitle',
+  NED: 'dutchTitle',
+  SLO: 'slovenianTitle',
+  POR: 'portugueseTitle',
+};
+
+/** A game tag as the Edit Game Info dialog has it; null for none, or for the empty placeholder tag. */
+export function gameTagInfo(dto: GameTagDto | undefined): GameTagInfo | null {
+  if (!dto) return null;
+  const titles: GameTagInfo['titles'] = {};
+  for (const { code } of GAME_TAG_LANGUAGES) {
+    const title = dto[GAME_TAG_TITLE_FIELDS[code]];
+    if (title) titles[code] = title;
+  }
+  if (Object.keys(titles).length === 0) return null;
+  return { id: dto.id, titles, gameCount: dto.gameCount };
+}
+
+/**
+ * A game tag for the server, with every title, those not set left out. With an id, the game is
+ * put with that existing tag and the titles are ignored; without one, the tag with these titles is
+ * found, or created.
+ */
+export function gameTagDto(t: GameTagInfo): GameTagDto {
+  const dto: GameTagDto = { id: t.id, title: gameTagTitle(t) };
+  for (const { code } of GAME_TAG_LANGUAGES) {
+    dto[GAME_TAG_TITLE_FIELDS[code]] = t.titles[code];
+  }
+  return dto;
+}
+
 const KNOWN_TAGS = new Set<string>([
+  ...Object.values(GAME_TAG_TAGS),
   ...Object.values(teamTags('white')), ...Object.values(teamTags('black')),
   ...Object.values(SOURCE_TAGS), ANNOTATOR_ID_TAG,
   ...Object.values(TOURNAMENT_TAGS), ...Object.values(PLAYER_ID_TAGS), ...Object.values(ELO_TYPE_TAGS), 'Date', 'Round', 'White', 'Black', 'Result',
@@ -225,6 +277,9 @@ export function gameDtoToPgn(game: GameDto): string {
   for (const [name, value] of Object.entries(teamToTags('black', teamInfo(game.blackTeam)))) {
     pushIfSet(name, value);
   }
+  for (const [name, value] of Object.entries(gameTagToTags(gameTagInfo(game.gameTag)))) {
+    pushIfSet(name, value);
+  }
   if (game.setupPosition && game.moves?.fen) {
     tags.push(['FEN', game.moves.fen]);
     tags.push(['SetUp', '1']);
@@ -264,6 +319,7 @@ export function pgnToGamePatch(chess: Chess, base: GameDto): GameDto {
   const source = sourceFromTags((name) => tagValues[name] ?? '');
   const whiteTeam = teamFromTags('white', (name) => tagValues[name] ?? '');
   const blackTeam = teamFromTags('black', (name) => tagValues[name] ?? '');
+  const gameTag = gameTagFromTags((name) => tagValues[name] ?? '');
 
   const result = PGN_TO_RESULT[tagValues.Result ?? ''] ?? base.result;
   const round = tagValues.Round?.split('.');
@@ -299,6 +355,8 @@ export function pgnToGamePatch(chess: Chess, base: GameDto): GameDto {
     // A player without a team tag has no team
     whiteTeam: whiteTeam ? teamDto(whiteTeam) : undefined,
     blackTeam: blackTeam ? teamDto(blackTeam) : undefined,
+    // A game without a tag keeps the empty placeholder tag it may have
+    gameTag: gameTag ? gameTagDto(gameTag) : gameTagInfo(base.gameTag) ? undefined : base.gameTag,
     setupPosition,
     moves: {
       pgn: chess.renderPgn({ skipHeader: true }).trim(),

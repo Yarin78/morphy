@@ -21,7 +21,7 @@ export interface EntityFieldsContext<F extends FormValues> {
   /** A text input with its label above it; the first field gets the focus while editing. */
   input: (
     field: keyof F & string,
-    label: string,
+    label: React.ReactNode,
     props?: React.InputHTMLAttributes<HTMLInputElement> & { first?: boolean }
   ) => React.ReactNode;
 }
@@ -30,6 +30,8 @@ interface EntityDetailsDialogProps<E extends SharedEntity, F extends FormValues>
   entity: E;
   /** What it is, in lowercase: "tournament". */
   what: string;
+  /** What it is in class names, if not what: "game-tag". */
+  name?: string;
   /** Changes an existing one, for every game in it; without it, it can't be. */
   update?: (entity: E) => Promise<E>;
   toForm: (entity: E) => F;
@@ -54,6 +56,7 @@ type Mode = 'new' | 'existing' | 'editing-existing';
 export function EntityDetailsDialog<E extends SharedEntity, F extends FormValues>({
   entity,
   what,
+  name = what,
   update,
   toForm,
   validate,
@@ -129,7 +132,7 @@ export function EntityDetailsDialog<E extends SharedEntity, F extends FormValues
   };
 
   const input: EntityFieldsContext<F>['input'] = (field, label, { first, ...props } = {}) => (
-    <label className={`game-info-field ${what}-field-${field}`}>
+    <label className={`game-info-field ${name}-field-${field}`}>
       <span className="game-info-label">{label}</span>
       <input
         type="text"
@@ -149,12 +152,12 @@ export function EntityDetailsDialog<E extends SharedEntity, F extends FormValues
 
   const games = entity.gameCount;
   const gamesText = games == null ? 'its games' : `its ${games} ${games === 1 ? 'game' : 'games'}`;
-  const titleId = `${what}-dialog-title`;
+  const titleId = `${name}-dialog-title`;
 
   return (
     <div className="game-info-overlay game-info-overlay-stacked" onMouseDown={onClose}>
       <form
-        className={`game-info-dialog entity-dialog ${what}-dialog${readOnly ? ' read-only' : ''}`}
+        className={`game-info-dialog entity-dialog ${name}-dialog${readOnly ? ' read-only' : ''}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}

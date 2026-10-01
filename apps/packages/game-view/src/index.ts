@@ -19,6 +19,15 @@ export { ANNOTATOR_ID_TAG } from './utils/gameInfo';
 export { SOURCE_TAGS, sourceFromTags, sourceToTags } from './utils/source';
 export type { SourceInfo, SourceService } from './utils/source';
 export { teamFromTags, teamTags, teamToTags } from './utils/team';
+export {
+  GAME_TAG_LANGUAGES,
+  GAME_TAG_TAGS,
+  gameTagFromTags,
+  gameTagLanguages,
+  gameTagTitle,
+  gameTagToTags,
+} from './utils/gameTag';
+export type { GameTagInfo, GameTagLanguage, GameTagService } from './utils/gameTag';
 export type { TeamColor, TeamInfo, TeamService } from './utils/team';
 export { decodeEloType, ELO_TYPE_TAGS, encodeEloType } from './utils/eloType';
 export type { EloTypeInfo } from './utils/eloType';

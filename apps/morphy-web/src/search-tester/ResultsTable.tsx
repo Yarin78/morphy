@@ -324,6 +324,7 @@ function getGameTagTitle(gt: GameDto['gameTag']): string {
     gt.italianTitle,
     gt.dutchTitle,
     gt.slovenianTitle,
+    gt.portugueseTitle,
     gt.resTitle,
   ];
   const found = titles.find((t): t is string => typeof t === 'string');

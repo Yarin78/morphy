@@ -896,3 +896,81 @@ img.elo-flag {
 .entity-dialog.read-only .date-field-input {
   background: #efe8de;
 }
+
+/* The game tag: its language's flag, the title and its Details button */
+.game-info-dialog fieldset.game-info-game-tag {
+  flex-wrap: nowrap;
+  align-items: center;
+}
+
+.game-info-dialog .game-info-field-game-tag {
+  flex: 1 1 auto;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+  position: relative;
+}
+
+.game-info-field-game-tag.with-badge input {
+  padding-right: 3.2rem;
+}
+
+.game-tag-input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* The flag at the start of the field, like a rating's type */
+.game-tag-language .icon-select-button {
+  height: 100%;
+  min-height: 0;
+  padding: 0 1.3rem 0 0.5rem;
+  border: none;
+  border-right: 1px solid #d4c4b0;
+  border-radius: 3px 0 0 3px;
+  background: #efe6da;
+}
+
+.game-tag-language .icon-select-button:hover {
+  background: #e3d6c4;
+}
+
+.game-tag-language .icon-select-button::after {
+  right: 0.4rem;
+}
+
+.game-tag-language .icon-select-dropdown {
+  min-width: 10rem;
+}
+
+/* A language an existing tag has no title in */
+.game-tag-untitled {
+  color: #8a7a68;
+}
+
+.game-info-game-tag .tournament-details-button {
+  box-sizing: border-box;
+  height: 2.25rem;
+}
+
+/* The game tag dialog: a title per language, each after its flag and name */
+.game-info-dialog fieldset.game-tag-titles {
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  column-gap: 0.75rem;
+}
+
+.game-tag-titles .game-info-field {
+  display: contents;
+}
+
+.game-tag-titles .game-info-label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+}
+
+.game-tag-titles .game-info-error {
+  grid-column: 2;
+}

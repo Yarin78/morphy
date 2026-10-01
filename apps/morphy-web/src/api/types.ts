@@ -151,6 +151,7 @@ export interface GameTagDto {
   italianTitle?: string;
   dutchTitle?: string;
   slovenianTitle?: string;
+  portugueseTitle?: string;
   resTitle?: string;
   gameCount?: number;
 }
