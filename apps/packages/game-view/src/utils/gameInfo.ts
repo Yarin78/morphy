@@ -9,6 +9,13 @@ import type { SourceInfo, SourceService } from './source';
 import { teamFromTags, teamToTags } from './team';
 import type { TeamInfo, TeamService } from './team';
 import { gameTagFromTags, gameTagToTags } from './gameTag';
+import {
+  formatTimeControl,
+  parseTimeControl,
+  TIME_CONTROL_TAG,
+  timeControlError,
+  toPgnTimeControl,
+} from './timeControl';
 import type { GameTagInfo, GameTagService } from './gameTag';
 import { formatDateTag, parseDateTag, tournamentFromTags, tournamentToTags } from './tournament';
 import type { TournamentInfo, TournamentService } from './tournament';
@@ -52,6 +59,8 @@ export interface GameInfo {
   lineEvaluation: string;
   /** As typed: yyyy-mm-dd, or yyyy-mm or yyyy when not all of it is known. */
   date: string;
+  /** The time control as typed; see formatTimeControl. */
+  timeControl: string;
   /** Null when the game has no tournament. */
   tournament: TournamentInfo | null;
   round: string;
@@ -150,6 +159,12 @@ export function readGameInfo(chess: Chess): GameInfo {
     result: RESULTS.some((r) => r.value === result) ? result : LINE_RESULT,
     lineEvaluation: tagValue(chess, LINE_EVALUATION_TAG),
     date: formatDateText(parseDateTag(tagValue(chess, 'Date'))),
+    // A tag that can't be read is shown as it is
+    timeControl: (() => {
+      const tag = tagValue(chess, TIME_CONTROL_TAG);
+      const periods = parseTimeControl(tag);
+      return periods === null ? tag : formatTimeControl(periods);
+    })(),
     tournament: tournamentFromTags((name) => chess.header().getRawValue(name)),
     round: numberPart(round),
     subRound: numberPart(subRound),
@@ -198,6 +213,8 @@ export function validateGameInfo(info: GameInfo): GameInfoErrors {
   }
   const dateError = dateTextError(info.date);
   if (dateError) errors.date = dateError;
+  const timeControlProblem = timeControlError(info.timeControl);
+  if (timeControlProblem) errors.timeControl = timeControlProblem;
   checkNumber(errors, info, 'round', 1, 255);
   checkNumber(errors, info, 'subRound', 1, 255);
   checkNumber(errors, info, 'board', 1, 32767);
@@ -227,6 +244,7 @@ export function writeGameInfo(chess: Chess, info: GameInfo) {
   chess.setHeader('Result', info.result);
   chess.setHeader(LINE_EVALUATION_TAG, info.result === LINE_RESULT ? info.lineEvaluation : '');
   chess.setHeader('Date', formatDateTag(parseDateText(info.date) ?? undefined));
+  chess.setHeader(TIME_CONTROL_TAG, toPgnTimeControl(parseTimeControl(info.timeControl) ?? undefined));
   const t = info.tournament;
   const tournament = t && (t.title.trim() || t.id != null || t.place?.trim()) ? { ...t, title: t.title.trim() } : null;
   for (const [name, value] of Object.entries(tournamentToTags(tournament))) {

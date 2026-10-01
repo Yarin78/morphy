@@ -23,6 +23,7 @@ import type { GameTagInfo } from '../utils/gameTag';
 import { GameTagDialog } from './GameTagDialog';
 import { GameTagField } from './GameTagField';
 import { TeamDialog } from './TeamDialog';
+import { TimeControlField } from './TimeControlField';
 import { TeamField } from './TeamField';
 import { TournamentDialog } from './TournamentDialog';
 import { TournamentField } from './TournamentField';
@@ -382,6 +383,12 @@ export const GameInfoDialog: React.FC<GameInfoDialogProps> = ({ initial, service
             error={errors.date}
             className="game-info-field-date"
           />
+          <TimeControlField
+            value={info.timeControl}
+            onChange={(timeControl) => setInfo((i) => ({ ...i, timeControl }))}
+            error={errors.timeControl}
+          />
+          <span className="game-info-break" />
           {field('eco', 'ECO', { placeholder: 'A00', maxLength: 6 })}
           {field('opening', 'Opening')}
         </fieldset>

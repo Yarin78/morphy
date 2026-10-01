@@ -10,6 +10,9 @@ import {
   gameTagTitle,
   gameTagToTags,
   LINE_EVALUATION_TAG,
+  parseTimeControl,
+  TIME_CONTROL_TAG,
+  toPgnTimeControl,
   FIDE_ID_TAGS,
   PLAYER_ID_TAGS,
   SOURCE_TAGS,
@@ -239,7 +242,7 @@ const KNOWN_TAGS = new Set<string>([
   ...Object.values(teamTags('white')), ...Object.values(teamTags('black')),
   ...Object.values(SOURCE_TAGS), ANNOTATOR_ID_TAG,
   ...Object.values(TOURNAMENT_TAGS), ...Object.values(PLAYER_ID_TAGS), ...Object.values(FIDE_ID_TAGS), ...Object.values(ELO_TYPE_TAGS), 'Date', 'Round', 'White', 'Black', 'Result',
-  'WhiteElo', 'BlackElo', 'Board', 'ECO', 'Annotator', 'FEN', 'SetUp', LINE_EVALUATION_TAG,
+  'WhiteElo', 'BlackElo', 'Board', 'ECO', 'Annotator', 'FEN', 'SetUp', LINE_EVALUATION_TAG, TIME_CONTROL_TAG,
 ]);
 
 /**
@@ -268,6 +271,10 @@ export function gameDtoToPgn(game: GameDto): string {
   pushIfSet(FIDE_ID_TAGS.black, game.blackPlayer?.fideId == null ? undefined : String(game.blackPlayer.fideId));
   tags.push(['Result', RESULT_TO_PGN[game.result] ?? '*']);
   if (game.result === 'NOT_FINISHED') pushIfSet(LINE_EVALUATION_TAG, game.lineEvaluation);
+  pushIfSet(
+    TIME_CONTROL_TAG,
+    toPgnTimeControl(game.timeControl?.periods.map((p) => ({ ...p, moves: p.moves ?? undefined })))
+  );
   pushIfSet('WhiteElo', game.whiteElo == null ? undefined : String(game.whiteElo));
   pushIfSet(ELO_TYPE_TAGS.white, encodeEloType(game.whiteEloType ?? null));
   pushIfSet('BlackElo', game.blackElo == null ? undefined : String(game.blackElo));
@@ -339,6 +346,9 @@ export function pgnToGamePatch(chess: Chess, base: GameDto): GameDto {
       extraTags[name] = value;
     }
   }
+  // A time control tag that can't be read, like a sandclock, is kept as it is
+  const timeControlTag = tagValues[TIME_CONTROL_TAG] ?? '';
+  if (parseTimeControl(timeControlTag) === null) extraTags[TIME_CONTROL_TAG] = timeControlTag;
 
   return {
     ...base,
@@ -350,6 +360,10 @@ export function pgnToGamePatch(chess: Chess, base: GameDto): GameDto {
     blackEloType: tagValues.BlackElo ? decodeEloType(tagValues[ELO_TYPE_TAGS.black] ?? '') ?? undefined : undefined,
     result,
     lineEvaluation: result === 'NOT_FINISHED' ? tagValues[LINE_EVALUATION_TAG] || undefined : undefined,
+    timeControl: (() => {
+      const periods = parseTimeControl(tagValues[TIME_CONTROL_TAG] ?? '');
+      return periods ? { periods } : undefined;
+    })(),
     date: parseDateTag(tagValues.Date, base.date),
     eco: tagValues.ECO || undefined,
     round: round?.[0] ? parseInt(round[0], 10) : undefined,

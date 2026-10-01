@@ -31,3 +31,10 @@ export type { GameTagInfo, GameTagLanguage, GameTagService } from './utils/gameT
 export type { TeamColor, TeamInfo, TeamService } from './utils/team';
 export { decodeEloType, ELO_TYPE_TAGS, encodeEloType } from './utils/eloType';
 export type { EloTypeInfo } from './utils/eloType';
+export {
+  formatTimeControl,
+  parseTimeControl,
+  TIME_CONTROL_TAG,
+  toPgnTimeControl,
+} from './utils/timeControl';
+export type { TimeControlPeriod } from './utils/timeControl';

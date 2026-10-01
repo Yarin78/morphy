@@ -139,6 +139,18 @@ export interface AnnotatorDto {
   gameCount?: number;
 }
 
+/** A time control: periods played one after the other. */
+export interface TimeControlDto {
+  periods: {
+    /** The time the period starts with, in seconds. */
+    seconds: number;
+    /** Added after each move, in seconds. */
+    increment: number;
+    /** The number of moves of the period; none for the rest of the game. */
+    moves?: number | null;
+  }[];
+}
+
 export interface GameTagDto {
   id: number | null;
   title?: string;
@@ -196,6 +208,7 @@ export interface GameDto {
   /** The board in a team match; not stored by every format. */
   board?: number;
   lineEvaluation?: string;
+  timeControl?: TimeControlDto;
   tournament?: TournamentDto;
   source?: SourceDto;
   annotator?: AnnotatorDto;
