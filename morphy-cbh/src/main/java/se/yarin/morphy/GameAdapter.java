@@ -201,8 +201,8 @@ public class GameAdapter {
       model.setGameTagId((long) gameTag.id());
       model.setGameTag(gameTag.title());
       for (GameTagLanguage language : GameTagLanguage.values()) {
-        String title = gameTagTitle(gameTag, language);
-        if (title != null && !title.isEmpty()) {
+        String title = gameTag.title(language);
+        if (!title.isEmpty()) {
           model.setGameTagTitle(language, title);
         }
       }
@@ -429,20 +429,6 @@ public class GameAdapter {
           }
         });
     return builder.build();
-  }
-
-  /** A game tag's title in a language; null for one a v1 game tag can't have. */
-  private static @Nullable String gameTagTitle(@NotNull GameTag gameTag, @NotNull GameTagLanguage language) {
-    return switch (language) {
-      case ENGLISH -> gameTag.englishTitle();
-      case GERMAN -> gameTag.germanTitle();
-      case FRENCH -> gameTag.frenchTitle();
-      case SPANISH -> gameTag.spanishTitle();
-      case ITALIAN -> gameTag.italianTitle();
-      case DUTCH -> gameTag.dutchTitle();
-      case SLOVENIAN -> gameTag.slovenianTitle();
-      case PORTUGUESE -> null;
-    };
   }
 
   /** A team with the details the header has for white's or black's. */

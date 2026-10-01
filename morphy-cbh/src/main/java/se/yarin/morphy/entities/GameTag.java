@@ -1,6 +1,11 @@
 package se.yarin.morphy.entities;
 
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.stream.Collectors;
 import org.immutables.value.Value;
+import se.yarin.chess.GameTagLanguage;
+import se.yarin.morphy.chessbase.Nation;
 
 @Value.Immutable
 public abstract class GameTag extends Entity implements Comparable<GameTag> {
@@ -52,17 +57,30 @@ public abstract class GameTag extends Entity implements Comparable<GameTag> {
   }
   ;
 
-  /** Returns a space-separated list of ISO 639-2 three-letter codes for languages that have a title set. */
+  /** The title in a language; empty if it has none, as always in Portuguese, which v1 lacks. */
+  public String title(GameTagLanguage language) {
+    return switch (language) {
+      case ENGLISH -> englishTitle();
+      case GERMAN -> germanTitle();
+      case FRENCH -> frenchTitle();
+      case SPANISH -> spanishTitle();
+      case ITALIAN -> italianTitle();
+      case DUTCH -> dutchTitle();
+      case SLOVENIAN -> slovenianTitle();
+      case PORTUGUESE -> "";
+    };
+  }
+
+  /**
+   * The languages that have a title, as the nation codes that stand for them, in the order v2 keeps
+   * them: "ENG ESP GER".
+   */
   public String languages() {
-    var sb = new StringBuilder();
-    if (!englishTitle().isEmpty()) sb.append("ENG");
-    if (!germanTitle().isEmpty()) { if (!sb.isEmpty()) sb.append(' '); sb.append("GER"); }
-    if (!frenchTitle().isEmpty()) { if (!sb.isEmpty()) sb.append(' '); sb.append("FRE"); }
-    if (!spanishTitle().isEmpty()) { if (!sb.isEmpty()) sb.append(' '); sb.append("SPA"); }
-    if (!italianTitle().isEmpty()) { if (!sb.isEmpty()) sb.append(' '); sb.append("ITA"); }
-    if (!dutchTitle().isEmpty()) { if (!sb.isEmpty()) sb.append(' '); sb.append("DUT"); }
-    if (!slovenianTitle().isEmpty()) { if (!sb.isEmpty()) sb.append(' '); sb.append("SLV"); }
-    return sb.toString();
+    return Arrays.stream(GameTagLanguage.values())
+        .filter(language -> !title(language).isEmpty())
+        .sorted(Comparator.comparingInt(language -> Nation.fromIOC(language.nation()).ordinal()))
+        .map(GameTagLanguage::nation)
+        .collect(Collectors.joining(" "));
   }
 
   /** Returns the number of languages that have a title set. */

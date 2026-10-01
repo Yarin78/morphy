@@ -357,9 +357,6 @@ public final class DtoConverter {
 
   public @NotNull GameTagDto toDto(
       @NotNull DatabaseTransaction txn, long id, @NotNull GameTag tag) {
-    String english = title(tag, 42), german = title(tag, 53), french = title(tag, 49);
-    String spanish = title(tag, 43), italian = title(tag, 70), dutch = title(tag, 103);
-    String portuguese = title(tag, 117);
     List<String> languages = new ArrayList<>();
     int count = 0;
     for (GameTag.Title t : tag.titles()) {
@@ -374,21 +371,22 @@ public final class DtoConverter {
         emptyToNull(tag.title()),
         languages.isEmpty() ? null : String.join(" ", languages),
         count,
-        emptyToNull(english),
-        emptyToNull(german),
-        emptyToNull(french),
-        emptyToNull(spanish),
-        emptyToNull(italian),
-        emptyToNull(dutch),
-        emptyToNull(title(tag, GameTag.code(GameTagLanguage.SLOVENIAN))),
-        emptyToNull(portuguese),
+        emptyToNull(title(tag, GameTagLanguage.ENGLISH)),
+        emptyToNull(title(tag, GameTagLanguage.GERMAN)),
+        emptyToNull(title(tag, GameTagLanguage.FRENCH)),
+        emptyToNull(title(tag, GameTagLanguage.SPANISH)),
+        emptyToNull(title(tag, GameTagLanguage.ITALIAN)),
+        emptyToNull(title(tag, GameTagLanguage.DUTCH)),
+        emptyToNull(title(tag, GameTagLanguage.SLOVENIAN)),
+        emptyToNull(title(tag, GameTagLanguage.PORTUGUESE)),
         null,
         count(txn, id, Role.GAME_TAG));
   }
 
-  private static String title(GameTag tag, int language) {
+  private static String title(GameTag tag, GameTagLanguage language) {
+    int code = GameTag.code(language);
     for (GameTag.Title t : tag.titles()) {
-      if (t.language() == language) {
+      if (t.language() == code) {
         return t.text();
       }
     }
