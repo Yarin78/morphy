@@ -224,8 +224,16 @@ public final class WriteTransaction extends DatabaseTransaction {
     GameHeaderModel h = game.header();
     GameMovesModel moves = game.moves();
 
-    long whiteId = entityId(EntityType.PLAYER, h.getWhiteId(), () -> Player.ofFullName(text(h.getWhite())));
-    long blackId = entityId(EntityType.PLAYER, h.getBlackId(), () -> Player.ofFullName(text(h.getBlack())));
+    long whiteId =
+        entityId(
+            EntityType.PLAYER,
+            h.getWhiteId(),
+            () -> Player.ofFullName(text(h.getWhite())).withFideId(h.getWhiteFideId()));
+    long blackId =
+        entityId(
+            EntityType.PLAYER,
+            h.getBlackId(),
+            () -> Player.ofFullName(text(h.getBlack())).withFideId(h.getBlackFideId()));
     long tournamentId = entityId(EntityType.TOURNAMENT, h.getEventId(), () -> tournament(h));
     long annotatorId =
         entityId(EntityType.PLAYER, h.getAnnotatorId(), () -> Player.ofFullName(text(h.getAnnotator())));

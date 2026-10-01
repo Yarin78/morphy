@@ -258,6 +258,29 @@ class FacadeWriteTest {
     }
   }
 
+  @Test
+  void newPlayersTakeTheirFideIdsFromTheGame() throws Exception {
+    File file = new File(tempDir, "fide.2cbh");
+    try (Database v1 = Databases.open(TestDatabases.worldCh(), AccessMode.READ_ONLY);
+        Database v2 = Databases.create(file)) {
+      GameDto g = unbind(v1.getGame(1, GameFetchOptions.full()));
+      PlayerDto white = new PlayerDto(null, "Carlsen", "Magnus", null, 1503014L, null);
+      PlayerDto black = new PlayerDto(null, "Unrated", "Player", null, null, null);
+      GameDto withPlayers =
+          new GameDto(
+              g.id(), g.type(), g.textTitle(), white, g.whiteElo(), g.whiteEloType(), black,
+              g.blackElo(), g.blackEloType(), g.whiteTeam(), g.blackTeam(), g.result(), g.date(),
+              g.eco(), g.round(), g.subRound(), g.board(), g.lineEvaluation(), g.tournament(),
+              g.source(), g.annotator(), g.gameTag(), g.medals(), g.deleted(), g.topGame(),
+              g.setupPosition(), g.variant(), g.noMoves(), g.notation(), g.variationMoves(), g.ait(),
+              g.vcs(), g.finalMaterial(), g.gameVersion(), g.creationTimestamp(), g.lastChanged(),
+              g.moves(), g.text(), g.extraTags());
+      GameDto back = v2.getGame(v2.addGame(withPlayers), GameFetchOptions.full());
+      assertEquals(1503014L, back.whitePlayer().fideId());
+      assertEquals(null, back.blackPlayer().fideId());
+    }
+  }
+
   private static GameDto withGameTag(GameDto g, GameTagDto tag) {
     return new GameDto(
         g.id(), g.type(), g.textTitle(), g.whitePlayer(), g.whiteElo(), g.whiteEloType(), g.blackPlayer(),

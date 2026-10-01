@@ -224,6 +224,13 @@ public class AnnotationPgnUtil {
                     yield null;
                 }
             }
+            case "whiteFideId", "blackFideId" -> {
+                try {
+                    yield Long.parseLong(valueStr);
+                } catch (NumberFormatException e) {
+                    yield null;
+                }
+            }
             case "date", "eventDate", "eventEndDate", "sourceDate", "sourcePublication" -> {
                 try {
                     yield parsePgnDate(valueStr);

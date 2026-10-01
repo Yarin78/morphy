@@ -44,6 +44,8 @@ public class GameHeaderModel {
                 "blackElo",
                 "whiteEloType",
                 "blackEloType",
+                "whiteFideId",
+                "blackFideId",
                 "whiteTeam",
                 "blackTeam",
                 "whiteTeamNumber",
@@ -92,6 +94,8 @@ public class GameHeaderModel {
   private @Nullable Integer blackElo;
   private @Nullable EloType whiteEloType;
   private @Nullable EloType blackEloType;
+  private @Nullable Long whiteFideId;
+  private @Nullable Long blackFideId;
   private @Nullable String whiteTeam;
   private @Nullable String blackTeam;
   private @Nullable Integer whiteTeamNumber;
@@ -201,6 +205,24 @@ public class GameHeaderModel {
 
   public void setBlackEloType(@Nullable EloType blackEloType) {
     this.blackEloType = blackEloType;
+  }
+
+  /** The white player's FIDE id, which belongs to the player rather than to the game. */
+  public @Nullable Long getWhiteFideId() {
+    return whiteFideId;
+  }
+
+  public void setWhiteFideId(@Nullable Long whiteFideId) {
+    this.whiteFideId = whiteFideId;
+  }
+
+  /** The black player's FIDE id, which belongs to the player rather than to the game. */
+  public @Nullable Long getBlackFideId() {
+    return blackFideId;
+  }
+
+  public void setBlackFideId(@Nullable Long blackFideId) {
+    this.blackFideId = blackFideId;
   }
 
   public @Nullable String getWhiteTeam() {
@@ -654,6 +676,8 @@ public class GameHeaderModel {
       case "blackElo" -> blackElo;
       case "whiteEloType" -> whiteEloType;
       case "blackEloType" -> blackEloType;
+      case "whiteFideId" -> whiteFideId;
+      case "blackFideId" -> blackFideId;
       case "whiteTeam" -> whiteTeam;
       case "blackTeam" -> blackTeam;
       case "whiteTeamNumber" -> whiteTeamNumber;
@@ -712,6 +736,8 @@ public class GameHeaderModel {
       case "blackElo" -> blackElo = cast(name, value, Integer.class);
       case "whiteEloType" -> whiteEloType = cast(name, value, EloType.class);
       case "blackEloType" -> blackEloType = cast(name, value, EloType.class);
+      case "whiteFideId" -> whiteFideId = cast(name, value, Long.class);
+      case "blackFideId" -> blackFideId = cast(name, value, Long.class);
       case "whiteTeam" -> whiteTeam = cast(name, value, String.class);
       case "blackTeam" -> blackTeam = cast(name, value, String.class);
       case "whiteTeamNumber" -> whiteTeamNumber = cast(name, value, Integer.class);

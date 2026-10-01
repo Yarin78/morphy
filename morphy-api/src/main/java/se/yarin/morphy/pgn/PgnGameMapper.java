@@ -91,6 +91,8 @@ public final class PgnGameMapper {
       headerModel.setWhite(fullName(dto.whitePlayer()));
       headerModel.setBlack(fullName(dto.blackPlayer()));
 
+      headerModel.setWhiteFideId(dto.whitePlayer() == null ? null : dto.whitePlayer().fideId());
+      headerModel.setBlackFideId(dto.blackPlayer() == null ? null : dto.blackPlayer().fideId());
       if (dto.whitePlayer() != null && dto.whitePlayer().id() != null) {
         headerModel.setWhiteId(dto.whitePlayer().id());
       }
@@ -295,10 +297,10 @@ public final class PgnGameMapper {
         id,
         "game",
         null,
-        player(header.getWhite()),
+        player(header.getWhite(), header.getWhiteFideId()),
         header.getWhiteElo(),
         eloType(header.getWhiteElo(), header.getWhiteEloType()),
-        player(header.getBlack()),
+        player(header.getBlack(), header.getBlackFideId()),
         header.getBlackElo(),
         eloType(header.getBlackElo(), header.getBlackEloType()),
         team(
@@ -348,7 +350,7 @@ public final class PgnGameMapper {
     return value == null || value.isBlank() || value.equals(UNKNOWN) ? null : value;
   }
 
-  private static @Nullable PlayerDto player(@Nullable String name) {
+  private static @Nullable PlayerDto player(@Nullable String name, @Nullable Long fideId) {
     if (known(name) == null) {
       return null;
     }
@@ -356,7 +358,7 @@ public final class PgnGameMapper {
     String lastName = (comma < 0 ? name : name.substring(0, comma)).strip();
     String firstName = comma < 0 ? null : name.substring(comma + 1).strip();
     return new PlayerDto(
-        null, lastName, firstName == null || firstName.isEmpty() ? null : firstName, null, null, null);
+        null, lastName, firstName == null || firstName.isEmpty() ? null : firstName, null, fideId, null);
   }
 
   private static @Nullable TeamDto team(

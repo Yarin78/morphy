@@ -268,10 +268,12 @@ public final class Game {
       model.setWhiteId(g.whiteId());
       if (white != null && !white.isEmpty()) {
         model.setWhite(white.fullName());
+        model.setWhiteFideId(white.fideId() > 0 ? white.fideId() : null);
       }
       model.setBlackId(g.blackId());
       if (black != null && !black.isEmpty()) {
         model.setBlack(black.fullName());
+        model.setBlackFideId(black.fideId() > 0 ? black.fideId() : null);
       }
       if (g.whiteElo() > 0) {
         model.setWhiteElo(g.whiteElo());

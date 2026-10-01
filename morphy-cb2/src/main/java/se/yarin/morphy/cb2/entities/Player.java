@@ -2,6 +2,7 @@ package se.yarin.morphy.cb2.entities;
 
 import java.nio.ByteBuffer;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * A player, who may also be an annotator or the author of a text or analysis.
@@ -36,6 +37,13 @@ public record Player(
       return of(fullName.strip(), "");
     }
     return of(fullName.substring(0, comma).strip(), fullName.substring(comma + 1).strip());
+  }
+
+  /** The same player with a FIDE id; unchanged without one. */
+  public @NotNull Player withFideId(@Nullable Long fideId) {
+    return fideId == null
+        ? this
+        : new Player(lastName, firstName, unknown1, unknown2, chessBaseId, fideIdSize, fideId);
   }
 
   /** The name as {@code "Last, First"}, or just the last name. */
