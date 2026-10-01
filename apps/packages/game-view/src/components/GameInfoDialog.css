@@ -361,7 +361,6 @@
   flex: 2 1 8rem;
 }
 
-.tournament-field-nation input,
 .tournament-field-rounds input,
 .tournament-field-category input {
   width: 3.5rem;
@@ -659,14 +658,16 @@
   color: #8a7a68;
 }
 
+/* Drawn above everything, dialogs included, where IconSelect places it */
 .icon-select-dropdown {
-  position: absolute;
-  top: calc(100% + 2px);
-  left: 0;
-  z-index: 1;
-  min-width: 100%;
+  position: fixed;
+  z-index: 10002;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
   width: max-content;
   max-width: 18rem;
+  color: #333;
   background: #fbf8f4;
   border: 1px solid #b8a896;
   border-radius: 4px;
@@ -674,7 +675,12 @@
   overflow: hidden;
 }
 
-.rating-type-popover input.icon-select-search {
+.icon-select-dropdown input.icon-select-search {
+  flex: 0 0 auto;
+  font: inherit;
+  font-size: 0.9rem;
+  background: #fbf8f4;
+  color: #333;
   display: block;
   box-sizing: border-box;
   width: 100%;
@@ -686,6 +692,8 @@
 }
 
 .icon-select-list {
+  flex: 1 1 auto;
+  min-height: 0;
   list-style: none;
   margin: 0;
   padding: 0.2rem 0;
@@ -709,12 +717,14 @@
   cursor: default;
 }
 
-.icon-select .elo-server-logo {
+.icon-select .elo-server-logo,
+.icon-select-dropdown .elo-server-logo {
   width: 1.1rem;
   height: 1.1rem;
 }
 
-.icon-select .elo-flag {
+.icon-select .elo-flag,
+.icon-select-dropdown .elo-flag {
   flex: 0 0 auto;
 }
 
@@ -846,6 +856,22 @@ img.elo-flag {
   flex: 1 1 12rem;
 }
 
+.tournament-field-nation {
+  flex: 0 0 9.5rem;
+}
+
+
+/* As tall as the text fields next to it */
+.entity-dialog .icon-select-button {
+  min-height: 2.25rem;
+}
+
+.entity-dialog.read-only .icon-select-button {
+  background: #efe8de;
+  color: #555;
+  cursor: default;
+}
+
 /* A date typed as yyyy-mm-dd, with a button for the browser's date picker, looking like one field */
 .date-field-input {
   position: relative;
@@ -955,7 +981,7 @@ img.elo-flag {
   right: 0.4rem;
 }
 
-.game-tag-language .icon-select-dropdown {
+.game-tag-language-dropdown {
   min-width: 10rem;
 }
 
@@ -1024,13 +1050,11 @@ img.elo-flag {
   content: none;
 }
 
-.time-control-presets .icon-select-dropdown {
-  left: auto;
-  right: 0;
+.time-control-presets-dropdown {
   max-width: none;
 }
 
-.time-control-presets .icon-select-list li {
+.time-control-presets-dropdown .icon-select-list li {
   justify-content: space-between;
   gap: 1rem;
 }

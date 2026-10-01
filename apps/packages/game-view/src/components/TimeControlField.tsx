@@ -32,6 +32,7 @@ export const TimeControlField: React.FC<TimeControlFieldProps> = ({ value, onCha
       />
       <IconSelect<Preset>
         className="time-control-presets"
+        align="end"
         options={TIME_CONTROL_PRESETS}
         value={undefined}
         onChange={(preset) => onChange(preset.text)}

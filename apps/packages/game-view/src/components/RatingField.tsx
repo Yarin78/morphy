@@ -10,16 +10,9 @@ import {
   internationalEloType,
 } from '../utils/eloType';
 import type { EloKind, EloTimeControl, EloTypeInfo } from '../utils/eloType';
-import { NATIONS, nationInfo } from '../utils/nations';
-import type { NationInfo } from '../utils/nations';
-import { EloTypeIcons, NationFlag, ServerLogo, TimeControlIcon } from './EloTypeIcons';
+import { EloTypeIcons, ServerLogo, TimeControlIcon } from './EloTypeIcons';
 import { IconSelect } from './IconSelect';
-
-/** Whether a nation matches what's typed in the search: its name, or the start of its code. */
-function nationMatches(nation: NationInfo, query: string): boolean {
-  const q = query.toLowerCase();
-  return nation.name.toLowerCase().includes(q) || nation.ioc.toLowerCase().startsWith(q);
-}
+import { NationSelect } from './NationSelect';
 
 interface RatingFieldProps {
   elo: string;
@@ -79,6 +72,8 @@ export const RatingField: React.FC<RatingFieldProps> = ({
     if (!open) return;
     const handleMouseDown = (e: MouseEvent) => {
       const target = e.target as Node;
+      // A dropdown of the popover has its list elsewhere on the page
+      if (target instanceof Element && target.closest('.icon-select-dropdown')) return;
       if (!popoverRef.current?.contains(target) && !buttonRef.current?.contains(target)) setOpen(false);
     };
     document.addEventListener('mousedown', handleMouseDown);
@@ -179,26 +174,7 @@ export const RatingField: React.FC<RatingFieldProps> = ({
             {current.kind === 'NATIONAL' && (
               <div className="game-info-field">
                 <span className="game-info-label">Nation</span>
-                <IconSelect<NationInfo>
-                  options={NATIONS}
-                  value={nationInfo(current.nation)}
-                  onChange={(nation) => onTypeChange({ ...current, nation: nation.ioc })}
-                  optionKey={(nation) => nation.ioc}
-                  renderOption={(nation) => (
-                    <>
-                      <NationFlag nation={nation.ioc} />
-                      <span>{nation.name}</span>
-                    </>
-                  )}
-                  placeholder={
-                    <>
-                      <NationFlag nation={undefined} />
-                      <span className="icon-select-placeholder">Choose a nation</span>
-                    </>
-                  }
-                  label="Nation"
-                  matches={nationMatches}
-                />
+                <NationSelect value={current.nation ?? ''} onChange={(nation) => onTypeChange({ ...current, nation })} />
               </div>
             )}
             {current.kind === 'SERVER' && (

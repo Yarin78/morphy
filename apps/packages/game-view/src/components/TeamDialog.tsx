@@ -1,9 +1,6 @@
-import { NATIONS, nationInfo } from '../utils/nations';
-import type { NationInfo } from '../utils/nations';
 import type { TeamInfo, TeamService } from '../utils/team';
-import { NationFlag } from './EloTypeIcons';
 import { EntityDetailsDialog } from './EntityDetailsDialog';
-import { IconSelect } from './IconSelect';
+import { NationSelect } from './NationSelect';
 
 interface TeamDialogProps {
   team: TeamInfo;
@@ -20,9 +17,6 @@ type Form = {
   season: boolean;
   nation: string;
 };
-
-/** A team needn't have a nation. */
-const NO_NATION: NationInfo = { ioc: '', name: 'None' };
 
 const part = (value: number | undefined) => (value ? String(value) : '');
 
@@ -63,11 +57,6 @@ function fromForm(form: Form, base: TeamInfo, id: number | null): TeamInfo {
   };
 }
 
-function nationMatches(nation: NationInfo, query: string): boolean {
-  const q = query.toLowerCase();
-  return nation.name.toLowerCase().includes(q) || nation.ioc.toLowerCase().startsWith(q);
-}
-
 /** The details of a player's team; see EntityDetailsDialog. */
 export const TeamDialog: React.FC<TeamDialogProps> = ({ team, service, onApply, onClose }) => (
   <EntityDetailsDialog<TeamInfo, Form>
@@ -93,22 +82,7 @@ export const TeamDialog: React.FC<TeamDialogProps> = ({ team, service, onApply, 
           </label>
           <div className="game-info-field team-field-nation">
             <span className="game-info-label">Nation</span>
-            <IconSelect<NationInfo>
-              options={[NO_NATION, ...NATIONS]}
-              value={form.nation ? (nationInfo(form.nation) ?? NO_NATION) : NO_NATION}
-              onChange={(nation) => setValue('nation', nation.ioc)}
-              optionKey={(nation) => nation.ioc || 'none'}
-              renderOption={(nation) => (
-                <>
-                  {nation.ioc && <NationFlag nation={nation.ioc} />}
-                  <span>{nation.name}</span>
-                </>
-              )}
-              placeholder={<span className="icon-select-placeholder">None</span>}
-              label="Nation"
-              matches={nationMatches}
-              disabled={readOnly}
-            />
+            <NationSelect value={form.nation} onChange={(ioc) => setValue('nation', ioc)} optional disabled={readOnly} />
           </div>
         </fieldset>
       </>

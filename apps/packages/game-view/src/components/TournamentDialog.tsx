@@ -3,6 +3,7 @@ import { dateTextError, formatDateText, parseDateText } from '../utils/dateText'
 import type { TournamentInfo, TournamentService } from '../utils/tournament';
 import { DateField } from './DateField';
 import { EntityDetailsDialog } from './EntityDetailsDialog';
+import { NationSelect } from './NationSelect';
 
 interface TournamentDialogProps {
   tournament: TournamentInfo;
@@ -61,9 +62,6 @@ function validate(form: Form): Errors {
   }
   number('rounds', 1, 255);
   number('category', 1, 255);
-  if (form.nation.trim() && !/^[A-Za-z0-9]{3}$/.test(form.nation.trim())) {
-    errors.nation = 'A 3-letter code';
-  }
   return errors;
 }
 
@@ -75,7 +73,7 @@ function fromForm(form: Form, base: TournamentInfo, id: number | null): Tourname
     startDate: parseDateText(form.start) ?? undefined,
     endDate: parseDateText(form.end) ?? undefined,
     place: form.place.trim() || undefined,
-    nation: form.nation.trim().toUpperCase() || undefined,
+    nation: form.nation || undefined,
     type: form.type || undefined,
     timeControl: form.timeControl || undefined,
     rounds: n(form.rounds),
@@ -107,7 +105,15 @@ export const TournamentDialog: React.FC<TournamentDialogProps> = ({ tournament, 
           <fieldset className="game-info-row">
             {input('title', 'Name', { first: true })}
             {input('place', 'Site')}
-            {input('nation', 'Nation', { placeholder: 'IOC', maxLength: 3 })}
+            <div className="game-info-field tournament-field-nation">
+              <span className="game-info-label">Nation</span>
+              <NationSelect
+                value={form.nation}
+                onChange={(ioc) => setValue('nation', ioc)}
+                optional
+                disabled={readOnly}
+              />
+            </div>
           </fieldset>
 
           <fieldset className="game-info-row">
