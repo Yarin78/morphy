@@ -7,7 +7,7 @@ import { GameInfoDialog } from './GameInfoDialog';
 import { PromotionDialog } from './PromotionDialog';
 import { convertMoveDrawablesToAutoShapes, convertShapesToPGN } from '../utils/drawableConverter';
 import { createMovedPieceFen } from '../utils/fenUtils';
-import { IoPlaySkipBack, IoChevronBack, IoChevronForward, IoPlaySkipForward, IoReload, IoMenu, IoClose, IoPencil } from 'react-icons/io5';
+import { IoPlaySkipBack, IoChevronBack, IoChevronForward, IoPlaySkipForward, IoReload, IoMenu, IoClose } from 'react-icons/io5';
 import type { ChessGame } from '../types/chess';
 import { useChessGame } from '../hooks/useChessGame';
 import { useKeyboardNavigation } from '../hooks/useKeyboardNavigation';
@@ -25,7 +25,8 @@ export interface GameViewProps {
   onToggleSidebar?: () => void;
   initialOrientation: 'white' | 'black';
   initialMoveToShow?: (chess: Chess) => Move | null;
-  startInEditMode?: boolean;
+  /** Opens the board read-only instead of the default editable mode. */
+  readOnly?: boolean;
   /**
    * Called with the live (mutable) Chess instance whenever it's (re)created - i.e. whenever
    * selectedGame changes. GameView never lifts the board state itself, so a caller that wants
@@ -43,7 +44,7 @@ export const GameView: React.FC<GameViewProps> = ({
   onToggleSidebar,
   initialOrientation,
   initialMoveToShow,
-  startInEditMode = false,
+  readOnly = false,
   onChessReady,
   gameInfoServices,
 }) => {
@@ -85,10 +86,10 @@ export const GameView: React.FC<GameViewProps> = ({
         // New game with no PGN - load empty position
         loadPgn('', undefined);
       }
-      // Set edit mode based on startInEditMode prop (for new games)
-      setIsEditMode(startInEditMode);
+      // A game is editable by default; readOnly opens it in view mode instead.
+      setIsEditMode(!readOnly);
     }
-  }, [selectedGame, loadPgn, initialMoveToShow, startInEditMode]);
+  }, [selectedGame, loadPgn, initialMoveToShow, readOnly]);
 
   // Set board orientation from parent when game changes
   useEffect(() => {
@@ -518,15 +519,6 @@ export const GameView: React.FC<GameViewProps> = ({
               title="Flip board"
             >
               <IoReload style={{ transform: 'rotate(90deg) scaleX(-1)' }} />
-            </button>
-            <button
-              onClick={() => {
-                setIsEditMode(!isEditMode);
-              }}
-              className={`edit-mode-button ${isEditMode ? 'active' : ''}`}
-              title={isEditMode ? "Switch to view mode" : "Switch to edit mode"}
-            >
-              <IoPencil />
             </button>
           </div>
         </div>
