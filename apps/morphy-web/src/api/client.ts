@@ -4,6 +4,7 @@ import type {
   FilterOptionsResponse,
   GameDto,
   GameTagDto,
+  PlayerDto,
   SourceDto,
   TeamDto,
   TournamentDto,
@@ -126,6 +127,16 @@ export async function replaceGame(
   game: GameDto
 ): Promise<GameDto> {
   return sendJson('PUT', `${databaseUrl(databaseId)}/games/${gameId}`, game, 'Replace game');
+}
+
+/** Fetches one player. */
+export async function fetchPlayer(databaseId: string, id: number): Promise<PlayerDto> {
+  return getJson(`${databaseUrl(databaseId)}/players/${id}`, 'Fetch player');
+}
+
+/** Replaces a player's fields, for every game of it. A FIDE id left out is kept; 0 clears it. */
+export async function updatePlayer(databaseId: string, player: PlayerDto): Promise<PlayerDto> {
+  return sendJson('PUT', `${databaseUrl(databaseId)}/players/${player.id}`, player, 'Update player');
 }
 
 /** Fetches one tournament. */

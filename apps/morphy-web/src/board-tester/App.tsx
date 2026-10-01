@@ -17,12 +17,14 @@ import {
   fetchDatabases,
   fetchGame,
   fetchGameTag,
+  fetchPlayer,
   fetchSource,
   fetchTeam,
   fetchTournament,
   replaceGame,
   search,
   updateGameTag,
+  updatePlayer,
   updateSource,
   updateTeam,
   updateTournament,
@@ -74,8 +76,9 @@ function prefixFilter(text: string): string {
 }
 
 /** Existing players of a database, for the Edit Game Info dialog. */
-function playerService(databaseId: string): PlayerService {
+function playerService(databaseId: string, fideIds: boolean): PlayerService {
   return {
+    fideIds,
     async search(text) {
       const response = await search<EntitySearchResponse<PlayerDto>>(databaseId, 'players', {
         filter: prefixFilter(text),
@@ -86,9 +89,29 @@ function playerService(databaseId: string): PlayerService {
         id: p.id,
         name: p.firstName ? `${p.lastName ?? ''}, ${p.firstName}` : p.lastName ?? '',
         gameCount: p.gameCount,
+        fideId: p.fideId,
       }));
     },
   };
+}
+
+/**
+ * Gives the game's existing players the FIDE ids the game was saved with: a FIDE id belongs to the
+ * player, so the game itself can't change it. Returns whether any player was changed.
+ */
+async function saveFideIds(databaseId: string, wanted: GameDto, saved: GameDto): Promise<boolean> {
+  let changed = false;
+  for (const [want, have] of [
+    [wanted.whitePlayer, saved.whitePlayer],
+    [wanted.blackPlayer, saved.blackPlayer],
+  ]) {
+    if (have?.id == null || (want?.fideId ?? null) === (have.fideId ?? null)) continue;
+    // The whole entity is replaced, so start from it as saved; 0 is no FIDE id
+    const current = await fetchPlayer(databaseId, have.id);
+    await updatePlayer(databaseId, { ...current, fideId: want?.fideId ?? 0 });
+    changed = true;
+  }
+  return changed;
 }
 
 /** Existing annotators of a database, for the Edit Game Info dialog. */
@@ -217,7 +240,7 @@ function App() {
     () =>
       databaseId
         ? {
-            players: playerService(databaseId),
+            players: playerService(databaseId, databaseFormat === '2cbh'),
             annotators: annotatorService(databaseId),
             tournaments: tournamentService(databaseId),
             sources: sourceService(databaseId),
@@ -299,19 +322,22 @@ function App() {
     try {
       if (gameState.kind === 'loaded' && gameId) {
         const patch = pgnToGamePatch(chessRef.current, gameState.game);
-        const updated = await replaceGame(databaseId, gameId, patch);
+        let updated = await replaceGame(databaseId, gameId, patch);
+        if (await saveFideIds(databaseId, patch, updated)) updated = await fetchGame(databaseId, gameId);
         // Keep the same paramsKey/pgn (see the comment on loadedPgn above) - only the
         // metadata changes.
         setFetchResult({ paramsKey, game: updated });
         setSaveMessageFor({ paramsKey, message: 'Saved.' });
       } else {
         const patch = pgnToGamePatch(chessRef.current, BLANK_GAME);
-        const created = await createGame(databaseId, patch);
+        let created = await createGame(databaseId, patch);
         if (created.id == null) {
           throw new Error('Server did not return an id for the created game');
         }
-        const newParamsKey = `${databaseId}:${created.id}`;
-        setLoadedGame(databaseId, created.id);
+        const createdId = created.id;
+        if (await saveFideIds(databaseId, patch, created)) created = await fetchGame(databaseId, createdId);
+        const newParamsKey = `${databaseId}:${createdId}`;
+        setLoadedGame(databaseId, createdId);
         setFetchResult({ paramsKey: newParamsKey, game: created });
         setSaveMessageFor({ paramsKey: newParamsKey, message: 'Created.' });
       }

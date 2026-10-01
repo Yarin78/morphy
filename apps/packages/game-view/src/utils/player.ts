@@ -8,10 +8,14 @@ export interface PlayerInfo {
   name: string;
   /** The number of games of an existing player. */
   gameCount?: number;
+  /** An existing player's FIDE id, in a database that has them. */
+  fideId?: number;
 }
 
 /** How the Edit Game Info dialog finds existing players. */
 export interface PlayerService {
+  /** Whether the database's players have FIDE ids; ChessBase v1's don't. */
+  fideIds?: boolean;
   /** Players whose "Lastname, Firstname" starts with the text, those with the most games first. */
   search(text: string): Promise<PlayerInfo[]>;
 }
@@ -21,6 +25,12 @@ export interface PlayerService {
  * game.
  */
 export const PLAYER_ID_TAGS = { white: 'WhiteId', black: 'BlackId' } as const;
+
+/**
+ * The PGN tags with the players' FIDE ids. A FIDE id belongs to the player, so whoever saves the
+ * game changes it for an existing player's other games too.
+ */
+export const FIDE_ID_TAGS = { white: 'WhiteFideId', black: 'BlackFideId' } as const;
 
 /**
  * Splits "Lastname, Firstname" at the first comma; without a comma, it's all last name. A first

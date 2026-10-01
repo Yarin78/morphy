@@ -10,6 +10,7 @@ import {
   gameTagTitle,
   gameTagToTags,
   LINE_EVALUATION_TAG,
+  FIDE_ID_TAGS,
   PLAYER_ID_TAGS,
   SOURCE_TAGS,
   sourceFromTags,
@@ -87,13 +88,18 @@ function formatPlayerNameTag(player: { lastName?: string; firstName?: string } |
  * A player from its name and id tags. With an id, the game is put with that existing player; without
  * one, the player is found by name, or created.
  */
-function playerFromTags(name: string | undefined, id: string | undefined): PlayerDto | undefined {
+function playerFromTags(
+  name: string | undefined,
+  id: string | undefined,
+  fideId: string | undefined
+): PlayerDto | undefined {
   const { lastName, firstName } = splitPlayerName(name ?? '');
   if (!lastName && !firstName) return undefined;
   return {
     id: id && /^\d+$/.test(id) ? parseInt(id, 10) : null,
     lastName,
     ...(firstName ? { firstName } : {}),
+    ...(fideId && /^\d+$/.test(fideId) ? { fideId: parseInt(fideId, 10) } : {}),
   };
 }
 
@@ -232,7 +238,7 @@ const KNOWN_TAGS = new Set<string>([
   ...Object.values(GAME_TAG_TAGS),
   ...Object.values(teamTags('white')), ...Object.values(teamTags('black')),
   ...Object.values(SOURCE_TAGS), ANNOTATOR_ID_TAG,
-  ...Object.values(TOURNAMENT_TAGS), ...Object.values(PLAYER_ID_TAGS), ...Object.values(ELO_TYPE_TAGS), 'Date', 'Round', 'White', 'Black', 'Result',
+  ...Object.values(TOURNAMENT_TAGS), ...Object.values(PLAYER_ID_TAGS), ...Object.values(FIDE_ID_TAGS), ...Object.values(ELO_TYPE_TAGS), 'Date', 'Round', 'White', 'Black', 'Result',
   'WhiteElo', 'BlackElo', 'Board', 'ECO', 'Annotator', 'FEN', 'SetUp', LINE_EVALUATION_TAG,
 ]);
 
@@ -256,8 +262,10 @@ export function gameDtoToPgn(game: GameDto): string {
   );
   pushIfSet('White', formatPlayerNameTag(game.whitePlayer) || undefined);
   pushIfSet(PLAYER_ID_TAGS.white, game.whitePlayer?.id == null ? undefined : String(game.whitePlayer.id));
+  pushIfSet(FIDE_ID_TAGS.white, game.whitePlayer?.fideId == null ? undefined : String(game.whitePlayer.fideId));
   pushIfSet('Black', formatPlayerNameTag(game.blackPlayer) || undefined);
   pushIfSet(PLAYER_ID_TAGS.black, game.blackPlayer?.id == null ? undefined : String(game.blackPlayer.id));
+  pushIfSet(FIDE_ID_TAGS.black, game.blackPlayer?.fideId == null ? undefined : String(game.blackPlayer.fideId));
   tags.push(['Result', RESULT_TO_PGN[game.result] ?? '*']);
   if (game.result === 'NOT_FINISHED') pushIfSet(LINE_EVALUATION_TAG, game.lineEvaluation);
   pushIfSet('WhiteElo', game.whiteElo == null ? undefined : String(game.whiteElo));
@@ -334,8 +342,8 @@ export function pgnToGamePatch(chess: Chess, base: GameDto): GameDto {
 
   return {
     ...base,
-    whitePlayer: playerFromTags(tagValues.White, tagValues[PLAYER_ID_TAGS.white]),
-    blackPlayer: playerFromTags(tagValues.Black, tagValues[PLAYER_ID_TAGS.black]),
+    whitePlayer: playerFromTags(tagValues.White, tagValues[PLAYER_ID_TAGS.white], tagValues[FIDE_ID_TAGS.white]),
+    blackPlayer: playerFromTags(tagValues.Black, tagValues[PLAYER_ID_TAGS.black], tagValues[FIDE_ID_TAGS.black]),
     whiteElo: tagValues.WhiteElo ? parseInt(tagValues.WhiteElo, 10) : undefined,
     whiteEloType: tagValues.WhiteElo ? decodeEloType(tagValues[ELO_TYPE_TAGS.white] ?? '') ?? undefined : undefined,
     blackElo: tagValues.BlackElo ? parseInt(tagValues.BlackElo, 10) : undefined,

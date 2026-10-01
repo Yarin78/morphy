@@ -12,7 +12,7 @@ export type { ChessGame, GameHeader as GameHeaderData } from './types/chess';
 export { LINE_EVALUATION_TAG } from './utils/gameInfo';
 export { TOURNAMENT_TAGS, tournamentFromTags, tournamentToTags } from './utils/tournament';
 export type { DateParts, TournamentInfo, TournamentService } from './utils/tournament';
-export { PLAYER_ID_TAGS, splitPlayerName } from './utils/player';
+export { FIDE_ID_TAGS, PLAYER_ID_TAGS, splitPlayerName } from './utils/player';
 export type { PlayerInfo, PlayerService } from './utils/player';
 export type { GameInfoServices } from './utils/gameInfo';
 export { ANNOTATOR_ID_TAG } from './utils/gameInfo';

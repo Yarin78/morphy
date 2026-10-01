@@ -146,7 +146,26 @@ export const GameInfoDialog: React.FC<GameInfoDialogProps> = ({ initial, service
   const setTeam = (color: TeamColor) => (team: TeamInfo | null) => setInfo((i) => ({ ...i, [`${color}Team`]: team }));
 
   const setTournament = (tournament: TournamentInfo | null) => setInfo((i) => ({ ...i, tournament }));
-  const setPlayer = (color: 'white' | 'black') => (player: PlayerInfo) => setInfo((i) => ({ ...i, [color]: player }));
+  const setPlayer = (color: 'white' | 'black') => (player: PlayerInfo) =>
+    setInfo((i) => {
+      // A player picked has the FIDE id it has. A name typed over an existing player's is someone
+      // else, without its FIDE id; a new player's name being typed keeps the one typed for it.
+      const picked = player.id != null && player.id !== i[color].id;
+      const replaced = player.id == null && i[color].id != null;
+      const fideId = picked ? (player.fideId ? String(player.fideId) : '') : replaced ? '' : i[`${color}FideId`];
+      return { ...i, [color]: player, [`${color}FideId`]: fideId };
+    });
+  const fideIds = Boolean(services?.players?.fideIds);
+  const fideIdField = (color: 'white' | 'black') => (
+    <label className="game-info-field game-info-field-fide-id">
+      {input(`${color}FideId`, {
+        'aria-label': `${color === 'white' ? 'White' : 'Black'} FIDE ID`,
+        inputMode: 'numeric',
+        maxLength: 10,
+        title: "Belongs to the player: changing it changes it for the player's other games too",
+      })}
+    </label>
+  );
 
   // Both ratings are usually of the same type, so a change to one changes both, unless asked not to
   const [differentEloTypes, setDifferentEloTypes] = useState(
@@ -264,10 +283,11 @@ export const GameInfoDialog: React.FC<GameInfoDialogProps> = ({ initial, service
       >
         <h3 id="game-info-title">Edit Game Info</h3>
 
-        <fieldset className="game-info-players">
+        <fieldset className={`game-info-players${fideIds ? ' with-fide-ids' : ''}`}>
           <legend>Players</legend>
           <span />
           <span className="game-info-label">Name</span>
+          {fideIds && <span className="game-info-label">FIDE ID</span>}
           <span className="game-info-label">Rating</span>
 
           <span className="game-info-row-label">White</span>
@@ -278,6 +298,7 @@ export const GameInfoDialog: React.FC<GameInfoDialogProps> = ({ initial, service
             label="White player"
             inputRef={firstFieldRef}
           />
+          {fideIds && fideIdField('white')}
           <RatingField
             elo={info.whiteElo}
             onEloChange={(whiteElo) => setInfo((i) => ({ ...i, whiteElo }))}
@@ -291,6 +312,7 @@ export const GameInfoDialog: React.FC<GameInfoDialogProps> = ({ initial, service
 
           <span className="game-info-row-label">Black</span>
           <PlayerField value={info.black} onChange={setPlayer('black')} service={services?.players} label="Black player" />
+          {fideIds && fideIdField('black')}
           <RatingField
             elo={info.blackElo}
             onEloChange={(blackElo) => setInfo((i) => ({ ...i, blackElo }))}

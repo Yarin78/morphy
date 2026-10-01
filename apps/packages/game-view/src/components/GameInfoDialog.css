@@ -65,6 +65,14 @@
   row-gap: 0.3rem;
 }
 
+.game-info-dialog fieldset.game-info-players.with-fide-ids {
+  grid-template-columns: auto 1fr 6.5rem 10rem;
+}
+
+.game-info-field-fide-id input {
+  width: 100%;
+}
+
 .game-info-players .game-info-label {
   align-self: end;
 }

@@ -2,7 +2,7 @@ import type { Chess } from '@jackstenglein/chess';
 import { dateTextError, formatDateText, parseDateText } from './dateText';
 import { decodeEloType, ELO_TYPE_TAGS, encodeEloType } from './eloType';
 import type { EloTypeInfo } from './eloType';
-import { normalizePlayerName, PLAYER_ID_TAGS } from './player';
+import { FIDE_ID_TAGS, normalizePlayerName, PLAYER_ID_TAGS } from './player';
 import type { PlayerInfo, PlayerService } from './player';
 import { sourceFromTags, sourceToTags } from './source';
 import type { SourceInfo, SourceService } from './source';
@@ -37,10 +37,13 @@ export const ANNOTATOR_ID_TAG = 'AnnotatorId';
  */
 export interface GameInfo {
   white: PlayerInfo;
+  /** The player's FIDE id, as typed: usually 8 digits, or empty. */
+  whiteFideId: string;
   whiteElo: string;
   /** Null when not known, which is saved as FIDE. */
   whiteEloType: EloTypeInfo | null;
   black: PlayerInfo;
+  blackFideId: string;
   blackElo: string;
   blackEloType: EloTypeInfo | null;
   /** A PGN Result tag value: one of the RESULTS values. */
@@ -137,9 +140,11 @@ export function readGameInfo(chess: Chess): GameInfo {
   const result = tagValue(chess, 'Result') || LINE_RESULT;
   return {
     white: readPlayer(chess, 'White', PLAYER_ID_TAGS.white),
+    whiteFideId: tagValue(chess, FIDE_ID_TAGS.white),
     whiteElo: tagValue(chess, 'WhiteElo'),
     whiteEloType: decodeEloType(tagValue(chess, ELO_TYPE_TAGS.white)),
     black: readPlayer(chess, 'Black', PLAYER_ID_TAGS.black),
+    blackFideId: tagValue(chess, FIDE_ID_TAGS.black),
     blackElo: tagValue(chess, 'BlackElo'),
     blackEloType: decodeEloType(tagValue(chess, ELO_TYPE_TAGS.black)),
     result: RESULTS.some((r) => r.value === result) ? result : LINE_RESULT,
@@ -180,6 +185,10 @@ function checkNumber(
 
 export function validateGameInfo(info: GameInfo): GameInfoErrors {
   const errors: GameInfoErrors = {};
+  for (const field of ['whiteFideId', 'blackFideId'] as const) {
+    const value = info[field].trim();
+    if (value && !/^[1-9]\d{0,9}$/.test(value)) errors[field] = 'Digits only';
+  }
   checkNumber(errors, info, 'whiteElo', 0, 9999);
   checkNumber(errors, info, 'blackElo', 0, 9999);
   for (const [elo, type] of [['whiteElo', info.whiteEloType], ['blackElo', info.blackEloType]] as const) {
@@ -207,10 +216,12 @@ export function writeGameInfo(chess: Chess, info: GameInfo) {
   const subRound = info.subRound.trim();
 
   writePlayer(chess, 'White', PLAYER_ID_TAGS.white, info.white);
+  chess.setHeader(FIDE_ID_TAGS.white, info.whiteFideId.trim());
   chess.setHeader('WhiteElo', info.whiteElo.trim());
   // A type only means something with an elo
   chess.setHeader(ELO_TYPE_TAGS.white, info.whiteElo.trim() ? encodeEloType(info.whiteEloType) : '');
   writePlayer(chess, 'Black', PLAYER_ID_TAGS.black, info.black);
+  chess.setHeader(FIDE_ID_TAGS.black, info.blackFideId.trim());
   chess.setHeader('BlackElo', info.blackElo.trim());
   chess.setHeader(ELO_TYPE_TAGS.black, info.blackElo.trim() ? encodeEloType(info.blackEloType) : '');
   chess.setHeader('Result', info.result);
