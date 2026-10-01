@@ -197,34 +197,22 @@ class ServicesIntegrationTest {
 
     // Step 8: Update game 2 - change moves slightly and add annotator
     GameDto game2Updated =
-        new GameDto(
-            null,
-            "game",
-            null,
-            game2.whitePlayer(),
-            2700,
-            null,
-            game2.blackPlayer(),
-            2680,
-            null,
-            null,
-            null,
-            GameResult.WHITE_WINS,
-            new Date(2024, 3, 20),
-            "E20",
-            2,
-            null,
-            null,
-            NAG.WHITE_MODERATE_ADVANTAGE,
-            null,
-            game2.tournament(),
-            game2.source(),
-            new AnnotatorDto(null, "GM Bobby Fischer", null),
-            null,
-            null, null, null, null, null, null, null, null, null, null, null, null, null, null,
-            new GameMovesDto("1. d4 Nf6 2. c4 e6 3. Nc3 Bb4 4. e3 O-O 5. Bd3 d5 1-0"),
-            null,
-        null);
+        GameDto.builder()
+            .type("game")
+            .whitePlayer(game2.whitePlayer())
+            .whiteElo(2700)
+            .blackPlayer(game2.blackPlayer())
+            .blackElo(2680)
+            .result(GameResult.WHITE_WINS)
+            .date(new Date(2024, 3, 20))
+            .eco("E20")
+            .round(2)
+            .lineEvaluation(NAG.WHITE_MODERATE_ADVANTAGE)
+            .tournament(game2.tournament())
+            .source(game2.source())
+            .annotator(new AnnotatorDto(null, "GM Bobby Fischer", null))
+            .moves(new GameMovesDto("1. d4 Nf6 2. c4 e6 3. Nc3 Bb4 4. e3 O-O 5. Bd3 d5 1-0"))
+            .build();
     gamesService.replaceGame(databaseId, game2Id, game2Updated);
 
     // Step 9: Get first game and verify all fields match as expected
@@ -642,62 +630,36 @@ class ServicesIntegrationTest {
    * annotations.
    */
   private GameDto createComprehensiveGame(String whiteLastName, String whiteFirstName) {
-    return new GameDto(
-        null,
-        "game",
-        null,
-        new PlayerDto(null, whiteLastName, whiteFirstName, null, null, null),
-        2863,
-        null,
-        new PlayerDto(null, "Caruana", "Fabiano", null, null, null),
-        2832,
-        null,
-        new TeamDto(null, "Team Norway", 1, false, 2024, "NOR", null),
-        new TeamDto(null, "Team USA", 2, false, 2024, "USA", null),
-        GameResult.WHITE_WINS,
-        new Date(2024, 3, 15),
-        "C42",
-        7,
-        1,
-        null,
-        NAG.WHITE_MODERATE_ADVANTAGE,
-        null,
-        new TournamentDto(
-            null,
-            "Candidates Tournament 2024",
-            new Date(2024, 3, 1),
-            new Date(2024, 3, 25),
-            "Toronto",
-            "CAN",
-            22,
-            null,
-            14,
-            "tournament",
-            "classical",
-            null,
-            true,
-            false,
-            null,
-            null,
-            null, null),
-        new SourceDto(
-            null,
-            "FIDE Live Games",
-            "chess.com",
-            new Date(2024, 3, 15),
-            new Date(2024, 3, 15),
-            1,
-            null,
-            null),
-        new AnnotatorDto(null, "GM Hikaru Nakamura", null),
-        null,
-        null, null, null, null, null, null, null, null, null, null, null, null, null, null,
-        new GameMovesDto(
-            "1. e4 e5 {The King's Pawn opening.} (1... c5 {Sicilian Defense}) "
-                + "2. Nf3 Nc6 3. Bb5 a6 4. Ba4 Nf6 5. O-O Be7 6. Re1 b5 "
-                + "7. Bb3 d6 8. c3 O-O 9. h3 Nb8 10. d4 Nbd7 1-0"),
-        null,
-        null);
+    return GameDto.builder()
+        .type("game")
+        .whitePlayer(new PlayerDto(null, whiteLastName, whiteFirstName, null, null, null))
+        .whiteElo(2863)
+        .blackPlayer(new PlayerDto(null, "Caruana", "Fabiano", null, null, null))
+        .blackElo(2832)
+        .whiteTeam(new TeamDto(null, "Team Norway", 1, false, 2024, "NOR", null))
+        .blackTeam(new TeamDto(null, "Team USA", 2, false, 2024, "USA", null))
+        .result(GameResult.WHITE_WINS)
+        .date(new Date(2024, 3, 15))
+        .eco("C42")
+        .round(7)
+        .subRound(1)
+        .lineEvaluation(NAG.WHITE_MODERATE_ADVANTAGE)
+        .tournament(
+            new TournamentDto(
+                null, "Candidates Tournament 2024", new Date(2024, 3, 1), new Date(2024, 3, 25),
+                "Toronto", "CAN", 22, null, 14, "tournament", "classical", null, true, false, null,
+                null, null, null))
+        .source(
+            new SourceDto(
+                null, "FIDE Live Games", "chess.com", new Date(2024, 3, 15), new Date(2024, 3, 15),
+                1, null, null))
+        .annotator(new AnnotatorDto(null, "GM Hikaru Nakamura", null))
+        .moves(
+            new GameMovesDto(
+                "1. e4 e5 {The King's Pawn opening.} (1... c5 {Sicilian Defense}) " +
+                "2. Nf3 Nc6 3. Bb5 a6 4. Ba4 Nf6 5. O-O Be7 6. Re1 b5 " +
+                "7. Bb3 d6 8. c3 O-O 9. h3 Nb8 10. d4 Nbd7 1-0"))
+        .build();
   }
 
   /**
@@ -705,146 +667,70 @@ class ServicesIntegrationTest {
    * the first game.
    */
   private GameDto createMinimalGame() {
-    return new GameDto(
-        null,
-        "game",
-        null,
-        new PlayerDto(null, "Kasparov", "Garry", null, null, null),
-        null,
-        null,
-        new PlayerDto(null, "Karpov", "Anatoly", null, null, null),
-        null,
-        null,
-        null,
-        null,
-        GameResult.DRAW,
-        new Date(2024, 5, 10),
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        new TournamentDto(
-            null,
-            "World Championship 1984",
-            new Date(1984, 9, 10),
-            new Date(1985, 2, 15),
-            "Moscow",
-            "URS",
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null, null),
-        new SourceDto(null, "ChessBase Database", "ChessBase", null, null, null, null, null),
-        null,
-        null,
-        null, null, null, null, null, null, null, null, null, null, null, null, null, null,
-        new GameMovesDto("1. e4 c5 2. Nf3 d6 3. d4 cxd4 4. Nxd4 Nf6 *"),
-        null,
-        null);
+    return GameDto.builder()
+        .type("game")
+        .whitePlayer(new PlayerDto(null, "Kasparov", "Garry", null, null, null))
+        .blackPlayer(new PlayerDto(null, "Karpov", "Anatoly", null, null, null))
+        .result(GameResult.DRAW)
+        .date(new Date(2024, 5, 10))
+        .tournament(
+            new TournamentDto(
+                null, "World Championship 1984", new Date(1984, 9, 10), new Date(1985, 2, 15),
+                "Moscow", "URS", null, null, null, null, null, null, null, null, null, null, null,
+                null))
+        .source(
+            new SourceDto(
+                null, "ChessBase Database", "ChessBase", null, null, null, null, null))
+        .moves(new GameMovesDto("1. e4 c5 2. Nf3 d6 3. d4 cxd4 4. Nxd4 Nf6 *"))
+        .build();
   }
 
   /** Creates a minimal game with a specific tournament. */
   private GameDto createMinimalGameWithTournament(TournamentDto tournament) {
-    return new GameDto(
-        null,
-        "game",
-        null,
-        new PlayerDto(null, "Doe", "John", null, null, null),
-        null,
-        null,
-        new PlayerDto(null, "Doe", "Jane", null, null, null),
-        null,
-        null,
-        null,
-        null,
-        GameResult.DRAW,
-        new Date(2024, 1, 1),
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        tournament,
-        new SourceDto(null, "Test Source", "Test", null, null, null, null, null),
-        null,
-        null,
-        null, null, null, null, null, null, null, null, null, null, null, null, null, null,
-        new GameMovesDto("1. e4 e5 *"),
-        null,
-        null);
+    return GameDto.builder()
+        .type("game")
+        .whitePlayer(new PlayerDto(null, "Doe", "John", null, null, null))
+        .blackPlayer(new PlayerDto(null, "Doe", "Jane", null, null, null))
+        .result(GameResult.DRAW)
+        .date(new Date(2024, 1, 1))
+        .tournament(tournament)
+        .source(new SourceDto(null, "Test Source", "Test", null, null, null, null, null))
+        .moves(new GameMovesDto("1. e4 e5 *"))
+        .build();
   }
 
   /** Creates a minimal game with a specific white player. */
   private GameDto createMinimalGameWithPlayer(String lastName, String firstName) {
-    return new GameDto(
-        null,
-        "game",
-        null,
-        new PlayerDto(null, lastName, firstName, null, null, null),
-        null,
-        null,
-        new PlayerDto(null, "Opponent", "Test", null, null, null),
-        null,
-        null,
-        null,
-        null,
-        GameResult.DRAW,
-        new Date(2024, 1, 1),
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        new TournamentDto(null, "Test Event", new Date(2024, 1, 1), null, "Test City", null, null, null, null, null, null, null, null, null, null, null, null, null),
-        new SourceDto(null, "Test Source", "Test", null, null, null, null, null),
-        null,
-        null,
-        null, null, null, null, null, null, null, null, null, null, null, null, null, null,
-        new GameMovesDto("1. e4 e5 *"),
-        null,
-        null);
+    return GameDto.builder()
+        .type("game")
+        .whitePlayer(new PlayerDto(null, lastName, firstName, null, null, null))
+        .blackPlayer(new PlayerDto(null, "Opponent", "Test", null, null, null))
+        .result(GameResult.DRAW)
+        .date(new Date(2024, 1, 1))
+        .tournament(
+            new TournamentDto(
+                null, "Test Event", new Date(2024, 1, 1), null, "Test City", null, null, null,
+                null, null, null, null, null, null, null, null, null, null))
+        .source(new SourceDto(null, "Test Source", "Test", null, null, null, null, null))
+        .moves(new GameMovesDto("1. e4 e5 *"))
+        .build();
   }
 
   /** Creates a minimal game with a specific annotator. */
   private GameDto createMinimalGameWithAnnotator(String annotatorName) {
-    return new GameDto(
-        null,
-        "game",
-        null,
-        new PlayerDto(null, "Player", "Test", null, null, null),
-        null,
-        null,
-        new PlayerDto(null, "Opponent", "Test", null, null, null),
-        null,
-        null,
-        null,
-        null,
-        GameResult.DRAW,
-        new Date(2024, 1, 1),
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        new TournamentDto(null, "Test Event", new Date(2024, 1, 1), null, "Test City", null, null, null, null, null, null, null, null, null, null, null, null, null),
-        new SourceDto(null, "Test Source", "Test", null, null, null, null, null),
-        new AnnotatorDto(null, annotatorName, null),
-        null,
-        null, null, null, null, null, null, null, null, null, null, null, null, null, null,
-        new GameMovesDto("1. e4 e5 *"),
-        null,
-        null);
+    return GameDto.builder()
+        .type("game")
+        .whitePlayer(new PlayerDto(null, "Player", "Test", null, null, null))
+        .blackPlayer(new PlayerDto(null, "Opponent", "Test", null, null, null))
+        .result(GameResult.DRAW)
+        .date(new Date(2024, 1, 1))
+        .tournament(
+            new TournamentDto(
+                null, "Test Event", new Date(2024, 1, 1), null, "Test City", null, null, null,
+                null, null, null, null, null, null, null, null, null, null))
+        .source(new SourceDto(null, "Test Source", "Test", null, null, null, null, null))
+        .annotator(new AnnotatorDto(null, annotatorName, null))
+        .moves(new GameMovesDto("1. e4 e5 *"))
+        .build();
   }
 }

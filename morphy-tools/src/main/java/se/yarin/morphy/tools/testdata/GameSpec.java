@@ -206,10 +206,28 @@ final class GameSpec {
   }
 
   GameDto build() {
-    return new GameDto(
-        null, type, null, white, whiteElo, null, black, blackElo, null, whiteTeam, blackTeam, result, date,
-        eco, round, subRound, null, lineEvaluation, null, tournament, source, annotator, gameTag, null, null,
-        null, null, variant, null, null, null, null, null, null, null, null, null, moves, text,
-        extraTags);
+    return GameDto.builder()
+        .type(type)
+        .whitePlayer(white)
+        .whiteElo(whiteElo)
+        .blackPlayer(black)
+        .blackElo(blackElo)
+        .whiteTeam(whiteTeam)
+        .blackTeam(blackTeam)
+        .result(result)
+        .date(date)
+        .eco(eco)
+        .round(round)
+        .subRound(subRound)
+        .lineEvaluation(lineEvaluation)
+        .tournament(tournament)
+        .source(source)
+        .annotator(annotator)
+        .gameTag(gameTag)
+        .variant(variant)
+        .moves(moves)
+        .text(text)
+        .extraTags(extraTags)
+        .build();
   }
 }

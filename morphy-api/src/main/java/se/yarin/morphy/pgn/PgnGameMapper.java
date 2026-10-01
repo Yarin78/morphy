@@ -306,57 +306,51 @@ public final class PgnGameMapper {
       variationMoves = varPly > 0 ? varPly : null;
     }
 
-    return new GameDto(
-        id,
-        "game",
-        null,
-        player(header.getWhite(), header.getWhiteFideId()),
-        header.getWhiteElo(),
-        eloType(header.getWhiteElo(), header.getWhiteEloType()),
-        player(header.getBlack(), header.getBlackFideId()),
-        header.getBlackElo(),
-        eloType(header.getBlackElo(), header.getBlackEloType()),
-        team(
-            header.getWhiteTeam(),
-            header.getWhiteTeamNumber(),
-            header.getWhiteTeamSeason(),
-            header.getWhiteTeamYear(),
-            header.getWhiteTeamNation()),
-        team(
-            header.getBlackTeam(),
-            header.getBlackTeamNumber(),
-            header.getBlackTeamSeason(),
-            header.getBlackTeamYear(),
-            header.getBlackTeamNation()),
-        header.getResult() != null ? header.getResult() : GameResult.NOT_FINISHED,
-        header.getDate() != null ? header.getDate() : Date.unset(),
-        eco != null && eco.isSet() ? eco.toString() : null,
-        header.getRound(),
-        header.getSubRound(),
-        header.getBoard(),
-        lineEvaluation == null || lineEvaluation == NAG.NONE ? null : lineEvaluation,
-        timeControl,
-        tournament(header),
-        source(header),
-        header.getAnnotator() == null ? null : new AnnotatorDto(null, header.getAnnotator(), null),
-        gameTag(header),
-        null,
-        null,
-        null,
-        moves.isSetupPosition() ? true : null,
-        moves.root().position().isRegularChess() ? null : Chess960.VARIANT,
-        null,
-        notation,
-        variationMoves,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        movesDto,
-        null,
-        extraTags.isEmpty() ? null : extraTags);
+    return GameDto.builder()
+        .id(id)
+        .type("game")
+        .whitePlayer(player(header.getWhite(), header.getWhiteFideId()))
+        .whiteElo(header.getWhiteElo())
+        .whiteEloType(eloType(header.getWhiteElo(), header.getWhiteEloType()))
+        .blackPlayer(player(header.getBlack(), header.getBlackFideId()))
+        .blackElo(header.getBlackElo())
+        .blackEloType(eloType(header.getBlackElo(), header.getBlackEloType()))
+        .whiteTeam(
+            team(
+                header.getWhiteTeam(),
+                header.getWhiteTeamNumber(),
+                header.getWhiteTeamSeason(),
+                header.getWhiteTeamYear(),
+                header.getWhiteTeamNation()))
+        .blackTeam(
+            team(
+                header.getBlackTeam(),
+                header.getBlackTeamNumber(),
+                header.getBlackTeamSeason(),
+                header.getBlackTeamYear(),
+                header.getBlackTeamNation()))
+        .result(header.getResult() != null ? header.getResult() : GameResult.NOT_FINISHED)
+        .date(header.getDate() != null ? header.getDate() : Date.unset())
+        .eco(eco != null && eco.isSet() ? eco.toString() : null)
+        .round(header.getRound())
+        .subRound(header.getSubRound())
+        .board(header.getBoard())
+        .lineEvaluation(lineEvaluation == null || lineEvaluation == NAG.NONE ? null : lineEvaluation)
+        .timeControl(timeControl)
+        .tournament(tournament(header))
+        .source(source(header))
+        .annotator(
+            header.getAnnotator() == null
+                ? null
+                : new AnnotatorDto(null, header.getAnnotator(), null))
+        .gameTag(gameTag(header))
+        .setupPosition(moves.isSetupPosition() ? true : null)
+        .variant(moves.root().position().isRegularChess() ? null : Chess960.VARIANT)
+        .notation(notation)
+        .variationMoves(variationMoves)
+        .moves(movesDto)
+        .extraTags(extraTags.isEmpty() ? null : extraTags)
+        .build();
   }
 
   /** A value that stands for something known, or null for a missing or "?" value. */

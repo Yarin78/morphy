@@ -196,47 +196,46 @@ public class GameDtoConverter {
     // Text (optional)
     GameTextDto text = includeText ? convertText(game) : null;
 
-    return new GameDto(
-        id,
-        type,
-        textTitle,
-        whitePlayer,
-        whiteElo,
-        whiteElo == null ? null : game.whiteRatingType().toEloType(),
-        blackPlayer,
-        blackElo,
-        blackElo == null ? null : game.blackRatingType().toEloType(),
-        whiteTeam,
-        blackTeam,
-        result,
-        date,
-        eco,
-        round,
-        subRound,
-        null, // the v1 format has no board
-        lineEvaluation,
-        timeControl,
-        tournament,
-        source,
-        annotator,
-        gameTag,
-        medals,
-        deleted,
-        topGame,
-        setupPosition,
-        variant,
-        noMoves,
-        notation,
-        variationMoves,
-        ait,
-        vcs,
-        finalMaterial,
-        gameVersion,
-        creationTimestamp,
-        lastChanged,
-        moves,
-        text,
-        null);
+    return GameDto.builder()
+        .id(id)
+        .type(type)
+        .textTitle(textTitle)
+        .whitePlayer(whitePlayer)
+        .whiteElo(whiteElo)
+        .whiteEloType(whiteElo == null ? null : game.whiteRatingType().toEloType())
+        .blackPlayer(blackPlayer)
+        .blackElo(blackElo)
+        .blackEloType(blackElo == null ? null : game.blackRatingType().toEloType())
+        .whiteTeam(whiteTeam)
+        .blackTeam(blackTeam)
+        .result(result)
+        .date(date)
+        .eco(eco)
+        .round(round)
+        .subRound(subRound)
+        .lineEvaluation(lineEvaluation)
+        .timeControl(timeControl)
+        .tournament(tournament)
+        .source(source)
+        .annotator(annotator)
+        .gameTag(gameTag)
+        .medals(medals)
+        .deleted(deleted)
+        .topGame(topGame)
+        .setupPosition(setupPosition)
+        .variant(variant)
+        .noMoves(noMoves)
+        .notation(notation)
+        .variationMoves(variationMoves)
+        .ait(ait)
+        .vcs(vcs)
+        .finalMaterial(finalMaterial)
+        .gameVersion(gameVersion)
+        .creationTimestamp(creationTimestamp)
+        .lastChanged(lastChanged)
+        .moves(moves)
+        .text(text)
+        .build();
   }
 
   @Nullable

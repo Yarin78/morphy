@@ -110,12 +110,12 @@ class FacadeWriteTest {
     File file = new File(tempDir, "board.2cbh");
     try (Database v1 = Databases.open(TestDatabases.worldCh(), AccessMode.READ_ONLY);
         Database v2 = Databases.create(file)) {
-      GameDto game = withBoard(unbind(v1.getGame(1, GameFetchOptions.full())), 4);
+      GameDto game = unbind(v1.getGame(1, GameFetchOptions.full())).toBuilder().board(4).build();
       long id = v2.addGame(game);
       assertEquals(4, v2.getGame(id, GameFetchOptions.full()).board());
 
       // Replacing the game without a board clears it
-      v2.replaceGame(id, withBoard(game, null));
+      v2.replaceGame(id, game.toBuilder().board(null).build());
       assertEquals(null, v2.getGame(id, GameFetchOptions.full()).board());
     }
   }
@@ -132,7 +132,7 @@ class FacadeWriteTest {
               null, t.title(), t.startDate(), t.endDate(), t.place(), t.nation(), t.category(),
               null, t.rounds(), t.type(), t.timeControl(), null, true, true, null, null, null,
               null);
-      long id = v2.addGame(withTournament(g, flagged));
+      long id = v2.addGame(g.toBuilder().tournament(flagged).build());
       TournamentDto back = v2.getGame(id, GameFetchOptions.full()).tournament();
       assertEquals(true, back.complete());
       assertEquals(true, back.teamTournament());
@@ -147,19 +147,37 @@ class FacadeWriteTest {
       GameDto g = unbind(v1.getGame(1, GameFetchOptions.full()));
       EloType national = EloType.national(EloType.TimeControl.BLITZ, "NOR");
       EloType lichess = EloType.server(EloType.TimeControl.RAPID, EloType.LICHESS);
-      long id = v2.addGame(withElos(g, 2100, national, 2300, lichess));
+      long id = v2.addGame(g
+              .toBuilder()
+              .whiteElo(2100)
+              .whiteEloType(national)
+              .blackElo(2300)
+              .blackEloType(lichess)
+              .build());
       GameDto back = v2.getGame(id, GameFetchOptions.full());
       assertEquals(national, back.whiteEloType());
       assertEquals(lichess, back.blackEloType());
 
       // An elo without a type gets a FIDE one
-      id = v2.addGame(withElos(g, 2100, null, 2300, null));
+      id = v2.addGame(g
+              .toBuilder()
+              .whiteElo(2100)
+              .whiteEloType(null)
+              .blackElo(2300)
+              .blackEloType(null)
+              .build());
       assertEquals(EloType.FIDE, v2.getGame(id, GameFetchOptions.full()).whiteEloType());
 
       // Server ratings at any of their time controls
       EloType lichessBullet = EloType.server(EloType.TimeControl.BULLET, EloType.LICHESS);
       EloType chessCom = EloType.server(EloType.TimeControl.BLITZ, EloType.CHESS_COM);
-      id = v2.addGame(withElos(g, 2100, lichessBullet, 2300, chessCom));
+      id = v2.addGame(g
+              .toBuilder()
+              .whiteElo(2100)
+              .whiteEloType(lichessBullet)
+              .blackElo(2300)
+              .blackEloType(chessCom)
+              .build());
       back = v2.getGame(id, GameFetchOptions.full());
       assertEquals(lichessBullet, back.whiteEloType());
       assertEquals(chessCom, back.blackEloType());
@@ -171,19 +189,15 @@ class FacadeWriteTest {
             EloType.server(EloType.TimeControl.CORRESPONDENCE, EloType.LICHESS),
             new EloType(EloType.Kind.NATIONAL, EloType.TimeControl.NORMAL, null, null),
           }) {
-        assertThrows(IllegalArgumentException.class, () -> v2.addGame(withElos(g, 2100, invalid, 2300, null)));
+        assertThrows(IllegalArgumentException.class, () -> v2.addGame(g
+                .toBuilder()
+                .whiteElo(2100)
+                .whiteEloType(invalid)
+                .blackElo(2300)
+                .blackEloType(null)
+                .build()));
       }
     }
-  }
-
-  private static GameDto withElos(GameDto g, Integer whiteElo, EloType whiteType, Integer blackElo, EloType blackType) {
-    return new GameDto(
-        g.id(), g.type(), g.textTitle(), g.whitePlayer(), whiteElo, whiteType, g.blackPlayer(), blackElo,
-        blackType, g.whiteTeam(), g.blackTeam(), g.result(), g.date(), g.eco(), g.round(), g.subRound(),
-        g.board(), g.lineEvaluation(), g.timeControl(), g.tournament(), g.source(), g.annotator(), g.gameTag(), g.medals(),
-        g.deleted(), g.topGame(), g.setupPosition(), g.variant(), g.noMoves(), g.notation(),
-        g.variationMoves(), g.ait(), g.vcs(), g.finalMaterial(), g.gameVersion(), g.creationTimestamp(),
-        g.lastChanged(), g.moves(), g.text(), g.extraTags());
   }
 
   @Test
@@ -194,7 +208,7 @@ class FacadeWriteTest {
       GameDto g = unbind(v1.getGame(1, GameFetchOptions.full()));
       SourceDto source =
           new SourceDto(null, "Scratch Source", "Morphy", new Date(2025, 3, 1), new Date(2024, 12, 31), 3, "MEDIUM", null);
-      long id = v2.addGame(withSource(g, source));
+      long id = v2.addGame(g.toBuilder().source(source).build());
       SourceDto back = v2.getGame(id, GameFetchOptions.full()).source();
       assertEquals("Scratch Source", back.title());
       assertEquals("Morphy", back.publisher());
@@ -213,7 +227,7 @@ class FacadeWriteTest {
       GameDto g = unbind(v1.getGame(1, GameFetchOptions.full()));
       TeamDto white = new TeamDto(null, "Norway", 1, true, 2024, "NOR", null);
       TeamDto black = new TeamDto(null, "Sweden", 2, null, 2023, null, null);
-      long id = v2.addGame(withTeams(g, white, black));
+      long id = v2.addGame(g.toBuilder().whiteTeam(white).blackTeam(black).build());
       GameDto back = v2.getGame(id, GameFetchOptions.full());
       assertEquals(new TeamDto(back.whiteTeam().id(), "Norway", 1, true, 2024, "NOR", null), back.whiteTeam());
       assertEquals("Sweden", back.blackTeam().title());
@@ -236,7 +250,10 @@ class FacadeWriteTest {
             new GameTagDto(
                 null, "Strategie", null, null, null, "Strategie", null, null, null, null, null, null,
                 null, null);
-        GameTagDto back = db.getGame(db.addGame(withGameTag(g, german)), GameFetchOptions.full()).gameTag();
+        GameTagDto back = db.getGame(db.addGame(g
+                .toBuilder()
+                .gameTag(german)
+                .build()), GameFetchOptions.full()).gameTag();
         assertEquals("Strategie", back.title(), name);
         assertEquals("Strategie", back.germanTitle(), name);
         assertEquals(null, back.englishTitle(), name);
@@ -246,7 +263,10 @@ class FacadeWriteTest {
             new GameTagDto(
                 null, "Tactics", null, null, "Tactics", null, "Tactique", null, null, null, null, null,
                 null, null);
-        back = db.getGame(db.addGame(withGameTag(g, both)), GameFetchOptions.full()).gameTag();
+        back = db.getGame(db.addGame(g
+                .toBuilder()
+                .gameTag(both)
+                .build()), GameFetchOptions.full()).gameTag();
         assertEquals("Tactics", back.title(), name);
         assertEquals("Tactique", back.frenchTitle(), name);
 
@@ -255,7 +275,10 @@ class FacadeWriteTest {
             new GameTagDto(
                 null, "Model game", null, null, null, null, null, null, null, null, null, null, null,
                 null);
-        back = db.getGame(db.addGame(withGameTag(g, plain)), GameFetchOptions.full()).gameTag();
+        back = db.getGame(db.addGame(g
+                .toBuilder()
+                .gameTag(plain)
+                .build()), GameFetchOptions.full()).gameTag();
         assertEquals("Model game", back.englishTitle(), name);
       }
     }
@@ -269,15 +292,7 @@ class FacadeWriteTest {
       GameDto g = unbind(v1.getGame(1, GameFetchOptions.full()));
       PlayerDto white = new PlayerDto(null, "Carlsen", "Magnus", null, 1503014L, null);
       PlayerDto black = new PlayerDto(null, "Unrated", "Player", null, null, null);
-      GameDto withPlayers =
-          new GameDto(
-              g.id(), g.type(), g.textTitle(), white, g.whiteElo(), g.whiteEloType(), black,
-              g.blackElo(), g.blackEloType(), g.whiteTeam(), g.blackTeam(), g.result(), g.date(),
-              g.eco(), g.round(), g.subRound(), g.board(), g.lineEvaluation(), g.timeControl(), g.tournament(),
-              g.source(), g.annotator(), g.gameTag(), g.medals(), g.deleted(), g.topGame(),
-              g.setupPosition(), g.variant(), g.noMoves(), g.notation(), g.variationMoves(), g.ait(),
-              g.vcs(), g.finalMaterial(), g.gameVersion(), g.creationTimestamp(), g.lastChanged(),
-              g.moves(), g.text(), g.extraTags());
+      GameDto withPlayers = g.toBuilder().whitePlayer(white).blackPlayer(black).build();
       GameDto back = v2.getGame(v2.addGame(withPlayers), GameFetchOptions.full());
       assertEquals(1503014L, back.whitePlayer().fideId());
       assertEquals(null, back.blackPlayer().fideId());
@@ -294,93 +309,55 @@ class FacadeWriteTest {
       try (Database v1 = Databases.open(TestDatabases.worldCh(), AccessMode.READ_ONLY);
           Database db = Databases.create(file)) {
         GameDto g = unbind(v1.getGame(1, GameFetchOptions.full()));
-        long id = db.addGame(withTimeControl(g, classical));
+        long id = db.addGame(g.toBuilder().timeControl(classical).build());
         GameDto back = db.getGame(id, GameFetchOptions.full());
         assertEquals(classical, back.timeControl(), name);
         assertFalse(back.moves().pgn().contains("[%tc"), name);
 
         // Saved again without one, it has none
-        db.replaceGame(id, withTimeControl(back, null));
+        db.replaceGame(id, back.toBuilder().timeControl(null).build());
         assertEquals(null, db.getGame(id, GameFetchOptions.full()).timeControl(), name);
       }
     }
   }
 
-  private static GameDto withTimeControl(GameDto g, TimeControlDto timeControl) {
-    return new GameDto(
-        g.id(), g.type(), g.textTitle(), g.whitePlayer(), g.whiteElo(), g.whiteEloType(), g.blackPlayer(),
-        g.blackElo(), g.blackEloType(), g.whiteTeam(), g.blackTeam(), g.result(), g.date(), g.eco(),
-        g.round(), g.subRound(), g.board(), g.lineEvaluation(), timeControl, g.tournament(), g.source(),
-        g.annotator(), g.gameTag(), g.medals(), g.deleted(), g.topGame(), g.setupPosition(), g.variant(),
-        g.noMoves(), g.notation(), g.variationMoves(), g.ait(), g.vcs(), g.finalMaterial(),
-        g.gameVersion(), g.creationTimestamp(), g.lastChanged(), g.moves(), g.text(), g.extraTags());
-  }
-
-  private static GameDto withGameTag(GameDto g, GameTagDto tag) {
-    return new GameDto(
-        g.id(), g.type(), g.textTitle(), g.whitePlayer(), g.whiteElo(), g.whiteEloType(), g.blackPlayer(),
-        g.blackElo(), g.blackEloType(), g.whiteTeam(), g.blackTeam(), g.result(), g.date(), g.eco(),
-        g.round(), g.subRound(), g.board(), g.lineEvaluation(), g.timeControl(), g.tournament(), g.source(), g.annotator(),
-        tag, g.medals(), g.deleted(), g.topGame(), g.setupPosition(), g.variant(), g.noMoves(),
-        g.notation(), g.variationMoves(), g.ait(), g.vcs(), g.finalMaterial(), g.gameVersion(),
-        g.creationTimestamp(), g.lastChanged(), g.moves(), g.text(), g.extraTags());
-  }
-
-  private static GameDto withTeams(GameDto g, TeamDto white, TeamDto black) {
-    return new GameDto(
-        g.id(), g.type(), g.textTitle(), g.whitePlayer(), g.whiteElo(), g.whiteEloType(), g.blackPlayer(),
-        g.blackElo(), g.blackEloType(), white, black, g.result(), g.date(), g.eco(), g.round(), g.subRound(),
-        g.board(), g.lineEvaluation(), g.timeControl(), g.tournament(), g.source(), g.annotator(), g.gameTag(), g.medals(),
-        g.deleted(), g.topGame(), g.setupPosition(), g.variant(), g.noMoves(), g.notation(),
-        g.variationMoves(), g.ait(), g.vcs(), g.finalMaterial(), g.gameVersion(), g.creationTimestamp(),
-        g.lastChanged(), g.moves(), g.text(), g.extraTags());
-  }
-
-  private static GameDto withSource(GameDto g, SourceDto source) {
-    return new GameDto(
-        g.id(), g.type(), g.textTitle(), g.whitePlayer(), g.whiteElo(), g.whiteEloType(), g.blackPlayer(),
-        g.blackElo(), g.blackEloType(), g.whiteTeam(), g.blackTeam(), g.result(), g.date(), g.eco(), g.round(),
-        g.subRound(), g.board(), g.lineEvaluation(), g.timeControl(), g.tournament(), source, g.annotator(), g.gameTag(),
-        g.medals(), g.deleted(), g.topGame(), g.setupPosition(), g.variant(), g.noMoves(), g.notation(),
-        g.variationMoves(), g.ait(), g.vcs(), g.finalMaterial(), g.gameVersion(), g.creationTimestamp(),
-        g.lastChanged(), g.moves(), g.text(), g.extraTags());
-  }
-
-  private static GameDto withTournament(GameDto g, TournamentDto tournament) {
-    return new GameDto(
-        g.id(), g.type(), g.textTitle(), g.whitePlayer(), g.whiteElo(), g.whiteEloType(),
-        g.blackPlayer(), g.blackElo(), g.blackEloType(), g.whiteTeam(), g.blackTeam(), g.result(), g.date(), g.eco(), g.round(),
-        g.subRound(), g.board(), g.lineEvaluation(), g.timeControl(), tournament, g.source(), g.annotator(),
-        g.gameTag(), g.medals(), g.deleted(), g.topGame(), g.setupPosition(), g.variant(),
-        g.noMoves(), g.notation(), g.variationMoves(), g.ait(), g.vcs(), g.finalMaterial(),
-        g.gameVersion(), g.creationTimestamp(), g.lastChanged(), g.moves(), g.text(),
-        g.extraTags());
-  }
-
-  private static GameDto withBoard(GameDto g, Integer board) {
-    return new GameDto(
-        g.id(), g.type(), g.textTitle(), g.whitePlayer(), g.whiteElo(), g.whiteEloType(),
-        g.blackPlayer(), g.blackElo(), g.blackEloType(), g.whiteTeam(), g.blackTeam(), g.result(), g.date(), g.eco(), g.round(),
-        g.subRound(), board, g.lineEvaluation(), g.timeControl(), g.tournament(), g.source(), g.annotator(),
-        g.gameTag(), g.medals(), g.deleted(), g.topGame(), g.setupPosition(), g.variant(),
-        g.noMoves(), g.notation(), g.variationMoves(), g.ait(), g.vcs(), g.finalMaterial(),
-        g.gameVersion(), g.creationTimestamp(), g.lastChanged(), g.moves(), g.text(),
-        g.extraTags());
-  }
-
   /** A game with its entity ids dropped, so its entities are found or created by name. */
   private static GameDto unbind(GameDto g) {
-    return new GameDto(
-        null, g.type(), g.textTitle(),
-        g.whitePlayer() == null ? null : new PlayerDto(null, g.whitePlayer().lastName(), g.whitePlayer().firstName(), null, null, null),
-        g.whiteElo(),
-        g.whiteEloType(),
-        g.blackPlayer() == null ? null : new PlayerDto(null, g.blackPlayer().lastName(), g.blackPlayer().firstName(), null, null, null),
-        g.blackElo(), g.blackEloType(), null, null, g.result(), g.date(), g.eco(), g.round(), g.subRound(),
-        g.board(), g.lineEvaluation(), g.timeControl(),
-        g.tournament() == null ? null : new TournamentDto(null, g.tournament().title(), g.tournament().startDate(), g.tournament().endDate(), g.tournament().place(), g.tournament().nation(), g.tournament().category(), null, g.tournament().rounds(), g.tournament().type(), g.tournament().timeControl(), null, null, null, null, null, null, null),
-        null, null, null, g.medals(), null, null, g.setupPosition(), g.variant(), null, null, null,
-        null, null, null, null, null, null, g.moves(), g.text(),
-        null);
+    return GameDto.builder()
+        .type(g.type())
+        .textTitle(g.textTitle())
+        .whitePlayer(unbind(g.whitePlayer()))
+        .whiteElo(g.whiteElo())
+        .whiteEloType(g.whiteEloType())
+        .blackPlayer(unbind(g.blackPlayer()))
+        .blackElo(g.blackElo())
+        .blackEloType(g.blackEloType())
+        .result(g.result())
+        .date(g.date())
+        .eco(g.eco())
+        .round(g.round())
+        .subRound(g.subRound())
+        .board(g.board())
+        .lineEvaluation(g.lineEvaluation())
+        .timeControl(g.timeControl())
+        .tournament(unbind(g.tournament()))
+        .medals(g.medals())
+        .setupPosition(g.setupPosition())
+        .variant(g.variant())
+        .moves(g.moves())
+        .text(g.text())
+        .build();
+  }
+
+  private static PlayerDto unbind(PlayerDto p) {
+    return p == null ? null : new PlayerDto(null, p.lastName(), p.firstName(), null, null, null);
+  }
+
+  private static TournamentDto unbind(TournamentDto t) {
+    return t == null
+        ? null
+        : new TournamentDto(
+            null, t.title(), t.startDate(), t.endDate(), t.place(), t.nation(), t.category(), null,
+            t.rounds(), t.type(), t.timeControl(), null, null, null, null, null, null, null);
   }
 }

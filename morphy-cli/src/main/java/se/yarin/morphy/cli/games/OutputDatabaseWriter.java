@@ -61,47 +61,17 @@ public class OutputDatabaseWriter extends GameConsumerBase {
    * creates matching entities by name instead of trying to resolve ids that mean nothing there.
    */
   private static GameDto detach(GameDto dto) {
-    return new GameDto(
-        null,
-        dto.type(),
-        dto.textTitle(),
-        detach(dto.whitePlayer()),
-        dto.whiteElo(),
-        dto.whiteEloType(),
-        detach(dto.blackPlayer()),
-        dto.blackElo(),
-        dto.blackEloType(),
-        detach(dto.whiteTeam()),
-        detach(dto.blackTeam()),
-        dto.result(),
-        dto.date(),
-        dto.eco(),
-        dto.round(),
-        dto.subRound(),
-        dto.board(),
-        dto.lineEvaluation(),
-        dto.timeControl(),
-        detach(dto.tournament()),
-        detach(dto.source()),
-        detach(dto.annotator()),
-        detach(dto.gameTag()),
-        dto.medals(),
-        dto.deleted(),
-        dto.topGame(),
-        dto.setupPosition(),
-        dto.variant(),
-        dto.noMoves(),
-        dto.notation(),
-        dto.variationMoves(),
-        dto.ait(),
-        dto.vcs(),
-        dto.finalMaterial(),
-        dto.gameVersion(),
-        dto.creationTimestamp(),
-        dto.lastChanged(),
-        dto.moves(),
-        dto.text(),
-        dto.extraTags());
+    return dto.toBuilder()
+        .id(null)
+        .whitePlayer(detach(dto.whitePlayer()))
+        .blackPlayer(detach(dto.blackPlayer()))
+        .whiteTeam(detach(dto.whiteTeam()))
+        .blackTeam(detach(dto.blackTeam()))
+        .tournament(detach(dto.tournament()))
+        .source(detach(dto.source()))
+        .annotator(detach(dto.annotator()))
+        .gameTag(detach(dto.gameTag()))
+        .build();
   }
 
   private static PlayerDto detach(PlayerDto p) {

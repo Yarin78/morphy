@@ -218,47 +218,46 @@ public final class DtoConverter {
             ? toDto(txn, game.gameTagId(), tag)
             : null;
 
-    return new GameDto(
-        (long) game.id(),
-        type,
-        textTitle,
-        white,
-        whiteElo,
-        whiteEloType,
-        black,
-        blackElo,
-        blackEloType,
-        whiteTeam,
-        blackTeam,
-        result,
-        date,
-        eco,
-        round,
-        subRound,
-        board,
-        lineEvaluation,
-        timeControl,
-        tournamentDto,
-        sourceDto,
-        annotatorDto,
-        gameTagDto,
-        medals,
-        game.deleted() ? true : null,
-        null,
-        setupPosition,
-        variant,
-        noMoves,
-        notation,
-        variationMoves,
-        ait,
-        vcs,
-        finalMaterial,
-        gameVersion,
-        creationTimestamp,
-        lastChanged,
-        moves,
-        text,
-        null);
+    return GameDto.builder()
+        .id((long) game.id())
+        .type(type)
+        .textTitle(textTitle)
+        .whitePlayer(white)
+        .whiteElo(whiteElo)
+        .whiteEloType(whiteEloType)
+        .blackPlayer(black)
+        .blackElo(blackElo)
+        .blackEloType(blackEloType)
+        .whiteTeam(whiteTeam)
+        .blackTeam(blackTeam)
+        .result(result)
+        .date(date)
+        .eco(eco)
+        .round(round)
+        .subRound(subRound)
+        .board(board)
+        .lineEvaluation(lineEvaluation)
+        .timeControl(timeControl)
+        .tournament(tournamentDto)
+        .source(sourceDto)
+        .annotator(annotatorDto)
+        .gameTag(gameTagDto)
+        .medals(medals)
+        .deleted(game.deleted() ? true : null)
+        .setupPosition(setupPosition)
+        .variant(variant)
+        .noMoves(noMoves)
+        .notation(notation)
+        .variationMoves(variationMoves)
+        .ait(ait)
+        .vcs(vcs)
+        .finalMaterial(finalMaterial)
+        .gameVersion(gameVersion)
+        .creationTimestamp(creationTimestamp)
+        .lastChanged(lastChanged)
+        .moves(moves)
+        .text(text)
+        .build();
   }
 
   private @Nullable PlayerDto player(DatabaseTransaction txn, long id, @Nullable Player player) {
