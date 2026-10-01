@@ -11,6 +11,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.chess.Chess960;
 import se.yarin.chess.GameModel;
+import se.yarin.chess.GameMovesModel;
 import se.yarin.chess.GameResult;
 import se.yarin.chess.NAG;
 import se.yarin.morphy.Game;
@@ -23,6 +24,7 @@ import se.yarin.morphy.model.GameTagDto;
 import se.yarin.morphy.model.PlayerDto;
 import se.yarin.morphy.model.SourceDto;
 import se.yarin.morphy.model.TeamDto;
+import se.yarin.morphy.model.TimeControlDto;
 import se.yarin.morphy.model.TournamentDto;
 import se.yarin.morphy.chessbase.text.TextModel;
 import se.yarin.morphy.chessbase.convert.*;
@@ -169,13 +171,18 @@ public class GameDtoConverter {
 
     // Moves and move-derived fields (optional)
     GameMovesDto moves = null;
+    TimeControlDto timeControl = null;
     String notation = game.guidingText() ? "Text" : null;
     Integer variationMoves = null;
     if (includeMoves && !game.guidingText()) {
       try {
         GameModel model = game.getModel();
+        // The time control is a field of its own, not in the movetext
+        timeControl = GameTimeControl.of(model.moves());
+        GameMovesModel withoutTimeControl = GameTimeControl.without(model.moves());
         moves =
-            new GameMovesDto(GameMovesPgn.toPgn(model.moves()), GameMovesPgn.toFen(model.moves()));
+            new GameMovesDto(
+                GameMovesPgn.toPgn(withoutTimeControl), GameMovesPgn.toFen(withoutTimeControl));
 
         String built = model.moves().getNotation(20);
         notation = built != null ? built : "--";
@@ -208,6 +215,7 @@ public class GameDtoConverter {
         subRound,
         null, // the v1 format has no board
         lineEvaluation,
+        timeControl,
         tournament,
         source,
         annotator,

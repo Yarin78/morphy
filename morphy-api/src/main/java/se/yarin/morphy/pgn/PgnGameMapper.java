@@ -23,6 +23,7 @@ import se.yarin.morphy.model.GameTagDto;
 import se.yarin.morphy.model.PlayerDto;
 import se.yarin.morphy.model.SourceDto;
 import se.yarin.morphy.model.TeamDto;
+import se.yarin.morphy.model.TimeControlDto;
 import se.yarin.morphy.model.TournamentDto;
 
 /**
@@ -38,6 +39,9 @@ public final class PgnGameMapper {
 
   /** The PGN value for a name that isn't known. */
   private static final String UNKNOWN = "?";
+
+  /** The PGN tag with the time control; see {@link TimeControlDto#toPgn()}. */
+  private static final String TIME_CONTROL_TAG = "TimeControl";
 
   private final @NotNull PgnMoves pgnMoves;
 
@@ -251,6 +255,9 @@ public final class PgnGameMapper {
                 }
               });
     }
+    if (dto.timeControl() != null) {
+      headerModel.setExtraTag(TIME_CONTROL_TAG, dto.timeControl().toPgn());
+    }
 
     return headerModel;
   }
@@ -282,6 +289,12 @@ public final class PgnGameMapper {
 
     Eco eco = header.getEco();
     NAG lineEvaluation = header.getLineEvaluation();
+    // The TimeControl tag is the time control, if it can be read
+    LinkedHashMap<String, String> extraTags = new LinkedHashMap<>(header.getExtraTags());
+    TimeControlDto timeControl = TimeControlDto.fromPgn(extraTags.get(TIME_CONTROL_TAG));
+    if (timeControl != null) {
+      extraTags.remove(TIME_CONTROL_TAG);
+    }
 
     GameMovesDto movesDto = null;
     String notation = null;
@@ -322,6 +335,7 @@ public final class PgnGameMapper {
         header.getSubRound(),
         header.getBoard(),
         lineEvaluation == null || lineEvaluation == NAG.NONE ? null : lineEvaluation,
+        timeControl,
         tournament(header),
         source(header),
         header.getAnnotator() == null ? null : new AnnotatorDto(null, header.getAnnotator(), null),
@@ -342,7 +356,7 @@ public final class PgnGameMapper {
         null,
         movesDto,
         null,
-        header.getExtraTags().isEmpty() ? null : new LinkedHashMap<>(header.getExtraTags()));
+        extraTags.isEmpty() ? null : extraTags);
   }
 
   /** A value that stands for something known, or null for a missing or "?" value. */

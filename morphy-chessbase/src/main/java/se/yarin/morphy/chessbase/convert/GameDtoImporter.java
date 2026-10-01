@@ -32,7 +32,13 @@ public class GameDtoImporter {
    *     moves can't be read
    */
   public GameModel toGameModel(@NotNull GameDto dto) {
-    return mapper.toModel(dto);
+    GameModel model = mapper.toModel(dto);
+    // A time control is kept as ChessBase does: on the game as a whole, before the first move.
+    // Without one, the movetext may still have one.
+    if (dto.timeControl() != null) {
+      GameTimeControl.set(model.moves(), dto.timeControl());
+    }
+    return model;
   }
 
   /**

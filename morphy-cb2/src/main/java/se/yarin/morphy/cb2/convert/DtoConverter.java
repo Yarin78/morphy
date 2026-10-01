@@ -37,6 +37,7 @@ import se.yarin.morphy.chessbase.Nation;
 import se.yarin.morphy.chessbase.TournamentTimeControl;
 import se.yarin.morphy.chessbase.TournamentType;
 import se.yarin.morphy.chessbase.convert.GameMovesPgn;
+import se.yarin.morphy.chessbase.convert.GameTimeControl;
 import se.yarin.morphy.model.AnnotatorDto;
 import se.yarin.morphy.model.GameDto;
 import se.yarin.morphy.model.GameMovesDto;
@@ -45,6 +46,7 @@ import se.yarin.morphy.model.GameTextDto;
 import se.yarin.morphy.model.PlayerDto;
 import se.yarin.morphy.model.SourceDto;
 import se.yarin.morphy.model.TeamDto;
+import se.yarin.morphy.model.TimeControlDto;
 import se.yarin.morphy.model.TournamentDto;
 
 /**
@@ -157,12 +159,18 @@ public final class DtoConverter {
     }
 
     GameMovesDto moves = null;
+    TimeControlDto timeControl = null;
     String notation = game.isText() ? "Text" : null;
     Integer variationMoves = null;
     if (fetch.includeMoves() && !game.isText()) {
       try {
         GameMovesModel model = game.moves();
-        moves = new GameMovesDto(GameMovesPgn.toPgn(model), GameMovesPgn.toFen(model));
+        // The time control is a field of its own, not in the movetext
+        timeControl = GameTimeControl.of(model);
+        GameMovesModel withoutTimeControl = GameTimeControl.without(model);
+        moves =
+            new GameMovesDto(
+                GameMovesPgn.toPgn(withoutTimeControl), GameMovesPgn.toFen(withoutTimeControl));
         String built = model.getNotation(20);
         notation = built != null ? built : "--";
         int variationPly = model.countPly(true) - model.countPly(false);
@@ -229,6 +237,7 @@ public final class DtoConverter {
         subRound,
         board,
         lineEvaluation,
+        timeControl,
         tournamentDto,
         sourceDto,
         annotatorDto,

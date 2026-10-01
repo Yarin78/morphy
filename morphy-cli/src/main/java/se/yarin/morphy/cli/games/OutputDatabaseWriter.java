@@ -80,6 +80,7 @@ public class OutputDatabaseWriter extends GameConsumerBase {
         dto.subRound(),
         dto.board(),
         dto.lineEvaluation(),
+        dto.timeControl(),
         detach(dto.tournament()),
         detach(dto.source()),
         detach(dto.annotator()),

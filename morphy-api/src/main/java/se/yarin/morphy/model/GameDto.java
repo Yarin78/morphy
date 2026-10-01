@@ -36,6 +36,7 @@ import se.yarin.chess.NAG;
   "subRound",
   "board",
   "lineEvaluation",
+  "timeControl",
   "tournament",
   "source",
   "annotator",
@@ -84,6 +85,7 @@ public record GameDto(
     @Nullable Integer subRound,
     @Nullable Integer board, // the board in a team match; not stored by every format
     @Nullable NAG lineEvaluation,
+    @Nullable TimeControlDto timeControl, // the time control, a ChessBase annotation of the game
 
     // Tournament information
     @Nullable TournamentDto tournament,

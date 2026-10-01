@@ -1,11 +1,13 @@
 package se.yarin.morphy.cb2;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import se.yarin.chess.Date;
@@ -22,6 +24,7 @@ import se.yarin.morphy.model.GameTagDto;
 import se.yarin.morphy.model.PlayerDto;
 import se.yarin.morphy.model.SourceDto;
 import se.yarin.morphy.model.TeamDto;
+import se.yarin.morphy.model.TimeControlDto;
 import se.yarin.morphy.model.TournamentDto;
 
 /** Games copied through the facade from a v1 database into a new v2 one read back the same. */
@@ -177,7 +180,7 @@ class FacadeWriteTest {
     return new GameDto(
         g.id(), g.type(), g.textTitle(), g.whitePlayer(), whiteElo, whiteType, g.blackPlayer(), blackElo,
         blackType, g.whiteTeam(), g.blackTeam(), g.result(), g.date(), g.eco(), g.round(), g.subRound(),
-        g.board(), g.lineEvaluation(), g.tournament(), g.source(), g.annotator(), g.gameTag(), g.medals(),
+        g.board(), g.lineEvaluation(), g.timeControl(), g.tournament(), g.source(), g.annotator(), g.gameTag(), g.medals(),
         g.deleted(), g.topGame(), g.setupPosition(), g.variant(), g.noMoves(), g.notation(),
         g.variationMoves(), g.ait(), g.vcs(), g.finalMaterial(), g.gameVersion(), g.creationTimestamp(),
         g.lastChanged(), g.moves(), g.text(), g.extraTags());
@@ -270,7 +273,7 @@ class FacadeWriteTest {
           new GameDto(
               g.id(), g.type(), g.textTitle(), white, g.whiteElo(), g.whiteEloType(), black,
               g.blackElo(), g.blackEloType(), g.whiteTeam(), g.blackTeam(), g.result(), g.date(),
-              g.eco(), g.round(), g.subRound(), g.board(), g.lineEvaluation(), g.tournament(),
+              g.eco(), g.round(), g.subRound(), g.board(), g.lineEvaluation(), g.timeControl(), g.tournament(),
               g.source(), g.annotator(), g.gameTag(), g.medals(), g.deleted(), g.topGame(),
               g.setupPosition(), g.variant(), g.noMoves(), g.notation(), g.variationMoves(), g.ait(),
               g.vcs(), g.finalMaterial(), g.gameVersion(), g.creationTimestamp(), g.lastChanged(),
@@ -281,11 +284,43 @@ class FacadeWriteTest {
     }
   }
 
+  @Test
+  void timeControlsAreKeptApartFromTheMoves() throws Exception {
+    TimeControlDto classical =
+        new TimeControlDto(
+            List.of(new TimeControlDto.Period(5400, 0, 40), new TimeControlDto.Period(1800, 30, null)));
+    for (String name : new String[] {"tc2.2cbh", "tc1.cbh"}) {
+      File file = new File(tempDir, name);
+      try (Database v1 = Databases.open(TestDatabases.worldCh(), AccessMode.READ_ONLY);
+          Database db = Databases.create(file)) {
+        GameDto g = unbind(v1.getGame(1, GameFetchOptions.full()));
+        long id = db.addGame(withTimeControl(g, classical));
+        GameDto back = db.getGame(id, GameFetchOptions.full());
+        assertEquals(classical, back.timeControl(), name);
+        assertFalse(back.moves().pgn().contains("[%tc"), name);
+
+        // Saved again without one, it has none
+        db.replaceGame(id, withTimeControl(back, null));
+        assertEquals(null, db.getGame(id, GameFetchOptions.full()).timeControl(), name);
+      }
+    }
+  }
+
+  private static GameDto withTimeControl(GameDto g, TimeControlDto timeControl) {
+    return new GameDto(
+        g.id(), g.type(), g.textTitle(), g.whitePlayer(), g.whiteElo(), g.whiteEloType(), g.blackPlayer(),
+        g.blackElo(), g.blackEloType(), g.whiteTeam(), g.blackTeam(), g.result(), g.date(), g.eco(),
+        g.round(), g.subRound(), g.board(), g.lineEvaluation(), timeControl, g.tournament(), g.source(),
+        g.annotator(), g.gameTag(), g.medals(), g.deleted(), g.topGame(), g.setupPosition(), g.variant(),
+        g.noMoves(), g.notation(), g.variationMoves(), g.ait(), g.vcs(), g.finalMaterial(),
+        g.gameVersion(), g.creationTimestamp(), g.lastChanged(), g.moves(), g.text(), g.extraTags());
+  }
+
   private static GameDto withGameTag(GameDto g, GameTagDto tag) {
     return new GameDto(
         g.id(), g.type(), g.textTitle(), g.whitePlayer(), g.whiteElo(), g.whiteEloType(), g.blackPlayer(),
         g.blackElo(), g.blackEloType(), g.whiteTeam(), g.blackTeam(), g.result(), g.date(), g.eco(),
-        g.round(), g.subRound(), g.board(), g.lineEvaluation(), g.tournament(), g.source(), g.annotator(),
+        g.round(), g.subRound(), g.board(), g.lineEvaluation(), g.timeControl(), g.tournament(), g.source(), g.annotator(),
         tag, g.medals(), g.deleted(), g.topGame(), g.setupPosition(), g.variant(), g.noMoves(),
         g.notation(), g.variationMoves(), g.ait(), g.vcs(), g.finalMaterial(), g.gameVersion(),
         g.creationTimestamp(), g.lastChanged(), g.moves(), g.text(), g.extraTags());
@@ -295,7 +330,7 @@ class FacadeWriteTest {
     return new GameDto(
         g.id(), g.type(), g.textTitle(), g.whitePlayer(), g.whiteElo(), g.whiteEloType(), g.blackPlayer(),
         g.blackElo(), g.blackEloType(), white, black, g.result(), g.date(), g.eco(), g.round(), g.subRound(),
-        g.board(), g.lineEvaluation(), g.tournament(), g.source(), g.annotator(), g.gameTag(), g.medals(),
+        g.board(), g.lineEvaluation(), g.timeControl(), g.tournament(), g.source(), g.annotator(), g.gameTag(), g.medals(),
         g.deleted(), g.topGame(), g.setupPosition(), g.variant(), g.noMoves(), g.notation(),
         g.variationMoves(), g.ait(), g.vcs(), g.finalMaterial(), g.gameVersion(), g.creationTimestamp(),
         g.lastChanged(), g.moves(), g.text(), g.extraTags());
@@ -305,7 +340,7 @@ class FacadeWriteTest {
     return new GameDto(
         g.id(), g.type(), g.textTitle(), g.whitePlayer(), g.whiteElo(), g.whiteEloType(), g.blackPlayer(),
         g.blackElo(), g.blackEloType(), g.whiteTeam(), g.blackTeam(), g.result(), g.date(), g.eco(), g.round(),
-        g.subRound(), g.board(), g.lineEvaluation(), g.tournament(), source, g.annotator(), g.gameTag(),
+        g.subRound(), g.board(), g.lineEvaluation(), g.timeControl(), g.tournament(), source, g.annotator(), g.gameTag(),
         g.medals(), g.deleted(), g.topGame(), g.setupPosition(), g.variant(), g.noMoves(), g.notation(),
         g.variationMoves(), g.ait(), g.vcs(), g.finalMaterial(), g.gameVersion(), g.creationTimestamp(),
         g.lastChanged(), g.moves(), g.text(), g.extraTags());
@@ -315,7 +350,7 @@ class FacadeWriteTest {
     return new GameDto(
         g.id(), g.type(), g.textTitle(), g.whitePlayer(), g.whiteElo(), g.whiteEloType(),
         g.blackPlayer(), g.blackElo(), g.blackEloType(), g.whiteTeam(), g.blackTeam(), g.result(), g.date(), g.eco(), g.round(),
-        g.subRound(), g.board(), g.lineEvaluation(), tournament, g.source(), g.annotator(),
+        g.subRound(), g.board(), g.lineEvaluation(), g.timeControl(), tournament, g.source(), g.annotator(),
         g.gameTag(), g.medals(), g.deleted(), g.topGame(), g.setupPosition(), g.variant(),
         g.noMoves(), g.notation(), g.variationMoves(), g.ait(), g.vcs(), g.finalMaterial(),
         g.gameVersion(), g.creationTimestamp(), g.lastChanged(), g.moves(), g.text(),
@@ -326,7 +361,7 @@ class FacadeWriteTest {
     return new GameDto(
         g.id(), g.type(), g.textTitle(), g.whitePlayer(), g.whiteElo(), g.whiteEloType(),
         g.blackPlayer(), g.blackElo(), g.blackEloType(), g.whiteTeam(), g.blackTeam(), g.result(), g.date(), g.eco(), g.round(),
-        g.subRound(), board, g.lineEvaluation(), g.tournament(), g.source(), g.annotator(),
+        g.subRound(), board, g.lineEvaluation(), g.timeControl(), g.tournament(), g.source(), g.annotator(),
         g.gameTag(), g.medals(), g.deleted(), g.topGame(), g.setupPosition(), g.variant(),
         g.noMoves(), g.notation(), g.variationMoves(), g.ait(), g.vcs(), g.finalMaterial(),
         g.gameVersion(), g.creationTimestamp(), g.lastChanged(), g.moves(), g.text(),
@@ -342,7 +377,7 @@ class FacadeWriteTest {
         g.whiteEloType(),
         g.blackPlayer() == null ? null : new PlayerDto(null, g.blackPlayer().lastName(), g.blackPlayer().firstName(), null, null, null),
         g.blackElo(), g.blackEloType(), null, null, g.result(), g.date(), g.eco(), g.round(), g.subRound(),
-        g.board(), g.lineEvaluation(),
+        g.board(), g.lineEvaluation(), g.timeControl(),
         g.tournament() == null ? null : new TournamentDto(null, g.tournament().title(), g.tournament().startDate(), g.tournament().endDate(), g.tournament().place(), g.tournament().nation(), g.tournament().category(), null, g.tournament().rounds(), g.tournament().type(), g.tournament().timeControl(), null, null, null, null, null, null, null),
         null, null, null, g.medals(), null, null, g.setupPosition(), g.variant(), null, null, null,
         null, null, null, null, null, null, g.moves(), g.text(),
