@@ -4,31 +4,28 @@ import { GameView, gameTagLanguages } from 'game-view';
 import type {
   ChessGame,
   GameInfoServices,
+  GameTagInfo,
   GameTagLanguage,
   GameTagService,
   PlayerService,
+  SourceInfo,
   SourceService,
+  TeamInfo,
   TeamService,
+  TournamentInfo,
   TournamentService,
 } from 'game-view';
 import {
   ApiError,
   createGame,
   fetchDatabases,
+  fetchEntity,
   fetchGame,
-  fetchGameTag,
-  fetchPlayer,
-  fetchSource,
-  fetchTeam,
-  fetchTournament,
   replaceGame,
   search,
-  updateGameTag,
-  updatePlayer,
-  updateSource,
-  updateTeam,
-  updateTournament,
+  updateEntity,
 } from '../api/client';
+import type { EntityPath } from '../api/client';
 import {
   gameDtoToPgn,
   gameTagDto,
@@ -75,17 +72,22 @@ function prefixFilter(text: string): string {
   return `"${text.replace(/"/g, '')}"`;
 }
 
+/** Entities of a database whose names or titles start with the text, those with the most games first. */
+async function searchEntities<T>(databaseId: string, path: EntityPath, text: string, sortBy = '-count'): Promise<T[]> {
+  const response = await search<EntitySearchResponse<T>>(databaseId, path, {
+    filter: prefixFilter(text),
+    limit: 20,
+    sortBy,
+  });
+  return response.items;
+}
+
 /** Existing players of a database, for the Edit Game Info dialog. */
 function playerService(databaseId: string, fideIds: boolean): PlayerService {
   return {
     fideIds,
     async search(text) {
-      const response = await search<EntitySearchResponse<PlayerDto>>(databaseId, 'players', {
-        filter: prefixFilter(text),
-        limit: 20,
-        sortBy: '-count',
-      });
-      return response.items.map((p) => ({
+      return (await searchEntities<PlayerDto>(databaseId, 'players', text)).map((p) => ({
         id: p.id,
         name: p.firstName ? `${p.lastName ?? ''}, ${p.firstName}` : p.lastName ?? '',
         gameCount: p.gameCount,
@@ -107,8 +109,8 @@ async function saveFideIds(databaseId: string, wanted: GameDto, saved: GameDto):
   ]) {
     if (have?.id == null || (want?.fideId ?? null) === (have.fideId ?? null)) continue;
     // The whole entity is replaced, so start from it as saved; 0 is no FIDE id
-    const current = await fetchPlayer(databaseId, have.id);
-    await updatePlayer(databaseId, { ...current, fideId: want?.fideId ?? 0 });
+    const current = await fetchEntity<PlayerDto>(databaseId, 'players', have.id);
+    await updateEntity(databaseId, 'players', { ...current, fideId: want?.fideId ?? 0 });
     changed = true;
   }
   return changed;
@@ -118,107 +120,64 @@ async function saveFideIds(databaseId: string, wanted: GameDto, saved: GameDto):
 function annotatorService(databaseId: string): PlayerService {
   return {
     async search(text) {
-      const response = await search<EntitySearchResponse<AnnotatorDto>>(databaseId, 'annotators', {
-        filter: prefixFilter(text),
-        limit: 20,
-        sortBy: '-count',
-      });
-      return response.items.map((a) => ({ id: a.id, name: a.name ?? '', gameCount: a.gameCount }));
+      return (await searchEntities<AnnotatorDto>(databaseId, 'annotators', text)).map((a) => ({
+        id: a.id,
+        name: a.name ?? '',
+        gameCount: a.gameCount,
+      }));
     },
   };
 }
 
-/** Existing sources of a database, for the Edit Game Info dialog. */
+/**
+ * Existing entities of one kind in a database, for the Edit Game Info dialog: found, fetched and
+ * changed as the dialog has them, converted to and from their DTOs.
+ */
+function entityService<D extends { id: number | null }, I extends { id: number | null }>(
+  databaseId: string,
+  path: EntityPath,
+  toInfo: (dto: D) => I,
+  toDto: (info: I) => Partial<D>,
+  sortBy?: string
+) {
+  return {
+    async search(text: string) {
+      return (await searchEntities<D>(databaseId, path, text, sortBy)).map(toInfo);
+    },
+    async get(id: number) {
+      return toInfo(await fetchEntity<D>(databaseId, path, id));
+    },
+    async update(info: I) {
+      // The whole entity is replaced, so start from it as saved, keeping the fields not edited here
+      const current = await fetchEntity<D>(databaseId, path, info.id!);
+      return toInfo(await updateEntity<D>(databaseId, path, { ...current, ...toDto(info) }));
+    },
+  };
+}
+
 function sourceService(databaseId: string): SourceService {
-  const info = (dto: SourceDto) => sourceInfo(dto)!;
-  return {
-    async search(text) {
-      const response = await search<EntitySearchResponse<SourceDto>>(databaseId, 'sources', {
-        filter: prefixFilter(text),
-        limit: 20,
-        sortBy: '-count',
-      });
-      return response.items.map(info);
-    },
-    async get(id) {
-      return info(await fetchSource(databaseId, id));
-    },
-    async update(source) {
-      // The whole entity is replaced, so start from it as saved
-      const current = await fetchSource(databaseId, source.id!);
-      return info(await updateSource(databaseId, { ...current, ...sourceDto(source) }));
-    },
-  };
+  return entityService<SourceDto, SourceInfo>(databaseId, 'sources', (dto) => sourceInfo(dto)!, sourceDto);
 }
 
-/** Existing teams of a database, for the Edit Game Info dialog. */
 function teamService(databaseId: string): TeamService {
-  const info = (dto: TeamDto) => teamInfo(dto)!;
-  return {
-    async search(text) {
-      const response = await search<EntitySearchResponse<TeamDto>>(databaseId, 'teams', {
-        filter: prefixFilter(text),
-        limit: 20,
-        sortBy: '-count',
-      });
-      return response.items.map(info);
-    },
-    async get(id) {
-      return info(await fetchTeam(databaseId, id));
-    },
-    async update(team) {
-      // The whole entity is replaced, so start from it as saved
-      const current = await fetchTeam(databaseId, team.id!);
-      return info(await updateTeam(databaseId, { ...current, ...teamDto(team) }));
-    },
-  };
+  return entityService<TeamDto, TeamInfo>(databaseId, 'teams', (dto) => teamInfo(dto)!, teamDto);
 }
 
-/** Existing game tags of a database, for the Edit Game Info dialog. */
-function gameTagService(databaseId: string, languages: GameTagLanguage[]): GameTagService {
-  const info = (dto: GameTagDto) => gameTagInfo(dto) ?? { id: dto.id, titles: {}, gameCount: dto.gameCount };
-  return {
-    languages,
-    async search(text) {
-      const response = await search<EntitySearchResponse<GameTagDto>>(databaseId, 'gametags', {
-        filter: prefixFilter(text),
-        limit: 20,
-        sortBy: '-count',
-      });
-      return response.items.map(info);
-    },
-    async get(id) {
-      return info(await fetchGameTag(databaseId, id));
-    },
-    async update(gameTag) {
-      // The whole entity is replaced, so start from it as saved
-      const current = await fetchGameTag(databaseId, gameTag.id!);
-      return info(await updateGameTag(databaseId, { ...current, ...gameTagDto(gameTag) }));
-    },
-  };
-}
-
-/** Existing tournaments of a database, for the Edit Game Info dialog. */
 function tournamentService(databaseId: string): TournamentService {
-  const info = (dto: TournamentDto) => tournamentInfo(dto)!;
-  return {
-    async search(text) {
-      const response = await search<EntitySearchResponse<TournamentDto>>(databaseId, 'tournaments', {
-        filter: prefixFilter(text),
-        limit: 20,
-        sortBy: '-startDate',
-      });
-      return response.items.map(info);
-    },
-    async get(id) {
-      return info(await fetchTournament(databaseId, id));
-    },
-    async update(tournament) {
-      // The whole entity is replaced, so start from it as saved to keep the fields not edited here
-      const current = await fetchTournament(databaseId, tournament.id!);
-      return info(await updateTournament(databaseId, { ...current, ...tournamentDto(tournament) }));
-    },
-  };
+  // The latest first, as an older one of the same name is rarely meant
+  return entityService<TournamentDto, TournamentInfo>(
+    databaseId,
+    'tournaments',
+    (dto) => tournamentInfo(dto)!,
+    tournamentDto,
+    '-startDate'
+  );
+}
+
+function gameTagService(databaseId: string, languages: GameTagLanguage[]): GameTagService {
+  // The empty placeholder tag has no titles
+  const info = (dto: GameTagDto): GameTagInfo => gameTagInfo(dto) ?? { id: dto.id, titles: {}, gameCount: dto.gameCount };
+  return { languages, ...entityService<GameTagDto, GameTagInfo>(databaseId, 'gametags', info, gameTagDto) };
 }
 
 function App() {

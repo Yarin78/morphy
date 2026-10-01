@@ -1,12 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import {
-  LINE_EVALUATIONS,
-  LINE_RESULT,
-  RESULTS,
-  lineEvaluationSymbol,
-  validateGameInfo,
-} from '../utils/gameInfo';
-import type { GameInfo, GameInfoErrors, GameInfoServices, GameInfoTextField, ResultGroup } from '../utils/gameInfo';
+import { validateGameInfo } from '../utils/gameInfo';
+import type { GameInfo, GameInfoErrors, GameInfoServices, GameInfoTextField } from '../utils/gameInfo';
 import type { PlayerInfo } from '../utils/player';
 import { sameEloType } from '../utils/eloType';
 import type { EloTypeInfo } from '../utils/eloType';
@@ -15,6 +9,7 @@ import type { TournamentInfo } from '../utils/tournament';
 import { DateField } from './DateField';
 import { PlayerField } from './PlayerField';
 import { RatingField } from './RatingField';
+import { ResultField } from './ResultField';
 import type { SourceInfo } from '../utils/source';
 import { SourceDialog } from './SourceDialog';
 import { SourceField } from './SourceField';
@@ -49,8 +44,33 @@ const DetailsButton: React.FC<{ onClick: () => void; disabled: boolean }> = ({ o
 /** The fields with problems that only "More info" shows. */
 const MORE_INFO_FIELDS = ['whiteFideId', 'blackFideId', 'subRound', 'board'] as const;
 
-/** Between a line's result and its evaluation in the result dropdown's values; in neither of them. */
-const RESULT_EVALUATION_SEPARATOR = '|';
+/** The GameInfo fields that are an entity with details of its own. */
+type EntityField = 'tournament' | 'source' | 'whiteTeam' | 'blackTeam' | 'gameTag';
+
+/**
+ * Replaces an existing entity the dialog started with by the entity as it's saved now, with its
+ * number of games, unless another one has been picked by then.
+ */
+function useCurrentEntity<F extends EntityField>(
+  service: { get(id: number): Promise<NonNullable<GameInfo[F]>> } | undefined,
+  id: number | null | undefined,
+  field: F,
+  setInfo: React.Dispatch<React.SetStateAction<GameInfo>>
+) {
+  useEffect(() => {
+    if (!service || id == null) return;
+    let cancelled = false;
+    service
+      .get(id)
+      .then((current) => {
+        if (!cancelled) setInfo((i) => (i[field]?.id === current.id ? { ...i, [field]: current } : i));
+      })
+      .catch((err) => console.error(`Failed to load the ${field}:`, err));
+    return () => {
+      cancelled = true;
+    };
+  }, [service, id, field, setInfo]);
+}
 
 export const GameInfoDialog: React.FC<GameInfoDialogProps> = ({ initial, services, onSave, onCancel }) => {
   const tournamentService = services?.tournaments;
@@ -79,81 +99,15 @@ export const GameInfoDialog: React.FC<GameInfoDialogProps> = ({ initial, service
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onCancel, detailsOpen]);
 
-  // An existing tournament's details, as saved now rather than when the game was loaded, and its
-  // number of games
-  const initialTournamentId = initial.tournament?.id;
-  useEffect(() => {
-    if (!tournamentService || initialTournamentId == null) return;
-    let cancelled = false;
-    tournamentService
-      .get(initialTournamentId)
-      .then((current) => {
-        if (cancelled) return;
-        setInfo((i) => (i.tournament?.id === current.id ? { ...i, tournament: current } : i));
-      })
-      .catch((err) => console.error('Failed to load the tournament:', err));
-    return () => {
-      cancelled = true;
-    };
-  }, [tournamentService, initialTournamentId]);
-
-  // The same for an existing source
-  const initialSourceId = initial.source?.id;
-  useEffect(() => {
-    if (!sourceService || initialSourceId == null) return;
-    let cancelled = false;
-    sourceService
-      .get(initialSourceId)
-      .then((current) => {
-        if (cancelled) return;
-        setInfo((i) => (i.source?.id === current.id ? { ...i, source: current } : i));
-      })
-      .catch((err) => console.error('Failed to load the source:', err));
-    return () => {
-      cancelled = true;
-    };
-  }, [sourceService, initialSourceId]);
+  // The existing entities the game refers to, as saved now rather than when the game was loaded,
+  // with their numbers of games
+  useCurrentEntity(tournamentService, initial.tournament?.id, 'tournament', setInfo);
+  useCurrentEntity(sourceService, initial.source?.id, 'source', setInfo);
+  useCurrentEntity(teamService, initial.whiteTeam?.id, 'whiteTeam', setInfo);
+  useCurrentEntity(teamService, initial.blackTeam?.id, 'blackTeam', setInfo);
+  useCurrentEntity(gameTagService, initial.gameTag?.id, 'gameTag', setInfo);
 
   const setSource = (source: SourceInfo | null) => setInfo((i) => ({ ...i, source }));
-
-  // The same for the players' existing teams
-  const initialWhiteTeamId = initial.whiteTeam?.id;
-  const initialBlackTeamId = initial.blackTeam?.id;
-  useEffect(() => {
-    if (!teamService) return;
-    let cancelled = false;
-    for (const [color, id] of [['white', initialWhiteTeamId], ['black', initialBlackTeamId]] as const) {
-      if (id == null) continue;
-      teamService
-        .get(id)
-        .then((current) => {
-          if (cancelled) return;
-          setInfo((i) => (i[`${color}Team`]?.id === current.id ? { ...i, [`${color}Team`]: current } : i));
-        })
-        .catch((err) => console.error('Failed to load the team:', err));
-    }
-    return () => {
-      cancelled = true;
-    };
-  }, [teamService, initialWhiteTeamId, initialBlackTeamId]);
-
-  // The same for the existing game tag
-  const initialGameTagId = initial.gameTag?.id;
-  useEffect(() => {
-    if (!gameTagService || initialGameTagId == null) return;
-    let cancelled = false;
-    gameTagService
-      .get(initialGameTagId)
-      .then((current) => {
-        if (cancelled) return;
-        setInfo((i) => (i.gameTag?.id === current.id ? { ...i, gameTag: current } : i));
-      })
-      .catch((err) => console.error('Failed to load the game tag:', err));
-    return () => {
-      cancelled = true;
-    };
-  }, [gameTagService, initialGameTagId]);
-
   const setGameTag = (gameTag: GameTagInfo | null) => setInfo((i) => ({ ...i, gameTag }));
 
   const setTeam = (color: TeamColor) => (team: TeamInfo | null) => setInfo((i) => ({ ...i, [`${color}Team`]: team }));
@@ -263,27 +217,6 @@ export const GameInfoDialog: React.FC<GameInfoDialogProps> = ({ initial, service
 
   const numberProps = { inputMode: 'numeric' as const };
 
-  // Keep an evaluation the list doesn't offer selectable, rather than silently dropping it.
-  const evaluations =
-    !initial.lineEvaluation || LINE_EVALUATIONS.some((e) => e.value === initial.lineEvaluation)
-      ? LINE_EVALUATIONS
-      : [...LINE_EVALUATIONS, { value: initial.lineEvaluation, symbol: lineEvaluationSymbol(initial.lineEvaluation) }];
-
-  // The result and a line's evaluation are picked together, as one choice: a line's option is its
-  // result followed by the evaluation, if any.
-  const resultChoice = (result: string, lineEvaluation: string) =>
-    result === LINE_RESULT && lineEvaluation ? `${LINE_RESULT}${RESULT_EVALUATION_SEPARATOR}${lineEvaluation}` : result;
-  const chooseResult = (choice: string) => {
-    const [result, lineEvaluation = ''] = choice.split(RESULT_EVALUATION_SEPARATOR);
-    setInfo((current) => ({ ...current, result, lineEvaluation }));
-  };
-  const resultOptions = (group: ResultGroup) =>
-    RESULTS.filter((r) => r.group === group).map((r) => (
-      <option key={r.value} value={r.value}>
-        {r.label}
-      </option>
-    ));
-
   return (
     <>
     <div className="game-info-overlay" onMouseDown={onCancel}>
@@ -369,24 +302,12 @@ export const GameInfoDialog: React.FC<GameInfoDialogProps> = ({ initial, service
 
         <fieldset className="game-info-row game-info-game">
           <legend>Game Info</legend>
-          <label className="game-info-field game-info-field-result">
-            <span className="game-info-label">Result</span>
-            <select
-              value={resultChoice(info.result, info.lineEvaluation)}
-              onChange={(e) => chooseResult(e.target.value)}
-            >
-              {resultOptions('game')}
-              <optgroup label="Line, with its evaluation">
-                {resultOptions('line')}
-                {evaluations.map((e) => (
-                  <option key={e.value} value={resultChoice(LINE_RESULT, e.value)}>
-                    Line {e.symbol}
-                  </option>
-                ))}
-              </optgroup>
-              <optgroup label="Forfeits, both lost">{resultOptions('other')}</optgroup>
-            </select>
-          </label>
+          <ResultField
+            result={info.result}
+            lineEvaluation={info.lineEvaluation}
+            onChange={(result, lineEvaluation) => setInfo((i) => ({ ...i, result, lineEvaluation }))}
+            initialLineEvaluation={initial.lineEvaluation}
+          />
           <DateField
             value={info.date}
             onChange={(date) => setInfo((i) => ({ ...i, date }))}

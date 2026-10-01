@@ -1,3 +1,5 @@
+import { tagReader } from './tags';
+
 /**
  * A language a game tag can have a title in, by the IOC code of the nation whose flag stands for it.
  */
@@ -86,16 +88,13 @@ export function gameTagToTags(t: GameTagInfo | null): Record<string, string> {
 
 /** Reads the game tag from its tags; null if the game has none. */
 export function gameTagFromTags(tag: (name: string) => string): GameTagInfo | null {
-  const text = (name: string) => {
-    const value = tag(name).trim();
-    return value && !/^\?+$/.test(value) ? value : undefined;
-  };
+  const { text, id: idOf } = tagReader(tag);
   const titles: GameTagInfo['titles'] = {};
   for (const { code } of GAME_TAG_LANGUAGES) {
     const title = text(GAME_TAG_TAGS[code]);
     if (title) titles[code] = title;
   }
-  const id = text(GAME_TAG_TAGS.id);
+  const id = idOf(GAME_TAG_TAGS.id);
   if (id === undefined && Object.keys(titles).length === 0) return null;
-  return { id: id !== undefined && /^\d+$/.test(id) ? +id : null, titles };
+  return { id: id ?? null, titles };
 }

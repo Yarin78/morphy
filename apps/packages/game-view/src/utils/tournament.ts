@@ -1,4 +1,5 @@
 import { dateTag, parseDateTag } from './date';
+import { tagReader } from './tags';
 import type { DateParts } from './date';
 
 /**
@@ -94,19 +95,12 @@ export function tournamentToTags(t: TournamentInfo | null): Record<string, strin
 
 /** Reads a tournament from its tags; null if there is none. */
 export function tournamentFromTags(tag: (name: string) => string): TournamentInfo | null {
-  const text = (name: string) => {
-    const value = tag(name).trim();
-    return value && !/^\?+$/.test(value) ? value : undefined;
-  };
-  const number = (name: string) => {
-    const value = text(name);
-    return value && /^\d+$/.test(value) && +value > 0 ? +value : undefined;
-  };
-  const id = text(TOURNAMENT_TAGS.id);
+  const { text, number, flag, id: idOf } = tagReader(tag);
+  const id = idOf(TOURNAMENT_TAGS.id);
   const title = text(TOURNAMENT_TAGS.title) ?? '';
   if (id === undefined && !title) return null;
   return {
-    id: id !== undefined && /^\d+$/.test(id) ? +id : null,
+    id: id ?? null,
     title,
     startDate: parseDateTag(tag(TOURNAMENT_TAGS.startDate)),
     endDate: parseDateTag(tag(TOURNAMENT_TAGS.endDate)),
@@ -116,8 +110,8 @@ export function tournamentFromTags(tag: (name: string) => string): TournamentInf
     timeControl: text(TOURNAMENT_TAGS.timeControl),
     rounds: number(TOURNAMENT_TAGS.rounds),
     category: number(TOURNAMENT_TAGS.category),
-    complete: text(TOURNAMENT_TAGS.complete) === '1' || undefined,
-    teamTournament: text(TOURNAMENT_TAGS.teamTournament) === '1' || undefined,
+    complete: flag(TOURNAMENT_TAGS.complete),
+    teamTournament: flag(TOURNAMENT_TAGS.teamTournament),
   };
 }
 

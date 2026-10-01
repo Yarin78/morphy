@@ -410,13 +410,11 @@
 
 /* A badge inside a field, at its right end */
 .game-info-field-player,
-.game-info-field-team,
 .entity-input {
   position: relative;
 }
 
 .game-info-field-player.with-badge input,
-.game-info-field-team.with-badge input,
 .entity-input.with-badge input {
   padding-right: 3.2rem;
 }

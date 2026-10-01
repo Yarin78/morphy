@@ -1,4 +1,5 @@
 import { dateTag, parseDateTag } from './date';
+import { tagReader } from './tags';
 import type { DateParts } from './date';
 
 /**
@@ -67,22 +68,18 @@ export function sourceToTags(s: SourceInfo | null): Record<string, string> {
 
 /** Reads a source from its tags; null if there is none. */
 export function sourceFromTags(tag: (name: string) => string): SourceInfo | null {
-  const text = (name: string) => {
-    const value = tag(name).trim();
-    return value && !/^\?+$/.test(value) ? value : undefined;
-  };
-  const id = text(SOURCE_TAGS.id);
+  const { text, number, id: idOf } = tagReader(tag);
+  const id = idOf(SOURCE_TAGS.id);
   const title = text(SOURCE_TAGS.title) ?? '';
   const publisher = text(SOURCE_TAGS.publisher);
   if (id === undefined && !title && !publisher) return null;
-  const version = text(SOURCE_TAGS.version);
   return {
-    id: id !== undefined && /^\d+$/.test(id) ? +id : null,
+    id: id ?? null,
     title,
     publisher,
     publication: parseDateTag(tag(SOURCE_TAGS.publication)),
     date: parseDateTag(tag(SOURCE_TAGS.date)),
-    version: version && /^\d+$/.test(version) && +version > 0 ? +version : undefined,
+    version: number(SOURCE_TAGS.version),
     quality: text(SOURCE_TAGS.quality),
   };
 }

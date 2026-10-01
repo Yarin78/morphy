@@ -1,6 +1,6 @@
 import { sourceSubtitle } from '../utils/source';
 import type { SourceInfo, SourceService } from '../utils/source';
-import { EntityCombobox, gameCountText } from './EntityCombobox';
+import { EntityField } from './EntityField';
 
 interface SourceFieldProps {
   value: SourceInfo | null;
@@ -8,43 +8,21 @@ interface SourceFieldProps {
   service?: SourceService;
 }
 
-/**
- * The source's title, with suggestions of existing sources to pick from while typing. A badge marks
- * a new source, one that saving the game will create; editing the title of an existing one makes it
- * a new source, since the existing one belongs to other games too.
- */
-export const SourceField: React.FC<SourceFieldProps> = ({ value, onChange, service }) => {
-  const handleTextChange = (title: string) => {
-    if (!value || value.id != null) {
-      // A source created now, without any existing one's details
-      onChange(title ? { id: null, title } : null);
-    } else {
-      // A new source keeps the details entered for it
-      onChange(title || hasDetails(value) ? { ...value, title } : null);
-    }
-  };
-
-  const isNew = Boolean(service) && value !== null && value.id == null;
-  return (
-    <div className="game-info-field game-info-field-source">
-      <span className="game-info-label">Title</span>
-      <div className={`entity-input${isNew ? ' with-badge' : ''}`}>
-        <EntityCombobox<SourceInfo>
-          text={value?.title ?? ''}
-          onTextChange={handleTextChange}
-          search={service?.search}
-          onChoose={onChange}
-          optionKey={(s) => s.id ?? s.title}
-          optionTitle={(s) => s.title}
-          optionSubtitle={(s) => [sourceSubtitle(s), gameCountText(s.gameCount)].filter(Boolean).join(' · ')}
-          newWhat="source"
-          inputProps={{ 'aria-label': 'Source title' }}
-        />
-        {isNew && <span className="entity-badge entity-badge-new entity-badge-inline">New</span>}
-      </div>
-    </div>
-  );
-};
+/** The source's title, with suggestions of existing sources; see EntityField. */
+export const SourceField: React.FC<SourceFieldProps> = ({ value, onChange, service }) => (
+  <EntityField<SourceInfo>
+    value={value}
+    onChange={onChange}
+    search={service?.search}
+    create={(title) => ({ id: null, title })}
+    hasDetails={hasDetails}
+    subtitle={sourceSubtitle}
+    what="source"
+    label="Title"
+    ariaLabel="Source title"
+    className="game-info-field-source"
+  />
+);
 
 function hasDetails(s: SourceInfo): boolean {
   return Boolean(s.publisher || s.publication || s.date || s.version || s.quality);

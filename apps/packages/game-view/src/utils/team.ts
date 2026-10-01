@@ -1,3 +1,5 @@
+import { tagReader } from './tags';
+
 /**
  * A player's team, as edited in the Edit Game Info dialog. With an id, it's an existing team in the
  * database, shared with every other game of it; without one, it's a new team, created (or matched to
@@ -59,22 +61,15 @@ export function teamToTags(color: TeamColor, t: TeamInfo | null): Record<string,
 /** Reads a player's team from its tags; null if the player has none. */
 export function teamFromTags(color: TeamColor, tag: (name: string) => string): TeamInfo | null {
   const tags = teamTags(color);
-  const text = (name: string) => {
-    const value = tag(name).trim();
-    return value && !/^\?+$/.test(value) ? value : undefined;
-  };
-  const number = (name: string) => {
-    const value = text(name);
-    return value && /^\d+$/.test(value) && +value > 0 ? +value : undefined;
-  };
-  const id = text(tags.id);
+  const { text, number, flag, id: idOf } = tagReader(tag);
+  const id = idOf(tags.id);
   const title = text(tags.title) ?? '';
   if (id === undefined && !title) return null;
   return {
-    id: id !== undefined && /^\d+$/.test(id) ? +id : null,
+    id: id ?? null,
     title,
     number: number(tags.number),
-    season: text(tags.season) === '1' || undefined,
+    season: flag(tags.season),
     year: number(tags.year),
     nation: text(tags.nation),
   };

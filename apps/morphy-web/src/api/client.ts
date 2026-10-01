@@ -3,11 +3,6 @@ import type {
   DebugSearchResponse,
   FilterOptionsResponse,
   GameDto,
-  GameTagDto,
-  PlayerDto,
-  SourceDto,
-  TeamDto,
-  TournamentDto,
 } from './types';
 
 const API_BASE = '/api';
@@ -129,55 +124,22 @@ export async function replaceGame(
   return sendJson('PUT', `${databaseUrl(databaseId)}/games/${gameId}`, game, 'Replace game');
 }
 
-/** Fetches one player. */
-export async function fetchPlayer(databaseId: string, id: number): Promise<PlayerDto> {
-  return getJson(`${databaseUrl(databaseId)}/players/${id}`, 'Fetch player');
-}
+/** The kinds of entity a game refers to, by the API path segment of each. */
+export type EntityPath = 'players' | 'annotators' | 'tournaments' | 'sources' | 'teams' | 'gametags';
 
-/** Replaces a player's fields, for every game of it. A FIDE id left out is kept; 0 clears it. */
-export async function updatePlayer(databaseId: string, player: PlayerDto): Promise<PlayerDto> {
-  return sendJson('PUT', `${databaseUrl(databaseId)}/players/${player.id}`, player, 'Update player');
-}
-
-/** Fetches one tournament. */
-export async function fetchTournament(databaseId: string, id: number): Promise<TournamentDto> {
-  return getJson(`${databaseUrl(databaseId)}/tournaments/${id}`, 'Fetch tournament');
+/** Fetches one entity. */
+export async function fetchEntity<T>(databaseId: string, path: EntityPath, id: number): Promise<T> {
+  return getJson(`${databaseUrl(databaseId)}/${path}/${id}`, `Fetch ${path}`);
 }
 
 /**
- * Replaces a tournament's fields, for every game in it. The whole entity is replaced: a field left
- * out is cleared.
+ * Replaces an entity's fields, for every game that refers to it. The whole entity is replaced: a
+ * field left out is cleared, except a player's FIDE id, which is kept; 0 clears it.
  */
-export async function updateTournament(databaseId: string, tournament: TournamentDto): Promise<TournamentDto> {
-  return sendJson('PUT', `${databaseUrl(databaseId)}/tournaments/${tournament.id}`, tournament, 'Update tournament');
-}
-
-/** Fetches one source. */
-export async function fetchSource(databaseId: string, id: number): Promise<SourceDto> {
-  return getJson(`${databaseUrl(databaseId)}/sources/${id}`, 'Fetch source');
-}
-
-/** Replaces a source's fields, for every game from it. As for tournaments, a field left out is cleared. */
-export async function updateSource(databaseId: string, source: SourceDto): Promise<SourceDto> {
-  return sendJson('PUT', `${databaseUrl(databaseId)}/sources/${source.id}`, source, 'Update source');
-}
-
-/** Fetches one game tag. */
-export async function fetchGameTag(databaseId: string, id: number): Promise<GameTagDto> {
-  return getJson(`${databaseUrl(databaseId)}/gametags/${id}`, 'Fetch game tag');
-}
-
-/** Replaces a game tag's titles, for every game of it. A title left out is cleared. */
-export async function updateGameTag(databaseId: string, gameTag: GameTagDto): Promise<GameTagDto> {
-  return sendJson('PUT', `${databaseUrl(databaseId)}/gametags/${gameTag.id}`, gameTag, 'Update game tag');
-}
-
-/** Fetches one team. */
-export async function fetchTeam(databaseId: string, id: number): Promise<TeamDto> {
-  return getJson(`${databaseUrl(databaseId)}/teams/${id}`, 'Fetch team');
-}
-
-/** Replaces a team's fields, for every game of it. As for tournaments, a field left out is cleared. */
-export async function updateTeam(databaseId: string, team: TeamDto): Promise<TeamDto> {
-  return sendJson('PUT', `${databaseUrl(databaseId)}/teams/${team.id}`, team, 'Update team');
+export async function updateEntity<T extends { id: number | null }>(
+  databaseId: string,
+  path: EntityPath,
+  entity: T
+): Promise<T> {
+  return sendJson('PUT', `${databaseUrl(databaseId)}/${path}/${entity.id}`, entity, `Update ${path}`);
 }
