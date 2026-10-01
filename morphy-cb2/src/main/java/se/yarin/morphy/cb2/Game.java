@@ -11,6 +11,7 @@ import se.yarin.chess.GameHeaderModel;
 import se.yarin.chess.GameModel;
 import se.yarin.chess.GameMovesModel;
 import se.yarin.chess.GameResult;
+import se.yarin.chess.GameTagLanguage;
 import se.yarin.chess.NAG;
 import se.yarin.morphy.cb2.annotations.AnnotationBlockCodec;
 import se.yarin.morphy.cb2.entities.EntityType;
@@ -356,6 +357,12 @@ public final class Game {
       model.setGameTagId(gameTagId());
       if (!tag.isEmpty()) {
         model.setGameTag(tag.title());
+      }
+      for (GameTag.Title title : tag.titles()) {
+        GameTagLanguage language = GameTag.language(title.language());
+        if (language != null && !title.text().isEmpty()) {
+          model.setGameTagTitle(language, title.text());
+        }
       }
     }
     return model;

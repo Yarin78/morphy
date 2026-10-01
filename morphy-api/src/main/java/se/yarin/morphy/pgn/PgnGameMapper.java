@@ -1,6 +1,7 @@
 package se.yarin.morphy.pgn;
 
 import java.util.LinkedHashMap;
+import java.util.Map;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -13,6 +14,7 @@ import se.yarin.chess.GameHeaderModel;
 import se.yarin.chess.GameModel;
 import se.yarin.chess.GameMovesModel;
 import se.yarin.chess.GameResult;
+import se.yarin.chess.GameTagLanguage;
 import se.yarin.chess.NAG;
 import se.yarin.morphy.model.AnnotatorDto;
 import se.yarin.morphy.model.GameDto;
@@ -225,12 +227,16 @@ public final class PgnGameMapper {
     }
 
     if (dto.gameTag() != null) {
-      if (dto.gameTag().id() != null) {
-        headerModel.setGameTagId(dto.gameTag().id());
+      GameTagDto tag = dto.gameTag();
+      if (tag.id() != null) {
+        headerModel.setGameTagId(tag.id());
       }
-      if (dto.gameTag().englishTitle() != null) {
-        headerModel.setGameTag(dto.gameTag().englishTitle());
+      for (GameTagLanguage language : GameTagLanguage.values()) {
+        headerModel.setGameTagTitle(language, known(tag.title(language)));
       }
+      // The title shown, which is the English one if a new tag has no titles by language
+      String title = known(tag.title());
+      headerModel.setGameTag(title != null ? title : known(tag.englishTitle()));
     }
 
     if (dto.extraTags() != null) {
@@ -317,7 +323,7 @@ public final class PgnGameMapper {
         tournament(header),
         source(header),
         header.getAnnotator() == null ? null : new AnnotatorDto(null, header.getAnnotator(), null),
-        gameTag(header.getGameTag()),
+        gameTag(header),
         null,
         null,
         null,
@@ -362,11 +368,29 @@ public final class PgnGameMapper {
     return known(title) == null ? null : new TeamDto(null, title, number, season, year, nation, null);
   }
 
-  private static @Nullable GameTagDto gameTag(@Nullable String title) {
-    return known(title) == null
-        ? null
-        : new GameTagDto(
-            null, title, null, null, title, null, null, null, null, null, null, null, null);
+  private static @Nullable GameTagDto gameTag(@NotNull GameHeaderModel header) {
+    String title = known(header.getGameTag());
+    Map<GameTagLanguage, String> titles = header.getGameTagTitles();
+    if (title == null && titles.isEmpty()) {
+      return null;
+    }
+    // A tag known only by its title has it in English
+    String english = titles.isEmpty() ? title : titles.get(GameTagLanguage.ENGLISH);
+    return new GameTagDto(
+        null,
+        title,
+        null,
+        null,
+        english,
+        titles.get(GameTagLanguage.GERMAN),
+        titles.get(GameTagLanguage.FRENCH),
+        titles.get(GameTagLanguage.SPANISH),
+        titles.get(GameTagLanguage.ITALIAN),
+        titles.get(GameTagLanguage.DUTCH),
+        titles.get(GameTagLanguage.SLOVENIAN),
+        titles.get(GameTagLanguage.PORTUGUESE),
+        null,
+        null);
   }
 
   /** The type of an elo, which only means something when there is one. */

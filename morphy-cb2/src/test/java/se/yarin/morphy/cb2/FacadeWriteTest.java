@@ -18,6 +18,7 @@ import se.yarin.morphy.api.GameFetchOptions;
 import se.yarin.morphy.api.query.Query;
 import se.yarin.morphy.api.query.Sort;
 import se.yarin.morphy.model.GameDto;
+import se.yarin.morphy.model.GameTagDto;
 import se.yarin.morphy.model.PlayerDto;
 import se.yarin.morphy.model.SourceDto;
 import se.yarin.morphy.model.TeamDto;
@@ -219,6 +220,52 @@ class FacadeWriteTest {
       // A game without teams has none
       assertEquals(null, v2.getGame(v2.addGame(g), GameFetchOptions.full()).whiteTeam());
     }
+  }
+
+  @Test
+  void newGameTagsTakeTheirLanguagesFromTheGame() throws Exception {
+    for (String name : new String[] {"tags2.2cbh", "tags1.cbh"}) {
+      File file = new File(tempDir, name);
+      try (Database v1 = Databases.open(TestDatabases.worldCh(), AccessMode.READ_ONLY);
+          Database db = Databases.create(file)) {
+        GameDto g = unbind(v1.getGame(1, GameFetchOptions.full()));
+        GameTagDto german =
+            new GameTagDto(
+                null, "Strategie", null, null, null, "Strategie", null, null, null, null, null, null,
+                null, null);
+        GameTagDto back = db.getGame(db.addGame(withGameTag(g, german)), GameFetchOptions.full()).gameTag();
+        assertEquals("Strategie", back.title(), name);
+        assertEquals("Strategie", back.germanTitle(), name);
+        assertEquals(null, back.englishTitle(), name);
+
+        // Shown in English when the tag has a title in it
+        GameTagDto both =
+            new GameTagDto(
+                null, "Tactics", null, null, "Tactics", null, "Tactique", null, null, null, null, null,
+                null, null);
+        back = db.getGame(db.addGame(withGameTag(g, both)), GameFetchOptions.full()).gameTag();
+        assertEquals("Tactics", back.title(), name);
+        assertEquals("Tactique", back.frenchTitle(), name);
+
+        // A tag known only by its title has it in English
+        GameTagDto plain =
+            new GameTagDto(
+                null, "Model game", null, null, null, null, null, null, null, null, null, null, null,
+                null);
+        back = db.getGame(db.addGame(withGameTag(g, plain)), GameFetchOptions.full()).gameTag();
+        assertEquals("Model game", back.englishTitle(), name);
+      }
+    }
+  }
+
+  private static GameDto withGameTag(GameDto g, GameTagDto tag) {
+    return new GameDto(
+        g.id(), g.type(), g.textTitle(), g.whitePlayer(), g.whiteElo(), g.whiteEloType(), g.blackPlayer(),
+        g.blackElo(), g.blackEloType(), g.whiteTeam(), g.blackTeam(), g.result(), g.date(), g.eco(),
+        g.round(), g.subRound(), g.board(), g.lineEvaluation(), g.tournament(), g.source(), g.annotator(),
+        tag, g.medals(), g.deleted(), g.topGame(), g.setupPosition(), g.variant(), g.noMoves(),
+        g.notation(), g.variationMoves(), g.ait(), g.vcs(), g.finalMaterial(), g.gameVersion(),
+        g.creationTimestamp(), g.lastChanged(), g.moves(), g.text(), g.extraTags());
   }
 
   private static GameDto withTeams(GameDto g, TeamDto white, TeamDto black) {

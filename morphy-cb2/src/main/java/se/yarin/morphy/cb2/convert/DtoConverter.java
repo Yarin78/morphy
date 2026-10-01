@@ -15,6 +15,7 @@ import se.yarin.chess.Date;
 import se.yarin.chess.EloType;
 import se.yarin.chess.GameMovesModel;
 import se.yarin.chess.GameResult;
+import se.yarin.chess.GameTagLanguage;
 import se.yarin.chess.NAG;
 import se.yarin.morphy.api.GameFetchOptions;
 import se.yarin.morphy.cb2.DatabaseTransaction;
@@ -349,6 +350,7 @@ public final class DtoConverter {
       @NotNull DatabaseTransaction txn, long id, @NotNull GameTag tag) {
     String english = title(tag, 42), german = title(tag, 53), french = title(tag, 49);
     String spanish = title(tag, 43), italian = title(tag, 70), dutch = title(tag, 103);
+    String portuguese = title(tag, 117);
     List<String> languages = new ArrayList<>();
     int count = 0;
     for (GameTag.Title t : tag.titles()) {
@@ -369,7 +371,8 @@ public final class DtoConverter {
         emptyToNull(spanish),
         emptyToNull(italian),
         emptyToNull(dutch),
-        null,
+        emptyToNull(title(tag, GameTag.code(GameTagLanguage.SLOVENIAN))),
+        emptyToNull(portuguese),
         null,
         count(txn, id, Role.GAME_TAG));
   }
@@ -462,8 +465,8 @@ public final class DtoConverter {
   }
 
   /**
-   * A game tag with the titles of a DTO, in the languages it has; a DTO with only a title gives
-   * the English one.
+   * A game tag with the titles of a DTO, in the languages it has; a DTO with no titles by language
+   * gives its title as the English one.
    */
   public @NotNull GameTag toGameTag(@NotNull GameTagDto dto, @NotNull GameTag existing) {
     Map<Integer, String> titles = new TreeMap<>();
@@ -473,12 +476,21 @@ public final class DtoConverter {
     for (int language : GameTag.OFFERED_LANGUAGES) {
       titles.putIfAbsent(language, "");
     }
-    titles.put(42, text(dto.englishTitle() != null ? dto.englishTitle() : dto.title()));
-    titles.put(53, text(dto.germanTitle()));
-    titles.put(49, text(dto.frenchTitle()));
-    titles.put(43, text(dto.spanishTitle()));
-    titles.put(70, text(dto.italianTitle()));
-    titles.put(103, text(dto.dutchTitle()));
+    boolean byLanguage = false;
+    for (GameTagLanguage language : GameTagLanguage.values()) {
+      byLanguage |= dto.title(language) != null;
+    }
+    for (GameTagLanguage language : GameTagLanguage.values()) {
+      String title = dto.title(language);
+      if (language == GameTagLanguage.ENGLISH && !byLanguage) {
+        title = dto.title();
+      }
+      int code = GameTag.code(language);
+      // A language ChessBase doesn't offer only when there's a title in it
+      if (title != null || titles.containsKey(code)) {
+        titles.put(code, text(title));
+      }
+    }
     List<GameTag.Title> list = new ArrayList<>();
     titles.forEach((language, title) -> list.add(new GameTag.Title(language, title)));
     return new GameTag(list);

@@ -1,5 +1,7 @@
 package se.yarin.morphy.convert;
 
+import java.util.Arrays;
+import se.yarin.chess.GameTagLanguage;
 import se.yarin.morphy.model.GameTagDto;
 
 import org.jetbrains.annotations.NotNull;
@@ -29,6 +31,7 @@ public class GameTagDtoConverter {
         gameTag.italianTitle().isEmpty() ? null : gameTag.italianTitle(),
         gameTag.dutchTitle().isEmpty() ? null : gameTag.dutchTitle(),
         gameTag.slovenianTitle().isEmpty() ? null : gameTag.slovenianTitle(),
+        null,
         gameTag.resTitle().isEmpty() ? null : gameTag.resTitle(),
         gameTag.count() > 0 ? gameTag.count() : null);
   }
@@ -42,9 +45,12 @@ public class GameTagDtoConverter {
   public GameTag toGameTag(@NotNull GameTagDto dto) {
     ImmutableGameTag.Builder builder = ImmutableGameTag.builder();
 
-    // Set English title
+    // Set English title, which is the title if there are no titles by language
     if (dto.englishTitle() != null) {
       builder.englishTitle(dto.englishTitle());
+    } else if (dto.title() != null
+        && Arrays.stream(GameTagLanguage.values()).allMatch(language -> dto.title(language) == null)) {
+      builder.englishTitle(dto.title());
     }
 
     // Set German title

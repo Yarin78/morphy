@@ -883,11 +883,13 @@ public class DatabaseWriteTransaction extends DatabaseTransaction {
               extendedHeaderBuilder::blackTeamId);
     }
 
-    if (headerModel.getGameTag() != null || headerModel.getGameTagId() != null) {
+    if (headerModel.getGameTag() != null
+        || headerModel.getGameTagId() != null
+        || !headerModel.getGameTagTitles().isEmpty()) {
       doEntity(
               headerModel,
               extendedHeaderBuilder.build().gameTagId(),
-              m -> GameTag.of(m.getGameTag()),
+              m -> gameAdapter().toGameTag(m),
               gameTagTransaction(),
               extendedHeaderBuilder::gameTagId);
     }

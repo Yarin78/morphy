@@ -261,7 +261,10 @@ public final class WriteTransaction extends DatabaseTransaction {
         entityId(
             EntityType.GAME_TAG,
             h.getGameTagId(),
-            () -> text(h.getGameTag()).isEmpty() ? GameTag.empty() : GameTag.of(h.getGameTag()));
+            () ->
+                !h.getGameTagTitles().isEmpty()
+                    ? GameTag.of(h.getGameTagTitles())
+                    : text(h.getGameTag()).isEmpty() ? GameTag.empty() : GameTag.of(h.getGameTag()));
 
     MoveStreamCodec.Encoded encoded;
     try {

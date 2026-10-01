@@ -536,7 +536,8 @@ final class Versions {
   private static GameTagDto gameTag(GameTagDto t, String english) {
     return new GameTagDto(
         t.id(), english, t.languages(), t.languageCount(), english, t.germanTitle(), t.frenchTitle(),
-        t.spanishTitle(), t.italianTitle(), t.dutchTitle(), t.slovenianTitle(), t.resTitle(),
+        t.spanishTitle(), t.italianTitle(), t.dutchTitle(), t.slovenianTitle(), t.portugueseTitle(),
+        t.resTitle(),
         t.gameCount());
   }
 
@@ -980,7 +981,7 @@ final class Versions {
                   new GameTagDto(
                       t.id(), t.title(), t.languages(), t.languageCount(), t.englishTitle(),
                       "Strategie", "Strat\u00e9gie", t.spanishTitle(), t.italianTitle(), t.dutchTitle(),
-                      t.slovenianTitle(), t.resTitle(), t.gameCount()));
+                      t.slovenianTitle(), t.portugueseTitle(), t.resTitle(), t.gameCount()));
         });
   }
 }

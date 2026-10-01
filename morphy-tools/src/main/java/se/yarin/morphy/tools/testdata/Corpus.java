@@ -163,7 +163,7 @@ final class Corpus {
    */
   static GameTagDto gameTag(String english) {
     return new GameTagDto(
-        null, english, null, null, english, null, null, null, null, null, null, null, null);
+        null, english, null, null, english, null, null, null, null, null, null, null, null, null);
   }
 
   /** Game tags in the ways ChessBase databases use them: a theme, or a kind of position. */

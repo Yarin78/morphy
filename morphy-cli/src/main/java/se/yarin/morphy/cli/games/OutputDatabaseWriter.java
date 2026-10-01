@@ -165,6 +165,7 @@ public class OutputDatabaseWriter extends GameConsumerBase {
             g.italianTitle(),
             g.dutchTitle(),
             g.slovenianTitle(),
+            g.portugueseTitle(),
             g.resTitle(),
             g.gameCount());
   }

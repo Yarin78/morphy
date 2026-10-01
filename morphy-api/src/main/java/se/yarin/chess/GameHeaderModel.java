@@ -3,6 +3,7 @@ package se.yarin.chess;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -31,50 +32,59 @@ import org.jetbrains.annotations.Nullable;
 public class GameHeaderModel {
 
   /** The names of the standard fields, as used by {@link #getField(String)}, in export order. */
-  public static final List<String> STANDARD_FIELDS =
-      List.of(
-          "white",
-          "black",
-          "whiteElo",
-          "blackElo",
-          "whiteEloType",
-          "blackEloType",
-          "whiteTeam",
-          "blackTeam",
-          "whiteTeamNumber",
-          "whiteTeamSeason",
-          "whiteTeamYear",
-          "whiteTeamNation",
-          "blackTeamNumber",
-          "blackTeamSeason",
-          "blackTeamYear",
-          "blackTeamNation",
-          "result",
-          "lineEvaluation",
-          "date",
-          "eco",
-          "round",
-          "subRound",
-          "board",
-          "event",
-          "eventDate",
-          "eventEndDate",
-          "eventSite",
-          "eventCountry",
-          "eventCategory",
-          "eventRounds",
-          "eventType",
-          "eventTimeControl",
-          "eventComplete",
-          "eventTeamTournament",
-          "sourceTitle",
-          "source",
-          "sourceDate",
-          "sourcePublication",
-          "sourceVersion",
-          "sourceQuality",
-          "annotator",
-          "gameTag");
+  public static final List<String> STANDARD_FIELDS = standardFields();
+
+  private static List<String> standardFields() {
+    List<String> names =
+        new ArrayList<>(
+            List.of(
+                "white",
+                "black",
+                "whiteElo",
+                "blackElo",
+                "whiteEloType",
+                "blackEloType",
+                "whiteTeam",
+                "blackTeam",
+                "whiteTeamNumber",
+                "whiteTeamSeason",
+                "whiteTeamYear",
+                "whiteTeamNation",
+                "blackTeamNumber",
+                "blackTeamSeason",
+                "blackTeamYear",
+                "blackTeamNation",
+                "result",
+                "lineEvaluation",
+                "date",
+                "eco",
+                "round",
+                "subRound",
+                "board",
+                "event",
+                "eventDate",
+                "eventEndDate",
+                "eventSite",
+                "eventCountry",
+                "eventCategory",
+                "eventRounds",
+                "eventType",
+                "eventTimeControl",
+                "eventComplete",
+                "eventTeamTournament",
+                "sourceTitle",
+                "source",
+                "sourceDate",
+                "sourcePublication",
+                "sourceVersion",
+                "sourceQuality",
+                "annotator",
+                "gameTag"));
+    for (GameTagLanguage language : GameTagLanguage.values()) {
+      names.add(language.headerField());
+    }
+    return List.copyOf(names);
+  }
 
   private @Nullable String white;
   private @Nullable String black;
@@ -120,6 +130,8 @@ public class GameHeaderModel {
   private @Nullable String sourceQuality;
   private @Nullable String annotator;
   private @Nullable String gameTag;
+  // The game tag's titles by language, for creating a new one; see GameTagLanguage
+  private final EnumMap<GameTagLanguage, String> gameTagTitles = new EnumMap<>(GameTagLanguage.class);
 
   // Ids of existing entities in the database the header belongs to; null if not bound
   private @Nullable Long whiteId;
@@ -497,6 +509,27 @@ public class GameHeaderModel {
     this.gameTag = gameTag;
   }
 
+  /**
+   * The game tag's title in a language. A database creating a new game tag gives it these titles,
+   * or makes {@link #getGameTag()} its English one if there are none.
+   */
+  public @Nullable String getGameTagTitle(@NotNull GameTagLanguage language) {
+    return gameTagTitles.get(language);
+  }
+
+  public void setGameTagTitle(@NotNull GameTagLanguage language, @Nullable String title) {
+    if (title == null) {
+      gameTagTitles.remove(language);
+    } else {
+      gameTagTitles.put(language, title);
+    }
+  }
+
+  /** The game tag's titles that are set, by language. */
+  public @NotNull Map<GameTagLanguage, String> getGameTagTitles() {
+    return Collections.unmodifiableMap(gameTagTitles);
+  }
+
   // ── Entity ids ──────────────────────────────────────────────────────────
 
   public @Nullable Long getWhiteId() {
@@ -657,7 +690,10 @@ public class GameHeaderModel {
       case "sourceQuality" -> sourceQuality;
       case "annotator" -> annotator;
       case "gameTag" -> gameTag;
-      default -> extraTags.get(name);
+      default -> {
+        GameTagLanguage language = GameTagLanguage.ofHeaderField(name);
+        yield language != null ? gameTagTitles.get(language) : extraTags.get(name);
+      }
     };
   }
 
@@ -712,7 +748,14 @@ public class GameHeaderModel {
       case "sourceQuality" -> sourceQuality = cast(name, value, String.class);
       case "annotator" -> annotator = cast(name, value, String.class);
       case "gameTag" -> gameTag = cast(name, value, String.class);
-      default -> setExtraTag(name, cast(name, value, String.class));
+      default -> {
+        GameTagLanguage language = GameTagLanguage.ofHeaderField(name);
+        if (language != null) {
+          setGameTagTitle(language, cast(name, value, String.class));
+        } else {
+          setExtraTag(name, cast(name, value, String.class));
+        }
+      }
     }
   }
 

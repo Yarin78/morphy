@@ -16,6 +16,7 @@ import se.yarin.morphy.chessbase.annotations.StatisticalAnnotation;
 import se.yarin.morphy.text.*;
 
 import java.util.EnumSet;
+import java.util.Map;
 import se.yarin.morphy.chessbase.*;
 import se.yarin.morphy.chessbase.text.*;
 import se.yarin.morphy.chessbase.TournamentType;
@@ -198,7 +199,13 @@ public class GameAdapter {
     model.setAnnotatorId((long) annotator.id());
     if (gameTag != null) {
       model.setGameTagId((long) gameTag.id());
-      model.setGameTag(gameTag.englishTitle());
+      model.setGameTag(gameTag.title());
+      for (GameTagLanguage language : GameTagLanguage.values()) {
+        String title = gameTagTitle(gameTag, language);
+        if (title != null && !title.isEmpty()) {
+          model.setGameTagTitle(language, title);
+        }
+      }
     }
 
     model.setLineEvaluation(game.lineEvaluation());
@@ -396,6 +403,46 @@ public class GameAdapter {
       builder.quality(sourceQuality(headerModel.getSourceQuality()));
     }
     return builder.build();
+  }
+
+  /**
+   * A game tag with the titles the header has by language, or with its title in English if it has
+   * none. There's no room for a Portuguese title.
+   */
+  public @NotNull GameTag toGameTag(@NotNull GameHeaderModel headerModel) {
+    Map<GameTagLanguage, String> titles = headerModel.getGameTagTitles();
+    if (titles.isEmpty()) {
+      return GameTag.of(headerModel.getGameTag() == null ? "" : headerModel.getGameTag());
+    }
+    ImmutableGameTag.Builder builder = ImmutableGameTag.builder();
+    titles.forEach(
+        (language, title) -> {
+          switch (language) {
+            case ENGLISH -> builder.englishTitle(title);
+            case GERMAN -> builder.germanTitle(title);
+            case FRENCH -> builder.frenchTitle(title);
+            case SPANISH -> builder.spanishTitle(title);
+            case ITALIAN -> builder.italianTitle(title);
+            case DUTCH -> builder.dutchTitle(title);
+            case SLOVENIAN -> builder.slovenianTitle(title);
+            case PORTUGUESE -> {}
+          }
+        });
+    return builder.build();
+  }
+
+  /** A game tag's title in a language; null for one a v1 game tag can't have. */
+  private static @Nullable String gameTagTitle(@NotNull GameTag gameTag, @NotNull GameTagLanguage language) {
+    return switch (language) {
+      case ENGLISH -> gameTag.englishTitle();
+      case GERMAN -> gameTag.germanTitle();
+      case FRENCH -> gameTag.frenchTitle();
+      case SPANISH -> gameTag.spanishTitle();
+      case ITALIAN -> gameTag.italianTitle();
+      case DUTCH -> gameTag.dutchTitle();
+      case SLOVENIAN -> gameTag.slovenianTitle();
+      case PORTUGUESE -> null;
+    };
   }
 
   /** A team with the details the header has for white's or black's. */

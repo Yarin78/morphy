@@ -3,7 +3,12 @@ package se.yarin.morphy.cb2.entities;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+import se.yarin.chess.GameTagLanguage;
+import se.yarin.morphy.chessbase.Nation;
 
 /**
  * A game tag, which is also the title of a guiding text or an analysis: one title per language.
@@ -50,6 +55,36 @@ public record GameTag(@NotNull List<Title> titles) implements Entity {
       titles.add(new Title(language, text));
     }
     return new GameTag(titles);
+  }
+
+  /**
+   * A game tag with titles in several languages, and the empty entries ChessBase writes for the
+   * other languages it offers.
+   */
+  public static @NotNull GameTag of(@NotNull Map<GameTagLanguage, String> titles) {
+    Map<Integer, String> byCode = new TreeMap<>();
+    for (int offered : OFFERED_LANGUAGES) {
+      byCode.put(offered, "");
+    }
+    titles.forEach((language, text) -> byCode.put(code(language), text));
+    List<Title> list = new ArrayList<>();
+    byCode.forEach((language, text) -> list.add(new Title(language, text)));
+    return new GameTag(list);
+  }
+
+  /** The code of a language: the code of the nation that stands for it. */
+  public static int code(@NotNull GameTagLanguage language) {
+    return Nation.fromIOC(language.nation()).ordinal();
+  }
+
+  /** The language with a code; null if it's none of GameTagLanguage. */
+  public static @Nullable GameTagLanguage language(int code) {
+    for (GameTagLanguage language : GameTagLanguage.values()) {
+      if (code(language) == code) {
+        return language;
+      }
+    }
+    return null;
   }
 
   /** A game tag with an English title. */
