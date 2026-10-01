@@ -1,4 +1,28 @@
-import type { DateParts } from './tournament';
+/** A date whose parts may be unknown: 0 means not set. */
+export interface DateParts {
+  year: number;
+  month: number;
+  day: number;
+}
+
+/** A date as a 'yyyy.mm.dd' tag, with '?' for the unknown parts. */
+export function formatDateTag(date: DateParts | undefined): string {
+  const part = (value: number | undefined, width: number) =>
+    value ? String(value).padStart(width, '0') : '?'.repeat(width);
+  return `${part(date?.year, 4)}.${part(date?.month, 2)}.${part(date?.day, 2)}`;
+}
+
+/** A 'yyyy.mm.dd' tag, with '?' for unknown parts; undefined if no part is known. */
+export function parseDateTag(value: string): DateParts | undefined {
+  const [y, m, d] = value.split('.').map((part) => (/^\d+$/.test(part ?? '') ? parseInt(part, 10) : 0));
+  const date = { year: y ?? 0, month: m ?? 0, day: d ?? 0 };
+  return date.year || date.month || date.day ? date : undefined;
+}
+
+/** A date for a tag that's left out when nothing is known of the date: '' rather than '????.??.??'. */
+export function dateTag(date: DateParts | undefined): string {
+  return date && (date.year || date.month || date.day) ? formatDateTag(date) : '';
+}
 
 /**
  * A date as typed in a date field: yyyy-mm-dd, or with the day or the month and day left out when

@@ -1,5 +1,5 @@
 import { TIME_CONTROLS, TOURNAMENT_TYPES } from '../utils/tournament';
-import { dateTextError, formatDateText, parseDateText } from '../utils/dateText';
+import { dateTextError, formatDateText, parseDateText } from '../utils/date';
 import type { TournamentInfo, TournamentService } from '../utils/tournament';
 import { DateField } from './DateField';
 import { EntityDetailsDialog } from './EntityDetailsDialog';

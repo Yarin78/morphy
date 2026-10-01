@@ -1,6 +1,6 @@
 import { SOURCE_QUALITIES } from '../utils/source';
 import type { SourceInfo, SourceService } from '../utils/source';
-import { dateTextError, formatDateText, parseDateText } from '../utils/dateText';
+import { dateTextError, formatDateText, parseDateText } from '../utils/date';
 import { DateField } from './DateField';
 import { EntityDetailsDialog } from './EntityDetailsDialog';
 

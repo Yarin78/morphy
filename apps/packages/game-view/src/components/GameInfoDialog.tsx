@@ -39,6 +39,13 @@ interface GameInfoDialogProps {
 
 type InputProps = React.InputHTMLAttributes<HTMLInputElement> & { ref?: React.Ref<HTMLInputElement> };
 
+/** Opens the details of an entity the game refers to; disabled when there's none. */
+const DetailsButton: React.FC<{ onClick: () => void; disabled: boolean }> = ({ onClick, disabled }) => (
+  <button type="button" className="details-button" onClick={onClick} disabled={disabled}>
+    Details…
+  </button>
+);
+
 /** The fields with problems that only "More info" shows. */
 const MORE_INFO_FIELDS = ['whiteFideId', 'blackFideId', 'subRound', 'board'] as const;
 
@@ -355,14 +362,7 @@ export const GameInfoDialog: React.FC<GameInfoDialogProps> = ({ initial, service
                   placeholder: 'yyyy',
                 })}
               </label>
-              <button
-                type="button"
-                className="tournament-details-button"
-                onClick={() => setDetailsOpen('tournament')}
-                disabled={!info.tournament}
-              >
-                Details…
-              </button>
+              <DetailsButton onClick={() => setDetailsOpen('tournament')} disabled={!info.tournament} />
             </>
           )}
         </fieldset>
@@ -424,14 +424,7 @@ export const GameInfoDialog: React.FC<GameInfoDialogProps> = ({ initial, service
               <fieldset className="game-info-row game-info-source">
                 <legend>Source</legend>
                 <SourceField value={info.source} onChange={setSource} service={sourceService} />
-                <button
-                  type="button"
-                  className="tournament-details-button"
-                  onClick={() => setDetailsOpen('source')}
-                  disabled={!info.source}
-                >
-                  Details…
-                </button>
+                <DetailsButton onClick={() => setDetailsOpen('source')} disabled={!info.source} />
               </fieldset>
             </div>
 
@@ -446,14 +439,7 @@ export const GameInfoDialog: React.FC<GameInfoDialogProps> = ({ initial, service
                     service={teamService}
                     label={`${color === 'white' ? 'White' : 'Black'} team`}
                   />
-                  <button
-                    type="button"
-                    className="tournament-details-button"
-                    onClick={() => setDetailsOpen(color)}
-                    disabled={!info[`${color}Team`]}
-                  >
-                    Details…
-                  </button>
+                  <DetailsButton onClick={() => setDetailsOpen(color)} disabled={!info[`${color}Team`]} />
                 </div>
               ))}
             </fieldset>
@@ -461,14 +447,7 @@ export const GameInfoDialog: React.FC<GameInfoDialogProps> = ({ initial, service
             <fieldset className="game-info-row game-info-game-tag">
               <legend>Game Tag</legend>
               <GameTagField value={info.gameTag} onChange={setGameTag} service={gameTagService} />
-              <button
-                type="button"
-                className="tournament-details-button"
-                onClick={() => setDetailsOpen('gameTag')}
-                disabled={!info.gameTag}
-              >
-                Details…
-              </button>
+              <DetailsButton onClick={() => setDetailsOpen('gameTag')} disabled={!info.gameTag} />
             </fieldset>
           </>
         )}

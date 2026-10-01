@@ -24,23 +24,24 @@ export const TournamentField: React.FC<TournamentFieldProps> = ({ value, onChang
     }
   };
 
+  const isNew = Boolean(service) && value !== null && value.id == null;
   return (
     <div className="game-info-field game-info-field-tournament">
-      <span className="game-info-label">
-        Name
-        {service && value && value.id == null && <span className="entity-badge entity-badge-new">New</span>}
-      </span>
-      <EntityCombobox<TournamentInfo>
-        text={value?.title ?? ''}
-        onTextChange={handleTextChange}
-        search={service?.search}
-        onChoose={onChange}
-        optionKey={(t) => t.id ?? t.title}
-        optionTitle={(t) => t.title}
-        optionSubtitle={(t) => [tournamentSubtitle(t), gameCountText(t.gameCount)].filter(Boolean).join(' · ')}
-        newWhat="tournament"
-        inputProps={{ 'aria-label': 'Tournament name' }}
-      />
+      <span className="game-info-label">Name</span>
+      <div className={`entity-input${isNew ? ' with-badge' : ''}`}>
+        <EntityCombobox<TournamentInfo>
+          text={value?.title ?? ''}
+          onTextChange={handleTextChange}
+          search={service?.search}
+          onChoose={onChange}
+          optionKey={(t) => t.id ?? t.title}
+          optionTitle={(t) => t.title}
+          optionSubtitle={(t) => [tournamentSubtitle(t), gameCountText(t.gameCount)].filter(Boolean).join(' · ')}
+          newWhat="tournament"
+          inputProps={{ 'aria-label': 'Tournament name' }}
+        />
+        {isNew && <span className="entity-badge entity-badge-new entity-badge-inline">New</span>}
+      </div>
     </div>
   );
 };

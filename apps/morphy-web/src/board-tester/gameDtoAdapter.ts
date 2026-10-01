@@ -318,10 +318,8 @@ export function gameDtoToPgn(game: GameDto): string {
  * copy of `base` (preserving anything the adapter doesn't understand, e.g. ids of unrelated
  * entities). Used to build the request body for createGame/replaceGame after editing.
  *
- * NOT YET VERIFIED against a real backend: whether sending a name-only PlayerDto/TournamentDto
- * (id: null) is enough for morphy-service's find-or-create to kick in for a *new* game is
- * confirmed by Database#addGame's contract, but the exact minimal shape wasn't exercised
- * against a live database while writing this - see the plan's open items.
+ * An entity with an id binds the game to that existing one; without one, the server finds the
+ * entity with these fields, or creates it.
  */
 export function pgnToGamePatch(chess: Chess, base: GameDto): GameDto {
   const tagValues = chess.header().valueMap();

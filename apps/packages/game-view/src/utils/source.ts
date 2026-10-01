@@ -1,5 +1,5 @@
-import { formatDateTag, parseDateTag } from './tournament';
-import type { DateParts } from './tournament';
+import { dateTag, parseDateTag } from './date';
+import type { DateParts } from './date';
 
 /**
  * The source of a game, such as the database or book it's from, as edited in the Edit Game Info
@@ -51,7 +51,6 @@ export const SOURCE_TAGS = {
   quality: 'SourceQuality',
 } as const;
 
-const hasDate = (date?: DateParts) => Boolean(date && (date.year || date.month || date.day));
 
 /** The tags for a source: every tag in SOURCE_TAGS, '' for those not set. */
 export function sourceToTags(s: SourceInfo | null): Record<string, string> {
@@ -59,8 +58,8 @@ export function sourceToTags(s: SourceInfo | null): Record<string, string> {
     [SOURCE_TAGS.id]: s?.id != null ? String(s.id) : '',
     [SOURCE_TAGS.title]: s?.title ?? '',
     [SOURCE_TAGS.publisher]: s?.publisher ?? '',
-    [SOURCE_TAGS.publication]: hasDate(s?.publication) ? formatDateTag(s?.publication) : '',
-    [SOURCE_TAGS.date]: hasDate(s?.date) ? formatDateTag(s?.date) : '',
+    [SOURCE_TAGS.publication]: dateTag(s?.publication),
+    [SOURCE_TAGS.date]: dateTag(s?.date),
     [SOURCE_TAGS.version]: s?.version ? String(s.version) : '',
     [SOURCE_TAGS.quality]: s?.quality ?? '',
   };

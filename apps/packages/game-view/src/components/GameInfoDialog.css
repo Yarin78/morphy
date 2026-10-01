@@ -125,14 +125,11 @@
   width: 100%;
 }
 
-.game-info-tournament .tournament-details-button {
+.game-info-tournament .details-button {
   grid-column: span 2;
   align-self: end;
   /* As wide as every other Details button, at the end of the row */
   justify-self: end;
-  /* As tall as the inputs beside it */
-  box-sizing: border-box;
-  height: 2.25rem;
 }
 
 .game-info-dialog input[readonly] {
@@ -251,7 +248,10 @@
   width: 100%;
 }
 
-.tournament-details-button {
+/* Opens the details of an entity the game refers to; as tall as the inputs beside it */
+.details-button {
+  box-sizing: border-box;
+  height: 2.25rem;
   font: inherit;
   font-size: 0.85rem;
   padding: 0.35rem 0.6rem;
@@ -263,11 +263,11 @@
   white-space: nowrap;
 }
 
-.tournament-details-button:hover:not(:disabled) {
+.details-button:hover:not(:disabled) {
   background: #c9b8a6;
 }
 
-.tournament-details-button:disabled {
+.details-button:disabled {
   opacity: 0.5;
   cursor: default;
 }
@@ -410,12 +410,14 @@
 
 /* A badge inside a field, at its right end */
 .game-info-field-player,
-.game-info-field-team {
+.game-info-field-team,
+.entity-input {
   position: relative;
 }
 
 .game-info-field-player.with-badge input,
-.game-info-field-team.with-badge input {
+.game-info-field-team.with-badge input,
+.entity-input.with-badge input {
   padding-right: 3.2rem;
 }
 
@@ -611,12 +613,6 @@
   height: 1.05rem;
 }
 
-.rating-type-nation {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-}
-
 /* A dropdown whose options have icons */
 .icon-select {
   position: relative;
@@ -775,11 +771,6 @@ img.elo-flag {
   min-width: 0;
 }
 
-.game-info-source .tournament-details-button {
-  box-sizing: border-box;
-  height: 2.25rem;
-}
-
 /* The source dialog's fields */
 .source-field-title {
   flex: 3 1 13rem;
@@ -834,11 +825,6 @@ img.elo-flag {
 
 .game-info-field-team input {
   width: 100%;
-}
-
-.game-info-team-row .tournament-details-button {
-  box-sizing: border-box;
-  height: 2.25rem;
 }
 
 /* The team dialog's fields */
@@ -995,11 +981,6 @@ img.elo-flag {
 /* A language an existing tag has no title in */
 .game-tag-untitled {
   color: #8a7a68;
-}
-
-.game-info-game-tag .tournament-details-button {
-  box-sizing: border-box;
-  height: 2.25rem;
 }
 
 /* The game tag dialog: a title per language, each after its flag and name */

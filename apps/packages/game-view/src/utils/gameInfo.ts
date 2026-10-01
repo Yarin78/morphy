@@ -1,5 +1,5 @@
 import type { Chess } from '@jackstenglein/chess';
-import { dateTextError, formatDateText, parseDateText } from './dateText';
+import { dateTextError, formatDateTag, formatDateText, parseDateTag, parseDateText } from './date';
 import { decodeEloType, ELO_TYPE_TAGS, encodeEloType } from './eloType';
 import type { EloTypeInfo } from './eloType';
 import { FIDE_ID_TAGS, normalizePlayerName, PLAYER_ID_TAGS } from './player';
@@ -17,7 +17,7 @@ import {
   toPgnTimeControl,
 } from './timeControl';
 import type { GameTagInfo, GameTagService } from './gameTag';
-import { formatDateTag, parseDateTag, tournamentFromTags, tournamentToTags } from './tournament';
+import { tournamentFromTags, tournamentToTags } from './tournament';
 import type { TournamentInfo, TournamentService } from './tournament';
 
 /**

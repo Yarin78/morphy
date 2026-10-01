@@ -1,9 +1,5 @@
-/** A date whose parts may be unknown: 0 means not set. */
-export interface DateParts {
-  year: number;
-  month: number;
-  day: number;
-}
+import { dateTag, parseDateTag } from './date';
+import type { DateParts } from './date';
 
 /**
  * A game's tournament, as edited in the Edit Game Info dialog. With an id, it's an existing
@@ -78,28 +74,14 @@ export const TOURNAMENT_TAGS = {
   teamTournament: 'EventTeam',
 } as const;
 
-export function formatDateTag(date: DateParts | undefined): string {
-  const part = (value: number | undefined, width: number) =>
-    value ? String(value).padStart(width, '0') : '?'.repeat(width);
-  return `${part(date?.year, 4)}.${part(date?.month, 2)}.${part(date?.day, 2)}`;
-}
-
-/** A 'yyyy.mm.dd' tag, with '?' for unknown parts; undefined if no part is known. */
-export function parseDateTag(value: string): DateParts | undefined {
-  const [y, m, d] = value.split('.').map((part) => (/^\d+$/.test(part ?? '') ? parseInt(part, 10) : 0));
-  const date = { year: y ?? 0, month: m ?? 0, day: d ?? 0 };
-  return date.year || date.month || date.day ? date : undefined;
-}
-
 /** The tags for a tournament: every tag in TOURNAMENT_TAGS, '' for those not set. */
 export function tournamentToTags(t: TournamentInfo | null): Record<string, string> {
-  const hasDate = (date?: DateParts) => Boolean(date && (date.year || date.month || date.day));
   return {
     [TOURNAMENT_TAGS.id]: t?.id != null ? String(t.id) : '',
     [TOURNAMENT_TAGS.title]: t?.title ?? '',
     [TOURNAMENT_TAGS.place]: t?.place ?? '',
-    [TOURNAMENT_TAGS.startDate]: hasDate(t?.startDate) ? formatDateTag(t?.startDate) : '',
-    [TOURNAMENT_TAGS.endDate]: hasDate(t?.endDate) ? formatDateTag(t?.endDate) : '',
+    [TOURNAMENT_TAGS.startDate]: dateTag(t?.startDate),
+    [TOURNAMENT_TAGS.endDate]: dateTag(t?.endDate),
     [TOURNAMENT_TAGS.nation]: t?.nation ?? '',
     [TOURNAMENT_TAGS.type]: t?.type ?? '',
     [TOURNAMENT_TAGS.timeControl]: t?.timeControl ?? '',

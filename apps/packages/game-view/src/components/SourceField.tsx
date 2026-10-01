@@ -24,23 +24,24 @@ export const SourceField: React.FC<SourceFieldProps> = ({ value, onChange, servi
     }
   };
 
+  const isNew = Boolean(service) && value !== null && value.id == null;
   return (
     <div className="game-info-field game-info-field-source">
-      <span className="game-info-label">
-        Title
-        {service && value && value.id == null && <span className="entity-badge entity-badge-new">New</span>}
-      </span>
-      <EntityCombobox<SourceInfo>
-        text={value?.title ?? ''}
-        onTextChange={handleTextChange}
-        search={service?.search}
-        onChoose={onChange}
-        optionKey={(s) => s.id ?? s.title}
-        optionTitle={(s) => s.title}
-        optionSubtitle={(s) => [sourceSubtitle(s), gameCountText(s.gameCount)].filter(Boolean).join(' · ')}
-        newWhat="source"
-        inputProps={{ 'aria-label': 'Source title' }}
-      />
+      <span className="game-info-label">Title</span>
+      <div className={`entity-input${isNew ? ' with-badge' : ''}`}>
+        <EntityCombobox<SourceInfo>
+          text={value?.title ?? ''}
+          onTextChange={handleTextChange}
+          search={service?.search}
+          onChoose={onChange}
+          optionKey={(s) => s.id ?? s.title}
+          optionTitle={(s) => s.title}
+          optionSubtitle={(s) => [sourceSubtitle(s), gameCountText(s.gameCount)].filter(Boolean).join(' · ')}
+          newWhat="source"
+          inputProps={{ 'aria-label': 'Source title' }}
+        />
+        {isNew && <span className="entity-badge entity-badge-new entity-badge-inline">New</span>}
+      </div>
     </div>
   );
 };

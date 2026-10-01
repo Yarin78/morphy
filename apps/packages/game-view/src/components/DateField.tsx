@@ -1,6 +1,6 @@
 import { useRef } from 'react';
 import { IoCalendarOutline } from 'react-icons/io5';
-import { parseDateText } from '../utils/dateText';
+import { parseDateText } from '../utils/date';
 
 interface DateFieldProps {
   /** The date as typed: yyyy-mm-dd, yyyy-mm or yyyy; see dateText. */
