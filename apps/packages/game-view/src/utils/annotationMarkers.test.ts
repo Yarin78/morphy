@@ -13,7 +13,7 @@ describe('annotation markers', () => {
       { type: 'squares', squares: [{ color: 'red', square: 'd5' }] },
       { type: 'arrows', arrows: [{ color: 'green', from: 'e2', to: 'e4' }] },
     ];
-    expect(annotationMarkers(shown, 'ENG', hasGlyph)).toEqual([]);
+    expect(annotationMarkers(shown, hasGlyph)).toEqual([]);
   });
 
   it('name the kind of the others, with their data as details', () => {
@@ -23,7 +23,6 @@ describe('annotation markers', () => {
         { type: 'eval', eval: 53, evalType: 0, depth: 22 },
         { type: 'medals', medals: ['NOVELTY', 'TACTICS'] },
       ],
-      'ENG',
       hasGlyph
     );
     expect(markers.map((m) => m.label)).toEqual(['clock', 'eval', 'medal']);
@@ -31,22 +30,20 @@ describe('annotation markers', () => {
     expect(markers[2].details).toBe('medals\nmedals: ["NOVELTY","TACTICS"]');
   });
 
-  it('mark text in another language and symbols without a glyph', () => {
+  it('mark symbols without a glyph, but not text in any language', () => {
     const markers = annotationMarkers(
       [
         { type: 'textAfter', text: 'Gut', language: 'GER' },
         { type: 'symbols', nags: [1, 146] },
       ],
-      'ENG',
       hasGlyph
     );
-    expect(markers.map((m) => m.label)).toEqual(['GER', '$146']);
+    expect(markers.map((m) => m.label)).toEqual(['$146']);
   });
 
   it('cut binary data short', () => {
     const [marker] = annotationMarkers(
       [{ type: 'raw', annotationType: 26, data: 'A'.repeat(100), invalid: false }],
-      'ENG',
       hasGlyph
     );
     expect(marker.details).toContain('data: 75 bytes, base64 ' + 'A'.repeat(48) + '…');

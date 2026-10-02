@@ -1,6 +1,5 @@
 import { NAG_PALETTE, nagInfo, nagsOf } from '../model/nags';
 import type { Annotation } from '../model/annotations';
-import './NagBar.css';
 
 interface NagBarProps {
   /** The annotations of the current move, or null at the start position, which has no move. */
@@ -10,15 +9,16 @@ interface NagBarProps {
 }
 
 /**
- * A bar of the NAGs that can be given a move: comments on the move, evaluations and prefixes.
+ * The NAGs that can be given a move, for the bar below the notation, a group for each type:
+ * comments on the move, evaluations and prefixes.
  * Clicking one the current move has takes it away again.
  */
 export const NagBar: React.FC<NagBarProps> = ({ annotations, onToggle }) => {
   const current = annotations ? nagsOf(annotations) : [];
   return (
-    <div className="nag-bar" role="toolbar" aria-label="Symbols">
+    <>
       {NAG_PALETTE.map((group) => (
-        <div key={group.type} className="nag-bar-group">
+        <div key={group.type} className="notation-bar-group" role="group" aria-label="Symbols">
           {group.nags.map((nag) => {
             const info = nagInfo(nag)!;
             const active = current.includes(nag);
@@ -40,6 +40,6 @@ export const NagBar: React.FC<NagBarProps> = ({ annotations, onToggle }) => {
           })}
         </div>
       ))}
-    </div>
+    </>
   );
 };

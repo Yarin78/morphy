@@ -12,6 +12,7 @@ interface ConversionState {
   moveMap: Map<MoveNode, number>; // Map move -> global move index
   reverseMoveMap: Map<number, MoveNode>; // Map global move index -> move (for reverse lookups)
   currentMove: MoveNode | null; // The move that should be highlighted
+  languages: ReadonlySet<string>; // The languages of the comments that are shown
 }
 
 export type NotationHtmlResult = {
@@ -40,14 +41,14 @@ function hasGlyph(nag: number): boolean {
   return nagInfo(nag) !== undefined;
 }
 
-// TODO: Text in a language is shown only in English, and text in other languages is hidden. Make
-// the language selectable.
-const DISPLAY_LANGUAGE = 'ENG';
-
-/** The text of the comments of a kind, in no language or the one shown. */
-function commentText(annotations: readonly Annotation[], type: 'textBefore' | 'textAfter'): string {
+/** The text of the comments of a kind, in no language or one of those shown. */
+function commentText(
+  annotations: readonly Annotation[],
+  type: 'textBefore' | 'textAfter',
+  languages: ReadonlySet<string>
+): string {
   return filterAnnotations(annotations, type)
-    .filter((a) => !a.language || a.language === DISPLAY_LANGUAGE)
+    .filter((a) => !a.language || languages.has(a.language))
     .map((a) => a.text.trim())
     .filter((t) => t)
     .join(' ');
@@ -158,9 +159,9 @@ function traverseGameTree(
   // Check if line has comments (before or after moves)
   // For the main line (level 0) starting at the first move, also check for game-level comment
   let hasComments = moves.some(
-    (m) => commentText(m.annotations, 'textBefore') || commentText(m.annotations, 'textAfter')
+    (m) => commentText(m.annotations, 'textBefore', state.languages) || commentText(m.annotations, 'textAfter', state.languages)
   );
-  if (level === 0 && parentMoveIndex === 0 && gameComment(game)) {
+  if (level === 0 && parentMoveIndex === 0 && gameComment(game, state.languages)) {
     hasComments = true;
   }
 
@@ -200,7 +201,7 @@ function traverseGameTree(
     const prefix = symbolsHtml(m.annotations, true);
     const moveContent = (prefix ? prefix + ' ' : '') + escapeHtml(formattedMove) + symbolsHtml(m.annotations, false);
 
-    const commentBefore = commentText(m.annotations, 'textBefore');
+    const commentBefore = commentText(m.annotations, 'textBefore', state.languages);
     if (commentBefore) {
       parts.push(
         `<span class="cbcomment" data-inx-mv="${localMoveIndex}" data-linecnt="${lineDepth}">${figurinesToHtml(escapeHtml(commentBefore))}</span>`
@@ -217,12 +218,12 @@ function traverseGameTree(
     }
 
     // The annotations not shown otherwise
-    const markers = annotationMarkersHtml(annotationMarkers(m.annotations, DISPLAY_LANGUAGE, hasGlyph));
+    const markers = annotationMarkersHtml(annotationMarkers(m.annotations, hasGlyph));
     if (markers) {
       parts.push(markers);
     }
 
-    const commentAfter = commentText(m.annotations, 'textAfter');
+    const commentAfter = commentText(m.annotations, 'textAfter', state.languages);
     if (commentAfter) {
       parts.push(
         `<span class="cbcomment" data-inx-mv="${localMoveIndex}" data-linecnt="${lineDepth}">${figurinesToHtml(processCommentWithLink(commentAfter))}</span>`
@@ -270,8 +271,11 @@ function traverseGameTree(
 }
 
 /** The text of the comments of the game as a whole, shown before the first move. */
-function gameComment(game: GameTree): string {
-  return [commentText(game.root.annotations, 'textBefore'), commentText(game.root.annotations, 'textAfter')]
+function gameComment(game: GameTree, languages: ReadonlySet<string>): string {
+  return [
+    commentText(game.root.annotations, 'textBefore', languages),
+    commentText(game.root.annotations, 'textAfter', languages),
+  ]
     .filter((t) => t)
     .join(' ');
 }
@@ -281,13 +285,14 @@ function gameComment(game: GameTree): string {
  *
  * Every move gets the index annotations use for it (see GameTree), as data-global-move-index.
  */
-export function generateNotationHtml(game: GameTree): NotationHtmlResult {
+export function generateNotationHtml(game: GameTree, languages: readonly string[] = []): NotationHtmlResult {
   const state: ConversionState = {
     lineIndexByLevel: new Map(),
     nodeIndex: 0,
     moveMap: new Map(),
     reverseMoveMap: new Map(),
     currentMove: game.currentMove(),
+    languages: new Set(languages),
   };
   game.movesInOrder().forEach((move, index) => {
     state.moveMap.set(move, index);
@@ -295,12 +300,12 @@ export function generateNotationHtml(game: GameTree): NotationHtmlResult {
   });
 
   const parts: string[] = [];
-  const comment = gameComment(game);
+  const comment = gameComment(game, state.languages);
   if (comment) {
     parts.push(`<span class="cbcomment" data-inx-mv="0" data-linecnt="1">${figurinesToHtml(processCommentWithLink(comment))}</span>`);
   }
 
-  const gameMarkers = annotationMarkersHtml(annotationMarkers(game.root.annotations, DISPLAY_LANGUAGE, hasGlyph));
+  const gameMarkers = annotationMarkersHtml(annotationMarkers(game.root.annotations, hasGlyph));
   if (gameMarkers) {
     parts.push(gameMarkers);
   }

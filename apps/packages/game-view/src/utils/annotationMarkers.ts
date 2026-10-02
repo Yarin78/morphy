@@ -35,12 +35,10 @@ export interface AnnotationMarker {
 /**
  * The markers of the annotations of a move that the notation doesn't show.
  *
- * @param shownLanguage the language of the text that is shown; text in others gets a marker
  * @param hasGlyph whether a NAG is shown as a glyph; the others get a marker
  */
 export function annotationMarkers(
   annotations: readonly Annotation[],
-  shownLanguage: string,
   hasGlyph: (nag: number) => boolean
 ): AnnotationMarker[] {
   const markers: AnnotationMarker[] = [];
@@ -48,9 +46,7 @@ export function annotationMarkers(
     switch (annotation.type) {
       case 'textBefore':
       case 'textAfter':
-        if (annotation.language && annotation.language !== shownLanguage) {
-          markers.push({ label: annotation.language, details: details(annotation) });
-        }
+        // Shown, or hidden by the choice of languages
         break;
       case 'symbols': {
         const missing = annotation.nags.filter((nag) => !hasGlyph(nag));

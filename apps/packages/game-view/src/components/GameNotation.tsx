@@ -7,6 +7,8 @@ import './GameNotation.css';
 interface GameNotationProps {
   game: GameTree;
   version: number;
+  /** The languages of the comments that are shown, besides those in no language. */
+  languages: readonly string[];
   onMoveClick: (move: MoveNode) => void;
   onNotationReady?: (reverseMoveMap: Map<number, MoveNode>) => void;
 }
@@ -14,6 +16,7 @@ interface GameNotationProps {
 export const GameNotation: React.FC<GameNotationProps> = ({
   game,
   version,
+  languages,
   onMoveClick,
   onNotationReady,
 }) => {
@@ -27,7 +30,7 @@ export const GameNotation: React.FC<GameNotationProps> = ({
   // Now we also pass the current move so highlighting is done during HTML generation.
   useEffect(() => {
     try {
-      const result = generateNotationHtml(game);
+      const result = generateNotationHtml(game, languages);
       setNotationResult(result);
       // Notify parent component that notation is ready
       if (onNotationReady) {
@@ -40,7 +43,7 @@ export const GameNotation: React.FC<GameNotationProps> = ({
         onNotationReady(new Map());
       }
     }
-  }, [game, version, onNotationReady]);
+  }, [game, version, languages, onNotationReady]);
 
   // Scroll highlighted move into view if necessary when position changes
   useEffect(() => {

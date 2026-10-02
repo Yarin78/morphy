@@ -6,6 +6,9 @@ import { GameHeader } from './GameHeader';
 import { GameInfoDialog } from './GameInfoDialog';
 import { PromotionDialog } from './PromotionDialog';
 import { NagBar } from './NagBar';
+import { LanguagePills } from './LanguagePills';
+import './NotationBar.css';
+import { commentLanguages, defaultLanguages } from '../model/languages';
 import { toggleNag } from '../model/nags';
 import { annotationsToShapes, ANNOTATION_BRUSHES, LAST_MOVE_BRUSH, shapesToAnnotations } from '../utils/drawableConverter';
 import type { DrawShape } from '../utils/drawableConverter';
@@ -410,6 +413,23 @@ export const GameView: React.FC<GameViewProps> = ({
     triggerUpdate();
   }, [game, triggerUpdate]);
 
+  // The languages the comments are in, and those shown: by default the preferred one. The choice
+  // is kept with the game it was made for, so another game starts from its own default.
+  const languages = useMemo(() => commentLanguages(game), [game, version]);
+  const [languageChoice, setLanguageChoice] = useState<{ game: typeof game; shown: string[] } | null>(null);
+  const shownLanguages = useMemo(
+    () => (languageChoice?.game === game ? languageChoice.shown : defaultLanguages(languages)),
+    [languageChoice, game, languages]
+  );
+  const handleLanguageToggle = useCallback((language: string) => {
+    setLanguageChoice({
+      game,
+      shown: shownLanguages.includes(language)
+        ? shownLanguages.filter((l) => l !== language)
+        : [...shownLanguages, language],
+    });
+  }, [game, shownLanguages]);
+
   // !, ? and = toggle those symbols on the current move, when editing
   useNagKeys(isEditMode && !!selectedGame && !editingGameInfo, handleNagToggle);
 
@@ -567,11 +587,19 @@ export const GameView: React.FC<GameViewProps> = ({
             <GameNotation
               game={game}
               version={version}
+              languages={shownLanguages}
               onMoveClick={handleMoveClick}
               onNotationReady={handleNotationReady}
             />
-            {isEditMode && (
-              <NagBar annotations={game.currentMove()?.annotations ?? null} onToggle={handleNagToggle} />
+            {(isEditMode || languages.length > 0) && (
+              <div className="notation-bar">
+                {isEditMode && (
+                  <NagBar annotations={game.currentMove()?.annotations ?? null} onToggle={handleNagToggle} />
+                )}
+                {languages.length > 0 && (
+                  <LanguagePills languages={languages} shown={shownLanguages} onToggle={handleLanguageToggle} />
+                )}
+              </div>
             )}
           </>
         ) : (

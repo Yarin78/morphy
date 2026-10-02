@@ -1,0 +1,75 @@
+/* The bar below the notation: the symbols to give a move, and the languages of the comments */
+.notation-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  row-gap: 0.25rem;
+  padding: 0.3rem 0.4rem;
+  border-top: 1px solid #d4c4b0;
+  background: #ede6dc;
+}
+
+.notation-bar-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+/* A thin line between the groups of symbols */
+.notation-bar-group + .notation-bar-group:not(.notation-bar-languages) {
+  margin-left: 0.35rem;
+  padding-left: 0.35rem;
+  border-left: 1px solid #c9b79c;
+}
+
+/* The languages go to the right */
+.notation-bar-languages {
+  margin-left: auto;
+  gap: 0.25rem;
+}
+
+.nag-bar-button {
+  min-width: 1.5rem;
+  height: 1.6rem;
+  padding: 0 0.2rem;
+  border: none;
+  border-radius: 0.25rem;
+  background: transparent;
+  color: #3d2f1c;
+  font-family: 'Noto Sans Symbols 2', 'Segoe UI Symbol', 'Apple Symbols', 'DejaVu Sans', sans-serif;
+  font-size: 0.95rem;
+  font-weight: bold;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.nag-bar-button:hover:not(:disabled) {
+  background: #dcc9ad;
+}
+
+.nag-bar-button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.language-pill {
+  height: 1.4rem;
+  padding: 0 0.6rem;
+  border: 1px solid #b9a98a;
+  border-radius: 0.7rem;
+  background: transparent;
+  color: #6b5a3a;
+  font-size: 0.75rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.language-pill:hover {
+  background: #e6d6bf;
+}
+
+.language-pill.active {
+  background: #8b6f47;
+  border-color: #8b6f47;
+  color: white;
+}
