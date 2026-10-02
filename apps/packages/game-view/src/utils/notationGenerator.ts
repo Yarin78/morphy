@@ -48,7 +48,22 @@ const NAG_MAP: Record<number, string> = {
   // Counterplay
   132: '⇆',    // white has moderate counterplay
   133: '⇆',    // black has moderate counterplay
+
+  // Prefixes, shown before the move
+  140: 'Δ',    // with the idea
+  141: '∇',    // directed against
+  142: '⌓',    // better is
+  143: '≤',    // worse is
+  144: '=',    // equivalent is
+  145: 'RR',   // editorial comment
+
+  146: 'N',    // novelty
 };
+
+/** The NAGs that are shown before the move rather than after it. */
+function isPrefix(nag: number): boolean {
+  return nag >= 140 && nag <= 145;
+}
 
 interface ConversionState {
   lineIndexByLevel: Map<number, number>;
@@ -153,9 +168,10 @@ function formatMoveWithNumber(move: MoveNode, moveIndex: number, hasVariationsBe
   }
 }
 
-/** The glyphs of the symbols of a move. */
-function symbolsHtml(annotations: readonly Annotation[]): string {
+/** The glyphs of the symbols of a move, either those before the move or those after it. */
+function symbolsHtml(annotations: readonly Annotation[], prefixes: boolean): string {
   return (findAnnotation(annotations, 'symbols')?.nags ?? [])
+    .filter((nag) => isPrefix(nag) === prefixes)
     .map(nagToGlyph)
     .filter((glyph) => glyph)
     .map((glyph) => `<span class="cbspec-glyph">${escapeHtml(glyph)}</span>`)
@@ -240,7 +256,8 @@ function traverseGameTree(
     if (state.currentMove === m || (state.currentMove === null && level === 0 && i === 0)) {
       moveClasses.push('cbcur-move');
     }
-    const moveContent = escapeHtml(formattedMove) + symbolsHtml(m.annotations);
+    const prefix = symbolsHtml(m.annotations, true);
+    const moveContent = (prefix ? prefix + ' ' : '') + escapeHtml(formattedMove) + symbolsHtml(m.annotations, false);
 
     const commentBefore = commentText(m.annotations, 'textBefore');
     if (commentBefore) {
