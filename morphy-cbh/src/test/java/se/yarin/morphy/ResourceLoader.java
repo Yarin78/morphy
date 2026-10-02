@@ -4,14 +4,40 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.UncheckedIOException;
 import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
+import java.util.stream.Stream;
 
 public class ResourceLoader {
+  private static Path tempRoot;
+
+  /**
+   * Creates a fresh directory under a per-JVM root that is deleted recursively when the JVM exits,
+   * so materialized databases don't pile up in the system temp directory.
+   */
+  private static synchronized Path createTempDirectory(String prefix) throws IOException {
+    if (tempRoot == null) {
+      Path root = Files.createTempDirectory("morphy-test-");
+      Runtime.getRuntime().addShutdownHook(new Thread(() -> deleteRecursively(root)));
+      tempRoot = root;
+    }
+    return Files.createTempDirectory(tempRoot, prefix);
+  }
+
+  private static void deleteRecursively(Path root) {
+    try (Stream<Path> paths = Files.walk(root)) {
+      paths.sorted(Comparator.reverseOrder()).forEach(p -> p.toFile().delete());
+    } catch (IOException | UncheckedIOException ignored) {
+      // Best effort; this runs during JVM shutdown
+    }
+  }
+
   public static ByteBuffer loadResource(String resourceName) throws IOException {
     return loadResource(ResourceLoader.class, resourceName);
   }
@@ -27,7 +53,7 @@ public class ResourceLoader {
 
   public static File materializeStream(String name, InputStream stream, String extension)
       throws IOException {
-    Path tempFile = Files.createTempFile(Files.createTempDirectory(name), name, extension);
+    Path tempFile = Files.createTempFile(createTempDirectory(name), name, extension);
     return materializeStream(stream, tempFile.toFile());
   }
 
@@ -73,7 +99,7 @@ public class ResourceLoader {
       parentPath += "/";
     }
 
-    File targetDirectory = Files.createTempDirectory(databaseName).toFile();
+    File targetDirectory = createTempDirectory(databaseName).toFile();
 
     HashMap<String, File> extensionFiles = new HashMap<>();
     String firstMatchingExtension = null;
@@ -99,7 +125,7 @@ public class ResourceLoader {
     // Copies everything, recursively, in the given resource path to a temporary directory
     // and returns a reference to the directory
 
-    File tempDir = Files.createTempDirectory(null).toFile();
+    File tempDir = createTempDirectory("resources").toFile();
     materializeStreamPathRecursively(resourceRoot, path, tempDir);
     return tempDir;
   }

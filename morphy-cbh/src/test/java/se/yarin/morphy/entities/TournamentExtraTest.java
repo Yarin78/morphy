@@ -1,6 +1,8 @@
 package se.yarin.morphy.entities;
 
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 import se.yarin.chess.Date;
 import se.yarin.morphy.DatabaseMode;
 import se.yarin.morphy.ResourceLoader;
@@ -16,6 +18,8 @@ import java.util.Random;
 import static org.junit.Assert.*;
 
 public class TournamentExtraTest {
+  @Rule public TemporaryFolder tempFolder = new TemporaryFolder();
+
 
   private final Random random = new Random();
 
@@ -153,8 +157,7 @@ public class TournamentExtraTest {
 
   @Test
   public void testUpgradeMissingStorage() throws IOException {
-    File file = File.createTempFile("dummy", ".cbtt");
-    file.delete();
+    File file = new File(tempFolder.getRoot(), "dummy.cbtt");
 
     TournamentExtraStorage.upgrade(file);
 

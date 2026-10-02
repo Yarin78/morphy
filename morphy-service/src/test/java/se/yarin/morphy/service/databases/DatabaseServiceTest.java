@@ -22,6 +22,7 @@ import se.yarin.morphy.service.config.DatabaseConfig;
 class DatabaseServiceTest {
 
   @TempDir Path tempDir;
+  @TempDir Path otherTempDir; // outside the allowed paths
 
   private DatabaseService service;
 
@@ -197,7 +198,7 @@ class DatabaseServiceTest {
     @Test
     @DisplayName("should reject registration outside allowed paths")
     void registerDatabase_PathNotAllowed() throws Exception {
-      File otherDir = Files.createTempDirectory("other").toFile();
+      File otherDir = otherTempDir.toFile();
       File dbFile = new File(otherDir, "test.cbh");
 
       DatabaseCbh.create(dbFile, false).close();
@@ -266,7 +267,7 @@ class DatabaseServiceTest {
     @Test
     @DisplayName("should reject creation in non-allowed path")
     void createDatabase_PathNotAllowed() throws Exception {
-      File otherDir = Files.createTempDirectory("other").toFile();
+      File otherDir = otherTempDir.toFile();
       File dbFile = new File(otherDir, "test.cbh");
 
       IllegalArgumentException exception =

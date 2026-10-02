@@ -27,6 +27,7 @@ class DatabaseServiceIntegrationTest {
   @Autowired private DatabaseService databaseService;
 
   @TempDir static Path tempDir;
+  @TempDir Path outsideDir; // outside the allowed paths
   private static File configFile;
 
   @DynamicPropertySource
@@ -341,7 +342,7 @@ class DatabaseServiceIntegrationTest {
     @Test
     @DisplayName("should validate database paths correctly")
     void pathValidationError() throws Exception {
-      File invalidPath = Files.createTempDirectory("invalid").resolve("test.cbh").toFile();
+      File invalidPath = outsideDir.resolve("test.cbh").toFile();
       DatabaseCbh.create(invalidPath, false).close();
 
       // Try to register database outside allowed paths
