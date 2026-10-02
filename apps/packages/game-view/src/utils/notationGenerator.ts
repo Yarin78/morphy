@@ -4,67 +4,7 @@ import type { Annotation } from '../model/annotations';
 import { filterAnnotations, findAnnotation } from '../model/annotations';
 import { annotationMarkers, annotationMarkersHtml } from './annotationMarkers';
 import { figurinesToHtml } from './figurines';
-
-// NAG (Numeric Annotation Glyph) mapping
-// Based on PGN Standard NAGs: https://en.wikipedia.org/wiki/Portable_Game_Notation#Standard_NAGs
-const NAG_MAP: Record<number, string> = {
-  // Move quality annotations
-  1: '!',      // good move
-  2: '?',      // bad move
-  3: '!!',     // brilliant move
-  4: '??',     // blunder
-  5: '!?',     // interesting move
-  6: '?!',     // dubious move
-
-  // Positional evaluations
-  10: '=',     // equal position
-  13: '∞',     // unclear position
-  14: '⩲',     // white has a slight advantage
-  15: '⩱',     // black has a slight advantage
-  16: '±',     // white has a moderate advantage
-  17: '∓',     // black has a moderate advantage
-  18: '+−',    // white has a decisive advantage
-  19: '−+',    // black has a decisive advantage
-
-  22: '⨀',     // white is in zugzwang
-  23: '⨀',     // black is in zugzwang
-
-  26: '○',     // white has moderate space advantage
-  27: '○',     // black has moderate space advantage
-
-  32: '⟳',     // white has a slight development advantage
-  33: '⟳',     // black has a slight development advantage
-
-  // Initiative
-  36: '↑',     // white has a slight initiative
-  37: '↓',     // black has a slight initiative
-
-  // Time pressure
-  40: '→',     // white has the attack
-  41: '→',     // black has the attack
-
-  44: '⯹',     // white has sufficient compensation for material deficit
-  45: '⯹',     // black has sufficient compensation for material deficit
-
-  // Counterplay
-  132: '⇆',    // white has moderate counterplay
-  133: '⇆',    // black has moderate counterplay
-
-  // Prefixes, shown before the move
-  140: 'Δ',    // with the idea
-  141: '∇',    // directed against
-  142: '⌓',    // better is
-  143: '≤',    // worse is
-  144: '=',    // equivalent is
-  145: 'RR',   // editorial comment
-
-  146: 'N',    // novelty
-};
-
-/** The NAGs that are shown before the move rather than after it. */
-function isPrefix(nag: number): boolean {
-  return nag >= 140 && nag <= 145;
-}
+import { isPrefixNag, nagInfo } from '../model/nags';
 
 interface ConversionState {
   lineIndexByLevel: Map<number, number>;
@@ -93,11 +33,11 @@ function escapeHtml(text: string): string {
  * Converts NAG number to glyph symbol
  */
 function nagToGlyph(nag: number): string {
-  return NAG_MAP[nag] || '';
+  return nagInfo(nag)?.symbol ?? '';
 }
 
 function hasGlyph(nag: number): boolean {
-  return nag in NAG_MAP;
+  return nagInfo(nag) !== undefined;
 }
 
 // TODO: Text in a language is shown only in English, and text in other languages is hidden. Make
@@ -172,7 +112,7 @@ function formatMoveWithNumber(move: MoveNode, moveIndex: number, hasVariationsBe
 /** The glyphs of the symbols of a move, either those before the move or those after it. */
 function symbolsHtml(annotations: readonly Annotation[], prefixes: boolean): string {
   return (findAnnotation(annotations, 'symbols')?.nags ?? [])
-    .filter((nag) => isPrefix(nag) === prefixes)
+    .filter((nag) => isPrefixNag(nag) === prefixes)
     .map(nagToGlyph)
     .filter((glyph) => glyph)
     .map((glyph) => `<span class="cbspec-glyph">${escapeHtml(glyph)}</span>`)

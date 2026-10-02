@@ -5,6 +5,8 @@ import { GameNotation } from './GameNotation';
 import { GameHeader } from './GameHeader';
 import { GameInfoDialog } from './GameInfoDialog';
 import { PromotionDialog } from './PromotionDialog';
+import { NagBar } from './NagBar';
+import { toggleNag } from '../model/nags';
 import { annotationsToShapes, ANNOTATION_BRUSHES, LAST_MOVE_BRUSH, shapesToAnnotations } from '../utils/drawableConverter';
 import type { DrawShape } from '../utils/drawableConverter';
 import { createMovedPieceFen } from '../utils/fenUtils';
@@ -399,6 +401,14 @@ export const GameView: React.FC<GameViewProps> = ({
 
   const handleGameInfoCancel = useCallback(() => setEditingGameInfo(null), []);
 
+  // Adds a symbol to the current move, or takes it away
+  const handleNagToggle = useCallback((nag: number) => {
+    const move = game.currentMove();
+    if (!move) return;
+    move.annotations = toggleNag(move.annotations, nag);
+    triggerUpdate();
+  }, [game, triggerUpdate]);
+
   // Keyboard navigation
   useKeyboardNavigation({
     enabled: !!selectedGame && !editingGameInfo,
@@ -556,6 +566,9 @@ export const GameView: React.FC<GameViewProps> = ({
               onMoveClick={handleMoveClick}
               onNotationReady={handleNotationReady}
             />
+            {isEditMode && (
+              <NagBar annotations={game.currentMove()?.annotations ?? null} onToggle={handleNagToggle} />
+            )}
           </>
         ) : (
           <></>
