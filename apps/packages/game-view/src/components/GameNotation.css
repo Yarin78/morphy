@@ -357,6 +357,23 @@ span.cbcol-marker
    display: inline-block;
 }
 
+/* An annotation the notation doesn't show otherwise; its data is in the tooltip */
+span.cbanno-marker
+{
+   display: inline-block;
+   margin: 0 0.15em;
+   padding: 0 0.35em;
+   border: 1px solid #b9a98a;
+   border-radius: 0.6em;
+   background-color: #f3ead6;
+   color: #6b5a3a;
+   font-size: 0.75em;
+   font-weight: normal;
+   line-height: 1.4;
+   vertical-align: middle;
+   cursor: help;
+}
+
 .game-notation-content .cbmove.cbcur-move {
    background-color: brown;
    color: white;

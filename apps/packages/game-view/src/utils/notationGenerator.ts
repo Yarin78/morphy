@@ -2,6 +2,7 @@ import { GameTree } from '../model/GameTree';
 import type { MoveNode } from '../model/GameTree';
 import type { Annotation } from '../model/annotations';
 import { filterAnnotations, findAnnotation } from '../model/annotations';
+import { annotationMarkers, annotationMarkersHtml } from './annotationMarkers';
 
 // NAG (Numeric Annotation Glyph) mapping
 // Based on PGN Standard NAGs: https://en.wikipedia.org/wiki/Portable_Game_Notation#Standard_NAGs
@@ -77,6 +78,10 @@ function escapeHtml(text: string): string {
  */
 function nagToGlyph(nag: number): string {
   return NAG_MAP[nag] || '';
+}
+
+function hasGlyph(nag: number): boolean {
+  return nag in NAG_MAP;
 }
 
 // TODO: Text in a language is shown only in English, and text in other languages is hidden. Make
@@ -253,6 +258,12 @@ function traverseGameTree(
       parts.push(`<span class="cbcol-marker" data-inx-mv="${localMoveIndex}"> </span>`);
     }
 
+    // The annotations not shown otherwise
+    const markers = annotationMarkersHtml(annotationMarkers(m.annotations, DISPLAY_LANGUAGE, hasGlyph));
+    if (markers) {
+      parts.push(markers);
+    }
+
     const commentAfter = commentText(m.annotations, 'textAfter');
     if (commentAfter) {
       parts.push(
@@ -329,6 +340,11 @@ export function generateNotationHtml(game: GameTree): NotationHtmlResult {
   const comment = gameComment(game);
   if (comment) {
     parts.push(`<span class="cbcomment" data-inx-mv="0" data-linecnt="1">${processCommentWithLink(comment)}</span>`);
+  }
+
+  const gameMarkers = annotationMarkersHtml(annotationMarkers(game.root.annotations, DISPLAY_LANGUAGE, hasGlyph));
+  if (gameMarkers) {
+    parts.push(gameMarkers);
   }
 
   const firstMove = game.firstMove();
