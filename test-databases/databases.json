@@ -12,5 +12,9 @@
     "displayName": "Scratch",
     "path": "test-databases/scratch/scratch.2cbh",
     "createIfMissing": true
+  },
+  "annotations": {
+    "displayName": "Annotation samples (Mega 2026)",
+    "path": "test-databases/annotations/annotations.2cbh"
   }
 }

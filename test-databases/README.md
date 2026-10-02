@@ -32,6 +32,19 @@ tests compare it game by game with the v1 copy, and by the Python tooling in
 [../morphy-py](../morphy-py). `databases.json` registers it with the service,
 read-only.
 
+## annotations
+
+50 games from Mega Database 2026, in the **v2** format, picked to have at least
+three games with every kind of annotation: text before and after moves (also in
+other languages than English), symbols (also before the move), squares, arrows
+(also in uncommon colors), clocks, time spent, time control, evaluations (also
+mate), critical positions, medals, pawn structure, piece path, variation color,
+video stream time, web links and game quotations. Mega has no correspondence
+annotations, and training annotations were not looked for.
+
+It was made with `PickAnnotatedGames` in morphy-tools, for testing how the
+frontend shows annotations.
+
 ## scratch
 
 Not in the repository. Small hand-made databases — `probe`, `reveng1`, `1tour`,
