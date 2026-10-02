@@ -17,7 +17,6 @@ const MARKER_LABELS: Partial<Record<AnnotationType, string>> = {
   medals: 'medal',
   pawnStructure: 'pawns',
   piecePath: 'path',
-  variationColor: 'var color',
   videoStreamTime: 'video',
   webLink: 'link',
   quote: 'quote',
@@ -57,6 +56,7 @@ export function annotationMarkers(
       }
       case 'squares':
       case 'arrows':
+      case 'variationColor':
         break;
       case 'critical':
         // Shown by the color of the move, unless it's of no phase

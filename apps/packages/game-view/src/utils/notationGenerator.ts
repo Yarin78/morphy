@@ -127,6 +127,24 @@ function hasGraphics(annotations: readonly Annotation[]): boolean {
   );
 }
 
+/** A color given to the moves of a line from some move on, see the variationColor annotation. */
+interface LineColor {
+  color: string;
+  onlyMoves: boolean;
+  onlyMainline: boolean;
+}
+
+/** The color a move gives the line from it on, if it has one. */
+function lineColor(annotations: readonly Annotation[]): LineColor | null {
+  const annotation = findAnnotation(annotations, 'variationColor');
+  return annotation && /^#[0-9a-fA-F]{6}$/.test(annotation.color) ? annotation : null;
+}
+
+/** The style attribute giving an element a line's color, through a custom property. */
+function colorStyle(color: LineColor | null): string {
+  return color ? ` style="--line-color: ${color.color}"` : '';
+}
+
 /**
  * Recursively traverses the game tree and generates HTML
  */
@@ -139,9 +157,12 @@ function traverseGameTree(
   lineDepth: number,
   parentMoveIndex: number,
   isLast: boolean,
-  state: ConversionState
+  state: ConversionState,
+  inheritedColor: LineColor | null = null
 ): string {
   const parts: string[] = [];
+  // The color of the moves from here on, if a variation color applies
+  let color = inheritedColor;
 
   // The moves of this line, and the alternatives to each of them
   const moves: MoveNode[] = [];
@@ -185,6 +206,8 @@ function traverseGameTree(
     const m = moves[i];
     const moveVariations = variations[i];
     const globalMoveIndex = state.moveMap.get(m)!;
+    color = lineColor(m.annotations) ?? color;
+    const commentColor = color && !color.onlyMoves ? color : null;
 
     // Check if previous move had variations (for formatting black moves after variations)
     // This applies to both main line and variations (for nested variations)
@@ -206,16 +229,19 @@ function traverseGameTree(
     }
     const prefix = symbolsHtml(m.annotations, true);
     const moveContent = (prefix ? prefix + ' ' : '') + escapeHtml(formattedMove) + symbolsHtml(m.annotations, false);
+    if (color) {
+      moveClasses.push('cbvarcolor');
+    }
 
     const commentBefore = commentText(m.annotations, 'textBefore', state.languages);
     if (commentBefore) {
       parts.push(
-        `<span class="cbcomment" data-inx-mv="${localMoveIndex}" data-linecnt="${lineDepth}">${figurinesToHtml(escapeHtml(commentBefore))}</span>`
+        `<span class="cbcomment${commentColor ? ' cbvarcolor' : ''}"${colorStyle(commentColor)} data-inx-mv="${localMoveIndex}" data-linecnt="${lineDepth}">${figurinesToHtml(escapeHtml(commentBefore))}</span>`
       );
     }
 
     parts.push(
-      `<span class="${moveClasses.join(' ')}" data-inx-mv="${localMoveIndex}" data-linecnt="${lineDepth}" data-nodecnt="${currentNodeIndex}" data-global-move-index="${globalMoveIndex}"${criticalTitle}>${moveContent}</span>`
+      `<span class="${moveClasses.join(' ')}"${colorStyle(color)} data-inx-mv="${localMoveIndex}" data-linecnt="${lineDepth}" data-nodecnt="${currentNodeIndex}" data-global-move-index="${globalMoveIndex}"${criticalTitle}>${moveContent}</span>`
     );
 
     // Add color marker for moves with graphical annotations (colored squares or arrows)
@@ -232,7 +258,7 @@ function traverseGameTree(
     const commentAfter = commentText(m.annotations, 'textAfter', state.languages);
     if (commentAfter) {
       parts.push(
-        `<span class="cbcomment" data-inx-mv="${localMoveIndex}" data-linecnt="${lineDepth}">${figurinesToHtml(processCommentWithLink(commentAfter))}</span>`
+        `<span class="cbcomment${commentColor ? ' cbvarcolor' : ''}"${colorStyle(commentColor)} data-inx-mv="${localMoveIndex}" data-linecnt="${lineDepth}">${figurinesToHtml(processCommentWithLink(commentAfter))}</span>`
       );
     }
 
@@ -261,7 +287,9 @@ function traverseGameTree(
             lineDepth + 1,
             localMoveIndex,
             vIdx === moveVariations.length - 1,
-            state
+            state,
+            // The sublines take the color too, unless it's for its own line only
+            color && !color.onlyMainline ? color : null
           )
         );
         varLineIndex++;
