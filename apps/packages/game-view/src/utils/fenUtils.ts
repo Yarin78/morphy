@@ -1,4 +1,4 @@
-import type { Square } from '@jackstenglein/chess';
+import type { Square } from 'chess.js';
 
 /**
  * Creates a preview FEN string with a piece moved from one square to another.

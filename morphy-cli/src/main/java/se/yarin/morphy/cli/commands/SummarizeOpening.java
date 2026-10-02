@@ -17,7 +17,7 @@ import se.yarin.morphy.cli.games.OutputDatabases;
 import se.yarin.morphy.cli.opening.OpeningRepertoireCache;
 import se.yarin.morphy.cli.queries.FacadeQuerySupport;
 import se.yarin.morphy.pgn.PgnGameMapper;
-import se.yarin.morphy.pgn.PgnMoves;
+import se.yarin.morphy.pgn.GameMovesDtoCodec;
 
 import java.io.File;
 import java.io.IOException;
@@ -36,9 +36,9 @@ public class SummarizeOpening extends BaseCommand implements Callable<Integer> {
   private static final Logger log = LoggerFactory.getLogger(SummarizeOpening.class);
 
   // The synthesized summary carries only plain PGN-representable annotations (comments and NAGs),
-  // so a plain PgnMoves codec is enough to turn it into a GameDto; each target format's own
+  // so a plain GameMovesDtoCodec is enough to turn it into a GameDto; each target format's own
   // Database.addGame(dto) then re-encodes those annotations however it needs to.
-  private static final PgnGameMapper MAPPER = new PgnGameMapper(PgnMoves.PLAIN);
+  private static final PgnGameMapper MAPPER = new PgnGameMapper(GameMovesDtoCodec.PLAIN);
 
   @CommandLine.Parameters(
       index = "1",

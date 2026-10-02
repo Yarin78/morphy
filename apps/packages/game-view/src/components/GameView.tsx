@@ -5,7 +5,8 @@ import { GameNotation } from './GameNotation';
 import { GameHeader } from './GameHeader';
 import { GameInfoDialog } from './GameInfoDialog';
 import { PromotionDialog } from './PromotionDialog';
-import { convertMoveDrawablesToAutoShapes, convertShapesToPGN } from '../utils/drawableConverter';
+import { annotationsToShapes, ANNOTATION_BRUSHES, LAST_MOVE_BRUSH, shapesToAnnotations } from '../utils/drawableConverter';
+import type { DrawShape } from '../utils/drawableConverter';
 import { createMovedPieceFen } from '../utils/fenUtils';
 import { IoPlaySkipBack, IoChevronBack, IoChevronForward, IoPlaySkipForward, IoReload, IoMenu, IoClose } from 'react-icons/io5';
 import type { ChessGame } from '../types/chess';
@@ -14,8 +15,8 @@ import { useKeyboardNavigation } from '../hooks/useKeyboardNavigation';
 import { readGameInfo, writeGameInfo } from '../utils/gameInfo';
 import type { GameInfo } from '../utils/gameInfo';
 import type { GameInfoServices } from '../utils/gameInfo';
-import { Chess } from '@jackstenglein/chess';
-import type { Move, Square } from '@jackstenglein/chess';
+import type { GameTree, MoveNode } from '../model/GameTree';
+import type { Square } from 'chess.js';
 import './GameView.css';
 
 export interface GameViewProps {
@@ -24,16 +25,16 @@ export interface GameViewProps {
   sidebarOpen?: boolean;
   onToggleSidebar?: () => void;
   initialOrientation: 'white' | 'black';
-  initialMoveToShow?: (chess: Chess) => Move | null;
+  initialMoveToShow?: (game: GameTree) => MoveNode | null;
   /** Opens the board read-only instead of the default editable mode. */
   readOnly?: boolean;
   /**
-   * Called with the live (mutable) Chess instance whenever it's (re)created - i.e. whenever
-   * selectedGame changes. GameView never lifts the board state itself, so a caller that wants
-   * to save edits should stash this reference and read chess.renderPgn()/chess.header() from
-   * it on demand (e.g. on a Save button click), rather than re-rendering on every move.
+   * Called with the live (mutable) game whenever it's (re)created - i.e. whenever selectedGame
+   * changes. GameView never lifts the board state itself, so a caller that wants to save edits
+   * should stash this reference and read game.toMoves()/game.tagValues() from it on demand (e.g.
+   * on a Save button click), rather than re-rendering on every move.
    */
-  onChessReady?: (chess: Chess) => void;
+  onGameReady?: (game: GameTree) => void;
   /** Lets the Edit Game Info dialog pick existing players and tournaments. */
   gameInfoServices?: GameInfoServices;
 }
@@ -45,11 +46,11 @@ export const GameView: React.FC<GameViewProps> = ({
   initialOrientation,
   initialMoveToShow,
   readOnly = false,
-  onChessReady,
+  onGameReady,
   gameInfoServices,
 }) => {
   const {
-    chess,
+    game,
     version,
     triggerUpdate,
     getLastMove,
@@ -60,12 +61,12 @@ export const GameView: React.FC<GameViewProps> = ({
     goToStart,
     goToEnd,
     seekToMove,
-    loadPgn,
+    loadGame,
   } = useChessGame();
 
   useEffect(() => {
-    onChessReady?.(chess);
-  }, [chess, onChessReady]);
+    onGameReady?.(game);
+  }, [game, onGameReady]);
 
   const [boardOrientation, setBoardOrientation] = useState<'white' | 'black'>('white');
   const [isEditMode, setIsEditMode] = useState(false);
@@ -74,30 +75,25 @@ export const GameView: React.FC<GameViewProps> = ({
   // The game info being edited in the Edit Game Info dialog, or null when it isn't open
   const [editingGameInfo, setEditingGameInfo] = useState<GameInfo | null>(null);
 
-  // Load PGN when a game is selected and set edit mode
+  // Load the game when one is selected and set edit mode
   useEffect(() => {
     if (selectedGame) {
-      if (selectedGame.pgn) {
-        const success = loadPgn(selectedGame.pgn, initialMoveToShow);
-        if (!success) {
-          console.error('Failed to load PGN for game:', selectedGame.header.id);
-        }
-      } else {
-        // New game with no PGN - load empty position
-        loadPgn('', undefined);
+      const success = loadGame(selectedGame.moves, selectedGame.tags, initialMoveToShow);
+      if (!success) {
+        console.error('Failed to load game:', selectedGame.header.id);
       }
       // A game is editable by default; readOnly opens it in view mode instead.
       setIsEditMode(!readOnly);
     }
-  }, [selectedGame, loadPgn, initialMoveToShow, readOnly]);
+  }, [selectedGame, loadGame, initialMoveToShow, readOnly]);
 
   // Set board orientation from parent when game changes
   useEffect(() => {
     setBoardOrientation(initialOrientation);
   }, [initialOrientation]);
-  const previousMoveRef = useRef<any>(null);
-  const [autoShapes, setAutoShapes] = useState<any[]>([]);
-  const [userDrawnShapes, setUserDrawnShapes] = useState<any[]>([]);
+  const previousMoveRef = useRef<MoveNode | null>(null);
+  const [autoShapes, setAutoShapes] = useState<DrawShape[]>([]);
+  const [userDrawnShapes, setUserDrawnShapes] = useState<DrawShape[]>([]);
   // ReturnType<typeof setTimeout>, not NodeJS.Timeout: this is browser code, and setTimeout's
   // return type depends on which lib is in scope for whoever compiles this file.
   const animationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -109,10 +105,11 @@ export const GameView: React.FC<GameViewProps> = ({
   const resizeStartXRef = useRef<number>(0);
   const resizeStartWidthRef = useRef<number>(0);
   const boardWrapperRef = useRef<HTMLDivElement>(null);
+  const boardContainerRef = useRef<HTMLDivElement>(null);
   const navigationRef = useRef<HTMLDivElement>(null);
-  const [reverseMoveMap, setReverseMoveMap] = useState<Map<number, any>>(new Map());
+  const [reverseMoveMap, setReverseMoveMap] = useState<Map<number, MoveNode>>(new Map());
 
-  const handleMoveClick = useCallback((move: any) => {
+  const handleMoveClick = useCallback((move: MoveNode) => {
     seekToMove(move);
   }, [seekToMove]);
 
@@ -121,10 +118,9 @@ export const GameView: React.FC<GameViewProps> = ({
   const legalMoves = useMemo(() => {
     if (!isEditMode) return new Map<Square, Square[]>();
 
-    const moves = chess.moves();
     const dests = new Map<Square, Square[]>();
 
-    moves.forEach((move) => {
+    game.legalMoves().forEach((move) => {
       if (!dests.has(move.from)) {
         dests.set(move.from, []);
       }
@@ -132,7 +128,7 @@ export const GameView: React.FC<GameViewProps> = ({
     });
 
     return dests;
-  }, [chess, version, isEditMode]);
+  }, [game, version, isEditMode]);
 
   // Handle move execution in edit mode
   const handleMove = useCallback((from: Square, to: Square) => {
@@ -140,18 +136,18 @@ export const GameView: React.FC<GameViewProps> = ({
 
     try {
       // Check if this is a pawn promotion move
-      const piece = chess.get(from);
+      const piece = game.pieceAt(from);
       const isPawn = piece?.type === 'p';
       const isPromotionRank = to[1] === '8' || to[1] === '1';
 
       if (isPawn && isPromotionRank) {
         // Create a preview FEN with the pawn moved to the destination square
-        const previewFen = createMovedPieceFen(chess.fen(), from, to);
+        const previewFen = createMovedPieceFen(game.fen(), from, to);
         setPromotionPreviewFen(previewFen);
         setPromotionPending({ from, to });
       } else {
         // Normal move (not a promotion)
-        const move = chess.move({ from, to });
+        const move = game.play({ from, to });
         if (move) {
           triggerUpdate();
         } else {
@@ -161,14 +157,14 @@ export const GameView: React.FC<GameViewProps> = ({
     } catch (error) {
       console.error('Error making move:', error);
     }
-  }, [chess, isEditMode, triggerUpdate]);
+  }, [game, isEditMode, triggerUpdate]);
 
   // Handle promotion piece selection
   const handlePromotionSelect = useCallback((piece: 'q' | 'r' | 'b' | 'n') => {
     if (!promotionPending) return;
 
     try {
-      const move = chess.move({
+      const move = game.play({
         from: promotionPending.from,
         to: promotionPending.to,
         promotion: piece,
@@ -185,7 +181,7 @@ export const GameView: React.FC<GameViewProps> = ({
       setPromotionPending(null);
       setPromotionPreviewFen(null);
     }
-  }, [chess, promotionPending, triggerUpdate]);
+  }, [game, promotionPending, triggerUpdate]);
 
   // Handle promotion dialog cancellation
   const handlePromotionCancel = useCallback(() => {
@@ -201,13 +197,11 @@ export const GameView: React.FC<GameViewProps> = ({
   // - Same orig/dest with same color: remove (toggle off)
   // - Same orig/dest with different color: replace
   // - New orig/dest: add
-  const handleDrawableChange = useCallback((newShapes: any[]) => {
+  const handleDrawableChange = useCallback((newShapes: DrawShape[]) => {
     if (!isEditMode) return;
 
-    // Filter out the yellow arrow (last move indicator) from new shapes
-    const filteredNewShapes = newShapes.filter(shape =>
-      shape.brush !== 'yellow'
-    );
+    // The last move arrow isn't an annotation
+    const filteredNewShapes = newShapes.filter((shape) => shape.brush !== LAST_MOVE_BRUSH);
 
     // Start with existing user shapes
     const updatedShapes = [...userDrawnShapes];
@@ -235,22 +229,13 @@ export const GameView: React.FC<GameViewProps> = ({
 
     setUserDrawnShapes(updatedShapes);
 
-    // Save to PGN using chess.setDrawables()
-    const currentMove = chess.currentMove();
-    if (currentMove) {
-      const { colorArrows, colorFields } = convertShapesToPGN(updatedShapes);
+    // Keep them as the annotations of the current move, or of the game at the start position
+    const node = game.currentNode();
+    node.annotations = shapesToAnnotations(node.annotations, updatedShapes);
 
-      // setDrawables expects undefined for empty arrays, not empty arrays
-      chess.setDrawables(
-        colorArrows.length > 0 ? colorArrows : undefined,
-        colorFields.length > 0 ? colorFields : undefined,
-        currentMove
-      );
-
-      // Trigger re-render to update notation
-      triggerUpdate();
-    }
-  }, [isEditMode, chess, triggerUpdate, userDrawnShapes]);
+    // Trigger re-render to update notation
+    triggerUpdate();
+  }, [isEditMode, game, triggerUpdate, userDrawnShapes]);
 
   // Resize handler functions
   const handleResizeStart = useCallback((e: React.MouseEvent) => {
@@ -291,6 +276,37 @@ export const GameView: React.FC<GameViewProps> = ({
       };
     }
   }, [isResizing, handleResizeMove, handleResizeEnd]);
+
+  // Drawing with the Option key held down: green, with Ctrl too yellow, and with Shift too red.
+  // Chessground draws only with the right button (or Shift), and picks the color from the
+  // modifiers itself, so a press with Option is handed to it as the right-button press that gives
+  // the color: none for green, Shift for red, and Shift+Alt for yellow. Chessground doesn't look at
+  // the buttons after that, so the rest of the drag draws as usual.
+  useEffect(() => {
+    const container = boardContainerRef.current;
+    if (!container || !isEditMode) return;
+    const handleMouseDown = (e: MouseEvent) => {
+      if (!e.isTrusted || !e.altKey || !(e.target instanceof Element) || !e.target.closest('cg-board')) return;
+      e.stopPropagation();
+      e.preventDefault();
+      const red = e.shiftKey;
+      const yellow = !red && e.ctrlKey;
+      e.target.dispatchEvent(
+        new MouseEvent('mousedown', {
+          bubbles: true,
+          cancelable: true,
+          clientX: e.clientX,
+          clientY: e.clientY,
+          button: 2,
+          buttons: 2,
+          shiftKey: red || yellow,
+          altKey: yellow,
+        })
+      );
+    };
+    container.addEventListener('mousedown', handleMouseDown, { capture: true });
+    return () => container.removeEventListener('mousedown', handleMouseDown, { capture: true });
+  }, [isEditMode]);
 
   // Track mobile state for responsive behavior
   useEffect(() => {
@@ -371,15 +387,15 @@ export const GameView: React.FC<GameViewProps> = ({
   }, [leftPanelWidth, isMobile]);
 
   // Callback to receive notation reverse move map
-  const handleNotationReady = useCallback((moveMap: Map<number, any>) => {
+  const handleNotationReady = useCallback((moveMap: Map<number, MoveNode>) => {
     setReverseMoveMap(moveMap);
   }, []);
 
   const handleGameInfoSave = useCallback((info: GameInfo) => {
-    writeGameInfo(chess, info);
+    writeGameInfo(game, info);
     setEditingGameInfo(null);
     triggerUpdate();
-  }, [chess, triggerUpdate]);
+  }, [game, triggerUpdate]);
 
   const handleGameInfoCancel = useCallback(() => setEditingGameInfo(null), []);
 
@@ -398,9 +414,10 @@ export const GameView: React.FC<GameViewProps> = ({
 
   // This useLayoutEffect manages board shapes (arrows, highlights) in sync with animations.
   // - Yellow arrow: highlights the last move played
-  // - PGN shapes: arrows/highlights stored in the PGN (loaded into userDrawnShapes for editing)
+  // - Annotation shapes: the colored squares and arrows of the move (loaded into userDrawnShapes
+  //   for editing)
   useLayoutEffect(() => {
-    const currentMove = chess.currentMove();
+    const currentMove = game.currentMove();
     const moveChanged = previousMoveRef.current !== currentMove;
     const ANIMATION_DURATION = 200; // Match the animation duration in Chessground
 
@@ -411,18 +428,16 @@ export const GameView: React.FC<GameViewProps> = ({
 
     // Helper to compute shapes for the current position
     const updateShapes = () => {
-      const pgnShapes = convertMoveDrawablesToAutoShapes(currentMove);
+      const annotationShapes = annotationsToShapes(game.currentNode().annotations);
       const lastMove = getLastMove();
-      const yellowArrow = lastMove ? [{
-        orig: lastMove[0],
-        dest: lastMove[1],
-        brush: 'yellow',
-      }] : [];
+      const lastMoveArrow: DrawShape[] = lastMove
+        ? [{ orig: lastMove[0], dest: lastMove[1], brush: LAST_MOVE_BRUSH }]
+        : [];
 
       // userDrawnShapes: editable in edit mode, passed to Chessground's drawable.shapes
-      // autoShapes: read-only shapes (yellow arrow, and PGN shapes in view mode)
-      setUserDrawnShapes(pgnShapes);
-      setAutoShapes(yellowArrow);
+      // autoShapes: read-only shapes (the last move arrow)
+      setUserDrawnShapes(annotationShapes);
+      setAutoShapes(lastMoveArrow);
     };
 
     if (moveChanged) {
@@ -444,7 +459,7 @@ export const GameView: React.FC<GameViewProps> = ({
         clearTimeout(animationTimeoutRef.current);
       }
     };
-  }, [chess, version, getLastMove]); // Removed isEditMode - shapes are loaded the same way regardless
+  }, [game, version, getLastMove]); // Removed isEditMode - shapes are loaded the same way regardless
 
   return (
     <div className="game-view-container" ref={containerRef}>
@@ -453,12 +468,12 @@ export const GameView: React.FC<GameViewProps> = ({
         className="chess-board-wrapper"
         style={{ width: `${leftPanelWidth}px`, minWidth: '320px', maxWidth: 'calc(100% - 8px - 320px)' }}
       >
-        <div className="chess-board-container">
+        <div className="chess-board-container" ref={boardContainerRef}>
           <Chessground
             key={`chessground-${isEditMode ? 'edit' : 'view'}`}
             width={boardSize}
             height={boardSize}
-            fen={promotionPreviewFen || chess.fen()}
+            fen={promotionPreviewFen || game.fen()}
             orientation={boardOrientation}
             coordinates={true}
             viewOnly={!isEditMode}
@@ -477,13 +492,14 @@ export const GameView: React.FC<GameViewProps> = ({
               visible: true,
               eraseOnClick: true,
               autoShapes: [...autoShapes, ...userDrawnShapes],
+              brushes: ANNOTATION_BRUSHES,
               onChange: handleDrawableChange,
             }}
             addDimensionsCssVarsTo={document.body}
           />
           {promotionPending && (
             <PromotionDialog
-              color={chess.turn() === 'w' ? 'white' : 'black'}
+              color={game.turn() === 'w' ? 'white' : 'black'}
               onSelect={handlePromotionSelect}
               onCancel={handlePromotionCancel}
             />
@@ -532,10 +548,10 @@ export const GameView: React.FC<GameViewProps> = ({
       <div className="notation-area">
         {selectedGame ? (
           <>
-            <GameHeader chess={chess} onClick={() => setEditingGameInfo(readGameInfo(chess))} />
+            <GameHeader game={game} onClick={() => setEditingGameInfo(readGameInfo(game))} />
             <div className="notation-divider"></div>
             <GameNotation
-              chess={chess}
+              game={game}
               version={version}
               onMoveClick={handleMoveClick}
               onNotationReady={handleNotationReady}

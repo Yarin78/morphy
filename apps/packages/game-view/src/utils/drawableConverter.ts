@@ -1,188 +1,83 @@
-import type { Move } from '@jackstenglein/chess';
+import type { Annotation, AnnotationColor, ColoredArrow, ColoredSquare } from '../model/annotations';
+import { findAnnotation, replaceAnnotation } from '../model/annotations';
 
 // DrawShape type matching Chessground's autoShapes format
 // Note: This matches the DrawShape interface in react-chessground.d.ts
 // We keep it separate here since module declarations can't export types for import
 type Square = string;
-type Color = 'white' | 'black';
 
-interface DrawShape {
+export interface DrawShape {
   orig: Square;
   dest?: Square;
   brush?: string;
-  label?: { text: string };
   modifiers?: {
     hilite?: boolean;
     lineWidth?: number;
-    [key: string]: any;
+    [key: string]: unknown;
   };
-  piece?: {
-    role: 'king' | 'queen' | 'rook' | 'bishop' | 'knight' | 'pawn';
-    color: Color;
-    scale?: number;
-  };
-  customSvg?: string;
 }
 
-export interface PGNDrawables {
-  colorArrows: string[];
-  colorFields: string[];
+/** The brush of the arrow showing the last move, which is not an annotation. */
+export const LAST_MOVE_BRUSH = 'lastMove';
+
+interface Brush {
+  key: string;
+  color: string;
+  opacity: number;
+  lineWidth: number;
 }
 
 /**
- * Color code mapping between PGN annotation format and Chessground brush colors
- * PGN uses single letter codes: R=Red, G=Green, Y=Yellow, B=Blue
+ * The brushes the board draws annotations with: one per color, named like the color, so a shape
+ * drawn on the board says which color it has. Green, red, blue and yellow are the ones that can be
+ * drawn with the mouse (with shift and alt), the others come from ChessBase.
  */
-const COLOR_CODE_MAP: Record<string, string> = {
-  R: 'red',
-  G: 'green',
-  Y: 'yellow',
-  B: 'blue',
+export const ANNOTATION_BRUSHES: Record<AnnotationColor | typeof LAST_MOVE_BRUSH, Brush> = {
+  green: { key: 'g', color: '#15781B', opacity: 1, lineWidth: 10 },
+  red: { key: 'r', color: '#882020', opacity: 1, lineWidth: 10 },
+  blue: { key: 'b', color: '#003088', opacity: 1, lineWidth: 10 },
+  yellow: { key: 'y', color: '#e68f00', opacity: 1, lineWidth: 10 },
+  cyan: { key: 'c', color: '#0097a7', opacity: 1, lineWidth: 10 },
+  orange: { key: 'o', color: '#e65100', opacity: 1, lineWidth: 10 },
+  none: { key: 'n0', color: '#4a4a4a', opacity: 1, lineWidth: 10 },
+  not_used: { key: 'n1', color: '#4a4a4a', opacity: 1, lineWidth: 10 },
+  unknown_5: { key: 'n5', color: '#4a4a4a', opacity: 1, lineWidth: 10 },
+  unknown_6: { key: 'n6', color: '#4a4a4a', opacity: 1, lineWidth: 10 },
+  [LAST_MOVE_BRUSH]: { key: 'lm', color: '#e6c200', opacity: 0.7, lineWidth: 10 },
 };
 
-const BRUSH_TO_PGN_MAP: Record<string, string> = {
-  'red': 'R',
-  'green': 'G',
-  'yellow': 'Y',
-  'blue': 'B',
-};
-
-// =============================================================================
-// PGN to Chessground (for displaying stored annotations)
-// =============================================================================
-
-/**
- * Converts colorFields (colored squares) from chess move to Chessground DrawShape format
- * @param colorFields Array of strings in format "Rsquare" where R is color code and square is like "d5"
- * @returns Array of DrawShape objects for squares
- */
-function convertColorFields(colorFields: string[]): DrawShape[] {
-  const shapes: DrawShape[] = [];
-
-  for (const field of colorFields) {
-    if (field.length < 2) {
-      console.warn(`Invalid colorField format: ${field}`);
-      continue;
-    }
-
-    const colorCode = field[0];
-    const square = field.slice(1);
-
-    // Validate square format (should be 2 characters like "d5")
-    if (square.length !== 2) {
-      console.warn(`Invalid square format in colorField: ${field}`);
-      continue;
-    }
-
-    const brush = COLOR_CODE_MAP[colorCode] || 'green'; // Default to green if unknown
-
-    shapes.push({
-      orig: square,
-      brush,
-      modifiers: {
-        hilite: true,
-      },
-    });
-  }
-
-  return shapes;
+function isAnnotationColor(brush: string | undefined): brush is AnnotationColor {
+  return brush !== undefined && brush !== LAST_MOVE_BRUSH && brush in ANNOTATION_BRUSHES;
 }
 
-/**
- * Converts colorArrows (colored arrows) from chess move to Chessground DrawShape format
- * @param colorArrows Array of strings in format "Gfromto" where G is color code, from is like "f2", to is like "f3"
- * @returns Array of DrawShape objects for arrows
- */
-function convertColorArrows(colorArrows: string[]): DrawShape[] {
-  const shapes: DrawShape[] = [];
-
-  for (const arrow of colorArrows) {
-    if (arrow.length < 5) {
-      console.warn(`Invalid colorArrow format: ${arrow}`);
-      continue;
-    }
-
-    const colorCode = arrow[0];
-    const from = arrow.slice(1, 3);
-    const to = arrow.slice(3, 5);
-
-    // Validate square formats
-    if (from.length !== 2 || to.length !== 2) {
-      console.warn(`Invalid square format in colorArrow: ${arrow}`);
-      continue;
-    }
-
-    const brush = COLOR_CODE_MAP[colorCode] || 'green'; // Default to green if unknown
-
-    shapes.push({
-      orig: from,
-      dest: to,
-      brush,
-    });
-  }
-
-  return shapes;
+/** The colored squares and arrows of a move as shapes on the board. */
+export function annotationsToShapes(annotations: readonly Annotation[]): DrawShape[] {
+  const squares: DrawShape[] = (findAnnotation(annotations, 'squares')?.squares ?? []).map((s) => ({
+    orig: s.square,
+    brush: s.color,
+    modifiers: { hilite: true },
+  }));
+  const arrows: DrawShape[] = (findAnnotation(annotations, 'arrows')?.arrows ?? []).map((a) => ({
+    orig: a.from,
+    dest: a.to,
+    brush: a.color,
+  }));
+  return [...squares, ...arrows];
 }
 
-/**
- * Converts drawables from a chess move (colorFields and colorArrows) to Chessground autoShapes format
- * @param move The chess move object that may contain commentDiag with colorFields and/or colorArrows
- * @returns Array of DrawShape objects ready for Chessground's autoShapes property
- */
-export function convertMoveDrawablesToAutoShapes(move: Move | null): DrawShape[] {
-  if (!move || !move.commentDiag) {
-    return [];
-  }
-
-  const shapes: DrawShape[] = [];
-  const { colorFields, colorArrows } = move.commentDiag;
-
-  // Convert colored squares (fields)
-  if (colorFields && Array.isArray(colorFields) && colorFields.length > 0) {
-    shapes.push(...convertColorFields(colorFields));
-  }
-
-  // Convert colored arrows
-  if (colorArrows && Array.isArray(colorArrows) && colorArrows.length > 0) {
-    shapes.push(...convertColorArrows(colorArrows));
-  }
-
-  return shapes;
-}
-
-// =============================================================================
-// Chessground to PGN (for saving user drawings)
-// =============================================================================
-
-/**
- * Converts Chessground DrawShape objects to PGN annotation format
- * @param shapes Array of DrawShape objects from Chessground
- * @returns Object containing colorArrows and colorFields arrays in PGN format
- *
- * @example
- * const shapes = [
- *   { orig: 'd5', brush: 'red' },           // Highlighted square
- *   { orig: 'f2', dest: 'f3', brush: 'green' }  // Arrow
- * ];
- * const result = convertShapesToPGN(shapes);
- * // result = { colorArrows: ['Gf2f3'], colorFields: ['Rd5'] }
- */
-export function convertShapesToPGN(shapes: DrawShape[]): PGNDrawables {
-  const colorArrows: string[] = [];
-  const colorFields: string[] = [];
-
-  shapes.forEach(shape => {
-    const brush = shape.brush || 'green';
-    const pgnColor = BRUSH_TO_PGN_MAP[brush] || 'G';
-
+/** The annotations of a move with its colored squares and arrows replaced by the shapes. */
+export function shapesToAnnotations(annotations: readonly Annotation[], shapes: DrawShape[]): Annotation[] {
+  const squares: ColoredSquare[] = [];
+  const arrows: ColoredArrow[] = [];
+  for (const shape of shapes) {
+    const color = isAnnotationColor(shape.brush) ? shape.brush : 'green';
     if (shape.dest) {
-      // It's an arrow: format = "ColorCodeFromSquareToSquare" (e.g., "Gf2f3")
-      colorArrows.push(`${pgnColor}${shape.orig}${shape.dest}`);
+      arrows.push({ color, from: shape.orig, to: shape.dest });
     } else {
-      // It's a highlighted square: format = "ColorCodeSquare" (e.g., "Rd5")
-      colorFields.push(`${pgnColor}${shape.orig}`);
+      squares.push({ color, square: shape.orig });
     }
-  });
-
-  return { colorArrows, colorFields };
+  }
+  let result = replaceAnnotation(annotations, 'squares', squares.length > 0 ? { type: 'squares', squares } : null);
+  result = replaceAnnotation(result, 'arrows', arrows.length > 0 ? { type: 'arrows', arrows } : null);
+  return result;
 }

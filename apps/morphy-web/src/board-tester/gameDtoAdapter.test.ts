@@ -1,8 +1,8 @@
-import { Chess } from '@jackstenglein/chess';
 import { describe, expect, it } from 'vitest';
+import { GameTree } from 'game-view';
 import { readGameInfo, writeGameInfo } from 'game-view/src/utils/gameInfo';
 import type { GameDto } from '../api/types';
-import { gameDtoToPgn, pgnToGamePatch } from './gameDtoAdapter';
+import { gameDtoToTags, gameToGamePatch } from './gameDtoAdapter';
 
 /** A game with something in every field the board tester edits. */
 const GAME: GameDto = {
@@ -37,37 +37,60 @@ const GAME: GameDto = {
   moves: { pgn: '1. d4 Nf6 2. c4 e6' },
 };
 
-/** The game as the board tester has it: its PGN in a Chess instance. */
-function load(game: GameDto): Chess {
-  return new Chess({ pgn: gameDtoToPgn(game) });
+/** The game as the board tester has it. */
+function load(game: GameDto): GameTree {
+  return GameTree.fromMoves(game.moves, gameDtoToTags(game));
 }
 
 describe('the game as PGN tags', () => {
   it('comes back as it was', () => {
-    const patch = pgnToGamePatch(load(GAME), GAME);
+    const patch = gameToGamePatch(load(GAME), GAME);
     const { moves, ...header } = patch;
     const { moves: originalMoves, ...originalHeader } = GAME;
     expect(header).toEqual({ ...originalHeader, setupPosition: false, extraTags: undefined });
-    expect(moves?.pgn).toContain('1. d4 Nf6 2. c4 e6');
+    expect(moves).toEqual({ pgn: '1. d4 Nf6 2. c4 e6', fen: undefined, annotations: undefined });
     expect(originalMoves).toBeDefined();
   });
 
   it('comes back as it was through the Edit Game Info form', () => {
-    const chess = load(GAME);
-    writeGameInfo(chess, readGameInfo(chess));
-    expect(pgnToGamePatch(chess, GAME)).toEqual(pgnToGamePatch(load(GAME), GAME));
+    const game = load(GAME);
+    writeGameInfo(game, readGameInfo(game));
+    expect(gameToGamePatch(game, GAME)).toEqual(gameToGamePatch(load(GAME), GAME));
   });
 
   it('keeps the empty placeholder tag a game without a tag refers to', () => {
     const placeholder: GameDto = { ...GAME, gameTag: { id: 0, languageCount: 0 } };
-    expect(pgnToGamePatch(load(placeholder), placeholder).gameTag).toEqual({ id: 0, languageCount: 0 });
+    expect(gameToGamePatch(load(placeholder), placeholder).gameTag).toEqual({ id: 0, languageCount: 0 });
   });
 
   it('keeps a time control tag it can not read', () => {
-    const chess = load({ ...GAME, timeControl: undefined });
-    chess.setHeader('TimeControl', '*180');
-    const patch = pgnToGamePatch(chess, GAME);
+    const game = load({ ...GAME, timeControl: undefined });
+    game.setTag('TimeControl', '*180');
+    const patch = gameToGamePatch(game, GAME);
     expect(patch.timeControl).toBeUndefined();
     expect(patch.extraTags).toEqual({ TimeControl: '*180' });
+  });
+});
+
+describe('the moves and annotations', () => {
+  it('come back as they were', () => {
+    const fen = '4k3/8/8/8/8/8/4P3/4K3 w - - 0 1';
+    const game: GameDto = {
+      ...GAME,
+      setupPosition: true,
+      moves: {
+        pgn: '1. e4 Kd7 (1... Kf7 2. e5) 2. e5',
+        fen,
+        annotations: [
+          { move: -1, type: 'textAfter', text: 'Intro', language: 'ENG' },
+          { move: 0, type: 'symbols', nags: [1] },
+          { move: 2, type: 'arrows', arrows: [{ color: 'orange', from: 'f7', to: 'f6' }] },
+          { move: 4, type: 'raw', annotationType: 26, data: 'AQID', invalid: false },
+        ],
+      },
+    };
+    const patch = gameToGamePatch(load(game), game);
+    expect(patch.moves).toEqual(game.moves);
+    expect(patch.setupPosition).toBe(true);
   });
 });

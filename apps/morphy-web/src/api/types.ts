@@ -12,6 +12,8 @@
  * running service) - they're not trimmed down to id+main-field as search results.
  */
 
+import type { AnnotationDto } from 'game-view';
+
 export interface DatabaseResponse {
   id: string;
   displayName: string;
@@ -169,10 +171,15 @@ export interface GameTagDto {
 }
 
 export interface GameMovesDto {
-  /** Movetext only - no [Tag "value"] headers. */
+  /** Movetext only - no [Tag "value"] headers, comments, NAGs or result. */
   pgn?: string;
   /** Non-null only for setup positions (non-standard starting position). */
   fen?: string;
+  /**
+   * The annotations of the moves, each with the index of its move in the movetext (-1 for the
+   * game as a whole); see game-view's AnnotationDto. Absent when there are none.
+   */
+  annotations?: AnnotationDto[];
 }
 
 export interface GameTextDto {

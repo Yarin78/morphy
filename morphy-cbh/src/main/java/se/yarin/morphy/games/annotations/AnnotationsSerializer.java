@@ -48,16 +48,13 @@ public final class AnnotationsSerializer {
             new GraphicalSquaresAnnotationSerializer(),
             new MedalAnnotationSerializer(),
             new PawnStructureAnnotationSerializer(),
-            new PictureAnnotationSerializer(),
             new PiecePathAnnotationSerializer(),
-            new SoundAnnotationSerializer(),
             new TextAfterMoveAnnotationSerializer(),
             new TextBeforeMoveAnnotationSerializer(),
             new TimeControlAnnotationSerializer(),
             new TimeSpentAnnotationSerializer(),
             new TrainingAnnotationSerializer(),
             new VariationColorAnnotationSerializer(),
-            new VideoAnnotationSerializer(),
             new VideoStreamTimeAnnotationSerializer(),
             new WebLinkAnnotationSerializer(),
             new WhiteClockAnnotationSerializer())
@@ -89,8 +86,9 @@ public final class AnnotationsSerializer {
     int posNo = -1, noAnnotations = 0;
     for (GameMovesModel.Node node : model.getAllNodes()) {
       for (Annotation annotation : node.getAnnotations()) {
-        AnnotationSerializer serializer = annotationSerializersByClass.get(annotation.getClass());
-        if (serializer == null) {
+        // An annotation of a kind that isn't known is written back as it was read
+        if (!(annotation instanceof RawAnnotation)
+            && !annotationSerializersByClass.containsKey(annotation.getClass())) {
           log.warn(
               "No annotation serializer found for annotation class {}",
               annotation.getClass().getSimpleName());

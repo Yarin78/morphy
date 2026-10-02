@@ -94,9 +94,6 @@ public class AnnotationConverter {
 
         registry.register(new TrainingAnnotation.PgnCodec());
         registry.register(new CorrespondenceMoveAnnotation.PgnCodec());
-        registry.register(new SoundAnnotation.PgnCodec());
-        registry.register(new VideoAnnotation.PgnCodec());
-        registry.register(new PictureAnnotation.PgnCodec());
 
         registry.register(new GameQuotationAnnotation.PgnCodec());
     }

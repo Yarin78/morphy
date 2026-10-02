@@ -52,7 +52,8 @@ import se.yarin.morphy.model.GameDto;
  * serialized within this object only, there is no locking against other processes.
  *
  * <p>Games are read as UTF-8, and as Windows-1252 if they aren't valid UTF-8; new games are written
- * as UTF-8. Annotations are the plain PGN comments and NAGs.
+ * as UTF-8. Annotations are the plain PGN comments and NAGs, and whatever else {@link
+ * GameMovesDtoCodec#forPgn()} finds in the comments.
  */
 public final class DatabasePgn implements Database {
   private static final Logger log = LoggerFactory.getLogger(DatabasePgn.class);
@@ -60,7 +61,7 @@ public final class DatabasePgn implements Database {
   private final @NotNull Path path;
   private final @NotNull PgnFile file;
   private final boolean writable;
-  private final @NotNull PgnGameMapper mapper = new PgnGameMapper(PgnMoves.PLAIN);
+  private final @NotNull PgnGameMapper mapper = new PgnGameMapper(GameMovesDtoCodec.forPgn());
   private final @NotNull PgnParser parser = new PgnParser();
   private final @NotNull ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
 

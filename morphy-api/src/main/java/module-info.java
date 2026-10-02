@@ -15,6 +15,7 @@ module se.yarin.morphy.api {
     exports se.yarin.morphy.pgn;
 
     uses se.yarin.morphy.api.DatabaseProvider;
+    uses se.yarin.morphy.pgn.GameMovesDtoCodec.Provider;
     provides se.yarin.morphy.api.DatabaseProvider with
             se.yarin.morphy.pgn.DatabasePgnProvider;
 }

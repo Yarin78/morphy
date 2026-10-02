@@ -691,33 +691,11 @@ Uses key-value pairs where each field from `GameHeaderModel` is serialized as `k
 
 ---
 
-## Deprecated/Unsupported Annotations
+## Sound, Video and Picture Annotations
 
-These annotation types are deprecated in ChessBase and should be preserved for round-trip but may not display correctly:
-
-### SoundAnnotation (0x10)
-
-**Command:** `%sound`
-
-```
-[%sound base64data]
-```
-
-### VideoAnnotation (0x20)
-
-**Command:** `%video`
-
-```
-[%video base64data]
-```
-
-### PictureAnnotation (0x11)
-
-**Command:** `%picture`
-
-```
-[%picture base64data]
-```
+ChessBase's sound (0x10), picture (0x11) and video (0x20) annotations are hardly used any more and
+have no classes of their own: they are read as unknown annotations, kept as they were stored and
+written back as they were. They have no PGN encoding and are left out of PGN.
 
 ---
 

@@ -1,42 +1,38 @@
-import { Chess } from '@jackstenglein/chess';
+import type { GameTree } from '../model/GameTree';
 import { LINE_EVALUATION_TAG, lineEvaluationSymbol } from '../utils/gameInfo';
 import './GameHeader.css';
 
 interface GameHeaderProps {
-  chess: Chess;
+  game: GameTree;
   /** When provided, the whole header is clickable, e.g. to edit the game info. */
   onClick?: () => void;
 }
 
-export const GameHeader: React.FC<GameHeaderProps> = ({ chess, onClick }) => {
-  // Get headers from chess instance (loaded from PGN)
-  const headers = chess.header() || {};
-
+export const GameHeader: React.FC<GameHeaderProps> = ({ game, onClick }) => {
   // Helper function to filter out empty values and PGN placeholders like "?" or "????.??.??"
   const getValue = (value: string | undefined): string => {
     if (!value || /^[?.\s]*$/.test(value)) return '';
     return value;
   };
 
-  // Extract information from PGN headers
-  // Use getRawValue() to get string values instead of parsed types
-  const white = getValue(headers.getRawValue('White'));
-  const black = getValue(headers.getRawValue('Black'));
-  const whiteElo = getValue(headers.getRawValue('WhiteElo') || headers.getRawValue('WhiteRating'));
-  const blackElo = getValue(headers.getRawValue('BlackElo') || headers.getRawValue('BlackRating'));
-  const result = getValue(headers.getRawValue('Result'));
-  const date = getValue(headers.getRawValue('Date'));
-  const event = getValue(headers.getRawValue('Event'));
-  const site = getValue(headers.getRawValue('Site'));
+  // Extract information from the PGN tags
+  const white = getValue(game.getTag('White'));
+  const black = getValue(game.getTag('Black'));
+  const whiteElo = getValue(game.getTag('WhiteElo') || game.getTag('WhiteRating'));
+  const blackElo = getValue(game.getTag('BlackElo') || game.getTag('BlackRating'));
+  const result = getValue(game.getTag('Result'));
+  const date = getValue(game.getTag('Date'));
+  const event = getValue(game.getTag('Event'));
+  const site = getValue(game.getTag('Site'));
   // "round.subround.board", leaving out whichever parts aren't set. The Round tag already holds
   // "round" or "round.subround".
-  const round = [...getValue(headers.getRawValue('Round')).split('.'), getValue(headers.getRawValue('Board'))]
+  const round = [...getValue(game.getTag('Round')).split('.'), getValue(game.getTag('Board'))]
     .map((part) => part.trim())
     .filter((part) => part && !/^[?0]+$/.test(part))
     .join('.');
-  const eco = getValue(headers.getRawValue('ECO'));
-  const annotator = getValue(headers.getRawValue('Annotator'));
-  const lineEvaluation = getValue(headers.getRawValue(LINE_EVALUATION_TAG));
+  const eco = getValue(game.getTag('ECO'));
+  const annotator = getValue(game.getTag('Annotator'));
+  const lineEvaluation = getValue(game.getTag(LINE_EVALUATION_TAG));
 
   // Format result for display
   const formatResult = (result: string) => {

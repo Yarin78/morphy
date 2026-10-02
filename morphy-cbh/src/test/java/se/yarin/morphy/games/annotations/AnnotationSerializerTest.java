@@ -135,23 +135,9 @@ public class AnnotationSerializerTest {
   }
 
   @Test
-  public void testPictureAnnotationSerialization() {
-    PictureAnnotation before = ImmutablePictureAnnotation.of(new byte[] {0x30, (byte) 0xE2});
-    PictureAnnotation after = serialize(before);
-    assertEquals(before, after);
-  }
-
-  @Test
   public void testPiecePathAnnotationSerialization() {
     PiecePathAnnotation before = ImmutablePiecePathAnnotation.of(3, 15);
     PiecePathAnnotation after = serialize(before);
-    assertEquals(before, after);
-  }
-
-  @Test
-  public void testSoundAnnotationSerialization() {
-    SoundAnnotation before = ImmutableSoundAnnotation.of(new byte[] {0x23});
-    SoundAnnotation after = serialize(before);
     assertEquals(before, after);
   }
 
@@ -212,13 +198,6 @@ public class AnnotationSerializerTest {
   public void testVariationColorAnnotationSerialization() {
     VariationColorAnnotation before = ImmutableVariationColorAnnotation.of(12, 34, 56, true, false);
     VariationColorAnnotation after = serialize(before);
-    assertEquals(before, after);
-  }
-
-  @Test
-  public void testVideoAnnotationSerialization() {
-    VideoAnnotation before = ImmutableVideoAnnotation.of(new byte[] {(byte) 0xA9});
-    VideoAnnotation after = serialize(before);
     assertEquals(before, after);
   }
 

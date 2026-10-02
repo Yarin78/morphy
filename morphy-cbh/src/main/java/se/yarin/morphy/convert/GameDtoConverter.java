@@ -180,9 +180,7 @@ public class GameDtoConverter {
         // The time control is a field of its own, not in the movetext
         timeControl = GameTimeControl.of(model.moves());
         GameMovesModel withoutTimeControl = GameTimeControl.without(model.moves());
-        moves =
-            new GameMovesDto(
-                GameMovesPgn.toPgn(withoutTimeControl), GameMovesPgn.toFen(withoutTimeControl));
+        moves = GameMovesDtos.toDto(withoutTimeControl);
 
         String built = model.moves().getNotation(20);
         notation = built != null ? built : "--";

@@ -1,4 +1,4 @@
-import type { Chess } from '@jackstenglein/chess';
+import type { GameTree } from '../model/GameTree';
 import { dateTextError, formatDateTag, formatDateText, parseDateTag, parseDateText } from './date';
 import { decodeEloType, ELO_TYPE_TAGS, encodeEloType } from './eloType';
 import type { EloTypeInfo } from './eloType';
@@ -40,7 +40,7 @@ export const ANNOTATOR_ID_TAG = 'AnnotatorId';
 /**
  * The game header information edited in the Edit Game Info dialog, as form values. Everything is
  * a string, as typed; an empty string means "not set". It's read from and written back to the
- * Chess instance's PGN tags, so whoever saves the game picks the changes up from there.
+ * game's PGN tags, so whoever saves the game picks the changes up from there.
  */
 export interface GameInfo {
   white: PlayerInfo;
@@ -121,19 +121,19 @@ export function lineEvaluationSymbol(nag: string): string {
 }
 
 /** Treats the PGN placeholders for an unknown value ('?', '????') as empty. */
-function tagValue(chess: Chess, name: string): string {
-  const value = chess.header().getRawValue(name).trim();
+function tagValue(game: GameTree, name: string): string {
+  const value = game.getTag(name).trim();
   return /^\?*$/.test(value) ? '' : value;
 }
 
-function readPlayer(chess: Chess, nameTag: string, idTag: string): PlayerInfo {
-  const id = tagValue(chess, idTag);
-  return { id: /^\d+$/.test(id) ? parseInt(id, 10) : null, name: tagValue(chess, nameTag) };
+function readPlayer(game: GameTree, nameTag: string, idTag: string): PlayerInfo {
+  const id = tagValue(game, idTag);
+  return { id: /^\d+$/.test(id) ? parseInt(id, 10) : null, name: tagValue(game, nameTag) };
 }
 
-function writePlayer(chess: Chess, nameTag: string, idTag: string, player: PlayerInfo) {
-  chess.setHeader(nameTag, normalizePlayerName(player.name));
-  chess.setHeader(idTag, player.id != null ? String(player.id) : '');
+function writePlayer(game: GameTree, nameTag: string, idTag: string, player: PlayerInfo) {
+  game.setTag(nameTag, normalizePlayerName(player.name));
+  game.setTag(idTag, player.id != null ? String(player.id) : '');
 }
 
 /**
@@ -144,38 +144,38 @@ function numberPart(part: string | undefined): string {
   return part && /^\d+$/.test(part) && parseInt(part, 10) > 0 ? String(parseInt(part, 10)) : '';
 }
 
-export function readGameInfo(chess: Chess): GameInfo {
-  const [round, subRound] = tagValue(chess, 'Round').split('.');
-  const result = tagValue(chess, 'Result') || LINE_RESULT;
+export function readGameInfo(game: GameTree): GameInfo {
+  const [round, subRound] = tagValue(game, 'Round').split('.');
+  const result = tagValue(game, 'Result') || LINE_RESULT;
   return {
-    white: readPlayer(chess, 'White', PLAYER_ID_TAGS.white),
-    whiteFideId: tagValue(chess, FIDE_ID_TAGS.white),
-    whiteElo: tagValue(chess, 'WhiteElo'),
-    whiteEloType: decodeEloType(tagValue(chess, ELO_TYPE_TAGS.white)),
-    black: readPlayer(chess, 'Black', PLAYER_ID_TAGS.black),
-    blackFideId: tagValue(chess, FIDE_ID_TAGS.black),
-    blackElo: tagValue(chess, 'BlackElo'),
-    blackEloType: decodeEloType(tagValue(chess, ELO_TYPE_TAGS.black)),
+    white: readPlayer(game, 'White', PLAYER_ID_TAGS.white),
+    whiteFideId: tagValue(game, FIDE_ID_TAGS.white),
+    whiteElo: tagValue(game, 'WhiteElo'),
+    whiteEloType: decodeEloType(tagValue(game, ELO_TYPE_TAGS.white)),
+    black: readPlayer(game, 'Black', PLAYER_ID_TAGS.black),
+    blackFideId: tagValue(game, FIDE_ID_TAGS.black),
+    blackElo: tagValue(game, 'BlackElo'),
+    blackEloType: decodeEloType(tagValue(game, ELO_TYPE_TAGS.black)),
     result: RESULTS.some((r) => r.value === result) ? result : LINE_RESULT,
-    lineEvaluation: tagValue(chess, LINE_EVALUATION_TAG),
-    date: formatDateText(parseDateTag(tagValue(chess, 'Date'))),
+    lineEvaluation: tagValue(game, LINE_EVALUATION_TAG),
+    date: formatDateText(parseDateTag(tagValue(game, 'Date'))),
     // A tag that can't be read is shown as it is
     timeControl: (() => {
-      const tag = tagValue(chess, TIME_CONTROL_TAG);
+      const tag = tagValue(game, TIME_CONTROL_TAG);
       const periods = parseTimeControl(tag);
       return periods === null ? tag : formatTimeControl(periods);
     })(),
-    tournament: tournamentFromTags((name) => chess.header().getRawValue(name)),
+    tournament: tournamentFromTags((name) => game.getTag(name)),
     round: numberPart(round),
     subRound: numberPart(subRound),
-    board: numberPart(tagValue(chess, 'Board')),
-    eco: tagValue(chess, 'ECO'),
-    opening: tagValue(chess, 'Opening'),
-    annotator: readPlayer(chess, 'Annotator', ANNOTATOR_ID_TAG),
-    source: sourceFromTags((name) => chess.header().getRawValue(name)),
-    whiteTeam: teamFromTags('white', (name) => chess.header().getRawValue(name)),
-    blackTeam: teamFromTags('black', (name) => chess.header().getRawValue(name)),
-    gameTag: gameTagFromTags((name) => chess.header().getRawValue(name)),
+    board: numberPart(tagValue(game, 'Board')),
+    eco: tagValue(game, 'ECO'),
+    opening: tagValue(game, 'Opening'),
+    annotator: readPlayer(game, 'Annotator', ANNOTATOR_ID_TAG),
+    source: sourceFromTags((name) => game.getTag(name)),
+    whiteTeam: teamFromTags('white', (name) => game.getTag(name)),
+    blackTeam: teamFromTags('black', (name) => game.getTag(name)),
+    gameTag: gameTagFromTags((name) => game.getTag(name)),
   };
 }
 
@@ -227,50 +227,50 @@ export function validateGameInfo(info: GameInfo): GameInfoErrors {
   return errors;
 }
 
-/** Writes validated form values back to the Chess instance's PGN tags. */
-export function writeGameInfo(chess: Chess, info: GameInfo) {
+/** Writes validated form values back to the game's PGN tags. */
+export function writeGameInfo(game: GameTree, info: GameInfo) {
   const round = info.round.trim();
   const subRound = info.subRound.trim();
 
-  writePlayer(chess, 'White', PLAYER_ID_TAGS.white, info.white);
-  chess.setHeader(FIDE_ID_TAGS.white, info.whiteFideId.trim());
-  chess.setHeader('WhiteElo', info.whiteElo.trim());
+  writePlayer(game, 'White', PLAYER_ID_TAGS.white, info.white);
+  game.setTag(FIDE_ID_TAGS.white, info.whiteFideId.trim());
+  game.setTag('WhiteElo', info.whiteElo.trim());
   // A type only means something with an elo
-  chess.setHeader(ELO_TYPE_TAGS.white, info.whiteElo.trim() ? encodeEloType(info.whiteEloType) : '');
-  writePlayer(chess, 'Black', PLAYER_ID_TAGS.black, info.black);
-  chess.setHeader(FIDE_ID_TAGS.black, info.blackFideId.trim());
-  chess.setHeader('BlackElo', info.blackElo.trim());
-  chess.setHeader(ELO_TYPE_TAGS.black, info.blackElo.trim() ? encodeEloType(info.blackEloType) : '');
-  chess.setHeader('Result', info.result);
-  chess.setHeader(LINE_EVALUATION_TAG, info.result === LINE_RESULT ? info.lineEvaluation : '');
-  chess.setHeader('Date', formatDateTag(parseDateText(info.date) ?? undefined));
-  chess.setHeader(TIME_CONTROL_TAG, toPgnTimeControl(parseTimeControl(info.timeControl) ?? undefined));
+  game.setTag(ELO_TYPE_TAGS.white, info.whiteElo.trim() ? encodeEloType(info.whiteEloType) : '');
+  writePlayer(game, 'Black', PLAYER_ID_TAGS.black, info.black);
+  game.setTag(FIDE_ID_TAGS.black, info.blackFideId.trim());
+  game.setTag('BlackElo', info.blackElo.trim());
+  game.setTag(ELO_TYPE_TAGS.black, info.blackElo.trim() ? encodeEloType(info.blackEloType) : '');
+  game.setTag('Result', info.result);
+  game.setTag(LINE_EVALUATION_TAG, info.result === LINE_RESULT ? info.lineEvaluation : '');
+  game.setTag('Date', formatDateTag(parseDateText(info.date) ?? undefined));
+  game.setTag(TIME_CONTROL_TAG, toPgnTimeControl(parseTimeControl(info.timeControl) ?? undefined));
   const t = info.tournament;
   const tournament = t && (t.title.trim() || t.id != null || t.place?.trim()) ? { ...t, title: t.title.trim() } : null;
   for (const [name, value] of Object.entries(tournamentToTags(tournament))) {
-    chess.setHeader(name, value);
+    game.setTag(name, value);
   }
-  chess.setHeader('Round', round && subRound ? `${round}.${subRound}` : round);
-  chess.setHeader('Board', info.board.trim());
-  chess.setHeader('ECO', info.eco.trim().toUpperCase());
-  chess.setHeader('Opening', info.opening.trim());
+  game.setTag('Round', round && subRound ? `${round}.${subRound}` : round);
+  game.setTag('Board', info.board.trim());
+  game.setTag('ECO', info.eco.trim().toUpperCase());
+  game.setTag('Opening', info.opening.trim());
   // Not normalized like a player's name: ChessBase has annotators like "Gutman,L"
-  chess.setHeader('Annotator', info.annotator.name.trim());
-  chess.setHeader(ANNOTATOR_ID_TAG, info.annotator.id != null ? String(info.annotator.id) : '');
+  game.setTag('Annotator', info.annotator.name.trim());
+  game.setTag(ANNOTATOR_ID_TAG, info.annotator.id != null ? String(info.annotator.id) : '');
   const source = info.source && (info.source.title.trim() || info.source.id != null || info.source.publisher?.trim())
     ? { ...info.source, title: info.source.title.trim() }
     : null;
   for (const [name, value] of Object.entries(sourceToTags(source))) {
-    chess.setHeader(name, value);
+    game.setTag(name, value);
   }
   for (const color of ['white', 'black'] as const) {
     const t = info[`${color}Team`];
     const team = t && (t.title.trim() || t.id != null) ? { ...t, title: t.title.trim() } : null;
     for (const [name, value] of Object.entries(teamToTags(color, team))) {
-      chess.setHeader(name, value);
+      game.setTag(name, value);
     }
   }
   for (const [name, value] of Object.entries(gameTagToTags(info.gameTag))) {
-    chess.setHeader(name, value.trim());
+    game.setTag(name, value.trim());
   }
 }

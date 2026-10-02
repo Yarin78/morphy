@@ -1,3 +1,5 @@
+import type { GameMoves } from '../model/GameTree';
+
 export interface GameHeader {
   id: string;
   white: string;
@@ -17,5 +19,8 @@ export interface GameHeader {
 
 export interface ChessGame {
   header: GameHeader;
-  pgn: string;
+  /** The PGN tags of the game, in order; the Edit Game Info dialog reads and writes them. */
+  tags: [string, string][];
+  /** The moves and their annotations, as the server sends them; absent for a new game. */
+  moves?: GameMoves;
 }

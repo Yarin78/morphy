@@ -1,4 +1,3 @@
-import type { Chess } from '@jackstenglein/chess';
 import {
   ANNOTATOR_ID_TAG,
   decodeEloType,
@@ -26,7 +25,7 @@ import {
   tournamentFromTags,
   tournamentToTags,
 } from 'game-view';
-import type { GameTagInfo, GameTagLanguage, SourceInfo, TeamInfo, TournamentInfo } from 'game-view';
+import type { ChessGame, GameTagInfo, GameTagLanguage, GameTree, SourceInfo, TeamInfo, TournamentInfo } from 'game-view';
 import type {
   DateDto,
   GameDto,
@@ -38,12 +37,9 @@ import type {
   TournamentDto,
 } from '../api/types';
 
-// Bridges morphy-service's GameDto (flattened header fields + a movetext-only
-// moves.pgn) and the single full-PGN-string (headers + movetext) that
-// @jackstenglein/chess's Chess wants. Confirmed against the library's own
-// .d.ts (node_modules/@jackstenglein/chess/dist/types/{Chess,Pgn,Header}.d.ts
-// in yarin-chess's install): Chess#renderPgn({ skipHeader: true }) returns
-// movetext only, and Chess#header().valueMap() returns every current tag.
+// Bridges morphy-service's GameDto (flattened header fields, plus moves and their
+// annotations) and GameView's game: PGN tags, which the Edit Game Info dialog reads
+// and writes, next to the moves and annotations, which are passed on as they are.
 
 // GameResult <-> PGN Result tag, from se.yarin.chess.GameResult#toString().
 const RESULT_TO_PGN: Record<GameResultDto, string> = {
@@ -246,10 +242,10 @@ const KNOWN_TAGS = new Set<string>([
 ]);
 
 /**
- * Builds a full PGN string (headers + movetext) from a GameDto, suitable for
- * @jackstenglein/chess's `new Chess({ pgn })` / GameView's `ChessGame.pgn`.
+ * The PGN tags of a GameDto, in the order a PGN file has them; the Edit Game Info dialog reads and
+ * writes these.
  */
-export function gameDtoToPgn(game: GameDto): string {
+export function gameDtoToTags(game: GameDto): [string, string][] {
   const tags: [string, string][] = [];
   const pushIfSet = (name: string, value: string | undefined) => {
     if (value) tags.push([name, value]);
@@ -295,34 +291,35 @@ export function gameDtoToPgn(game: GameDto): string {
   for (const [name, value] of Object.entries(gameTagToTags(gameTagInfo(game.gameTag)))) {
     pushIfSet(name, value);
   }
-  if (game.setupPosition && game.moves?.fen) {
-    tags.push(['FEN', game.moves.fen]);
-    tags.push(['SetUp', '1']);
-  }
   if (game.extraTags) {
     for (const [name, value] of Object.entries(game.extraTags)) {
       pushIfSet(name, value);
     }
   }
 
-  const header = tags.map(([name, value]) => `[${name} "${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"]`).join('\n');
-  const movetext = game.moves?.pgn?.trim();
-  const resultToken = RESULT_TO_PGN[game.result] ?? '*';
-  const moves = movetext ? `${movetext} ${resultToken}` : resultToken;
+  return tags;
+}
 
-  return `${header}\n\n${moves}\n`;
+/** A GameDto as GameView shows it. */
+export function gameDtoToChessGame(game: GameDto): ChessGame {
+  return {
+    header: { id: String(game.id ?? 'new'), white: '', black: '', result: '', date: '' },
+    tags: gameDtoToTags(game),
+    moves: game.moves,
+  };
 }
 
 /**
- * Reads the current PGN headers and moves off a live Chess instance and folds them into a
+ * Reads the current PGN tags, moves and annotations off a live game and folds them into a
  * copy of `base` (preserving anything the adapter doesn't understand, e.g. ids of unrelated
  * entities). Used to build the request body for createGame/replaceGame after editing.
  *
  * An entity with an id binds the game to that existing one; without one, the server finds the
  * entity with these fields, or creates it.
  */
-export function pgnToGamePatch(chess: Chess, base: GameDto): GameDto {
-  const tagValues = chess.header().valueMap();
+export function gameToGamePatch(game: GameTree, base: GameDto): GameDto {
+  const tagValues = game.tagValues();
+  const moves = game.toMoves();
 
 
   const tournament = tournamentFromTags((name) => tagValues[name] ?? '');
@@ -336,7 +333,7 @@ export function pgnToGamePatch(chess: Chess, base: GameDto): GameDto {
 
   const result = PGN_TO_RESULT[tagValues.Result ?? ''] ?? base.result;
   const round = tagValues.Round?.split('.');
-  const setupPosition = tagValues.SetUp === '1';
+  const setupPosition = moves.fen !== undefined;
 
   const extraTags: Record<string, string> = {};
   for (const [name, value] of Object.entries(tagValues)) {
@@ -379,8 +376,9 @@ export function pgnToGamePatch(chess: Chess, base: GameDto): GameDto {
     gameTag: gameTag ? gameTagDto(gameTag) : gameTagInfo(base.gameTag) ? undefined : base.gameTag,
     setupPosition,
     moves: {
-      pgn: chess.renderPgn({ skipHeader: true }).trim(),
-      fen: setupPosition ? tagValues.FEN : undefined,
+      pgn: moves.pgn,
+      fen: moves.fen,
+      annotations: moves.annotations.length > 0 ? moves.annotations : undefined,
     },
     extraTags: Object.keys(extraTags).length > 0 ? extraTags : undefined,
   };

@@ -111,9 +111,9 @@ public class VerifyGameFlags {
         flags,
         CORRESPONDENCE_HEADER,
         annotations.containsKey(CorrespondenceMoveAnnotation.class));
-    verifyFlag(id, flags, EMBEDDED_VIDEO, annotations.containsKey(VideoAnnotation.class));
-    verifyFlag(id, flags, EMBEDDED_AUDIO, annotations.containsKey(SoundAnnotation.class));
-    verifyFlag(id, flags, EMBEDDED_PICTURE, annotations.containsKey(PictureAnnotation.class));
+    verifyFlag(id, flags, EMBEDDED_VIDEO, unknownAnnotations.contains(0x20));
+    verifyFlag(id, flags, EMBEDDED_AUDIO, unknownAnnotations.contains(0x10));
+    verifyFlag(id, flags, EMBEDDED_PICTURE, unknownAnnotations.contains(0x11));
     verifyFlag(id, flags, GAME_QUOTATION, annotations.containsKey(GameQuotationAnnotation.class));
     verifyFlag(id, flags, PAWN_STRUCTURE, annotations.containsKey(PawnStructureAnnotation.class));
     verifyFlag(id, flags, PIECE_PATH, annotations.containsKey(PiecePathAnnotation.class));

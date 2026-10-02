@@ -1,4 +1,4 @@
-import type { Move } from '@jackstenglein/chess';
+import type { MoveNode } from '../model/GameTree';
 
 const LINE_THRESHOLD = 5; // pixels - consider moves on same line if within this threshold
 
@@ -152,8 +152,8 @@ function sortCandidateMoves(
  */
 export function navigateToAdjacentMove(
   direction: 'up' | 'down',
-  reverseMoveMap: Map<number, Move>,
-  seekToMove: (move: Move | null) => void
+  reverseMoveMap: Map<number, MoveNode>,
+  seekToMove: (move: MoveNode | null) => void
 ): void {
   const allMoves = getAllMoveElements();
   if (allMoves.length === 0) return;

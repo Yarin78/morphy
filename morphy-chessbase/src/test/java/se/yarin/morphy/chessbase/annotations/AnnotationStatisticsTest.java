@@ -1,6 +1,8 @@
 package se.yarin.morphy.chessbase.annotations;
 
+import java.util.EnumSet;
 import org.junit.jupiter.api.Test;
+import se.yarin.morphy.chessbase.GameHeaderFlags;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -67,5 +69,19 @@ class AnnotationStatisticsTest {
     assertEquals(1, stats.getTrainingMagnitude());
     stats.noTraining = 6;
     assertEquals(2, stats.getTrainingMagnitude());
+  }
+
+  @Test
+  public void testSoundPictureAndVideoAnnotationsKeptAsUnknownSetTheirFlags() {
+    AnnotationStatistics stats = new AnnotationStatistics();
+    ImmutableUnknownAnnotation.of(0x10, new byte[] {1}).updateStatistics(stats);
+    ImmutableUnknownAnnotation.of(0x11, new byte[] {2}).updateStatistics(stats);
+    assertEquals(EnumSet.of(GameHeaderFlags.EMBEDDED_AUDIO, GameHeaderFlags.EMBEDDED_PICTURE), stats.getFlags());
+
+    // In Mega Database 2021, no game with a video annotation has the embedded video flag; only
+    // guiding texts have it
+    AnnotationStatistics video = new AnnotationStatistics();
+    ImmutableUnknownAnnotation.of(0x20, new byte[] {1, 0x35, 'a', 'b'}).updateStatistics(video);
+    assertEquals(EnumSet.noneOf(GameHeaderFlags.class), video.getFlags());
   }
 }

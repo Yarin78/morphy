@@ -85,7 +85,7 @@ public final class AnnotationBlockCodec {
     if (annotations == null) {
       return false;
     }
-    List<GameMovesModel.Node> nodes = pgnOrder(moves);
+    List<GameMovesModel.Node> nodes = moves.getAllNodesPgnOrder();
     for (Positioned p : annotations) {
       if (p.position() == GAME) {
         moves.root().addAnnotation(p.annotation());
@@ -105,7 +105,7 @@ public final class AnnotationBlockCodec {
    * @return the content of the record
    */
   public static byte @NotNull [] encode(@NotNull GameMovesModel moves) {
-    List<GameMovesModel.Node> nodes = pgnOrder(moves);
+    List<GameMovesModel.Node> nodes = moves.getAllNodesPgnOrder();
     int size = 4;
     for (GameMovesModel.Node node : moves.getAllNodes()) {
       for (Annotation annotation : node.getAnnotations()) {
@@ -140,29 +140,6 @@ public final class AnnotationBlockCodec {
       buf.position(start);
     } else {
       buf.putInt(start + 4, count);
-    }
-  }
-
-  /**
-   * The nodes of a move tree in the order annotation positions number them, the root excluded:
-   * each alternative, with everything that follows it, right after the move it is an alternative
-   * to.
-   */
-  public static @NotNull List<GameMovesModel.Node> pgnOrder(@NotNull GameMovesModel moves) {
-    List<GameMovesModel.Node> out = new ArrayList<>();
-    line(moves.root(), out);
-    return out;
-  }
-
-  private static void line(GameMovesModel.Node node, List<GameMovesModel.Node> out) {
-    while (node.hasMoves()) {
-      List<GameMovesModel.Node> children = node.children();
-      out.add(children.get(0));
-      for (int i = 1; i < children.size(); i++) {
-        out.add(children.get(i));
-        line(children.get(i), out);
-      }
-      node = children.get(0);
     }
   }
 }

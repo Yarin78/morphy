@@ -36,7 +36,7 @@ import se.yarin.morphy.chessbase.Medal;
 import se.yarin.morphy.chessbase.Nation;
 import se.yarin.morphy.chessbase.TournamentTimeControl;
 import se.yarin.morphy.chessbase.TournamentType;
-import se.yarin.morphy.chessbase.convert.GameMovesPgn;
+import se.yarin.morphy.chessbase.convert.GameMovesDtos;
 import se.yarin.morphy.chessbase.convert.GameTimeControl;
 import se.yarin.morphy.model.AnnotatorDto;
 import se.yarin.morphy.model.GameDto;
@@ -168,9 +168,7 @@ public final class DtoConverter {
         // The time control is a field of its own, not in the movetext
         timeControl = GameTimeControl.of(model);
         GameMovesModel withoutTimeControl = GameTimeControl.without(model);
-        moves =
-            new GameMovesDto(
-                GameMovesPgn.toPgn(withoutTimeControl), GameMovesPgn.toFen(withoutTimeControl));
+        moves = GameMovesDtos.toDto(withoutTimeControl);
         String built = model.getNotation(20);
         notation = built != null ? built : "--";
         int variationPly = model.countPly(true) - model.countPly(false);

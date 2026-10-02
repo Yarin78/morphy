@@ -349,7 +349,7 @@ span.cbspec-glyph
 
 span.cbcol-marker
 {
-   background-image: url( /images/NotaArrow16.png );
+   background-image: url( ../assets/NotaArrow16.png );
    background-repeat: no-repeat;
    vertical-align: middle;
    width: 16px;

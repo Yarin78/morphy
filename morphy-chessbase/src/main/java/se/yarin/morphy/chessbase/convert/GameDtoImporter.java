@@ -21,7 +21,7 @@ import se.yarin.morphy.pgn.PgnGameMapper;
  */
 public class GameDtoImporter {
 
-  private final PgnGameMapper mapper = new PgnGameMapper(GameMovesPgn.ROUND_TRIP);
+  private final PgnGameMapper mapper = new PgnGameMapper(GameMovesDtos.CODEC);
 
   /**
    * Converts a GameDto to a GameModel.

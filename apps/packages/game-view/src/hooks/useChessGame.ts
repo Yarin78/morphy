@@ -1,9 +1,9 @@
 import { useState, useCallback } from 'react';
-import { Chess } from '@jackstenglein/chess';
-import type { Move } from '@jackstenglein/chess';
+import { GameTree } from '../model/GameTree';
+import type { GameMoves, MoveNode } from '../model/GameTree';
 
 export interface UseChessGameReturn {
-  chess: Chess;
+  game: GameTree;
   version: number;
   triggerUpdate: () => void;
   getLastMove: () => [string, string] | null;
@@ -13,140 +13,97 @@ export interface UseChessGameReturn {
   goToPreviousMove: () => void;
   goToStart: () => void;
   goToEnd: () => void;
-  seekToMove: (move: Move | null) => void;
-  loadPgn: (pgn: string, initialMoveSelector?: (chess: Chess) => Move | null) => boolean;
+  seekToMove: (move: MoveNode | null) => void;
+  loadGame: (
+    moves: GameMoves | undefined,
+    tags: [string, string][],
+    initialMoveSelector?: (game: GameTree) => MoveNode | null
+  ) => boolean;
 }
 
 export const useChessGame = (): UseChessGameReturn => {
   /*
-  This hook wraps the @jackstenglein/chess TypeScript chess
-  library into a React hook.
-
-  Since the Chess instance mutates its internal state (via seek(),
-  loadPgn(), etc.) rather than creating new instances, React won't
-  detect these changes automatically. We use a version counter to
-  force re-renders whenever the chess state is mutated, ensuring
-  components that depend on the chess state update correctly.
+  The GameTree is changed in place (by seek(), play(), and annotation edits) rather than
+  replaced, so React won't see the changes by itself. A version counter is bumped whenever the
+  game changes, to re-render whatever depends on it.
   */
-  const [chess, setChess] = useState<Chess>(() => new Chess());
+  const [game, setGame] = useState<GameTree>(() => GameTree.empty());
   const [version, setVersion] = useState(0);
 
-  // Force re-render by incrementing version counter
   const triggerUpdate = useCallback(() => {
-    setVersion(v => v + 1);
+    setVersion((v) => v + 1);
   }, []);
 
-  // Get last move from chess instance
   const getLastMove = useCallback((): [string, string] | null => {
-    try {
-      const currentMove = chess.currentMove();
-      if (currentMove && currentMove.from && currentMove.to && !currentMove.isNullMove) {
-        return [currentMove.from, currentMove.to];
+    const currentMove = game.currentMove();
+    return currentMove && !currentMove.isNullMove ? [currentMove.from, currentMove.to] : null;
+  }, [game]);
+
+  const canGoBack = useCallback((): boolean => game.currentMove() !== null, [game]);
+
+  const canGoForward = useCallback((): boolean => game.nextMove() !== null, [game]);
+
+  // Note: this does not read window.location.hash to deep-link to a move - a shared component
+  // shouldn't assume any particular app's URL scheme. Callers that want deep-linking can pass
+  // their own initialMoveSelector.
+  const loadGame = useCallback(
+    (
+      moves: GameMoves | undefined,
+      tags: [string, string][],
+      initialMoveSelector?: (game: GameTree) => MoveNode | null
+    ): boolean => {
+      try {
+        const loaded = GameTree.fromMoves(moves, tags);
+        loaded.seek(initialMoveSelector?.(loaded) ?? null);
+        setGame(loaded);
+        triggerUpdate();
+        return true;
+      } catch (error) {
+        console.error('Error loading game:', error);
+        return false;
       }
-    } catch {
-      // Ignore errors
-    }
-    return null;
-  }, [chess]);
-
-  const canGoBack = useCallback((): boolean => {
-    return chess.currentMove() !== null;
-  }, [chess]);
-
-  const canGoForward = useCallback((): boolean => {
-    return chess.nextMove() !== null;
-  }, [chess]);
-
-  // Note: unlike yarin-chess's original useChessGame, this does not read
-  // window.location.hash to deep-link to a move - a shared component
-  // shouldn't assume any particular app's URL scheme. Callers that want
-  // deep-linking can pass their own initialMoveSelector.
-  const loadPgn = useCallback((pgn: string, initialMoveSelector?: (chess: Chess) => Move | null): boolean => {
-    try {
-      const chessInstance = new Chess({pgn});
-
-      if (initialMoveSelector) {
-        const initialMove = initialMoveSelector(chessInstance);
-        chessInstance.seek(initialMove || null);
-      } else {
-        chessInstance.seek(null);
-      }
-
-      setChess(chessInstance);
-      triggerUpdate();
-      return true;
-    } catch (error) {
-      console.error('Error loading PGN:', error);
-      return false;
-    }
-  }, [triggerUpdate]);
+    },
+    [triggerUpdate]
+  );
 
   const goToNextMove = useCallback(() => {
-    try {
-      const nextMove = chess.nextMove();
-      if (nextMove) {
-        // Navigate to the next move using seek()
-        chess.seek(nextMove);
-        triggerUpdate();
-      }
-    } catch (error) {
-      console.error('Error going to next move:', error);
+    const nextMove = game.nextMove();
+    if (nextMove) {
+      game.seek(nextMove);
+      triggerUpdate();
     }
-  }, [chess, triggerUpdate]);
+  }, [game, triggerUpdate]);
 
   const goToPreviousMove = useCallback(() => {
-    try {
-      const currentMove = chess.currentMove();
-      if (currentMove && currentMove.previous) {
-        // Navigate to the previous move
-        chess.seek(currentMove.previous);
-      } else {
-        // If no previous move, go to start
-        chess.seek(null);
-      }
-      triggerUpdate();
-    } catch (error) {
-      console.error('Error going to previous move:', error);
-    }
-  }, [chess, triggerUpdate]);
+    const currentMove = game.currentMove();
+    game.seek(currentMove ? GameTree.previous(currentMove) : null);
+    triggerUpdate();
+  }, [game, triggerUpdate]);
 
   const goToStart = useCallback(() => {
-    try {
-      chess.seek(null);
-      triggerUpdate();
-    } catch (error) {
-      console.error('Error going to start:', error);
-    }
-  }, [chess, triggerUpdate]);
+    game.seek(null);
+    triggerUpdate();
+  }, [game, triggerUpdate]);
 
   const goToEnd = useCallback(() => {
-    try {
-      // Navigate to the end of the game
-      chess.seek(null);
-      let nextMove = chess.nextMove();
-
-      while (nextMove) {
-        chess.seek(nextMove);
-        nextMove = chess.nextMove();
-      }
-      triggerUpdate();
-    } catch (error) {
-      console.error('Error going to end:', error);
+    let nextMove = game.nextMove();
+    while (nextMove) {
+      game.seek(nextMove);
+      nextMove = game.nextMove();
     }
-  }, [chess, triggerUpdate]);
+    triggerUpdate();
+  }, [game, triggerUpdate]);
 
-  const seekToMove = useCallback((move: Move | null) => {
-    try {
-      // Navigate to the position after the move
-      chess.seek(move);
+  const seekToMove = useCallback(
+    (move: MoveNode | null) => {
+      game.seek(move);
       triggerUpdate();
-    } catch (error) {
-      console.error('Error seeking to move:', error);
-    }
-  }, [chess, triggerUpdate]);
+    },
+    [game, triggerUpdate]
+  );
 
   return {
-    chess,
+    game,
     version,
     triggerUpdate,
     getLastMove,
@@ -157,6 +114,6 @@ export const useChessGame = (): UseChessGameReturn => {
     goToStart,
     goToEnd,
     seekToMove,
-    loadPgn,
+    loadGame,
   };
 };

@@ -43,11 +43,11 @@ public final class PgnGameMapper {
   /** The PGN tag with the time control; see {@link TimeControlDto#toPgn()}. */
   private static final String TIME_CONTROL_TAG = "TimeControl";
 
-  private final @NotNull PgnMoves pgnMoves;
+  private final @NotNull GameMovesDtoCodec movesCodec;
 
-  /** @param pgnMoves how the moves are turned into and out of movetext */
-  public PgnGameMapper(@NotNull PgnMoves pgnMoves) {
-    this.pgnMoves = pgnMoves;
+  /** @param movesCodec how the moves and their annotations are turned into and out of DTOs */
+  public PgnGameMapper(@NotNull GameMovesDtoCodec movesCodec) {
+    this.movesCodec = movesCodec;
   }
 
   // ── DTO -> model ─────────────────────────────────────────────────────────
@@ -72,13 +72,11 @@ public final class PgnGameMapper {
       throw new IllegalArgumentException("Unsupported variant: " + dto.variant());
     }
 
-    // Moves are required to read back; an unreadable movetext is an invalid game, not an empty one
-    String pgn = dto.moves() == null ? null : dto.moves().pgn();
-    String fen = dto.moves() == null ? null : dto.moves().fen();
-    if ((pgn == null || pgn.isEmpty()) && fen == null) {
+    if (dto.moves() == null) {
       return new GameModel(headerModel, new GameMovesModel());
     }
-    GameMovesModel movesModel = pgnMoves.fromPgn(pgn == null ? "" : pgn, fen, chess960);
+    // An unreadable movetext is an invalid game, not an empty one
+    GameMovesModel movesModel = movesCodec.fromDto(dto.moves(), chess960);
     return new GameModel(headerModel, movesModel);
   }
 
@@ -300,7 +298,7 @@ public final class PgnGameMapper {
     String notation = null;
     Integer variationMoves = null;
     if (includeMoves) {
-      movesDto = new GameMovesDto(pgnMoves.toPgn(moves), pgnMoves.toFen(moves));
+      movesDto = movesCodec.toDto(moves);
       notation = moves.getNotation(20);
       int varPly = moves.countPly(true) - moves.countPly(false);
       variationMoves = varPly > 0 ? varPly : null;

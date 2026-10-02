@@ -30,6 +30,7 @@ import se.yarin.morphy.api.GameFetchOptions;
 import se.yarin.morphy.api.query.Query;
 import se.yarin.morphy.api.query.ResultPage;
 import se.yarin.morphy.api.query.Sort;
+import se.yarin.morphy.model.AnnotationDto;
 import se.yarin.morphy.model.GameDto;
 
 public class DatabasePgnTest {
@@ -140,7 +141,9 @@ public class DatabasePgnTest {
   public void readsMovesOfAGame() throws IOException {
     try (Database db = open(write(G1))) {
       GameDto game = get(db, 1);
-      assertEquals("1. e4 e5 2. Nf3 Nc6 3. Bb5 Nf6 { a comment } 4. O-O Nxe4", game.moves().pgn());
+      assertEquals("1. e4 e5 2. Nf3 Nc6 3. Bb5 Nf6 4. O-O Nxe4", game.moves().pgn());
+      assertEquals(
+          List.of(new AnnotationDto.TextAfter(5, "a comment")), game.moves().annotations());
       assertNull(game.moves().fen());
       assertNotNull(game.notation());
     }

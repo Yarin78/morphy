@@ -7,16 +7,17 @@ import se.yarin.morphy.chessbase.annotations.AnnotationConverter;
 import se.yarin.morphy.pgn.PgnMoves;
 
 /**
- * The moves of a game as {@link se.yarin.morphy.model.GameMovesDto} carries them: PGN movetext and
- * the FEN of the start position, written by {@link GameDtoConverter} and read by {@link
- * GameDtoImporter}. What one writes, the other reads back to the same moves.
+ * The moves of a game as PGN movetext with ChessBase annotations, kept in the comments, and the FEN
+ * of the start position. What one writes, the other reads back to the same moves.
  *
- * <p>This is {@link PgnMoves} with ChessBase annotations, kept in the PGN as comments.
+ * <p>This is {@link PgnMoves} with ChessBase annotations. A {@link
+ * se.yarin.morphy.model.GameMovesDto} carries the annotations next to the movetext instead, see
+ * {@link GameMovesDtos}.
  */
 public final class GameMovesPgn {
 
   /** The moves with ChessBase annotations round-tripped through PGN comments. */
-  static final @NotNull PgnMoves ROUND_TRIP =
+  private static final @NotNull PgnMoves ROUND_TRIP =
       new PgnMoves(
           AnnotationConverter.getRoundTripConverter()::convertToPgn,
           AnnotationConverter.getRoundTripConverter()::convertToChessBase);

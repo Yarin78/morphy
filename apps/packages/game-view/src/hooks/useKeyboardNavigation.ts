@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { navigateToAdjacentMove } from '../utils/moveNavigation';
-import type { Move } from '@jackstenglein/chess';
+import type { MoveNode } from '../model/GameTree';
 
 interface UseKeyboardNavigationOptions {
   enabled: boolean;
@@ -10,8 +10,8 @@ interface UseKeyboardNavigationOptions {
   goToNextMove: () => void;
   goToStart: () => void;
   goToEnd: () => void;
-  seekToMove: (move: Move | null) => void;
-  reverseMoveMap: Map<number, Move>;
+  seekToMove: (move: MoveNode | null) => void;
+  reverseMoveMap: Map<number, MoveNode>;
 }
 
 /**
@@ -28,7 +28,7 @@ export function useKeyboardNavigation({
   seekToMove,
   reverseMoveMap,
 }: UseKeyboardNavigationOptions): void {
-  const reverseMoveMapRef = useRef<Map<number, Move>>(reverseMoveMap);
+  const reverseMoveMapRef = useRef<Map<number, MoveNode>>(reverseMoveMap);
 
   // Update ref when reverseMoveMap changes
   useEffect(() => {

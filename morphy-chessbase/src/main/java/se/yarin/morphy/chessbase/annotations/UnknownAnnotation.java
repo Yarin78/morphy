@@ -31,5 +31,14 @@ public abstract class UnknownAnnotation extends Annotation
     if (annotationType() == 0x1A) {
       stats.flags.add(GameHeaderFlags.ANNO_TYPE_1A);
     }
+    // Sound and picture annotations of the v1 format, which are hardly used any more and kept as
+    // they are. A video annotation (0x20) sets no flag: in Mega Database 2021, 22 of them are on
+    // 17 games, none of which has the embedded video flag; only guiding texts have it.
+    if (annotationType() == 0x10) {
+      stats.flags.add(GameHeaderFlags.EMBEDDED_AUDIO);
+    }
+    if (annotationType() == 0x11) {
+      stats.flags.add(GameHeaderFlags.EMBEDDED_PICTURE);
+    }
   }
 }

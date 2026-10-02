@@ -8,19 +8,20 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.Test;
-import se.yarin.chess.GameModel;
+import se.yarin.chess.GameMovesModel;
 import se.yarin.morphy.DatabaseCbh;
+import se.yarin.morphy.DatabaseMode;
+import se.yarin.morphy.Game;
 import se.yarin.morphy.ResourceLoader;
-import se.yarin.morphy.api.AccessMode;
-import se.yarin.morphy.api.Database;
-import se.yarin.morphy.api.Databases;
-import se.yarin.morphy.api.GameFetchOptions;
+import se.yarin.morphy.chessbase.convert.GameDtoImporter;
+import se.yarin.morphy.chessbase.convert.GameTimeControl;
+import se.yarin.morphy.chessbase.convert.GameMovesDtos;
 import se.yarin.morphy.model.GameDto;
-import se.yarin.morphy.chessbase.convert.*;
+import se.yarin.morphy.model.GameMovesDto;
 
 /**
- * The moves of every game in World-ch survive the DTO: the PGN a game is sent out as reads back to
- * the same moves, variations, annotations and comments.
+ * The moves of every game in World-ch survive the DTO: the movetext and the annotations a game is
+ * sent out as read back to the same moves, variations and annotations, every one of them equal.
  */
 public class GameDtoMovesRoundtripTest {
 
@@ -30,19 +31,25 @@ public class GameDtoMovesRoundtripTest {
     GameDtoImporter importer = new GameDtoImporter();
     List<String> failures = new ArrayList<>();
     int checked = 0;
-    try (Database db = Databases.open(new File(dir, "World-ch.cbh"), AccessMode.READ_ONLY)) {
-      for (long id = 1; id <= db.gameCount(); id++) {
-        GameDto dto = db.getGame(id, GameFetchOptions.full());
-        if (dto == null || dto.moves() == null) {
+    int annotated = 0;
+    try (DatabaseCbh db = DatabaseCbh.open(new File(dir, "World-ch.cbh"), DatabaseMode.READ_ONLY)) {
+      for (int id = 1; id <= db.count(); id++) {
+        Game game = db.getGame(id);
+        if (game.guidingText()) {
           continue;
         }
         checked++;
-        String pgn = dto.moves().pgn();
+        // The time control is a field of its own, and is left out here
+        GameMovesModel original = GameTimeControl.without(game.getModel().moves());
+        GameMovesDto moves = GameMovesDtos.toDto(original);
+        if (!moves.annotations().isEmpty()) {
+          annotated++;
+        }
+        GameDto dto = GameDto.builder().moves(moves).build();
         try {
-          GameModel model = importer.toGameModel(dto);
-          String again = GameMovesPgn.toPgn(model.moves());
-          if (!pgn.equals(again)) {
-            failures.add("game " + id + ": " + firstDifference(pgn, again));
+          String difference = firstDifference(original, importer.toGameModel(dto).moves());
+          if (difference != null) {
+            failures.add("game " + id + ": " + difference);
           }
         } catch (IllegalArgumentException e) {
           failures.add("game " + id + ": " + e.getMessage());
@@ -50,23 +57,35 @@ public class GameDtoMovesRoundtripTest {
       }
     }
     assertTrue("no games were checked", checked > 0);
+    assertTrue("no annotated games were checked", annotated > 0);
     assertEquals(
         failures.size() + " of " + checked + " games, e.g. " + failures.stream().limit(5).toList(),
         0,
         failures.size());
   }
 
-  /** Where two movetexts part ways, with a little context. */
-  private static String firstDifference(String expected, String actual) {
-    int i = 0;
-    while (i < expected.length() && i < actual.length() && expected.charAt(i) == actual.charAt(i)) {
-      i++;
+  /** The first node where two move trees differ, in their moves or annotations, or null. */
+  private static String firstDifference(GameMovesModel expected, GameMovesModel actual) {
+    List<GameMovesModel.Node> e = expected.getAllNodes();
+    List<GameMovesModel.Node> a = actual.getAllNodes();
+    if (e.size() != a.size()) {
+      return "sent " + e.size() + " nodes but read back " + a.size();
     }
-    int from = Math.max(0, i - 40);
-    return "sent '…"
-        + expected.substring(from, Math.min(expected.length(), i + 40))
-        + "…' but read back '…"
-        + actual.substring(from, Math.min(actual.length(), i + 40))
-        + "…'";
+    for (int i = 0; i < e.size(); i++) {
+      GameMovesModel.Node en = e.get(i);
+      GameMovesModel.Node an = a.get(i);
+      if (!en.isRoot() && !en.lastMove().equals(an.lastMove())) {
+        return "node " + i + ": sent " + en.lastMove() + " but read back " + an.lastMove();
+      }
+      if (!en.getAnnotations().equals(an.getAnnotations())) {
+        return "node "
+            + i
+            + ": sent "
+            + en.getAnnotations()
+            + " but read back "
+            + an.getAnnotations();
+      }
+    }
+    return null;
   }
 }

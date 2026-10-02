@@ -1,5 +1,7 @@
-import { Chess, CommentType } from '@jackstenglein/chess';
-import type { Move } from '@jackstenglein/chess';
+import { GameTree } from '../model/GameTree';
+import type { MoveNode } from '../model/GameTree';
+import type { Annotation } from '../model/annotations';
+import { filterAnnotations, findAnnotation } from '../model/annotations';
 
 // NAG (Numeric Annotation Glyph) mapping
 // Based on PGN Standard NAGs: https://en.wikipedia.org/wiki/Portable_Game_Notation#Standard_NAGs
@@ -50,16 +52,15 @@ const NAG_MAP: Record<number, string> = {
 interface ConversionState {
   lineIndexByLevel: Map<number, number>;
   nodeIndex: number;
-  globalMoveIndex: number;
-  moveMap: Map<Move, number>; // Map Move object -> global move index
-  reverseMoveMap: Map<number, Move>; // Map global move index -> Move object (for reverse lookups)
-  currentMove: Move | null; // The move that should be highlighted
+  moveMap: Map<MoveNode, number>; // Map move -> global move index
+  reverseMoveMap: Map<number, MoveNode>; // Map global move index -> move (for reverse lookups)
+  currentMove: MoveNode | null; // The move that should be highlighted
 }
 
 export type NotationHtmlResult = {
   html: string;
-  moveMap: Map<Move, number>; // Map Move object -> global move index
-  reverseMoveMap: Map<number, Move>; // Map global move index -> Move object (for reverse lookups)
+  moveMap: Map<MoveNode, number>; // Map move -> global move index
+  reverseMoveMap: Map<number, MoveNode>; // Map global move index -> move (for reverse lookups)
 };
 
 /**
@@ -78,59 +79,17 @@ function nagToGlyph(nag: number): string {
   return NAG_MAP[nag] || '';
 }
 
-// TODO: Language-tagged commentary ([%pre_XXX ...] and [%post_XXX ...], see
-// morphy-cbh/docs/ANNOTATION-TEXT-ENCODING.md) is always shown in English, and text in other
-// languages is hidden. Make the language selectable. Also, @jackstenglein/chess drops the commands
-// of a comment at the start of a variation, so language-tagged text there is lost (and is lost
-// when the game is saved); this goes away once the library is replaced.
+// TODO: Text in a language is shown only in English, and text in other languages is hidden. Make
+// the language selectable.
 const DISPLAY_LANGUAGE = 'ENG';
 
-type CommandMap = Record<string, unknown> | undefined;
-
-/**
- * Reverses the escaping the server applies to text inside a [%...] command:
- * \) is ']', \< is '{', \> is '}', and \x is x for any other character.
- */
-function unescapeCommandText(text: string): string {
-  return text.replace(/\\(.)/gs, (_, c: string) => (c === ')' ? ']' : c === '<' ? '{' : c === '>' ? '}' : c));
-}
-
-function commandText(commands: CommandMap, name: string): string {
-  const value = commands?.[name];
-  return typeof value === 'string' ? unescapeCommandText(value.trim()) : '';
-}
-
-function joinTexts(...texts: string[]): string {
-  return texts.filter((t) => t).join(' ');
-}
-
-/** The before-move text held in the [%pre] and [%pre_XXX] commands of a comment. */
-function beforeMoveCommandText(commands: CommandMap): string {
-  return joinTexts(commandText(commands, 'pre'), commandText(commands, `pre_${DISPLAY_LANGUAGE}`));
-}
-
-/**
- * The text of the comment before a move. The chess library keeps only the plain text of such a
- * comment on the move itself; its commands end up on the previous move in the same line.
- */
-function commentBeforeMove(chess: Chess, m: Move): string {
-  const previousCommands = m.previous && m.previous.next === m ? m.previous.commentDiag : undefined;
-  return joinTexts(chess.getComment(CommentType.Before, m), beforeMoveCommandText(previousCommands));
-}
-
-function commentAfterMove(chess: Chess, m: Move): string {
-  return joinTexts(
-    chess.getComment(CommentType.After, m),
-    commandText(m.commentDiag, `post_${DISPLAY_LANGUAGE}`)
-  );
-}
-
-/** The text of the comment before the game's first move. */
-function gameComment(chess: Chess): string {
-  return joinTexts(
-    chess.getComment(CommentType.Before, null),
-    beforeMoveCommandText(chess.pgn.gameComment)
-  );
+/** The text of the comments of a kind, in no language or the one shown. */
+function commentText(annotations: readonly Annotation[], type: 'textBefore' | 'textAfter'): string {
+  return filterAnnotations(annotations, type)
+    .filter((a) => !a.language || a.language === DISPLAY_LANGUAGE)
+    .map((a) => a.text.trim())
+    .filter((t) => t)
+    .join(' ');
 }
 
 /**
@@ -172,7 +131,7 @@ function processCommentWithLink(comment: string): string {
 /**
  * Formats a move with move number
  */
-function formatMoveWithNumber(move: Move, moveIndex: number, hasVariationsBefore: boolean): string {
+function formatMoveWithNumber(move: MoveNode, moveIndex: number, hasVariationsBefore: boolean): string {
   // Calculate the actual move number (1-based)
   const moveNumber = Math.floor((move.ply + 1) / 2);
 
@@ -189,12 +148,28 @@ function formatMoveWithNumber(move: Move, moveIndex: number, hasVariationsBefore
   }
 }
 
+/** The glyphs of the symbols of a move. */
+function symbolsHtml(annotations: readonly Annotation[]): string {
+  return (findAnnotation(annotations, 'symbols')?.nags ?? [])
+    .map(nagToGlyph)
+    .filter((glyph) => glyph)
+    .map((glyph) => `<span class="cbspec-glyph">${escapeHtml(glyph)}</span>`)
+    .join('');
+}
+
+function hasGraphics(annotations: readonly Annotation[]): boolean {
+  return (
+    (findAnnotation(annotations, 'squares')?.squares.length ?? 0) > 0 ||
+    (findAnnotation(annotations, 'arrows')?.arrows.length ?? 0) > 0
+  );
+}
+
 /**
  * Recursively traverses the game tree and generates HTML
  */
 function traverseGameTree(
-  chess: Chess,
-  move: Move | null,
+  game: GameTree,
+  move: MoveNode,
   level: number,
   lineIndex: number,
   nodeIndex: number,
@@ -205,21 +180,14 @@ function traverseGameTree(
 ): string {
   const parts: string[] = [];
 
-  // Collect moves in this line
-  const moves: Move[] = [];
-  const variations: any[][] = [];
-
-  let currentMove = move;
-  const lineStartGlobalMoveIndex = state.globalMoveIndex;
-
-  // Traverse the main line
+  // The moves of this line, and the alternatives to each of them
+  const moves: MoveNode[] = [];
+  let currentMove: MoveNode | undefined = move;
   while (currentMove) {
     moves.push(currentMove);
-    variations.push(currentMove.variations || []);
-    currentMove = currentMove.next;
+    currentMove = currentMove.children[0];
   }
-
-  state.globalMoveIndex += moves.length;
+  const variations = moves.map((m) => GameTree.alternatives(m));
 
   // Count moves and variations
   const moveCount = moves.length;
@@ -227,13 +195,11 @@ function traverseGameTree(
 
   // Check if line has comments (before or after moves)
   // For the main line (level 0) starting at the first move, also check for game-level comment
-  let hasComments = moves.some((m) => commentBeforeMove(chess, m) || commentAfterMove(chess, m));
-
-  // If this is the main line and we're at the first move (parentMoveIndex === 0), check for game-level comment
-  if (level === 0 && parentMoveIndex === 0 && moves.length > 0) {
-    if (gameComment(chess)) {
-      hasComments = true;
-    }
+  let hasComments = moves.some(
+    (m) => commentText(m.annotations, 'textBefore') || commentText(m.annotations, 'textAfter')
+  );
+  if (level === 0 && parentMoveIndex === 0 && gameComment(game)) {
+    hasComments = true;
   }
 
   // Generate line opening tag
@@ -254,14 +220,12 @@ function traverseGameTree(
 
   for (let i = 0; i < moves.length; i++) {
     const m = moves[i];
-    const moveVariations = variations[i] || [];
-
-    state.moveMap.set(m, lineStartGlobalMoveIndex + i);
-    state.reverseMoveMap.set(lineStartGlobalMoveIndex + i, m);
+    const moveVariations = variations[i];
+    const globalMoveIndex = state.moveMap.get(m)!;
 
     // Check if previous move had variations (for formatting black moves after variations)
     // This applies to both main line and variations (for nested variations)
-    const hasVariationsBefore = i > 0 && variations[i - 1]?.length > 0;
+    const hasVariationsBefore = i > 0 && variations[i - 1].length > 0;
 
     // Get move text and format with move number
     const formattedMove = formatMoveWithNumber(m, localMoveIndex, hasVariationsBefore);
@@ -271,25 +235,9 @@ function traverseGameTree(
     if (state.currentMove === m || (state.currentMove === null && level === 0 && i === 0)) {
       moveClasses.push('cbcur-move');
     }
-    let moveContent = escapeHtml(formattedMove);
+    const moveContent = escapeHtml(formattedMove) + symbolsHtml(m.annotations);
 
-    // Add NAG glyphs if present
-    // NAGs are stored as strings like '$1', '$14' in the nags array
-    if (m.nags && m.nags.length > 0) {
-      for (const nagString of m.nags) {
-        // Parse the NAG string (e.g., '$1' -> 1)
-        const nagNumber = parseInt(nagString.replace('$', ''), 10);
-        if (!isNaN(nagNumber)) {
-          const glyph = nagToGlyph(nagNumber);
-          if (glyph) {
-            moveContent += `<span class="cbspec-glyph">${escapeHtml(glyph)}</span>`;
-          }
-        }
-      }
-    }
-
-    // Add comment before move if present
-    const commentBefore = commentBeforeMove(chess, m);
+    const commentBefore = commentText(m.annotations, 'textBefore');
     if (commentBefore) {
       parts.push(
         `<span class="cbcomment" data-inx-mv="${localMoveIndex}" data-linecnt="${lineDepth}">${escapeHtml(commentBefore)}</span>`
@@ -297,21 +245,15 @@ function traverseGameTree(
     }
 
     parts.push(
-      `<span class="${moveClasses.join(' ')}" data-inx-mv="${localMoveIndex}" data-linecnt="${lineDepth}" data-nodecnt="${currentNodeIndex}" data-global-move-index="${lineStartGlobalMoveIndex + i}">${moveContent}</span>`
+      `<span class="${moveClasses.join(' ')}" data-inx-mv="${localMoveIndex}" data-linecnt="${lineDepth}" data-nodecnt="${currentNodeIndex}" data-global-move-index="${globalMoveIndex}">${moveContent}</span>`
     );
 
     // Add color marker for moves with graphical annotations (colored squares or arrows)
-    // Graphical annotations are stored in commentDiag with colorFields (squares) or colorArrows (arrows)
-    const hasGraphicalAnnotations = m.commentDiag && (
-      (m.commentDiag.colorFields && m.commentDiag.colorFields.length > 0) ||
-      (m.commentDiag.colorArrows && m.commentDiag.colorArrows.length > 0)
-    );
-    if (hasGraphicalAnnotations) {
+    if (hasGraphics(m.annotations)) {
       parts.push(`<span class="cbcol-marker" data-inx-mv="${localMoveIndex}"> </span>`);
     }
 
-    // Add comment after move if present
-    const commentAfter = commentAfterMove(chess, m);
+    const commentAfter = commentText(m.annotations, 'textAfter');
     if (commentAfter) {
       parts.push(
         `<span class="cbcomment" data-inx-mv="${localMoveIndex}" data-linecnt="${lineDepth}">${processCommentWithLink(commentAfter)}</span>`
@@ -323,7 +265,7 @@ function traverseGameTree(
       // Assign node index for variations
       // All variations from the same parent move share the same nodeIndex
       let varNodeIndex = currentNodeIndex;
-      if (i === 0 || (i > 0 && variations[i - 1]?.length === 0)) {
+      if (i === 0 || variations[i - 1].length === 0) {
         state.nodeIndex++;
         varNodeIndex = state.nodeIndex;
       }
@@ -332,36 +274,20 @@ function traverseGameTree(
       let varLineIndex = state.lineIndexByLevel.get(varLevel) || 0;
 
       for (let vIdx = 0; vIdx < moveVariations.length; vIdx++) {
-        const variation = moveVariations[vIdx];
-        const isLastVar = vIdx === moveVariations.length - 1;
-
         state.lineIndexByLevel.set(varLevel, varLineIndex);
-
-        // Variation is an array of moves - traverse them
-        // We need to build a linked list structure for the variation
-        // The Chess library stores variations as arrays, so we need to link them
-        const varMoveHead = variation[0];
-        if (variation.length > 1) {
-          // Link moves in variation
-          for (let j = 0; j < variation.length - 1; j++) {
-            variation[j].next = variation[j + 1];
-          }
-        }
-
-        // Recursively process variation
-        const varHtml = traverseGameTree(
-          chess,
-          varMoveHead,
-          varLevel,
-          varLineIndex,
-          varNodeIndex,
-          lineDepth + 1,
-          localMoveIndex,
-          isLastVar,
-          state
+        parts.push(
+          traverseGameTree(
+            game,
+            moveVariations[vIdx],
+            varLevel,
+            varLineIndex,
+            varNodeIndex,
+            lineDepth + 1,
+            localMoveIndex,
+            vIdx === moveVariations.length - 1,
+            state
+          )
         );
-
-        parts.push(varHtml);
         varLineIndex++;
       }
 
@@ -374,79 +300,53 @@ function traverseGameTree(
   return `<span ${lineAttrs}>${parts.join('  ')}</span>`;
 }
 
+/** The text of the comments of the game as a whole, shown before the first move. */
+function gameComment(game: GameTree): string {
+  return [commentText(game.root.annotations, 'textBefore'), commentText(game.root.annotations, 'textAfter')]
+    .filter((t) => t)
+    .join(' ');
+}
+
 /**
- * Generates ChessBase-style HTML notation from a Chess game instance
- * The chess instance should already have the game loaded via loadPgn()
- * @param chess - The Chess instance with the game loaded
- * @param currentMove - Optional Move object to highlight. If null, highlights the first move (start position)
+ * Generates ChessBase-style HTML notation of a game, with the current move highlighted.
+ *
+ * Every move gets the index annotations use for it (see GameTree), as data-global-move-index.
  */
-export function generateNotationHtml(chess: Chess): NotationHtmlResult {
+export function generateNotationHtml(game: GameTree): NotationHtmlResult {
   const state: ConversionState = {
     lineIndexByLevel: new Map(),
     nodeIndex: 0,
-    globalMoveIndex: 0,
     moveMap: new Map(),
     reverseMoveMap: new Map(),
-    currentMove: chess.currentMove(),
+    currentMove: game.currentMove(),
   };
-  // Get first move directly without modifying chess state
-  const firstMove = chess.firstMove();
+  game.movesInOrder().forEach((move, index) => {
+    state.moveMap.set(move, index);
+    state.reverseMoveMap.set(index, move);
+  });
 
-  if (!firstMove) {
-    return {
-      html: '<div class="nota-game" data-inx-game="0"></div>',
-      moveMap: new Map(),
-      reverseMoveMap: new Map(),
-    };
-  }
-
-  // Check for game-level comment before the first move
-  // Comments before the first move are stored as game comments, accessible via getComment(null)
-  const gameCommentBefore = gameComment(chess);
   const parts: string[] = [];
-
-  // Initialize line index for level 0
-  state.lineIndexByLevel.set(0, 0);
-
-  // Generate main line HTML
-  const mainLineHtml = traverseGameTree(
-    chess,
-    firstMove,
-    0,      // level
-    0,      // lineIndex
-    0,      // nodeIndex
-    1,      // lineDepth
-    0,      // parentMoveIndex
-    false,  // isLast
-    state
-  );
-
-  // If there's a game-level comment before the first move, prepend it
-  if (gameCommentBefore) {
-    parts.push(
-      `<span class="cbcomment" data-inx-mv="0" data-linecnt="1">${escapeHtml(gameCommentBefore)}</span>`
-    );
+  const comment = gameComment(game);
+  if (comment) {
+    parts.push(`<span class="cbcomment" data-inx-mv="0" data-linecnt="1">${processCommentWithLink(comment)}</span>`);
   }
-  parts.push(mainLineHtml);
+
+  const firstMove = game.firstMove();
+  if (firstMove) {
+    state.lineIndexByLevel.set(0, 0);
+    parts.push(traverseGameTree(game, firstMove, 0, 0, 0, 1, 0, false, state));
+  }
 
   // Add game result at the end if available
-  const headers = chess.header() || {};
-  const result = headers.getRawValue('Result');
+  const result = game.getTag('Result');
   if (result && result !== '?' && result !== '???' && result.trim() !== '' && result !== '*') {
     // Format result similar to GameHeader component
-    let formattedResult = result;
-    if (result === '1/2-1/2') {
-      formattedResult = '½-½';
-    }
-    parts.push(
-      `<span class="cbnota-result">${escapeHtml(formattedResult)}</span>`
-    );
+    const formattedResult = result === '1/2-1/2' ? '½-½' : result;
+    parts.push(`<span class="cbnota-result">${escapeHtml(formattedResult)}</span>`);
   }
 
-  const html = `<div class="nota-game" data-inx-game="0">${parts.join('  ')}</div>`;
-
   return {
-    html,
+    html: `<div class="nota-game" data-inx-game="0">${parts.join('  ')}</div>`,
     moveMap: state.moveMap,
     reverseMoveMap: state.reverseMoveMap,
   };

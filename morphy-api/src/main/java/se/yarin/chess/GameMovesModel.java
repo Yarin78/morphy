@@ -149,6 +149,32 @@ public class GameMovesModel {
   }
 
   /**
+   * Gets a flat list of all moves in the game in the order they're written in PGN, the root
+   * excluded: each variation, with everything that follows it, right after the move it's an
+   * alternative to, and then the line it branches from goes on. In {@code 1.e4 c5 (1...c6 2.d4)
+   * 2.Nf3} that's e4, c5, c6, d4, Nf3.
+   *
+   * @return a list of all nodes in the game but the root
+   */
+  public List<Node> getAllNodesPgnOrder() {
+    ArrayList<Node> nodes = new ArrayList<>();
+    addLinePgnOrder(root(), nodes);
+    return nodes;
+  }
+
+  private static void addLinePgnOrder(Node node, List<Node> nodes) {
+    while (node.hasMoves()) {
+      List<Node> children = node.children();
+      nodes.add(children.getFirst());
+      for (int i = 1; i < children.size(); i++) {
+        nodes.add(children.get(i));
+        addLinePgnOrder(children.get(i), nodes);
+      }
+      node = children.getFirst();
+    }
+  }
+
+  /**
    * Replaces the game tree with a new tree starting from the specified position
    *
    * @param startPosition the new starting position

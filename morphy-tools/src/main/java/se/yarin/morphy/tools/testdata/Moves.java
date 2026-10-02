@@ -8,6 +8,7 @@ import org.jetbrains.annotations.Nullable;
 import se.yarin.chess.GameMovesModel;
 import se.yarin.chess.Move;
 import se.yarin.chess.annotations.Annotation;
+import se.yarin.morphy.chessbase.convert.GameMovesDtos;
 import se.yarin.morphy.chessbase.convert.GameMovesPgn;
 import se.yarin.morphy.model.GameMovesDto;
 import se.yarin.morphy.pgn.PgnMoves;
@@ -18,15 +19,15 @@ final class Moves {
   private Moves() {}
 
   /**
-   * Movetext in the form the databases give it back, and checked to be legal.
+   * Moves in the form the databases give them back, and checked to be legal.
    *
-   * @param movetext the moves; no headers and no result
+   * @param movetext the moves, with annotations in comments as ChessBase writes them in PGN; no
+   *     headers and no result
    * @param fen the start position, or null for the standard one
    * @throws IllegalArgumentException if a move is illegal
    */
   static GameMovesDto of(String movetext, @Nullable String fen, boolean chess960) {
-    GameMovesModel model = PgnMoves.PLAIN.fromPgn(movetext, fen, chess960);
-    return new GameMovesDto(PgnMoves.PLAIN.toPgn(model), PgnMoves.PLAIN.toFen(model));
+    return GameMovesDtos.toDto(GameMovesPgn.fromPgn(movetext, fen, chess960));
   }
 
   static GameMovesDto of(String movetext) {
@@ -52,7 +53,7 @@ final class Moves {
       }
       current = current.addMove(moves.get(random.nextInt(moves.size())));
     }
-    return new GameMovesDto(PgnMoves.PLAIN.toPgn(model), null);
+    return GameMovesDtos.toDto(model);
   }
 
   /**
@@ -70,7 +71,7 @@ final class Moves {
       }
       current = current.addMove(moves.get(random.nextInt(moves.size())));
     }
-    return new GameMovesDto(PgnMoves.PLAIN.toPgn(model), PgnMoves.PLAIN.toFen(model));
+    return GameMovesDtos.toDto(model);
   }
 
   /** A random game with random variations added at random positions. */
@@ -92,7 +93,7 @@ final class Moves {
         nodes.add(node.addMove(moves.get(random.nextInt(moves.size()))));
       }
     }
-    return new GameMovesDto(PgnMoves.PLAIN.toPgn(model), null);
+    return GameMovesDtos.toDto(model);
   }
 
   /**
@@ -137,15 +138,14 @@ final class Moves {
     }
     // The text has to be in the form the ChessBase formats write it in, or the comparison of what
     // they give back would have to allow for differences, and could then miss what is lost
-    GameMovesDto plain = of(movetext, fen, chess960);
+    String plain = PgnMoves.PLAIN.toPgn(PgnMoves.PLAIN.fromPgn(movetext, fen, chess960));
     GameMovesModel model = GameMovesPgn.fromPgn(movetext, fen, chess960);
     String written = GameMovesPgn.toPgn(model);
-    GameMovesDto normal = of(written, fen, chess960);
-    if (!plain.pgn().equals(normal.pgn())) {
+    if (!plain.equals(written)) {
       throw new IllegalStateException(
-          "The annotations are not in the form ChessBase writes them in.\n  given:   " + plain.pgn()
-              + "\n  written: " + normal.pgn());
+          "The annotations are not in the form ChessBase writes them in.\n  given:   " + plain
+              + "\n  written: " + written);
     }
-    return plain;
+    return GameMovesDtos.toDto(model);
   }
 }

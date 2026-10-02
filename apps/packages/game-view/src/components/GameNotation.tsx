@@ -1,18 +1,18 @@
 import { useEffect, useRef, useState } from 'react';
-import { Chess } from '@jackstenglein/chess';
+import type { GameTree, MoveNode } from '../model/GameTree';
 import { generateNotationHtml } from '../utils/notationGenerator';
 import type { NotationHtmlResult } from '../utils/notationGenerator';
 import './GameNotation.css';
 
 interface GameNotationProps {
-  chess: Chess;
+  game: GameTree;
   version: number;
-  onMoveClick: (move: any) => void;
-  onNotationReady?: (reverseMoveMap: Map<number, any>) => void;
+  onMoveClick: (move: MoveNode) => void;
+  onNotationReady?: (reverseMoveMap: Map<number, MoveNode>) => void;
 }
 
 export const GameNotation: React.FC<GameNotationProps> = ({
-  chess,
+  game,
   version,
   onMoveClick,
   onNotationReady,
@@ -27,7 +27,7 @@ export const GameNotation: React.FC<GameNotationProps> = ({
   // Now we also pass the current move so highlighting is done during HTML generation.
   useEffect(() => {
     try {
-      const result = generateNotationHtml(chess);
+      const result = generateNotationHtml(game);
       setNotationResult(result);
       // Notify parent component that notation is ready
       if (onNotationReady) {
@@ -40,7 +40,7 @@ export const GameNotation: React.FC<GameNotationProps> = ({
         onNotationReady(new Map());
       }
     }
-  }, [chess, version, onNotationReady]);
+  }, [game, version, onNotationReady]);
 
   // Scroll highlighted move into view if necessary when position changes
   useEffect(() => {
@@ -48,7 +48,7 @@ export const GameNotation: React.FC<GameNotationProps> = ({
 
     try {
       const container = containerRef.current;
-      const currentMove = chess.currentMove();
+      const currentMove = game.currentMove();
       let targetElement: Element | null = null;
 
       if (currentMove) {
@@ -98,7 +98,7 @@ export const GameNotation: React.FC<GameNotationProps> = ({
     } catch (error) {
       console.error('Error scrolling to current move:', error);
     }
-  }, [notationResult, chess, version]);
+  }, [notationResult, game, version]);
 
   // Handle click events on moves
   useEffect(() => {
@@ -115,7 +115,7 @@ export const GameNotation: React.FC<GameNotationProps> = ({
       const moveIndex = moveElement.getAttribute('data-global-move-index');
       if (!moveIndex) return;
 
-      // Look up the Move object using the path
+      // Look up the move by its index
       const move = notationResult.reverseMoveMap.get(Number(moveIndex));
       if (move && onMoveClick) {
         onMoveClick(move);

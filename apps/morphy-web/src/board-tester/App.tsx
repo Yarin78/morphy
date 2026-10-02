@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { Chess } from '@jackstenglein/chess';
 import { GameView, gameTagLanguages } from 'game-view';
 import type {
   ChessGame,
@@ -7,6 +6,7 @@ import type {
   GameTagInfo,
   GameTagLanguage,
   GameTagService,
+  GameTree,
   PlayerService,
   SourceInfo,
   SourceService,
@@ -27,10 +27,10 @@ import {
 } from '../api/client';
 import type { EntityPath } from '../api/client';
 import {
-  gameDtoToPgn,
+  gameDtoToChessGame,
   gameTagDto,
   gameTagInfo,
-  pgnToGamePatch,
+  gameToGamePatch,
   sourceDto,
   sourceInfo,
   teamDto,
@@ -55,7 +55,7 @@ import './App.css';
 type GameState =
   | { kind: 'empty' }
   | { kind: 'loading' }
-  | { kind: 'loaded'; game: GameDto; pgn: string }
+  | { kind: 'loaded'; game: GameDto; shown: string }
   | { kind: 'error'; message: string };
 
 type FetchResult = { paramsKey: string; game: GameDto } | { paramsKey: string; error: string };
@@ -191,7 +191,7 @@ function App() {
   const [saveMessageFor, setSaveMessageFor] = useState<{ paramsKey: string; message: string } | null>(null);
   const saveMessage = saveMessageFor?.paramsKey === paramsKey ? saveMessageFor.message : null;
   const [saving, setSaving] = useState(false);
-  const chessRef = useRef<Chess | null>(null);
+  const gameRef = useRef<GameTree | null>(null);
   // The format decides the languages a game tag can have titles in
   const databasePath = databases?.find((db) => db.id === databaseId)?.path;
   const databaseFormat = databasePath?.endsWith('.2cbh') ? '2cbh' : databasePath?.endsWith('.cbh') ? 'cbh' : undefined;
@@ -257,38 +257,37 @@ function App() {
     if (!fetchResult || fetchResult.paramsKey !== paramsKey) return { kind: 'loading' };
     return 'error' in fetchResult
       ? { kind: 'error', message: fetchResult.error }
-      : { kind: 'loaded', game: fetchResult.game, pgn: gameDtoToPgn(fetchResult.game) };
+      : { kind: 'loaded', game: fetchResult.game, shown: JSON.stringify(gameDtoToChessGame(fetchResult.game)) };
   }, [syncState, fetchResult, paramsKey]);
 
   // Keyed on primitive values (not the gameState object) so that saving a replaced game
-  // - which produces a new GameState object with the *same* pgn - doesn't change identity
+  // - which produces a new GameState object with the *same* game - doesn't change identity
   // and doesn't make GameView reload/reset the board out from under the user.
-  const loadedPgn = gameState.kind === 'loaded' ? gameState.pgn : '';
-  const loadedId = gameState.kind === 'loaded' ? String(gameState.game.id ?? 'new') : 'new';
+  const shownGame = gameState.kind === 'loaded' ? gameState.shown : '';
   const selectedGame = useMemo<ChessGame>(
-    () => ({
-      header: { id: loadedId, white: '', black: '', result: '', date: '' },
-      pgn: loadedPgn,
-    }),
-    [loadedId, loadedPgn]
+    () =>
+      shownGame
+        ? (JSON.parse(shownGame) as ChessGame)
+        : { header: { id: 'new', white: '', black: '', result: '', date: '' }, tags: [] },
+    [shownGame]
   );
 
   const canSave = !saving && Boolean(databaseId) && (gameState.kind === 'loaded' || gameState.kind === 'empty');
 
   async function handleSave() {
-    if (!databaseId || !chessRef.current) return;
+    if (!databaseId || !gameRef.current) return;
     setSaving(true);
     try {
       if (gameState.kind === 'loaded' && gameId) {
-        const patch = pgnToGamePatch(chessRef.current, gameState.game);
+        const patch = gameToGamePatch(gameRef.current, gameState.game);
         let updated = await replaceGame(databaseId, gameId, patch);
         if (await saveFideIds(databaseId, patch, updated)) updated = await fetchGame(databaseId, gameId);
-        // Keep the same paramsKey/pgn (see the comment on loadedPgn above) - only the
+        // Keep the same paramsKey/game (see the comment on shownGame above) - only the
         // metadata changes.
         setFetchResult({ paramsKey, game: updated });
         setSaveMessageFor({ paramsKey, message: 'Saved.' });
       } else {
-        const patch = pgnToGamePatch(chessRef.current, BLANK_GAME);
+        const patch = gameToGamePatch(gameRef.current, BLANK_GAME);
         let created = await createGame(databaseId, patch);
         if (created.id == null) {
           throw new Error('Server did not return an id for the created game');
@@ -329,8 +328,8 @@ function App() {
         <GameView
           selectedGame={selectedGame}
           initialOrientation="white"
-          onChessReady={(chess) => {
-            chessRef.current = chess;
+          onGameReady={(game) => {
+            gameRef.current = game;
           }}
           gameInfoServices={gameInfoServices}
         />

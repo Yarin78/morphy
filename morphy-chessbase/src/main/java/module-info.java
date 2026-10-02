@@ -10,4 +10,7 @@ module se.yarin.morphy.chessbase {
     exports se.yarin.morphy.chessbase.annotations;
     exports se.yarin.morphy.chessbase.convert;
     exports se.yarin.morphy.chessbase.text;
+
+    provides se.yarin.morphy.pgn.GameMovesDtoCodec.Provider with
+            se.yarin.morphy.chessbase.convert.GameMovesDtos.PgnProvider;
 }

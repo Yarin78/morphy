@@ -6,7 +6,7 @@
   "main": "src/index.ts",
   "types": "src/index.ts",
   "dependencies": {
-    "@jackstenglein/chess": "^2.2.15",
+    "chess.js": "^1.4.0",
     "flag-icons": "^7.5.0",
     "react-chessground": "^1.0.0",
     "react-icons": "^5.5.0"
