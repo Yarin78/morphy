@@ -217,9 +217,13 @@ by one word per piece on the board:
 | Word | Description |
 |---|---|
 | 0 | the move number |
-| 1 | low byte: side to move, 0 white, 1 black. High byte: en passant file, 1-8 for `a`-`h`, 0 if none |
+| 1 | low byte: side to move, 0 white, 1 black. High byte: en passant file, 1-8 for `a`-`h`, 0 if none; other values occur, see below |
 | 2 | castling rights: 1 white O-O-O, 2 white O-O, 4 black O-O-O, 8 black O-O |
 | 3… | the pieces, in square order |
+
+The en passant byte is also found holding 15 (`0f00` for White to move), in
+positions where no en passant capture is possible. Its meaning is **unknown**;
+likely it is another way of saying there is none.
 
 A piece word is `c02d` plus an index over pieces and squares, continuing the
 numbering directly above the move words:

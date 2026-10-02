@@ -32,6 +32,9 @@ are not repeated here.
 
 - **[File header](2-moves.md#file-header)**: the byte at 0x0a, which is 1 in a
   database with no games and 0 otherwise.
+- **[Set-up positions](2-moves.md#set-up-positions)**: the value 15 in the en
+  passant byte of word 1, where no en passant capture is possible; likely the
+  same as 0, none.
 - **[Free space](6-behaviour.md#free-space-in-the-move-and-annotation-files)**:
   what happens when a record outgrows all the spare in the records after it, or
   when the last record in the file grows.
