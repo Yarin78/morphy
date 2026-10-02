@@ -357,6 +357,13 @@ span.cbcol-marker
    display: inline-block;
 }
 
+/* A piece in a comment; fonts that have the Unicode chess pieces */
+span.cbfigurine
+{
+   font-family: 'Noto Sans Symbols 2', 'Segoe UI Symbol', 'Apple Symbols', 'DejaVu Sans', sans-serif;
+   font-style: normal;
+}
+
 /* An annotation the notation doesn't show otherwise; its data is in the tooltip */
 span.cbanno-marker
 {

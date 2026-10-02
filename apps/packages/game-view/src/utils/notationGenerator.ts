@@ -3,6 +3,7 @@ import type { MoveNode } from '../model/GameTree';
 import type { Annotation } from '../model/annotations';
 import { filterAnnotations, findAnnotation } from '../model/annotations';
 import { annotationMarkers, annotationMarkersHtml } from './annotationMarkers';
+import { figurinesToHtml } from './figurines';
 
 // NAG (Numeric Annotation Glyph) mapping
 // Based on PGN Standard NAGs: https://en.wikipedia.org/wiki/Portable_Game_Notation#Standard_NAGs
@@ -262,7 +263,7 @@ function traverseGameTree(
     const commentBefore = commentText(m.annotations, 'textBefore');
     if (commentBefore) {
       parts.push(
-        `<span class="cbcomment" data-inx-mv="${localMoveIndex}" data-linecnt="${lineDepth}">${escapeHtml(commentBefore)}</span>`
+        `<span class="cbcomment" data-inx-mv="${localMoveIndex}" data-linecnt="${lineDepth}">${figurinesToHtml(escapeHtml(commentBefore))}</span>`
       );
     }
 
@@ -284,7 +285,7 @@ function traverseGameTree(
     const commentAfter = commentText(m.annotations, 'textAfter');
     if (commentAfter) {
       parts.push(
-        `<span class="cbcomment" data-inx-mv="${localMoveIndex}" data-linecnt="${lineDepth}">${processCommentWithLink(commentAfter)}</span>`
+        `<span class="cbcomment" data-inx-mv="${localMoveIndex}" data-linecnt="${lineDepth}">${figurinesToHtml(processCommentWithLink(commentAfter))}</span>`
       );
     }
 
@@ -356,7 +357,7 @@ export function generateNotationHtml(game: GameTree): NotationHtmlResult {
   const parts: string[] = [];
   const comment = gameComment(game);
   if (comment) {
-    parts.push(`<span class="cbcomment" data-inx-mv="0" data-linecnt="1">${processCommentWithLink(comment)}</span>`);
+    parts.push(`<span class="cbcomment" data-inx-mv="0" data-linecnt="1">${figurinesToHtml(processCommentWithLink(comment))}</span>`);
   }
 
   const gameMarkers = annotationMarkersHtml(annotationMarkers(game.root.annotations, DISPLAY_LANGUAGE, hasGlyph));

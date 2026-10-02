@@ -1,4 +1,5 @@
 import type { Annotation, AnnotationType } from '../model/annotations';
+import { figurinesToUnicode } from './figurines';
 
 /**
  * Markers for the annotations the notation doesn't show yet: a small label after the move naming
@@ -85,7 +86,7 @@ function details(annotation: Annotation): string {
   const lines: string[] = [annotation.type];
   for (const [field, value] of Object.entries(annotation)) {
     if (field === 'type') continue;
-    let text = typeof value === 'string' ? value : JSON.stringify(value);
+    let text = typeof value === 'string' ? figurinesToUnicode(value) : JSON.stringify(value);
     if (field === 'data' && typeof value === 'string') {
       text = `${Math.floor((value.length * 3) / 4)} bytes, base64 ${value.slice(0, 48)}${value.length > 48 ? '…' : ''}`;
     } else if (text.length > MAX_TEXT) {
