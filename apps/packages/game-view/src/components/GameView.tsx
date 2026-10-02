@@ -14,6 +14,7 @@ import { IoPlaySkipBack, IoChevronBack, IoChevronForward, IoPlaySkipForward, IoR
 import type { ChessGame } from '../types/chess';
 import { useChessGame } from '../hooks/useChessGame';
 import { useKeyboardNavigation } from '../hooks/useKeyboardNavigation';
+import { useNagKeys } from '../hooks/useNagKeys';
 import { readGameInfo, writeGameInfo } from '../utils/gameInfo';
 import type { GameInfo } from '../utils/gameInfo';
 import type { GameInfoServices } from '../utils/gameInfo';
@@ -408,6 +409,9 @@ export const GameView: React.FC<GameViewProps> = ({
     move.annotations = toggleNag(move.annotations, nag);
     triggerUpdate();
   }, [game, triggerUpdate]);
+
+  // !, ? and = toggle those symbols on the current move, when editing
+  useNagKeys(isEditMode && !!selectedGame && !editingGameInfo, handleNagToggle);
 
   // Keyboard navigation
   useKeyboardNavigation({
