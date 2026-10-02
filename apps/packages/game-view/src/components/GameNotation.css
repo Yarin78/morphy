@@ -381,6 +381,19 @@ span.cbanno-marker
    cursor: help;
 }
 
+/* A move leading to a critical position, by the phase of the game */
+.game-notation-content .cbmove.cbcrit-opening {
+   color: #1f5fbf;
+}
+
+.game-notation-content .cbmove.cbcrit-middlegame {
+   color: #e00000;
+}
+
+.game-notation-content .cbmove.cbcrit-endgame {
+   color: #2e8b3d;
+}
+
 .game-notation-content .cbmove.cbcur-move {
    background-color: brown;
    color: white;

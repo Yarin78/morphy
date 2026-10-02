@@ -198,6 +198,12 @@ function traverseGameTree(
     if (state.currentMove === m || (state.currentMove === null && level === 0 && i === 0)) {
       moveClasses.push('cbcur-move');
     }
+    // A critical position is shown by the color of the move leading to it
+    const critical = findAnnotation(m.annotations, 'critical');
+    const criticalTitle = critical && critical.phase !== 'none' ? ` title="Critical position: ${critical.phase}"` : '';
+    if (criticalTitle) {
+      moveClasses.push(`cbcrit-${critical!.phase}`);
+    }
     const prefix = symbolsHtml(m.annotations, true);
     const moveContent = (prefix ? prefix + ' ' : '') + escapeHtml(formattedMove) + symbolsHtml(m.annotations, false);
 
@@ -209,7 +215,7 @@ function traverseGameTree(
     }
 
     parts.push(
-      `<span class="${moveClasses.join(' ')}" data-inx-mv="${localMoveIndex}" data-linecnt="${lineDepth}" data-nodecnt="${currentNodeIndex}" data-global-move-index="${globalMoveIndex}">${moveContent}</span>`
+      `<span class="${moveClasses.join(' ')}" data-inx-mv="${localMoveIndex}" data-linecnt="${lineDepth}" data-nodecnt="${currentNodeIndex}" data-global-move-index="${globalMoveIndex}"${criticalTitle}>${moveContent}</span>`
     );
 
     // Add color marker for moves with graphical annotations (colored squares or arrows)

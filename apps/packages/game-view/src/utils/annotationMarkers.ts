@@ -58,6 +58,12 @@ export function annotationMarkers(
       case 'squares':
       case 'arrows':
         break;
+      case 'critical':
+        // Shown by the color of the move, unless it's of no phase
+        if (annotation.phase === 'none') {
+          markers.push({ label: 'critical', details: details(annotation) });
+        }
+        break;
       default:
         markers.push({ label: MARKER_LABELS[annotation.type] ?? annotation.type, details: details(annotation) });
     }
