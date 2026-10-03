@@ -10,6 +10,17 @@ export interface MoveAction {
   /** Whether it can't be done from the move. */
   disabled: boolean;
   run: () => void;
+  /** The key that does it, as shown. */
+  shortcut: string;
+  /** Whether a key pressed is the one that does it. */
+  isKey: (e: KeyboardEvent) => boolean;
+}
+
+const MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
+
+/** A key pressed without Cmd, Ctrl or Alt. */
+function plain(e: KeyboardEvent, ...keys: string[]): boolean {
+  return keys.includes(e.key) && !e.metaKey && !e.ctrlKey && !e.altKey;
 }
 
 /**
@@ -29,6 +40,8 @@ export function moveActions(game: GameTree, move: MoveNode | null, onChange: () 
       run: () => {
         if (move && GameTree.promoteVariation(move)) onChange();
       },
+      shortcut: MAC ? '⌘↑' : 'Ctrl+↑',
+      isKey: (e) => e.key === 'ArrowUp' && (MAC ? e.metaKey : e.ctrlKey) && !e.altKey && !e.shiftKey,
     },
     {
       label: 'Delete Variation',
@@ -37,6 +50,9 @@ export function moveActions(game: GameTree, move: MoveNode | null, onChange: () 
       run: () => {
         if (move && game.deleteVariation(move)) onChange();
       },
+      // The delete key of a Mac is Backspace
+      shortcut: MAC ? '⌫' : 'Del',
+      isKey: (e) => plain(e, 'Delete', 'Backspace'),
     },
     {
       label: 'Delete Remaining Moves',
@@ -47,6 +63,8 @@ export function moveActions(game: GameTree, move: MoveNode | null, onChange: () 
         game.deleteRemainingMoves(move);
         onChange();
       },
+      shortcut: ']',
+      isKey: (e) => plain(e, ']'),
     },
     {
       label: 'Delete Previous Moves',
@@ -56,6 +74,8 @@ export function moveActions(game: GameTree, move: MoveNode | null, onChange: () 
       run: () => {
         if (move && game.deletePreviousMoves(move)) onChange();
       },
+      shortcut: '[',
+      isKey: (e) => plain(e, '['),
     },
   ];
 }

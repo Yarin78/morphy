@@ -27,7 +27,7 @@ export const NagBar: React.FC<NagBarProps> = ({ annotations, onToggle, actions =
               key={action.label}
               type="button"
               className="nag-bar-button"
-              title={action.label}
+              title={`${action.label} (${action.shortcut})`}
               disabled={action.disabled}
               // Keep the focus where it is, so the arrow keys still go through the moves
               onMouseDown={(e) => e.preventDefault()}

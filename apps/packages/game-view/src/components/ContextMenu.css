@@ -59,7 +59,9 @@
   min-width: 1.5rem;
   margin-right: 0.35rem;
   font-family: 'Noto Sans Symbols 2', 'Segoe UI Symbol', 'Apple Symbols', 'DejaVu Sans', sans-serif;
+  font-size: 1.15em;
   font-weight: bold;
+  line-height: 1;
   text-align: left;
 }
 
@@ -69,7 +71,7 @@
 
 .context-menu-symbol svg {
   display: block;
-  margin-top: 0.1em;
+  font-size: 0.9em;
 }
 
 .context-menu-shortcut {

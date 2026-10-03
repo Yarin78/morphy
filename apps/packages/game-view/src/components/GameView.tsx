@@ -24,12 +24,14 @@ import { createMovedPieceFen } from '../utils/fenUtils';
 import { evalBars } from '../utils/evalGraph';
 import { nextMoveChoices } from '../utils/variationChoice';
 import { findAnnotation } from '../model/annotations';
+import { TbCircleOff, TbRoute, TbStar } from 'react-icons/tb';
 import { IoPlaySkipBack, IoChevronBack, IoChevronForward, IoPlaySkipForward, IoReload, IoMenu, IoClose } from 'react-icons/io5';
 import type { ChessGame } from '../types/chess';
 import { useChessGame } from '../hooks/useChessGame';
 import { useKeyboardNavigation } from '../hooks/useKeyboardNavigation';
 import { NAG_KEYS, useNagKeys } from '../hooks/useNagKeys';
 import { COMMENT_KEYS, useCommentKeys } from '../hooks/useCommentKeys';
+import { useMoveActionKeys } from '../hooks/useMoveActionKeys';
 import { withComment } from '../model/comments';
 import type { CommentType } from '../model/comments';
 import { readGameInfo, writeGameInfo } from '../utils/gameInfo';
@@ -66,6 +68,13 @@ export interface GameViewProps {
    */
   onQuotationClick?: (link: QuotationLink) => void;
 }
+
+// The colors of the moves leading to critical positions, as in GameNotation.css
+const CRITICAL_COLORS: Record<CriticalPhase, string> = {
+  opening: '#2b5f94',
+  middlegame: '#cc4a2c',
+  endgame: '#2f7a3c',
+};
 
 /** The key that does something, of those that do things, if one does it. */
 function shortcutOf<T>(keys: Record<string, T>, value: T): string | undefined {
@@ -536,8 +545,10 @@ export const GameView: React.FC<GameViewProps> = ({
         shortcut: shortcutOf(NAG_KEYS, nag),
         onSelect: annotate((annotations) => toggleNag(annotations, nag)),
       }));
+    // A dot in the color of the moves leading to such a position
     const critical = (name: string, p: CriticalPhase): ContextMenuItem => ({
       label: `Critical ${name} position`,
+      symbol: <span style={{ color: CRITICAL_COLORS[p] }}>●</span>,
       onSelect: annotate((annotations) => toggleCritical(annotations, p)),
     });
     return [
@@ -545,6 +556,7 @@ export const GameView: React.FC<GameViewProps> = ({
         (action): ContextMenuItem => ({
           label: action.label,
           symbol: action.icon,
+          shortcut: action.shortcut,
           disabled: action.disabled,
           onSelect: action.run,
         })
@@ -552,27 +564,32 @@ export const GameView: React.FC<GameViewProps> = ({
       'separator',
       {
         label: 'Add Comment Before Move',
+        symbol: '{',
         shortcut: shortcutOf(COMMENT_KEYS, 'textBefore'),
         onSelect: () => handleCommentEdit(move, 'textBefore'),
       },
       {
         label: 'Add Comment After Move',
+        symbol: '}',
         shortcut: shortcutOf(COMMENT_KEYS, 'textAfter'),
         onSelect: () => handleCommentEdit(move, 'textAfter'),
       },
+      'separator',
       {
         label: 'Insert Null Move',
+        symbol: <TbCircleOff />,
         disabled: !game.canPlayNullMove(),
         onSelect: () => {
           if (game.playNullMove()) triggerUpdate();
         },
       },
       'separator',
-      { label: 'Move Annotations', submenu: nagItems('moveComment') },
-      { label: 'Position Annotations', submenu: nagItems('lineEvaluation') },
-      { label: 'Other Annotations', submenu: nagItems('movePrefix') },
+      { label: 'Move Annotations', symbol: '!?', submenu: nagItems('moveComment') },
+      { label: 'Position Annotations', symbol: '±', submenu: nagItems('lineEvaluation') },
+      { label: 'Other Annotations', symbol: 'Δ', submenu: nagItems('movePrefix') },
       {
         label: 'Special Annotations',
+        symbol: <TbStar />,
         submenu: [
           critical('opening', 'opening'),
           critical('middlegame', 'middlegame'),
@@ -580,10 +597,12 @@ export const GameView: React.FC<GameViewProps> = ({
           'separator',
           {
             label: 'Pawn structure',
+            symbol: '♟',
             onSelect: annotate(togglePawnStructure),
           },
           {
             label: 'Piece path',
+            symbol: <TbRoute />,
             disabled: move.isNullMove,
             onSelect: annotate((annotations) => togglePiecePath(annotations, move.to)),
           },
@@ -601,6 +620,12 @@ export const GameView: React.FC<GameViewProps> = ({
   // !, ? and = toggle those symbols on the current move, when editing
   useNagKeys(isEditMode && !!selectedGame && !editingGameInfo, handleNagToggle);
   useCommentKeys(isEditMode && !!selectedGame && !editingGameInfo && !editingComment, handleCurrentCommentEdit);
+  // Cmd+↑, Delete, ] and [ promote or delete the variation, or delete the moves after or before
+  const currentMoveActions = useCallback(
+    () => moveActions(game, game.currentMove(), triggerUpdate),
+    [game, triggerUpdate]
+  );
+  useMoveActionKeys(isEditMode && !!selectedGame && !editingGameInfo && !editingComment, currentMoveActions);
 
   // Keyboard navigation
   useKeyboardNavigation({
