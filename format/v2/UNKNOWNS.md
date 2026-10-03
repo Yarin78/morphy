@@ -52,8 +52,9 @@ are not repeated here.
 - **[Training](3-annotations.md#training)**: the two bytes after each solution's
   squares, and the layout of a record whose third byte is 2 rather than 1.
 - **[Game quotation](3-annotations.md#game-quotation)**: most of its fixed
-  blocks — the 35 bytes of game data in detail, the 44 mostly-zero bytes, the 29
-  bytes before the move count, and the 3 bytes after each move's squares.
+  blocks — the 35 bytes of game data in detail, but for the result, the 44
+  mostly-zero bytes, the 29 bytes before the move count, and the 3 bytes after
+  each move's squares.
 - **Sample**: type `1a`, and the sound, picture, video and correspondence
   annotations. The [flags](1-game-headers.md#flags) name them, but no game sets
   those flags.

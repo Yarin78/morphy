@@ -120,7 +120,11 @@ class CrossFormatTest {
         case TrainingAnnotation t -> {}
         // v2 stores the last and first name apart, joined here with ", "
         case GameQuotationAnnotation q ->
-            out.add("quotation " + q.header().getWhite().replace(", ", ","));
+            out.add(
+                "quotation "
+                    + q.header().getWhite().replace(", ", ",")
+                    + " "
+                    + q.header().getResult());
         case SymbolAnnotation s -> {
           Set<NAG> nags = new TreeSet<>(List.of(s.moveComment(), s.lineEvaluation(), s.movePrefix()));
           nags.remove(NAG.NONE);

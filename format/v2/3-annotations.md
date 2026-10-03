@@ -197,7 +197,7 @@ moves.
 | 4 | `int` 1 |
 | 1 | 0 |
 | … | six strings: white last name, white first name, black last name, black first name, site, event. Each is a length byte counting a terminating zero, the text, and the zero |
-| 35 | date (`int`), event type, nation, category, rounds, white and black elo, ECO, result — **unknown** in detail |
+| 35 | date (`int`), event type, nation, category, rounds, white and black elo, ECO — **unknown** in detail — and last a byte, the result, coded as in the [game header](1-game-headers.md#result-and-line-evaluation) |
 | 44 | unknown, mostly zero |
 | … | two rating types, each `01 00 01 00 00` and a string naming the list |
 | 29 | unknown |

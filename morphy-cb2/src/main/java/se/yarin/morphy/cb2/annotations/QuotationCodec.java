@@ -7,6 +7,7 @@ import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.yarin.chess.GameHeaderModel;
+import se.yarin.chess.GameResult;
 import se.yarin.chess.GameMovesModel;
 import se.yarin.chess.Move;
 import se.yarin.chess.Piece;
@@ -21,7 +22,8 @@ import se.yarin.morphy.chessbase.annotations.GameQuotationAnnotation;
  *
  * <p>The known parts: a 10-byte preamble whose second field is 2 when the moves are included, six
  * strings (white's last and first name, black's last and first name, site, event) each a length
- * byte counting a terminating zero, the text and the zero; 35 bytes starting with the date; 44
+ * byte counting a terminating zero, the text and the zero; 35 bytes starting with the date and
+ * ending with the result; 44
  * bytes; two rating types, each 5 bytes and an {@code int}-prefixed string; 29 bytes; an {@code
  * int} number of moves, 5 bytes per move starting with its origin and destination squares; and an
  * {@code int} 0.
@@ -69,6 +71,7 @@ final class QuotationCodec {
       pos += 1 + length;
     }
     int date = buf.getInt(pos);
+    int result = buf.get(pos + 34) & 0xFF;
     pos += 35 + 44;
     for (int i = 0; i < 2; i++) {
       pos += 5;
@@ -88,6 +91,9 @@ final class QuotationCodec {
     header.setEventSite(strings[4]);
     header.setEvent(strings[5]);
     header.setDate(Dates.decode(date));
+    if (result < GameResult.values().length) {
+      header.setResult(GameResult.values()[result]);
+    }
 
     Encoding encoding = new Encoding(data);
     int movesOffset = movesStart - start;
