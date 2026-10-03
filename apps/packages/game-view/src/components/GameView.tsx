@@ -24,7 +24,7 @@ import { createMovedPieceFen } from '../utils/fenUtils';
 import { evalBars } from '../utils/evalGraph';
 import { nextMoveChoices } from '../utils/variationChoice';
 import { findAnnotation } from '../model/annotations';
-import { TbArrowBackUp, TbArrowForwardUp, TbCircleOff, TbRoute, TbStar } from 'react-icons/tb';
+import { TbArrowBackUp, TbArrowForwardUp, TbCircleOff, TbEraser, TbRoute, TbStar } from 'react-icons/tb';
 import { IoPlaySkipBack, IoChevronBack, IoChevronForward, IoPlaySkipForward, IoReload, IoMenu, IoClose } from 'react-icons/io5';
 import type { ChessGame } from '../types/chess';
 import { useChessGame } from '../hooks/useChessGame';
@@ -656,6 +656,14 @@ export const GameView: React.FC<GameViewProps> = ({
             onSelect: annotate((annotations) => togglePiecePath(annotations, move.to)),
           },
         ],
+      },
+      'separator',
+      {
+        // Every annotation of the move: comments in every language, symbols, squares and the rest
+        label: 'Clear Annotations',
+        symbol: <TbEraser />,
+        disabled: move.annotations.length === 0,
+        onSelect: annotate(() => []),
       },
     ];
   }, [game, version, moveMenu, edit, editHistory, handleUndo, handleRedo, handleCommentEdit]);
