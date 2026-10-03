@@ -21,6 +21,7 @@ import se.yarin.morphy.chessbase.annotations.BlackClockAnnotation;
 import se.yarin.morphy.chessbase.annotations.ComputerEvaluationAnnotation;
 import se.yarin.morphy.chessbase.annotations.CorrespondenceMoveAnnotation;
 import se.yarin.morphy.chessbase.annotations.CriticalPositionAnnotation;
+import se.yarin.morphy.chessbase.annotations.EvaluationsAnnotation;
 import se.yarin.morphy.chessbase.annotations.GameQuotationAnnotation;
 import se.yarin.morphy.chessbase.annotations.GraphicalAnnotationColor;
 import se.yarin.morphy.chessbase.annotations.GraphicalArrowsAnnotation;
@@ -30,6 +31,7 @@ import se.yarin.morphy.chessbase.annotations.ImmutableBlackClockAnnotation;
 import se.yarin.morphy.chessbase.annotations.ImmutableComputerEvaluationAnnotation;
 import se.yarin.morphy.chessbase.annotations.ImmutableCorrespondenceMoveAnnotation;
 import se.yarin.morphy.chessbase.annotations.ImmutableCriticalPositionAnnotation;
+import se.yarin.morphy.chessbase.annotations.ImmutableEvaluationsAnnotation;
 import se.yarin.morphy.chessbase.annotations.ImmutableGraphicalArrowsAnnotation;
 import se.yarin.morphy.chessbase.annotations.ImmutableGraphicalSquaresAnnotation;
 import se.yarin.morphy.chessbase.annotations.ImmutableInvalidAnnotation;
@@ -116,6 +118,12 @@ public class ChessBaseAnnotationDtoMapper extends AnnotationDtoMapper {
               move, a.hours(), a.minutes(), a.seconds(), unknown(a.unknownByte()));
       case ComputerEvaluationAnnotation a ->
           new AnnotationDto.Eval(move, a.eval(), a.evalType(), a.ply());
+      case EvaluationsAnnotation a ->
+          new AnnotationDto.Evaluations(
+              move,
+              a.evaluations().stream()
+                  .map(e -> new AnnotationDto.Evaluation(e.eval(), e.depth(), e.type()))
+                  .toList());
       case CriticalPositionAnnotation a ->
           new AnnotationDto.CriticalPosition(move, a.type().name().toLowerCase(Locale.ROOT));
       case MedalAnnotation a ->
@@ -179,6 +187,11 @@ public class ChessBaseAnnotationDtoMapper extends AnnotationDtoMapper {
                   t.hours(), t.minutes(), t.seconds(), t.unknown() == null ? 0 : t.unknown());
           case AnnotationDto.Eval e ->
               ImmutableComputerEvaluationAnnotation.of(e.eval(), e.evalType(), e.depth());
+          case AnnotationDto.Evaluations e ->
+              ImmutableEvaluationsAnnotation.of(
+                  e.evaluations().stream()
+                      .map(v -> new EvaluationsAnnotation.Evaluation(v.eval(), v.depth(), v.evalType()))
+                      .toList());
           case AnnotationDto.CriticalPosition c ->
               ImmutableCriticalPositionAnnotation.of(
                   enumValue(CriticalPositionAnnotation.CriticalPositionType.class, c.phase()));

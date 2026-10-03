@@ -6,6 +6,7 @@ import { GameHeader } from './GameHeader';
 import { GameInfoDialog } from './GameInfoDialog';
 import { PromotionDialog } from './PromotionDialog';
 import { NagBar } from './NagBar';
+import { EvalGraph } from './EvalGraph';
 import { LanguagePills } from './LanguagePills';
 import './NotationBar.css';
 import { commentLanguages, defaultLanguages } from '../model/languages';
@@ -13,6 +14,8 @@ import { toggleNag } from '../model/nags';
 import { annotationsToShapes, ANNOTATION_BRUSHES, LAST_MOVE_BRUSH, shapesToAnnotations } from '../utils/drawableConverter';
 import type { DrawShape } from '../utils/drawableConverter';
 import { createMovedPieceFen } from '../utils/fenUtils';
+import { evalBars } from '../utils/evalGraph';
+import { findAnnotation } from '../model/annotations';
 import { IoPlaySkipBack, IoChevronBack, IoChevronForward, IoPlaySkipForward, IoReload, IoMenu, IoClose } from 'react-icons/io5';
 import type { ChessGame } from '../types/chess';
 import { useChessGame } from '../hooks/useChessGame';
@@ -421,6 +424,12 @@ export const GameView: React.FC<GameViewProps> = ({
     triggerUpdate();
   }, [game, triggerUpdate]);
 
+  // The evaluations of the main line, shown as a graph above the bar
+  const evaluationBars = useMemo(() => {
+    const evaluations = findAnnotation(game.root.annotations, 'evaluations');
+    return evaluations ? evalBars(game.root, evaluations) : null;
+  }, [game, version]);
+
   // The languages the comments are in, and those shown: by default the preferred one. The choice
   // is kept with the game it was made for, so another game starts from its own default.
   const languages = useMemo(() => commentLanguages(game), [game, version]);
@@ -600,6 +609,13 @@ export const GameView: React.FC<GameViewProps> = ({
               onNotationReady={handleNotationReady}
               onQuotationClick={onQuotationClick}
             />
+            {evaluationBars && (
+              <EvalGraph
+                bars={evaluationBars}
+                current={game.currentNode()}
+                onSelect={(node) => seekToMove('san' in node ? (node as MoveNode) : null)}
+              />
+            )}
             {(isEditMode || languages.length > 0) && (
               <div className="notation-bar">
                 {isEditMode && (

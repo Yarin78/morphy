@@ -1,0 +1,60 @@
+/* The evaluations of the main line, above the bar below the notation */
+.eval-graph {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  height: 3rem;
+  padding: 0.2rem 0.4rem;
+  border-top: 1px solid #d4c4b0;
+  background: #ede6dc;
+}
+
+/* The middle line, an even position */
+.eval-graph::before {
+  content: '';
+  position: absolute;
+  left: 0.4rem;
+  right: 0.4rem;
+  top: 50%;
+  border-top: 1px solid #b9a98a;
+  pointer-events: none;
+}
+
+.eval-graph-column {
+  position: relative;
+  flex: 1 1 0;
+  max-width: 1.5rem;
+  cursor: pointer;
+}
+
+.eval-graph-column:hover,
+.eval-graph-column.current {
+  background: hsla(30, 40%, 50%, 0.18);
+}
+
+/* A bar grows up from the middle when White is better, and down when Black is */
+.eval-graph-bar {
+  position: absolute;
+  left: 1px;
+  right: 1px;
+}
+
+.eval-graph-bar.white {
+  bottom: 50%;
+  background: #f8f4ec;
+  box-shadow: inset 0 0 0 1px #b9a98a;
+}
+
+.eval-graph-bar.black {
+  top: 50%;
+  background: #4a3b2a;
+}
+
+.eval-graph-column.current .eval-graph-bar.white {
+  background: #fffdf8;
+  box-shadow: inset 0 0 0 1px #8b6f47;
+}
+
+.eval-graph-column.current .eval-graph-bar.black {
+  background: #2a2016;
+}

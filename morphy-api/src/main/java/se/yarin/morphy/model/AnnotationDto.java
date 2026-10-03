@@ -33,6 +33,7 @@ import org.jetbrains.annotations.Nullable;
   @JsonSubTypes.Type(value = AnnotationDto.BlackClock.class, name = "blackClock"),
   @JsonSubTypes.Type(value = AnnotationDto.TimeSpent.class, name = "timeSpent"),
   @JsonSubTypes.Type(value = AnnotationDto.Eval.class, name = "eval"),
+  @JsonSubTypes.Type(value = AnnotationDto.Evaluations.class, name = "evaluations"),
   @JsonSubTypes.Type(value = AnnotationDto.CriticalPosition.class, name = "critical"),
   @JsonSubTypes.Type(value = AnnotationDto.Medals.class, name = "medals"),
   @JsonSubTypes.Type(value = AnnotationDto.PawnStructure.class, name = "pawnStructure"),
@@ -147,6 +148,27 @@ public sealed interface AnnotationDto {
    * @param depth the search depth in plies
    */
   record Eval(int move, int eval, int evalType, int depth) implements AnnotationDto {}
+
+  /**
+   * Computer evaluations of the positions of the main line, on the game as a whole: the first is of
+   * the position before the first move, then one after each move. There may be fewer than there are
+   * moves.
+   */
+  record Evaluations(int move, @NotNull List<Evaluation> evaluations) implements AnnotationDto {
+    public Evaluations {
+      evaluations = List.copyOf(evaluations);
+    }
+  }
+
+  /**
+   * The evaluation of a position, of {@link Evaluations}.
+   *
+   * @param eval the evaluation in hundredths of a pawn from White's side, or the moves to mate
+   * @param depth the search depth in plies
+   * @param evalType 0 for an evaluation in pawns, 1 for moves to mate, 255 for none; ChessBase has 2
+   *     and 32 too, of unknown meaning
+   */
+  record Evaluation(int eval, int depth, int evalType) {}
 
   /**
    * The position after the move is a critical one.

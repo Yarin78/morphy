@@ -18,6 +18,7 @@ import se.yarin.morphy.chessbase.Nation;
 import se.yarin.morphy.chessbase.annotations.BlackClockAnnotation;
 import se.yarin.morphy.chessbase.annotations.ComputerEvaluationAnnotation;
 import se.yarin.morphy.chessbase.annotations.CriticalPositionAnnotation;
+import se.yarin.morphy.chessbase.annotations.EvaluationsAnnotation;
 import se.yarin.morphy.chessbase.annotations.GameQuotationAnnotation;
 import se.yarin.morphy.chessbase.annotations.GraphicalAnnotationColor;
 import se.yarin.morphy.chessbase.annotations.GraphicalArrowsAnnotation;
@@ -26,6 +27,7 @@ import se.yarin.morphy.chessbase.annotations.ImmutableArrow;
 import se.yarin.morphy.chessbase.annotations.ImmutableBlackClockAnnotation;
 import se.yarin.morphy.chessbase.annotations.ImmutableComputerEvaluationAnnotation;
 import se.yarin.morphy.chessbase.annotations.ImmutableCriticalPositionAnnotation;
+import se.yarin.morphy.chessbase.annotations.ImmutableEvaluationsAnnotation;
 import se.yarin.morphy.chessbase.annotations.ImmutableGraphicalArrowsAnnotation;
 import se.yarin.morphy.chessbase.annotations.ImmutableGraphicalSquaresAnnotation;
 import se.yarin.morphy.chessbase.annotations.ImmutableMedalAnnotation;
@@ -153,10 +155,7 @@ public final class AnnotationCodec {
         }
         case TIME_CONTROL -> readTimeControl(buf, start);
         case VIDEO_STREAM_TIME -> ImmutableVideoStreamTimeAnnotation.of(buf.getInt());
-        case EVALUATIONS -> {
-          int length = 5 + buf.getInt(buf.position() + 1);
-          yield ImmutableUnknownAnnotation.of(type, bytes(buf, length));
-        }
+        case EVALUATIONS -> readEvaluations(buf);
         default ->
             throw new UnreadableAnnotationException(
                 String.format("Unknown annotation type %02x", type));
@@ -165,6 +164,29 @@ public final class AnnotationCodec {
       throw new UnreadableAnnotationException(
           String.format("Annotation of type %02x doesn't fit its record: %s", type, e));
     }
+  }
+
+  /**
+   * Reads the evaluations of the main line; kept as an unknown annotation if they're not in the
+   * known layout.
+   */
+  private static Annotation readEvaluations(ByteBuffer buf) {
+    int start = buf.position();
+    int marker = buf.get() & 0xFF;
+    int length = buf.getInt();
+    int count = buf.getShort() & 0xFFFF;
+    if (marker != 1 || length != 2 + 4 * count) {
+      buf.position(start);
+      return ImmutableUnknownAnnotation.of(EVALUATIONS, bytes(buf, 5 + length));
+    }
+    List<EvaluationsAnnotation.Evaluation> evaluations = new ArrayList<>();
+    for (int i = 0; i < count; i++) {
+      int eval = buf.getShort();
+      int depth = buf.get() & 0xFF;
+      int type = buf.get() & 0xFF;
+      evaluations.add(new EvaluationsAnnotation.Evaluation(eval, depth, type));
+    }
+    return ImmutableEvaluationsAnnotation.of(evaluations);
   }
 
   /** Reads an annotation this codec only knows the length of, keeping its data as it is. */
@@ -423,6 +445,15 @@ public final class AnnotationCodec {
         buf.putInt(0);
       }
       case VideoStreamTimeAnnotation a -> buf.putInt(a.time());
+      case EvaluationsAnnotation a -> {
+        buf.put((byte) 1).putInt(2 + 4 * a.evaluations().size());
+        buf.putShort((short) a.evaluations().size());
+        for (EvaluationsAnnotation.Evaluation evaluation : a.evaluations()) {
+          buf.putShort((short) evaluation.eval())
+              .put((byte) evaluation.depth())
+              .put((byte) evaluation.type());
+        }
+      }
       case UnknownAnnotation a -> buf.put(a.rawData());
       default -> throw new IllegalStateException("Unexpected annotation " + annotation);
     }
@@ -450,6 +481,7 @@ public final class AnnotationCodec {
       case VariationColorAnnotation a -> VARIATION_COLOR;
       case TimeControlAnnotation a -> TIME_CONTROL;
       case VideoStreamTimeAnnotation a -> VIDEO_STREAM_TIME;
+      case EvaluationsAnnotation a -> EVALUATIONS;
       case UnknownAnnotation a -> isV2UnknownType(a.annotationType()) ? a.annotationType() : null;
       default -> null;
     };
@@ -497,6 +529,7 @@ public final class AnnotationCodec {
       case GameQuotationAnnotation a -> 2 + QuotationCodec.size(a);
       case GraphicalSquaresAnnotation a -> 6 + 2 * a.squares().size();
       case GraphicalArrowsAnnotation a -> 6 + 3 * a.arrows().size();
+      case EvaluationsAnnotation a -> 9 + 4 * a.evaluations().size();
       default -> 64;
     };
   }

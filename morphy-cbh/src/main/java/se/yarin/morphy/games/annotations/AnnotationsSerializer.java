@@ -43,6 +43,7 @@ public final class AnnotationsSerializer {
             new ComputerEvaluationAnnotationSerializer(),
             new CorrespondenceMoveAnnotationSerializer(),
             new CriticalPositionAnnotationSerializer(),
+            new EvaluationsAnnotationSerializer(),
             new GameQuotationAnnotationSerializer(),
             new GraphicalArrowsAnnotationSerializer(),
             new GraphicalSquaresAnnotationSerializer(),

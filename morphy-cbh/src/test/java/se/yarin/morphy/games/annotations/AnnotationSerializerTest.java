@@ -11,6 +11,7 @@ import se.yarin.morphy.chessbase.Medal;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.EnumSet;
+import java.util.List;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -131,6 +132,18 @@ public class AnnotationSerializerTest {
   public void testPawnStructureAnnotationSerialization() {
     PawnStructureAnnotation before = ImmutablePawnStructureAnnotation.of(3);
     PawnStructureAnnotation after = serialize(before);
+    assertEquals(before, after);
+  }
+
+  @Test
+  public void testEvaluationsAnnotationSerialization() {
+    EvaluationsAnnotation before =
+        ImmutableEvaluationsAnnotation.of(
+            List.of(
+                new EvaluationsAnnotation.Evaluation(17, 1, 0),
+                new EvaluationsAnnotation.Evaluation(-16, 20, 0),
+                new EvaluationsAnnotation.Evaluation(0, 0, 0xff)));
+    EvaluationsAnnotation after = serialize(before);
     assertEquals(before, after);
   }
 

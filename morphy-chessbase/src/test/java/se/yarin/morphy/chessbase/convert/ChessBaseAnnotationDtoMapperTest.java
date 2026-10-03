@@ -16,6 +16,7 @@ import se.yarin.chess.annotations.Annotations;
 import se.yarin.morphy.chessbase.Medal;
 import se.yarin.morphy.chessbase.Nation;
 import se.yarin.morphy.chessbase.annotations.CriticalPositionAnnotation;
+import se.yarin.morphy.chessbase.annotations.EvaluationsAnnotation;
 import se.yarin.morphy.chessbase.annotations.GameQuotationAnnotation;
 import se.yarin.morphy.chessbase.annotations.GraphicalAnnotationColor;
 import se.yarin.morphy.chessbase.annotations.ImmutableArrow;
@@ -23,6 +24,7 @@ import se.yarin.morphy.chessbase.annotations.ImmutableBlackClockAnnotation;
 import se.yarin.morphy.chessbase.annotations.ImmutableComputerEvaluationAnnotation;
 import se.yarin.morphy.chessbase.annotations.ImmutableCorrespondenceMoveAnnotation;
 import se.yarin.morphy.chessbase.annotations.ImmutableCriticalPositionAnnotation;
+import se.yarin.morphy.chessbase.annotations.ImmutableEvaluationsAnnotation;
 import se.yarin.morphy.chessbase.annotations.ImmutableGraphicalArrowsAnnotation;
 import se.yarin.morphy.chessbase.annotations.ImmutableGraphicalSquaresAnnotation;
 import se.yarin.morphy.chessbase.annotations.ImmutableInvalidAnnotation;
@@ -88,7 +90,11 @@ class ChessBaseAnnotationDtoMapperTest {
         ImmutableTrainingAnnotation.of(new byte[] {1, 2, 3}),
         ImmutableCorrespondenceMoveAnnotation.of(new byte[] {4}),
         ImmutableUnknownAnnotation.of(0x1A, new byte[] {8, 9}),
-        ImmutableInvalidAnnotation.of(0x02, new byte[] {10}));
+        ImmutableInvalidAnnotation.of(0x02, new byte[] {10}),
+        ImmutableEvaluationsAnnotation.of(
+            List.of(
+                new EvaluationsAnnotation.Evaluation(17, 1, 0),
+                new EvaluationsAnnotation.Evaluation(0, 0, 0xff))));
   }
 
   @Test

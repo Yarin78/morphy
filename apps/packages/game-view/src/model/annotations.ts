@@ -49,6 +49,12 @@ export type Annotation =
   | { type: 'timeSpent'; hours: number; minutes: number; seconds: number; unknown?: number }
   /** evalType 0: eval in hundredths of a pawn; 1: moves to mate. */
   | { type: 'eval'; eval: number; evalType: number; depth: number }
+  /**
+   * Evaluations of the positions of the main line, on the game: the first before the first move,
+   * then one after each move; there may be fewer than there are moves. evalType as for 'eval', and
+   * 255 for none.
+   */
+  | { type: 'evaluations'; evaluations: { eval: number; depth: number; evalType: number }[] }
   | { type: 'critical'; phase: 'opening' | 'middlegame' | 'endgame' | 'none' }
   | { type: 'medals'; medals: string[] }
   | { type: 'pawnStructure'; pawnStructureType: number }

@@ -56,6 +56,7 @@ export function annotationMarkers(
       case 'quote':
       case 'pawnStructure':
       case 'piecePath':
+      case 'evaluations':
         break;
       case 'critical':
         // Shown by the color of the move, unless it's of no phase
