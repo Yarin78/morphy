@@ -381,6 +381,25 @@ span.cbeval
    color: #3d6b8f;
 }
 
+/* A diagram of the position, where a comment has [#]: a block of its own, indented with its line */
+.game-notation-content .cbdiagram
+{
+   display: block;
+   width: 14em;
+   max-width: 100%;
+   margin: 0.4em 0 0.5em;
+   line-height: 0;
+}
+
+.game-notation-content .cbdiagram svg
+{
+   box-sizing: border-box;
+   width: 100%;
+   height: auto;
+   border: 1px solid #6b5a3a;
+   box-shadow: 1px 1px 4px hsla( 30, 30%, 30%, 0.35);
+}
+
 /* A web link after the move */
 .game-notation-content .cbweblink
 {

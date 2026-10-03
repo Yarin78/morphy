@@ -4,6 +4,7 @@ import type { Annotation, AnnotationOf } from '../model/annotations';
 import { filterAnnotations, findAnnotation } from '../model/annotations';
 import { annotationMarkers, annotationMarkersHtml } from './annotationMarkers';
 import { figurinesToHtml } from './figurines';
+import { commentWithDiagramsHtml, diagramHtml } from './diagram';
 import { moveInfoHtml } from './moveInfo';
 import { medalsHtml } from './medals';
 import { quoteHtml, webLinkHtml } from './references';
@@ -139,10 +140,15 @@ function hasGraphics(annotations: readonly Annotation[]): boolean {
 }
 
 /** The web links and quoted games of a move, in the order they're in. */
-function referencesHtml(annotations: readonly Annotation[], fen: string, state: ConversionState): string {
+/** The web links of a move, in the order they're in. */
+function webLinksHtml(annotations: readonly Annotation[]): string {
+  return annotations.map((a) => (a.type === 'webLink' ? webLinkHtml(a) : '')).join('');
+}
+
+/** The quoted games of a move, in the order they're in. */
+function quotesHtml(annotations: readonly Annotation[], fen: string, state: ConversionState): string {
   return annotations
     .map((a) => {
-      if (a.type === 'webLink') return webLinkHtml(a);
       if (a.type !== 'quote') return '';
       // A quotation without moves refers to another game, which can be opened if links are wanted
       if (state.quoteLinks && !a.moves?.trim()) {
@@ -262,8 +268,14 @@ function traverseGameTree(
 
     const commentBefore = commentText(m.annotations, 'textBefore', state.languages);
     if (commentBefore) {
+      // A diagram in it is of the position before the move
       parts.push(
-        `<span class="cbcomment${commentColor ? ' cbvarcolor' : ''}"${colorStyle(commentColor)} data-inx-mv="${localMoveIndex}" data-linecnt="${lineDepth}">${figurinesToHtml(escapeHtml(commentBefore))}</span>`
+        commentWithDiagramsHtml(
+          commentBefore,
+          (text) =>
+            `<span class="cbcomment${commentColor ? ' cbvarcolor' : ''}"${colorStyle(commentColor)} data-inx-mv="${localMoveIndex}" data-linecnt="${lineDepth}">${figurinesToHtml(escapeHtml(text))}</span>`,
+          () => diagramHtml(m.parent.fen, m.parent.annotations)
+        )
       );
     }
 
@@ -288,10 +300,10 @@ function traverseGameTree(
       parts.push(moveInfo);
     }
 
-    // Web links and quoted games
-    const references = referencesHtml(m.annotations, m.fen, state);
-    if (references) {
-      parts.push(references);
+    // Web links
+    const webLinks = webLinksHtml(m.annotations);
+    if (webLinks) {
+      parts.push(webLinks);
     }
 
     // The annotations not shown otherwise
@@ -303,8 +315,19 @@ function traverseGameTree(
     const commentAfter = commentText(m.annotations, 'textAfter', state.languages);
     if (commentAfter) {
       parts.push(
-        `<span class="cbcomment${commentColor ? ' cbvarcolor' : ''}"${colorStyle(commentColor)} data-inx-mv="${localMoveIndex}" data-linecnt="${lineDepth}">${figurinesToHtml(processCommentWithLink(commentAfter))}</span>`
+        commentWithDiagramsHtml(
+          commentAfter,
+          (text) =>
+            `<span class="cbcomment${commentColor ? ' cbvarcolor' : ''}"${colorStyle(commentColor)} data-inx-mv="${localMoveIndex}" data-linecnt="${lineDepth}">${figurinesToHtml(processCommentWithLink(text))}</span>`,
+          () => diagramHtml(m.fen, m.annotations)
+        )
       );
+    }
+
+    // Quoted games, after the comments
+    const quotes = quotesHtml(m.annotations, m.fen, state);
+    if (quotes) {
+      parts.push(quotes);
     }
 
     // Generate variations for this move
@@ -386,7 +409,14 @@ export function generateNotationHtml(
   const parts: string[] = [];
   const comment = gameComment(game, state.languages);
   if (comment) {
-    parts.push(`<span class="cbcomment" data-inx-mv="0" data-linecnt="1">${figurinesToHtml(processCommentWithLink(comment))}</span>`);
+    parts.push(
+      commentWithDiagramsHtml(
+        comment,
+        (text) =>
+          `<span class="cbcomment" data-inx-mv="0" data-linecnt="1">${figurinesToHtml(processCommentWithLink(text))}</span>`,
+        () => diagramHtml(game.root.fen, game.root.annotations)
+      )
+    );
   }
 
   const gameMedals = medalsHtml(findAnnotation(game.root.annotations, 'medals')?.medals ?? []);
@@ -397,7 +427,8 @@ export function generateNotationHtml(
   if (gameInfo) {
     parts.push(gameInfo);
   }
-  const gameReferences = referencesHtml(game.root.annotations, game.root.fen, state);
+  const gameReferences =
+    webLinksHtml(game.root.annotations) + quotesHtml(game.root.annotations, game.root.fen, state);
   if (gameReferences) {
     parts.push(gameReferences);
   }
