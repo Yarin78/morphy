@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { isTyped } from '../utils/keys';
 
 /** The keys that toggle a symbol on the current move, and the NAG each one toggles. */
 export const NAG_KEYS: Record<string, number> = {
@@ -9,7 +10,7 @@ export const NAG_KEYS: Record<string, number> = {
 
 /**
  * Lets the keyboard toggle the most common symbols on the current move: '!', '?' and '='.
- * Keys typed into a field, and keys pressed with Ctrl, Cmd or Alt, are left alone.
+ * Keys typed into a field, and keys pressed with Cmd or Ctrl, are left alone; see isTyped.
  */
 export function useNagKeys(enabled: boolean, onToggle: (nag: number) => void): void {
   useEffect(() => {
@@ -17,7 +18,7 @@ export function useNagKeys(enabled: boolean, onToggle: (nag: number) => void): v
 
     const handleKeyDown = (e: KeyboardEvent) => {
       const nag = NAG_KEYS[e.key];
-      if (nag === undefined || e.ctrlKey || e.metaKey || e.altKey) return;
+      if (nag === undefined || !isTyped(e, e.key)) return;
       const activeElement = document.activeElement;
       if (
         activeElement instanceof HTMLInputElement ||

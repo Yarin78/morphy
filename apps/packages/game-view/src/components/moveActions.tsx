@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { TbArrowUp, TbScissors, TbTrash } from 'react-icons/tb';
 import { GameTree } from '../model/GameTree';
+import { isTyped } from '../utils/keys';
 import type { MoveNode } from '../model/GameTree';
 
 /** Something to do to the moves of a game from a move, for its context menu and the bar below the notation. */
@@ -18,7 +19,7 @@ export interface MoveAction {
 
 export const MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
 
-/** A key pressed without Cmd, Ctrl or Alt. */
+/** A key pressed without Cmd, Ctrl or Alt, for keys that aren't characters. */
 function plain(e: KeyboardEvent, ...keys: string[]): boolean {
   return keys.includes(e.key) && !e.metaKey && !e.ctrlKey && !e.altKey;
 }
@@ -66,7 +67,7 @@ export function moveActions(
         if (move) edit(() => game.deleteRemainingMoves(move));
       },
       shortcut: ']',
-      isKey: (e) => plain(e, ']'),
+      isKey: (e) => isTyped(e, ']'),
     },
     {
       label: 'Delete Previous Moves',
@@ -77,7 +78,7 @@ export function moveActions(
         if (move) edit(() => game.deletePreviousMoves(move));
       },
       shortcut: '[',
-      isKey: (e) => plain(e, '['),
+      isKey: (e) => isTyped(e, '['),
     },
   ];
 }
