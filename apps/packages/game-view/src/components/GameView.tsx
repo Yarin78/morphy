@@ -9,6 +9,7 @@ import { NagBar } from './NagBar';
 import { EvalGraph } from './EvalGraph';
 import { LanguageSelector } from './LanguageSelector';
 import { VariationChooser } from './VariationChooser';
+import { MoveTimeDialog } from './MoveTimeDialog';
 import { ContextMenu } from './ContextMenu';
 import type { ContextMenuItem } from './ContextMenu';
 import { moveActions } from './moveActions';
@@ -22,9 +23,10 @@ import { annotationsToShapes, ANNOTATION_BRUSHES, LAST_MOVE_BRUSH, shapesToAnnot
 import type { DrawShape } from '../utils/drawableConverter';
 import { createMovedPieceFen } from '../utils/fenUtils';
 import { evalBars } from '../utils/evalGraph';
-import { nextMoveChoices } from '../utils/variationChoice';
+import { lineStart, nextMoveChoices } from '../utils/variationChoice';
 import { findAnnotation } from '../model/annotations';
-import { TbArrowBackUp, TbArrowForwardUp, TbCircleOff, TbEraser, TbRoute, TbStar } from 'react-icons/tb';
+import type { Annotation } from '../model/annotations';
+import { TbArrowBackUp, TbArrowForwardUp, TbCircleOff, TbClock, TbEraser, TbRoute, TbStar } from 'react-icons/tb';
 import { IoPlaySkipBack, IoChevronBack, IoChevronForward, IoPlaySkipForward, IoReload, IoMenu, IoClose } from 'react-icons/io5';
 import type { ChessGame } from '../types/chess';
 import { useChessGame } from '../hooks/useChessGame';
@@ -544,6 +546,22 @@ export const GameView: React.FC<GameViewProps> = ({
 
   const handleMoveMenuClose = useCallback(() => setMoveMenu(null), []);
 
+  // The move whose time is being given in a dialog, while it's open
+  const [moveTimeMove, setMoveTimeMove] = useState<MoveNode | null>(null);
+  const handleMoveTimeSave = useCallback(
+    (annotations: Annotation[]) => {
+      const move = moveTimeMove;
+      setMoveTimeMove(null);
+      if (move) {
+        edit(() => {
+          move.annotations = annotations;
+        });
+      }
+    },
+    [moveTimeMove, edit]
+  );
+  const handleMoveTimeCancel = useCallback(() => setMoveTimeMove(null), []);
+
   // Goes back to the moves before the last edit, or forward again to those after the last undone
   const handleUndoRedo = useCallback(
     (redo: boolean) => {
@@ -655,6 +673,12 @@ export const GameView: React.FC<GameViewProps> = ({
             disabled: move.isNullMove,
             onSelect: annotate((annotations) => togglePiecePath(annotations, move.to)),
           },
+          'separator',
+          {
+            label: 'Move Time…',
+            symbol: <TbClock />,
+            onSelect: () => setMoveTimeMove(move),
+          },
         ],
       },
       'separator',
@@ -674,20 +698,23 @@ export const GameView: React.FC<GameViewProps> = ({
     return evaluations ? evalBars(game.root, evaluations) : null;
   }, [game, version]);
 
+  // The keys are the dialog's while one is open
+  const dialogOpen = !!editingGameInfo || !!moveTimeMove;
+
   // !, ? and = toggle those symbols on the current move, when editing
-  useNagKeys(isEditMode && !!selectedGame && !editingGameInfo, handleNagToggle);
-  useCommentKeys(isEditMode && !!selectedGame && !editingGameInfo && !editingComment, handleCurrentCommentEdit);
+  useNagKeys(isEditMode && !!selectedGame && !dialogOpen, handleNagToggle);
+  useCommentKeys(isEditMode && !!selectedGame && !dialogOpen && !editingComment, handleCurrentCommentEdit);
   // Cmd+↑, Delete, ] and [ promote or delete the variation, or delete the moves after or before
   const currentMoveActions = useCallback(
     () => moveActions(game, game.currentMove(), edit),
     [game, edit]
   );
-  useMoveActionKeys(isEditMode && !!selectedGame && !editingGameInfo && !editingComment, currentMoveActions);
-  useUndoKeys(isEditMode && !!selectedGame && !editingGameInfo && !editingComment, handleUndo, handleRedo);
+  useMoveActionKeys(isEditMode && !!selectedGame && !dialogOpen && !editingComment, currentMoveActions);
+  useUndoKeys(isEditMode && !!selectedGame && !dialogOpen && !editingComment, handleUndo, handleRedo);
 
   // Keyboard navigation
   useKeyboardNavigation({
-    enabled: !!selectedGame && !editingGameInfo,
+    enabled: !!selectedGame && !dialogOpen,
     canGoBack,
     canGoForward,
     goToPreviousMove,
@@ -884,6 +911,14 @@ export const GameView: React.FC<GameViewProps> = ({
         )}
       </div>
 
+      {moveTimeMove && (
+        <MoveTimeDialog
+          moveName={lineStart(moveTimeMove, 1)}
+          annotations={moveTimeMove.annotations}
+          onSave={handleMoveTimeSave}
+          onCancel={handleMoveTimeCancel}
+        />
+      )}
       {editingGameInfo && (
         <GameInfoDialog
           initial={editingGameInfo}

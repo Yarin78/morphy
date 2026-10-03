@@ -1,0 +1,37 @@
+/* The dialog to give a move its time, with the look of the game info dialog */
+.game-info-dialog.move-time-dialog {
+  width: min(380px, 100%);
+}
+
+.move-time-choice {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.4rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.move-time-fields {
+  display: flex;
+  gap: 0.75rem;
+  margin: 0 0 1rem 1.5rem;
+}
+
+.move-time-fields .game-info-field {
+  width: 7rem;
+}
+
+.move-time-fields input:disabled {
+  opacity: 0.5;
+}
+
+.game-info-dialog .move-time-choice input {
+  margin: 0;
+  padding: 0;
+  accent-color: #8b6f47;
+}
+
+.move-time-choice.move-time-none {
+  margin-bottom: 1rem;
+}
