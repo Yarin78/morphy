@@ -23,7 +23,6 @@ export const TimeControlField: React.FC<TimeControlFieldProps> = ({ value, onCha
         type="text"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        placeholder="90m+30s"
         aria-label="Time control"
         aria-invalid={error ? true : undefined}
         autoComplete="off"
