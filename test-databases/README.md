@@ -68,3 +68,8 @@ Example:
 ```
 
 You can add more databases to this file as needed.
+
+Databases of your own, which shouldn't be in the repository, go in
+`databases.local.json` next to it instead, in the same form. Git ignores that file.
+The service loads it after `databases.json`, and an entry in it replaces one with the
+same ID. Databases registered or created through the service are added to it too.

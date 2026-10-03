@@ -17,6 +17,10 @@ __pycache__/
 # Databases written by morphy-tools GenerateTestDatabases, in every format and version.
 /test-databases/generated/
 
+# The service's own list of databases besides the shared databases.json, such as personal ones;
+# see test-databases/README.md.
+/test-databases/databases.local.json
+
 # The working notes behind the format specifications mention personal databases,
 # and the superseded v1 documents are only of use with them. They live in a
 # private repository, morphy-notes, next to this one, and are linked in here; see

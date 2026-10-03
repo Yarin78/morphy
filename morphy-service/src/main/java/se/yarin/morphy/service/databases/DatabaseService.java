@@ -227,6 +227,11 @@ public class DatabaseService {
     }
   }
 
+  /**
+   * The databases of the shared configuration file, followed by those of the local one next to
+   * it, if there is one (see {@link #localConfigFile()}). A local entry replaces a shared one with
+   * the same id.
+   */
   private Map<String, DatabaseConfig> loadDatabaseConfigurations() throws IOException {
     if (databasesConfigPath == null || databasesConfigPath.isEmpty()) {
       return new LinkedHashMap<>();
@@ -239,12 +244,49 @@ public class DatabaseService {
       return new LinkedHashMap<>();
     }
 
-    // Use LinkedHashMap to preserve insertion order from JSON
-    Map<String, DatabaseConfig> configs =
-        objectMapper.readValue(
-            configFile, new TypeReference<LinkedHashMap<String, DatabaseConfig>>() {});
+    Map<String, DatabaseConfig> configs = readConfigFile(configFile);
     log.info("Loaded {} database configuration(s) from {}", configs.size(), databasesConfigPath);
+    File localFile = localConfigFile();
+    if (localFile != null && localFile.isFile()) {
+      Map<String, DatabaseConfig> local = readConfigFile(localFile);
+      configs.putAll(local);
+      log.info("Loaded {} local database configuration(s) from {}", local.size(), localFile);
+    }
     return configs;
+  }
+
+  /**
+   * The configuration file of the databases that aren't shared, like personal ones: {@code
+   * databases.local.json} next to {@code databases.json}, kept out of version control. Databases
+   * registered or created through the service are added to it. Null in in-memory only mode.
+   */
+  private @Nullable File localConfigFile() {
+    if (databasesConfigPath == null || databasesConfigPath.isEmpty()) {
+      return null;
+    }
+    File configFile = new File(databasesConfigPath).getAbsoluteFile();
+    String name = configFile.getName();
+    int dot = name.lastIndexOf('.');
+    String localName =
+        dot > 0 ? name.substring(0, dot) + ".local" + name.substring(dot) : name + ".local";
+    return new File(configFile.getParentFile(), localName);
+  }
+
+  private Map<String, DatabaseConfig> readConfigFile(@NotNull File file) throws IOException {
+    // Use LinkedHashMap to preserve insertion order from JSON
+    return objectMapper.readValue(
+        file, new TypeReference<LinkedHashMap<String, DatabaseConfig>>() {});
+  }
+
+  private void writeConfigFile(@NotNull File file, @NotNull Map<String, DatabaseConfig> configs)
+      throws IOException {
+    try {
+      objectMapper.writerWithDefaultPrettyPrinter().writeValue(file, configs);
+      log.info("Updated database configuration file: {}", file);
+    } catch (IOException e) {
+      log.error("Failed to write database configuration to {}", file, e);
+      throw new IOException("Failed to save database configuration: " + e.getMessage(), e);
+    }
   }
 
   private void openDatabaseFile(@NotNull String databaseId, @NotNull DatabaseState state) {
@@ -575,56 +617,46 @@ public class DatabaseService {
     log.info("Successfully unregistered database '{}'", databaseId);
   }
 
+  /** Adds a database to the local configuration file, creating it if need be. */
   private void saveDatabaseConfiguration(
       @NotNull String databaseId, @NotNull DatabaseConfig config) throws IOException {
+    File localFile = localConfigFile();
     // If no config path specified, skip persisting (in-memory only mode)
-    if (databasesConfigPath == null || databasesConfigPath.isEmpty()) {
+    if (localFile == null) {
       log.debug("Skipping database configuration persistence (in-memory only mode)");
       return;
     }
 
-    // Load existing configs
-    Map<String, DatabaseConfig> configs = loadDatabaseConfigurations();
-
-    // Add or update the new config
+    Map<String, DatabaseConfig> configs =
+        localFile.isFile() ? readConfigFile(localFile) : new LinkedHashMap<>();
     configs.put(databaseId, config);
-
-    // Write back to file (file existence was validated at startup)
-    File configFile = new File(databasesConfigPath);
-
-    try {
-      objectMapper.writerWithDefaultPrettyPrinter().writeValue(configFile, configs);
-      log.info("Updated database configuration file: {}", databasesConfigPath);
-    } catch (IOException e) {
-      log.error("Failed to write database configuration to {}", databasesConfigPath, e);
-      throw new IOException("Failed to save database configuration: " + e.getMessage(), e);
-    }
+    writeConfigFile(localFile, configs);
   }
 
+  /** Removes a database from the configuration files that have it. */
   private void removeDatabaseConfiguration(@NotNull String databaseId) throws IOException {
+    File localFile = localConfigFile();
     // If no config path specified, skip persisting (in-memory only mode)
-    if (databasesConfigPath == null || databasesConfigPath.isEmpty()) {
+    if (localFile == null) {
       log.debug("Skipping database configuration persistence (in-memory only mode)");
       return;
     }
 
-    // Load existing configs
-    Map<String, DatabaseConfig> configs = loadDatabaseConfigurations();
-
-    // Remove the config
-    if (configs.remove(databaseId) == null) {
-      log.warn("Database '{}' was not found in configuration file", databaseId);
+    boolean removed = false;
+    for (File file : List.of(new File(databasesConfigPath), localFile)) {
+      if (!file.isFile()) {
+        continue;
+      }
+      Map<String, DatabaseConfig> configs = readConfigFile(file);
+      if (configs.remove(databaseId) != null) {
+        writeConfigFile(file, configs);
+        removed = true;
+      }
     }
-
-    // Write back to file (file existence was validated at startup)
-    File configFile = new File(databasesConfigPath);
-
-    try {
-      objectMapper.writerWithDefaultPrettyPrinter().writeValue(configFile, configs);
-      log.info("Removed database '{}' from configuration file", databaseId);
-    } catch (IOException e) {
-      log.error("Failed to write database configuration to {}", databasesConfigPath, e);
-      throw new IOException("Failed to update database configuration: " + e.getMessage(), e);
+    if (!removed) {
+      log.warn("Database '{}' was not found in the configuration files", databaseId);
+    } else {
+      log.info("Removed database '{}' from the configuration", databaseId);
     }
   }
 }

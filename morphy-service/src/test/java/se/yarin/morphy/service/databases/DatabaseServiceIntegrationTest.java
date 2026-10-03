@@ -159,16 +159,18 @@ class DatabaseServiceIntegrationTest {
       databaseService.createDatabase(
           "persist-db", "Persist Test Database", dbPath.getAbsolutePath());
 
-      // Verify config file was updated
-      String configContent = Files.readString(configFile.toPath());
+      // Verify the local config file next to the shared one was updated, and not the shared one
+      Path localConfig = tempDir.resolve("databases-integration-test.local.json");
+      String configContent = Files.readString(localConfig);
       assertTrue(configContent.contains("persist-db"));
       assertTrue(configContent.contains("Persist Test Database"));
+      assertFalse(Files.readString(configFile.toPath()).contains("persist-db"));
 
       // Cleanup
       databaseService.unregisterDatabase("persist-db");
 
       // Verify removal was persisted
-      configContent = Files.readString(configFile.toPath());
+      configContent = Files.readString(localConfig);
       assertFalse(configContent.contains("persist-db"));
     }
   }

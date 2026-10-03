@@ -542,6 +542,10 @@ class DatabaseServiceTest {
     }
   }
 
+  private static String escape(File file) {
+    return file.getAbsolutePath().replace("\\", "\\\\");
+  }
+
   @Nested
   @DisplayName("Configuration Persistence")
   class ConfigPersistenceTests {
@@ -564,10 +568,62 @@ class DatabaseServiceTest {
 
       testService.registerDatabase("test-db", "Test Database", dbFile.getAbsolutePath());
 
-      // Verify config file was updated
-      String configContent = Files.readString(configFile.toPath());
-      assertTrue(configContent.contains("test-db"));
-      assertTrue(configContent.contains("Test Database"));
+      // Registered databases go to the local config file, the shared one is left as it was
+      String localContent = Files.readString(tempDir.resolve("databases.local.json"));
+      assertTrue(localContent.contains("test-db"));
+      assertTrue(localContent.contains("Test Database"));
+      assertEquals("{}", Files.readString(configFile.toPath()));
+    }
+
+    @Test
+    @DisplayName("should load local databases after the shared ones, replacing those with the same id")
+    void localConfig_LoadedAfterShared() throws Exception {
+      File shared1 = tempDir.resolve("shared1.cbh").toFile();
+      File shared2 = tempDir.resolve("shared2.cbh").toFile();
+      File local = tempDir.resolve("local.cbh").toFile();
+      Files.writeString(
+          tempDir.resolve("databases.json"),
+          String.format(
+              """
+              { "a": { "displayName": "A", "path": "%s" }, "b": { "displayName": "B", "path": "%s" } }
+              """,
+              escape(shared1), escape(shared2)));
+      Files.writeString(
+          tempDir.resolve("databases.local.json"),
+          String.format(
+              """
+              { "b": { "displayName": "B mine", "path": "%s" }, "c": { "displayName": "C", "path": "%s" } }
+              """,
+              escape(local), escape(local)));
+
+      DatabaseService testService =
+          new DatabaseService(
+              tempDir.resolve("databases.json").toString(), 600000L, List.of(tempDir.toString()), null);
+      testService.init();
+
+      List<DatabaseDto> databases = testService.getAllDatabase();
+      assertEquals(List.of("a", "b", "c"), databases.stream().map(DatabaseDto::id).toList());
+      assertEquals("B mine", databases.get(1).displayName());
+    }
+
+    @Test
+    @DisplayName("should remove a local database from the local config file")
+    void unregisterLocalDatabase_RemovesFromLocalFile() throws Exception {
+      File dbFile = tempDir.resolve("local.cbh").toFile();
+      DatabaseCbh.create(dbFile, false).close();
+      Files.writeString(tempDir.resolve("databases.json"), "{}");
+      Files.writeString(
+          tempDir.resolve("databases.local.json"),
+          String.format("{ \"mine\": { \"displayName\": \"Mine\", \"path\": \"%s\" } }", escape(dbFile)));
+
+      DatabaseService testService =
+          new DatabaseService(
+              tempDir.resolve("databases.json").toString(), 600000L, List.of(tempDir.toString()), null);
+      testService.init();
+      testService.unregisterDatabase("mine");
+
+      assertFalse(Files.readString(tempDir.resolve("databases.local.json")).contains("mine"));
+      assertEquals("{}", Files.readString(tempDir.resolve("databases.json")));
     }
 
     @Test
