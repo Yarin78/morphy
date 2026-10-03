@@ -32,6 +32,31 @@ export function formatTimeControl(periods: TimeControlPeriod[] | undefined): str
     .join(':');
 }
 
+/** A time in words: 2 h, 2.5 h (from two hours), 90 min, 1 h 45 min (over 90 minutes), or 30 s. */
+function durationInWords(seconds: number): string {
+  if (seconds > 0 && seconds % 3600 === 0) return `${seconds / 3600} h`;
+  if (seconds >= 7200 && seconds % 1800 === 0) return `${seconds / 3600} h`;
+  if (seconds > 0 && seconds % 60 === 0) {
+    const minutes = seconds / 60;
+    return minutes > 90 ? `${Math.floor(minutes / 60)} h ${minutes % 60} min` : `${minutes} min`;
+  }
+  return `${seconds} s`;
+}
+
+/**
+ * A time control in words, a line for each period: "40 moves in 90 min, +30 s per move", then
+ * "30 min for the rest of the game, +30 s per move".
+ */
+export function describeTimeControl(periods: TimeControlPeriod[] | undefined): string[] {
+  return (periods ?? []).map((p, i) => {
+    const time = durationInWords(p.seconds);
+    const period = p.moves
+      ? `${p.moves} move${p.moves === 1 ? '' : 's'} in ${time}`
+      : `${time} for the ${i === 0 ? 'game' : 'rest of the game'}`;
+    return p.increment ? `${period}, +${durationInWords(p.increment)} per move` : period;
+  });
+}
+
 /** The time control as a PGN TimeControl tag, with every time in seconds: "40/5400+30:1800+30". */
 export function toPgnTimeControl(periods: TimeControlPeriod[] | undefined): string {
   return (periods ?? [])

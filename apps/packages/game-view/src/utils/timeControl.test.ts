@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { formatTimeControl, parseTimeControl, timeControlError, toPgnTimeControl } from './timeControl';
+import {
+  describeTimeControl,
+  formatTimeControl,
+  parseTimeControl,
+  timeControlError,
+  toPgnTimeControl,
+} from './timeControl';
 
 const FIDE_CLASSICAL = [
   { seconds: 5400, increment: 30, moves: 40 },
@@ -43,5 +49,21 @@ describe('time controls', () => {
     expect(parseTimeControl('*180')).toBeNull();
     expect(timeControlError('abc')).toBeDefined();
     expect(timeControlError('90m+30s')).toBeUndefined();
+  });
+});
+
+describe('time controls in words', () => {
+  it('have a line for each period', () => {
+    expect(describeTimeControl(FIDE_CLASSICAL)).toEqual([
+      '40 moves in 90 min, +30 s per move',
+      '30 min for the rest of the game, +30 s per move',
+    ]);
+    expect(describeTimeControl([{ seconds: 300, increment: 3 }])).toEqual(['5 min for the game, +3 s per move']);
+    expect(describeTimeControl([{ seconds: 7200, increment: 0, moves: 40 }, { seconds: 4500, increment: 0 }])).toEqual([
+      '40 moves in 2 h',
+      '75 min for the rest of the game',
+    ]);
+    expect(describeTimeControl([{ seconds: 6300, increment: 0 }])).toEqual(['1 h 45 min for the game']);
+    expect(describeTimeControl(undefined)).toEqual([]);
   });
 });

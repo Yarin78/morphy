@@ -1,5 +1,7 @@
 import type { GameTree } from '../model/GameTree';
+import { IoTimeOutline } from 'react-icons/io5';
 import { LINE_EVALUATION_TAG, lineEvaluationSymbol } from '../utils/gameInfo';
+import { describeTimeControl, parseTimeControl, TIME_CONTROL_TAG } from '../utils/timeControl';
 import './GameHeader.css';
 
 interface GameHeaderProps {
@@ -33,6 +35,7 @@ export const GameHeader: React.FC<GameHeaderProps> = ({ game, onClick }) => {
   const eco = getValue(game.getTag('ECO'));
   const annotator = getValue(game.getTag('Annotator'));
   const lineEvaluation = getValue(game.getTag(LINE_EVALUATION_TAG));
+  const timeControl = describeTimeControl(parseTimeControl(game.getTag(TIME_CONTROL_TAG) ?? '') ?? undefined);
 
   // Format result for display
   const formatResult = (result: string) => {
@@ -70,6 +73,19 @@ export const GameHeader: React.FC<GameHeaderProps> = ({ game, onClick }) => {
   const formattedResult = formatResult(result);
   if (formattedResult) {
     firstLineParts.push(<strong key="result"> {formattedResult}</strong>);
+  }
+  // The time control, shown while the clock is hovered over, a line for each period
+  if (timeControl.length > 0) {
+    firstLineParts.push(
+      <span key="timeControl" className="game-header-time-control" tabIndex={0} title="" aria-label={`Time control: ${timeControl.join('; ')}`}>
+        <IoTimeOutline aria-hidden="true" />
+        <span className="game-header-time-control-popup" role="tooltip">
+          {timeControl.map((line, i) => (
+            <span key={i} className="game-header-time-control-period">{line}</span>
+          ))}
+        </span>
+      </span>
+    );
   }
 
   // Build second line: eco event site (round.subround.board) date

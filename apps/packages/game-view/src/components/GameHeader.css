@@ -62,3 +62,47 @@
   color: #8a7a68;
   font-style: italic;
 }
+
+/* A clock after the result, showing the time control while hovered over */
+.game-header-line .game-header-time-control {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  margin-left: 0.4em;
+  color: #6b5a3a;
+  vertical-align: -0.1em;
+  cursor: default;
+}
+
+.game-header-line .game-header-time-control:focus {
+  outline: none;
+}
+
+.game-header-line .game-header-time-control-popup {
+  display: none;
+  position: absolute;
+  z-index: 10;
+  top: 1.5em;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 0.35rem 0.6rem;
+  border: 1px solid #b9a98a;
+  border-radius: 0.3rem;
+  background: #fbf7f0;
+  box-shadow: 2px 2px 6px hsla(30, 30%, 20%, 0.3);
+  font-size: 0.85rem;
+  line-height: 1.5;
+  text-align: left;
+  white-space: nowrap;
+  color: #3d2f1c;
+}
+
+.game-header-line .game-header-time-control:hover .game-header-time-control-popup,
+.game-header-line .game-header-time-control:focus .game-header-time-control-popup {
+  display: block;
+}
+
+.game-header-line .game-header-time-control-period {
+  display: block;
+  color: #3d2f1c;
+}
