@@ -171,6 +171,7 @@ describe('GameTree', () => {
         pgn: PGN,
         annotations: [
           { move: -1, type: 'evaluations', evaluations: [] },
+          { move: -1, type: 'textAfter', text: 'Played in New York' },
           { move: -1, type: 'medals', medals: ['BEST_GAME'] },
         ],
       });

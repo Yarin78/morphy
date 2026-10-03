@@ -262,8 +262,9 @@ export class GameTree {
    * Deletes the moves before a move, and the variations from them, so the game starts from the
    * position before it: a set-up position, with the move numbers going on from there. The move
    * becomes the first move of the game, the other moves from that position its variations. The
-   * evaluations of the game, of the positions of the old main line, go too. The start position is
-   * shown, unless the move shown is still there.
+   * evaluations of the game, of the positions of the old main line, go too, and so do the comments
+   * of the game, which are likely about the moves deleted; its other annotations stay. The start
+   * position is shown, unless the move shown is still there.
    *
    * @returns false if the move is a first move of the game, with nothing before it
    */
@@ -276,7 +277,10 @@ export class GameTree {
     root.ply = start.ply;
     root.children = [move, ...start.children.filter((child) => child !== move)];
     for (const child of root.children) (child as { parent: GameNode }).parent = root;
-    root.annotations = root.annotations.filter((a) => a.type !== 'evaluations');
+    // The evaluations were of the old main line, and the comments likely about the moves deleted
+    root.annotations = root.annotations.filter(
+      (a) => a.type !== 'evaluations' && a.type !== 'textBefore' && a.type !== 'textAfter'
+    );
     if (!keep) this.current = null;
     return true;
   }
