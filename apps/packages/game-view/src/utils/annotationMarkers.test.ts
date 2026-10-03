@@ -20,14 +20,15 @@ describe('annotation markers', () => {
     const markers = annotationMarkers(
       [
         { type: 'whiteClock', centiseconds: 543210 },
-        { type: 'eval', eval: 53, evalType: 0, depth: 22 },
+        { type: 'eval', eval: 7, evalType: 3, depth: 0 },
         { type: 'medals', medals: ['NOVELTY', 'TACTICS'] },
       ],
       hasGlyph
     );
-    expect(markers.map((m) => m.label)).toEqual(['clock', 'eval', 'medal']);
-    expect(markers[1].details).toBe('eval\neval: 53\nevalType: 0\ndepth: 22');
-    expect(markers[2].details).toBe('medals\nmedals: ["NOVELTY","TACTICS"]');
+    // Clocks and known evaluations are shown after the move instead
+    expect(markers.map((m) => m.label)).toEqual(['eval', 'medal']);
+    expect(markers[0].details).toBe('eval\neval: 7\nevalType: 3\ndepth: 0');
+    expect(markers[1].details).toBe('medals\nmedals: ["NOVELTY","TACTICS"]');
   });
 
   it('mark symbols without a glyph, but not text in any language', () => {

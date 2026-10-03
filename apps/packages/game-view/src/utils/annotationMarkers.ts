@@ -1,5 +1,6 @@
 import type { Annotation, AnnotationType } from '../model/annotations';
 import { figurinesToUnicode } from './figurines';
+import { isMoveInfo } from './moveInfo';
 
 /**
  * Markers for the annotations the notation doesn't show yet: a small label after the move naming
@@ -9,9 +10,6 @@ import { figurinesToUnicode } from './figurines';
 
 /** The label of each kind of annotation that is shown as a marker. */
 const MARKER_LABELS: Partial<Record<AnnotationType, string>> = {
-  whiteClock: 'clock',
-  blackClock: 'clock',
-  timeSpent: 'time',
   eval: 'eval',
   critical: 'critical',
   medals: 'medal',
@@ -65,6 +63,8 @@ export function annotationMarkers(
         }
         break;
       default:
+        // Clocks, time spent and evaluations are shown after the move, but for unknown kinds
+        if (isMoveInfo(annotation)) break;
         markers.push({ label: MARKER_LABELS[annotation.type] ?? annotation.type, details: details(annotation) });
     }
   }

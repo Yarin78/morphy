@@ -364,6 +364,23 @@ span.cbfigurine
    font-style: normal;
 }
 
+/* A clock time, the time spent on the move, or an engine evaluation, after the move */
+span.cbmoveinfo
+{
+   margin: 0 0.15em;
+   color: #7a6a52;
+   font-size: 0.8em;
+   font-weight: normal;
+   font-variant-numeric: tabular-nums;
+   white-space: nowrap;
+   cursor: default;
+}
+
+span.cbeval
+{
+   color: #3d6b8f;
+}
+
 /* An annotation the notation doesn't show otherwise; its data is in the tooltip */
 span.cbanno-marker
 {

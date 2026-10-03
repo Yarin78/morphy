@@ -4,6 +4,7 @@ import type { Annotation } from '../model/annotations';
 import { filterAnnotations, findAnnotation } from '../model/annotations';
 import { annotationMarkers, annotationMarkersHtml } from './annotationMarkers';
 import { figurinesToHtml } from './figurines';
+import { moveInfoHtml } from './moveInfo';
 import { isPrefixNag, nagInfo } from '../model/nags';
 
 interface ConversionState {
@@ -249,6 +250,12 @@ function traverseGameTree(
       parts.push(`<span class="cbcol-marker" data-inx-mv="${localMoveIndex}"> </span>`);
     }
 
+    // Clock times, the time spent and evaluations
+    const moveInfo = moveInfoHtml(m.annotations);
+    if (moveInfo) {
+      parts.push(moveInfo);
+    }
+
     // The annotations not shown otherwise
     const markers = annotationMarkersHtml(annotationMarkers(m.annotations, hasGlyph));
     if (markers) {
@@ -339,6 +346,10 @@ export function generateNotationHtml(game: GameTree, languages: readonly string[
     parts.push(`<span class="cbcomment" data-inx-mv="0" data-linecnt="1">${figurinesToHtml(processCommentWithLink(comment))}</span>`);
   }
 
+  const gameInfo = moveInfoHtml(game.root.annotations, true);
+  if (gameInfo) {
+    parts.push(gameInfo);
+  }
   const gameMarkers = annotationMarkersHtml(annotationMarkers(game.root.annotations, hasGlyph));
   if (gameMarkers) {
     parts.push(gameMarkers);
