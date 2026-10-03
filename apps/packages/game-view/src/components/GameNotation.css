@@ -381,6 +381,46 @@ span.cbeval
    color: #3d6b8f;
 }
 
+/* A web link after the move */
+.game-notation-content .cbweblink
+{
+   margin: 0 0.15em;
+   color: #2b5f94;
+   font-size: 0.85em;
+   font-weight: normal;
+   text-decoration: underline;
+}
+
+/* A quoted game: a reference that unfolds to its moves */
+.game-notation-content .cbquote
+{
+   display: inline;
+   margin: 0 0.15em;
+   color: #6b5a3a;
+   font-size: 0.85em;
+   font-style: italic;
+   font-weight: normal;
+}
+
+.game-notation-content details.cbquote > summary
+{
+   display: inline;
+   list-style: none;
+   cursor: pointer;
+   text-decoration: underline dotted;
+}
+
+.game-notation-content details.cbquote > summary::-webkit-details-marker
+{
+   display: none;
+}
+
+.game-notation-content .cbquote-moves
+{
+   margin-left: 0.3em;
+   font-style: normal;
+}
+
 /* An annotation the notation doesn't show otherwise; its data is in the tooltip */
 span.cbanno-marker
 {

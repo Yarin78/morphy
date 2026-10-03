@@ -1,6 +1,7 @@
 import type { Annotation, AnnotationType } from '../model/annotations';
 import { figurinesToUnicode } from './figurines';
 import { isMoveInfo } from './moveInfo';
+import { escapeHtml } from './html';
 
 /**
  * Markers for the annotations the notation doesn't show yet: a small label after the move naming
@@ -15,8 +16,6 @@ const MARKER_LABELS: Partial<Record<AnnotationType, string>> = {
   pawnStructure: 'pawns',
   piecePath: 'path',
   videoStreamTime: 'video',
-  webLink: 'link',
-  quote: 'quote',
   training: 'training',
   correspondence: 'corr',
   raw: 'raw',
@@ -55,6 +54,8 @@ export function annotationMarkers(
       case 'arrows':
       case 'variationColor':
       case 'medals':
+      case 'webLink':
+      case 'quote':
         break;
       case 'critical':
         // Shown by the color of the move, unless it's of no phase
@@ -97,13 +98,4 @@ function details(annotation: Annotation): string {
     lines.push(`${field}: ${text}`);
   }
   return lines.join('\n');
-}
-
-function escapeHtml(text: string): string {
-  return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
 }

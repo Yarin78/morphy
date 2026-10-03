@@ -6,6 +6,7 @@ import { annotationMarkers, annotationMarkersHtml } from './annotationMarkers';
 import { figurinesToHtml } from './figurines';
 import { moveInfoHtml } from './moveInfo';
 import { medalsHtml } from './medals';
+import { quoteHtml, webLinkHtml } from './references';
 import { isPrefixNag, nagInfo } from '../model/nags';
 
 interface ConversionState {
@@ -127,6 +128,13 @@ function hasGraphics(annotations: readonly Annotation[]): boolean {
     (findAnnotation(annotations, 'squares')?.squares.length ?? 0) > 0 ||
     (findAnnotation(annotations, 'arrows')?.arrows.length ?? 0) > 0
   );
+}
+
+/** The web links and quoted games of a move, in the order they're in. */
+function referencesHtml(annotations: readonly Annotation[]): string {
+  return annotations
+    .map((a) => (a.type === 'webLink' ? webLinkHtml(a) : a.type === 'quote' ? quoteHtml(a) : ''))
+    .join('');
 }
 
 /** A color given to the moves of a line from some move on, see the variationColor annotation. */
@@ -263,6 +271,12 @@ function traverseGameTree(
       parts.push(moveInfo);
     }
 
+    // Web links and quoted games
+    const references = referencesHtml(m.annotations);
+    if (references) {
+      parts.push(references);
+    }
+
     // The annotations not shown otherwise
     const markers = annotationMarkersHtml(annotationMarkers(m.annotations, hasGlyph));
     if (markers) {
@@ -360,6 +374,10 @@ export function generateNotationHtml(game: GameTree, languages: readonly string[
   const gameInfo = moveInfoHtml(game.root.annotations, true);
   if (gameInfo) {
     parts.push(gameInfo);
+  }
+  const gameReferences = referencesHtml(game.root.annotations);
+  if (gameReferences) {
+    parts.push(gameReferences);
   }
   const gameMarkers = annotationMarkersHtml(annotationMarkers(game.root.annotations, hasGlyph));
   if (gameMarkers) {
