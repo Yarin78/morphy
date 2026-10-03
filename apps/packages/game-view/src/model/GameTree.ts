@@ -54,6 +54,13 @@ function plyOf(fen: string): number {
  * appear in the movetext, each variation right after the move it's an alternative to, before the
  * line it branches from goes on.
  */
+/** The moves of a game and the move shown, as GameTree.snapshot gives them. */
+export interface TreeSnapshot {
+  moves: Required<Pick<GameMoves, 'pgn' | 'annotations'>> & { fen?: string };
+  /** The index of the move shown in the order of the movetext, or null for the start position. */
+  current: number | null;
+}
+
 export class GameTree {
   readonly root: GameNode;
   private readonly tags: Map<string, string>;
@@ -363,6 +370,24 @@ export class GameTree {
       fen: this.root.fen === DEFAULT_POSITION ? undefined : this.root.fen,
       annotations,
     };
+  }
+
+  /** The moves and the move shown, to go back to with restore. */
+  snapshot(): TreeSnapshot {
+    const current = this.current ? this.movesInOrder().indexOf(this.current) : -1;
+    return { moves: this.toMoves(), current: current < 0 ? null : current };
+  }
+
+  /** Makes the moves and the move shown those of a snapshot. The tags are left as they are. */
+  restore(snapshot: TreeSnapshot) {
+    const restored = GameTree.fromMoves(snapshot.moves);
+    const root = this.root as { fen: string; ply: number; children: MoveNode[]; annotations: Annotation[] };
+    root.fen = restored.root.fen;
+    root.ply = restored.root.ply;
+    root.children = restored.root.children;
+    root.annotations = restored.root.annotations;
+    for (const child of root.children) (child as { parent: GameNode }).parent = root;
+    this.current = snapshot.current === null ? null : (this.movesInOrder()[snapshot.current] ?? null);
   }
 
   private attachAnnotations(annotations: AnnotationDto[]) {

@@ -199,5 +199,24 @@ describe('GameTree', () => {
       expect(tree.currentMove()).toBeNull();
     });
   });
+
+  it('restores a snapshot of its moves and the move shown, in place', () => {
+    const tree = GameTree.fromMoves({
+      pgn: '1.e4 e5 (1...c5 2.Nf3) 2.Nf3 Nc6',
+      annotations: [{ move: 1, type: 'textAfter', text: 'Solid' }],
+    });
+    tree.seek(tree.root.children[0].children[1]);
+    const before = tree.snapshot();
+    expect(before.current).toBe(2);
+
+    const root = tree.root;
+    tree.deletePreviousMoves(tree.root.children[0].children[0].children[0]);
+    tree.seek(null);
+    tree.restore(before);
+    expect(tree.root).toBe(root);
+    expect(tree.toMoves()).toEqual(before.moves);
+    expect(tree.currentMove()?.san).toBe('c5');
+    expect(tree.root.children[0].parent).toBe(tree.root);
+  });
 });
 

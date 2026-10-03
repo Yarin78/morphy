@@ -24,7 +24,7 @@ import { createMovedPieceFen } from '../utils/fenUtils';
 import { evalBars } from '../utils/evalGraph';
 import { nextMoveChoices } from '../utils/variationChoice';
 import { findAnnotation } from '../model/annotations';
-import { TbCircleOff, TbRoute, TbStar } from 'react-icons/tb';
+import { TbArrowBackUp, TbArrowForwardUp, TbCircleOff, TbRoute, TbStar } from 'react-icons/tb';
 import { IoPlaySkipBack, IoChevronBack, IoChevronForward, IoPlaySkipForward, IoReload, IoMenu, IoClose } from 'react-icons/io5';
 import type { ChessGame } from '../types/chess';
 import { useChessGame } from '../hooks/useChessGame';
@@ -32,6 +32,8 @@ import { useKeyboardNavigation } from '../hooks/useKeyboardNavigation';
 import { NAG_KEYS, useNagKeys } from '../hooks/useNagKeys';
 import { COMMENT_KEYS, useCommentKeys } from '../hooks/useCommentKeys';
 import { useMoveActionKeys } from '../hooks/useMoveActionKeys';
+import { UNDO_SHORTCUTS, useUndoKeys } from '../hooks/useUndoKeys';
+import { EditHistory } from '../model/editHistory';
 import { withComment } from '../model/comments';
 import type { CommentType } from '../model/comments';
 import { readGameInfo, writeGameInfo } from '../utils/gameInfo';
@@ -197,6 +199,24 @@ export const GameView: React.FC<GameViewProps> = ({
     return dests;
   }, [game, version, isEditMode]);
 
+  // The edits made to the moves and annotations, to undo and redo, kept with the game they're of
+  const historyRef = useRef<{ game: GameTree; history: EditHistory } | null>(null);
+  const editHistory = useCallback(() => {
+    if (historyRef.current?.game !== game) historyRef.current = { game, history: new EditHistory() };
+    return historyRef.current.history;
+  }, [game]);
+
+  // Makes an edit to the moves or annotations, which can then be undone, unless it changed nothing
+  const edit = useCallback(
+    (change: () => void) => {
+      const before = game.snapshot();
+      change();
+      if (JSON.stringify(before.moves) !== JSON.stringify(game.toMoves())) editHistory().record(before);
+      triggerUpdate();
+    },
+    [game, editHistory, triggerUpdate]
+  );
+
   // Handle move execution in edit mode
   const handleMove = useCallback((from: Square, to: Square) => {
     if (!isEditMode) return;
@@ -214,41 +234,31 @@ export const GameView: React.FC<GameViewProps> = ({
         setPromotionPending({ from, to });
       } else {
         // Normal move (not a promotion)
-        const move = game.play({ from, to });
-        if (move) {
-          triggerUpdate();
-        } else {
-          console.error('Invalid move:', from, to);
-        }
+        edit(() => {
+          if (!game.play({ from, to })) console.error('Invalid move:', from, to);
+        });
       }
     } catch (error) {
       console.error('Error making move:', error);
     }
-  }, [game, isEditMode, triggerUpdate]);
+  }, [game, isEditMode, edit]);
 
   // Handle promotion piece selection
   const handlePromotionSelect = useCallback((piece: 'q' | 'r' | 'b' | 'n') => {
     if (!promotionPending) return;
 
     try {
-      const move = game.play({
-        from: promotionPending.from,
-        to: promotionPending.to,
-        promotion: piece,
+      edit(() => {
+        const move = game.play({ from: promotionPending.from, to: promotionPending.to, promotion: piece });
+        if (!move) console.error('Invalid promotion move:', promotionPending);
       });
-
-      if (move) {
-        triggerUpdate();
-      } else {
-        console.error('Invalid promotion move:', promotionPending);
-      }
     } catch (error) {
       console.error('Error making promotion move:', error);
     } finally {
       setPromotionPending(null);
       setPromotionPreviewFen(null);
     }
-  }, [game, promotionPending, triggerUpdate]);
+  }, [game, promotionPending, edit]);
 
   // Handle promotion dialog cancellation
   const handlePromotionCancel = useCallback(() => {
@@ -297,12 +307,11 @@ export const GameView: React.FC<GameViewProps> = ({
     setUserDrawnShapes(updatedShapes);
 
     // Keep them as the annotations of the current move, or of the game at the start position
-    const node = game.currentNode();
-    node.annotations = shapesToAnnotations(node.annotations, updatedShapes);
-
-    // Trigger re-render to update notation
-    triggerUpdate();
-  }, [isEditMode, game, triggerUpdate, userDrawnShapes]);
+    edit(() => {
+      const node = game.currentNode();
+      node.annotations = shapesToAnnotations(node.annotations, updatedShapes);
+    });
+  }, [isEditMode, game, edit, userDrawnShapes]);
 
   // Resize handler functions
   const handleResizeStart = useCallback((e: React.MouseEvent) => {
@@ -470,9 +479,10 @@ export const GameView: React.FC<GameViewProps> = ({
   const handleNagToggle = useCallback((nag: number) => {
     const move = game.currentMove();
     if (!move) return;
-    move.annotations = toggleNag(move.annotations, nag);
-    triggerUpdate();
-  }, [game, triggerUpdate]);
+    edit(() => {
+      move.annotations = toggleNag(move.annotations, nag);
+    });
+  }, [game, edit]);
 
   // The language whose comments are shown, besides those in no language, and that comments are
   // written in, or null for all: every comment shown, and comments written in no language. By
@@ -509,12 +519,13 @@ export const GameView: React.FC<GameViewProps> = ({
     (text: string | null) => {
       if (editingComment && text !== null) {
         const { node, type, language } = editingComment;
-        node.annotations = withComment(node.annotations, type, language, text);
-        triggerUpdate();
+        edit(() => {
+          node.annotations = withComment(node.annotations, type, language, text);
+        });
       }
       setCommentEdit(null);
     },
-    [editingComment, triggerUpdate]
+    [editingComment, edit]
   );
 
   // The context menu of a move, while it's open: the move goes to the one right-clicked
@@ -530,14 +541,30 @@ export const GameView: React.FC<GameViewProps> = ({
 
   const handleMoveMenuClose = useCallback(() => setMoveMenu(null), []);
 
+  // Goes back to the moves before the last edit, or forward again to those after the last undone
+  const handleUndoRedo = useCallback(
+    (redo: boolean) => {
+      const history = editHistory();
+      const snapshot = redo ? history.redo(game.snapshot()) : history.undo(game.snapshot());
+      if (!snapshot) return;
+      game.restore(snapshot);
+      setCommentEdit(null);
+      setMoveMenu(null);
+      triggerUpdate();
+    },
+    [game, editHistory, triggerUpdate]
+  );
+  const handleUndo = useCallback(() => handleUndoRedo(false), [handleUndoRedo]);
+  const handleRedo = useCallback(() => handleUndoRedo(true), [handleUndoRedo]);
+
   const moveMenuItems = useMemo((): ContextMenuItem[] => {
     const move = game.currentMove();
     if (!moveMenu || !move) return [];
     // Changes the annotations of the move
-    const annotate = (change: (annotations: MoveNode['annotations']) => MoveNode['annotations']) => () => {
-      move.annotations = change(move.annotations);
-      triggerUpdate();
-    };
+    const annotate = (change: (annotations: MoveNode['annotations']) => MoveNode['annotations']) => () =>
+      edit(() => {
+        move.annotations = change(move.annotations);
+      });
     const nagItems = (type: NagType): ContextMenuItem[] =>
       NAG_PALETTE.find((group) => group.type === type)!.nags.map((nag) => ({
         label: nagInfo(nag)!.name,
@@ -551,8 +578,24 @@ export const GameView: React.FC<GameViewProps> = ({
       symbol: <span style={{ color: CRITICAL_COLORS[p] }}>●</span>,
       onSelect: annotate((annotations) => toggleCritical(annotations, p)),
     });
+    const history = editHistory();
     return [
-      ...moveActions(game, move, triggerUpdate).map(
+      {
+        label: 'Undo',
+        symbol: <TbArrowBackUp />,
+        shortcut: UNDO_SHORTCUTS.undo,
+        disabled: !history.canUndo,
+        onSelect: handleUndo,
+      },
+      {
+        label: 'Redo',
+        symbol: <TbArrowForwardUp />,
+        shortcut: UNDO_SHORTCUTS.redo,
+        disabled: !history.canRedo,
+        onSelect: handleRedo,
+      },
+      'separator',
+      ...moveActions(game, move, edit).map(
         (action): ContextMenuItem => ({
           label: action.label,
           symbol: action.icon,
@@ -580,7 +623,7 @@ export const GameView: React.FC<GameViewProps> = ({
         symbol: <TbCircleOff />,
         disabled: !game.canPlayNullMove(),
         onSelect: () => {
-          if (game.playNullMove()) triggerUpdate();
+          edit(() => game.playNullMove());
         },
       },
       'separator',
@@ -609,7 +652,7 @@ export const GameView: React.FC<GameViewProps> = ({
         ],
       },
     ];
-  }, [game, version, moveMenu, triggerUpdate, handleCommentEdit]);
+  }, [game, version, moveMenu, edit, editHistory, handleUndo, handleRedo, handleCommentEdit]);
 
   // The evaluations of the main line, shown as a graph above the bar
   const evaluationBars = useMemo(() => {
@@ -622,10 +665,11 @@ export const GameView: React.FC<GameViewProps> = ({
   useCommentKeys(isEditMode && !!selectedGame && !editingGameInfo && !editingComment, handleCurrentCommentEdit);
   // Cmd+↑, Delete, ] and [ promote or delete the variation, or delete the moves after or before
   const currentMoveActions = useCallback(
-    () => moveActions(game, game.currentMove(), triggerUpdate),
-    [game, triggerUpdate]
+    () => moveActions(game, game.currentMove(), edit),
+    [game, edit]
   );
   useMoveActionKeys(isEditMode && !!selectedGame && !editingGameInfo && !editingComment, currentMoveActions);
+  useUndoKeys(isEditMode && !!selectedGame && !editingGameInfo && !editingComment, handleUndo, handleRedo);
 
   // Keyboard navigation
   useKeyboardNavigation({
@@ -809,7 +853,7 @@ export const GameView: React.FC<GameViewProps> = ({
                   <NagBar
                     annotations={game.currentMove()?.annotations ?? null}
                     onToggle={handleNagToggle}
-                    actions={moveActions(game, game.currentMove(), triggerUpdate)}
+                    actions={moveActions(game, game.currentMove(), edit)}
                   />
                 )}
                 <LanguageSelector

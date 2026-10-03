@@ -16,7 +16,7 @@ export interface MoveAction {
   isKey: (e: KeyboardEvent) => boolean;
 }
 
-const MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
+export const MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
 
 /** A key pressed without Cmd, Ctrl or Alt. */
 function plain(e: KeyboardEvent, ...keys: string[]): boolean {
@@ -28,9 +28,13 @@ function plain(e: KeyboardEvent, ...keys: string[]): boolean {
  * variation, and deleting the moves after or before it.
  *
  * @param move the move, or null at the start position, where none can be made
- * @param onChange called after the moves were changed
+ * @param edit makes a change to the moves, as an edit that can be undone
  */
-export function moveActions(game: GameTree, move: MoveNode | null, onChange: () => void): MoveAction[] {
+export function moveActions(
+  game: GameTree,
+  move: MoveNode | null,
+  edit: (change: () => void) => void
+): MoveAction[] {
   const inVariation = !!move && !!GameTree.variationStart(move);
   return [
     {
@@ -38,7 +42,7 @@ export function moveActions(game: GameTree, move: MoveNode | null, onChange: () 
       icon: <TbArrowUp />,
       disabled: !inVariation,
       run: () => {
-        if (move && GameTree.promoteVariation(move)) onChange();
+        if (move) edit(() => GameTree.promoteVariation(move));
       },
       shortcut: MAC ? '⌘↑' : 'Ctrl+↑',
       isKey: (e) => e.key === 'ArrowUp' && (MAC ? e.metaKey : e.ctrlKey) && !e.altKey && !e.shiftKey,
@@ -48,7 +52,7 @@ export function moveActions(game: GameTree, move: MoveNode | null, onChange: () 
       icon: <TbTrash />,
       disabled: !inVariation,
       run: () => {
-        if (move && game.deleteVariation(move)) onChange();
+        if (move) edit(() => game.deleteVariation(move));
       },
       // The delete key of a Mac is Backspace
       shortcut: MAC ? '⌫' : 'Del',
@@ -59,9 +63,7 @@ export function moveActions(game: GameTree, move: MoveNode | null, onChange: () 
       icon: <TbScissors />,
       disabled: !move || move.children.length === 0,
       run: () => {
-        if (!move) return;
-        game.deleteRemainingMoves(move);
-        onChange();
+        if (move) edit(() => game.deleteRemainingMoves(move));
       },
       shortcut: ']',
       isKey: (e) => plain(e, ']'),
@@ -72,7 +74,7 @@ export function moveActions(game: GameTree, move: MoveNode | null, onChange: () 
       icon: <TbScissors style={{ transform: 'scaleX(-1)' }} />,
       disabled: !move || !GameTree.previous(move),
       run: () => {
-        if (move && game.deletePreviousMoves(move)) onChange();
+        if (move) edit(() => game.deletePreviousMoves(move));
       },
       shortcut: '[',
       isKey: (e) => plain(e, '['),
