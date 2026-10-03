@@ -123,5 +123,24 @@ describe('GameTree', () => {
     check.seek(check.root.children[0].children[0].children[0]);
     expect(check.playNullMove()).toBeNull();
   });
+
+  it('promotes the variation a move is in to the main line from where it starts', () => {
+    const tree = GameTree.fromMoves({ pgn: '1.e4 e5 (1...c5 2.Nf3 (2.Nc3 Nc6) d6) (1...e6) 2.Nf3' });
+    const e4 = tree.root.children[0];
+    const nc6 = e4.children[1].children[1].children[0];
+    expect(GameTree.variationStart(nc6)?.san).toBe('Nc3');
+
+    // From inside a nested variation, the nested one is promoted
+    expect(GameTree.promoteVariation(nc6)).toBe(true);
+    expect(tree.movetext()).toBe('1. e4 e5 (1... c5 2. Nc3 (2. Nf3 d6) 2... Nc6) (1... e6) 2. Nf3');
+
+    // Then the one it's now the main line of
+    expect(GameTree.promoteVariation(nc6)).toBe(true);
+    expect(tree.movetext()).toBe('1. e4 c5 (1... e5 2. Nf3) (1... e6) 2. Nc3 (2. Nf3 d6) 2... Nc6');
+
+    // The main line of the game stays
+    expect(GameTree.variationStart(nc6)).toBeNull();
+    expect(GameTree.promoteVariation(nc6)).toBe(false);
+  });
 });
 

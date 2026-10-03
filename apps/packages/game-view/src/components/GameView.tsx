@@ -31,7 +31,8 @@ import { useNagKeys } from '../hooks/useNagKeys';
 import { readGameInfo, writeGameInfo } from '../utils/gameInfo';
 import type { GameInfo } from '../utils/gameInfo';
 import type { GameInfoServices } from '../utils/gameInfo';
-import type { GameTree, MoveNode } from '../model/GameTree';
+import { GameTree } from '../model/GameTree';
+import type { MoveNode } from '../model/GameTree';
 import type { Square } from 'chess.js';
 import type { QuotationLink } from '../utils/notationGenerator';
 import './GameView.css';
@@ -487,6 +488,13 @@ export const GameView: React.FC<GameViewProps> = ({
       onSelect: annotate((annotations) => toggleCritical(annotations, p)),
     });
     return [
+      {
+        label: 'Promote Variation',
+        disabled: !GameTree.variationStart(move),
+        onSelect: () => {
+          if (GameTree.promoteVariation(move)) triggerUpdate();
+        },
+      },
       {
         label: 'Insert Null Move',
         disabled: !game.canPlayNullMove(),

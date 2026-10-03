@@ -186,6 +186,32 @@ export class GameTree {
     return this.current;
   }
 
+  /**
+   * The first move of the variation a move is in: the move itself or the nearest one before it that
+   * is not the main move from its position. Null for a move of the main line of the game.
+   */
+  static variationStart(move: MoveNode): MoveNode | null {
+    for (let m: MoveNode | null = move; m; m = GameTree.previous(m)) {
+      if (m.parent.children[0] !== m) return m;
+    }
+    return null;
+  }
+
+  /**
+   * Makes the variation a move is in the main line from the position it starts at; the main line
+   * from there becomes its first variation, and the other variations keep their order.
+   *
+   * @returns false if the move is in the main line of the game, which is left as it is
+   */
+  static promoteVariation(move: MoveNode): boolean {
+    const start = GameTree.variationStart(move);
+    if (!start) return false;
+    const siblings = start.parent.children;
+    siblings.splice(siblings.indexOf(start), 1);
+    siblings.unshift(start);
+    return true;
+  }
+
   /** Whether a null move can be played from the position shown: not when in check. */
   canPlayNullMove(): boolean {
     return !new Chess(this.currentNode().fen).inCheck();
