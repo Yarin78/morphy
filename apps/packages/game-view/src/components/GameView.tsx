@@ -8,6 +8,7 @@ import { PromotionDialog } from './PromotionDialog';
 import { NagBar } from './NagBar';
 import { EvalGraph } from './EvalGraph';
 import { LanguagePills } from './LanguagePills';
+import { VariationChooser } from './VariationChooser';
 import './NotationBar.css';
 import { commentLanguages, defaultLanguages } from '../model/languages';
 import { toggleNag } from '../model/nags';
@@ -15,6 +16,7 @@ import { annotationsToShapes, ANNOTATION_BRUSHES, LAST_MOVE_BRUSH, shapesToAnnot
 import type { DrawShape } from '../utils/drawableConverter';
 import { createMovedPieceFen } from '../utils/fenUtils';
 import { evalBars } from '../utils/evalGraph';
+import { nextMoveChoices } from '../utils/variationChoice';
 import { findAnnotation } from '../model/annotations';
 import { IoPlaySkipBack, IoChevronBack, IoChevronForward, IoPlaySkipForward, IoReload, IoMenu, IoClose } from 'react-icons/io5';
 import type { ChessGame } from '../types/chess';
@@ -125,6 +127,30 @@ export const GameView: React.FC<GameViewProps> = ({
   const boardContainerRef = useRef<HTMLDivElement>(null);
   const navigationRef = useRef<HTMLDivElement>(null);
   const [reverseMoveMap, setReverseMoveMap] = useState<Map<number, MoveNode>>(new Map());
+
+  // The moves to choose the next move from when there are variations, while they're shown
+  const [moveChoice, setMoveChoice] = useState<{ game: GameTree; moves: MoveNode[] } | null>(null);
+  const choosingMove = moveChoice?.game === game ? moveChoice.moves : null;
+
+  // The next move, or a choice of it when there are variations
+  const handleNextMove = useCallback(() => {
+    const choices = nextMoveChoices(game.currentNode());
+    if (choices.length > 1) {
+      setMoveChoice({ game, moves: choices });
+    } else {
+      goToNextMove();
+    }
+  }, [game, goToNextMove]);
+
+  const handleMoveChosen = useCallback(
+    (move: MoveNode) => {
+      setMoveChoice(null);
+      seekToMove(move);
+    },
+    [seekToMove]
+  );
+
+  const handleMoveChoiceCancel = useCallback(() => setMoveChoice(null), []);
 
   const handleMoveClick = useCallback((move: MoveNode) => {
     seekToMove(move);
@@ -456,7 +482,7 @@ export const GameView: React.FC<GameViewProps> = ({
     canGoBack,
     canGoForward,
     goToPreviousMove,
-    goToNextMove,
+    goToNextMove: handleNextMove,
     goToStart,
     goToEnd,
     seekToMove,
@@ -574,7 +600,7 @@ export const GameView: React.FC<GameViewProps> = ({
             <button onClick={goToPreviousMove} disabled={!selectedGame || !canGoBack()} className="nav-button" title="Previous move">
               <IoChevronBack />
             </button>
-            <button onClick={goToNextMove} disabled={!selectedGame || !canGoForward()} className="nav-button" title="Next move">
+            <button onClick={handleNextMove} disabled={!selectedGame || !canGoForward()} className="nav-button" title="Next move">
               <IoChevronForward />
             </button>
             <button onClick={goToEnd} disabled={!selectedGame || !canGoForward()} className="nav-button" title="Last move">
@@ -609,6 +635,9 @@ export const GameView: React.FC<GameViewProps> = ({
               onNotationReady={handleNotationReady}
               onQuotationClick={onQuotationClick}
             />
+            {choosingMove && (
+              <VariationChooser moves={choosingMove} onChoose={handleMoveChosen} onCancel={handleMoveChoiceCancel} />
+            )}
             {evaluationBars && (
               <EvalGraph
                 bars={evaluationBars}

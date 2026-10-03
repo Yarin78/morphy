@@ -1,0 +1,45 @@
+/* The popup to choose the next move by, in the middle of the notation */
+.variation-chooser {
+  position: absolute;
+  z-index: 20;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  min-width: 12rem;
+  max-width: 90%;
+  max-height: 80%;
+  overflow-y: auto;
+  padding: 0.3rem 0;
+  border: 1px solid #8b6f47;
+  border-radius: 0.35rem;
+  background: #fbf7f0;
+  box-shadow: 3px 3px 12px hsla(30, 30%, 20%, 0.4);
+  color: #3d2f1c;
+  font-size: 1rem;
+}
+
+.variation-chooser-line {
+  padding: 0.25rem 0.9rem;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+/* The main move, last */
+.variation-chooser-line.main {
+  font-weight: bold;
+}
+
+.variation-chooser-line.selected {
+  background: #8b6f47;
+  color: #fff;
+}
+
+.variation-chooser-title {
+  margin: -0.3rem 0 0.25rem;
+  padding: 0.3rem 0.9rem;
+  border-bottom: 1px solid #d4c4b0;
+  background: #ede6dc;
+  color: #6b5a3a;
+  font-size: 0.85rem;
+  font-weight: bold;
+}

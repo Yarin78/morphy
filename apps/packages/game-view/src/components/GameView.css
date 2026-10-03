@@ -123,6 +123,8 @@
 }
 
 .notation-area {
+  /* For the popup to choose the next move by, in the middle */
+  position: relative;
   background: #ede6dc;
   display: flex;
   flex-direction: column;
