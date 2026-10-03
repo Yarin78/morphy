@@ -11,6 +11,7 @@ import { LanguageSelector } from './LanguageSelector';
 import { VariationChooser } from './VariationChooser';
 import { ContextMenu } from './ContextMenu';
 import type { ContextMenuItem } from './ContextMenu';
+import { moveActions } from './moveActions';
 import './NotationBar.css';
 import { commentLanguages, defaultLanguage } from '../model/languages';
 import { NAG_PALETTE, nagInfo, toggleNag } from '../model/nags';
@@ -27,8 +28,8 @@ import { IoPlaySkipBack, IoChevronBack, IoChevronForward, IoPlaySkipForward, IoR
 import type { ChessGame } from '../types/chess';
 import { useChessGame } from '../hooks/useChessGame';
 import { useKeyboardNavigation } from '../hooks/useKeyboardNavigation';
-import { useNagKeys } from '../hooks/useNagKeys';
-import { useCommentKeys } from '../hooks/useCommentKeys';
+import { NAG_KEYS, useNagKeys } from '../hooks/useNagKeys';
+import { COMMENT_KEYS, useCommentKeys } from '../hooks/useCommentKeys';
 import { withComment } from '../model/comments';
 import type { CommentType } from '../model/comments';
 import { readGameInfo, writeGameInfo } from '../utils/gameInfo';
@@ -64,6 +65,11 @@ export interface GameViewProps {
    * to, for the caller to open that game (see quotedPosition).
    */
   onQuotationClick?: (link: QuotationLink) => void;
+}
+
+/** The key that does something, of those that do things, if one does it. */
+function shortcutOf<T>(keys: Record<string, T>, value: T): string | undefined {
+  return Object.entries(keys).find(([, v]) => v === value)?.[0];
 }
 
 export const GameView: React.FC<GameViewProps> = ({
@@ -527,6 +533,7 @@ export const GameView: React.FC<GameViewProps> = ({
       NAG_PALETTE.find((group) => group.type === type)!.nags.map((nag) => ({
         label: nagInfo(nag)!.name,
         symbol: nagInfo(nag)!.symbol,
+        shortcut: shortcutOf(NAG_KEYS, nag),
         onSelect: annotate((annotations) => toggleNag(annotations, nag)),
       }));
     const critical = (name: string, p: CriticalPhase): ContextMenuItem => ({
@@ -534,38 +541,25 @@ export const GameView: React.FC<GameViewProps> = ({
       onSelect: annotate((annotations) => toggleCritical(annotations, p)),
     });
     return [
-      {
-        label: 'Promote Variation',
-        disabled: !GameTree.variationStart(move),
-        onSelect: () => {
-          if (GameTree.promoteVariation(move)) triggerUpdate();
-        },
-      },
-      {
-        label: 'Delete Variation',
-        disabled: !GameTree.variationStart(move),
-        onSelect: () => {
-          if (game.deleteVariation(move)) triggerUpdate();
-        },
-      },
-      {
-        label: 'Delete Remaining Moves',
-        disabled: move.children.length === 0,
-        onSelect: () => {
-          game.deleteRemainingMoves(move);
-          triggerUpdate();
-        },
-      },
-      {
-        label: 'Delete Previous Moves',
-        disabled: !GameTree.previous(move),
-        onSelect: () => {
-          if (game.deletePreviousMoves(move)) triggerUpdate();
-        },
-      },
+      ...moveActions(game, move, triggerUpdate).map(
+        (action): ContextMenuItem => ({
+          label: action.label,
+          symbol: action.icon,
+          disabled: action.disabled,
+          onSelect: action.run,
+        })
+      ),
       'separator',
-      { label: 'Add Comment Before Move', onSelect: () => handleCommentEdit(move, 'textBefore') },
-      { label: 'Add Comment After Move', onSelect: () => handleCommentEdit(move, 'textAfter') },
+      {
+        label: 'Add Comment Before Move',
+        shortcut: shortcutOf(COMMENT_KEYS, 'textBefore'),
+        onSelect: () => handleCommentEdit(move, 'textBefore'),
+      },
+      {
+        label: 'Add Comment After Move',
+        shortcut: shortcutOf(COMMENT_KEYS, 'textAfter'),
+        onSelect: () => handleCommentEdit(move, 'textAfter'),
+      },
       {
         label: 'Insert Null Move',
         disabled: !game.canPlayNullMove(),
@@ -787,7 +781,11 @@ export const GameView: React.FC<GameViewProps> = ({
             {(isEditMode || languages.length > 0) && (
               <div className="notation-bar">
                 {isEditMode && (
-                  <NagBar annotations={game.currentMove()?.annotations ?? null} onToggle={handleNagToggle} />
+                  <NagBar
+                    annotations={game.currentMove()?.annotations ?? null}
+                    onToggle={handleNagToggle}
+                    actions={moveActions(game, game.currentMove(), triggerUpdate)}
+                  />
                 )}
                 <LanguageSelector
                   language={language}

@@ -1,12 +1,15 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import type { ReactNode } from 'react';
 import './ContextMenu.css';
 
 /** An entry of a context menu: something to do, a submenu, or a line between groups. */
 export type ContextMenuItem =
   | {
       label: string;
-      /** Shown before the label, like the symbol of a NAG. */
-      symbol?: string;
+      /** Shown before the label: an icon, or a symbol like that of a NAG. */
+      symbol?: ReactNode;
+      /** The key that does the same, shown after the label. */
+      shortcut?: string;
       disabled?: boolean;
       /** Shown faded, as less relevant, though it can still be chosen. */
       faded?: boolean;
@@ -35,6 +38,8 @@ const MenuList: React.FC<{ items: readonly ContextMenuItem[]; onClose: () => voi
   const [open, setOpen] = useState<number | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const [flip, setFlip] = useState({ left: false, up: false });
+  // The labels line up, whether there's a symbol before them or not
+  const hasSymbols = items.some((item) => item !== 'separator' && item.symbol !== undefined);
 
   // A submenu that would go off the window opens to the left, or upwards, instead
   useLayoutEffect(() => {
@@ -66,8 +71,9 @@ const MenuList: React.FC<{ items: readonly ContextMenuItem[]; onClose: () => voi
               onClose();
             }}
           >
-            {item.symbol !== undefined && <span className="context-menu-symbol">{item.symbol}</span>}
+            {hasSymbols && <span className="context-menu-symbol">{item.symbol}</span>}
             <span className="context-menu-label">{item.label}</span>
+            {item.shortcut && <span className="context-menu-shortcut">{item.shortcut}</span>}
             {hasSubmenu && <span className="context-menu-arrow">▸</span>}
             {hasSubmenu && open === i && (
               <MenuList items={item.submenu!} onClose={onClose} className="context-menu submenu" />

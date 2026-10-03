@@ -43,6 +43,11 @@
   cursor: pointer;
 }
 
+.nag-bar-button svg {
+  display: block;
+  margin: 0 auto;
+}
+
 .nag-bar-button:hover:not(:disabled) {
   background: #dcc9ad;
 }

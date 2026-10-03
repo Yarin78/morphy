@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import type { CommentType } from '../model/comments';
 
 /** The keys that edit a comment of the current move, and the kind each one edits. */
-const COMMENT_KEYS: Record<string, CommentType> = {
+export const COMMENT_KEYS: Record<string, CommentType> = {
   a: 'textAfter',
   b: 'textBefore',
 };

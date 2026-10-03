@@ -67,6 +67,21 @@
   flex: 1;
 }
 
+.context-menu-symbol svg {
+  display: block;
+  margin-top: 0.1em;
+}
+
+.context-menu-shortcut {
+  margin-left: 1.5rem;
+  color: #9a8a70;
+  font-size: 0.85em;
+}
+
+.context-menu-item:hover:not(.disabled) .context-menu-shortcut {
+  color: inherit;
+}
+
 .context-menu-arrow {
   margin-left: 1.2rem;
   font-size: 0.75em;

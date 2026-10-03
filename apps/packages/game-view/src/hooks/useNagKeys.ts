@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 
 /** The keys that toggle a symbol on the current move, and the NAG each one toggles. */
-const NAG_KEYS: Record<string, number> = {
+export const NAG_KEYS: Record<string, number> = {
   '!': 1, // good move
   '?': 2, // mistake
   '=': 10, // equal
