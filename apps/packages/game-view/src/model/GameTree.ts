@@ -212,6 +212,68 @@ export class GameTree {
     return true;
   }
 
+  /** Whether a position is a move or comes after it, in its line or a variation of it. */
+  private static isWithin(node: GameNode, move: MoveNode): boolean {
+    for (let n: GameNode | null = node; n; n = isMoveNode(n) ? n.parent : null) {
+      if (n === move) return true;
+    }
+    return false;
+  }
+
+  /** Shows a position, of a move or the start position, after the moves shown were deleted. */
+  private showAfterDelete(node: GameNode) {
+    this.current = isMoveNode(node) ? node : null;
+  }
+
+  /**
+   * Deletes the variation a move is in, from its first move on; see variationStart. If the move
+   * shown was in it, the position the variation started from is shown.
+   *
+   * @returns false if the move is in the main line of the game, which is left as it is
+   */
+  deleteVariation(move: MoveNode): boolean {
+    const start = GameTree.variationStart(move);
+    if (!start) return false;
+    const siblings = start.parent.children;
+    siblings.splice(siblings.indexOf(start), 1);
+    if (this.current && GameTree.isWithin(this.current, start)) this.showAfterDelete(start.parent);
+    return true;
+  }
+
+  /**
+   * Deletes the moves after a move, the variations from the positions after it included. If the
+   * move shown was one of them, the move is shown.
+   */
+  deleteRemainingMoves(move: MoveNode) {
+    if (this.current && this.current !== move && GameTree.isWithin(this.current, move)) {
+      this.showAfterDelete(move);
+    }
+    move.children.splice(0);
+  }
+
+  /**
+   * Deletes the moves before a move, and the variations from them, so the game starts from the
+   * position before it: a set-up position, with the move numbers going on from there. The move
+   * becomes the first move of the game, the other moves from that position its variations. The
+   * evaluations of the game, of the positions of the old main line, go too. The start position is
+   * shown, unless the move shown is still there.
+   *
+   * @returns false if the move is a first move of the game, with nothing before it
+   */
+  deletePreviousMoves(move: MoveNode): boolean {
+    const start = move.parent;
+    if (!isMoveNode(start)) return false;
+    const keep = this.current && this.current !== start && GameTree.isWithin(this.current, start);
+    const root = this.root as { fen: string; ply: number; children: MoveNode[]; annotations: Annotation[] };
+    root.fen = start.fen;
+    root.ply = start.ply;
+    root.children = [move, ...start.children.filter((child) => child !== move)];
+    for (const child of root.children) (child as { parent: GameNode }).parent = root;
+    root.annotations = root.annotations.filter((a) => a.type !== 'evaluations');
+    if (!keep) this.current = null;
+    return true;
+  }
+
   /** Whether a null move can be played from the position shown: not when in check. */
   canPlayNullMove(): boolean {
     return !new Chess(this.currentNode().fen).inCheck();

@@ -142,5 +142,62 @@ describe('GameTree', () => {
     expect(GameTree.variationStart(nc6)).toBeNull();
     expect(GameTree.promoteVariation(nc6)).toBe(false);
   });
+
+  describe('deleting moves', () => {
+    const PGN = '1.e4 e5 (1...c5 2.Nf3 (2.Nc3 Nc6) d6) 2.Nf3 Nc6 3.Bb5';
+
+    it('deletes the variation a move is in, showing where it started if the move shown was in it', () => {
+      const tree = GameTree.fromMoves({ pgn: PGN });
+      const e4 = tree.root.children[0];
+      const nc6 = e4.children[1].children[1].children[0];
+      tree.seek(nc6);
+      expect(tree.deleteVariation(nc6)).toBe(true);
+      expect(tree.movetext()).toBe('1. e4 e5 (1... c5 2. Nf3 d6) 2. Nf3 Nc6 3. Bb5');
+      expect(tree.currentMove()?.san).toBe('c5');
+      expect(tree.deleteVariation(e4.children[0])).toBe(false);
+    });
+
+    it('deletes the moves after a move, with their variations', () => {
+      const tree = GameTree.fromMoves({ pgn: PGN });
+      const e4 = tree.root.children[0];
+      tree.seek(e4.children[0].children[0].children[0]);
+      tree.deleteRemainingMoves(e4);
+      expect(tree.movetext()).toBe('1. e4');
+      expect(tree.currentMove()).toBe(e4);
+    });
+
+    it('deletes the moves before a move, starting the game from the position before it', () => {
+      const tree = GameTree.fromMoves({
+        pgn: PGN,
+        annotations: [
+          { move: -1, type: 'evaluations', evaluations: [] },
+          { move: -1, type: 'medals', medals: ['BEST_GAME'] },
+        ],
+      });
+      const e4 = tree.root.children[0];
+      const nf3 = e4.children[0].children[0];
+      const bb5 = nf3.children[0].children[0];
+      tree.seek(bb5);
+      expect(tree.deletePreviousMoves(nf3)).toBe(true);
+      expect(tree.root.fen).toBe(e4.children[0].fen);
+      expect(tree.movetext()).toBe('2. Nf3 Nc6 3. Bb5');
+      expect(tree.root.children[0].parent).toBe(tree.root);
+      expect(tree.root.annotations).toEqual([{ type: 'medals', medals: ['BEST_GAME'] }]);
+      expect(tree.currentMove()).toBe(bb5);
+      expect(tree.toMoves().fen).toBe(e4.children[0].fen);
+      // Nothing comes before a first move
+      expect(tree.deletePreviousMoves(nf3)).toBe(false);
+    });
+
+    it('makes a move of a variation the first move, the others from its position its variations', () => {
+      const tree = GameTree.fromMoves({ pgn: PGN });
+      const c5 = tree.root.children[0].children[1];
+      const nc3 = c5.children[1];
+      tree.seek(tree.root.children[0]);
+      expect(tree.deletePreviousMoves(nc3)).toBe(true);
+      expect(tree.movetext()).toBe('2. Nc3 (2. Nf3 d6) 2... Nc6');
+      expect(tree.currentMove()).toBeNull();
+    });
+  });
 });
 

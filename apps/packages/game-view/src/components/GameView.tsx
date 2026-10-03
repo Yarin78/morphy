@@ -496,6 +496,29 @@ export const GameView: React.FC<GameViewProps> = ({
         },
       },
       {
+        label: 'Delete Variation',
+        disabled: !GameTree.variationStart(move),
+        onSelect: () => {
+          if (game.deleteVariation(move)) triggerUpdate();
+        },
+      },
+      {
+        label: 'Delete Remaining Moves',
+        disabled: move.children.length === 0,
+        onSelect: () => {
+          game.deleteRemainingMoves(move);
+          triggerUpdate();
+        },
+      },
+      {
+        label: 'Delete Previous Moves',
+        disabled: !GameTree.previous(move),
+        onSelect: () => {
+          if (game.deletePreviousMoves(move)) triggerUpdate();
+        },
+      },
+      'separator',
+      {
         label: 'Insert Null Move',
         disabled: !game.canPlayNullMove(),
         onSelect: () => {
