@@ -9,9 +9,14 @@ import { NagBar } from './NagBar';
 import { EvalGraph } from './EvalGraph';
 import { LanguagePills } from './LanguagePills';
 import { VariationChooser } from './VariationChooser';
+import { ContextMenu } from './ContextMenu';
+import type { ContextMenuItem } from './ContextMenu';
 import './NotationBar.css';
 import { commentLanguages, defaultLanguages } from '../model/languages';
-import { toggleNag } from '../model/nags';
+import { NAG_PALETTE, nagInfo, toggleNag } from '../model/nags';
+import type { NagType } from '../model/nags';
+import { toggleCritical, togglePawnStructure, togglePiecePath } from '../model/specialAnnotations';
+import type { CriticalPhase } from '../model/specialAnnotations';
 import { annotationsToShapes, ANNOTATION_BRUSHES, LAST_MOVE_BRUSH, shapesToAnnotations } from '../utils/drawableConverter';
 import type { DrawShape } from '../utils/drawableConverter';
 import { createMovedPieceFen } from '../utils/fenUtils';
@@ -450,6 +455,70 @@ export const GameView: React.FC<GameViewProps> = ({
     triggerUpdate();
   }, [game, triggerUpdate]);
 
+  // The context menu of a move, while it's open: the move goes to the one right-clicked
+  const [moveMenu, setMoveMenu] = useState<{ x: number; y: number } | null>(null);
+
+  const handleMoveContextMenu = useCallback(
+    (move: MoveNode, x: number, y: number) => {
+      seekToMove(move);
+      setMoveMenu({ x, y });
+    },
+    [seekToMove]
+  );
+
+  const handleMoveMenuClose = useCallback(() => setMoveMenu(null), []);
+
+  const moveMenuItems = useMemo((): ContextMenuItem[] => {
+    const move = game.currentMove();
+    if (!moveMenu || !move) return [];
+    // Changes the annotations of the move
+    const annotate = (change: (annotations: MoveNode['annotations']) => MoveNode['annotations']) => () => {
+      move.annotations = change(move.annotations);
+      triggerUpdate();
+    };
+    const nagItems = (type: NagType): ContextMenuItem[] =>
+      NAG_PALETTE.find((group) => group.type === type)!.nags.map((nag) => ({
+        label: nagInfo(nag)!.name,
+        symbol: nagInfo(nag)!.symbol,
+        onSelect: annotate((annotations) => toggleNag(annotations, nag)),
+      }));
+    const critical = (name: string, p: CriticalPhase): ContextMenuItem => ({
+      label: `Critical ${name} position`,
+      onSelect: annotate((annotations) => toggleCritical(annotations, p)),
+    });
+    return [
+      {
+        label: 'Insert Null Move',
+        disabled: !game.canPlayNullMove(),
+        onSelect: () => {
+          if (game.playNullMove()) triggerUpdate();
+        },
+      },
+      'separator',
+      { label: 'Move Annotations', submenu: nagItems('moveComment') },
+      { label: 'Position Annotations', submenu: nagItems('lineEvaluation') },
+      { label: 'Other Annotations', submenu: nagItems('movePrefix') },
+      {
+        label: 'Special Annotations',
+        submenu: [
+          critical('opening', 'opening'),
+          critical('middlegame', 'middlegame'),
+          critical('endgame', 'endgame'),
+          'separator',
+          {
+            label: 'Pawn structure',
+            onSelect: annotate(togglePawnStructure),
+          },
+          {
+            label: 'Piece path',
+            disabled: move.isNullMove,
+            onSelect: annotate((annotations) => togglePiecePath(annotations, move.to)),
+          },
+        ],
+      },
+    ];
+  }, [game, version, moveMenu, triggerUpdate]);
+
   // The evaluations of the main line, shown as a graph above the bar
   const evaluationBars = useMemo(() => {
     const evaluations = findAnnotation(game.root.annotations, 'evaluations');
@@ -632,9 +701,13 @@ export const GameView: React.FC<GameViewProps> = ({
               version={version}
               languages={shownLanguages}
               onMoveClick={handleMoveClick}
+              onMoveContextMenu={isEditMode ? handleMoveContextMenu : undefined}
               onNotationReady={handleNotationReady}
               onQuotationClick={onQuotationClick}
             />
+            {moveMenu && moveMenuItems.length > 0 && (
+              <ContextMenu x={moveMenu.x} y={moveMenu.y} items={moveMenuItems} onClose={handleMoveMenuClose} />
+            )}
             {choosingMove && (
               <VariationChooser moves={choosingMove} onChoose={handleMoveChosen} onCancel={handleMoveChoiceCancel} />
             )}

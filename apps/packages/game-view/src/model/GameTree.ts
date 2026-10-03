@@ -186,6 +186,35 @@ export class GameTree {
     return this.current;
   }
 
+  /** Whether a null move can be played from the position shown: not when in check. */
+  canPlayNullMove(): boolean {
+    return !new Chess(this.currentNode().fen).inCheck();
+  }
+
+  /**
+   * Plays a null move, passing the turn, from the position shown and shows the position after it.
+   * One that is already there is gone to; otherwise it's added like a move, see play.
+   *
+   * @returns the null move, or null if there can't be one, as when the side to move is in check
+   */
+  playNullMove(): MoveNode | null {
+    const node = this.currentNode();
+    const existing = node.children.find((child) => child.isNullMove);
+    if (existing) {
+      this.current = existing;
+      return existing;
+    }
+    if (!this.canPlayNullMove()) return null;
+    const chess = new Chess(node.fen);
+    try {
+      chess.move('--');
+    } catch {
+      return null;
+    }
+    this.current = addMove(node, chess);
+    return this.current;
+  }
+
   // ── Moves and annotations ───────────────────────────────────────────────
 
   /** All moves of the game, in the order of the movetext. */

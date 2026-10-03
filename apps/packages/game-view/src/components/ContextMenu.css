@@ -1,0 +1,75 @@
+/* A context menu, with submenus opening to the right */
+.context-menu-root {
+  position: fixed;
+  z-index: 1000;
+}
+
+.context-menu {
+  min-width: 11rem;
+  padding: 0.25rem 0;
+  border: 1px solid #b9a98a;
+  border-radius: 0.3rem;
+  background: #fbf7f0;
+  box-shadow: 3px 3px 10px hsla(30, 30%, 20%, 0.35);
+  color: #3d2f1c;
+  font-size: 0.9rem;
+  user-select: none;
+}
+
+.context-menu.submenu {
+  position: absolute;
+  top: -0.3rem;
+  left: 100%;
+}
+
+.context-menu.submenu.flip-left {
+  left: auto;
+  right: 100%;
+}
+
+.context-menu.submenu.flip-up {
+  top: auto;
+  bottom: -0.3rem;
+}
+
+.context-menu-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding: 0.22rem 0.8rem 0.22rem 0.6rem;
+  white-space: nowrap;
+  cursor: default;
+}
+
+.context-menu-item:hover:not(.disabled),
+.context-menu-item.open {
+  background: #8b6f47;
+  color: #fff;
+}
+
+.context-menu-item.disabled {
+  color: #b5a78f;
+}
+
+.context-menu-symbol {
+  min-width: 1.5rem;
+  margin-right: 0.35rem;
+  font-family: 'Noto Sans Symbols 2', 'Segoe UI Symbol', 'Apple Symbols', 'DejaVu Sans', sans-serif;
+  font-weight: bold;
+  text-align: left;
+}
+
+.context-menu-label {
+  flex: 1;
+}
+
+.context-menu-arrow {
+  margin-left: 1.2rem;
+  font-size: 0.75em;
+}
+
+.context-menu-separator {
+  height: 1px;
+  margin: 0.25rem 0;
+  background: #d4c4b0;
+}

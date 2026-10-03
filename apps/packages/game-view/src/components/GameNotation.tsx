@@ -11,6 +11,8 @@ interface GameNotationProps {
   /** The languages of the comments that are shown, besides those in no language. */
   languages: readonly string[];
   onMoveClick: (move: MoveNode) => void;
+  /** When given, right-clicking a move calls it, with where the mouse is in the window. */
+  onMoveContextMenu?: (move: MoveNode, x: number, y: number) => void;
   onNotationReady?: (reverseMoveMap: Map<number, MoveNode>) => void;
   /** When given, a quoted game that refers to another game can be clicked to open it. */
   onQuotationClick?: (link: QuotationLink) => void;
@@ -31,6 +33,7 @@ export const GameNotation: React.FC<GameNotationProps> = ({
   version,
   languages,
   onMoveClick,
+  onMoveContextMenu,
   onNotationReady,
   onQuotationClick,
 }) => {
@@ -173,13 +176,25 @@ export const GameNotation: React.FC<GameNotationProps> = ({
       setFolding({ game, folded: next });
     };
 
+    // Right-clicking a move
+    const handleContextMenu = (e: MouseEvent) => {
+      if (!onMoveContextMenu) return;
+      const moveElement: HTMLElement | null = (e.target as HTMLElement).closest('.cbmove');
+      const move = moveElement && notationResult.reverseMoveMap.get(Number(moveElement.getAttribute('data-global-move-index')));
+      if (!move) return;
+      e.preventDefault();
+      onMoveContextMenu(move, e.clientX, e.clientY);
+    };
+
     const container = containerRef.current;
     container.addEventListener('click', handleClick);
+    container.addEventListener('contextmenu', handleContextMenu);
 
     return () => {
       container.removeEventListener('click', handleClick);
+      container.removeEventListener('contextmenu', handleContextMenu);
     };
-  }, [notationResult, onMoveClick, onQuotationClick, folded, game]);
+  }, [notationResult, onMoveClick, onMoveContextMenu, onQuotationClick, folded, game]);
 
   if (!notationResult) {
     return (

@@ -109,4 +109,19 @@ describe('GameTree', () => {
     expect(tree.tagValues()).toEqual({ Black: 'B', Result: '1-0' });
     expect(tree.getTag('White')).toBe('');
   });
+
+  it('plays a null move, but not in check', () => {
+    const tree = GameTree.fromMoves({ pgn: '1.e4 e5' });
+    tree.seek(tree.root.children[0]);
+    const nullMove = tree.playNullMove()!;
+    expect(nullMove.isNullMove).toBe(true);
+    expect(tree.root.children[0].children.map((m) => m.san)).toEqual(['e5', '--']);
+    tree.seek(tree.root.children[0]);
+    expect(tree.playNullMove()).toBe(nullMove);
+
+    const check = GameTree.fromMoves({ pgn: '1.e4 f5 2.Qh5+' });
+    check.seek(check.root.children[0].children[0].children[0]);
+    expect(check.playNullMove()).toBeNull();
+  });
 });
+
