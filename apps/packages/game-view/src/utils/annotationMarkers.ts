@@ -13,8 +13,6 @@ import { escapeHtml } from './html';
 const MARKER_LABELS: Partial<Record<AnnotationType, string>> = {
   eval: 'eval',
   critical: 'critical',
-  pawnStructure: 'pawns',
-  piecePath: 'path',
   videoStreamTime: 'video',
   training: 'training',
   correspondence: 'corr',
@@ -56,6 +54,8 @@ export function annotationMarkers(
       case 'medals':
       case 'webLink':
       case 'quote':
+      case 'pawnStructure':
+      case 'piecePath':
         break;
       case 'critical':
         // Shown by the color of the move, unless it's of no phase

@@ -4,7 +4,7 @@ import type { Annotation, AnnotationOf } from '../model/annotations';
 import { filterAnnotations, findAnnotation } from '../model/annotations';
 import { annotationMarkers, annotationMarkersHtml } from './annotationMarkers';
 import { figurinesToHtml } from './figurines';
-import { commentWithDiagramsHtml, diagramHtml } from './diagram';
+import { commentWithDiagramsHtml, diagramHtml, pawnStructureHtml, piecePathHtml } from './diagram';
 import { moveInfoHtml } from './moveInfo';
 import { medalsHtml } from './medals';
 import { quoteHtml, webLinkHtml } from './references';
@@ -294,6 +294,17 @@ function traverseGameTree(
       parts.push(medals);
     }
 
+    // The pawn structure, shown when its symbol is hovered over
+    if (findAnnotation(m.annotations, 'pawnStructure')) {
+      parts.push(pawnStructureHtml(m.fen));
+    }
+
+    // The path of a piece, shown when its symbol is hovered over
+    const path = findAnnotation(m.annotations, 'piecePath');
+    if (path) {
+      parts.push(piecePathHtml(m, path.square));
+    }
+
     // Clock times, the time spent and evaluations
     const moveInfo = moveInfoHtml(m.annotations);
     if (moveInfo) {
@@ -422,6 +433,9 @@ export function generateNotationHtml(
   const gameMedals = medalsHtml(findAnnotation(game.root.annotations, 'medals')?.medals ?? []);
   if (gameMedals) {
     parts.push(gameMedals);
+  }
+  if (findAnnotation(game.root.annotations, 'pawnStructure')) {
+    parts.push(pawnStructureHtml(game.root.fen));
   }
   const gameInfo = moveInfoHtml(game.root.annotations, true);
   if (gameInfo) {
