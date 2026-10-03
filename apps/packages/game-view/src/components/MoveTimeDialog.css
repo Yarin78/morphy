@@ -1,8 +1,4 @@
-/* The dialog to give a move its time, with the look of the game info dialog */
-.game-info-dialog.move-time-dialog {
-  width: min(380px, 100%);
-}
-
+/* The dialog to give a move its time */
 .move-time-choice {
   display: flex;
   align-items: center;

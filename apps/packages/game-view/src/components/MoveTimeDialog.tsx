@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import type { Annotation } from '../model/annotations';
 import { findAnnotation } from '../model/annotations';
 import { parseTime, withClocks, withTimeSpent } from '../model/moveTime';
 import { formatClock, formatTimeSpent } from '../utils/moveInfo';
-import './GameInfoDialog.css';
+import { AnnotationDialog } from './AnnotationDialog';
 import './MoveTimeDialog.css';
 
 interface MoveTimeDialogProps {
@@ -34,14 +34,6 @@ export const MoveTimeDialog: React.FC<MoveTimeDialogProps> = ({ moveName, annota
   const [mode, setMode] = useState<'clocks' | 'spent' | 'none'>(spent && !white && !black ? 'spent' : 'clocks');
   const [fields, setFields] = useState(initial);
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onCancel();
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onCancel]);
-
   const error = (name: keyof typeof fields) => (parseTime(fields[name]) === null ? TIME_HINT : undefined);
   const invalid =
     mode === 'clocks' ? !!(error('white') || error('black')) : mode === 'spent' ? !!error('spent') : false;
@@ -53,9 +45,7 @@ export const MoveTimeDialog: React.FC<MoveTimeDialogProps> = ({ moveName, annota
     return seconds === undefined || seconds === null ? undefined : seconds * 100;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (invalid) return;
+  const handleSubmit = () => {
     onSave(
       mode === 'clocks'
         ? withClocks(annotations, clock('white', white?.centiseconds), clock('black', black?.centiseconds))
@@ -82,47 +72,26 @@ export const MoveTimeDialog: React.FC<MoveTimeDialogProps> = ({ moveName, annota
   );
 
   return (
-    <div className="game-info-overlay" onMouseDown={onCancel}>
-      <form
-        className="game-info-dialog move-time-dialog"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="move-time-title"
-        onMouseDown={(e) => e.stopPropagation()}
-        onSubmit={handleSubmit}
-        noValidate
-      >
-        <h3 id="move-time-title">Move Time: {moveName}</h3>
+    <AnnotationDialog title={`Move Time: ${moveName}`} onSubmit={handleSubmit} onCancel={onCancel} invalid={invalid}>
+      <label className="move-time-choice">
+        <input type="radio" checked={mode === 'clocks'} onChange={() => setMode('clocks')} />
+        Time left on the clocks after the move
+      </label>
+      <div className="move-time-fields">
+        {field('white', 'White', mode !== 'clocks')}
+        {field('black', 'Black', mode !== 'clocks')}
+      </div>
 
-        <label className="move-time-choice">
-          <input type="radio" checked={mode === 'clocks'} onChange={() => setMode('clocks')} />
-          Time left on the clocks after the move
-        </label>
-        <div className="move-time-fields">
-          {field('white', 'White', mode !== 'clocks')}
-          {field('black', 'Black', mode !== 'clocks')}
-        </div>
+      <label className="move-time-choice">
+        <input type="radio" checked={mode === 'spent'} onChange={() => setMode('spent')} />
+        Time spent on the move
+      </label>
+      <div className="move-time-fields">{field('spent', 'Time spent', mode !== 'spent')}</div>
 
-        <label className="move-time-choice">
-          <input type="radio" checked={mode === 'spent'} onChange={() => setMode('spent')} />
-          Time spent on the move
-        </label>
-        <div className="move-time-fields">{field('spent', 'Time spent', mode !== 'spent')}</div>
-
-        <label className="move-time-choice move-time-none">
-          <input type="radio" checked={mode === 'none'} onChange={() => setMode('none')} />
-          No time
-        </label>
-
-        <div className="game-info-buttons">
-          <button type="button" className="game-info-cancel" onClick={onCancel}>
-            Cancel
-          </button>
-          <button type="submit" className="game-info-ok" disabled={invalid}>
-            OK
-          </button>
-        </div>
-      </form>
-    </div>
+      <label className="move-time-choice move-time-none">
+        <input type="radio" checked={mode === 'none'} onChange={() => setMode('none')} />
+        No time
+      </label>
+    </AnnotationDialog>
   );
 };

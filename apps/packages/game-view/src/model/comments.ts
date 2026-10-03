@@ -1,4 +1,5 @@
 import type { Annotation, AnnotationOf } from './annotations';
+import { hasDiagram, withoutDiagrams } from '../utils/diagram';
 
 /** The two kinds of comments of a move: before it and after it. */
 export type CommentType = 'textBefore' | 'textAfter';
@@ -41,4 +42,25 @@ export function withComment(
   return trimmed
     ? annotations.map((a) => (a === comment ? { ...comment, text: trimmed } : a))
     : annotations.filter((a) => a !== comment);
+}
+
+/** What a comment has to ask for a diagram, where it is, as ChessBase writes it. */
+export const DIAGRAM_TEXT = '[#]';
+
+/**
+ * The annotations with a diagram of the position after the move, or without it if it has one: one
+ * asked for at the start of its comment after in no language, or in a new one; or the diagrams of
+ * that comment taken away, and the comment too if nothing else is left of it.
+ */
+export function toggleDiagram(annotations: readonly Annotation[]): Annotation[] {
+  const comment = editedComment(annotations, 'textAfter', null);
+  if (comment && hasDiagram(comment.text)) {
+    return withComment(annotations, 'textAfter', null, withoutDiagrams(comment.text));
+  }
+  return withComment(annotations, 'textAfter', null, comment ? `${DIAGRAM_TEXT} ${comment.text}` : DIAGRAM_TEXT);
+}
+
+/** Whether the comment after the move in no language asks for a diagram. */
+export function hasDiagramComment(annotations: readonly Annotation[]): boolean {
+  return hasDiagram(editedComment(annotations, 'textAfter', null)?.text ?? '');
 }

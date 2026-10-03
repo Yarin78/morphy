@@ -25,6 +25,9 @@ const MEDALS: readonly { medal: string; name: string; top: string; bottom: strin
   { medal: 'USER', name: 'User', top: '#30FCFC', bottom: '#03CFCF' },
 ];
 
+/** Every medal, in the order ChessBase shows them. */
+export const MEDAL_NAMES: readonly string[] = MEDALS.map((m) => m.medal);
+
 /** The colors of a medal's gradient, from the top down; grey if the medal isn't known. */
 export function medalColors(medal: string): [string, string] {
   const info = MEDALS.find((m) => m.medal === medal);

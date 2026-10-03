@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Annotation } from './annotations';
-import { editedComment, withComment } from './comments';
+import { editedComment, hasDiagramComment, toggleDiagram, withComment } from './comments';
 
 describe('editing comments', () => {
   const german: Annotation = { type: 'textAfter', text: 'Gut', language: 'GER' };
@@ -31,5 +31,25 @@ describe('editing comments', () => {
     ]);
     expect(withComment([before], 'textAfter', null, 'Best')).toEqual([before, { type: 'textAfter', text: 'Best' }]);
     expect(withComment([before], 'textAfter', null, '')).toEqual([before]);
+  });
+
+  it('asks for a diagram at the start of the comment after in no language, or in a new one', () => {
+    expect(toggleDiagram([english])).toEqual([english, { type: 'textAfter', text: '[#]' }]);
+    expect(toggleDiagram([{ type: 'textAfter', text: 'Black is lost' }, english])).toEqual([
+      { type: 'textAfter', text: '[#] Black is lost' },
+      english,
+    ]);
+  });
+
+  it('takes the diagrams of that comment away again, and the comment if nothing else is left', () => {
+    expect(toggleDiagram([{ type: 'textAfter', text: '[#] Black is lost' }])).toEqual([
+      { type: 'textAfter', text: 'Black is lost' },
+    ]);
+    expect(toggleDiagram([{ type: 'textAfter', text: 'Mate. ž The end' }])).toEqual([
+      { type: 'textAfter', text: 'Mate. The end' },
+    ]);
+    expect(toggleDiagram([english, { type: 'textAfter', text: '[#]' }])).toEqual([english]);
+    expect(hasDiagramComment([{ type: 'textAfter', text: '[#]' }])).toBe(true);
+    expect(hasDiagramComment([{ type: 'textAfter', text: '[#]', language: 'ENG' }])).toBe(false);
   });
 });

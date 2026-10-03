@@ -10,6 +10,9 @@ import { EvalGraph } from './EvalGraph';
 import { LanguageSelector } from './LanguageSelector';
 import { VariationChooser } from './VariationChooser';
 import { MoveTimeDialog } from './MoveTimeDialog';
+import { MedalDialog } from './MedalDialog';
+import { WebLinkDialog } from './WebLinkDialog';
+import { VariationColorDialog } from './VariationColorDialog';
 import { ContextMenu } from './ContextMenu';
 import type { ContextMenuItem } from './ContextMenu';
 import { moveActions } from './moveActions';
@@ -26,17 +29,17 @@ import { evalBars } from '../utils/evalGraph';
 import { lineStart, nextMoveChoices } from '../utils/variationChoice';
 import { findAnnotation } from '../model/annotations';
 import type { Annotation } from '../model/annotations';
-import { TbArrowBackUp, TbArrowForwardUp, TbCircleOff, TbClock, TbEraser, TbRoute, TbStar } from 'react-icons/tb';
+import { TbArrowBackUp, TbArrowForwardUp, TbBorderAll, TbCircleOff, TbClock, TbEraser, TbLink, TbMedal, TbPalette, TbRoute, TbStar } from 'react-icons/tb';
 import { IoPlaySkipBack, IoChevronBack, IoChevronForward, IoPlaySkipForward, IoReload, IoMenu, IoClose } from 'react-icons/io5';
 import type { ChessGame } from '../types/chess';
 import { useChessGame } from '../hooks/useChessGame';
 import { useKeyboardNavigation } from '../hooks/useKeyboardNavigation';
 import { NAG_KEYS, useNagKeys } from '../hooks/useNagKeys';
-import { COMMENT_KEYS, useCommentKeys } from '../hooks/useCommentKeys';
+import { COMMENT_KEYS, DIAGRAM_KEY, useCommentKeys } from '../hooks/useCommentKeys';
 import { useMoveActionKeys } from '../hooks/useMoveActionKeys';
 import { UNDO_SHORTCUTS, useUndoKeys } from '../hooks/useUndoKeys';
 import { EditHistory } from '../model/editHistory';
-import { withComment } from '../model/comments';
+import { hasDiagramComment, toggleDiagram, withComment } from '../model/comments';
 import type { CommentType } from '../model/comments';
 import { readGameInfo, writeGameInfo } from '../utils/gameInfo';
 import type { GameInfo } from '../utils/gameInfo';
@@ -72,6 +75,15 @@ export interface GameViewProps {
    */
   onQuotationClick?: (link: QuotationLink) => void;
 }
+
+// The dialogs for the annotations of a move, by kind
+const ANNOTATION_DIALOGS = {
+  time: MoveTimeDialog,
+  medals: MedalDialog,
+  webLink: WebLinkDialog,
+  variationColor: VariationColorDialog,
+};
+type AnnotationDialogKind = keyof typeof ANNOTATION_DIALOGS;
 
 // The NAGs after which their menu has a line: the evaluations of the position from the rest
 const NAG_MENU_BREAKS: ReadonlySet<number> = new Set([44]);
@@ -546,21 +558,23 @@ export const GameView: React.FC<GameViewProps> = ({
 
   const handleMoveMenuClose = useCallback(() => setMoveMenu(null), []);
 
-  // The move whose time is being given in a dialog, while it's open
-  const [moveTimeMove, setMoveTimeMove] = useState<MoveNode | null>(null);
-  const handleMoveTimeSave = useCallback(
+  // The dialog for an annotation of a move, while it's open: the kind and the move
+  const [annotationDialog, setAnnotationDialog] = useState<{ kind: AnnotationDialogKind; move: MoveNode } | null>(
+    null
+  );
+  const handleAnnotationDialogSave = useCallback(
     (annotations: Annotation[]) => {
-      const move = moveTimeMove;
-      setMoveTimeMove(null);
+      const move = annotationDialog?.move;
+      setAnnotationDialog(null);
       if (move) {
         edit(() => {
           move.annotations = annotations;
         });
       }
     },
-    [moveTimeMove, edit]
+    [annotationDialog, edit]
   );
-  const handleMoveTimeCancel = useCallback(() => setMoveTimeMove(null), []);
+  const handleAnnotationDialogCancel = useCallback(() => setAnnotationDialog(null), []);
 
   // Goes back to the moves before the last edit, or forward again to those after the last undone
   const handleUndoRedo = useCallback(
@@ -641,6 +655,13 @@ export const GameView: React.FC<GameViewProps> = ({
         shortcut: shortcutOf(COMMENT_KEYS, 'textAfter'),
         onSelect: () => handleCommentEdit(move, 'textAfter'),
       },
+      {
+        // In the comment after in no language
+        label: hasDiagramComment(move.annotations) ? 'Remove Diagram' : 'Insert Diagram',
+        symbol: <TbBorderAll />,
+        shortcut: DIAGRAM_KEY,
+        onSelect: annotate(toggleDiagram),
+      },
       'separator',
       {
         label: 'Insert Null Move',
@@ -677,7 +698,22 @@ export const GameView: React.FC<GameViewProps> = ({
           {
             label: 'Move Time…',
             symbol: <TbClock />,
-            onSelect: () => setMoveTimeMove(move),
+            onSelect: () => setAnnotationDialog({ kind: 'time', move }),
+          },
+          {
+            label: 'Set Medal…',
+            symbol: <TbMedal />,
+            onSelect: () => setAnnotationDialog({ kind: 'medals', move }),
+          },
+          {
+            label: 'Enter Web Link…',
+            symbol: <TbLink />,
+            onSelect: () => setAnnotationDialog({ kind: 'webLink', move }),
+          },
+          {
+            label: 'Variation Colour…',
+            symbol: <TbPalette />,
+            onSelect: () => setAnnotationDialog({ kind: 'variationColor', move }),
           },
         ],
       },
@@ -699,11 +735,24 @@ export const GameView: React.FC<GameViewProps> = ({
   }, [game, version]);
 
   // The keys are the dialog's while one is open
-  const dialogOpen = !!editingGameInfo || !!moveTimeMove;
+  const dialogOpen = !!editingGameInfo || !!annotationDialog;
 
   // !, ? and = toggle those symbols on the current move, when editing
   useNagKeys(isEditMode && !!selectedGame && !dialogOpen, handleNagToggle);
-  useCommentKeys(isEditMode && !!selectedGame && !dialogOpen && !editingComment, handleCurrentCommentEdit);
+  // A diagram of the position shown, or none if it has one
+  const handleCurrentDiagram = useCallback(
+    () =>
+      edit(() => {
+        const node = game.currentNode();
+        node.annotations = toggleDiagram(node.annotations);
+      }),
+    [game, edit]
+  );
+  useCommentKeys(
+    isEditMode && !!selectedGame && !dialogOpen && !editingComment,
+    handleCurrentCommentEdit,
+    handleCurrentDiagram
+  );
   // Cmd+↑, Delete, ] and [ promote or delete the variation, or delete the moves after or before
   const currentMoveActions = useCallback(
     () => moveActions(game, game.currentMove(), edit),
@@ -911,14 +960,18 @@ export const GameView: React.FC<GameViewProps> = ({
         )}
       </div>
 
-      {moveTimeMove && (
-        <MoveTimeDialog
-          moveName={lineStart(moveTimeMove, 1)}
-          annotations={moveTimeMove.annotations}
-          onSave={handleMoveTimeSave}
-          onCancel={handleMoveTimeCancel}
-        />
-      )}
+      {annotationDialog &&
+        (() => {
+          const Dialog = ANNOTATION_DIALOGS[annotationDialog.kind];
+          return (
+            <Dialog
+              moveName={lineStart(annotationDialog.move, 1)}
+              annotations={annotationDialog.move.annotations}
+              onSave={handleAnnotationDialogSave}
+              onCancel={handleAnnotationDialogCancel}
+            />
+          );
+        })()}
       {editingGameInfo && (
         <GameInfoDialog
           initial={editingGameInfo}

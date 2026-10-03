@@ -30,6 +30,20 @@ import { ANNOTATION_BRUSHES } from './drawableConverter';
  */
 const DIAGRAM_MARKER = /\[#\]|\uE005|(?<=^|\s)ž(?=\s|$)/;
 
+/** Whether a comment asks for a diagram. */
+export function hasDiagram(text: string): boolean {
+  return DIAGRAM_MARKER.test(text);
+}
+
+/** A comment without its diagrams: the text around them, joined by spaces. */
+export function withoutDiagrams(text: string): string {
+  return text
+    .split(new RegExp(DIAGRAM_MARKER, 'g'))
+    .map((piece) => piece.trim())
+    .filter((piece) => piece)
+    .join(' ');
+}
+
 const PIECES: Record<string, string> = { wK, wQ, wR, wB, wN, wP, bK, bQ, bR, bB, bN, bP };
 
 // The colors of the board beside the notation (react-chessground's brown board)

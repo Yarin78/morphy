@@ -8,17 +8,25 @@ export const COMMENT_KEYS: Record<string, CommentType> = {
   b: 'textBefore',
 };
 
+/** The key that inserts a diagram in the comment after the current move, or removes it. */
+export const DIAGRAM_KEY = 'd';
+
 /**
- * Lets the keyboard start editing a comment of the current move: 'a' after it and 'b' before it.
+ * Lets the keyboard start editing a comment of the current move: 'a' after it and 'b' before it;
+ * and 'd' insert a diagram, or remove it.
  * Keys typed into a field, and keys pressed with Cmd or Ctrl, are left alone; see isTyped.
  */
-export function useCommentKeys(enabled: boolean, onEdit: (type: CommentType) => void): void {
+export function useCommentKeys(
+  enabled: boolean,
+  onEdit: (type: CommentType) => void,
+  onDiagram: () => void
+): void {
   useEffect(() => {
     if (!enabled) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
       const type = COMMENT_KEYS[e.key];
-      if (type === undefined || !isTyped(e, e.key)) return;
+      if ((type === undefined && e.key !== DIAGRAM_KEY) || !isTyped(e, e.key)) return;
       const activeElement = document.activeElement;
       if (
         activeElement instanceof HTMLInputElement ||
@@ -29,10 +37,11 @@ export function useCommentKeys(enabled: boolean, onEdit: (type: CommentType) => 
         return;
       }
       e.preventDefault();
-      onEdit(type);
+      if (type) onEdit(type);
+      else onDiagram();
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [enabled, onEdit]);
+  }, [enabled, onEdit, onDiagram]);
 }

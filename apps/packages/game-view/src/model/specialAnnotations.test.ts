@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import type { Annotation } from './annotations';
-import { criticalPhase, toggleCritical, togglePawnStructure, togglePiecePath } from './specialAnnotations';
+import {
+  criticalPhase,
+  toggleCritical,
+  togglePawnStructure,
+  togglePiecePath,
+  withAnnotation,
+} from './specialAnnotations';
 
 describe('special annotations', () => {
   const text: Annotation = { type: 'textAfter', text: 'Good' };
@@ -22,4 +28,17 @@ describe('special annotations', () => {
     ]);
     expect(togglePiecePath(togglePawnStructure(shown), 'e4')).toEqual([text]);
   });
+
+  it('replace the first of a kind where it is, add one, or remove it', () => {
+    const link = (url: string): Annotation => ({ type: 'webLink', url, text: url });
+    const annotations = [link('a'), text, link('b')];
+    expect(withAnnotation(annotations, 'webLink', { type: 'webLink', url: 'c', text: 'c' })).toEqual([link('c'), text, link('b')]);
+    expect(withAnnotation(annotations, 'webLink', null)).toEqual([text, link('b')]);
+    expect(withAnnotation([text], 'medals', { type: 'medals', medals: ['NOVELTY'] })).toEqual([
+      text,
+      { type: 'medals', medals: ['NOVELTY'] },
+    ]);
+    expect(withAnnotation([text], 'medals', null)).toEqual([text]);
+  });
 });
+

@@ -42,3 +42,20 @@ export function togglePiecePath(annotations: readonly Annotation[], square: stri
   const path: AnnotationOf<'piecePath'> = { type: 'piecePath', pathType: CHESSBASE_TYPE, square };
   return findAnnotation(annotations, 'piecePath') ? rest : [...rest, path];
 }
+
+/**
+ * The annotations with the first annotation of a kind replaced, where it is, or added if there's
+ * none, or removed if the replacement is null; others of the kind stay.
+ */
+export function withAnnotation<T extends Annotation['type']>(
+  annotations: readonly Annotation[],
+  type: T,
+  replacement: AnnotationOf<T> | null
+): Annotation[] {
+  const index = annotations.findIndex((a) => a.type === type);
+  if (index < 0) return replacement ? [...annotations, replacement] : [...annotations];
+  const result = [...annotations];
+  if (replacement) result[index] = replacement;
+  else result.splice(index, 1);
+  return result;
+}

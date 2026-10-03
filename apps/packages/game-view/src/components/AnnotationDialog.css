@@ -1,0 +1,53 @@
+/* The dialogs for the annotations of a move, with the look of the game info dialog */
+.game-info-dialog.annotation-dialog {
+  width: min(380px, 100%);
+}
+
+.annotation-dialog .annotation-dialog-check {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.game-info-dialog.annotation-dialog .annotation-dialog-check input {
+  margin: 0;
+  padding: 0;
+  accent-color: #8b6f47;
+}
+
+.medal-dialog-list {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.35rem 1rem;
+  margin-bottom: 1rem;
+}
+
+.medal-dialog-swatch {
+  display: inline-block;
+  flex-shrink: 0;
+  width: 1.1rem;
+  height: 0.7rem;
+  border-radius: 2px;
+}
+
+.web-link-dialog-fields,
+.variation-color-dialog-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+}
+
+.game-info-dialog.annotation-dialog input[type='color'] {
+  width: 2.4rem;
+  height: 1.6rem;
+  padding: 0.1rem;
+  cursor: pointer;
+}
+
+/* Wide enough for the medals' names on one line, two to a row */
+.game-info-dialog.annotation-dialog:has(.medal-dialog-list) {
+  width: min(470px, 100%);
+}
