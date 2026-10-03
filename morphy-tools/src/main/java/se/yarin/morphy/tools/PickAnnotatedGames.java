@@ -46,8 +46,9 @@ import se.yarin.morphy.chessbase.annotations.WhiteClockAnnotation;
  * <p>Only the annotations of a game are read while looking, not its moves, and only for games that
  * have any. A game is taken if it has a kind that hasn't been found often enough yet; the search
  * stops when every kind has been, or the whole database has been looked through. Some kinds are
- * split further: text in a language, symbols before the move, arrows in uncommon colors and
- * evaluations of mate. Training annotations and those of unknown kinds are left out.
+ * split further: text in a language, symbols before the move, arrows in uncommon colors, clocks
+ * on a move rather than the game, and evaluations of mate and with a search depth. Training
+ * annotations and those of unknown kinds are left out.
  *
  * <p>Usage: PickAnnotatedGames &lt;source.2cbh&gt; &lt;target.2cbh&gt; [games per kind, default 3]
  */
@@ -66,10 +67,12 @@ public class PickAnnotatedGames {
           "arrowsUncommonColor",
           "whiteClock",
           "blackClock",
+          "clockOnMove",
           "timeSpent",
           "timeControl",
           "eval",
           "evalMate",
+          "evalWithDepth",
           "critical",
           "medals",
           "pawnStructure",
@@ -200,13 +203,20 @@ public class PickAnnotatedGames {
             kinds.add("arrowsUncommonColor");
           }
         }
-        case WhiteClockAnnotation a -> kinds.add("whiteClock");
-        case BlackClockAnnotation a -> kinds.add("blackClock");
+        case WhiteClockAnnotation a -> {
+          kinds.add("whiteClock");
+          if (positioned.position() >= 0) kinds.add("clockOnMove");
+        }
+        case BlackClockAnnotation a -> {
+          kinds.add("blackClock");
+          if (positioned.position() >= 0) kinds.add("clockOnMove");
+        }
         case TimeSpentAnnotation a -> kinds.add("timeSpent");
         case TimeControlAnnotation a -> kinds.add("timeControl");
         case ComputerEvaluationAnnotation a -> {
           kinds.add("eval");
           if (a.evalType() == 1) kinds.add("evalMate");
+          if (a.ply() > 0) kinds.add("evalWithDepth");
         }
         case CriticalPositionAnnotation a -> kinds.add("critical");
         case MedalAnnotation a -> kinds.add("medals");
