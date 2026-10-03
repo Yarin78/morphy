@@ -25,10 +25,9 @@ describe('annotation markers', () => {
       ],
       hasGlyph
     );
-    // Clocks and known evaluations are shown after the move instead
-    expect(markers.map((m) => m.label)).toEqual(['eval', 'medal']);
+    // Clocks, known evaluations and medals are shown after the move instead
+    expect(markers.map((m) => m.label)).toEqual(['eval']);
     expect(markers[0].details).toBe('eval\neval: 7\nevalType: 3\ndepth: 0');
-    expect(markers[1].details).toBe('medals\nmedals: ["NOVELTY","TACTICS"]');
   });
 
   it('mark symbols without a glyph, but not text in any language', () => {

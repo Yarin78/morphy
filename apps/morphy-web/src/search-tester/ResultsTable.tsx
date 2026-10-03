@@ -1,4 +1,5 @@
 import { Fragment, useCallback, useEffect, useRef, type MutableRefObject } from 'react';
+import { medalColors } from 'game-view';
 import type {
   AnnotatorDto,
   GameDto,
@@ -331,25 +332,6 @@ function getGameTagTitle(gt: GameDto['gameTag']): string {
   return found ?? '';
 }
 
-const MEDAL_COLORS: Record<string, [string, string]> = {
-  BEST_GAME: ['#FDCA31', '#CF9C03'],
-  DECIDED_TOURNAMENT: ['#FD31FD', '#CF03CF'],
-  MODEL_GAME: ['#323298', '#030369'],
-  NOVELTY: ['#3131FD', '#0303CF'],
-  PAWN_STRUCTURE: ['#319797', '#036969'],
-  STRATEGY: ['#9B6831', '#6D3A03'],
-  TACTICS: ['#973131', '#690303'],
-  WITH_ATTACK: ['#FEFE32', '#CFCF03'],
-  SACRIFICE: ['#FE3232', '#CE0202'],
-  DEFENSE: ['#FDFDFD', '#CFCFCF'],
-  MATERIAL: ['#963096', '#6A046A'],
-  PIECE_PLAY: ['#31FD31', '#03CF03'],
-  ENDGAME: ['#319731', '#046A04'],
-  TACTICAL_BLUNDER: ['#323232', '#030303'],
-  STRATEGICAL_BLUNDER: ['#979797', '#696969'],
-  USER: ['#30FCFC', '#03CFCF'],
-};
-
 function MedalBar({ medals }: { medals?: string[] }) {
   if (!medals || medals.length === 0) return null;
   return (
@@ -358,7 +340,7 @@ function MedalBar({ medals }: { medals?: string[] }) {
       title={medals.join(', ')}
     >
       {medals.map((m) => {
-        const [top, bottom] = MEDAL_COLORS[m] ?? ['#999', '#666'];
+        const [top, bottom] = medalColors(m);
         return (
           <div
             key={m}

@@ -5,6 +5,7 @@ import { filterAnnotations, findAnnotation } from '../model/annotations';
 import { annotationMarkers, annotationMarkersHtml } from './annotationMarkers';
 import { figurinesToHtml } from './figurines';
 import { moveInfoHtml } from './moveInfo';
+import { medalsHtml } from './medals';
 import { isPrefixNag, nagInfo } from '../model/nags';
 
 interface ConversionState {
@@ -250,6 +251,12 @@ function traverseGameTree(
       parts.push(`<span class="cbcol-marker" data-inx-mv="${localMoveIndex}"> </span>`);
     }
 
+    // Medals
+    const medals = medalsHtml(findAnnotation(m.annotations, 'medals')?.medals ?? []);
+    if (medals) {
+      parts.push(medals);
+    }
+
     // Clock times, the time spent and evaluations
     const moveInfo = moveInfoHtml(m.annotations);
     if (moveInfo) {
@@ -346,6 +353,10 @@ export function generateNotationHtml(game: GameTree, languages: readonly string[
     parts.push(`<span class="cbcomment" data-inx-mv="0" data-linecnt="1">${figurinesToHtml(processCommentWithLink(comment))}</span>`);
   }
 
+  const gameMedals = medalsHtml(findAnnotation(game.root.annotations, 'medals')?.medals ?? []);
+  if (gameMedals) {
+    parts.push(gameMedals);
+  }
   const gameInfo = moveInfoHtml(game.root.annotations, true);
   if (gameInfo) {
     parts.push(gameInfo);

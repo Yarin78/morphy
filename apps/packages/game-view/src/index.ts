@@ -10,6 +10,7 @@ export { GameView } from './components/GameView';
 export type { GameViewProps } from './components/GameView';
 export type { ChessGame, GameHeader as GameHeaderData } from './types/chess';
 export { GameTree } from './model/GameTree';
+export { medalColors, medalName } from './utils/medals';
 export type { GameMoves, GameNode, MoveNode } from './model/GameTree';
 export { GAME_ANNOTATION_INDEX } from './model/annotations';
 export type {

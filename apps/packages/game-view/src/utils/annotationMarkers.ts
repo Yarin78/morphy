@@ -12,7 +12,6 @@ import { isMoveInfo } from './moveInfo';
 const MARKER_LABELS: Partial<Record<AnnotationType, string>> = {
   eval: 'eval',
   critical: 'critical',
-  medals: 'medal',
   pawnStructure: 'pawns',
   piecePath: 'path',
   videoStreamTime: 'video',
@@ -55,6 +54,7 @@ export function annotationMarkers(
       case 'squares':
       case 'arrows':
       case 'variationColor':
+      case 'medals':
         break;
       case 'critical':
         // Shown by the color of the move, unless it's of no phase

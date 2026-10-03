@@ -487,19 +487,23 @@ span.cbgame-result
 }
 
 
+/* Medals: a rectangle the height of the text and twice as wide, a part for each medal */
 span.cbmedal
 {
-   display: inline-block;
-   background-color: red;
-   /*width:20px;
-   height:16px;*/
-   margin: 0;
-   padding: 0;
-   max-height: 16px;
-   vertical-align: middle;
+   display: inline-flex;
+   width: 2em;
+   height: 1em;
+   margin: 0 0.2em;
+   vertical-align: -0.12em;
    border-radius: 2px;
-   border: 1px solid hsla( 0, 0%, 0%, 0.3);
-   box-shadow: 1px 1px 4px hsla( 30, 40%, 50%, 0.3);
+   overflow: hidden;
+   box-shadow: 1px 1px 3px hsla( 30, 40%, 50%, 0.3);
+   cursor: default;
+}
+
+span.cbmedal-part
+{
+   flex: 1;
 }
 
 @media (max-width: 767px) {
