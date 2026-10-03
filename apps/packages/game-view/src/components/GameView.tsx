@@ -71,6 +71,9 @@ export interface GameViewProps {
   onQuotationClick?: (link: QuotationLink) => void;
 }
 
+// The NAGs after which their menu has a line: the evaluations of the position from the rest
+const NAG_MENU_BREAKS: ReadonlySet<number> = new Set([44]);
+
 // The colors of the moves leading to critical positions, as in GameNotation.css
 const CRITICAL_COLORS: Record<CriticalPhase, string> = {
   opening: '#2b5f94',
@@ -566,12 +569,15 @@ export const GameView: React.FC<GameViewProps> = ({
         move.annotations = change(move.annotations);
       });
     const nagItems = (type: NagType): ContextMenuItem[] =>
-      NAG_PALETTE.find((group) => group.type === type)!.nags.map((nag) => ({
-        label: nagInfo(nag)!.name,
-        symbol: nagInfo(nag)!.symbol,
-        shortcut: shortcutOf(NAG_KEYS, nag),
-        onSelect: annotate((annotations) => toggleNag(annotations, nag)),
-      }));
+      NAG_PALETTE.find((group) => group.type === type)!.nags.flatMap((nag): ContextMenuItem[] => [
+        {
+          label: nagInfo(nag)!.name,
+          symbol: nagInfo(nag)!.symbol,
+          shortcut: shortcutOf(NAG_KEYS, nag),
+          onSelect: annotate((annotations) => toggleNag(annotations, nag)),
+        },
+        ...(NAG_MENU_BREAKS.has(nag) ? ['separator' as const] : []),
+      ]);
     // A dot in the color of the moves leading to such a position
     const critical = (name: string, p: CriticalPhase): ContextMenuItem => ({
       label: `Critical ${name} position`,
