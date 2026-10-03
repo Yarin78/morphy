@@ -426,6 +426,21 @@ span.cbeval
    outline: none;
 }
 
+/* The two pawns of a pawn structure, the white one in front of the black one */
+.game-notation-content .cbpawnstructure-black
+{
+   color: #3d2f1c;
+}
+
+.game-notation-content .cbpawnstructure-white
+{
+   position: relative;
+   margin-left: -0.35em;
+   color: #fffdf8;
+   -webkit-text-stroke: 0.7px #3d2f1c;
+   paint-order: stroke fill;
+}
+
 .game-notation-content .cbpopupboard-popup
 {
    display: none;

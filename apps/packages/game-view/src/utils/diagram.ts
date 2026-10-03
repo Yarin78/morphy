@@ -177,8 +177,8 @@ function popupBoardHtml(kind: string, symbol: string, label: string, svg: string
 }
 
 /**
- * The pawn structure of a position, as ChessBase shows it for a pawn structure annotation: a
- * symbol after the move, which shows a diagram of only the pawns while it's hovered over.
+ * The pawn structure of a position, as ChessBase shows it for a pawn structure annotation: two
+ * pawns after the move, which shows a diagram of only the pawns while it's hovered over.
  *
  * @param fen the position
  */
@@ -186,7 +186,9 @@ export function pawnStructureHtml(fen: string): string {
   const board = readBoard(fen);
   if (!board) return '';
   const svg = boardSvg(board, [], [], (piece) => piece.type === 'p');
-  return popupBoardHtml('cbpawnstructure', '♙', 'Pawn structure', svg);
+  // A black and a white pawn, overlapping, to tell it from the path of a pawn
+  const symbol = '<span class="cbpawnstructure-black">♟</span><span class="cbpawnstructure-white">♟</span>';
+  return popupBoardHtml('cbpawnstructure', symbol, 'Pawn structure', svg);
 }
 
 // The colors the arrows of a piece path alternate between, as in ChessBase, to make it easier to
