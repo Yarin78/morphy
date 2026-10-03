@@ -110,7 +110,15 @@ public class DatabaseService {
       throw new IllegalArgumentException("Unknown database ID: " + databaseId);
     }
     if (state.database == null) {
-      throw new IllegalStateException("Database '" + databaseId + "' failed to open");
+      Exception cause = state.openFailure;
+      throw new IllegalStateException(
+          "Database '"
+              + databaseId
+              + "' failed to open ("
+              + state.config.getPath()
+              + ")"
+              + (cause != null ? ": " + cause : ""),
+          cause);
     }
 
     state.lastAccessTime = System.currentTimeMillis();
@@ -152,6 +160,7 @@ public class DatabaseService {
   private static class DatabaseState {
     final @NotNull DatabaseConfig config;
     @Nullable Database database; // null = not yet opened or was closed
+    @Nullable Exception openFailure; // why the last attempt to open it failed
     long lastModifiedTime;
 
     long lastAccessTime;
@@ -269,6 +278,7 @@ public class DatabaseService {
     try {
       AccessMode mode = state.config.isReadOnly() ? AccessMode.READ_ONLY : AccessMode.READ_WRITE;
       state.database = Databases.open(dbFile, mode);
+      state.openFailure = null;
       state.lastModifiedTime = dbFile.lastModified();
       log.info(
           "Successfully opened chess database '{}' ({}): {} (last modified: {})",
@@ -279,6 +289,7 @@ public class DatabaseService {
     } catch (Exception e) {
       log.error("Failed to open chess database '{}': {}", databaseId, state.config.getPath(), e);
       state.database = null;
+      state.openFailure = e;
     }
   }
 
