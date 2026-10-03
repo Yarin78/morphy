@@ -114,3 +114,47 @@ export function toggleNag(annotations: readonly Annotation[], nag: number): Anno
   const sorted = [...nags].sort((a, b) => rank(a) - rank(b));
   return replaceAnnotation(annotations, 'symbols', sorted.length > 0 ? { type: 'symbols', nags: sorted } : null);
 }
+
+/** The symbols of good and bad moves as they're typed, one key or two, and their NAGs. */
+const TYPED_MOVE_COMMENTS: Readonly<Record<string, number>> = {
+  '!': 1,
+  '?': 2,
+  '!!': 3,
+  '??': 4,
+  '!?': 5,
+  '?!': 6,
+};
+
+/** The NAG of the good or bad move a move is, if it has one. */
+function moveCommentOf(annotations: readonly Annotation[]): number | undefined {
+  return nagsOf(annotations).find((n) => NAG_INFO.get(n)?.type === 'moveComment');
+}
+
+/**
+ * Typing the symbol of a good or bad move, '!' or '?', as a key on its own or after another: '!'
+ * then '?' is '!?', and so on, and a third key takes the symbol away. A key on its own gives the
+ * move its symbol, or takes it away if the move has it.
+ *
+ * @param typed what was typed just before on the same move, if it's to be typed on: what this
+ *     returned for the key before
+ * @returns the annotations, and what has been typed so far, or null when nothing more can be typed
+ *     on it
+ */
+export function typeMoveComment(
+  annotations: readonly Annotation[],
+  key: '!' | '?',
+  typed: string | null
+): { annotations: Annotation[]; typed: string | null } {
+  const current = moveCommentOf(annotations);
+  const withoutCurrent = current === undefined ? [...annotations] : toggleNag(annotations, current);
+  if (typed !== null && TYPED_MOVE_COMMENTS[typed] === current) {
+    const nag = TYPED_MOVE_COMMENTS[typed + key];
+    return nag === undefined
+      ? { annotations: withoutCurrent, typed: null }
+      : { annotations: toggleNag(withoutCurrent, nag), typed: typed + key };
+  }
+  const nag = TYPED_MOVE_COMMENTS[key];
+  return current === nag
+    ? { annotations: withoutCurrent, typed: null }
+    : { annotations: toggleNag(annotations, nag), typed: key };
+}

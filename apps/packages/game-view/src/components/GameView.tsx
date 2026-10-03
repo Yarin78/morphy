@@ -18,7 +18,7 @@ import type { ContextMenuItem } from './ContextMenu';
 import { moveActions } from './moveActions';
 import './NotationBar.css';
 import { commentLanguages, defaultLanguage } from '../model/languages';
-import { NAG_PALETTE, nagInfo, toggleNag } from '../model/nags';
+import { NAG_PALETTE, nagInfo, toggleNag, typeMoveComment } from '../model/nags';
 import type { NagType } from '../model/nags';
 import { toggleCritical, togglePawnStructure, togglePiecePath } from '../model/specialAnnotations';
 import type { CriticalPhase } from '../model/specialAnnotations';
@@ -37,6 +37,7 @@ import { useKeyboardNavigation } from '../hooks/useKeyboardNavigation';
 import { NAG_KEYS, useNagKeys } from '../hooks/useNagKeys';
 import { COMMENT_KEYS, DIAGRAM_KEY, useCommentKeys } from '../hooks/useCommentKeys';
 import { useMoveActionKeys } from '../hooks/useMoveActionKeys';
+import { useKeyShortcut } from '../hooks/useKeyShortcut';
 import { UNDO_SHORTCUTS, useUndoKeys } from '../hooks/useUndoKeys';
 import { EditHistory } from '../model/editHistory';
 import { hasDiagramComment, toggleDiagram, withComment } from '../model/comments';
@@ -84,6 +85,9 @@ const ANNOTATION_DIALOGS = {
   variationColor: VariationColorDialog,
 };
 type AnnotationDialogKind = keyof typeof ANNOTATION_DIALOGS;
+
+// The key that plays a null move from the position shown
+const NULL_MOVE_KEY = '0';
 
 // The NAGs after which their menu has a line: the evaluations of the position from the rest
 const NAG_MENU_BREAKS: ReadonlySet<number> = new Set([44]);
@@ -501,6 +505,30 @@ export const GameView: React.FC<GameViewProps> = ({
     });
   }, [game, edit]);
 
+  // '!' and '?' typed on the current move, and what was typed on it just before, to type on
+  const typingRef = useRef<{ move: MoveNode; typed: string } | null>(null);
+  const handleMoveCommentType = useCallback(
+    (key: '!' | '?') => {
+      const move = game.currentMove();
+      if (!move) return;
+      const typed = typingRef.current?.move === move ? typingRef.current.typed : null;
+      let next: string | null = null;
+      edit(() => {
+        const result = typeMoveComment(move.annotations, key, typed);
+        move.annotations = result.annotations;
+        next = result.typed;
+      });
+      typingRef.current = next ? { move, typed: next } : null;
+    },
+    [game, edit]
+  );
+  const handleTypingInterrupt = useCallback(() => {
+    typingRef.current = null;
+  }, []);
+
+  // Plays a null move from the position shown
+  const handleNullMove = useCallback(() => edit(() => game.playNullMove()), [game, edit]);
+
   // The language whose comments are shown, besides those in no language, and that comments are
   // written in, or null for all: every comment shown, and comments written in no language. By
   // default the preferred one of the game's. The choice is kept with the game it was made for, so
@@ -666,6 +694,7 @@ export const GameView: React.FC<GameViewProps> = ({
       {
         label: 'Insert Null Move',
         symbol: <TbCircleOff />,
+        shortcut: NULL_MOVE_KEY,
         disabled: !game.canPlayNullMove(),
         onSelect: () => {
           edit(() => game.playNullMove());
@@ -738,7 +767,12 @@ export const GameView: React.FC<GameViewProps> = ({
   const dialogOpen = !!editingGameInfo || !!annotationDialog;
 
   // !, ? and = toggle those symbols on the current move, when editing
-  useNagKeys(isEditMode && !!selectedGame && !dialogOpen, handleNagToggle);
+  useNagKeys(isEditMode && !!selectedGame && !dialogOpen, {
+    onToggle: handleNagToggle,
+    onType: handleMoveCommentType,
+    onInterrupt: handleTypingInterrupt,
+  });
+  useKeyShortcut(isEditMode && !!selectedGame && !dialogOpen && !editingComment, NULL_MOVE_KEY, handleNullMove);
   // A diagram of the position shown, or none if it has one
   const handleCurrentDiagram = useCallback(
     () =>
