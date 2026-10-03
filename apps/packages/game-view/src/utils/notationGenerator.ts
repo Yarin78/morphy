@@ -4,6 +4,7 @@ import type { Annotation, AnnotationOf } from '../model/annotations';
 import { filterAnnotations, findAnnotation } from '../model/annotations';
 import { annotationMarkers, annotationMarkersHtml } from './annotationMarkers';
 import { figurinesToHtml } from './figurines';
+import { escapeHtml } from './html';
 import { commentWithDiagramsHtml, diagramHtml, pawnStructureHtml, piecePathHtml } from './diagram';
 import { moveInfoHtml } from './moveInfo';
 import { medalsHtml } from './medals';
@@ -18,6 +19,7 @@ interface ConversionState {
   currentMove: MoveNode | null; // The move that should be highlighted
   languages: ReadonlySet<string>; // The languages of the comments that are shown
   quoteLinks: QuotationLink[] | null; // The quoted games that can be opened, or null if none can
+  mainLineStart?: string; // HTML to start the main line with, on the row of its first moves
 }
 
 /** A quoted game that can be opened: the quotation, and the position its move leads to. */
@@ -32,15 +34,6 @@ export type NotationHtmlResult = {
   reverseMoveMap: Map<number, MoveNode>; // Map global move index -> move (for reverse lookups)
   quoteLinks: QuotationLink[]; // The quoted games that can be opened, by data-quote-index
 };
-
-/**
- * Escapes HTML special characters
- */
-function escapeHtml(text: string): string {
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
-}
 
 /**
  * Converts NAG number to glyph symbol
@@ -194,6 +187,10 @@ function traverseGameTree(
   inheritedColor: LineColor | null = null
 ): string {
   const parts: string[] = [];
+  if (level === 0 && state.mainLineStart) {
+    parts.push(state.mainLineStart);
+    state.mainLineStart = undefined;
+  }
   // The color of the moves from here on, if a variation color applies
   let color = inheritedColor;
 
@@ -449,6 +446,12 @@ export function generateNotationHtml(
   const gameMarkers = annotationMarkersHtml(annotationMarkers(game.root.annotations, hasGlyph));
   if (gameMarkers) {
     parts.push(gameMarkers);
+  }
+
+  // The color marker of the colored squares and arrows of the start position, just before the
+  // first move, in the main line so it's on the same row
+  if (hasGraphics(game.root.annotations)) {
+    state.mainLineStart = `<span class="cbcol-marker" data-inx-mv="0"> </span>`;
   }
 
   const firstMove = game.firstMove();
