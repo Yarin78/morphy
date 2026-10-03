@@ -23,6 +23,7 @@ import type { GameInfo } from '../utils/gameInfo';
 import type { GameInfoServices } from '../utils/gameInfo';
 import type { GameTree, MoveNode } from '../model/GameTree';
 import type { Square } from 'chess.js';
+import type { QuotationLink } from '../utils/notationGenerator';
 import './GameView.css';
 
 export interface GameViewProps {
@@ -43,6 +44,12 @@ export interface GameViewProps {
   onGameReady?: (game: GameTree) => void;
   /** Lets the Edit Game Info dialog pick existing players and tournaments. */
   gameInfoServices?: GameInfoServices;
+  /**
+   * When given, a quoted game that refers to another game, as a repertoire refers to its other
+   * chapters, can be clicked; this is called with the quotation and the position its move leads
+   * to, for the caller to open that game (see quotedPosition).
+   */
+  onQuotationClick?: (link: QuotationLink) => void;
 }
 
 export const GameView: React.FC<GameViewProps> = ({
@@ -54,6 +61,7 @@ export const GameView: React.FC<GameViewProps> = ({
   readOnly = false,
   onGameReady,
   gameInfoServices,
+  onQuotationClick,
 }) => {
   const {
     game,
@@ -590,6 +598,7 @@ export const GameView: React.FC<GameViewProps> = ({
               languages={shownLanguages}
               onMoveClick={handleMoveClick}
               onNotationReady={handleNotationReady}
+              onQuotationClick={onQuotationClick}
             />
             {(isEditMode || languages.length > 0) && (
               <div className="notation-bar">

@@ -10,6 +10,8 @@ export { GameView } from './components/GameView';
 export type { GameViewProps } from './components/GameView';
 export type { ChessGame, GameHeader as GameHeaderData } from './types/chess';
 export { GameTree } from './model/GameTree';
+export { quotedPosition } from './model/quotedPosition';
+export type { QuotationLink } from './utils/notationGenerator';
 export { medalColors, medalName } from './utils/medals';
 export type { GameMoves, GameNode, MoveNode } from './model/GameTree';
 export { GAME_ANNOTATION_INDEX } from './model/annotations';

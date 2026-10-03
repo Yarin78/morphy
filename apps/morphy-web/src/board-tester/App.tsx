@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { GameView, gameTagLanguages } from 'game-view';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { GameView, gameTagLanguages, quotedPosition } from 'game-view';
 import type {
   ChessGame,
   GameInfoServices,
@@ -7,6 +7,7 @@ import type {
   GameTagLanguage,
   GameTagService,
   GameTree,
+  QuotationLink,
   PlayerService,
   SourceInfo,
   SourceService,
@@ -43,6 +44,7 @@ import type {
   DatabaseResponse,
   EntitySearchResponse,
   GameDto,
+  GameSearchResponse,
   GameTagDto,
   PlayerDto,
   SourceDto,
@@ -180,6 +182,45 @@ function gameTagService(databaseId: string, languages: GameTagLanguage[]): GameT
   return { languages, ...entityService<GameTagDto, GameTagInfo>(databaseId, 'gametags', info, gameTagDto) };
 }
 
+/** The position to open a quoted game at, from the fen and index params, if they're given. */
+function readQuoteTarget(): { gameId: number; fen: string; index: number } | null {
+  const params = new URLSearchParams(window.location.search);
+  const gameId = Number(params.get('game'));
+  const fen = params.get('fen');
+  if (!fen || !Number.isFinite(gameId)) return null;
+  return { gameId, fen, index: Number(params.get('index')) || 0 };
+}
+
+/** A name compared loosely: in lower case, with only its letters and digits. */
+function looseName(name: string | undefined): string {
+  return (name ?? '').toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
+}
+
+/**
+ * The id of the game in a database with these players, as a quotation names them, or null if there
+ * is none. The search is on the first word of a name, and the names are then compared in full.
+ */
+async function findGameByPlayers(
+  databaseId: string,
+  white: string | undefined,
+  black: string | undefined
+): Promise<number | null> {
+  const [name, position] = black?.trim() ? [black, 'black'] : [white ?? '', 'white'];
+  const word = name.trim().split(/[\s,]+/)[0];
+  if (!word) return null;
+  const response = await search<GameSearchResponse>(databaseId, 'games', {
+    filter: `player.name:${word},position=${position}`,
+    limit: 1000,
+  });
+  const playerName = (p: GameDto['whitePlayer']) => [p?.lastName, p?.firstName].filter((n) => n).join(',');
+  const match = response.games.find(
+    (g) =>
+      looseName(playerName(g.whitePlayer)) === looseName(white) &&
+      looseName(playerName(g.blackPlayer)) === looseName(black)
+  );
+  return match?.id ?? null;
+}
+
 function App() {
   const { databaseId, gameId, setLoadedGame } = useDbGameParams();
   const paramsKey = `${databaseId ?? ''}:${gameId ?? ''}`;
@@ -272,6 +313,52 @@ function App() {
     [shownGame]
   );
 
+  // A quoted game refers to another game in the same database by its players, as a repertoire
+  // refers to its other chapters. It's opened in a new tab, at the position the quotation links
+  // to, given by the fen and index params
+  const [quoteTarget] = useState(readQuoteTarget);
+  const initialMoveToShow = useMemo(
+    () =>
+      quoteTarget && quoteTarget.gameId === gameId
+        ? (game: GameTree) => quotedPosition(game, quoteTarget.fen, quoteTarget.index)
+        : undefined,
+    [quoteTarget, gameId]
+  );
+
+  const handleQuotationClick = useCallback(
+    async (link: QuotationLink) => {
+      if (!databaseId) return;
+      const { white, black } = link.quote.header;
+      // Opened now, while the click still counts as one, as browsers block opening it later
+      const tab = window.open('', '_blank');
+      try {
+        const target = await findGameByPlayers(databaseId, white, black);
+        if (target == null) {
+          tab?.close();
+          setSaveMessageFor({ paramsKey, message: `No game ${white ?? '?'} – ${black ?? '?'} in this database` });
+          return;
+        }
+        const params = new URLSearchParams({
+          db: databaseId,
+          game: String(target),
+          fen: link.fen,
+          index: String(link.quote.unknown ?? 0),
+        });
+        // Absolute, as the new tab is about:blank so far
+        const url = new URL(`${window.location.pathname}?${params}`, window.location.href).href;
+        if (tab) {
+          tab.location.href = url;
+        } else {
+          window.location.href = url;
+        }
+      } catch (err) {
+        tab?.close();
+        setSaveMessageFor({ paramsKey, message: err instanceof Error ? err.message : String(err) });
+      }
+    },
+    [databaseId, paramsKey]
+  );
+
   const canSave = !saving && Boolean(databaseId) && (gameState.kind === 'loaded' || gameState.kind === 'empty');
 
   async function handleSave() {
@@ -332,6 +419,8 @@ function App() {
             gameRef.current = game;
           }}
           gameInfoServices={gameInfoServices}
+          initialMoveToShow={initialMoveToShow}
+          onQuotationClick={handleQuotationClick}
         />
       </main>
     </div>

@@ -1,6 +1,6 @@
 import { GameTree } from '../model/GameTree';
 import type { MoveNode } from '../model/GameTree';
-import type { Annotation } from '../model/annotations';
+import type { Annotation, AnnotationOf } from '../model/annotations';
 import { filterAnnotations, findAnnotation } from '../model/annotations';
 import { annotationMarkers, annotationMarkersHtml } from './annotationMarkers';
 import { figurinesToHtml } from './figurines';
@@ -16,12 +16,20 @@ interface ConversionState {
   reverseMoveMap: Map<number, MoveNode>; // Map global move index -> move (for reverse lookups)
   currentMove: MoveNode | null; // The move that should be highlighted
   languages: ReadonlySet<string>; // The languages of the comments that are shown
+  quoteLinks: QuotationLink[] | null; // The quoted games that can be opened, or null if none can
+}
+
+/** A quoted game that can be opened: the quotation, and the position its move leads to. */
+export interface QuotationLink {
+  quote: AnnotationOf<'quote'>;
+  fen: string;
 }
 
 export type NotationHtmlResult = {
   html: string;
   moveMap: Map<MoveNode, number>; // Map move -> global move index
   reverseMoveMap: Map<number, MoveNode>; // Map global move index -> move (for reverse lookups)
+  quoteLinks: QuotationLink[]; // The quoted games that can be opened, by data-quote-index
 };
 
 /**
@@ -131,9 +139,18 @@ function hasGraphics(annotations: readonly Annotation[]): boolean {
 }
 
 /** The web links and quoted games of a move, in the order they're in. */
-function referencesHtml(annotations: readonly Annotation[]): string {
+function referencesHtml(annotations: readonly Annotation[], fen: string, state: ConversionState): string {
   return annotations
-    .map((a) => (a.type === 'webLink' ? webLinkHtml(a) : a.type === 'quote' ? quoteHtml(a) : ''))
+    .map((a) => {
+      if (a.type === 'webLink') return webLinkHtml(a);
+      if (a.type !== 'quote') return '';
+      // A quotation without moves refers to another game, which can be opened if links are wanted
+      if (state.quoteLinks && !a.moves?.trim()) {
+        state.quoteLinks.push({ quote: a, fen });
+        return quoteHtml(a, state.quoteLinks.length - 1);
+      }
+      return quoteHtml(a);
+    })
     .join('');
 }
 
@@ -272,7 +289,7 @@ function traverseGameTree(
     }
 
     // Web links and quoted games
-    const references = referencesHtml(m.annotations);
+    const references = referencesHtml(m.annotations, m.fen, state);
     if (references) {
       parts.push(references);
     }
@@ -347,7 +364,11 @@ function gameComment(game: GameTree, languages: ReadonlySet<string>): string {
  *
  * Every move gets the index annotations use for it (see GameTree), as data-global-move-index.
  */
-export function generateNotationHtml(game: GameTree, languages: readonly string[] = []): NotationHtmlResult {
+export function generateNotationHtml(
+  game: GameTree,
+  languages: readonly string[] = [],
+  linkQuotes = false
+): NotationHtmlResult {
   const state: ConversionState = {
     lineIndexByLevel: new Map(),
     nodeIndex: 0,
@@ -355,6 +376,7 @@ export function generateNotationHtml(game: GameTree, languages: readonly string[
     reverseMoveMap: new Map(),
     currentMove: game.currentMove(),
     languages: new Set(languages),
+    quoteLinks: linkQuotes ? [] : null,
   };
   game.movesInOrder().forEach((move, index) => {
     state.moveMap.set(move, index);
@@ -375,7 +397,7 @@ export function generateNotationHtml(game: GameTree, languages: readonly string[
   if (gameInfo) {
     parts.push(gameInfo);
   }
-  const gameReferences = referencesHtml(game.root.annotations);
+  const gameReferences = referencesHtml(game.root.annotations, game.root.fen, state);
   if (gameReferences) {
     parts.push(gameReferences);
   }
@@ -402,5 +424,6 @@ export function generateNotationHtml(game: GameTree, languages: readonly string[
     html: `<div class="nota-game" data-inx-game="0">${parts.join('  ')}</div>`,
     moveMap: state.moveMap,
     reverseMoveMap: state.reverseMoveMap,
+    quoteLinks: state.quoteLinks ?? [],
   };
 }

@@ -50,11 +50,19 @@ export function quoteReference(header: Readonly<Record<string, string>>): string
   return [players, where].filter((p) => p).join(', ') || 'Quoted game';
 }
 
-/** A quoted game: a reference to it, which unfolds to its moves when they're quoted too. */
-export function quoteHtml(annotation: AnnotationOf<'quote'>): string {
+/**
+ * A quoted game: a reference to it, which unfolds to its moves when they're quoted too.
+ *
+ * @param linkIndex for a quotation without moves, which refers to another game, the index to give
+ *     it as a link to that game, or undefined for no link
+ */
+export function quoteHtml(annotation: AnnotationOf<'quote'>, linkIndex?: number): string {
   const reference = escapeHtml(quoteReference(annotation.header));
   const moves = annotation.moves?.trim();
   if (!moves) {
+    if (linkIndex !== undefined) {
+      return `<span class="cbquote cbquote-link" data-quote-index="${linkIndex}" title="Open this game">${reference}</span>`;
+    }
     return `<span class="cbquote" title="Quoted game">${reference}</span>`;
   }
   return (

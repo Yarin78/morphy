@@ -402,6 +402,12 @@ span.cbeval
    font-weight: normal;
 }
 
+.game-notation-content .cbquote-link
+{
+   cursor: pointer;
+   text-decoration: underline;
+}
+
 .game-notation-content details.cbquote > summary
 {
    display: inline;

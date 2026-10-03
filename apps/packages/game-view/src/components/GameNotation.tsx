@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { GameTree, MoveNode } from '../model/GameTree';
 import { generateNotationHtml } from '../utils/notationGenerator';
-import type { NotationHtmlResult } from '../utils/notationGenerator';
+import type { NotationHtmlResult, QuotationLink } from '../utils/notationGenerator';
 import './GameNotation.css';
 
 interface GameNotationProps {
@@ -11,6 +11,8 @@ interface GameNotationProps {
   languages: readonly string[];
   onMoveClick: (move: MoveNode) => void;
   onNotationReady?: (reverseMoveMap: Map<number, MoveNode>) => void;
+  /** When given, a quoted game that refers to another game can be clicked to open it. */
+  onQuotationClick?: (link: QuotationLink) => void;
 }
 
 export const GameNotation: React.FC<GameNotationProps> = ({
@@ -19,6 +21,7 @@ export const GameNotation: React.FC<GameNotationProps> = ({
   languages,
   onMoveClick,
   onNotationReady,
+  onQuotationClick,
 }) => {
   const [notationResult, setNotationResult] = useState<NotationHtmlResult | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -30,7 +33,7 @@ export const GameNotation: React.FC<GameNotationProps> = ({
   // Now we also pass the current move so highlighting is done during HTML generation.
   useEffect(() => {
     try {
-      const result = generateNotationHtml(game, languages);
+      const result = generateNotationHtml(game, languages, !!onQuotationClick);
       setNotationResult(result);
       // Notify parent component that notation is ready
       if (onNotationReady) {
@@ -43,7 +46,7 @@ export const GameNotation: React.FC<GameNotationProps> = ({
         onNotationReady(new Map());
       }
     }
-  }, [game, version, languages, onNotationReady]);
+  }, [game, version, languages, onNotationReady, onQuotationClick]);
 
   // Scroll highlighted move into view if necessary when position changes
   useEffect(() => {
@@ -110,6 +113,14 @@ export const GameNotation: React.FC<GameNotationProps> = ({
     const handleClick = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
 
+      // A quoted game that refers to another game
+      const quoteElement: HTMLElement | null = target.closest('.cbquote-link');
+      if (quoteElement && onQuotationClick) {
+        const link = notationResult.quoteLinks[Number(quoteElement.getAttribute('data-quote-index'))];
+        if (link) onQuotationClick(link);
+        return;
+      }
+
       // Find the move element (could be the span itself or a child)
       const moveElement: HTMLElement | null = target.closest('.cbmove');
 
@@ -131,7 +142,7 @@ export const GameNotation: React.FC<GameNotationProps> = ({
     return () => {
       container.removeEventListener('click', handleClick);
     };
-  }, [notationResult, onMoveClick]);
+  }, [notationResult, onMoveClick, onQuotationClick]);
 
   if (!notationResult) {
     return (

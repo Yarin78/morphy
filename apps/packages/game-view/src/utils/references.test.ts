@@ -41,4 +41,12 @@ describe('game quotations', () => {
     );
     expect(quoteHtml({ type: 'quote', header })).toBe('<span class="cbquote" title="Quoted game">Evans – McDonnell</span>');
   });
+
+  it('link to the game they refer to when they have no moves', () => {
+    const quote = { type: 'quote' as const, header: { white: 'Sicilian', black: 'Kan' } };
+    expect(quoteHtml(quote, 3)).toBe(
+      '<span class="cbquote cbquote-link" data-quote-index="3" title="Open this game">Sicilian – Kan</span>'
+    );
+    expect(quoteHtml({ ...quote, moves: '1. e4' }, 3)).toContain('<details');
+  });
 });
