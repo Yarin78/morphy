@@ -1,6 +1,9 @@
 package se.yarin.morphy.games.annotations;
 
 import java.nio.ByteBuffer;
+import java.nio.charset.CharacterCodingException;
+import java.nio.charset.CodingErrorAction;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -172,17 +175,17 @@ public class GameQuotationAnnotationSerializer implements AnnotationSerializer {
     }
 
     GameHeaderModel header = new GameHeaderModel();
-    header.setWhite(ByteBufferUtil.getByteString(buf));
+    header.setWhite(getString(buf));
     buf.get();
-    header.setBlack(ByteBufferUtil.getByteString(buf));
+    header.setBlack(getString(buf));
     buf.get();
     header.setWhiteElo(ByteBufferUtil.getUnsignedShortB(buf));
     header.setBlackElo(ByteBufferUtil.getUnsignedShortB(buf));
     Eco eco = CBUtil.decodeEco(ByteBufferUtil.getUnsignedShortB(buf));
     header.setEco(eco);
-    header.setEvent(ByteBufferUtil.getByteString(buf));
+    header.setEvent(getString(buf));
     buf.get();
-    header.setEventSite(ByteBufferUtil.getByteString(buf));
+    header.setEventSite(getString(buf));
     buf.get();
     Date date = CBUtil.decodeDate(ByteBufferUtil.getIntB(buf));
     header.setDate(date);
@@ -215,6 +218,31 @@ public class GameQuotationAnnotationSerializer implements AnnotationSerializer {
     }
     Encoding encoding = new Encoding(setupPositionData, gameData);
     return new GameQuotationAnnotation(header, unknown, () -> decodeMoves(encoding), encoding);
+  }
+
+  /**
+   * A length-prefixed string. Newer versions of ChessBase write these as UTF-8, older ones in a
+   * single-byte charset, so a string that is valid UTF-8 is read as such.
+   */
+  private static String getString(ByteBuffer buf) {
+    int start = buf.position();
+    int len = buf.get(start) & 0xFF;
+    byte[] bytes = new byte[len];
+    buf.get(start + 1, bytes);
+    int textLen = len > 0 && bytes[len - 1] == 0 ? len - 1 : len;
+    try {
+      String text =
+          StandardCharsets.UTF_8
+              .newDecoder()
+              .onMalformedInput(CodingErrorAction.REPORT)
+              .onUnmappableCharacter(CodingErrorAction.REPORT)
+              .decode(ByteBuffer.wrap(bytes, 0, textLen))
+              .toString();
+      buf.position(start + 1 + len);
+      return text;
+    } catch (CharacterCodingException e) {
+      return ByteBufferUtil.getByteString(buf);
+    }
   }
 
   @Override
