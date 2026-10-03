@@ -632,3 +632,45 @@ span.cbmedal-part
     padding: 0.5rem 0.25rem;
   }
 }
+
+/* The button at the start of a variation that folds it to its first move, or unfolds it: a box
+   with a minus, or a plus when folded, drawn as lines so they're centered whatever the font */
+.game-notation-content .cbfold
+{
+   position: relative;
+   display: inline-block;
+   box-sizing: border-box;
+   width: 0.75em;
+   height: 0.75em;
+   margin: 0 0.25em 0 0.1em;
+   border: 1px solid #a8977a;
+   border-radius: 0.15em;
+   background: #fbf7f0;
+   vertical-align: -0.05em;
+   cursor: pointer;
+   user-select: none;
+}
+
+.game-notation-content .cbfold::before,
+.game-notation-content .cbfold[aria-expanded="false"]::after
+{
+   content: '';
+   position: absolute;
+   top: 50%;
+   left: 50%;
+   width: 60%;
+   height: 1.5px;
+   background: #6b5a3a;
+   transform: translate(-50%, -50%);
+}
+
+.game-notation-content .cbfold[aria-expanded="false"]::after
+{
+   transform: translate(-50%, -50%) rotate(90deg);
+}
+
+.game-notation-content .cbfold:hover
+{
+   background: #e6d3b3;
+   border-color: #8b6f47;
+}

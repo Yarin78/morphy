@@ -20,6 +20,19 @@ interface ConversionState {
   languages: ReadonlySet<string>; // The languages of the comments that are shown
   quoteLinks: QuotationLink[] | null; // The quoted games that can be opened, or null if none can
   mainLineStart?: string; // HTML to start the main line with, on the row of its first moves
+  folded: ReadonlySet<MoveNode>; // The first moves of the variations that are folded
+}
+
+/**
+ * Whether a variation is shown folded, as just its first move: when it's folded, unless the
+ * current move is one of the moves hidden by it, which are shown so the current move can be seen.
+ */
+function isFolded(first: MoveNode, state: ConversionState): boolean {
+  if (!state.folded.has(first)) return false;
+  for (let m = state.currentMove; m; m = GameTree.previous(m)) {
+    if (m.parent === first) return false;
+  }
+  return true;
 }
 
 /** A quoted game that can be opened: the quotation, and the position its move leads to. */
@@ -191,6 +204,14 @@ function traverseGameTree(
     parts.push(state.mainLineStart);
     state.mainLineStart = undefined;
   }
+  // A variation can be folded to just its first move, with a button at its start
+  const folded = level > 0 && isFolded(move, state);
+  if (level > 0) {
+    parts.push(
+      `<span class="cbfold" role="button" tabindex="-1" data-fold-move="${state.moveMap.get(move)}" ` +
+        `aria-expanded="${!folded}" title="${folded ? 'Unfold' : 'Fold'} the variation"></span>`
+    );
+  }
   // The color of the moves from here on, if a variation color applies
   let color = inheritedColor;
 
@@ -263,7 +284,7 @@ function traverseGameTree(
       moveClasses.push('cbvarcolor');
     }
 
-    const commentBefore = commentText(m.annotations, 'textBefore', state.languages);
+    const commentBefore = folded ? null : commentText(m.annotations, 'textBefore', state.languages);
     if (commentBefore) {
       // A diagram in it is of the position before the move
       parts.push(
@@ -279,6 +300,9 @@ function traverseGameTree(
     parts.push(
       `<span class="${moveClasses.join(' ')}"${colorStyle(color)} data-inx-mv="${localMoveIndex}" data-linecnt="${lineDepth}" data-nodecnt="${currentNodeIndex}" data-global-move-index="${globalMoveIndex}"${criticalTitle}>${moveContent}</span>`
     );
+
+    // A folded variation shows nothing after its first move
+    if (folded) break;
 
     // Add color marker for moves with graphical annotations (colored squares or arrows)
     if (hasGraphics(m.annotations)) {
@@ -394,11 +418,17 @@ function gameComment(game: GameTree, languages: ReadonlySet<string>): string {
  * Generates ChessBase-style HTML notation of a game, with the current move highlighted.
  *
  * Every move gets the index annotations use for it (see GameTree), as data-global-move-index.
+ * Every variation starts with a button to fold or unfold it, with the index of its first move as
+ * data-fold-move.
+ *
+ * @param folded the first moves of the variations shown folded, as just their first move; one
+ *     the current move is hidden in is shown unfolded
  */
 export function generateNotationHtml(
   game: GameTree,
   languages: readonly string[] = [],
-  linkQuotes = false
+  linkQuotes = false,
+  folded: ReadonlySet<MoveNode> = new Set()
 ): NotationHtmlResult {
   const state: ConversionState = {
     lineIndexByLevel: new Map(),
@@ -408,6 +438,7 @@ export function generateNotationHtml(
     currentMove: game.currentMove(),
     languages: new Set(languages),
     quoteLinks: linkQuotes ? [] : null,
+    folded,
   };
   game.movesInOrder().forEach((move, index) => {
     state.moveMap.set(move, index);

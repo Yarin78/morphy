@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import type { GameTree, MoveNode } from '../model/GameTree';
+import { GameTree } from '../model/GameTree';
+import type { MoveNode } from '../model/GameTree';
 import { generateNotationHtml } from '../utils/notationGenerator';
 import type { NotationHtmlResult, QuotationLink } from '../utils/notationGenerator';
 import './GameNotation.css';
@@ -15,6 +16,16 @@ interface GameNotationProps {
   onQuotationClick?: (link: QuotationLink) => void;
 }
 
+const NOTHING_FOLDED: ReadonlySet<MoveNode> = new Set();
+
+/** Whether a move is one of those a variation hides when it's folded: any after its first. */
+function isHiddenBy(first: MoveNode, move: MoveNode | null): boolean {
+  for (let m = move; m; m = GameTree.previous(m)) {
+    if (m.parent === first) return true;
+  }
+  return false;
+}
+
 export const GameNotation: React.FC<GameNotationProps> = ({
   game,
   version,
@@ -25,6 +36,12 @@ export const GameNotation: React.FC<GameNotationProps> = ({
 }) => {
   const [notationResult, setNotationResult] = useState<NotationHtmlResult | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  // The first moves of the variations that are folded, kept with the game they're of
+  const [folding, setFolding] = useState<{ game: GameTree; folded: ReadonlySet<MoveNode> }>({
+    game,
+    folded: new Set(),
+  });
+  const folded = folding.game === game ? folding.folded : NOTHING_FOLDED;
 
   // Generate HTML when chess game changes
   // Note: We include 'version' to ensure regeneration when chess state mutates,
@@ -33,7 +50,7 @@ export const GameNotation: React.FC<GameNotationProps> = ({
   // Now we also pass the current move so highlighting is done during HTML generation.
   useEffect(() => {
     try {
-      const result = generateNotationHtml(game, languages, !!onQuotationClick);
+      const result = generateNotationHtml(game, languages, !!onQuotationClick, folded);
       setNotationResult(result);
       // Notify parent component that notation is ready
       if (onNotationReady) {
@@ -46,7 +63,7 @@ export const GameNotation: React.FC<GameNotationProps> = ({
         onNotationReady(new Map());
       }
     }
-  }, [game, version, languages, onNotationReady, onQuotationClick]);
+  }, [game, version, languages, onNotationReady, onQuotationClick, folded]);
 
   // Scroll highlighted move into view if necessary when position changes
   useEffect(() => {
@@ -121,6 +138,14 @@ export const GameNotation: React.FC<GameNotationProps> = ({
         return;
       }
 
+      // The button folding or unfolding a variation
+      const foldElement: HTMLElement | null = target.closest('.cbfold');
+      if (foldElement) {
+        const first = notationResult.reverseMoveMap.get(Number(foldElement.getAttribute('data-fold-move')));
+        if (first) toggleFold(first);
+        return;
+      }
+
       // Find the move element (could be the span itself or a child)
       const moveElement: HTMLElement | null = target.closest('.cbmove');
 
@@ -136,13 +161,25 @@ export const GameNotation: React.FC<GameNotationProps> = ({
       }
     };
 
+    // Folds a variation, or unfolds it; the current move goes to its first move if it would be hidden
+    const toggleFold = (first: MoveNode) => {
+      const next = new Set(folded);
+      if (next.has(first)) {
+        next.delete(first);
+      } else {
+        next.add(first);
+        if (isHiddenBy(first, game.currentMove())) onMoveClick(first);
+      }
+      setFolding({ game, folded: next });
+    };
+
     const container = containerRef.current;
     container.addEventListener('click', handleClick);
 
     return () => {
       container.removeEventListener('click', handleClick);
     };
-  }, [notationResult, onMoveClick, onQuotationClick]);
+  }, [notationResult, onMoveClick, onQuotationClick, folded, game]);
 
   if (!notationResult) {
     return (
