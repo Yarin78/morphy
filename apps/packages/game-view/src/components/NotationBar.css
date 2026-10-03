@@ -64,12 +64,11 @@
   cursor: pointer;
 }
 
-.language-pill:hover {
+.language-pill:hover:not(:disabled) {
   background: #e6d6bf;
 }
 
-.language-pill.active {
-  background: #8b6f47;
-  border-color: #8b6f47;
-  color: white;
+.language-pill:disabled {
+  opacity: 0.5;
+  cursor: default;
 }

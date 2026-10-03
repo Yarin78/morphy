@@ -689,3 +689,20 @@ span.cbmedal-part
    background: #e6d3b3;
    border-color: #8b6f47;
 }
+
+/* A comment being edited in place */
+.game-notation-content .cbcomment-editor
+{
+   display: inline-block;
+   min-width: 6em;
+   margin: 0 0.2em;
+   padding: 0 0.3em;
+   border-radius: 0.2em;
+   background: #fff6c8;
+   box-shadow: 0 0 0 1px #c9a84a;
+   color: #3d2f1c;
+   font-weight: normal;
+   white-space: pre-wrap;
+   outline: none;
+   cursor: text;
+}

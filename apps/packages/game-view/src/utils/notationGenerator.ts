@@ -1,7 +1,9 @@
 import { GameTree } from '../model/GameTree';
-import type { MoveNode } from '../model/GameTree';
+import type { GameNode, MoveNode } from '../model/GameTree';
 import type { Annotation, AnnotationOf } from '../model/annotations';
-import { filterAnnotations, findAnnotation } from '../model/annotations';
+import { filterAnnotations, findAnnotation, GAME_ANNOTATION_INDEX } from '../model/annotations';
+import { isCommentShown } from '../model/comments';
+import type { CommentType } from '../model/comments';
 import { annotationMarkers, annotationMarkersHtml } from './annotationMarkers';
 import { figurinesToHtml } from './figurines';
 import { escapeHtml } from './html';
@@ -21,6 +23,65 @@ interface ConversionState {
   quoteLinks: QuotationLink[] | null; // The quoted games that can be opened, or null if none can
   mainLineStart?: string; // HTML to start the main line with, on the row of its first moves
   folded: ReadonlySet<MoveNode>; // The first moves of the variations that are folded
+  editing: CommentEdit | null; // The comment being edited, shown as an editor instead
+}
+
+/**
+ * A comment being edited: of a move, or of the game for the start position, its kind, and its
+ * language, null for none.
+ */
+export interface CommentEdit {
+  node: GameNode;
+  type: CommentType;
+  language: string | null;
+}
+
+/** The editor of the comment being edited, with its text, to be made editable. */
+function commentEditorHtml(text: string): string {
+  return `<span class="cbcomment-editor" data-comment-editor>${escapeHtml(text)}</span>`;
+}
+
+/** The attributes telling which comment a span of comment text is of: its move's index, kind and language. */
+function commentAttrs(moveIndex: number, type: CommentType, language: string | undefined): string {
+  return ` data-comment-move="${moveIndex}" data-comment-type="${type}" data-comment-language="${language ?? ''}"`;
+}
+
+/**
+ * The comments of a kind of a move, or of the game, that are shown, each on its own, with a
+ * diagram where one asks for it. The one being edited is an editor instead, or one is added after
+ * them for a new comment.
+ *
+ * @param moveIndex the index of the move, or -1 for the game
+ * @param span the HTML of a span of comment text, given its HTML and the attributes telling which
+ *     comment it is of
+ * @param textHtml the HTML of the text of a comment
+ * @param diagram the HTML of a diagram
+ */
+function commentsHtml(
+  node: GameNode,
+  type: CommentType,
+  moveIndex: number,
+  state: ConversionState,
+  span: (html: string, attrs: string) => string,
+  textHtml: (text: string) => string,
+  diagram: () => string
+): string {
+  const editing = state.editing?.node === node && state.editing.type === type ? state.editing : null;
+  const parts: string[] = [];
+  let edited = false;
+  for (const comment of filterAnnotations(node.annotations, type)) {
+    if (editing && (comment.language ?? null) === editing.language && !edited) {
+      parts.push(commentEditorHtml(comment.text));
+      edited = true;
+      continue;
+    }
+    const text = comment.text.trim();
+    if (!text || !isCommentShown(comment, state.languages)) continue;
+    const attrs = commentAttrs(moveIndex, type, comment.language);
+    parts.push(commentWithDiagramsHtml(text, (piece) => span(textHtml(piece), attrs), diagram));
+  }
+  if (editing && !edited) parts.push(commentEditorHtml(''));
+  return parts.join(' ');
 }
 
 /**
@@ -284,17 +345,23 @@ function traverseGameTree(
       moveClasses.push('cbvarcolor');
     }
 
-    const commentBefore = folded ? null : commentText(m.annotations, 'textBefore', state.languages);
-    if (commentBefore) {
-      // A diagram in it is of the position before the move
-      parts.push(
-        commentWithDiagramsHtml(
-          commentBefore,
-          (text) =>
-            `<span class="cbcomment${commentColor ? ' cbvarcolor' : ''}"${colorStyle(commentColor)} data-inx-mv="${localMoveIndex}" data-linecnt="${lineDepth}">${figurinesToHtml(escapeHtml(text))}</span>`,
+    const commentSpan = (html: string, attrs: string) =>
+      `<span class="cbcomment${commentColor ? ' cbvarcolor' : ''}"${colorStyle(commentColor)} data-inx-mv="${localMoveIndex}" data-linecnt="${lineDepth}"${attrs}>${html}</span>`;
+
+    // A diagram in a comment before the move is of the position before it
+    const commentsBefore = folded
+      ? ''
+      : commentsHtml(
+          m,
+          'textBefore',
+          globalMoveIndex,
+          state,
+          commentSpan,
+          (text) => figurinesToHtml(escapeHtml(text)),
           () => diagramHtml(m.parent.fen, m.parent.annotations)
-        )
-      );
+        );
+    if (commentsBefore) {
+      parts.push(commentsBefore);
     }
 
     parts.push(
@@ -344,16 +411,17 @@ function traverseGameTree(
       parts.push(markers);
     }
 
-    const commentAfter = commentText(m.annotations, 'textAfter', state.languages);
-    if (commentAfter) {
-      parts.push(
-        commentWithDiagramsHtml(
-          commentAfter,
-          (text) =>
-            `<span class="cbcomment${commentColor ? ' cbvarcolor' : ''}"${colorStyle(commentColor)} data-inx-mv="${localMoveIndex}" data-linecnt="${lineDepth}">${figurinesToHtml(processCommentWithLink(text))}</span>`,
-          () => diagramHtml(m.fen, m.annotations)
-        )
-      );
+    const commentsAfter = commentsHtml(
+      m,
+      'textAfter',
+      globalMoveIndex,
+      state,
+      commentSpan,
+      (text) => figurinesToHtml(processCommentWithLink(text)),
+      () => diagramHtml(m.fen, m.annotations)
+    );
+    if (commentsAfter) {
+      parts.push(commentsAfter);
     }
 
     // Quoted games, after the comments
@@ -423,12 +491,17 @@ function gameComment(game: GameTree, languages: ReadonlySet<string>): string {
  *
  * @param folded the first moves of the variations shown folded, as just their first move; one
  *     the current move is hidden in is shown unfolded
+ * @param editing the comment being edited, shown as an element with data-comment-editor holding
+ *     its text, to be made editable. Every other comment's text has the index of its move (-1 for
+ *     the game) as data-comment-move, its kind as data-comment-type, and its language, or '' for
+ *     none, as data-comment-language
  */
 export function generateNotationHtml(
   game: GameTree,
   languages: readonly string[] = [],
   linkQuotes = false,
-  folded: ReadonlySet<MoveNode> = new Set()
+  folded: ReadonlySet<MoveNode> = new Set(),
+  editing: CommentEdit | null = null
 ): NotationHtmlResult {
   const state: ConversionState = {
     lineIndexByLevel: new Map(),
@@ -439,6 +512,7 @@ export function generateNotationHtml(
     languages: new Set(languages),
     quoteLinks: linkQuotes ? [] : null,
     folded,
+    editing,
   };
   game.movesInOrder().forEach((move, index) => {
     state.moveMap.set(move, index);
@@ -446,16 +520,20 @@ export function generateNotationHtml(
   });
 
   const parts: string[] = [];
-  const comment = gameComment(game, state.languages);
-  if (comment) {
-    parts.push(
-      commentWithDiagramsHtml(
-        comment,
-        (text) =>
-          `<span class="cbcomment" data-inx-mv="0" data-linecnt="1">${figurinesToHtml(processCommentWithLink(text))}</span>`,
-        () => diagramHtml(game.root.fen, game.root.annotations)
-      )
+  // The comments of the game, before the first move
+  for (const type of ['textBefore', 'textAfter'] as const) {
+    const comments = commentsHtml(
+      game.root,
+      type,
+      GAME_ANNOTATION_INDEX,
+      state,
+      (html, attrs) => `<span class="cbcomment" data-inx-mv="0" data-linecnt="1"${attrs}>${html}</span>`,
+      (text) => figurinesToHtml(processCommentWithLink(text)),
+      () => diagramHtml(game.root.fen, game.root.annotations)
     );
+    if (comments) {
+      parts.push(comments);
+    }
   }
 
   const gameMedals = medalsHtml(findAnnotation(game.root.annotations, 'medals')?.medals ?? []);

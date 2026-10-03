@@ -7,12 +7,12 @@ import { GameInfoDialog } from './GameInfoDialog';
 import { PromotionDialog } from './PromotionDialog';
 import { NagBar } from './NagBar';
 import { EvalGraph } from './EvalGraph';
-import { LanguagePills } from './LanguagePills';
+import { LanguageSelector } from './LanguageSelector';
 import { VariationChooser } from './VariationChooser';
 import { ContextMenu } from './ContextMenu';
 import type { ContextMenuItem } from './ContextMenu';
 import './NotationBar.css';
-import { commentLanguages, defaultLanguages } from '../model/languages';
+import { commentLanguages, defaultLanguage } from '../model/languages';
 import { NAG_PALETTE, nagInfo, toggleNag } from '../model/nags';
 import type { NagType } from '../model/nags';
 import { toggleCritical, togglePawnStructure, togglePiecePath } from '../model/specialAnnotations';
@@ -28,13 +28,16 @@ import type { ChessGame } from '../types/chess';
 import { useChessGame } from '../hooks/useChessGame';
 import { useKeyboardNavigation } from '../hooks/useKeyboardNavigation';
 import { useNagKeys } from '../hooks/useNagKeys';
+import { useCommentKeys } from '../hooks/useCommentKeys';
+import { withComment } from '../model/comments';
+import type { CommentType } from '../model/comments';
 import { readGameInfo, writeGameInfo } from '../utils/gameInfo';
 import type { GameInfo } from '../utils/gameInfo';
 import type { GameInfoServices } from '../utils/gameInfo';
 import { GameTree } from '../model/GameTree';
-import type { MoveNode } from '../model/GameTree';
+import type { GameNode, MoveNode } from '../model/GameTree';
 import type { Square } from 'chess.js';
-import type { QuotationLink } from '../utils/notationGenerator';
+import type { CommentEdit, QuotationLink } from '../utils/notationGenerator';
 import './GameView.css';
 
 export interface GameViewProps {
@@ -456,6 +459,49 @@ export const GameView: React.FC<GameViewProps> = ({
     triggerUpdate();
   }, [game, triggerUpdate]);
 
+  // The language whose comments are shown, besides those in no language, and that comments are
+  // written in, or null for all: every comment shown, and comments written in no language. By
+  // default the preferred one of the game's. The choice is kept with the game it was made for, so
+  // another game starts from its own default.
+  const languages = useMemo(() => commentLanguages(game), [game, version]);
+  const [languageChoice, setLanguageChoice] = useState<{ game: typeof game; language: string | null } | null>(null);
+  const language = languageChoice?.game === game ? languageChoice.language : defaultLanguage(languages);
+  const shownLanguages = useMemo(() => (language ? [language] : languages), [language, languages]);
+  const handleLanguageSelect = useCallback(
+    (selected: string | null) => setLanguageChoice({ game, language: selected }),
+    [game]
+  );
+
+  // The comment being edited in place, kept with the game it's of
+  const [commentEdit, setCommentEdit] = useState<{ game: GameTree; edit: CommentEdit } | null>(null);
+  const editingComment = commentEdit?.game === game ? commentEdit.edit : null;
+
+  // A comment in a language, by default the one being written in
+  const handleCommentEdit = useCallback(
+    (node: GameNode, type: CommentType, commentLanguage: string | null = language) =>
+      setCommentEdit({ game, edit: { node, type, language: commentLanguage } }),
+    [game, language]
+  );
+
+  // A comment of the current move, or of the game at the start position
+  const handleCurrentCommentEdit = useCallback(
+    (type: CommentType) => handleCommentEdit(game.currentNode(), type),
+    [game, handleCommentEdit]
+  );
+
+  // The comment edited gets the new text, unless the editing was cancelled
+  const handleCommentEditDone = useCallback(
+    (text: string | null) => {
+      if (editingComment && text !== null) {
+        const { node, type, language } = editingComment;
+        node.annotations = withComment(node.annotations, type, language, text);
+        triggerUpdate();
+      }
+      setCommentEdit(null);
+    },
+    [editingComment, triggerUpdate]
+  );
+
   // The context menu of a move, while it's open: the move goes to the one right-clicked
   const [moveMenu, setMoveMenu] = useState<{ x: number; y: number } | null>(null);
 
@@ -518,6 +564,8 @@ export const GameView: React.FC<GameViewProps> = ({
         },
       },
       'separator',
+      { label: 'Add Comment Before Move', onSelect: () => handleCommentEdit(move, 'textBefore') },
+      { label: 'Add Comment After Move', onSelect: () => handleCommentEdit(move, 'textAfter') },
       {
         label: 'Insert Null Move',
         disabled: !game.canPlayNullMove(),
@@ -548,7 +596,7 @@ export const GameView: React.FC<GameViewProps> = ({
         ],
       },
     ];
-  }, [game, version, moveMenu, triggerUpdate]);
+  }, [game, version, moveMenu, triggerUpdate, handleCommentEdit]);
 
   // The evaluations of the main line, shown as a graph above the bar
   const evaluationBars = useMemo(() => {
@@ -556,25 +604,9 @@ export const GameView: React.FC<GameViewProps> = ({
     return evaluations ? evalBars(game.root, evaluations) : null;
   }, [game, version]);
 
-  // The languages the comments are in, and those shown: by default the preferred one. The choice
-  // is kept with the game it was made for, so another game starts from its own default.
-  const languages = useMemo(() => commentLanguages(game), [game, version]);
-  const [languageChoice, setLanguageChoice] = useState<{ game: typeof game; shown: string[] } | null>(null);
-  const shownLanguages = useMemo(
-    () => (languageChoice?.game === game ? languageChoice.shown : defaultLanguages(languages)),
-    [languageChoice, game, languages]
-  );
-  const handleLanguageToggle = useCallback((language: string) => {
-    setLanguageChoice({
-      game,
-      shown: shownLanguages.includes(language)
-        ? shownLanguages.filter((l) => l !== language)
-        : [...shownLanguages, language],
-    });
-  }, [game, shownLanguages]);
-
   // !, ? and = toggle those symbols on the current move, when editing
   useNagKeys(isEditMode && !!selectedGame && !editingGameInfo, handleNagToggle);
+  useCommentKeys(isEditMode && !!selectedGame && !editingGameInfo && !editingComment, handleCurrentCommentEdit);
 
   // Keyboard navigation
   useKeyboardNavigation({
@@ -733,6 +765,9 @@ export const GameView: React.FC<GameViewProps> = ({
               languages={shownLanguages}
               onMoveClick={handleMoveClick}
               onMoveContextMenu={isEditMode ? handleMoveContextMenu : undefined}
+              editing={editingComment}
+              onCommentDoubleClick={isEditMode ? handleCommentEdit : undefined}
+              onCommentEditDone={handleCommentEditDone}
               onNotationReady={handleNotationReady}
               onQuotationClick={onQuotationClick}
             />
@@ -754,9 +789,12 @@ export const GameView: React.FC<GameViewProps> = ({
                 {isEditMode && (
                   <NagBar annotations={game.currentMove()?.annotations ?? null} onToggle={handleNagToggle} />
                 )}
-                {languages.length > 0 && (
-                  <LanguagePills languages={languages} shown={shownLanguages} onToggle={handleLanguageToggle} />
-                )}
+                <LanguageSelector
+                  language={language}
+                  gameLanguages={languages}
+                  onSelect={handleLanguageSelect}
+                  disabled={!!editingComment}
+                />
               </div>
             )}
           </>

@@ -19,6 +19,9 @@ const LANGUAGES: readonly { code: string; name: string }[] = [
   { code: 'GRE', name: 'Greek' },
 ];
 
+/** The languages comments can be written in, in the order they're preferred. */
+export const COMMENT_LANGUAGES: readonly string[] = LANGUAGES.map((l) => l.code);
+
 /** The name of a language, or its code if it isn't known. */
 export function languageName(code: string): string {
   return LANGUAGES.find((l) => l.code === code)?.name ?? code;
@@ -42,7 +45,7 @@ export function commentLanguages(game: GameTree): string[] {
   return [...codes].sort((a, b) => rank(a) - rank(b) || a.localeCompare(b));
 }
 
-/** The languages shown when a game is opened: the preferred one of those it has, if any. */
-export function defaultLanguages(languages: readonly string[]): string[] {
-  return languages.length > 0 ? [languages[0]] : [];
+/** The language shown when a game is opened: the preferred one of those it has, or none. */
+export function defaultLanguage(languages: readonly string[]): string | null {
+  return languages[0] ?? null;
 }

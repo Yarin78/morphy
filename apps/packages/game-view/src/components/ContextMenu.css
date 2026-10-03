@@ -47,6 +47,10 @@
   color: #fff;
 }
 
+.context-menu-item.faded:not(:hover) {
+  color: #b5a78f;
+}
+
 .context-menu-item.disabled {
   color: #b5a78f;
 }

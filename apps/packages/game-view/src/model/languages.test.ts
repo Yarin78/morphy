@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { GameTree } from './GameTree';
-import { commentLanguages, defaultLanguages, languageName } from './languages';
+import { commentLanguages, defaultLanguage, languageName } from './languages';
 
 describe('comment languages', () => {
   const game = GameTree.fromMoves({
@@ -19,9 +19,9 @@ describe('comment languages', () => {
   });
 
   it('show only the preferred one by default', () => {
-    expect(defaultLanguages(commentLanguages(game))).toEqual(['ENG']);
-    expect(defaultLanguages(['GER', 'FRA'])).toEqual(['GER']);
-    expect(defaultLanguages([])).toEqual([]);
+    expect(defaultLanguage(commentLanguages(game))).toBe('ENG');
+    expect(defaultLanguage(['GER', 'FRA'])).toBe('GER');
+    expect(defaultLanguage([])).toBeNull();
   });
 
   it('have names, or else their codes', () => {

@@ -8,6 +8,8 @@ export type ContextMenuItem =
       /** Shown before the label, like the symbol of a NAG. */
       symbol?: string;
       disabled?: boolean;
+      /** Shown faded, as less relevant, though it can still be chosen. */
+      faded?: boolean;
       onSelect?: () => void;
       /** Entries opening to the right while the entry is hovered over. */
       submenu?: readonly ContextMenuItem[];
@@ -20,6 +22,8 @@ interface ContextMenuProps {
   y: number;
   items: readonly ContextMenuItem[];
   onClose: () => void;
+  /** Whether it opens upwards from where it's given, as from a button at the bottom. */
+  above?: boolean;
 }
 
 /** The entries of a menu, or of one of its submenus. */
@@ -51,7 +55,7 @@ const MenuList: React.FC<{ items: readonly ContextMenuItem[]; onClose: () => voi
         return (
           <div
             key={i}
-            className={`context-menu-item${item.disabled ? ' disabled' : ''}${open === i ? ' open' : ''}`}
+            className={`context-menu-item${item.disabled ? ' disabled' : ''}${item.faded ? ' faded' : ''}${open === i ? ' open' : ''}`}
             role="menuitem"
             aria-disabled={item.disabled || undefined}
             aria-haspopup={hasSubmenu || undefined}
@@ -79,7 +83,7 @@ const MenuList: React.FC<{ items: readonly ContextMenuItem[]; onClose: () => voi
  * A context menu where the mouse was clicked, with submenus opening to the right. A click outside
  * it or Escape closes it.
  */
-export const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, items, onClose }) => {
+export const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, items, onClose, above = false }) => {
   const menuRef = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState({ x, y });
 
@@ -89,9 +93,9 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, items, onClose }
     if (!rect) return;
     setPosition({
       x: Math.max(0, Math.min(x, window.innerWidth - rect.width)),
-      y: Math.max(0, Math.min(y, window.innerHeight - rect.height)),
+      y: Math.max(0, Math.min(above ? y - rect.height : y, window.innerHeight - rect.height)),
     });
-  }, [x, y]);
+  }, [x, y, above]);
 
   useEffect(() => {
     const handleMouseDown = (e: MouseEvent) => {

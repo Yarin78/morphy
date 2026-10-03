@@ -1,8 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { GameTree } from '../model/GameTree';
 import type { MoveNode } from '../model/GameTree';
 import { generateNotationHtml } from '../utils/notationGenerator';
-import type { NotationHtmlResult, QuotationLink } from '../utils/notationGenerator';
+import type { CommentEdit, NotationHtmlResult, QuotationLink } from '../utils/notationGenerator';
+import type { GameNode } from '../model/GameTree';
+import type { CommentType } from '../model/comments';
 import './GameNotation.css';
 
 interface GameNotationProps {
@@ -14,6 +16,12 @@ interface GameNotationProps {
   /** When given, right-clicking a move calls it, with where the mouse is in the window. */
   onMoveContextMenu?: (move: MoveNode, x: number, y: number) => void;
   onNotationReady?: (reverseMoveMap: Map<number, MoveNode>) => void;
+  /** The comment being edited in place, if one is. */
+  editing?: CommentEdit | null;
+  /** When given, double-clicking a comment calls it, to edit the comment. */
+  onCommentDoubleClick?: (node: GameNode, type: CommentType, language: string | null) => void;
+  /** The comment edited is done with: its new text, or null to leave it as it was. */
+  onCommentEditDone?: (text: string | null) => void;
   /** When given, a quoted game that refers to another game can be clicked to open it. */
   onQuotationClick?: (link: QuotationLink) => void;
 }
@@ -34,6 +42,9 @@ export const GameNotation: React.FC<GameNotationProps> = ({
   languages,
   onMoveClick,
   onMoveContextMenu,
+  editing = null,
+  onCommentDoubleClick,
+  onCommentEditDone,
   onNotationReady,
   onQuotationClick,
 }) => {
@@ -53,7 +64,7 @@ export const GameNotation: React.FC<GameNotationProps> = ({
   // Now we also pass the current move so highlighting is done during HTML generation.
   useEffect(() => {
     try {
-      const result = generateNotationHtml(game, languages, !!onQuotationClick, folded);
+      const result = generateNotationHtml(game, languages, !!onQuotationClick, folded, editing);
       setNotationResult(result);
       // Notify parent component that notation is ready
       if (onNotationReady) {
@@ -66,7 +77,45 @@ export const GameNotation: React.FC<GameNotationProps> = ({
         onNotationReady(new Map());
       }
     }
-  }, [game, version, languages, onNotationReady, onQuotationClick, folded]);
+  }, [game, version, languages, onNotationReady, onQuotationClick, folded, editing]);
+
+  // The comment being edited: its text made editable, with the caret at its end. Enter keeps the
+  // changes, as does leaving it, and Escape drops them.
+  useLayoutEffect(() => {
+    const editor = containerRef.current?.querySelector<HTMLElement>('[data-comment-editor]');
+    if (!editor || !onCommentEditDone) return;
+    editor.contentEditable = 'plaintext-only';
+    editor.focus();
+    const selection = window.getSelection();
+    selection?.selectAllChildren(editor);
+    selection?.collapseToEnd();
+
+    let done = false;
+    const finish = (text: string | null) => {
+      if (done) return;
+      done = true;
+      onCommentEditDone(text);
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        finish(editor.innerText);
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        finish(null);
+      }
+      // The keys are the editor's, not the notation's
+      e.stopPropagation();
+    };
+    const handleBlur = () => finish(editor.innerText);
+    editor.addEventListener('keydown', handleKeyDown);
+    editor.addEventListener('blur', handleBlur);
+    return () => {
+      done = true;
+      editor.removeEventListener('keydown', handleKeyDown);
+      editor.removeEventListener('blur', handleBlur);
+    };
+  }, [notationResult, onCommentEditDone]);
 
   // Scroll highlighted move into view if necessary when position changes
   useEffect(() => {
@@ -186,15 +235,34 @@ export const GameNotation: React.FC<GameNotationProps> = ({
       onMoveContextMenu(move, e.clientX, e.clientY);
     };
 
+    // Double-clicking a comment, to edit it
+    const handleDoubleClick = (e: MouseEvent) => {
+      if (!onCommentDoubleClick) return;
+      const commentElement: HTMLElement | null = (e.target as HTMLElement).closest('[data-comment-move]');
+      if (!commentElement) return;
+      const index = Number(commentElement.getAttribute('data-comment-move'));
+      const node = index < 0 ? game.root : notationResult.reverseMoveMap.get(index);
+      if (!node) return;
+      e.preventDefault();
+      window.getSelection()?.removeAllRanges();
+      onCommentDoubleClick(
+        node,
+        commentElement.getAttribute('data-comment-type') as CommentType,
+        commentElement.getAttribute('data-comment-language') || null
+      );
+    };
+
     const container = containerRef.current;
     container.addEventListener('click', handleClick);
     container.addEventListener('contextmenu', handleContextMenu);
+    container.addEventListener('dblclick', handleDoubleClick);
 
     return () => {
       container.removeEventListener('click', handleClick);
       container.removeEventListener('contextmenu', handleContextMenu);
+      container.removeEventListener('dblclick', handleDoubleClick);
     };
-  }, [notationResult, onMoveClick, onMoveContextMenu, onQuotationClick, folded, game]);
+  }, [notationResult, onMoveClick, onMoveContextMenu, onCommentDoubleClick, onQuotationClick, folded, game]);
 
   if (!notationResult) {
     return (
