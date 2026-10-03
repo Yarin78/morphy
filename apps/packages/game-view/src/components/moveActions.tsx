@@ -11,10 +11,10 @@ export interface MoveAction {
   /** Whether it can't be done from the move. */
   disabled: boolean;
   run: () => void;
-  /** The key that does it, as shown. */
-  shortcut: string;
-  /** Whether a key pressed is the one that does it. */
-  isKey: (e: KeyboardEvent) => boolean;
+  /** The key that does it, as shown, if one does. */
+  shortcut?: string;
+  /** Whether a key pressed is the one that does it, if useMoveActionKeys is to handle it. */
+  isKey?: (e: KeyboardEvent) => boolean;
 }
 
 export const MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);

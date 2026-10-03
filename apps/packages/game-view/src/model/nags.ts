@@ -158,3 +158,25 @@ export function typeMoveComment(
     ? { annotations: withoutCurrent, typed: null }
     : { annotations: toggleNag(annotations, nag), typed: key };
 }
+
+/** The evaluations of the position, from Black winning to White winning. */
+const EVALUATION_SCALE: readonly number[] = [19, 17, 15, 10, 14, 16, 18];
+
+// The NAG of an equal position, of which ChessBase has three
+const EQUAL = 10;
+const EQUALS = new Set([10, 11, 12]);
+
+/**
+ * The annotations of a move with the evaluation of the position a step better for White, or for
+ * Black: '−+ ∓ ⩱ = ⩲ ± +−', stopping at the ends. An evaluation off the scale, like unclear, or
+ * none counts as equal.
+ *
+ * @param step 1 for a step better for White, -1 for Black
+ */
+export function stepEvaluation(annotations: readonly Annotation[], step: 1 | -1): Annotation[] {
+  const current = nagsOf(annotations).find((n) => NAG_INFO.get(n)?.type === 'lineEvaluation');
+  const at = current === undefined || EQUALS.has(current) ? -1 : EVALUATION_SCALE.indexOf(current);
+  const from = at < 0 ? EVALUATION_SCALE.indexOf(EQUAL) : at;
+  const nag = EVALUATION_SCALE[Math.min(EVALUATION_SCALE.length - 1, Math.max(0, from + step))];
+  return current === nag ? [...annotations] : toggleNag(annotations, nag);
+}

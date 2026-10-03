@@ -16,9 +16,10 @@ import { VariationColorDialog } from './VariationColorDialog';
 import { ContextMenu } from './ContextMenu';
 import type { ContextMenuItem } from './ContextMenu';
 import { moveActions } from './moveActions';
+import type { MoveAction } from './moveActions';
 import './NotationBar.css';
 import { commentLanguages, defaultLanguage } from '../model/languages';
-import { NAG_PALETTE, nagInfo, toggleNag, typeMoveComment } from '../model/nags';
+import { NAG_PALETTE, nagInfo, stepEvaluation, toggleNag, typeMoveComment } from '../model/nags';
 import type { NagType } from '../model/nags';
 import { toggleCritical, togglePawnStructure, togglePiecePath } from '../model/specialAnnotations';
 import type { CriticalPhase } from '../model/specialAnnotations';
@@ -505,6 +506,27 @@ export const GameView: React.FC<GameViewProps> = ({
     });
   }, [game, edit]);
 
+  // Takes every annotation of the current move away
+  const handleClearAnnotations = useCallback(() => {
+    const move = game.currentMove();
+    if (!move) return;
+    edit(() => {
+      move.annotations = [];
+    });
+  }, [game, edit]);
+
+  // '+' and '-' step the evaluation of the position after the current move
+  const handleEvaluationStep = useCallback(
+    (step: 1 | -1) => {
+      const move = game.currentMove();
+      if (!move) return;
+      edit(() => {
+        move.annotations = stepEvaluation(move.annotations, step);
+      });
+    },
+    [game, edit]
+  );
+
   // '!' and '?' typed on the current move, and what was typed on it just before, to type on
   const typingRef = useRef<{ move: MoveNode; typed: string } | null>(null);
   const handleMoveCommentType = useCallback(
@@ -528,6 +550,7 @@ export const GameView: React.FC<GameViewProps> = ({
 
   // Plays a null move from the position shown
   const handleNullMove = useCallback(() => edit(() => game.playNullMove()), [game, edit]);
+
 
   // The language whose comments are shown, besides those in no language, and that comments are
   // written in, or null for all: every comment shown, and comments written in no language. By
@@ -763,12 +786,51 @@ export const GameView: React.FC<GameViewProps> = ({
     return evaluations ? evalBars(game.root, evaluations) : null;
   }, [game, version]);
 
+  // The things that can be done from the current move in the bar below the notation: to the
+  // moves, then to the annotations
+  const barActionGroups = useMemo((): MoveAction[][] => {
+    const move = game.currentMove();
+    return [
+      moveActions(game, move, edit),
+      [
+        {
+          label: 'Add Comment Before Move',
+          icon: '{',
+          shortcut: shortcutOf(COMMENT_KEYS, 'textBefore'),
+          disabled: false,
+          run: () => handleCurrentCommentEdit('textBefore'),
+        },
+        {
+          label: 'Add Comment After Move',
+          icon: '}',
+          shortcut: shortcutOf(COMMENT_KEYS, 'textAfter'),
+          disabled: false,
+          run: () => handleCurrentCommentEdit('textAfter'),
+        },
+        {
+          label: 'Insert Null Move',
+          icon: <TbCircleOff />,
+          shortcut: NULL_MOVE_KEY,
+          disabled: !game.canPlayNullMove(),
+          run: handleNullMove,
+        },
+        {
+          label: 'Clear Annotations',
+          icon: <TbEraser />,
+          disabled: !move || move.annotations.length === 0,
+          run: handleClearAnnotations,
+        },
+      ],
+    ];
+  }, [game, version, edit, handleCurrentCommentEdit, handleNullMove, handleClearAnnotations]);
+
   // The keys are the dialog's while one is open
   const dialogOpen = !!editingGameInfo || !!annotationDialog;
 
   // !, ? and = toggle those symbols on the current move, when editing
   useNagKeys(isEditMode && !!selectedGame && !dialogOpen, {
     onToggle: handleNagToggle,
+    onStep: handleEvaluationStep,
     onType: handleMoveCommentType,
     onInterrupt: handleTypingInterrupt,
   });
@@ -977,7 +1039,7 @@ export const GameView: React.FC<GameViewProps> = ({
                   <NagBar
                     annotations={game.currentMove()?.annotations ?? null}
                     onToggle={handleNagToggle}
-                    actions={moveActions(game, game.currentMove(), edit)}
+                    actionGroups={barActionGroups}
                   />
                 )}
                 <LanguageSelector

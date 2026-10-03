@@ -8,6 +8,12 @@ export const NAG_KEYS: Record<string, number> = {
   '=': 10, // equal
 };
 
+/** The keys that make the evaluation of the position a step better for White, or for Black. */
+export const EVALUATION_STEP_KEYS: Record<string, 1 | -1> = {
+  '+': 1,
+  '-': -1,
+};
+
 // The keys that are pressed to type others, which don't break a sequence of keys typed
 const MODIFIER_KEYS = new Set(['Shift', 'Alt', 'AltGraph', 'Control', 'Meta', 'CapsLock']);
 
@@ -25,6 +31,8 @@ function inField(): boolean {
 interface NagKeyHandlers {
   /** '=' toggles its symbol. */
   onToggle: (nag: number) => void;
+  /** '+' or '-' makes the evaluation of the position a step better for White, or for Black. */
+  onStep: (step: 1 | -1) => void;
   /** '!' or '?' is typed, on its own or after the other keys typed just before; see typeMoveComment. */
   onType: (key: '!' | '?') => void;
   /** Anything else was done, a key pressed or the mouse clicked, which ends what was being typed. */
@@ -33,17 +41,19 @@ interface NagKeyHandlers {
 
 /**
  * Lets the keyboard give the current move the most common symbols: '!' and '?', which can be typed
- * two in a row, like '!?', and '='. Keys typed into a field, and keys pressed with Cmd or Ctrl, are
+ * two in a row, like '!?'; '+' and '-', stepping the evaluation of the position; and '=', which
+ * makes it equal, or takes the evaluation away when it is. Keys typed into a field, and keys pressed with Cmd or Ctrl, are
  * left alone; see isTyped.
  */
-export function useNagKeys(enabled: boolean, { onToggle, onType, onInterrupt }: NagKeyHandlers): void {
+export function useNagKeys(enabled: boolean, { onToggle, onStep, onType, onInterrupt }: NagKeyHandlers): void {
   useEffect(() => {
     if (!enabled) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (MODIFIER_KEYS.has(e.key)) return;
       const nag = NAG_KEYS[e.key];
-      if (nag === undefined || !isTyped(e, e.key) || inField()) {
+      const step = EVALUATION_STEP_KEYS[e.key];
+      if ((nag === undefined && step === undefined) || !isTyped(e, e.key) || inField()) {
         onInterrupt();
         return;
       }
@@ -51,7 +61,8 @@ export function useNagKeys(enabled: boolean, { onToggle, onType, onInterrupt }: 
       if (e.key === '!' || e.key === '?') onType(e.key);
       else {
         onInterrupt();
-        onToggle(nag);
+        if (step !== undefined) onStep(step);
+        else onToggle(nag);
       }
     };
 
@@ -61,5 +72,5 @@ export function useNagKeys(enabled: boolean, { onToggle, onType, onInterrupt }: 
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('mousedown', onInterrupt);
     };
-  }, [enabled, onToggle, onType, onInterrupt]);
+  }, [enabled, onToggle, onStep, onType, onInterrupt]);
 }

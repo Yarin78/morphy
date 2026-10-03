@@ -22,7 +22,7 @@ export function useMoveActionKeys(enabled: boolean, actions: () => readonly Move
       ) {
         return;
       }
-      const action = actions().find((a) => a.isKey(e));
+      const action = actions().find((a) => a.isKey?.(e));
       if (!action) return;
       e.preventDefault();
       e.stopImmediatePropagation();
