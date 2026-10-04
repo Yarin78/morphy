@@ -22,6 +22,8 @@ export interface GameDocumentOptions {
    * shown as the message, and a failed load as the error state.
    */
   onError?: (what: string, err: unknown) => void;
+  /** Called when the game is saved, with a word on it; without it, that's shown as the message */
+  onSaved?: (message: string) => void;
 }
 
 const BLANK_GAME: GameDto = {
@@ -82,7 +84,7 @@ export interface GameDocument {
 export function useGameDocument(
   databaseId: string | null,
   gameId: number | null,
-  { onCreated, onError }: GameDocumentOptions = {}
+  { onCreated, onError, onSaved }: GameDocumentOptions = {}
 ): GameDocument {
   const paramsKey = `${databaseId ?? ''}:${gameId ?? ''}`;
 
@@ -188,7 +190,8 @@ export function useGameDocument(
     onCreated?.(targetId, createdId);
     setCreatedShown({ paramsKey: newParamsKey, shown: shownGame });
     setFetchResult({ paramsKey: newParamsKey, game: created });
-    setMessageFor({ paramsKey: newParamsKey, message });
+    if (onSaved) onSaved(message);
+    else setMessageFor({ paramsKey: newParamsKey, message });
   }
 
   // Runs a save, telling of its failure as what failed
@@ -216,7 +219,8 @@ export function useGameDocument(
         // Keep the same paramsKey/game (see the comment on shownGame above) - only the
         // metadata changes.
         setFetchResult({ paramsKey, game: updated });
-        setMessageFor({ paramsKey, message: 'Saved.' });
+        if (onSaved) onSaved('Saved.');
+        else setMessageFor({ paramsKey, message: 'Saved.' });
       } else {
         await createIn(targetId, gameToGamePatch(tree, BLANK_GAME), 'Created.');
       }

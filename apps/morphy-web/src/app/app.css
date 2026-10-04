@@ -351,10 +351,6 @@ html {
   min-height: 0;
 }
 
-.board-message {
-  color: #2e7d32;
-}
-
 .board-error {
   color: #c0392b;
 }
@@ -934,4 +930,53 @@ html {
 .database-picker li.selected .database-picker-current {
   background: rgba(255, 255, 255, 0.2);
   color: #fff;
+}
+
+/* Notices: a moment in the bottom right corner, then gone */
+
+.toasts {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 15000;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  pointer-events: none;
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 14px;
+  border-radius: 18px;
+  background: rgba(44, 44, 44, 0.92);
+  color: #f5f0e8;
+  font-size: 13px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+  animation-name: toast;
+  animation-timing-function: ease;
+  animation-fill-mode: forwards;
+}
+
+.toast-icon {
+  font-size: 16px;
+  color: #9fd99f;
+}
+
+@keyframes toast {
+  0% {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  8%,
+  80% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  100% {
+    opacity: 0;
+  }
 }

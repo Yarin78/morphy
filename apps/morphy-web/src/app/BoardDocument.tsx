@@ -9,6 +9,7 @@ import { BoardViewContext } from './boardStore';
 import type { BoardDocument as BoardDoc } from './documents';
 import { useDocuments } from './documentsStore';
 import { showError } from './errorStore';
+import { showToast } from './toastStore';
 import { SaveToDatabaseDialog } from './SaveToDatabaseDialog';
 
 /**
@@ -29,11 +30,12 @@ export function BoardDocument({
 }) {
   const { dispatch } = useDocuments();
   const databaseId = doc.databaseId ?? null;
-  const { databases, gameState, selectedGame, gameInfoServices, onGameReady, canSave, saving, save, saveAs, message, showMessage } =
+  const { databases, gameState, selectedGame, gameInfoServices, onGameReady, canSave, saving, save, saveAs } =
     useGameDocument(databaseId, doc.gameId ?? null, {
       onCreated: (createdIn, gameId) =>
         dispatch({ type: 'updateBoard', id: doc.id, changes: { databaseId: createdIn, gameId } }),
       onError: showError,
+      onSaved: showToast,
     });
 
   // A game in no database is saved to one picked in a dialog
@@ -65,7 +67,7 @@ export function BoardDocument({
       try {
         const target = await findGameByPlayers(databaseId, white, black);
         if (target == null) {
-          showMessage(`No game ${white ?? '?'} – ${black ?? '?'} in this database`);
+          showToast(`No game ${white ?? '?'} – ${black ?? '?'} in this database`);
           return;
         }
         dispatch({
@@ -78,7 +80,7 @@ export function BoardDocument({
         showError('Opening the quoted game failed', err);
       }
     },
-    [databaseId, dispatch, showMessage]
+    [databaseId, dispatch]
   );
 
   // Only the board shown takes the keys
@@ -115,7 +117,6 @@ export function BoardDocument({
           canSave={canSave}
           saving={saving}
           status={status}
-          message={message}
           error={gameState.kind === 'error' ? gameState.message : null}
         />
         <div className="board-grid">{children}</div>

@@ -46,7 +46,6 @@ export interface BoardCommandsProps {
   saving: boolean;
   /** Where the game is from, shown at the right */
   status: string;
-  message: string | null;
   error: string | null;
 }
 
@@ -99,7 +98,6 @@ export function BoardCommands({
   canSave,
   saving,
   status,
-  message,
   error,
 }: BoardCommandsProps) {
   const { dispatch } = useDocuments();
@@ -207,19 +205,19 @@ export function BoardCommands({
       <div className="board-menubar">
         <MenuBar menus={menus} enabled={active && !settingsOpen} />
         <span className="board-status">{status}</span>
-        {message && <span className="board-message">{message}</span>}
         {error && <span className="board-error">{error}</span>}
       </div>
       <div className="board-toolbar" role="toolbar">
         <ToolButton
           icon={<TbDeviceFloppy />}
-          label={saving ? 'Saving…' : 'Save'}
+          // The label stays, so the buttons don't move; saving shows as the button disabled
+          label="Save"
           title={
             readOnlyDatabase
               ? `${readOnlyDatabase} is read-only, so the game can't be saved to it`
               : `${savePicksDatabase ? 'Save the game to a database' : 'Save the game'} (${shortcutLabel('Cmd+S')})`
           }
-          disabled={!canSave || !!readOnlyDatabase}
+          disabled={!canSave || saving || !!readOnlyDatabase}
           onClick={save}
         />
         <span className="toolbar-sep" />

@@ -4,6 +4,7 @@ import { DocumentGrid } from './DocumentGrid';
 import { BoardSettingsProvider } from './BoardSettingsProvider';
 import { DocumentsProvider } from './DocumentsProvider';
 import { ErrorDialog } from './ErrorDialog';
+import { Toasts } from './Toasts';
 import { useDocuments } from './documentsStore';
 import { Navigator, type NavigatorState } from './Navigator';
 import './app.css';
@@ -66,6 +67,7 @@ export default function App() {
     <DocumentsProvider>
       <BoardSettingsProvider>
         <Workspace />
+        <Toasts />
         <ErrorDialog />
       </BoardSettingsProvider>
     </DocumentsProvider>
