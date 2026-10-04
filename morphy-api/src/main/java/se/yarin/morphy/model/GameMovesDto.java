@@ -1,5 +1,7 @@
 package se.yarin.morphy.model;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.List;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -18,7 +20,16 @@ public record GameMovesDto(
     @Nullable String pgn, @Nullable String fen, @NotNull List<AnnotationDto> annotations) {
 
   public GameMovesDto {
-    annotations = annotations == null ? List.of() : List.copyOf(annotations);
+    annotations = List.copyOf(annotations);
+  }
+
+  /** Read from JSON, where moves without annotations may leave them out. */
+  @JsonCreator
+  public static GameMovesDto fromJson(
+      @JsonProperty("pgn") @Nullable String pgn,
+      @JsonProperty("fen") @Nullable String fen,
+      @JsonProperty("annotations") @Nullable List<AnnotationDto> annotations) {
+    return new GameMovesDto(pgn, fen, annotations == null ? List.of() : annotations);
   }
 
   /** Moves without annotations. */

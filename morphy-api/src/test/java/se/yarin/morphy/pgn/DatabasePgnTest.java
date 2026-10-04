@@ -32,6 +32,7 @@ import se.yarin.morphy.api.query.ResultPage;
 import se.yarin.morphy.api.query.Sort;
 import se.yarin.morphy.model.AnnotationDto;
 import se.yarin.morphy.model.GameDto;
+import se.yarin.morphy.model.PlayerDto;
 
 public class DatabasePgnTest {
   @Rule public TemporaryFolder tmp = new TemporaryFolder();
@@ -549,8 +550,9 @@ public class DatabasePgnTest {
       assertThrows(IllegalArgumentException.class, () -> db.replaceGame(0, game));
       GameDto text = variant(game, "text", null, GameResult.NOT_FINISHED, null);
       assertThrows(IllegalArgumentException.class, () -> db.addGame(text));
+      PlayerDto player = new PlayerDto(1L, "Carlsen", "Magnus", null, null, null);
       assertThrows(
-          UnsupportedOperationException.class, () -> db.updateEntity(EntityKind.PLAYER, 1, null));
+          UnsupportedOperationException.class, () -> db.updateEntity(EntityKind.PLAYER, 1, player));
       assertEquals(1, db.gameCount());
     }
   }
