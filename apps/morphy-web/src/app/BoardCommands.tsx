@@ -12,6 +12,7 @@ import {
   TbFileExport,
   TbInfoCircle,
   TbNotes,
+  TbRestore,
   TbSwitchVertical,
 } from 'react-icons/tb';
 import { BoardSettingsDialog } from './BoardSettingsDialog';
@@ -47,6 +48,8 @@ export interface BoardCommandsProps {
   saving: boolean;
   /** Whether the game has changes not yet saved */
   unsaved: boolean;
+  /** Throws the unsaved changes away */
+  revertToSaved: () => void;
   /** Where the game is from, shown at the right */
   status: string;
   error: string | null;
@@ -101,6 +104,7 @@ export function BoardCommands({
   canSave,
   saving,
   unsaved,
+  revertToSaved,
   status,
   error,
 }: BoardCommandsProps) {
@@ -133,6 +137,8 @@ export function BoardCommands({
         },
         { label: 'Save As…', shortcut: 'Shift+Cmd+S', disabled: !canSave || !hasGame, action: saveAs },
         { label: 'Export PGN…', icon: <TbFileExport />, disabled: true },
+        'separator',
+        { label: 'Revert to Saved', icon: <TbRestore />, disabled: !unsaved, action: revertToSaved },
         'separator',
         { label: 'Edit Game Info…', icon: <TbInfoCircle />, disabled: !hasGame, action: view.openGameInfo },
         'separator',

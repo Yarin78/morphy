@@ -3,6 +3,7 @@ import 'dockview-react/dist/styles/dockview.css';
 import { DocumentGrid } from './DocumentGrid';
 import { BoardSettingsProvider } from './BoardSettingsProvider';
 import { DocumentsProvider } from './DocumentsProvider';
+import { ChoiceDialog } from './ChoiceDialog';
 import { ErrorDialog } from './ErrorDialog';
 import { Toasts } from './Toasts';
 import { UnsavedChangesDialog } from './UnsavedChangesDialog';
@@ -80,6 +81,7 @@ export default function App() {
         <Workspace />
         <Toasts />
         <UnsavedChangesDialog />
+        <ChoiceDialog />
         <ErrorDialog />
       </BoardSettingsProvider>
     </DocumentsProvider>

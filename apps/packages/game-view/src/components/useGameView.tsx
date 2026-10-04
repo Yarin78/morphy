@@ -64,6 +64,11 @@ export interface GameViewOptions {
    */
   onQuotationClick?: (link: QuotationLink) => void;
   /**
+   * Called with the game when one is loaded, before it's shown: the caller may change it, as when
+   * putting back changes that weren't saved.
+   */
+  onGameLoaded?: (game: GameTree) => void;
+  /**
    * Whether the keyboard moves through and edits this game; true by default. An app showing
    * several games at once turns it off for all but the active one, as the keys are the page's.
    */
@@ -107,6 +112,7 @@ export function useGameView({
   onGameReady,
   gameInfoServices,
   onQuotationClick,
+  onGameLoaded,
   keysEnabled = true,
 }: GameViewOptions) {
   const {
@@ -135,11 +141,19 @@ export function useGameView({
   // The game info being edited in the Edit Game Info dialog, or null when it isn't open
   const [editingGameInfo, setEditingGameInfo] = useState<GameInfo | null>(null);
 
+  // The latest onGameLoaded, which isn't a reason to load the game again
+  const onGameLoadedRef = useRef(onGameLoaded);
+  useEffect(() => {
+    onGameLoadedRef.current = onGameLoaded;
+  });
+
   // Load the game when one is selected and set edit mode
   useEffect(() => {
     if (selectedGame) {
-      const success = loadGame(selectedGame.moves, selectedGame.tags, initialMoveToShow);
-      if (!success) {
+      const loaded = loadGame(selectedGame.moves, selectedGame.tags, initialMoveToShow);
+      if (loaded) {
+        onGameLoadedRef.current?.(loaded);
+      } else {
         console.error('Failed to load game:', selectedGame.header.id);
       }
       // A game is editable by default; readOnly opens it in view mode instead.
@@ -757,6 +771,8 @@ export function useGameView({
     selectedGame,
     game,
     version,
+    /** Shows the game again after it was changed from outside, as by GameTree.restore */
+    refresh: triggerUpdate,
     gameInfoServices,
     onQuotationClick,
     // The board

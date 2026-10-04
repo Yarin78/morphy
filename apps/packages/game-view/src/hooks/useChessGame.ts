@@ -18,7 +18,7 @@ export interface UseChessGameReturn {
     moves: GameMoves | undefined,
     tags: [string, string][],
     initialMoveSelector?: (game: GameTree) => MoveNode | null
-  ) => boolean;
+  ) => GameTree | null;
 }
 
 export const useChessGame = (): UseChessGameReturn => {
@@ -51,16 +51,16 @@ export const useChessGame = (): UseChessGameReturn => {
       moves: GameMoves | undefined,
       tags: [string, string][],
       initialMoveSelector?: (game: GameTree) => MoveNode | null
-    ): boolean => {
+    ): GameTree | null => {
       try {
         const loaded = GameTree.fromMoves(moves, tags);
         loaded.seek(initialMoveSelector?.(loaded) ?? null);
         setGame(loaded);
         triggerUpdate();
-        return true;
+        return loaded;
       } catch (error) {
         console.error('Error loading game:', error);
-        return false;
+        return null;
       }
     },
     [triggerUpdate]

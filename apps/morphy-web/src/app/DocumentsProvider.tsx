@@ -2,6 +2,7 @@ import { type ReactNode, useCallback, useEffect, useMemo, useReducer, useRef, us
 import type { SerializedDockview } from 'dockview-react';
 import { documentsReducer, type DocumentsState, INITIAL_STATE, isDocumentsState } from './documents';
 import { DocumentsContext, type DocumentsStore } from './documentsStore';
+import { deleteDraftsExcept } from './drafts';
 
 // The open documents, the active one and each one's grid layout are kept in localStorage, so
 // a reload brings them back
@@ -24,7 +25,12 @@ function loadSaved(): Saved | null {
 }
 
 export function DocumentsProvider({ children }: { children: ReactNode }) {
-  const [saved] = useState(loadSaved);
+  const [saved] = useState(() => {
+    const loaded = loadSaved();
+    // The drafts of boards no longer open, as when the documents couldn't be restored
+    deleteDraftsExcept((loaded?.state ?? INITIAL_STATE).documents.map((d) => d.id));
+    return loaded;
+  });
   const [state, dispatch] = useReducer(documentsReducer, saved?.state ?? INITIAL_STATE);
   const layouts = useRef(new Map(Object.entries(saved?.layouts ?? {})));
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);

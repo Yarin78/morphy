@@ -1,5 +1,6 @@
 import { documentTitle, type DocumentsAction, type MorphyDocument } from './documents';
 import { askAboutUnsavedChanges } from './unsavedQuestion';
+import { deleteDraft } from './drafts';
 import { getUnsaved, saverOf } from './unsavedStore';
 
 /**
@@ -16,5 +17,7 @@ export async function closeDocuments(docs: MorphyDocument[], dispatch: (action: 
       if (choice !== 'discard' && !(await saver?.save(choice))) return;
     }
     dispatch({ type: 'close', id: doc.id });
+    // Its unsaved changes are let go, or were just saved
+    deleteDraft(doc.id);
   }
 }

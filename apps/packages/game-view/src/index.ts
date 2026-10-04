@@ -19,7 +19,7 @@ export { GameTree } from './model/GameTree';
 export { quotedPosition } from './model/quotedPosition';
 export type { QuotationLink } from './utils/notationGenerator';
 export { medalColors, medalName } from './utils/medals';
-export type { GameMoves, GameNode, MoveNode } from './model/GameTree';
+export type { GameMoves, GameNode, MoveNode, TreeSnapshot } from './model/GameTree';
 export { GAME_ANNOTATION_INDEX } from './model/annotations';
 export type {
   Annotation,
