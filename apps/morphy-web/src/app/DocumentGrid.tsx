@@ -7,12 +7,14 @@ import {
   themeLight,
 } from 'dockview-react';
 import type { FunctionComponent } from 'react';
-import { defaultLayout, type MorphyDocument } from './documents';
+import { BoardDocument } from './BoardDocument';
+import { BOARD_PANE, defaultLayout, isLayoutComplete, type MorphyDocument } from './documents';
 import { DocumentContext, useDocuments } from './documentsStore';
 import { BoardPane } from './panes/BoardPane';
 import { DatabasePane } from './panes/DatabasePane';
 import { DatabasesPane } from './panes/DatabasesPane';
 import { HomePane } from './panes/HomePane';
+import { NotationPane } from './panes/NotationPane';
 import { SettingsPane } from './panes/SettingsPane';
 
 // The panes a grid can hold, by Dockview component name. Each reads its document from
@@ -23,9 +25,10 @@ const PANES: Record<string, FunctionComponent<IDockviewPanelProps>> = {
   settings: SettingsPane,
   database: DatabasePane,
   board: BoardPane,
+  notation: NotationPane,
 };
 
-// Panes can't be closed yet: a document has only its one pane, which nothing could bring back
+// Panes can't be closed yet: nothing could bring them back
 function PaneTab(props: IDockviewPanelHeaderProps) {
   return <DockviewDefaultTab {...props} hideClose />;
 }
@@ -41,18 +44,33 @@ export function DocumentGrid({ doc, active }: { doc: MorphyDocument; active: boo
     const layout = layoutOf(doc.id);
     try {
       if (layout) api.fromJSON(layout);
-      else defaultLayout(doc, api);
+      if (!layout || !isLayoutComplete(doc, api)) {
+        api.clear();
+        defaultLayout(doc, api);
+      }
     } catch {
       api.clear();
       defaultLayout(doc, api);
     }
+    // The board's group has no tabs, so nothing can be dropped into it, only beside it
+    api.onWillShowOverlay((e) => {
+      if (e.position === 'center' && e.group?.panels.some((p) => p.id === BOARD_PANE)) e.preventDefault();
+    });
     api.onDidLayoutChange(() => setLayout(doc.id, api.toJSON()));
   };
+
+  const grid = <DockviewReact theme={themeLight} components={PANES} defaultTabComponent={PaneTab} onReady={onReady} />;
 
   return (
     <div className="document-grid" style={{ display: active ? undefined : 'none' }}>
       <DocumentContext.Provider value={doc}>
-        <DockviewReact theme={themeLight} components={PANES} defaultTabComponent={PaneTab} onReady={onReady} />
+        {doc.kind === 'board' ? (
+          <BoardDocument doc={doc} active={active}>
+            {grid}
+          </BoardDocument>
+        ) : (
+          grid
+        )}
       </DocumentContext.Provider>
     </div>
   );

@@ -8,6 +8,11 @@
 
 export { GameView } from './components/GameView';
 export type { GameViewProps } from './components/GameView';
+export { useGameView } from './components/useGameView';
+export type { GameViewOptions, GameViewState } from './components/useGameView';
+export { GameBoard } from './components/GameBoard';
+export { GameNotationPanel } from './components/GameNotationPanel';
+export { GameDialogs } from './components/GameDialogs';
 export type { ChessGame, GameHeader as GameHeaderData } from './types/chess';
 export { GameTree } from './model/GameTree';
 export { quotedPosition } from './model/quotedPosition';

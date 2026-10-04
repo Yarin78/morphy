@@ -137,13 +137,35 @@ const MAIN_PANE: Record<MorphyDocument['kind'], { component: string; title: stri
   databases: { component: 'databases', title: 'Databases' },
   settings: { component: 'settings', title: 'Settings' },
   database: { component: 'database', title: 'Search' },
-  board: { component: 'board', title: 'Game' },
+  board: { component: 'board', title: 'Board' },
 };
 
-/** Sets up a new document's grid: for now, a single pane by kind. */
+/** The id of a board document's board pane, which is alone in a group without tabs. */
+export const BOARD_PANE = 'board';
+
+/**
+ * Sets up a new document's grid: a single pane by kind, and for a board, the notation in a tab
+ * to the right of the board.
+ */
 export function defaultLayout(doc: MorphyDocument, api: DockviewApi) {
   const pane = MAIN_PANE[doc.kind];
-  api.addPanel({ id: pane.component, component: pane.component, title: pane.title });
+  const main = api.addPanel({ id: pane.component, component: pane.component, title: pane.title });
+  if (doc.kind === 'board') {
+    main.group.header.hidden = true;
+    api.addPanel({
+      id: 'notation',
+      component: 'notation',
+      title: 'Notation',
+      position: { referencePanel: main, direction: 'right' },
+      initialWidth: api.width > 0 ? Math.round(api.width * 0.42) : undefined,
+    });
+  }
+}
+
+/** Whether a saved grid still has the panes the document's kind always has. */
+export function isLayoutComplete(doc: MorphyDocument, api: DockviewApi): boolean {
+  if (doc.kind === 'board') return !!api.getPanel(BOARD_PANE) && !!api.getPanel('notation');
+  return api.panels.length > 0;
 }
 
 /** Whether the value looks like a saved DocumentsState. */

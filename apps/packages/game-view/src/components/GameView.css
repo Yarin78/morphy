@@ -1,6 +1,6 @@
 /*
- * Styles for GameView and the elements it renders directly (board wrapper,
- * navigation bar, resize handle, notation area). Extracted from yarin-chess's
+ * Styles for GameView and its parts: the board (GameBoard) with the navigation
+ * bar, and the notation area (GameNotationPanel). Extracted from yarin-chess's
  * App.css, keeping only the rules GameView itself depends on - none of that
  * app's header/sidebar/game-list chrome.
  */
@@ -17,14 +17,21 @@
   box-sizing: border-box;
 }
 
+.game-view-board {
+  flex: 1 1 55%;
+  min-width: 320px;
+}
+
+/* The board fills the space it's given; GameBoard sizes the board to fit */
 .chess-board-wrapper {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: space-between;
+  width: 100%;
   height: 100%;
+  overflow: hidden;
   background: #e8ddd4;
-  flex-shrink: 0;
 }
 
 .chess-board-container {
@@ -96,32 +103,6 @@
   opacity: 1;
 }
 
-.sidebar-menu-button {
-  display: none;
-  background: #8b6f47;
-  color: #f5f0e8;
-  border: 2px solid #6b5d47;
-  padding: 8px 12px;
-  font-size: 1.1rem;
-  cursor: pointer;
-  transition: all 0.2s;
-  position: absolute;
-  left: 0.5rem;
-  align-items: center;
-  justify-content: center;
-  min-width: 40px;
-  height: 36px;
-  border-radius: 6px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-  z-index: 101;
-}
-
-.sidebar-menu-button:hover {
-  background: #6b5d47;
-  border-color: #5a4a3a;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
-}
-
 .notation-area {
   /* For the popup to choose the next move by, in the middle */
   position: relative;
@@ -133,34 +114,6 @@
   border: 1px solid #d4c4b0;
   flex: 1 0 320px;
   min-width: 320px;
-}
-
-.resize-handle {
-  width: 8px;
-  background: #8b6f47;
-  cursor: col-resize;
-  flex-shrink: 0;
-  position: relative;
-  transition: background-color 0.2s;
-}
-
-.resize-handle:hover {
-  background: #6b5d47;
-}
-
-.resize-handle.resizing {
-  background: #5a4a3a;
-}
-
-.resize-handle::before {
-  content: '';
-  position: absolute;
-  left: 50%;
-  top: 0;
-  bottom: 0;
-  width: 2px;
-  background: rgba(255, 255, 255, 0.3);
-  transform: translateX(-50%);
 }
 
 .notation-divider {
@@ -178,13 +131,6 @@
   min-height: 0;
 }
 
-/* iPad and below (< 1200px) - show the hamburger menu button when rendered */
-@media (max-width: 1199px) {
-  .sidebar-menu-button {
-    display: flex;
-  }
-}
-
 /* Mobile devices (< 768px) - Stack board and notation vertically */
 @media (max-width: 767px) {
   .game-view-container {
@@ -195,12 +141,10 @@
     border: 0;
   }
 
-  .chess-board-wrapper {
-    width: 100% !important;
-    max-width: 100% !important;
-    min-width: 100% !important;
-    height: auto;
-    min-height: auto;
+  .game-view-board {
+    flex: 0 0 auto;
+    min-width: 100%;
+    height: 60vh;
   }
 
   .chess-board-container {
@@ -214,10 +158,6 @@
   /* Hide coordinates on mobile */
   coords.ranks, coords.files {
     display: none !important;
-  }
-
-  .resize-handle {
-    display: none;
   }
 
   .notation-area {

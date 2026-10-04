@@ -23,6 +23,9 @@ exactly as if it were standalone.
 Shared, reusable code lives under `packages/`, consumed by apps via the
 workspace (e.g. `"game-view": "*"` in an app's `package.json`).
 
-- **packages/game-view** — The chess board + header + move-notation UI
-  (`GameView`), ported from `~/src/yarin-chess`. No build step: apps compile
-  its TypeScript source directly as part of their own Vite/tsc pipeline.
+- **packages/game-view** — The chess board + header + move-notation UI,
+  ported from `~/src/yarin-chess`. `useGameView` holds a game's state, which
+  `GameBoard`, `GameNotationPanel` and `GameDialogs` render, so an app can put
+  the board and the notation in panes of its own; `GameView` lays them out side
+  by side. No build step: apps compile its TypeScript source directly as
+  part of their own Vite/tsc pipeline.
