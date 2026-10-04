@@ -1,14 +1,15 @@
 .game-header {
   background: #e0d5c8;
-  padding: 1rem;
+  /* Compact, so the moves get the space */
+  padding: 0.4rem 0.75rem;
   margin-bottom: 0;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .game-header-line {
-  font-size: 1.15rem;
+  font-size: 0.9rem;
   color: #333;
-  line-height: 1.6;
+  line-height: 1.4;
   text-align: center;
 }
 
