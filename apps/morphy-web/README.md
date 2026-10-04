@@ -38,6 +38,14 @@ morphy-service.
   - `?db=X&game=Y` → loads that game; saving replaces it
   - `?game=Y` with no `db` → invalid, redirected to the empty state
 
+- `/layout-dockview.html`, `/layout-flexlayout.html`, `/layout-mosaic.html`,
+  `/layout-rcdock.html` — throwaway demos of four window-layout libraries
+  (Dockview, FlexLayout, react-mosaic, rc-dock), for choosing the main app's
+  windowing framework. Each has the same dummy windows, a shared menu bar
+  (`src/layout-demos/shared`), split/new-tab buttons in the window headers, and
+  saves its layout to localStorage. Every dummy window shows a `mounts` counter:
+  if it goes up after moving a window, the library remounted it (losing state).
+
 ## Filter Query Language
 
 Examples (from morphy-service docs):
