@@ -1,5 +1,6 @@
 import type { GameNode, MoveNode } from '../model/GameTree';
 import { nagInfo, nagsOf } from '../model/nags';
+import { formatSan, type MoveNotation } from './moveNotation';
 
 // The NAGs of good and bad moves: ! ? !! ?? !? ?!
 const MOVE_QUALITY_NAGS = [1, 2, 3, 4, 5, 6];
@@ -18,8 +19,9 @@ export function nextMoveChoices(node: GameNode): MoveNode[] {
  * moves: the move and the main moves after it, like '1...c5 2.Nf3! d6 3.d4'.
  *
  * @param plies the number of moves at most
+ * @param notation how the pieces are written
  */
-export function lineStart(move: MoveNode, plies = 4): string {
+export function lineStart(move: MoveNode, plies = 4, notation: MoveNotation = 'en'): string {
   const parts: string[] = [];
   let m: MoveNode | undefined = move;
   for (let i = 0; m && i < plies; i++, m = m.children[0]) {
@@ -29,7 +31,7 @@ export function lineStart(move: MoveNode, plies = 4): string {
       .filter((nag) => MOVE_QUALITY_NAGS.includes(nag))
       .map((nag) => nagInfo(nag)?.symbol ?? '')
       .join('');
-    const san = m.san + quality;
+    const san = formatSan(m.san, notation) + quality;
     parts.push(white ? `${number}.${san}` : i === 0 ? `${number}...${san}` : san);
   }
   return parts.join(' ');

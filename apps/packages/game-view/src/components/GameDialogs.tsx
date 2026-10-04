@@ -22,7 +22,7 @@ export function GameDialogs({ view }: { view: GameViewState }) {
           const Dialog = ANNOTATION_DIALOGS[annotationDialog.kind];
           return (
             <Dialog
-              moveName={lineStart(annotationDialog.move, 1)}
+              moveName={lineStart(annotationDialog.move, 1, view.notation)}
               annotations={annotationDialog.move.annotations}
               onSave={handleAnnotationDialogSave}
               onCancel={handleAnnotationDialogCancel}

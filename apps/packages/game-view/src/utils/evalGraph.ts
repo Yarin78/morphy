@@ -1,6 +1,7 @@
 import type { AnnotationOf } from '../model/annotations';
 import type { GameNode, MoveNode } from '../model/GameTree';
 import { formatEval } from './moveInfo';
+import { formatSan, type MoveNotation } from './moveNotation';
 
 /**
  * The evaluations of the main line, as ChessBase stores them on the game, as bars of a graph: one
@@ -36,11 +37,11 @@ export function evalValue(evaluation: { eval: number; evalType: number }): numbe
   }
 }
 
-function moveName(node: GameNode): string {
+function moveName(node: GameNode, notation: MoveNotation): string {
   if (!('san' in node)) return 'Start';
   const move = node as MoveNode;
   const number = Math.ceil(move.ply / 2);
-  return `${number}${move.ply % 2 === 1 ? '.' : '...'}${move.san}`;
+  return `${number}${move.ply % 2 === 1 ? '.' : '...'}${formatSan(move.san, notation)}`;
 }
 
 /**
@@ -48,15 +49,20 @@ function moveName(node: GameNode): string {
  *
  * @param root the start position
  * @param annotation the evaluations of the game
+ * @param notation how the pieces of the moves are written
  */
-export function evalBars(root: GameNode, annotation: AnnotationOf<'evaluations'>): EvalBar[] {
+export function evalBars(
+  root: GameNode,
+  annotation: AnnotationOf<'evaluations'>,
+  notation: MoveNotation = 'en'
+): EvalBar[] {
   const bars: EvalBar[] = [];
   let node: GameNode | undefined = root;
   for (const evaluation of annotation.evaluations) {
     if (!node) break;
     const value = evalValue(evaluation);
     const text = value === null ? null : formatEval({ type: 'eval', ...evaluation });
-    bars.push({ node, value, label: text === null ? moveName(node) : `${moveName(node)} ${text}` });
+    bars.push({ node, value, label: text === null ? moveName(node, notation) : `${moveName(node, notation)} ${text}` });
     node = node.children[0];
   }
   return bars;

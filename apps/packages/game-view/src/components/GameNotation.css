@@ -27,7 +27,7 @@
 
 .game-notation-content {
   font-family: Roboto, sans-serif;
-  font-size: 15px;
+  font-size: var(--notation-font-size, 15px);
   color: #000;
 }
 

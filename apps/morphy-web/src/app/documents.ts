@@ -1,10 +1,10 @@
 import type { AddPanelPositionOptions, DockviewApi } from 'dockview-react';
 
 // The documents of the app. Each one has its own Dockview grid, which fills the screen when it
-// is the active one. Home, All Databases, Logs and Settings are singletons; databases and boards can
-// be opened any number of times.
+// is the active one. Home, All Databases and Logs are singletons; databases and boards can be
+// opened any number of times.
 
-export type SingletonKind = 'home' | 'databases' | 'settings' | 'logs';
+export type SingletonKind = 'home' | 'databases' | 'logs';
 
 /** A position in a quoted game to open the board at; see quotedPosition in game-view. */
 export interface QuoteTarget {
@@ -51,8 +51,6 @@ export function documentTitle(doc: MorphyDocument): string {
       return 'Home';
     case 'databases':
       return 'All Databases';
-    case 'settings':
-      return 'Settings';
     case 'logs':
       return 'Logs';
     case 'database':
@@ -134,7 +132,6 @@ export function documentsReducer(state: DocumentsState, action: DocumentsAction)
 const MAIN_PANE: Record<MorphyDocument['kind'], { component: string; title: string }> = {
   home: { component: 'home', title: 'Home' },
   databases: { component: 'databases', title: 'Databases' },
-  settings: { component: 'settings', title: 'Settings' },
   logs: { component: 'logs', title: 'Logs' },
   database: { component: 'database', title: 'Search' },
   board: { component: 'board', title: 'Board' },
@@ -209,6 +206,17 @@ export function defaultLayout(doc: MorphyDocument, api: DockviewApi) {
 /** Whether a saved grid still has the pane the document's kind always has. */
 export function isLayoutComplete(doc: MorphyDocument, api: DockviewApi): boolean {
   return !!api.getPanel(MAIN_PANE[doc.kind].component);
+}
+
+/**
+ * The documents saved of kinds there still are, as the Settings document is now a dialog. The
+ * active one is the first left if it's gone.
+ */
+export function knownDocuments(state: DocumentsState): DocumentsState {
+  const documents = state.documents.filter((d) => d.kind in MAIN_PANE);
+  if (documents.length === 0) return INITIAL_STATE;
+  const activeId = documents.some((d) => d.id === state.activeId) ? state.activeId : documents[0].id;
+  return { documents, activeId };
 }
 
 /** Whether the value looks like a saved DocumentsState. */

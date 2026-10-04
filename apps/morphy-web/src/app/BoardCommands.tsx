@@ -16,11 +16,11 @@ import {
   TbSwitchVertical,
 } from 'react-icons/tb';
 import { setAnalysisOn } from '../engine/analysis';
-import { BoardSettingsDialog } from './BoardSettingsDialog';
 import { closeDocuments } from './closeDocuments';
 import { BOARD_SIDE_PANES, type BoardSidePane, type BoardDocument, defaultLayout, toggleBoardPane } from './documents';
 import { useDocuments } from './documentsStore';
 import { type Menu, MenuBar } from './MenuBar';
+import { openSettings, useSettingsTab } from './settingsDialogStore';
 import { MAC, shortcutLabel } from './shortcuts';
 
 // The keys of the panes beside the board
@@ -110,7 +110,7 @@ export function BoardCommands({
   error,
 }: BoardCommandsProps) {
   const { dispatch } = useDocuments();
-  const [settingsOpen, setSettingsOpen] = useState(false);
+  const settingsOpen = useSettingsTab() !== null;
 
   // The panes menu and buttons show which panes are open
   const [, setLayoutVersion] = useState(0);
@@ -211,7 +211,7 @@ export function BoardCommands({
       items: [
         { label: 'Flip Board', icon: <TbSwitchVertical />, hint: shortcutLabel('Alt+F'), action: view.flipBoard },
         'separator',
-        { label: 'Board Settings…', icon: <TbAdjustments />, action: () => setSettingsOpen(true) },
+        { label: 'Board Settings…', icon: <TbAdjustments />, action: () => openSettings('board') },
       ],
     },
   ];
@@ -274,10 +274,9 @@ export function BoardCommands({
           icon={<TbAdjustments />}
           label="Settings"
           title="Board settings"
-          onClick={() => setSettingsOpen(true)}
+          onClick={() => openSettings('board')}
         />
       </div>
-      {settingsOpen && <BoardSettingsDialog onClose={() => setSettingsOpen(false)} />}
     </div>
   );
 }

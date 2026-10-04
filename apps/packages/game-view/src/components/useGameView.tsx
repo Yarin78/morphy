@@ -2,6 +2,8 @@ import { useState, useRef, useLayoutEffect, useCallback, useEffect, useMemo } fr
 import type { ContextMenuItem } from './ContextMenu';
 import { moveActions } from './moveActions';
 import type { MoveAction } from './moveActions';
+import type { NotationBarGroup } from './NagBar';
+import type { MoveNotation } from '../utils/moveNotation';
 import { MoveTimeDialog } from './MoveTimeDialog';
 import { MedalDialog } from './MedalDialog';
 import { WebLinkDialog } from './WebLinkDialog';
@@ -73,6 +75,12 @@ export interface GameViewOptions {
    * several games at once turns it off for all but the active one, as the keys are the page's.
    */
   keysEnabled?: boolean;
+  /** How the pieces of the moves are written; English letters by default */
+  notation?: MoveNotation;
+  /** Whether the keys that annotate the current move (!, ?, comments, diagram) do; true by default */
+  annotationKeys?: boolean;
+  /** The groups of the bar below the notation that are shown, when editing; all by default */
+  notationBarGroups?: ReadonlySet<NotationBarGroup>;
 }
 
 // The dialogs for the annotations of a move, by kind
@@ -114,6 +122,9 @@ export function useGameView({
   onQuotationClick,
   onGameLoaded,
   keysEnabled = true,
+  notation = 'en',
+  annotationKeys = true,
+  notationBarGroups,
 }: GameViewOptions) {
   const {
     game,
@@ -633,16 +644,16 @@ export function useGameView({
   // The evaluations of the main line, shown as a graph above the bar
   const evaluationBars = useMemo(() => {
     const evaluations = findAnnotation(game.root.annotations, 'evaluations');
-    return evaluations ? evalBars(game.root, evaluations) : null;
-  }, [game, version]);
+    return evaluations ? evalBars(game.root, evaluations, notation) : null;
+  }, [game, version, notation]);
 
   // The things that can be done from the current move in the bar below the notation: to the
   // moves, then to the annotations
-  const barActionGroups = useMemo((): MoveAction[][] => {
+  const barActionGroups = useMemo((): { id: NotationBarGroup; actions: MoveAction[] }[] => {
     const move = game.currentMove();
     return [
-      moveActions(game, move, edit),
-      [
+      { id: 'moves', actions: moveActions(game, move, edit) },
+      { id: 'comments', actions: [
         {
           label: 'Add Comment Before Move',
           icon: '{',
@@ -670,7 +681,7 @@ export function useGameView({
           disabled: !move || move.annotations.length === 0,
           run: handleClearAnnotations,
         },
-      ],
+      ] },
     ];
   }, [game, version, edit, handleCurrentCommentEdit, handleNullMove, handleClearAnnotations]);
 
@@ -678,7 +689,7 @@ export function useGameView({
   const keysActive = keysEnabled && !editingGameInfo && !annotationDialog;
 
   // !, ? and = toggle those symbols on the current move, when editing
-  useNagKeys(isEditMode && !!selectedGame && keysActive, {
+  useNagKeys(isEditMode && !!selectedGame && keysActive && annotationKeys, {
     onToggle: handleNagToggle,
     onStep: handleEvaluationStep,
     onType: handleMoveCommentType,
@@ -695,7 +706,7 @@ export function useGameView({
     [game, edit]
   );
   useCommentKeys(
-    isEditMode && !!selectedGame && keysActive && !editingComment,
+    isEditMode && !!selectedGame && keysActive && annotationKeys && !editingComment,
     handleCurrentCommentEdit,
     handleCurrentDiagram
   );
@@ -799,6 +810,8 @@ export function useGameView({
     goToEnd,
     seekToMove,
     notationRef,
+    /** The squares the last move went from and to, or null at the start */
+    getLastMove,
     // Undoing and redoing the edits; whether they can be done is asked when it's needed, as the
     // history isn't state
     handleUndo,
@@ -826,6 +839,8 @@ export function useGameView({
     evaluationBars,
     handleNagToggle,
     barActionGroups,
+    notationBarGroups,
+    notation,
     // The dialogs
     annotationDialog,
     handleAnnotationDialogSave,

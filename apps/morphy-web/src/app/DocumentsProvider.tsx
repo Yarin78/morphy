@@ -1,6 +1,6 @@
 import { type ReactNode, useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import type { SerializedDockview } from 'dockview-react';
-import { documentsReducer, type DocumentsState, INITIAL_STATE, isDocumentsState } from './documents';
+import { documentsReducer, type DocumentsState, INITIAL_STATE, isDocumentsState, knownDocuments } from './documents';
 import { DocumentsContext, type DocumentsStore } from './documentsStore';
 import { deleteDraftsExcept } from './drafts';
 
@@ -18,7 +18,9 @@ interface Saved {
 function loadSaved(): Saved | null {
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? 'null') as Saved | null;
-    return saved?.version === VERSION && isDocumentsState(saved.state) ? saved : null;
+    return saved?.version === VERSION && isDocumentsState(saved.state)
+      ? { ...saved, state: knownDocuments(saved.state) }
+      : null;
   } catch {
     return null;
   }

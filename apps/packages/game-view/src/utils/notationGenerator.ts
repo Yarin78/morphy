@@ -6,6 +6,7 @@ import { isCommentShown } from '../model/comments';
 import type { CommentType } from '../model/comments';
 import { annotationMarkers, annotationMarkersHtml } from './annotationMarkers';
 import { figurinesToHtml } from './figurines';
+import { formatSan, type MoveNotation, moveFigurinesToHtml } from './moveNotation';
 import { escapeHtml } from './html';
 import { commentWithDiagramsHtml, diagramHtml, pawnStructureHtml, piecePathHtml } from './diagram';
 import { moveInfoHtml } from './moveInfo';
@@ -24,6 +25,7 @@ interface ConversionState {
   mainLineStart?: string; // HTML to start the main line with, on the row of its first moves
   folded: ReadonlySet<MoveNode>; // The first moves of the variations that are folded
   editing: CommentEdit | null; // The comment being edited, shown as an editor instead
+  notation: MoveNotation; // How the pieces of the moves are written
 }
 
 /**
@@ -172,11 +174,16 @@ function processCommentWithLink(comment: string): string {
 /**
  * Formats a move with move number
  */
-function formatMoveWithNumber(move: MoveNode, moveIndex: number, hasVariationsBefore: boolean): string {
+function formatMoveWithNumber(
+  move: MoveNode,
+  moveIndex: number,
+  hasVariationsBefore: boolean,
+  notation: MoveNotation
+): string {
   // Calculate the actual move number (1-based)
   const moveNumber = Math.floor((move.ply + 1) / 2);
 
-  const san = move.isNullMove ? "--" : move.san;
+  const san = move.isNullMove ? "--" : formatSan(move.san, notation);
 
   if (move.ply % 2 == 0) {
     if (moveIndex == 0 || hasVariationsBefore) {
@@ -326,7 +333,7 @@ function traverseGameTree(
     const hasVariationsBefore = i > 0 && variations[i - 1].length > 0;
 
     // Get move text and format with move number
-    const formattedMove = formatMoveWithNumber(m, localMoveIndex, hasVariationsBefore);
+    const formattedMove = formatMoveWithNumber(m, localMoveIndex, hasVariationsBefore, state.notation);
     const moveClasses = ['cbmove'];
     // Add highlight class if this is the current move
     // Also highlight first move if at start position (currentMove === null) and this is the main line
@@ -340,7 +347,7 @@ function traverseGameTree(
       moveClasses.push(`cbcrit-${critical!.phase}`);
     }
     const prefix = symbolsHtml(m.annotations, true);
-    const moveContent = (prefix ? prefix + ' ' : '') + escapeHtml(formattedMove) + symbolsHtml(m.annotations, false);
+    const moveContent = (prefix ? prefix + ' ' : '') + moveFigurinesToHtml(escapeHtml(formattedMove)) + symbolsHtml(m.annotations, false);
     if (color) {
       moveClasses.push('cbvarcolor');
     }
@@ -501,7 +508,8 @@ export function generateNotationHtml(
   languages: readonly string[] = [],
   linkQuotes = false,
   folded: ReadonlySet<MoveNode> = new Set(),
-  editing: CommentEdit | null = null
+  editing: CommentEdit | null = null,
+  notation: MoveNotation = 'en'
 ): NotationHtmlResult {
   const state: ConversionState = {
     lineIndexByLevel: new Map(),
@@ -513,6 +521,7 @@ export function generateNotationHtml(
     quoteLinks: linkQuotes ? [] : null,
     folded,
     editing,
+    notation,
   };
   game.movesInOrder().forEach((move, index) => {
     state.moveMap.set(move, index);

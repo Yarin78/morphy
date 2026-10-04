@@ -12,6 +12,7 @@ import { showError } from './errorStore';
 import { showToast } from './toastStore';
 import { SaveToDatabaseDialog } from './SaveToDatabaseDialog';
 import { setAnalysisPosition } from '../engine/analysis';
+import { useSettings } from './settings';
 import { askChoice } from './choiceStore';
 import { applyContent, deleteDraft, fingerprint, gameContent, loadDraft, saveDraft } from './drafts';
 import { registerSaver, type SaveMode, setUnsaved } from './unsavedStore';
@@ -122,6 +123,8 @@ export function BoardDocument({
   };
 
   // Only the board shown takes the keys
+  const notationSettings = useSettings().notation;
+  const barGroups = useMemo(() => new Set(notationSettings.barGroups), [notationSettings.barGroups]);
   const view = useGameView({
     selectedGame,
     initialOrientation: 'white',
@@ -131,6 +134,9 @@ export function BoardDocument({
     onQuotationClick,
     onGameLoaded,
     keysEnabled: active,
+    notation: notationSettings.moveNotation,
+    annotationKeys: notationSettings.annotationKeys,
+    notationBarGroups: barGroups,
   });
 
   // The game's moves and header, to tell whether they've changed since it was loaded or saved;

@@ -35,8 +35,9 @@ remote engine can be added as another transport.
 ## Pages
 
 - `/` — the Morphy app (`src/app`). A navigator on the left lists the open
-  documents: Home, All Databases, Settings, and any opened databases and
-  boards. Each document has its own Dockview grid of panes, which fills the
+  documents: Home, All Databases, Logs, and any opened databases and
+  boards; its Settings opens the settings dialog (`src/app/settings.ts`),
+  whose settings apply to every document. Each document has its own Dockview grid of panes, which fills the
   rest of the screen while the document is active. A database document is the
   search UI (`src/database`, shared with the search tester); clicking a game
   opens it in a board document (`src/game`, shared with the board tester). The

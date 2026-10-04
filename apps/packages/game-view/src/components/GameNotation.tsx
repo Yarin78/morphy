@@ -1,6 +1,7 @@
 import { type RefObject, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { GameTree } from '../model/GameTree';
 import type { MoveNode } from '../model/GameTree';
+import type { MoveNotation } from '../utils/moveNotation';
 import { generateNotationHtml } from '../utils/notationGenerator';
 import type { CommentEdit, NotationHtmlResult, QuotationLink } from '../utils/notationGenerator';
 import type { GameNode } from '../model/GameTree';
@@ -26,6 +27,8 @@ interface GameNotationProps {
   onQuotationClick?: (link: QuotationLink) => void;
   /** Set to the element the moves are in, as for moving between them with the keys. */
   containerRef?: RefObject<HTMLDivElement | null>;
+  /** How the pieces of the moves are written; English letters by default */
+  notation?: MoveNotation;
 }
 
 const NOTHING_FOLDED: ReadonlySet<MoveNode> = new Set();
@@ -50,6 +53,7 @@ export const GameNotation: React.FC<GameNotationProps> = ({
   onNotationReady,
   onQuotationClick,
   containerRef: givenContainerRef,
+  notation = 'en',
 }) => {
   const [notationResult, setNotationResult] = useState<NotationHtmlResult | null>(null);
   const ownContainerRef = useRef<HTMLDivElement>(null);
@@ -68,7 +72,7 @@ export const GameNotation: React.FC<GameNotationProps> = ({
   // Now we also pass the current move so highlighting is done during HTML generation.
   useEffect(() => {
     try {
-      const result = generateNotationHtml(game, languages, !!onQuotationClick, folded, editing);
+      const result = generateNotationHtml(game, languages, !!onQuotationClick, folded, editing, notation);
       setNotationResult(result);
       // Notify parent component that notation is ready
       if (onNotationReady) {
@@ -81,7 +85,7 @@ export const GameNotation: React.FC<GameNotationProps> = ({
         onNotationReady(new Map());
       }
     }
-  }, [game, version, languages, onNotationReady, onQuotationClick, folded, editing]);
+  }, [game, version, languages, onNotationReady, onQuotationClick, folded, editing, notation]);
 
   // The comment being edited: its text made editable, with the caret at its end. Enter keeps the
   // changes, as does leaving it, and Escape drops them.

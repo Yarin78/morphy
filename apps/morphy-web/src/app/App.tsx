@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import 'dockview-react/dist/styles/dockview.css';
 import { DocumentGrid } from './DocumentGrid';
-import { BoardSettingsProvider } from './BoardSettingsProvider';
 import { DocumentsProvider } from './DocumentsProvider';
 import { ChoiceDialog } from './ChoiceDialog';
 import { ErrorDialog } from './ErrorDialog';
+import { SettingsDialog } from './SettingsDialog';
 import { Toasts } from './Toasts';
 import { UnsavedChangesDialog } from './UnsavedChangesDialog';
 import { getUnsaved } from './unsavedStore';
@@ -77,13 +77,12 @@ function Workspace() {
 export default function App() {
   return (
     <DocumentsProvider>
-      <BoardSettingsProvider>
-        <Workspace />
-        <Toasts />
-        <UnsavedChangesDialog />
-        <ChoiceDialog />
-        <ErrorDialog />
-      </BoardSettingsProvider>
+      <Workspace />
+      <Toasts />
+      <SettingsDialog />
+      <UnsavedChangesDialog />
+      <ChoiceDialog />
+      <ErrorDialog />
     </DocumentsProvider>
   );
 }

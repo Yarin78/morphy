@@ -4,6 +4,7 @@ import { closeDocuments } from './closeDocuments';
 import { getUnsaved, subscribeUnsaved } from './unsavedStore';
 import { documentTitle, type MorphyDocument, type SingletonKind } from './documents';
 import { useDocuments } from './documentsStore';
+import { openSettings } from './settingsDialogStore';
 
 // The navigator on the left: the singleton documents, New Board, the open databases and
 // boards, and Close All and Settings at the bottom. It collapses to icons, and resizes by
@@ -22,7 +23,6 @@ export interface NavigatorState {
 const ICONS: Record<MorphyDocument['kind'], string> = {
   home: '⌂',
   databases: '☰',
-  settings: '⚙',
   logs: '≣',
   database: '▤',
   board: '♞',
@@ -192,7 +192,7 @@ export function Navigator({ state, onChange }: { state: NavigatorState; onChange
           onClick={() => void closeDocuments(boards, dispatch)}
         />
         {singleton('logs', unseenErrors)}
-        {singleton('settings')}
+        <NavItem icon="⚙" label="Settings" collapsed={collapsed} onClick={() => openSettings()} />
       </div>
       <div className="nav-resize" onPointerDown={onResizeStart} title="Drag to resize; narrow it to collapse to icons" />
     </aside>

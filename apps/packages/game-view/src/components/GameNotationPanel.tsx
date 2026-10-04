@@ -43,6 +43,8 @@ export function GameNotationPanel({ view }: { view: GameViewState }) {
     notationRef,
     handleNagToggle,
     barActionGroups,
+    notationBarGroups,
+    notation,
   } = view;
 
   return (
@@ -62,13 +64,19 @@ export function GameNotationPanel({ view }: { view: GameViewState }) {
             onCommentEditDone={handleCommentEditDone}
             onNotationReady={handleNotationReady}
             containerRef={notationRef}
+            notation={notation}
             onQuotationClick={onQuotationClick}
           />
           {moveMenu && moveMenuItems.length > 0 && (
             <ContextMenu x={moveMenu.x} y={moveMenu.y} items={moveMenuItems} onClose={handleMoveMenuClose} />
           )}
           {choosingMove && (
-            <VariationChooser moves={choosingMove} onChoose={handleMoveChosen} onCancel={handleMoveChoiceCancel} />
+            <VariationChooser
+              moves={choosingMove}
+              onChoose={handleMoveChosen}
+              onCancel={handleMoveChoiceCancel}
+              notation={notation}
+            />
           )}
           {evaluationBars && (
             <EvalGraph
@@ -84,6 +92,7 @@ export function GameNotationPanel({ view }: { view: GameViewState }) {
                   annotations={game.currentMove()?.annotations ?? null}
                   onToggle={handleNagToggle}
                   actionGroups={barActionGroups}
+                  shownGroups={notationBarGroups}
                 />
               )}
               <LanguageSelector

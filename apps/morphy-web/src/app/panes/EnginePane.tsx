@@ -17,6 +17,7 @@ import {
 } from '../../engine/analysis';
 import { ENGINES, type EngineId } from '../../engine/engines';
 import { formatScore, lineToSan, scoreForWhite } from '../../engine/lines';
+import { useSettings } from '../settings';
 
 // The moves shown of each line
 const LINE_MOVES = 16;
@@ -82,6 +83,7 @@ export function EnginePane() {
   const { status, fen, lines, on, locked } = analysis;
   const profile = ENGINES[analysis.engineId];
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const { moveNotation } = useSettings().notation;
 
   // Analysis that was on when the app was left starts again
   useEffect(resumeAnalysis, []);
@@ -198,7 +200,7 @@ export function EnginePane() {
                 >
                   {formatScore(score)}
                 </span>
-                <span className="engine-pv">{lineToSan(fen!, line.pv, LINE_MOVES)}</span>
+                <span className="engine-pv">{lineToSan(fen!, line.pv, LINE_MOVES, moveNotation)}</span>
               </div>
             );
           })}

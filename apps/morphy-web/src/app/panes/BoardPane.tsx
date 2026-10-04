@@ -1,9 +1,17 @@
 import { GameBoard } from 'game-view';
-import { useBoardSettings } from '../boardSettings';
+import { useSettings } from '../settings';
 import { useBoardView } from '../boardStore';
 
 /** The board of a board document, with the buttons to move through the game. */
 export function BoardPane() {
-  const [settings] = useBoardSettings();
-  return <GameBoard view={useBoardView()} coordinates={settings.coordinates} animation={settings.animation} />;
+  const { board } = useSettings();
+  return (
+    <GameBoard
+      view={useBoardView()}
+      coordinates={board.coordinates}
+      animation={board.animation}
+      lastMove={board.lastMove}
+      navigation={board.navigation}
+    />
+  );
 }

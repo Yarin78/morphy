@@ -1,4 +1,5 @@
 import { Chess } from 'chess.js';
+import { formatSan, type MoveNotation } from 'game-view';
 import type { UciScore } from './uci';
 
 // What an engine's lines look like on screen: scores from White's point of view, and moves as
@@ -20,7 +21,12 @@ export function formatScore(score: UciScore): string {
  * A line of UCI moves from a position, as SAN with move numbers: "12.Nf3 Nc6 13.Bb5", or
  * "12...Nc6 13.Bb5" from Black's move. Stops at a move that can't be played, and after maxMoves.
  */
-export function lineToSan(fen: string, uciMoves: string[], maxMoves = Infinity): string {
+export function lineToSan(
+  fen: string,
+  uciMoves: string[],
+  maxMoves = Infinity,
+  notation: MoveNotation = 'en'
+): string {
   let chess: Chess;
   try {
     chess = new Chess(fen);
@@ -33,7 +39,7 @@ export function lineToSan(fen: string, uciMoves: string[], maxMoves = Infinity):
     const number = chess.moveNumber();
     let san: string;
     try {
-      san = chess.move({ from: uci.slice(0, 2), to: uci.slice(2, 4), promotion: uci[4] }).san;
+      san = formatSan(chess.move({ from: uci.slice(0, 2), to: uci.slice(2, 4), promotion: uci[4] }).san, notation);
     } catch {
       break;
     }

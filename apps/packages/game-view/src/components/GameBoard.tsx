@@ -19,13 +19,25 @@ export interface GameBoardProps {
   coordinates?: boolean;
   /** Whether the pieces slide when moving through the game; true by default */
   animation?: boolean;
+  /** How the last move is shown: by an arrow (the default), by its squares, or not at all */
+  lastMove?: LastMoveStyle;
+  /** Whether the buttons to move through the game are below the board; true by default */
+  navigation?: boolean;
 }
+
+export type LastMoveStyle = 'arrow' | 'squares' | 'none';
 
 /**
  * The board of a game being viewed, with the buttons to move through it below. It fills the
  * space it's given, the board as large a square as fits.
  */
-export function GameBoard({ view, coordinates = true, animation = true }: GameBoardProps) {
+export function GameBoard({
+  view,
+  coordinates = true,
+  animation = true,
+  lastMove = 'arrow',
+  navigation = true,
+}: GameBoardProps) {
   const {
     selectedGame,
     game,
@@ -46,6 +58,7 @@ export function GameBoard({ view, coordinates = true, animation = true }: GameBo
     goToPreviousMove,
     handleNextMove,
     goToEnd,
+    getLastMove,
   } = view;
   const boardWrapperRef = useRef<HTMLDivElement>(null);
   const boardContainerRef = useRef<HTMLDivElement>(null);
@@ -59,7 +72,7 @@ export function GameBoard({ view, coordinates = true, animation = true }: GameBo
     const calculateBoardSize = () => {
       // Hidden (as in an inactive tab), it has no size; keep the last one
       if (wrapper.clientWidth === 0 || wrapper.clientHeight === 0) return;
-      const navigationHeight = navigationRef.current?.offsetHeight ?? 60;
+      const navigationHeight = navigationRef.current?.offsetHeight ?? 0;
       const fits = Math.min(
         wrapper.clientWidth - BOARD_PADDING,
         wrapper.clientHeight - navigationHeight - BOARD_PADDING
@@ -71,7 +84,7 @@ export function GameBoard({ view, coordinates = true, animation = true }: GameBo
     resizeObserver.observe(wrapper);
     if (navigationRef.current) resizeObserver.observe(navigationRef.current);
     return () => resizeObserver.disconnect();
-  }, []);
+  }, [navigation]);
 
   // Drawing with the Option key held down: green, with Ctrl too yellow, and with Shift too red.
   // Chessground draws only with the right button (or Shift), and picks the color from the
@@ -130,11 +143,14 @@ export function GameBoard({ view, coordinates = true, animation = true }: GameBo
             enabled: isEditMode,
             visible: true,
             eraseOnClick: true,
-            autoShapes: [...autoShapes, ...userDrawnShapes],
+            // The arrow of the last move is the only shape drawn besides the move's own
+            autoShapes: lastMove === 'arrow' ? [...autoShapes, ...userDrawnShapes] : userDrawnShapes,
             brushes: ANNOTATION_BRUSHES,
             onChange: handleDrawableChange,
           }}
           addDimensionsCssVarsTo={document.body}
+          // null takes away the squares of a move shown before
+          lastMove={lastMove === 'squares' ? getLastMove() : null}
         />
         {promotionPending && (
           <PromotionDialog
@@ -145,22 +161,24 @@ export function GameBoard({ view, coordinates = true, animation = true }: GameBo
         )}
       </div>
 
-      <div ref={navigationRef} className="game-navigation">
-        <div className="navigation-controls">
-          <button onClick={goToStart} disabled={!selectedGame || !canGoBack()} className="nav-button" title="First move">
-            <IoPlaySkipBack />
-          </button>
-          <button onClick={goToPreviousMove} disabled={!selectedGame || !canGoBack()} className="nav-button" title="Previous move">
-            <IoChevronBack />
-          </button>
-          <button onClick={handleNextMove} disabled={!selectedGame || !canGoForward()} className="nav-button" title="Next move">
-            <IoChevronForward />
-          </button>
-          <button onClick={goToEnd} disabled={!selectedGame || !canGoForward()} className="nav-button" title="Last move">
-            <IoPlaySkipForward />
-          </button>
+      {navigation && (
+        <div ref={navigationRef} className="game-navigation">
+          <div className="navigation-controls">
+            <button onClick={goToStart} disabled={!selectedGame || !canGoBack()} className="nav-button" title="First move">
+              <IoPlaySkipBack />
+            </button>
+            <button onClick={goToPreviousMove} disabled={!selectedGame || !canGoBack()} className="nav-button" title="Previous move">
+              <IoChevronBack />
+            </button>
+            <button onClick={handleNextMove} disabled={!selectedGame || !canGoForward()} className="nav-button" title="Next move">
+              <IoChevronForward />
+            </button>
+            <button onClick={goToEnd} disabled={!selectedGame || !canGoForward()} className="nav-button" title="Last move">
+              <IoPlaySkipForward />
+            </button>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

@@ -11,7 +11,7 @@ export type { GameViewProps } from './components/GameView';
 export { useGameView } from './components/useGameView';
 export type { GameViewOptions, GameViewState } from './components/useGameView';
 export { GameBoard } from './components/GameBoard';
-export type { GameBoardProps } from './components/GameBoard';
+export type { GameBoardProps, LastMoveStyle } from './components/GameBoard';
 export { GameNotationPanel } from './components/GameNotationPanel';
 export { GameDialogs } from './components/GameDialogs';
 export type { ChessGame, GameHeader as GameHeaderData } from './types/chess';
@@ -60,3 +60,7 @@ export {
   toPgnTimeControl,
 } from './utils/timeControl';
 export type { TimeControlPeriod } from './utils/timeControl';
+export { formatSan, MOVE_NOTATIONS } from './utils/moveNotation';
+export type { MoveNotation } from './utils/moveNotation';
+export { NOTATION_BAR_GROUPS } from './components/NagBar';
+export type { NotationBarGroup } from './components/NagBar';

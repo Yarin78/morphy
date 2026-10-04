@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { MoveNode } from '../model/GameTree';
+import type { MoveNotation } from '../utils/moveNotation';
 import { lineStart } from '../utils/variationChoice';
 import './VariationChooser.css';
 
@@ -10,6 +11,8 @@ interface VariationChooserProps {
   onChoose: (move: MoveNode) => void;
   /** Goes back without playing a move. */
   onCancel: () => void;
+  /** How the pieces of the moves are written */
+  notation?: MoveNotation;
 }
 
 // The moves shown of a variation; of the main line, just the move
@@ -21,7 +24,7 @@ const VARIATION_PLIES = 6;
  * The arrow keys up and down pick one, the main move to begin with; Enter or the right arrow plays
  * it, and the left arrow, Escape or a click outside goes back.
  */
-export const VariationChooser: React.FC<VariationChooserProps> = ({ moves, onChoose, onCancel }) => {
+export const VariationChooser: React.FC<VariationChooserProps> = ({ moves, onChoose, onCancel, notation }) => {
   const [selected, setSelected] = useState(moves.length - 1);
   const popupRef = useRef<HTMLDivElement>(null);
 
@@ -75,7 +78,7 @@ export const VariationChooser: React.FC<VariationChooserProps> = ({ moves, onCho
           onMouseEnter={() => setSelected(i)}
           onClick={() => onChoose(move)}
         >
-          {lineStart(move, i === moves.length - 1 ? 1 : VARIATION_PLIES)}
+          {lineStart(move, i === moves.length - 1 ? 1 : VARIATION_PLIES, notation)}
         </div>
       ))}
     </div>

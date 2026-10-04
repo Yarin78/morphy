@@ -19,14 +19,12 @@ import { LogsPane } from './panes/LogsPane';
 import { NotationPane } from './panes/NotationPane';
 import { EnginePane } from './panes/EnginePane';
 import { TreePane } from './panes/PlaceholderPanes';
-import { SettingsPane } from './panes/SettingsPane';
 
 // The panes a grid can hold, by Dockview component name. Each reads its document from
 // DocumentContext; Dockview renders panes through portals, so the context reaches them.
 const PANES: Record<string, FunctionComponent<IDockviewPanelProps>> = {
   home: HomePane,
   databases: DatabasesPane,
-  settings: SettingsPane,
   logs: LogsPane,
   database: DatabasePane,
   board: BoardPane,
