@@ -1,4 +1,4 @@
-import { type ReactNode, useCallback, useEffect, useMemo } from 'react';
+import { type ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
 import type { DockviewApi } from 'dockview-react';
 import { GameDialogs, quotedPosition, useGameView } from 'game-view';
 import type { GameTree, QuotationLink } from 'game-view';
@@ -8,6 +8,8 @@ import { BoardCommands } from './BoardCommands';
 import { BoardViewContext } from './boardStore';
 import type { BoardDocument as BoardDoc } from './documents';
 import { useDocuments } from './documentsStore';
+import { showError } from './errorStore';
+import { SaveToDatabaseDialog } from './SaveToDatabaseDialog';
 
 /**
  * A board document: its game, loaded from its database (or new), played through, edited and
@@ -28,9 +30,18 @@ export function BoardDocument({
   const { dispatch } = useDocuments();
   const databaseId = doc.databaseId ?? null;
   const { databases, gameState, selectedGame, gameInfoServices, onGameReady, canSave, saving, save, message, showMessage } =
-    useGameDocument(databaseId, doc.gameId ?? null, (_, gameId) =>
-      dispatch({ type: 'updateBoard', id: doc.id, changes: { gameId } })
-    );
+    useGameDocument(databaseId, doc.gameId ?? null, {
+      onCreated: (createdIn, gameId) =>
+        dispatch({ type: 'updateBoard', id: doc.id, changes: { databaseId: createdIn, gameId } }),
+      onError: showError,
+    });
+
+  // A game in no database is saved to one picked in a dialog
+  const [pickingDatabase, setPickingDatabase] = useState(false);
+  const handleSave = () => {
+    if (databaseId) void save();
+    else setPickingDatabase(true);
+  };
 
   // The board is titled by the game's players, once it's loaded or saved
   const title = gameState.kind === 'loaded' ? (gameTitle(gameState.game) ?? undefined) : doc.title;
@@ -63,7 +74,7 @@ export function BoardDocument({
           quote: { fen: link.fen, index: link.quote.unknown ?? 0 },
         });
       } catch (err) {
-        showMessage(err instanceof Error ? err.message : String(err));
+        showError('Opening the quoted game failed', err);
       }
     },
     [databaseId, dispatch, showMessage]
@@ -95,7 +106,8 @@ export function BoardDocument({
           api={api}
           active={active}
           view={view}
-          save={save}
+          save={handleSave}
+          savePicksDatabase={!databaseId}
           canSave={canSave}
           saving={saving}
           status={status}
@@ -105,6 +117,16 @@ export function BoardDocument({
         <div className="board-grid">{children}</div>
       </div>
       <GameDialogs view={view} />
+      {pickingDatabase && (
+        <SaveToDatabaseDialog
+          databases={databases}
+          onSave={(id) => {
+            setPickingDatabase(false);
+            void save(id);
+          }}
+          onCancel={() => setPickingDatabase(false)}
+        />
+      )}
     </BoardViewContext.Provider>
   );
 }

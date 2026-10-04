@@ -45,7 +45,10 @@ export function DatabasesPane() {
                 title="Open the database"
               >
                 <td className="database-name">{db.displayName}</td>
-                <td>{formatOf(db.path)}</td>
+                <td className="database-format">
+                  {formatOf(db.path)}
+                  {db.readOnly && <span className="database-readonly">read-only</span>}
+                </td>
                 <td className="database-path">{db.path}</td>
               </tr>
             ))}

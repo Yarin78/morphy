@@ -4,44 +4,81 @@ import type {
   FilterOptionsResponse,
   GameDto,
 } from './types';
+import { callFinished, callStarted, newRequestId, SESSION_ID } from '../logs/logStore';
 
 const API_BASE = '/api';
 
-/** Thrown for a non-2xx response, carrying the HTTP status. */
+/** Thrown for a failed call: a non-2xx answer (with its status), or none at all (status 0). */
 export class ApiError extends Error {
   readonly status: number;
+  /** What the call was for, e.g. 'Create game' */
+  readonly what: string;
+  /** The service's own message about the failure, if it gave one */
+  readonly serverMessage: string | null;
+  /** The id the call was sent with, to find it and the service's events about it in the logs */
+  readonly requestId: string;
 
-  constructor(status: number, message: string) {
-    super(message);
+  constructor(status: number, what: string, serverMessage: string | null, requestId: string) {
+    super(`${what} failed: ${serverMessage ?? (status ? `HTTP ${status}` : 'no answer from the service')}`);
     this.status = status;
+    this.what = what;
+    this.serverMessage = serverMessage;
+    this.requestId = requestId;
   }
 }
 
-async function getJson<T>(url: string, what: string): Promise<T> {
-  const res = await fetch(url);
+/** The service's message in an error answer: the error field of its JSON, or the text itself. */
+function serverMessageOf(text: string): string | null {
+  try {
+    const body = JSON.parse(text) as { error?: unknown; message?: unknown };
+    if (typeof body.error === 'string' && body.error) return body.error;
+    if (typeof body.message === 'string' && body.message) return body.message;
+  } catch {
+    // not JSON
+  }
+  return text.trim() || null;
+}
+
+/**
+ * Makes an API call, with the ids that tie it to the service's log events, and records it in the
+ * logs, whether it succeeds or not.
+ */
+async function call<T>(method: 'GET' | 'POST' | 'PUT', url: string, what: string, body?: unknown): Promise<T> {
+  const requestId = newRequestId();
+  const started = performance.now();
+  callStarted({ requestId, time: new Date().toISOString(), method, url, what });
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      method,
+      headers: {
+        'X-Request-Id': requestId,
+        'X-Session-Id': SESSION_ID,
+        ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
+      },
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    callFinished(requestId, 0, performance.now() - started, message);
+    throw new ApiError(0, what, null, requestId);
+  }
+  const duration = performance.now() - started;
   if (!res.ok) {
     const text = await res.text();
-    throw new ApiError(res.status, `${what} failed: ${res.status} - ${text}`);
+    callFinished(requestId, res.status, duration, text);
+    throw new ApiError(res.status, what, serverMessageOf(text), requestId);
   }
+  callFinished(requestId, res.status, duration);
   return res.json();
 }
 
-async function sendJson<T>(
-  method: 'POST' | 'PUT',
-  url: string,
-  body: unknown,
-  what: string
-): Promise<T> {
-  const res = await fetch(url, {
-    method,
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) {
-    const text = await res.text();
-    throw new ApiError(res.status, `${what} failed: ${res.status} - ${text}`);
-  }
-  return res.json();
+function getJson<T>(url: string, what: string): Promise<T> {
+  return call('GET', url, what);
+}
+
+function sendJson<T>(method: 'POST' | 'PUT', url: string, body: unknown, what: string): Promise<T> {
+  return call(method, url, what, body);
 }
 
 function databaseUrl(databaseId: string): string {

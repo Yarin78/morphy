@@ -28,7 +28,7 @@ function App() {
     save,
     message,
     showMessage,
-  } = useGameDocument(databaseId, gameId, setLoadedGame);
+  } = useGameDocument(databaseId, gameId, { onCreated: setLoadedGame });
 
   // A quoted game refers to another game in the same database by its players, as a repertoire
   // refers to its other chapters. It's opened in a new tab, at the position the quotation links
@@ -88,7 +88,11 @@ function App() {
       <header className="topbar">
         <h1>Board Tester</h1>
         <span className="status">{statusText}</span>
-        <button onClick={save} disabled={!canSave} title={!databaseId ? 'No database to save to' : undefined}>
+        <button
+          onClick={() => save()}
+          disabled={!canSave || !databaseId}
+          title={!databaseId ? 'No database to save to' : undefined}
+        >
           {saving ? 'Saving…' : 'Save'}
         </button>
         {message && <span className="save-message">{message}</span>}

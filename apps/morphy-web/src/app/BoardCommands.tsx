@@ -36,6 +36,8 @@ export interface BoardCommandsProps {
   active: boolean;
   view: GameViewState;
   save: () => void;
+  /** Whether saving asks for the database first, the game being in none */
+  savePicksDatabase: boolean;
   canSave: boolean;
   saving: boolean;
   /** Where the game is from, shown at the right */
@@ -77,7 +79,19 @@ function ToolButton({
  * The menu bar and toolbar of a board document, above all its panes: saving and closing the
  * game, editing it, moving through it, the panes beside the board, and how the board looks.
  */
-export function BoardCommands({ doc, api, active, view, save, canSave, saving, status, message, error }: BoardCommandsProps) {
+export function BoardCommands({
+  doc,
+  api,
+  active,
+  view,
+  save,
+  savePicksDatabase,
+  canSave,
+  saving,
+  status,
+  message,
+  error,
+}: BoardCommandsProps) {
   const { dispatch } = useDocuments();
   const [settingsOpen, setSettingsOpen] = useState(false);
 
@@ -97,7 +111,13 @@ export function BoardCommands({ doc, api, active, view, save, canSave, saving, s
     {
       title: 'Game',
       items: [
-        { label: 'Save', icon: <TbDeviceFloppy />, shortcut: 'Cmd+S', disabled: !canSave, action: save },
+        {
+          label: savePicksDatabase ? 'Save to Database…' : 'Save',
+          icon: <TbDeviceFloppy />,
+          shortcut: 'Cmd+S',
+          disabled: !canSave,
+          action: save,
+        },
         { label: 'Save As…', disabled: true },
         { label: 'Export PGN…', icon: <TbFileExport />, disabled: true },
         'separator',
@@ -183,7 +203,7 @@ export function BoardCommands({ doc, api, active, view, save, canSave, saving, s
         <ToolButton
           icon={<TbDeviceFloppy />}
           label={saving ? 'Saving…' : 'Save'}
-          title={canSave ? `Save the game (${shortcutLabel('Cmd+S')})` : 'Not in a database'}
+          title={`${savePicksDatabase ? 'Save the game to a database' : 'Save the game'} (${shortcutLabel('Cmd+S')})`}
           disabled={!canSave}
           onClick={save}
         />

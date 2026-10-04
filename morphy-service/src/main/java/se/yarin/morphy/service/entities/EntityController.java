@@ -1,8 +1,6 @@
 package se.yarin.morphy.service.entities;
 
 import org.jetbrains.annotations.NotNull;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -11,7 +9,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import se.yarin.morphy.api.EntityKind;
 import se.yarin.morphy.service.CountResponse;
-import se.yarin.morphy.service.MorphyServiceException;
 import se.yarin.morphy.service.search.EntitySearchRequest;
 import se.yarin.morphy.service.search.EntitySearchResponse;
 
@@ -22,8 +19,6 @@ import se.yarin.morphy.service.search.EntitySearchResponse;
  * @param <T> the DTO type of the entity kind
  */
 public abstract class EntityController<T> {
-  private static final Logger log = LoggerFactory.getLogger(EntityController.class);
-
   private final @NotNull EntitiesService entitiesService;
   private final @NotNull EntityKind<T> kind;
 
@@ -49,14 +44,8 @@ public abstract class EntityController<T> {
   /** Gets one entity, or 404 if there is none with that id or no game refers to it. */
   @GetMapping("/{id}")
   public ResponseEntity<T> get(@PathVariable String databaseId, @PathVariable long id) {
-    try {
-      T entity = entitiesService.get(databaseId, kind, id);
-      return entity == null ? ResponseEntity.notFound().build() : ResponseEntity.ok(entity);
-    } catch (MorphyServiceException e) {
-      log.error(
-          "Error retrieving {} {} from database '{}': {}", kind, id, databaseId, e.getMessage());
-      return ResponseEntity.internalServerError().build();
-    }
+    T entity = entitiesService.get(databaseId, kind, id);
+    return entity == null ? ResponseEntity.notFound().build() : ResponseEntity.ok(entity);
   }
 
   /** The number of entities that games refer to. */
@@ -65,19 +54,11 @@ public abstract class EntityController<T> {
     return ResponseEntity.ok(new CountResponse(entitiesService.count(databaseId, kind)));
   }
 
-  /** Updates an entity; 404 if it doesn't exist or can't be updated. */
+  /** Updates an entity; 400 if it doesn't exist. */
   @PutMapping("/{id}")
   public ResponseEntity<T> update(
       @PathVariable String databaseId, @PathVariable long id, @RequestBody T entity) {
-    try {
-      return ResponseEntity.ok(entitiesService.update(databaseId, kind, id, entity));
-    } catch (MorphyServiceException e) {
-      log.error("Error updating {} {} in database '{}': {}", kind, id, databaseId, e.getMessage());
-      return ResponseEntity.internalServerError().build();
-    } catch (Exception e) {
-      log.error("Unexpected error updating {} {} in database '{}'", kind, id, databaseId, e);
-      return ResponseEntity.notFound().build();
-    }
+    return ResponseEntity.ok(entitiesService.update(databaseId, kind, id, entity));
   }
 
   /**

@@ -13,6 +13,16 @@ export type GameState =
 
 type FetchResult = { paramsKey: string; game: GameDto } | { paramsKey: string; error: string };
 
+export interface GameDocumentOptions {
+  /** Called when a new game is saved, with its database and id, for the caller to pass back */
+  onCreated?: (databaseId: string, gameId: number) => void;
+  /**
+   * Called when loading or saving the game fails, with what failed; without it, a failed save is
+   * shown as the message, and a failed load as the error state.
+   */
+  onError?: (what: string, err: unknown) => void;
+}
+
 const BLANK_GAME: GameDto = {
   id: null,
   type: 'game',
@@ -22,10 +32,16 @@ const BLANK_GAME: GameDto = {
 
 const EMPTY_GAME: ChessGame = { header: { id: 'new', white: '', black: '', result: '', date: '' }, tags: [] };
 
-/** "White vs Black" by the players' last names, or null if the game has neither. */
+/** A player's last name, or null if it's unknown: none, or "?" as in PGN. */
+function playerName(player: GameDto['whitePlayer']): string | null {
+  const name = player?.lastName?.trim();
+  return name && name !== '?' ? name : null;
+}
+
+/** "White vs Black" by the players' last names, or null if neither is known. */
 export function gameTitle(game: GameDto): string | null {
-  const white = game.whitePlayer?.lastName?.trim();
-  const black = game.blackPlayer?.lastName?.trim();
+  const white = playerName(game.whitePlayer);
+  const black = playerName(game.blackPlayer);
   if (!white && !black) return null;
   return `${white || '?'} vs ${black || '?'}`;
 }
@@ -42,8 +58,11 @@ export interface GameDocument {
   onGameReady: (game: GameTree) => void;
   canSave: boolean;
   saving: boolean;
-  /** Saves the edited game: replaces it, or creates it if it's new */
-  save: () => Promise<void>;
+  /**
+   * Saves the edited game: replaces it, or creates it if it's new. A game in no database is
+   * created in the one given.
+   */
+  save: (toDatabaseId?: string) => Promise<void>;
   /** A message about the last save, or one set with showMessage */
   message: string | null;
   showMessage: (message: string) => void;
@@ -51,13 +70,13 @@ export interface GameDocument {
 
 /**
  * A game shown in GameView: loaded from a database by id, or new (empty), and saved back to the
- * database. A new game that is saved is created; onCreated then gets its id, for the caller to
- * pass back as gameId.
+ * database. A new game that is saved is created, in its database or, if it has none, the one
+ * save is given; onCreated then gets the database and the id, for the caller to pass back.
  */
 export function useGameDocument(
   databaseId: string | null,
   gameId: number | null,
-  onCreated?: (databaseId: string, gameId: number) => void
+  { onCreated, onError }: GameDocumentOptions = {}
 ): GameDocument {
   const paramsKey = `${databaseId ?? ''}:${gameId ?? ''}`;
 
@@ -68,6 +87,9 @@ export function useGameDocument(
   const [messageFor, setMessageFor] = useState<{ paramsKey: string; message: string } | null>(null);
   const message = messageFor?.paramsKey === paramsKey ? messageFor.message : null;
   const [saving, setSaving] = useState(false);
+  // A new game just created from what's on the board: the board already shows it, so it keeps
+  // what it shows rather than load the game again, which would go back to its start
+  const [createdShown, setCreatedShown] = useState<{ paramsKey: string; shown: string } | null>(null);
   const gameRef = useRef<GameTree | null>(null);
   // The format decides the languages a game tag can have titles in
   const format = databaseFormat(databases?.find((db) => db.id === databaseId)?.path);
@@ -112,10 +134,13 @@ export function useGameDocument(
               ? err.message
               : String(err);
         setFetchResult({ paramsKey, error: message });
+        onError?.('Opening the game failed', err);
       });
     return () => {
       cancelled = true;
     };
+    // onError isn't a dependency: a new one mustn't load the game again
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [databaseId, gameId, syncState, paramsKey]);
 
   const gameState: GameState = useMemo(() => {
@@ -129,7 +154,8 @@ export function useGameDocument(
   // Keyed on primitive values (not the gameState object) so that saving a replaced game
   // - which produces a new GameState object with the *same* game - doesn't change identity
   // and doesn't make GameView reload/reset the board out from under the user.
-  const shownGame = gameState.kind === 'loaded' ? gameState.shown : '';
+  const shownGame =
+    createdShown?.paramsKey === paramsKey ? createdShown.shown : gameState.kind === 'loaded' ? gameState.shown : '';
   const selectedGame = useMemo<ChessGame>(
     () => (shownGame ? (JSON.parse(shownGame) as ChessGame) : EMPTY_GAME),
     [shownGame]
@@ -141,13 +167,14 @@ export function useGameDocument(
 
   const showMessage = useCallback((message: string) => setMessageFor({ paramsKey, message }), [paramsKey]);
 
-  const canSave = !saving && Boolean(databaseId) && (gameState.kind === 'loaded' || gameState.kind === 'empty');
+  const canSave = !saving && (gameState.kind === 'loaded' || gameState.kind === 'empty');
 
-  async function save() {
-    if (!databaseId || !gameRef.current) return;
+  async function save(toDatabaseId?: string) {
+    const targetId = databaseId ?? toDatabaseId;
+    if (!targetId || !gameRef.current) return;
     setSaving(true);
     try {
-      if (gameState.kind === 'loaded' && gameId) {
+      if (databaseId && gameState.kind === 'loaded' && gameId) {
         const patch = gameToGamePatch(gameRef.current, gameState.game);
         let updated = await replaceGame(databaseId, gameId, patch);
         if (await saveFideIds(databaseId, patch, updated)) updated = await fetchGame(databaseId, gameId);
@@ -157,19 +184,21 @@ export function useGameDocument(
         setMessageFor({ paramsKey, message: 'Saved.' });
       } else {
         const patch = gameToGamePatch(gameRef.current, BLANK_GAME);
-        let created = await createGame(databaseId, patch);
+        let created = await createGame(targetId, patch);
         if (created.id == null) {
           throw new Error('Server did not return an id for the created game');
         }
         const createdId = created.id;
-        if (await saveFideIds(databaseId, patch, created)) created = await fetchGame(databaseId, createdId);
-        const newParamsKey = `${databaseId}:${createdId}`;
-        onCreated?.(databaseId, createdId);
+        if (await saveFideIds(targetId, patch, created)) created = await fetchGame(targetId, createdId);
+        const newParamsKey = `${targetId}:${createdId}`;
+        onCreated?.(targetId, createdId);
+        setCreatedShown({ paramsKey: newParamsKey, shown: shownGame });
         setFetchResult({ paramsKey: newParamsKey, game: created });
         setMessageFor({ paramsKey: newParamsKey, message: 'Created.' });
       }
     } catch (err) {
-      setMessageFor({ paramsKey, message: err instanceof Error ? err.message : String(err) });
+      if (onError) onError('Saving the game failed', err);
+      else setMessageFor({ paramsKey, message: err instanceof Error ? err.message : String(err) });
     } finally {
       setSaving(false);
     }

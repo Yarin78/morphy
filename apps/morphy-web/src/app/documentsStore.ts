@@ -19,6 +19,13 @@ export function useDocuments(): DocumentsStore {
   return store;
 }
 
+/** Whether the document a pane belongs to is the one shown, set around each document's grid. */
+export const DocumentActiveContext = createContext(false);
+
+export function useDocumentActive(): boolean {
+  return useContext(DocumentActiveContext);
+}
+
 /** The document a pane belongs to, set around each document's grid. */
 export const DocumentContext = createContext<MorphyDocument | null>(null);
 

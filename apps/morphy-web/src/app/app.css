@@ -319,6 +319,20 @@ html {
   white-space: nowrap;
 }
 
+.database-format {
+  white-space: nowrap;
+}
+
+.database-readonly {
+  white-space: nowrap;
+  margin-left: 8px;
+  padding: 0 6px;
+  border-radius: 3px;
+  background: #eee;
+  color: #888;
+  font-size: 11px;
+}
+
 .database-path {
   color: #888;
   font-family: ui-monospace, Menlo, monospace;
@@ -564,6 +578,10 @@ html {
   margin-top: 14px;
 }
 
+.dialog-buttons {
+  gap: 8px;
+}
+
 .dialog-buttons button {
   background: #8b6f47;
   color: #fff;
@@ -585,4 +603,316 @@ html {
   font-size: 15px;
   color: #666;
   margin-bottom: 6px;
+}
+
+.dialog-buttons button:disabled {
+  background: #bbb;
+  border-color: #aaa;
+  cursor: default;
+}
+
+.dialog-buttons .dialog-secondary {
+  background: #fff;
+  color: #555;
+  border-color: #ccc;
+}
+
+/* Picking the database to save a game to */
+
+.save-dialog {
+  width: min(520px, 90vw);
+}
+
+.database-picker {
+  list-style: none;
+  max-height: 50vh;
+  overflow-y: auto;
+  border: 1px solid #e0dbd3;
+  border-radius: 6px;
+}
+
+.database-picker li {
+  display: flex;
+  flex-direction: column;
+  padding: 7px 12px;
+  cursor: pointer;
+  border-bottom: 1px solid #f0ece6;
+}
+
+.database-picker li:last-child {
+  border-bottom: none;
+}
+
+.database-picker li:hover {
+  background: #f6f1ea;
+}
+
+.database-picker li.selected {
+  background: #8b6f47;
+  color: #fff;
+}
+
+.database-picker-name {
+  font-weight: 600;
+}
+
+.database-picker-path {
+  font-size: 11px;
+  color: #999;
+  font-family: ui-monospace, Menlo, monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.database-picker li.selected .database-picker-path {
+  color: #eadfcf;
+}
+
+/* Navigator badge, e.g. errors not yet seen in the logs */
+
+.nav-icon {
+  position: relative;
+}
+
+.nav-badge {
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: #c0392b;
+  color: #fff;
+  font-size: 11px;
+  line-height: 18px;
+  text-align: center;
+}
+
+.nav-badge-dot {
+  position: absolute;
+  top: -2px;
+  right: -4px;
+  min-width: 8px;
+  width: 8px;
+  height: 8px;
+  padding: 0;
+}
+
+/* Error dialog */
+
+.error-dialog {
+  width: min(480px, 90vw);
+}
+
+.error-dialog-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.error-dialog-head h2 {
+  margin: 0;
+}
+
+.error-dialog-icon {
+  flex: 0 0 auto;
+  font-size: 24px;
+  color: #c0392b;
+}
+
+.error-dialog-message {
+  max-height: 40vh;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: #444;
+  line-height: 1.5;
+}
+
+/* Logs */
+
+.logs-pane {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  font-size: 12px;
+}
+
+.logs-toolbar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  border-bottom: 1px solid #e4e0da;
+  background: #f7f5f2;
+}
+
+.logs-toolbar select,
+.logs-search {
+  font-size: 12px;
+  padding: 2px 6px;
+}
+
+.logs-search {
+  width: 220px;
+}
+
+.logs-check {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.logs-count {
+  color: #888;
+}
+
+.logs-fetch-error {
+  color: #c0392b;
+}
+
+.logs-toolbar button {
+  font-size: 12px;
+  padding: 2px 10px;
+}
+
+.logs-toolbar button:first-of-type {
+  margin-left: auto;
+}
+
+.logs-list {
+  flex: 1;
+  overflow: auto;
+  font-family: ui-monospace, Menlo, monospace;
+}
+
+.logs-empty {
+  padding: 16px;
+  color: #999;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.log-row {
+  border-bottom: 1px solid #f0ede8;
+  border-left: 3px solid transparent;
+}
+
+.log-row-warn {
+  border-left-color: #e0a030;
+}
+
+.log-row-error {
+  border-left-color: #c0392b;
+  background: #fdf5f4;
+}
+
+.log-row.focused {
+  outline: 2px solid #8b6f47;
+  outline-offset: -2px;
+}
+
+.log-line {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 3px 8px;
+  cursor: default;
+  white-space: nowrap;
+}
+
+.log-toggle {
+  width: 10px;
+  color: #999;
+  cursor: pointer;
+}
+
+.log-time {
+  color: #999;
+}
+
+.log-level {
+  width: 44px;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.log-level-info {
+  color: #4a7c59;
+}
+
+.log-level-warn {
+  color: #b7791f;
+}
+
+.log-level-error {
+  color: #c0392b;
+}
+
+.log-level-debug,
+.log-level-trace {
+  color: #999;
+}
+
+.log-source {
+  width: 48px;
+  color: #8b6f47;
+}
+
+.log-what {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-weight: 600;
+}
+
+.log-logger {
+  color: #4f7cac;
+}
+
+.log-message {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.log-status {
+  color: #888;
+}
+
+.log-details {
+  padding: 2px 8px 8px 36px;
+}
+
+.log-detail-line {
+  color: #888;
+  padding: 2px 0;
+}
+
+.log-detail-label {
+  margin-top: 6px;
+  color: #888;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.log-event-line {
+  display: flex;
+  gap: 8px;
+  padding: 2px 0;
+  white-space: nowrap;
+}
+
+.log-event .log-message {
+  white-space: pre-wrap;
+}
+
+.log-stack {
+  margin: 4px 0;
+  padding: 6px 8px;
+  max-height: 300px;
+  overflow: auto;
+  background: #f6f3ef;
+  border-radius: 4px;
+  font-size: 11px;
+  white-space: pre;
 }

@@ -18,6 +18,8 @@ export interface DatabaseResponse {
   id: string;
   displayName: string;
   path: string;
+  /** A read-only database can be searched, but games can't be saved to it */
+  readOnly: boolean;
 }
 
 export interface DatabaseListResponse {

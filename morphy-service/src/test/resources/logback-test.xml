@@ -9,7 +9,11 @@
     <logger name="se.yarin.morphy" level="INFO"/>
     <logger name="ch.qos.logback" level="WARN"/>
 
+    <!-- The recent events, kept in memory for /api/logs -->
+    <appender name="MEMORY" class="se.yarin.morphy.service.logs.MemoryLogAppender"/>
+
     <root level="WARN">
         <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="MEMORY"/>
     </root>
 </configuration>

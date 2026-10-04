@@ -10,11 +10,12 @@ import {
 import { type FunctionComponent, useState } from 'react';
 import { BoardDocument } from './BoardDocument';
 import { BOARD_PANE, defaultLayout, isLayoutComplete, type MorphyDocument } from './documents';
-import { DocumentContext, useDocuments } from './documentsStore';
+import { DocumentActiveContext, DocumentContext, useDocuments } from './documentsStore';
 import { BoardPane } from './panes/BoardPane';
 import { DatabasePane } from './panes/DatabasePane';
 import { DatabasesPane } from './panes/DatabasesPane';
 import { HomePane } from './panes/HomePane';
+import { LogsPane } from './panes/LogsPane';
 import { NotationPane } from './panes/NotationPane';
 import { EnginePane, TreePane } from './panes/PlaceholderPanes';
 import { SettingsPane } from './panes/SettingsPane';
@@ -25,6 +26,7 @@ const PANES: Record<string, FunctionComponent<IDockviewPanelProps>> = {
   home: HomePane,
   databases: DatabasesPane,
   settings: SettingsPane,
+  logs: LogsPane,
   database: DatabasePane,
   board: BoardPane,
   notation: NotationPane,
@@ -77,15 +79,17 @@ export function DocumentGrid({ doc, active }: { doc: MorphyDocument; active: boo
 
   return (
     <div className="document-grid" style={{ display: active ? undefined : 'none' }}>
-      <DocumentContext.Provider value={doc}>
-        {doc.kind === 'board' ? (
-          <BoardDocument doc={doc} api={api} active={active}>
-            {grid}
-          </BoardDocument>
-        ) : (
-          grid
-        )}
-      </DocumentContext.Provider>
+      <DocumentActiveContext.Provider value={active}>
+        <DocumentContext.Provider value={doc}>
+          {doc.kind === 'board' ? (
+            <BoardDocument doc={doc} api={api} active={active}>
+              {grid}
+            </BoardDocument>
+          ) : (
+            grid
+          )}
+        </DocumentContext.Provider>
+      </DocumentActiveContext.Provider>
     </div>
   );
 }

@@ -1,4 +1,5 @@
-import { type PointerEvent as ReactPointerEvent, useState } from 'react';
+import { type PointerEvent as ReactPointerEvent, useState, useSyncExternalStore } from 'react';
+import { getSnapshot as getLogSnapshot, subscribe as subscribeLogs } from '../logs/logStore';
 import { documentTitle, type MorphyDocument, type SingletonKind } from './documents';
 import { useDocuments } from './documentsStore';
 
@@ -20,6 +21,7 @@ const ICONS: Record<MorphyDocument['kind'], string> = {
   home: '⌂',
   databases: '☰',
   settings: '⚙',
+  logs: '≣',
   database: '▤',
   board: '♞',
 };
@@ -30,6 +32,7 @@ function NavItem({
   collapsed,
   active,
   disabled,
+  badge,
   onClick,
   onClose,
 }: {
@@ -38,6 +41,8 @@ function NavItem({
   collapsed: boolean;
   active?: boolean;
   disabled?: boolean;
+  /** A count to draw attention to, as of errors not yet seen */
+  badge?: number;
   onClick: () => void;
   onClose?: () => void;
 }) {
@@ -47,8 +52,12 @@ function NavItem({
       title={collapsed ? label : undefined}
       onClick={disabled ? undefined : onClick}
     >
-      <span className="nav-icon">{icon}</span>
+      <span className="nav-icon">
+        {icon}
+        {!!badge && collapsed && <span className="nav-badge nav-badge-dot" />}
+      </span>
       {!collapsed && <span className="nav-label">{label}</span>}
+      {!!badge && !collapsed && <span className="nav-badge">{badge}</span>}
       {!collapsed && onClose && (
         <button
           className="nav-close"
@@ -75,8 +84,11 @@ export function Navigator({ state, onChange }: { state: NavigatorState; onChange
   const databases = docs.documents.filter((d) => d.kind === 'database');
   const boards = docs.documents.filter((d) => d.kind === 'board');
 
-  const singleton = (kind: SingletonKind) => (
+  const { unseenErrors } = useSyncExternalStore(subscribeLogs, getLogSnapshot);
+
+  const singleton = (kind: SingletonKind, badge?: number) => (
     <NavItem
+      badge={badge}
       icon={ICONS[kind]}
       label={documentTitle({ kind, id: kind })}
       collapsed={collapsed}
@@ -166,6 +178,7 @@ export function Navigator({ state, onChange }: { state: NavigatorState; onChange
           disabled={boards.length === 0}
           onClick={() => dispatch({ type: 'closeAllBoards' })}
         />
+        {singleton('logs', unseenErrors)}
         {singleton('settings')}
       </div>
       <div className="nav-resize" onPointerDown={onResizeStart} title="Drag to resize; narrow it to collapse to icons" />

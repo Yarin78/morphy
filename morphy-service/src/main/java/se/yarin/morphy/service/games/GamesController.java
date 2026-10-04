@@ -1,11 +1,8 @@
 package se.yarin.morphy.service.games;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import se.yarin.morphy.service.CountResponse;
-import se.yarin.morphy.service.MorphyServiceException;
 import se.yarin.morphy.service.games.GamesService;
 import se.yarin.morphy.model.GameDto;
 import se.yarin.morphy.service.games.dto.GameSearchRequest;
@@ -14,8 +11,6 @@ import se.yarin.morphy.service.games.dto.GameSearchResponse;
 @RestController
 @RequestMapping("/api/databases/{databaseId}/games")
 public class GamesController {
-  private static final Logger log = LoggerFactory.getLogger(GamesController.class);
-
   private final GamesService gamesService;
 
   public GamesController(GamesService gamesService) {
@@ -59,17 +54,11 @@ public class GamesController {
       @PathVariable long gameId,
       @RequestParam(defaultValue = "true") boolean includeMoves,
       @RequestParam(defaultValue = "false") boolean includeText) {
-    try {
-      GameDto game = gamesService.getGame(databaseId, gameId, includeMoves, includeText);
-      if (game == null) {
-        return ResponseEntity.notFound().build();
-      }
-      return ResponseEntity.ok(game);
-    } catch (MorphyServiceException e) {
-      log.error(
-          "Error retrieving game {} from database '{}': {}", gameId, databaseId, e.getMessage());
-      return ResponseEntity.internalServerError().build();
+    GameDto game = gamesService.getGame(databaseId, gameId, includeMoves, includeText);
+    if (game == null) {
+      return ResponseEntity.notFound().build();
     }
+    return ResponseEntity.ok(game);
   }
 
   /**
@@ -93,16 +82,8 @@ public class GamesController {
   @PostMapping
   public ResponseEntity<GameDto> addGame(
       @PathVariable String databaseId, @RequestBody GameDto gameDto) {
-    try {
-      GameDto createdGame = gamesService.addGame(databaseId, gameDto);
-      return ResponseEntity.status(201).body(createdGame);
-    } catch (MorphyServiceException e) {
-      log.error("Error adding game to database '{}': {}", databaseId, e.getMessage());
-      return ResponseEntity.internalServerError().build();
-    } catch (Exception e) {
-      log.error("Unexpected error adding game to database '{}'", databaseId, e);
-      return ResponseEntity.internalServerError().build();
-    }
+    GameDto createdGame = gamesService.addGame(databaseId, gameDto);
+    return ResponseEntity.status(201).body(createdGame);
   }
 
   /**
@@ -116,16 +97,8 @@ public class GamesController {
   @PutMapping("/{gameId}")
   public ResponseEntity<GameDto> replaceGame(
       @PathVariable String databaseId, @PathVariable long gameId, @RequestBody GameDto gameDto) {
-    try {
-      GameDto updatedGame = gamesService.replaceGame(databaseId, gameId, gameDto);
-      return ResponseEntity.ok(updatedGame);
-    } catch (MorphyServiceException e) {
-      log.error("Error replacing game {} in database '{}': {}", gameId, databaseId, e.getMessage());
-      return ResponseEntity.internalServerError().build();
-    } catch (Exception e) {
-      log.error("Unexpected error replacing game {} in database '{}'", gameId, databaseId, e);
-      return ResponseEntity.notFound().build();
-    }
+    GameDto updatedGame = gamesService.replaceGame(databaseId, gameId, gameDto);
+    return ResponseEntity.ok(updatedGame);
   }
 
   /**

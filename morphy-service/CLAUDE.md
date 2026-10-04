@@ -59,6 +59,11 @@ See @GAME_DTO_USAGE.md for DTO conversion details.
 ### Entities (Players, Tournaments, Annotators, Sources, Teams, GameTags)
 Each entity type has: list, get by ID, count, search, update endpoints under `/api/databases/{id}/{entity-type}/`.
 
+### Logs
+- `GET /api/logs?after={seq}` - The recent log events (kept in memory, the last 5000) after the one numbered `seq`: those logged while handling the caller's requests, and those of no request (startup, databases opening)
+
+Every request may send `X-Request-Id` and `X-Session-Id`; `RequestIdFilter` puts them in the MDC, so everything logged while handling the request carries them, and `/api/logs` returns only the caller's session's events. A request without an id gets one, returned in the `X-Request-Id` response header. Exceptions are left to `GlobalExceptionHandler`, which logs them (with the ids) and answers `{"error": "..."}` with the message and its causes; controllers don't catch them themselves.
+
 ### Metadata
 - `GET /api/health` - Health check
 - `GET /api/filters/{entity-type}` - Available filter fields per entity type

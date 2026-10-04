@@ -46,9 +46,13 @@
     <!-- HTTP Client logging -->
     <logger name="org.apache.http" level="WARN"/>
 
+    <!-- The recent events, kept in memory for /api/logs -->
+    <appender name="MEMORY" class="se.yarin.morphy.service.logs.MemoryLogAppender"/>
+
     <!-- Root logger -->
     <root level="INFO">
         <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="MEMORY"/>
         <!-- <appender-ref ref="FILE"/> -->
     </root>
 </configuration>

@@ -1,10 +1,10 @@
 import type { AddPanelPositionOptions, DockviewApi } from 'dockview-react';
 
 // The documents of the app. Each one has its own Dockview grid, which fills the screen when it
-// is the active one. Home, All Databases and Settings are singletons; databases and boards can
+// is the active one. Home, All Databases, Logs and Settings are singletons; databases and boards can
 // be opened any number of times.
 
-export type SingletonKind = 'home' | 'databases' | 'settings';
+export type SingletonKind = 'home' | 'databases' | 'settings' | 'logs';
 
 /** A position in a quoted game to open the board at; see quotedPosition in game-view. */
 export interface QuoteTarget {
@@ -54,6 +54,8 @@ export function documentTitle(doc: MorphyDocument): string {
       return 'All Databases';
     case 'settings':
       return 'Settings';
+    case 'logs':
+      return 'Logs';
     case 'database':
       return doc.name;
     case 'board':
@@ -136,6 +138,7 @@ const MAIN_PANE: Record<MorphyDocument['kind'], { component: string; title: stri
   home: { component: 'home', title: 'Home' },
   databases: { component: 'databases', title: 'Databases' },
   settings: { component: 'settings', title: 'Settings' },
+  logs: { component: 'logs', title: 'Logs' },
   database: { component: 'database', title: 'Search' },
   board: { component: 'board', title: 'Board' },
 };

@@ -2,8 +2,6 @@ package se.yarin.morphy.service.databases;
 
 import java.io.IOException;
 import java.util.List;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -15,8 +13,6 @@ import se.yarin.morphy.service.databases.DatabaseService;
 @RestController
 @RequestMapping("/api/databases")
 public class DatabaseController {
-  private static final Logger log = LoggerFactory.getLogger(DatabaseController.class);
-
   private final DatabaseService databaseService;
 
   public DatabaseController(DatabaseService databaseService) {
@@ -29,7 +25,9 @@ public class DatabaseController {
     List<DatabaseDto> databases = databaseService.getAllDatabase();
     List<DatabaseResponse> response =
         databases.stream()
-            .map(dto -> new DatabaseResponse(dto.id(), dto.displayName(), dto.path()))
+            .map(
+                dto ->
+                    new DatabaseResponse(dto.id(), dto.displayName(), dto.path(), dto.readOnly()))
             .toList();
     return ResponseEntity.ok(new DatabaseListResponse(response));
   }
@@ -42,7 +40,8 @@ public class DatabaseController {
       return ResponseEntity.notFound().build();
     }
     return ResponseEntity.ok(
-        new DatabaseResponse(config.getId(), config.getDisplayName(), config.getPath()));
+        new DatabaseResponse(
+            config.getId(), config.getDisplayName(), config.getPath(), config.isReadOnly()));
   }
 
   /** Refresh a database by forcing it to reload from disk. */
@@ -59,16 +58,14 @@ public class DatabaseController {
    * @return The created database details
    */
   @PostMapping
-  public ResponseEntity<DatabaseResponse> createDatabase(@RequestBody CreateDatabaseRequest request) {
-    try {
-      databaseService.createDatabase(request.id(), request.displayName(), request.path());
-      var config = databaseService.getDatabaseConfig(request.id());
-      return ResponseEntity.status(HttpStatus.CREATED)
-          .body(new DatabaseResponse(config.getId(), config.getDisplayName(), config.getPath()));
-    } catch (IOException e) {
-      log.error("Failed to create database: {}", e.getMessage(), e);
-      return ResponseEntity.internalServerError().build();
-    }
+  public ResponseEntity<DatabaseResponse> createDatabase(@RequestBody CreateDatabaseRequest request)
+      throws IOException {
+    databaseService.createDatabase(request.id(), request.displayName(), request.path());
+    var config = databaseService.getDatabaseConfig(request.id());
+    return ResponseEntity.status(HttpStatus.CREATED)
+        .body(
+            new DatabaseResponse(
+                config.getId(), config.getDisplayName(), config.getPath(), config.isReadOnly()));
   }
 
   /**
@@ -78,16 +75,14 @@ public class DatabaseController {
    * @return The registered database details
    */
   @PostMapping("/register")
-  public ResponseEntity<DatabaseResponse> registerDatabase(@RequestBody RegisterDatabaseRequest request) {
-    try {
-      databaseService.registerDatabase(request.id(), request.displayName(), request.path());
-      var config = databaseService.getDatabaseConfig(request.id());
-      return ResponseEntity.status(HttpStatus.CREATED)
-          .body(new DatabaseResponse(config.getId(), config.getDisplayName(), config.getPath()));
-    } catch (IOException e) {
-      log.error("Failed to register database: {}", e.getMessage(), e);
-      return ResponseEntity.internalServerError().build();
-    }
+  public ResponseEntity<DatabaseResponse> registerDatabase(@RequestBody RegisterDatabaseRequest request)
+      throws IOException {
+    databaseService.registerDatabase(request.id(), request.displayName(), request.path());
+    var config = databaseService.getDatabaseConfig(request.id());
+    return ResponseEntity.status(HttpStatus.CREATED)
+        .body(
+            new DatabaseResponse(
+                config.getId(), config.getDisplayName(), config.getPath(), config.isReadOnly()));
   }
 
   /**
@@ -98,13 +93,9 @@ public class DatabaseController {
    * @return 204 No Content on success
    */
   @DeleteMapping("/{databaseId}")
-  public ResponseEntity<Void> unregisterDatabase(@PathVariable String databaseId) {
-    try {
-      databaseService.unregisterDatabase(databaseId);
-      return ResponseEntity.noContent().build();
-    } catch (IOException e) {
-      log.error("Failed to unregister database: {}", e.getMessage(), e);
-      return ResponseEntity.internalServerError().build();
-    }
+  public ResponseEntity<Void> unregisterDatabase(@PathVariable String databaseId)
+      throws IOException {
+    databaseService.unregisterDatabase(databaseId);
+    return ResponseEntity.noContent().build();
   }
 }
