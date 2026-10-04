@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { type RefObject, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { GameTree } from '../model/GameTree';
 import type { MoveNode } from '../model/GameTree';
 import { generateNotationHtml } from '../utils/notationGenerator';
@@ -24,6 +24,8 @@ interface GameNotationProps {
   onCommentEditDone?: (text: string | null) => void;
   /** When given, a quoted game that refers to another game can be clicked to open it. */
   onQuotationClick?: (link: QuotationLink) => void;
+  /** Set to the element the moves are in, as for moving between them with the keys. */
+  containerRef?: RefObject<HTMLDivElement | null>;
 }
 
 const NOTHING_FOLDED: ReadonlySet<MoveNode> = new Set();
@@ -47,9 +49,11 @@ export const GameNotation: React.FC<GameNotationProps> = ({
   onCommentEditDone,
   onNotationReady,
   onQuotationClick,
+  containerRef: givenContainerRef,
 }) => {
   const [notationResult, setNotationResult] = useState<NotationHtmlResult | null>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const ownContainerRef = useRef<HTMLDivElement>(null);
+  const containerRef = givenContainerRef ?? ownContainerRef;
   // The first moves of the variations that are folded, kept with the game they're of
   const [folding, setFolding] = useState<{ game: GameTree; folded: ReadonlySet<MoveNode> }>({
     game,

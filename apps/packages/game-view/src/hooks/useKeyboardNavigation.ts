@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { type RefObject, useEffect, useRef } from 'react';
 import { navigateToAdjacentMove } from '../utils/moveNavigation';
 import type { MoveNode } from '../model/GameTree';
 
@@ -12,6 +12,8 @@ interface UseKeyboardNavigationOptions {
   goToEnd: () => void;
   seekToMove: (move: MoveNode | null) => void;
   reverseMoveMap: Map<number, MoveNode>;
+  /** The notation the moves are in, for moving up and down in it */
+  notationRef: RefObject<HTMLElement | null>;
 }
 
 /**
@@ -27,6 +29,7 @@ export function useKeyboardNavigation({
   goToEnd,
   seekToMove,
   reverseMoveMap,
+  notationRef,
 }: UseKeyboardNavigationOptions): void {
   const reverseMoveMapRef = useRef<Map<number, MoveNode>>(reverseMoveMap);
 
@@ -66,11 +69,11 @@ export function useKeyboardNavigation({
           break;
         case 'ArrowUp':
           e.preventDefault();
-          navigateToAdjacentMove('up', reverseMoveMapRef.current, seekToMove);
+          navigateToAdjacentMove('up', notationRef.current, reverseMoveMapRef.current, seekToMove);
           break;
         case 'ArrowDown':
           e.preventDefault();
-          navigateToAdjacentMove('down', reverseMoveMapRef.current, seekToMove);
+          navigateToAdjacentMove('down', notationRef.current, reverseMoveMapRef.current, seekToMove);
           break;
         case 'Home':
           e.preventDefault();
@@ -100,5 +103,6 @@ export function useKeyboardNavigation({
     goToStart,
     goToEnd,
     seekToMove,
+    notationRef,
   ]);
 }

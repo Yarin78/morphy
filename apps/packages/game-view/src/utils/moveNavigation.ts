@@ -26,20 +26,12 @@ function sortMovesByPosition(moves: HTMLElement[]): HTMLElement[] {
 }
 
 /**
- * Finds all move elements in the notation container
+ * Finds all move elements in a notation. It's the game's own, not just any on the page: with
+ * several games open, the others' are there too, hidden.
  */
-export function getAllMoveElements(): HTMLElement[] {
-  const notationContainer = document.querySelector('.game-notation-container');
-  if (!notationContainer) return [];
-  return Array.from(notationContainer.querySelectorAll('.cbmove')) as HTMLElement[];
-}
-
-/**
- * Finds the currently highlighted move element
- */
-export function getCurrentMoveElement(): HTMLElement | null {
-  const allMoves = getAllMoveElements();
-  return allMoves.find(move => move.classList.contains('cbcur-move')) || null;
+function getAllMoveElements(notation: HTMLElement | null): HTMLElement[] {
+  if (!notation) return [];
+  return Array.from(notation.querySelectorAll('.cbmove')) as HTMLElement[];
 }
 
 /**
@@ -152,13 +144,14 @@ function sortCandidateMoves(
  */
 export function navigateToAdjacentMove(
   direction: 'up' | 'down',
+  notation: HTMLElement | null,
   reverseMoveMap: Map<number, MoveNode>,
   seekToMove: (move: MoveNode | null) => void
 ): void {
-  const allMoves = getAllMoveElements();
+  const allMoves = getAllMoveElements(notation);
   if (allMoves.length === 0) return;
 
-  const currentMoveElement = getCurrentMoveElement();
+  const currentMoveElement = allMoves.find((move) => move.classList.contains('cbcur-move')) ?? null;
 
   if (!currentMoveElement) {
     // If no current move is highlighted, find first/last move by vertical position

@@ -172,6 +172,8 @@ export function useGameView({
   // return type depends on which lib is in scope for whoever compiles this file.
   const animationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [reverseMoveMap, setReverseMoveMap] = useState<Map<number, MoveNode>>(new Map());
+  // The notation's moves, to move between them with the keys: those of this game, of all on the page
+  const notationRef = useRef<HTMLDivElement | null>(null);
 
   // The moves to choose the next move from when there are variations, while they're shown
   const [moveChoice, setMoveChoice] = useState<{ game: GameTree; moves: MoveNode[] } | null>(null);
@@ -716,6 +718,7 @@ export function useGameView({
     goToEnd,
     seekToMove,
     reverseMoveMap,
+    notationRef,
   });
 
   // This useLayoutEffect manages board shapes (arrows, highlights) in sync with animations.
@@ -795,6 +798,7 @@ export function useGameView({
     handleNextMove,
     goToEnd,
     seekToMove,
+    notationRef,
     // Undoing and redoing the edits; whether they can be done is asked when it's needed, as the
     // history isn't state
     handleUndo,

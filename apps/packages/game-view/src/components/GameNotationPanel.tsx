@@ -40,6 +40,7 @@ export function GameNotationPanel({ view }: { view: GameViewState }) {
     handleMoveChoiceCancel,
     evaluationBars,
     seekToMove,
+    notationRef,
     handleNagToggle,
     barActionGroups,
   } = view;
@@ -60,6 +61,7 @@ export function GameNotationPanel({ view }: { view: GameViewState }) {
             onCommentDoubleClick={isEditMode ? handleCommentEdit : undefined}
             onCommentEditDone={handleCommentEditDone}
             onNotationReady={handleNotationReady}
+            containerRef={notationRef}
             onQuotationClick={onQuotationClick}
           />
           {moveMenu && moveMenuItems.length > 0 && (
