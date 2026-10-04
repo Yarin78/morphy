@@ -17,6 +17,8 @@ export interface BoardSettings {
   lastMove: LastMoveStyle;
   /** The buttons to move through the game, below the board */
   navigation: boolean;
+  /** Moves made by pressing the square they go to, the piece moved guessed by the engine */
+  destinationMoves: boolean;
   pieceSet: PieceSet;
   boardTheme: BoardTheme;
 }
@@ -59,6 +61,7 @@ export const DEFAULT_SETTINGS: Settings = {
     animation: true,
     lastMove: 'arrow',
     navigation: true,
+    destinationMoves: true,
     pieceSet: 'merida',
     boardTheme: 'brown',
   },

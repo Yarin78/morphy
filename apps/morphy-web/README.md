@@ -32,6 +32,11 @@ send `Cross-Origin-Opener-Policy: same-origin` and
 send them too. The engine code (`src/engine`) speaks UCI over a transport, so a
 remote engine can be added as another transport.
 
+A second engine, the lite single-threaded build in a worker of its own, guesses
+the piece meant when a move is made by pressing the square it goes to
+(`src/engine/moveGuesser.ts`): the best of the moves to that square, by a 0.1 s
+search.
+
 ## Pages
 
 - `/` — the Morphy app (`src/app`). A navigator on the left lists the open

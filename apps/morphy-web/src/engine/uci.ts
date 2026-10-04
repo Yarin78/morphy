@@ -87,9 +87,12 @@ export function parseOption(line: string): UciOption | null {
 export class UciEngine {
   private readonly transport: UciTransport;
   private infoListener: ((info: EngineInfo) => void) | null = null;
+  // Who is told the best move the search ends with, for a search for one
+  private bestMoveListener: ((move: string | null) => void) | null = null;
   private searching = false;
-  // The next position to search, while the last search is still being stopped
-  private pending: (() => void) | null = null;
+  // The next search, while the last one is still being stopped; cancelled, as when another
+  // replaces it, its caller is told so
+  private pending: { start: () => void; cancel?: () => void } | null = null;
 
   constructor(transport: UciTransport) {
     this.transport = transport;
@@ -150,27 +153,57 @@ export class UciEngine {
       this.transport.send(`position fen ${fen}`);
       this.transport.send('go infinite');
     };
-    if (!this.searching) {
-      start();
-      return;
-    }
-    // A search is stopped by its bestmove; the next one starts after, so its info isn't mixed up
-    // with the last one's
-    this.pending = start;
-    this.stopSearch();
+    this.startSearch({ start });
+  }
+
+  /**
+   * Searches a position for a while, for the best move: of all moves, or of those given. Resolves
+   * to the move in UCI, or null if there's none or the search was stopped for another.
+   */
+  bestMove(fen: string, movetime: number, searchMoves: string[] = []): Promise<string | null> {
+    return new Promise((resolve) => {
+      const start = () => {
+        this.infoListener = null;
+        this.bestMoveListener = resolve;
+        this.searching = true;
+        this.transport.send(`position fen ${fen}`);
+        const moves = searchMoves.length > 0 ? ` searchmoves ${searchMoves.join(' ')}` : '';
+        this.transport.send(`go movetime ${movetime}${moves}`);
+      };
+      this.startSearch({ start, cancel: () => resolve(null) });
+    });
   }
 
   /** Stops analysing. */
   stop() {
-    this.pending = null;
+    this.cancelPending();
     this.stopSearch();
   }
 
   quit() {
-    this.pending = null;
+    this.cancelPending();
+    this.bestMoveListener?.(null);
+    this.bestMoveListener = null;
     this.infoListener = null;
     this.transport.send('quit');
     this.transport.close();
+  }
+
+  private startSearch(search: { start: () => void; cancel?: () => void }) {
+    if (!this.searching) {
+      search.start();
+      return;
+    }
+    // A search is stopped by its bestmove; the next one starts after, so its info isn't mixed up
+    // with the last one's
+    this.cancelPending();
+    this.pending = search;
+    this.stopSearch();
+  }
+
+  private cancelPending() {
+    this.pending?.cancel?.();
+    this.pending = null;
   }
 
   private stopSearch() {
@@ -182,9 +215,14 @@ export class UciEngine {
   private handleLine(line: string) {
     if (line.startsWith('bestmove')) {
       this.searching = false;
+      // A search stopped for another doesn't count: its move is of a search cut short
+      const move = line.split(/\s+/)[1];
+      const listener = this.bestMoveListener;
+      this.bestMoveListener = null;
+      listener?.(this.pending || !move || move === '(none)' ? null : move);
       const next = this.pending;
       this.pending = null;
-      next?.();
+      next?.start();
       return;
     }
     if (!this.infoListener) return;

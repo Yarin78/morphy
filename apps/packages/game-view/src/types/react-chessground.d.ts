@@ -127,5 +127,14 @@ declare module 'react-chessground' {
     [key: string]: any;
   }
 
-  export default class Chessground extends Component<ChessgroundProps> {}
+  /** The bit of chessground's own API used through the component */
+  interface ChessgroundApi {
+    state: { selected?: Square };
+    selectSquare(key: Square | null): void;
+  }
+
+  export default class Chessground extends Component<ChessgroundProps> {
+    /** Chessground itself, once the component is mounted */
+    cg?: ChessgroundApi;
+  }
 }

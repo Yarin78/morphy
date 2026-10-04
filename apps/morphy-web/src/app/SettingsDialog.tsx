@@ -144,6 +144,16 @@ function BoardTab() {
           onChange={(lastMove) => setBoardSettings({ lastMove })}
         />
       </Row>
+      <Row
+        label="Moving"
+        note="Press the square a piece is to go to: the piece the engine finds best is circled, and moves when you let go. To move another, point at it before letting go; let go off the board to make no move."
+      >
+        <Check
+          checked={board.destinationMoves}
+          onChange={(destinationMoves) => setBoardSettings({ destinationMoves })}
+          label="Move by pressing the square to go to"
+        />
+      </Row>
       <Row label="Show">
         <Check
           checked={board.coordinates}

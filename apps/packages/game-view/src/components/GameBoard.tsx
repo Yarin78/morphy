@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
+import type { Square } from 'chess.js';
 import Chessground from 'react-chessground';
 import 'react-chessground/dist/styles/chessground.css';
 import { IoPlaySkipBack, IoChevronBack, IoChevronForward, IoPlaySkipForward } from 'react-icons/io5';
 import { PromotionDialog } from './PromotionDialog';
+import { GUESS_BRUSHES, type MoveGuesser, useDestinationMoves } from '../hooks/useDestinationMoves';
 import { ANNOTATION_BRUSHES } from '../utils/drawableConverter';
 import type { GameViewState } from './useGameView';
 import './GameView.css';
@@ -12,6 +14,8 @@ const MIN_BOARD_SIZE = 160;
 const MAX_BOARD_SIZE = 1200;
 // The space around the board: chess-board-container's padding, both sides
 const BOARD_PADDING = 32;
+// The annotations' brushes, and those of a move made square first
+const BRUSHES = { ...ANNOTATION_BRUSHES, ...GUESS_BRUSHES };
 
 export interface GameBoardProps {
   view: GameViewState;
@@ -23,6 +27,13 @@ export interface GameBoardProps {
   lastMove?: LastMoveStyle;
   /** Whether the buttons to move through the game are below the board; true by default */
   navigation?: boolean;
+  /**
+   * Whether a move can be made by pressing the square it goes to, when editing; the piece moved is
+   * the one guessed to be meant (see useDestinationMoves). True by default
+   */
+  destinationMoves?: boolean;
+  /** Guesses the piece meant, for such a move; without it, the least valuable piece is */
+  guessMove?: MoveGuesser;
 }
 
 export type LastMoveStyle = 'arrow' | 'squares' | 'none';
@@ -37,6 +48,8 @@ export function GameBoard({
   animation = true,
   lastMove = 'arrow',
   navigation = true,
+  destinationMoves = true,
+  guessMove,
 }: GameBoardProps) {
   const {
     selectedGame,
@@ -64,6 +77,19 @@ export function GameBoard({
   const boardContainerRef = useRef<HTMLDivElement>(null);
   const navigationRef = useRef<HTMLDivElement>(null);
   const [boardSize, setBoardSize] = useState(512);
+  const chessgroundRef = useRef<Chessground>(null);
+
+  const guessShapes = useDestinationMoves({
+    enabled: isEditMode && destinationMoves && !promotionPending,
+    containerRef: boardContainerRef,
+    chessground: () => chessgroundRef.current?.cg,
+    orientation: boardOrientation,
+    fen: game.fen(),
+    legalMoves,
+    pieceType: (square) => game.pieceAt(square as Square)?.type,
+    guess: guessMove,
+    onMove: (from, to) => handleMove(from as Square, to as Square),
+  });
 
   // The largest square that fits above the buttons
   useEffect(() => {
@@ -122,6 +148,7 @@ export function GameBoard({
       <div className="chess-board-container" ref={boardContainerRef}>
         {/* Chessground reads the coordinates only when it's created */}
         <Chessground
+          ref={chessgroundRef}
           key={`chessground-${isEditMode ? 'edit' : 'view'}-${coordinates ? 'coords' : 'plain'}`}
           width={boardSize}
           height={boardSize}
@@ -144,8 +171,8 @@ export function GameBoard({
             visible: true,
             eraseOnClick: true,
             // The arrow of the last move is the only shape drawn besides the move's own
-            autoShapes: lastMove === 'arrow' ? [...autoShapes, ...userDrawnShapes] : userDrawnShapes,
-            brushes: ANNOTATION_BRUSHES,
+            autoShapes: [...(lastMove === 'arrow' ? autoShapes : []), ...userDrawnShapes, ...guessShapes],
+            brushes: BRUSHES,
             onChange: handleDrawableChange,
           }}
           addDimensionsCssVarsTo={document.body}

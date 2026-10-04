@@ -64,3 +64,4 @@ export { formatSan, MOVE_NOTATIONS } from './utils/moveNotation';
 export type { MoveNotation } from './utils/moveNotation';
 export { NOTATION_BAR_GROUPS } from './components/NagBar';
 export type { NotationBarGroup } from './components/NagBar';
+export type { MoveGuesser } from './hooks/useDestinationMoves';
