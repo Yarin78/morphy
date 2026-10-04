@@ -63,14 +63,14 @@ export interface GameDocument {
   saving: boolean;
   /**
    * Saves the edited game: replaces it, or creates it if it's new. A game in no database is
-   * created in the one given.
+   * created in the one given. Whether it was saved.
    */
-  save: (toDatabaseId?: string) => Promise<void>;
+  save: (toDatabaseId?: string) => Promise<boolean>;
   /**
    * Saves what's on the board as a new game in a database, maybe the game's own, which the
-   * board then shows.
+   * board then shows. Whether it was saved.
    */
-  saveAs: (toDatabaseId: string) => Promise<void>;
+  saveAs: (toDatabaseId: string) => Promise<boolean>;
   /** A message about the last save, or one set with showMessage */
   message: string | null;
   showMessage: (message: string) => void;
@@ -194,24 +194,26 @@ export function useGameDocument(
     else setMessageFor({ paramsKey: newParamsKey, message });
   }
 
-  // Runs a save, telling of its failure as what failed
-  async function runSave(what: string, operation: () => Promise<void>) {
+  // Runs a save, telling of its failure as what failed; whether it succeeded
+  async function runSave(what: string, operation: () => Promise<void>): Promise<boolean> {
     setSaving(true);
     try {
       await operation();
+      return true;
     } catch (err) {
       if (onError) onError(what, err);
       else setMessageFor({ paramsKey, message: err instanceof Error ? err.message : String(err) });
+      return false;
     } finally {
       setSaving(false);
     }
   }
 
-  async function save(toDatabaseId?: string) {
+  async function save(toDatabaseId?: string): Promise<boolean> {
     const targetId = databaseId ?? toDatabaseId;
     const tree = gameRef.current;
-    if (!targetId || !tree) return;
-    await runSave('Saving the game failed', async () => {
+    if (!targetId || !tree) return false;
+    return runSave('Saving the game failed', async () => {
       if (databaseId && gameState.kind === 'loaded' && gameId) {
         const patch = gameToGamePatch(tree, gameState.game);
         let updated = await replaceGame(databaseId, gameId, patch);
@@ -227,10 +229,10 @@ export function useGameDocument(
     });
   }
 
-  async function saveAs(toDatabaseId: string) {
+  async function saveAs(toDatabaseId: string): Promise<boolean> {
     const tree = gameRef.current;
-    if (!tree) return;
-    await runSave('Saving a copy of the game failed', async () => {
+    if (!tree) return false;
+    return runSave('Saving a copy of the game failed', async () => {
       // In another database, the players, tournament and the rest are found or created by name:
       // the ids are this database's. They're forgotten on a copy, so the board keeps them if
       // saving fails, and on the board once the game is saved there.

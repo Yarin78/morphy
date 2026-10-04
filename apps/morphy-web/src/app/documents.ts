@@ -43,7 +43,6 @@ export type DocumentsAction =
   | { type: 'openDatabase'; databaseId: string; name: string }
   | { type: 'openBoard'; databaseId?: string; gameId?: number; quote?: QuoteTarget }
   | { type: 'close'; id: string }
-  | { type: 'closeAllBoards' }
   | { type: 'updateBoard'; id: string; changes: Partial<Pick<BoardDocument, 'title' | 'databaseId' | 'gameId'>> };
 
 export function documentTitle(doc: MorphyDocument): string {
@@ -123,8 +122,6 @@ export function documentsReducer(state: DocumentsState, action: DocumentsAction)
     }
     case 'close':
       return without(state, (d) => d.id === action.id);
-    case 'closeAllBoards':
-      return without(state, (d) => d.kind === 'board');
     case 'updateBoard':
       return {
         ...state,

@@ -1,5 +1,7 @@
 import { type PointerEvent as ReactPointerEvent, useState, useSyncExternalStore } from 'react';
 import { getSnapshot as getLogSnapshot, subscribe as subscribeLogs } from '../logs/logStore';
+import { closeDocuments } from './closeDocuments';
+import { getUnsaved, subscribeUnsaved } from './unsavedStore';
 import { documentTitle, type MorphyDocument, type SingletonKind } from './documents';
 import { useDocuments } from './documentsStore';
 
@@ -33,6 +35,7 @@ function NavItem({
   active,
   disabled,
   badge,
+  unsaved,
   onClick,
   onClose,
 }: {
@@ -43,6 +46,8 @@ function NavItem({
   disabled?: boolean;
   /** A count to draw attention to, as of errors not yet seen */
   badge?: number;
+  /** Whether it has changes not yet saved, shown as a dot */
+  unsaved?: boolean;
   onClick: () => void;
   onClose?: () => void;
 }) {
@@ -55,9 +60,15 @@ function NavItem({
       <span className="nav-icon">
         {icon}
         {!!badge && collapsed && <span className="nav-badge nav-badge-dot" />}
+        {unsaved && collapsed && <span className="nav-unsaved-dot" />}
       </span>
       {!collapsed && <span className="nav-label">{label}</span>}
       {!!badge && !collapsed && <span className="nav-badge">{badge}</span>}
+      {unsaved && !collapsed && (
+        <span className="nav-unsaved" title="Unsaved changes">
+          ●
+        </span>
+      )}
       {!collapsed && onClose && (
         <button
           className="nav-close"
@@ -85,6 +96,7 @@ export function Navigator({ state, onChange }: { state: NavigatorState; onChange
   const boards = docs.documents.filter((d) => d.kind === 'board');
 
   const { unseenErrors } = useSyncExternalStore(subscribeLogs, getLogSnapshot);
+  const unsaved = useSyncExternalStore(subscribeUnsaved, getUnsaved);
 
   const singleton = (kind: SingletonKind, badge?: number) => (
     <NavItem
@@ -108,8 +120,9 @@ export function Navigator({ state, onChange }: { state: NavigatorState; onChange
           label={documentTitle(d)}
           collapsed={collapsed}
           active={docs.activeId === d.id}
+          unsaved={unsaved.has(d.id)}
           onClick={() => dispatch({ type: 'activate', id: d.id })}
-          onClose={() => dispatch({ type: 'close', id: d.id })}
+          onClose={() => void closeDocuments([d], dispatch)}
         />
       ))}
     </>
@@ -176,7 +189,7 @@ export function Navigator({ state, onChange }: { state: NavigatorState; onChange
           label="Close All"
           collapsed={collapsed}
           disabled={boards.length === 0}
-          onClick={() => dispatch({ type: 'closeAllBoards' })}
+          onClick={() => void closeDocuments(boards, dispatch)}
         />
         {singleton('logs', unseenErrors)}
         {singleton('settings')}

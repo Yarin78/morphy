@@ -980,3 +980,44 @@ html {
     opacity: 0;
   }
 }
+
+/* Unsaved changes: a dot by the board in the navigator, and a note in its menu bar */
+
+.nav-unsaved {
+  color: #c9a46a;
+  font-size: 11px;
+  padding: 0 5px;
+}
+
+.nav-item:hover .nav-unsaved {
+  display: none;
+}
+
+.nav-unsaved-dot {
+  position: absolute;
+  top: -2px;
+  right: -4px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #c9a46a;
+}
+
+.board-unsaved {
+  margin-right: 12px;
+  color: #b7791f;
+}
+
+.unsaved-dialog {
+  width: min(520px, 92vw);
+}
+
+.unsaved-dialog-icon {
+  flex: 0 0 auto;
+  font-size: 24px;
+  color: #b7791f;
+}
+
+.dialog-buttons .dialog-left {
+  margin-right: auto;
+}

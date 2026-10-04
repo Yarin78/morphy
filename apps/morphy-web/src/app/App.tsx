@@ -5,6 +5,8 @@ import { BoardSettingsProvider } from './BoardSettingsProvider';
 import { DocumentsProvider } from './DocumentsProvider';
 import { ErrorDialog } from './ErrorDialog';
 import { Toasts } from './Toasts';
+import { UnsavedChangesDialog } from './UnsavedChangesDialog';
+import { getUnsaved } from './unsavedStore';
 import { useDocuments } from './documentsStore';
 import { Navigator, type NavigatorState } from './Navigator';
 import './app.css';
@@ -37,6 +39,15 @@ function Workspace() {
     }
   }, [navigator]);
 
+  // Leaving the page loses unsaved changes, so the browser asks first
+  useEffect(() => {
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (getUnsaved().size > 0) e.preventDefault();
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, []);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.altKey && !e.ctrlKey && !e.metaKey && e.code === 'KeyB') {
@@ -68,6 +79,7 @@ export default function App() {
       <BoardSettingsProvider>
         <Workspace />
         <Toasts />
+        <UnsavedChangesDialog />
         <ErrorDialog />
       </BoardSettingsProvider>
     </DocumentsProvider>

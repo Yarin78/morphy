@@ -15,6 +15,7 @@ import {
   TbSwitchVertical,
 } from 'react-icons/tb';
 import { BoardSettingsDialog } from './BoardSettingsDialog';
+import { closeDocuments } from './closeDocuments';
 import { BOARD_SIDE_PANES, type BoardSidePane, type BoardDocument, defaultLayout, toggleBoardPane } from './documents';
 import { useDocuments } from './documentsStore';
 import { type Menu, MenuBar } from './MenuBar';
@@ -44,6 +45,8 @@ export interface BoardCommandsProps {
   readOnlyDatabase: string | null;
   canSave: boolean;
   saving: boolean;
+  /** Whether the game has changes not yet saved */
+  unsaved: boolean;
   /** Where the game is from, shown at the right */
   status: string;
   error: string | null;
@@ -97,6 +100,7 @@ export function BoardCommands({
   readOnlyDatabase,
   canSave,
   saving,
+  unsaved,
   status,
   error,
 }: BoardCommandsProps) {
@@ -132,7 +136,7 @@ export function BoardCommands({
         'separator',
         { label: 'Edit Game Info…', icon: <TbInfoCircle />, disabled: !hasGame, action: view.openGameInfo },
         'separator',
-        { label: 'Close Board', action: () => dispatch({ type: 'close', id: doc.id }) },
+        { label: 'Close Board', action: () => void closeDocuments([doc], dispatch) },
       ],
     },
     {
@@ -204,7 +208,14 @@ export function BoardCommands({
     <div className="board-commands">
       <div className="board-menubar">
         <MenuBar menus={menus} enabled={active && !settingsOpen} />
-        <span className="board-status">{status}</span>
+        <span className="board-status">
+          {unsaved && (
+            <span className="board-unsaved" title="The game has changes that aren't saved">
+              ● Unsaved changes
+            </span>
+          )}
+          {status}
+        </span>
         {error && <span className="board-error">{error}</span>}
       </div>
       <div className="board-toolbar" role="toolbar">

@@ -11,6 +11,7 @@ import { useDocuments } from './documentsStore';
 import { showError } from './errorStore';
 import { showToast } from './toastStore';
 import { SaveToDatabaseDialog } from './SaveToDatabaseDialog';
+import { registerSaver, type SaveMode, setUnsaved } from './unsavedStore';
 
 /**
  * A board document: its game, loaded from its database (or new), played through, edited and
@@ -37,14 +38,6 @@ export function BoardDocument({
       onError: showError,
       onSaved: showToast,
     });
-
-  // A game in no database is saved to one picked in a dialog
-  // Save As always picks one, maybe the game's own for a copy there
-  const [pickingFor, setPickingFor] = useState<'save' | 'saveAs' | null>(null);
-  const handleSave = () => {
-    if (databaseId) void save();
-    else setPickingFor('save');
-  };
 
   // The board is titled by the game's players, once it's loaded or saved
   const title = gameState.kind === 'loaded' ? (gameTitle(gameState.game) ?? undefined) : doc.title;
@@ -94,7 +87,53 @@ export function BoardDocument({
     keysEnabled: active,
   });
 
+  // The game's moves and header, to tell whether they've changed since it was loaded or saved;
+  // moving through the game doesn't change them
+  const { game, version } = view;
+  const content = useMemo(
+    () => JSON.stringify({ moves: game.toMoves(), tags: game.tagValues() }),
+    // version: the game is changed in place
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [game, version]
+  );
+  // A game just loaded is as it was saved
+  const [savedContent, setSavedContent] = useState<{ game: GameTree; content: string } | null>(null);
+  if (savedContent?.game !== game) setSavedContent({ game, content });
+  const unsaved = savedContent?.game === game && savedContent.content !== content;
+  useEffect(() => setUnsaved(doc.id, unsaved), [doc.id, unsaved]);
+  useEffect(() => () => setUnsaved(doc.id, false), [doc.id]);
+
+  // A game in no database is saved to one picked in a dialog; Save As always picks one, maybe
+  // the game's own for a copy there
+  const [picking, setPicking] = useState<{ mode: SaveMode; pick: (id: string | null) => void } | null>(null);
+  const pickDatabase = (mode: SaveMode) =>
+    new Promise<string | null>((resolve) =>
+      setPicking({
+        mode,
+        pick: (id) => {
+          setPicking(null);
+          resolve(id);
+        },
+      })
+    );
+
   const database = databases?.find((db) => db.id === databaseId);
+  const writable = !database?.readOnly;
+
+  // Saves the game, picking the database first when it needs one; once saved, what was saved is
+  // what the game is compared with
+  const saveGame = async (mode: SaveMode): Promise<boolean> => {
+    const before = { game, content };
+    const targetId = mode === 'save' && databaseId ? databaseId : await pickDatabase(mode);
+    if (!targetId) return false;
+    const saved = mode === 'saveAs' ? await saveAs(targetId) : await save(databaseId ? undefined : targetId);
+    if (saved) setSavedContent(before);
+    return saved;
+  };
+  // For closing the board to save it with
+  useEffect(() => registerSaver(doc.id, { canSave: writable, save: saveGame }));
+  useEffect(() => () => registerSaver(doc.id, null), [doc.id]);
+
   const databaseName = database?.displayName ?? databaseId;
   const status = !databaseId
     ? 'Not in a database'
@@ -110,8 +149,9 @@ export function BoardDocument({
           api={api}
           active={active}
           view={view}
-          save={handleSave}
-          saveAs={() => setPickingFor('saveAs')}
+          save={() => void saveGame('save')}
+          saveAs={() => void saveGame('saveAs')}
+          unsaved={unsaved}
           savePicksDatabase={!databaseId}
           readOnlyDatabase={database?.readOnly ? database.displayName : null}
           canSave={canSave}
@@ -122,16 +162,13 @@ export function BoardDocument({
         <div className="board-grid">{children}</div>
       </div>
       <GameDialogs view={view} />
-      {pickingFor && (
+      {picking && (
         <SaveToDatabaseDialog
-          title={pickingFor === 'saveAs' ? 'Save a copy of the game to' : 'Save the game to'}
+          title={picking.mode === 'saveAs' ? 'Save a copy of the game to' : 'Save the game to'}
           databases={databases}
           currentDatabaseId={databaseId}
-          onSave={(id) => {
-            setPickingFor(null);
-            void (pickingFor === 'saveAs' ? saveAs(id) : save(id));
-          }}
-          onCancel={() => setPickingFor(null)}
+          onSave={picking.pick}
+          onCancel={() => picking.pick(null)}
         />
       )}
     </BoardViewContext.Provider>
