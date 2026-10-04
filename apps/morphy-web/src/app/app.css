@@ -337,34 +337,6 @@ html {
   min-height: 0;
 }
 
-.board-toolbar {
-  flex: 0 0 auto;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 6px 12px;
-  border-bottom: 1px solid #e4e0da;
-  background: #f7f5f2;
-}
-
-.board-status {
-  color: #666;
-}
-
-.board-toolbar button {
-  background: #8b6f47;
-  color: #fff;
-  border: 1px solid #6b5d47;
-  border-radius: 4px;
-  padding: 3px 12px;
-}
-
-.board-toolbar button:disabled {
-  background: #bbb;
-  border-color: #aaa;
-  cursor: default;
-}
-
 .board-message {
   color: #2e7d32;
 }
@@ -378,4 +350,239 @@ html {
   height: 100%;
   min-width: 0;
   border: none;
+}
+
+/* Board document: menu bar and toolbar */
+
+.board-commands {
+  flex: 0 0 auto;
+  background: #f7f5f2;
+  border-bottom: 1px solid #e0dbd3;
+}
+
+.board-menubar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 30px;
+  padding: 0 8px 0 4px;
+  border-bottom: 1px solid #ebe6df;
+}
+
+.board-status {
+  margin-left: auto;
+  color: #888;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.board-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 34px;
+  padding: 0 6px;
+}
+
+.toolbar-button {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  height: 26px;
+  padding: 0 8px;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  color: #4a4038;
+  font-size: 12px;
+}
+
+.toolbar-button svg {
+  font-size: 16px;
+}
+
+.toolbar-button:hover:not(:disabled) {
+  background: #ebe4d9;
+}
+
+.toolbar-button.pressed {
+  background: #e3d6c2;
+  border-color: #cdbb9f;
+}
+
+.toolbar-button:disabled {
+  color: #b5aea5;
+  cursor: default;
+}
+
+.toolbar-sep {
+  width: 1px;
+  height: 18px;
+  margin: 0 6px;
+  background: #ddd6cc;
+}
+
+/* Menus */
+
+.menubar {
+  display: flex;
+}
+
+.menubar-item {
+  position: relative;
+}
+
+.menubar-item > button {
+  background: none;
+  border: none;
+  padding: 3px 9px;
+  border-radius: 4px;
+  font-size: 13px;
+  color: #333;
+}
+
+.menubar-item > button:hover,
+.menubar-item > button.open {
+  background: #e8e1d6;
+}
+
+.menu-list {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 10000;
+  min-width: 220px;
+  padding: 4px;
+  background: #fff;
+  color: #222;
+  border: 1px solid #d5d0c8;
+  border-radius: 6px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+  white-space: nowrap;
+}
+
+.menu-list.nested {
+  top: -5px;
+  left: 100%;
+}
+
+.menu-row {
+  position: relative;
+}
+
+.menu-row > button {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  background: none;
+  border: none;
+  border-radius: 4px;
+  text-align: left;
+  font-size: 13px;
+  color: inherit;
+}
+
+.menu-row > button:hover:not(:disabled) {
+  background: #8b6f47;
+  color: #fff;
+}
+
+.menu-row > button:disabled {
+  color: #b0aaa2;
+  cursor: default;
+}
+
+.menu-check {
+  width: 16px;
+  display: flex;
+  justify-content: center;
+}
+
+.menu-label {
+  flex: 1;
+}
+
+.menu-shortcut {
+  padding-left: 20px;
+  color: #999;
+  font-size: 12px;
+}
+
+.menu-row > button:hover:not(:disabled) .menu-shortcut {
+  color: #f0e6d8;
+}
+
+.menu-sep {
+  height: 1px;
+  margin: 4px 6px;
+  background: #e8e4de;
+}
+
+/* Dialogs */
+
+.dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20000;
+  background: rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dialog {
+  min-width: 300px;
+  padding: 18px 22px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
+}
+
+.dialog h2 {
+  font-size: 16px;
+  margin-bottom: 12px;
+}
+
+.dialog-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+}
+
+.dialog-note {
+  margin-top: 8px;
+  color: #888;
+  font-size: 12px;
+}
+
+.dialog-buttons {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 14px;
+}
+
+.dialog-buttons button {
+  background: #8b6f47;
+  color: #fff;
+  border: 1px solid #6b5d47;
+  border-radius: 4px;
+  padding: 4px 16px;
+}
+
+/* Panes not built yet */
+
+.pane-placeholder {
+  height: 100%;
+  padding: 24px;
+  background: #faf8f5;
+  color: #888;
+}
+
+.pane-placeholder h2 {
+  font-size: 15px;
+  color: #666;
+  margin-bottom: 6px;
 }

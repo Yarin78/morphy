@@ -779,6 +779,12 @@ export function useGameView({
     handleNextMove,
     goToEnd,
     seekToMove,
+    // Undoing and redoing the edits; whether they can be done is asked when it's needed, as the
+    // history isn't state
+    handleUndo,
+    handleRedo,
+    canUndo: () => editHistory().canUndo,
+    canRedo: () => editHistory().canRedo,
     // The notation
     openGameInfo: () => setEditingGameInfo(readGameInfo(game)),
     languages,

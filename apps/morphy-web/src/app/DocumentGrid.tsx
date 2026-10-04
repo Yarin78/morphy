@@ -1,12 +1,13 @@
 import {
   DockviewDefaultTab,
+  type DockviewApi,
   DockviewReact,
   type DockviewReadyEvent,
   type IDockviewPanelHeaderProps,
   type IDockviewPanelProps,
   themeLight,
 } from 'dockview-react';
-import type { FunctionComponent } from 'react';
+import { type FunctionComponent, useState } from 'react';
 import { BoardDocument } from './BoardDocument';
 import { BOARD_PANE, defaultLayout, isLayoutComplete, type MorphyDocument } from './documents';
 import { DocumentContext, useDocuments } from './documentsStore';
@@ -15,6 +16,7 @@ import { DatabasePane } from './panes/DatabasePane';
 import { DatabasesPane } from './panes/DatabasesPane';
 import { HomePane } from './panes/HomePane';
 import { NotationPane } from './panes/NotationPane';
+import { EnginePane, TreePane } from './panes/PlaceholderPanes';
 import { SettingsPane } from './panes/SettingsPane';
 
 // The panes a grid can hold, by Dockview component name. Each reads its document from
@@ -26,9 +28,12 @@ const PANES: Record<string, FunctionComponent<IDockviewPanelProps>> = {
   database: DatabasePane,
   board: BoardPane,
   notation: NotationPane,
+  engine: EnginePane,
+  tree: TreePane,
 };
 
-// Panes can't be closed yet: nothing could bring them back
+// A document's main pane can't be closed, as nothing would bring it back; the panes beside a
+// board can, as its Panes menu brings them back
 function PaneTab(props: IDockviewPanelHeaderProps) {
   return <DockviewDefaultTab {...props} hideClose />;
 }
@@ -39,8 +44,10 @@ function PaneTab(props: IDockviewPanelHeaderProps) {
  */
 export function DocumentGrid({ doc, active }: { doc: MorphyDocument; active: boolean }) {
   const { layoutOf, setLayout } = useDocuments();
+  const [api, setApi] = useState<DockviewApi | null>(null);
 
   const onReady = ({ api }: DockviewReadyEvent) => {
+    setApi(api);
     const layout = layoutOf(doc.id);
     try {
       if (layout) api.fromJSON(layout);
@@ -59,13 +66,20 @@ export function DocumentGrid({ doc, active }: { doc: MorphyDocument; active: boo
     api.onDidLayoutChange(() => setLayout(doc.id, api.toJSON()));
   };
 
-  const grid = <DockviewReact theme={themeLight} components={PANES} defaultTabComponent={PaneTab} onReady={onReady} />;
+  const grid = (
+    <DockviewReact
+      theme={themeLight}
+      components={PANES}
+      defaultTabComponent={doc.kind === 'board' ? undefined : PaneTab}
+      onReady={onReady}
+    />
+  );
 
   return (
     <div className="document-grid" style={{ display: active ? undefined : 'none' }}>
       <DocumentContext.Provider value={doc}>
         {doc.kind === 'board' ? (
-          <BoardDocument doc={doc} active={active}>
+          <BoardDocument doc={doc} api={api} active={active}>
             {grid}
           </BoardDocument>
         ) : (

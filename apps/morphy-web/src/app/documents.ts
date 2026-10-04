@@ -1,4 +1,4 @@
-import type { DockviewApi } from 'dockview-react';
+import type { AddPanelPositionOptions, DockviewApi } from 'dockview-react';
 
 // The documents of the app. Each one has its own Dockview grid, which fills the screen when it
 // is the active one. Home, All Databases and Settings are singletons; databases and boards can
@@ -143,29 +143,75 @@ const MAIN_PANE: Record<MorphyDocument['kind'], { component: string; title: stri
 /** The id of a board document's board pane, which is alone in a group without tabs. */
 export const BOARD_PANE = 'board';
 
+/** The panes a board document can show beside the board, which can be closed and brought back. */
+export const BOARD_SIDE_PANES = {
+  notation: 'Notation',
+  engine: 'Engine',
+  tree: 'Opening tree',
+} as const;
+
+export type BoardSidePane = keyof typeof BOARD_SIDE_PANES;
+
+// The analysis panes, which share a group below the notation
+const ANALYSIS_PANES: BoardSidePane[] = ['engine', 'tree'];
+
 /**
- * Sets up a new document's grid: a single pane by kind, and for a board, the notation in a tab
- * to the right of the board.
+ * Shows a pane beside a board, or closes it. The engine and the opening tree share a group below
+ * the notation; the notation goes above them. With neither shown, a pane goes to the right of
+ * the board.
+ */
+export function toggleBoardPane(api: DockviewApi, id: BoardSidePane) {
+  const panel = api.getPanel(id);
+  if (panel) {
+    api.removePanel(panel);
+    return;
+  }
+  const notation = api.getPanel('notation');
+  const analysis = ANALYSIS_PANES.map((other) => api.getPanel(other)).find((p) => p !== undefined);
+  const columnHeight = (notation ?? analysis)?.group.api.height ?? api.height;
+  let position: AddPanelPositionOptions;
+  let initialHeight: number | undefined;
+  if (id === 'notation' && analysis) {
+    position = { referenceGroup: analysis.group, direction: 'above' };
+    initialHeight = Math.round(columnHeight * 0.6);
+  } else if (id !== 'notation' && analysis) {
+    position = { referenceGroup: analysis.group };
+  } else if (id !== 'notation' && notation) {
+    position = { referenceGroup: notation.group, direction: 'below' };
+    initialHeight = Math.round(columnHeight * 0.4);
+  } else {
+    position = { referencePanel: BOARD_PANE, direction: 'right' };
+  }
+  api.addPanel({
+    id,
+    component: id,
+    title: BOARD_SIDE_PANES[id],
+    position,
+    initialWidth: notation || analysis || api.width <= 0 ? undefined : Math.round(api.width * 0.42),
+    initialHeight: initialHeight && initialHeight > 0 ? initialHeight : undefined,
+  });
+}
+
+/**
+ * Sets up a new document's grid: a single pane by kind. A board has the notation to its right,
+ * and below that the engine and the opening tree in tabs.
  */
 export function defaultLayout(doc: MorphyDocument, api: DockviewApi) {
   const pane = MAIN_PANE[doc.kind];
   const main = api.addPanel({ id: pane.component, component: pane.component, title: pane.title });
   if (doc.kind === 'board') {
     main.group.header.hidden = true;
-    api.addPanel({
-      id: 'notation',
-      component: 'notation',
-      title: 'Notation',
-      position: { referencePanel: main, direction: 'right' },
-      initialWidth: api.width > 0 ? Math.round(api.width * 0.42) : undefined,
-    });
+    toggleBoardPane(api, 'notation');
+    toggleBoardPane(api, 'engine');
+    toggleBoardPane(api, 'tree');
+    api.getPanel('engine')?.api.setActive();
+    main.api.setActive();
   }
 }
 
-/** Whether a saved grid still has the panes the document's kind always has. */
+/** Whether a saved grid still has the pane the document's kind always has. */
 export function isLayoutComplete(doc: MorphyDocument, api: DockviewApi): boolean {
-  if (doc.kind === 'board') return !!api.getPanel(BOARD_PANE) && !!api.getPanel('notation');
-  return api.panels.length > 0;
+  return !!api.getPanel(MAIN_PANE[doc.kind].component);
 }
 
 /** Whether the value looks like a saved DocumentsState. */

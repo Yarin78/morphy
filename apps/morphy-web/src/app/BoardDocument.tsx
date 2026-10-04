@@ -1,8 +1,10 @@
 import { type ReactNode, useCallback, useEffect, useMemo } from 'react';
+import type { DockviewApi } from 'dockview-react';
 import { GameDialogs, quotedPosition, useGameView } from 'game-view';
 import type { GameTree, QuotationLink } from 'game-view';
 import { findGameByPlayers } from '../game/gameServices';
 import { gameTitle, useGameDocument } from '../game/useGameDocument';
+import { BoardCommands } from './BoardCommands';
 import { BoardViewContext } from './boardStore';
 import type { BoardDocument as BoardDoc } from './documents';
 import { useDocuments } from './documentsStore';
@@ -11,7 +13,18 @@ import { useDocuments } from './documentsStore';
  * A board document: its game, loaded from its database (or new), played through, edited and
  * saved. The game is kept here, above the document's grid, and shared with its panes.
  */
-export function BoardDocument({ doc, active, children }: { doc: BoardDoc; active: boolean; children: ReactNode }) {
+export function BoardDocument({
+  doc,
+  api,
+  active,
+  children,
+}: {
+  doc: BoardDoc;
+  /** The document's grid, once it's ready */
+  api: DockviewApi | null;
+  active: boolean;
+  children: ReactNode;
+}) {
   const { dispatch } = useDocuments();
   const databaseId = doc.databaseId ?? null;
   const { databases, gameState, selectedGame, gameInfoServices, onGameReady, canSave, saving, save, message, showMessage } =
@@ -77,14 +90,18 @@ export function BoardDocument({ doc, active, children }: { doc: BoardDoc; active
   return (
     <BoardViewContext.Provider value={view}>
       <div className="board-document">
-        <div className="board-toolbar">
-          <span className="board-status">{status}</span>
-          <button onClick={save} disabled={!canSave} title={!databaseId ? 'No database to save to' : undefined}>
-            {saving ? 'Saving…' : 'Save'}
-          </button>
-          {message && <span className="board-message">{message}</span>}
-          {gameState.kind === 'error' && <span className="board-error">{gameState.message}</span>}
-        </div>
+        <BoardCommands
+          doc={doc}
+          api={api}
+          active={active}
+          view={view}
+          save={save}
+          canSave={canSave}
+          saving={saving}
+          status={status}
+          message={message}
+          error={gameState.kind === 'error' ? gameState.message : null}
+        />
         <div className="board-grid">{children}</div>
       </div>
       <GameDialogs view={view} />

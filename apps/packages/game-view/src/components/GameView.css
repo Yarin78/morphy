@@ -58,7 +58,7 @@
 
 .navigation-controls {
   display: flex;
-  gap: 0.5rem;
+  gap: 1rem;
   justify-content: center;
   flex-wrap: wrap;
   align-items: center;
@@ -79,7 +79,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  min-width: 36px;
+  min-width: 64px;
   height: 36px;
   opacity: 0.85;
 }
@@ -185,7 +185,7 @@
   }
 
   .nav-button {
-    min-width: 32px;
+    min-width: 48px;
     height: 32px;
     font-size: 0.9rem;
   }

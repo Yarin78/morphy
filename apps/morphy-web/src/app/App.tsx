@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import 'dockview-react/dist/styles/dockview.css';
 import { DocumentGrid } from './DocumentGrid';
+import { BoardSettingsProvider } from './BoardSettingsProvider';
 import { DocumentsProvider } from './DocumentsProvider';
 import { useDocuments } from './documentsStore';
 import { Navigator, type NavigatorState } from './Navigator';
@@ -62,7 +63,9 @@ function Workspace() {
 export default function App() {
   return (
     <DocumentsProvider>
-      <Workspace />
+      <BoardSettingsProvider>
+        <Workspace />
+      </BoardSettingsProvider>
     </DocumentsProvider>
   );
 }

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Chessground from 'react-chessground';
 import 'react-chessground/dist/styles/chessground.css';
-import { IoPlaySkipBack, IoChevronBack, IoChevronForward, IoPlaySkipForward, IoReload } from 'react-icons/io5';
+import { IoPlaySkipBack, IoChevronBack, IoChevronForward, IoPlaySkipForward } from 'react-icons/io5';
 import { PromotionDialog } from './PromotionDialog';
 import { ANNOTATION_BRUSHES } from '../utils/drawableConverter';
 import type { GameViewState } from './useGameView';
@@ -13,17 +13,24 @@ const MAX_BOARD_SIZE = 1200;
 // The space around the board: chess-board-container's padding, both sides
 const BOARD_PADDING = 32;
 
+export interface GameBoardProps {
+  view: GameViewState;
+  /** Whether the files and ranks are shown along the board; true by default */
+  coordinates?: boolean;
+  /** Whether the pieces slide when moving through the game; true by default */
+  animation?: boolean;
+}
+
 /**
  * The board of a game being viewed, with the buttons to move through it below. It fills the
  * space it's given, the board as large a square as fits.
  */
-export function GameBoard({ view }: { view: GameViewState }) {
+export function GameBoard({ view, coordinates = true, animation = true }: GameBoardProps) {
   const {
     selectedGame,
     game,
     isEditMode,
     boardOrientation,
-    flipBoard,
     promotionPending,
     promotionPreviewFen,
     legalMoves,
@@ -100,15 +107,16 @@ export function GameBoard({ view }: { view: GameViewState }) {
   return (
     <div ref={boardWrapperRef} className="chess-board-wrapper">
       <div className="chess-board-container" ref={boardContainerRef}>
+        {/* Chessground reads the coordinates only when it's created */}
         <Chessground
-          key={`chessground-${isEditMode ? 'edit' : 'view'}`}
+          key={`chessground-${isEditMode ? 'edit' : 'view'}-${coordinates ? 'coords' : 'plain'}`}
           width={boardSize}
           height={boardSize}
           fen={promotionPreviewFen || game.fen()}
           orientation={boardOrientation}
-          coordinates={true}
+          coordinates={coordinates}
           viewOnly={!isEditMode}
-          animation={{ duration: 200, enabled: true }}
+          animation={{ duration: 200, enabled: animation }}
           movable={isEditMode ? {
             free: false,
             color: 'both',
@@ -150,9 +158,6 @@ export function GameBoard({ view }: { view: GameViewState }) {
           </button>
           <button onClick={goToEnd} disabled={!selectedGame || !canGoForward()} className="nav-button" title="Last move">
             <IoPlaySkipForward />
-          </button>
-          <button onClick={flipBoard} className="nav-button" title="Flip board">
-            <IoReload style={{ transform: 'rotate(90deg) scaleX(-1)' }} />
           </button>
         </div>
       </div>
