@@ -36,8 +36,12 @@ export interface BoardCommandsProps {
   active: boolean;
   view: GameViewState;
   save: () => void;
+  /** Saves the game as a new one, in a database picked first */
+  saveAs: () => void;
   /** Whether saving asks for the database first, the game being in none */
   savePicksDatabase: boolean;
+  /** The name of the game's database if it's read-only, which the game can't be saved to */
+  readOnlyDatabase: string | null;
   canSave: boolean;
   saving: boolean;
   /** Where the game is from, shown at the right */
@@ -61,17 +65,21 @@ function ToolButton({
   disabled?: boolean;
   pressed?: boolean;
 }) {
+  // The title is on a wrapper, as browsers don't all show it for a disabled button, which is
+  // when it may matter most: saying why
   return (
-    <button
-      className={`toolbar-button${pressed ? ' pressed' : ''}`}
-      title={title}
-      aria-pressed={pressed}
-      disabled={disabled}
-      onClick={onClick}
-    >
-      {icon}
-      <span>{label}</span>
-    </button>
+    <span className="toolbar-button-wrap" title={title}>
+      <button
+        className={`toolbar-button${pressed ? ' pressed' : ''}`}
+        aria-pressed={pressed}
+        aria-label={title}
+        disabled={disabled}
+        onClick={onClick}
+      >
+        {icon}
+        <span>{label}</span>
+      </button>
+    </span>
   );
 }
 
@@ -85,7 +93,9 @@ export function BoardCommands({
   active,
   view,
   save,
+  saveAs,
   savePicksDatabase,
+  readOnlyDatabase,
   canSave,
   saving,
   status,
@@ -112,13 +122,14 @@ export function BoardCommands({
       title: 'Game',
       items: [
         {
-          label: savePicksDatabase ? 'Save to Database…' : 'Save',
+          // A menu item has no tooltip, so it says why it can't be used
+          label: readOnlyDatabase ? 'Save (the database is read-only)' : savePicksDatabase ? 'Save to Database…' : 'Save',
           icon: <TbDeviceFloppy />,
           shortcut: 'Cmd+S',
-          disabled: !canSave,
+          disabled: !canSave || !!readOnlyDatabase,
           action: save,
         },
-        { label: 'Save As…', disabled: true },
+        { label: 'Save As…', shortcut: 'Shift+Cmd+S', disabled: !canSave || !hasGame, action: saveAs },
         { label: 'Export PGN…', icon: <TbFileExport />, disabled: true },
         'separator',
         { label: 'Edit Game Info…', icon: <TbInfoCircle />, disabled: !hasGame, action: view.openGameInfo },
@@ -203,8 +214,12 @@ export function BoardCommands({
         <ToolButton
           icon={<TbDeviceFloppy />}
           label={saving ? 'Saving…' : 'Save'}
-          title={`${savePicksDatabase ? 'Save the game to a database' : 'Save the game'} (${shortcutLabel('Cmd+S')})`}
-          disabled={!canSave}
+          title={
+            readOnlyDatabase
+              ? `${readOnlyDatabase} is read-only, so the game can't be saved to it`
+              : `${savePicksDatabase ? 'Save the game to a database' : 'Save the game'} (${shortcutLabel('Cmd+S')})`
+          }
+          disabled={!canSave || !!readOnlyDatabase}
           onClick={save}
         />
         <span className="toolbar-sep" />

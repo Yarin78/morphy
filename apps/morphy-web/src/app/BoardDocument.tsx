@@ -29,7 +29,7 @@ export function BoardDocument({
 }) {
   const { dispatch } = useDocuments();
   const databaseId = doc.databaseId ?? null;
-  const { databases, gameState, selectedGame, gameInfoServices, onGameReady, canSave, saving, save, message, showMessage } =
+  const { databases, gameState, selectedGame, gameInfoServices, onGameReady, canSave, saving, save, saveAs, message, showMessage } =
     useGameDocument(databaseId, doc.gameId ?? null, {
       onCreated: (createdIn, gameId) =>
         dispatch({ type: 'updateBoard', id: doc.id, changes: { databaseId: createdIn, gameId } }),
@@ -37,10 +37,11 @@ export function BoardDocument({
     });
 
   // A game in no database is saved to one picked in a dialog
-  const [pickingDatabase, setPickingDatabase] = useState(false);
+  // Save As always picks one, maybe the game's own for a copy there
+  const [pickingFor, setPickingFor] = useState<'save' | 'saveAs' | null>(null);
   const handleSave = () => {
     if (databaseId) void save();
-    else setPickingDatabase(true);
+    else setPickingFor('save');
   };
 
   // The board is titled by the game's players, once it's loaded or saved
@@ -91,7 +92,8 @@ export function BoardDocument({
     keysEnabled: active,
   });
 
-  const databaseName = databases?.find((db) => db.id === databaseId)?.displayName ?? databaseId;
+  const database = databases?.find((db) => db.id === databaseId);
+  const databaseName = database?.displayName ?? databaseId;
   const status = !databaseId
     ? 'Not in a database'
     : gameState.kind === 'loaded'
@@ -107,7 +109,9 @@ export function BoardDocument({
           active={active}
           view={view}
           save={handleSave}
+          saveAs={() => setPickingFor('saveAs')}
           savePicksDatabase={!databaseId}
+          readOnlyDatabase={database?.readOnly ? database.displayName : null}
           canSave={canSave}
           saving={saving}
           status={status}
@@ -117,14 +121,16 @@ export function BoardDocument({
         <div className="board-grid">{children}</div>
       </div>
       <GameDialogs view={view} />
-      {pickingDatabase && (
+      {pickingFor && (
         <SaveToDatabaseDialog
+          title={pickingFor === 'saveAs' ? 'Save a copy of the game to' : 'Save the game to'}
           databases={databases}
+          currentDatabaseId={databaseId}
           onSave={(id) => {
-            setPickingDatabase(false);
-            void save(id);
+            setPickingFor(null);
+            void (pickingFor === 'saveAs' ? saveAs(id) : save(id));
           }}
-          onCancel={() => setPickingDatabase(false)}
+          onCancel={() => setPickingFor(null)}
         />
       )}
     </BoardViewContext.Provider>

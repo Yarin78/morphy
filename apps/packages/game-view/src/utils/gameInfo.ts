@@ -274,3 +274,24 @@ export function writeGameInfo(game: GameTree, info: GameInfo) {
     game.setTag(name, value.trim());
   }
 }
+
+/**
+ * Forgets which entities of its database the game refers to: its players, annotator,
+ * tournament, source, teams and tag keep their names and details, without ids. A game copied to
+ * another database is then matched there by name, or creates them.
+ */
+export function forgetEntityIds(game: GameTree) {
+  const info = readGameInfo(game);
+  const noId = <T extends { id: number | null }>(entity: T | null): T | null => entity && { ...entity, id: null };
+  writeGameInfo(game, {
+    ...info,
+    white: { ...info.white, id: null },
+    black: { ...info.black, id: null },
+    annotator: { ...info.annotator, id: null },
+    tournament: noId(info.tournament),
+    source: noId(info.source),
+    whiteTeam: noId(info.whiteTeam),
+    blackTeam: noId(info.blackTeam),
+    gameTag: noId(info.gameTag),
+  });
+}

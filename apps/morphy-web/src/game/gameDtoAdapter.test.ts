@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { GameTree } from 'game-view';
+import { forgetEntityIds, GameTree } from 'game-view';
 import { readGameInfo, writeGameInfo } from 'game-view/src/utils/gameInfo';
 import type { GameDto } from '../api/types';
 import { gameDtoToTags, gameToGamePatch } from './gameDtoAdapter';
@@ -92,5 +92,29 @@ describe('the moves and annotations', () => {
     const patch = gameToGamePatch(load(game), game);
     expect(patch.moves).toEqual(game.moves);
     expect(patch.setupPosition).toBe(true);
+  });
+
+  it('keeps the entities but not their ids once the ids are forgotten', () => {
+    const game = load(GAME);
+    forgetEntityIds(game);
+    const patch = gameToGamePatch(game, GAME);
+    expect(patch.whitePlayer).toEqual({ ...GAME.whitePlayer, id: null });
+    expect(patch.blackPlayer).toEqual({ ...GAME.blackPlayer, id: null });
+    expect(patch.annotator).toEqual({ ...GAME.annotator, id: null });
+    expect(patch.tournament).toEqual({ ...GAME.tournament, id: null });
+    expect(patch.source).toEqual({ ...GAME.source, id: null });
+    expect(patch.whiteTeam).toEqual({ ...GAME.whiteTeam, id: null });
+    expect(patch.gameTag).toEqual({ ...GAME.gameTag, id: null });
+    // The rest is as it was
+    expect({ ...patch, whitePlayer: 0, blackPlayer: 0, annotator: 0, tournament: 0, source: 0, whiteTeam: 0, gameTag: 0 }).toEqual({
+      ...gameToGamePatch(load(GAME), GAME),
+      whitePlayer: 0,
+      blackPlayer: 0,
+      annotator: 0,
+      tournament: 0,
+      source: 0,
+      whiteTeam: 0,
+      gameTag: 0,
+    });
   });
 });

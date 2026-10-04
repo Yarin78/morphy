@@ -916,3 +916,22 @@ html {
   font-size: 11px;
   white-space: pre;
 }
+
+.toolbar-button-wrap {
+  display: inline-flex;
+}
+
+.database-picker-current {
+  margin-left: 8px;
+  padding: 0 6px;
+  border-radius: 3px;
+  background: #ece4d6;
+  color: #7a6040;
+  font-size: 11px;
+  font-weight: 400;
+}
+
+.database-picker li.selected .database-picker-current {
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+}

@@ -21,23 +21,35 @@ function rememberPicked(id: string) {
 }
 
 /**
- * Picks the database to save a game in that isn't in one yet: any configured database that
- * isn't read-only. New databases aren't made here.
+ * Picks the database to save a game to: any configured database that isn't read-only. New
+ * databases aren't made here.
  */
 export function SaveToDatabaseDialog({
+  title,
   databases,
+  currentDatabaseId,
   onSave,
   onCancel,
 }: {
+  title: string;
   /** The configured databases, or null while they're loading */
   databases: DatabaseResponse[] | null;
+  /** The game's own database, if it has one: picked first, and marked */
+  currentDatabaseId?: string | null;
   onSave: (databaseId: string) => void;
   onCancel: () => void;
 }) {
   const writable = databases?.filter((db) => !db.readOnly) ?? null;
-  const [picked, setPicked] = useState<string | null>(lastPicked);
-  // The last one picked if it can still be, else the first
-  const selected = writable?.find((db) => db.id === picked)?.id ?? writable?.[0]?.id ?? null;
+  const [picked, setPicked] = useState<string | null>(null);
+  const [lastOne] = useState(lastPicked);
+  // The one picked, else the game's own, else the one picked last time, else the first: the
+  // first of them that can be saved to
+  const selected =
+    [picked, currentDatabaseId, lastOne]
+      .map((id) => writable?.find((db) => db.id === id)?.id)
+      .find((id) => id !== undefined) ??
+    writable?.[0]?.id ??
+    null;
 
   const save = () => {
     if (!selected) return;
@@ -55,8 +67,8 @@ export function SaveToDatabaseDialog({
 
   return (
     <div className="dialog-backdrop" onClick={onCancel}>
-      <div className="dialog save-dialog" role="dialog" aria-label="Save game" onClick={(e) => e.stopPropagation()}>
-        <h2>Save game to database</h2>
+      <div className="dialog save-dialog" role="dialog" aria-label={title} onClick={(e) => e.stopPropagation()}>
+        <h2>{title}</h2>
         {writable === null && <p className="dialog-note">Loading the databases…</p>}
         {writable?.length === 0 && <p className="dialog-note">No database can be saved to: they're all read-only.</p>}
         {writable && writable.length > 0 && (
@@ -73,7 +85,10 @@ export function SaveToDatabaseDialog({
                   onSave(db.id);
                 }}
               >
-                <span className="database-picker-name">{db.displayName}</span>
+                <span className="database-picker-name">
+                  {db.displayName}
+                  {db.id === currentDatabaseId && <span className="database-picker-current">this game's database</span>}
+                </span>
                 <span className="database-picker-path">{db.path}</span>
               </li>
             ))}

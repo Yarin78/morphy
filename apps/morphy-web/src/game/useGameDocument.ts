@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { ChessGame, GameInfoServices, GameTree } from 'game-view';
+import { forgetEntityIds, GameTree } from 'game-view';
+import type { ChessGame, GameInfoServices } from 'game-view';
 import { ApiError, createGame, fetchDatabases, fetchGame, replaceGame } from '../api/client';
 import type { DatabaseResponse, GameDto } from '../api/types';
 import { gameDtoToChessGame, gameToGamePatch } from './gameDtoAdapter';
@@ -63,6 +64,11 @@ export interface GameDocument {
    * created in the one given.
    */
   save: (toDatabaseId?: string) => Promise<void>;
+  /**
+   * Saves what's on the board as a new game in a database, maybe the game's own, which the
+   * board then shows.
+   */
+  saveAs: (toDatabaseId: string) => Promise<void>;
   /** A message about the last save, or one set with showMessage */
   message: string | null;
   showMessage: (message: string) => void;
@@ -169,13 +175,42 @@ export function useGameDocument(
 
   const canSave = !saving && (gameState.kind === 'loaded' || gameState.kind === 'empty');
 
-  async function save(toDatabaseId?: string) {
-    const targetId = databaseId ?? toDatabaseId;
-    if (!targetId || !gameRef.current) return;
+  // Creates a game from what's on the board in a database; the board then shows that game, as
+  // it is (see createdShown)
+  async function createIn(targetId: string, patch: GameDto, message: string) {
+    let created = await createGame(targetId, patch);
+    if (created.id == null) {
+      throw new Error('Server did not return an id for the created game');
+    }
+    const createdId = created.id;
+    if (await saveFideIds(targetId, patch, created)) created = await fetchGame(targetId, createdId);
+    const newParamsKey = `${targetId}:${createdId}`;
+    onCreated?.(targetId, createdId);
+    setCreatedShown({ paramsKey: newParamsKey, shown: shownGame });
+    setFetchResult({ paramsKey: newParamsKey, game: created });
+    setMessageFor({ paramsKey: newParamsKey, message });
+  }
+
+  // Runs a save, telling of its failure as what failed
+  async function runSave(what: string, operation: () => Promise<void>) {
     setSaving(true);
     try {
+      await operation();
+    } catch (err) {
+      if (onError) onError(what, err);
+      else setMessageFor({ paramsKey, message: err instanceof Error ? err.message : String(err) });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function save(toDatabaseId?: string) {
+    const targetId = databaseId ?? toDatabaseId;
+    const tree = gameRef.current;
+    if (!targetId || !tree) return;
+    await runSave('Saving the game failed', async () => {
       if (databaseId && gameState.kind === 'loaded' && gameId) {
-        const patch = gameToGamePatch(gameRef.current, gameState.game);
+        const patch = gameToGamePatch(tree, gameState.game);
         let updated = await replaceGame(databaseId, gameId, patch);
         if (await saveFideIds(databaseId, patch, updated)) updated = await fetchGame(databaseId, gameId);
         // Keep the same paramsKey/game (see the comment on shownGame above) - only the
@@ -183,25 +218,24 @@ export function useGameDocument(
         setFetchResult({ paramsKey, game: updated });
         setMessageFor({ paramsKey, message: 'Saved.' });
       } else {
-        const patch = gameToGamePatch(gameRef.current, BLANK_GAME);
-        let created = await createGame(targetId, patch);
-        if (created.id == null) {
-          throw new Error('Server did not return an id for the created game');
-        }
-        const createdId = created.id;
-        if (await saveFideIds(targetId, patch, created)) created = await fetchGame(targetId, createdId);
-        const newParamsKey = `${targetId}:${createdId}`;
-        onCreated?.(targetId, createdId);
-        setCreatedShown({ paramsKey: newParamsKey, shown: shownGame });
-        setFetchResult({ paramsKey: newParamsKey, game: created });
-        setMessageFor({ paramsKey: newParamsKey, message: 'Created.' });
+        await createIn(targetId, gameToGamePatch(tree, BLANK_GAME), 'Created.');
       }
-    } catch (err) {
-      if (onError) onError('Saving the game failed', err);
-      else setMessageFor({ paramsKey, message: err instanceof Error ? err.message : String(err) });
-    } finally {
-      setSaving(false);
-    }
+    });
+  }
+
+  async function saveAs(toDatabaseId: string) {
+    const tree = gameRef.current;
+    if (!tree) return;
+    await runSave('Saving a copy of the game failed', async () => {
+      // In another database, the players, tournament and the rest are found or created by name:
+      // the ids are this database's. They're forgotten on a copy, so the board keeps them if
+      // saving fails, and on the board once the game is saved there.
+      const otherDatabase = toDatabaseId !== databaseId;
+      const source = otherDatabase ? GameTree.fromMoves(tree.toMoves(), Object.entries(tree.tagValues())) : tree;
+      if (otherDatabase) forgetEntityIds(source);
+      await createIn(toDatabaseId, gameToGamePatch(source, BLANK_GAME), 'Saved as a new game.');
+      if (otherDatabase) forgetEntityIds(tree);
+    });
   }
 
   return {
@@ -213,6 +247,7 @@ export function useGameDocument(
     canSave,
     saving,
     save,
+    saveAs,
     message,
     showMessage,
   };
