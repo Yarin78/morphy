@@ -15,6 +15,7 @@ import {
   TbRestore,
   TbSwitchVertical,
 } from 'react-icons/tb';
+import { setAnalysisOn } from '../engine/analysis';
 import { BoardSettingsDialog } from './BoardSettingsDialog';
 import { closeDocuments } from './closeDocuments';
 import { BOARD_SIDE_PANES, type BoardSidePane, type BoardDocument, defaultLayout, toggleBoardPane } from './documents';
@@ -120,7 +121,12 @@ export function BoardCommands({
     return () => subs.forEach((s) => s.dispose());
   }, [api]);
   const paneShown = (id: BoardSidePane) => !!api?.getPanel(id);
-  const togglePane = (id: BoardSidePane) => api && toggleBoardPane(api, id);
+  const togglePane = (id: BoardSidePane) => {
+    if (!api) return;
+    // The engine pane is shown to see the engine's analysis, so the engine starts with it
+    if (id === 'engine' && !paneShown(id)) setAnalysisOn(true);
+    toggleBoardPane(api, id);
+  };
 
   const hasGame = !!view.selectedGame;
   const menus: Menu[] = [

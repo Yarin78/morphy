@@ -9,10 +9,6 @@ function Placeholder({ title, text }: { title: string; text: string }) {
   );
 }
 
-export function EnginePane() {
-  return <Placeholder title="Engine" text="Engine analysis of the position will appear here." />;
-}
-
 export function TreePane() {
   return (
     <Placeholder title="Opening tree" text="The moves played from this position in a database, with their results, will appear here." />

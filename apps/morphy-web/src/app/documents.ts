@@ -193,8 +193,8 @@ export function toggleBoardPane(api: DockviewApi, id: BoardSidePane) {
 }
 
 /**
- * Sets up a new document's grid: a single pane by kind. A board has the notation to its right,
- * and below that the engine and the opening tree in tabs.
+ * Sets up a new document's grid: a single pane by kind. A board has the notation to its right;
+ * the engine and the opening tree are a menu away.
  */
 export function defaultLayout(doc: MorphyDocument, api: DockviewApi) {
   const pane = MAIN_PANE[doc.kind];
@@ -202,9 +202,6 @@ export function defaultLayout(doc: MorphyDocument, api: DockviewApi) {
   if (doc.kind === 'board') {
     main.group.header.hidden = true;
     toggleBoardPane(api, 'notation');
-    toggleBoardPane(api, 'engine');
-    toggleBoardPane(api, 'tree');
-    api.getPanel('engine')?.api.setActive();
     main.api.setActive();
   }
 }

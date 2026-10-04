@@ -17,7 +17,8 @@ import { DatabasesPane } from './panes/DatabasesPane';
 import { HomePane } from './panes/HomePane';
 import { LogsPane } from './panes/LogsPane';
 import { NotationPane } from './panes/NotationPane';
-import { EnginePane, TreePane } from './panes/PlaceholderPanes';
+import { EnginePane } from './panes/EnginePane';
+import { TreePane } from './panes/PlaceholderPanes';
 import { SettingsPane } from './panes/SettingsPane';
 
 // The panes a grid can hold, by Dockview component name. Each reads its document from

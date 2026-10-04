@@ -1021,3 +1021,230 @@ html {
 .dialog-buttons .dialog-left {
   margin-right: auto;
 }
+
+/* Engine */
+
+.engine-pane {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  font-size: 13px;
+}
+
+.engine-head {
+  flex: 0 0 auto;
+  display: grid;
+  /* The name in the middle; the sides share the rest, and may shrink */
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  padding: 4px 8px;
+  border-bottom: 1px solid #ebe6df;
+  background: #f7f5f2;
+}
+
+.engine-head-left,
+.engine-head-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.engine-head-right {
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+.engine-head-right > button,
+.engine-settings-anchor {
+  flex: 0 0 auto;
+}
+
+.engine-name {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.engine-stats {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #888;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* The on/off switch */
+.engine-switch {
+  position: relative;
+  flex: 0 0 auto;
+  width: 34px;
+  height: 18px;
+  padding: 0;
+  border: none;
+  border-radius: 9px;
+  background: #c9c2b8;
+  transition: background 0.15s;
+}
+
+.engine-switch.on {
+  background: #4a7c59;
+}
+
+.engine-switch-knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  transition: left 0.15s;
+}
+
+.engine-switch.on .engine-switch-knob {
+  left: 18px;
+}
+
+.engine-icon-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: none;
+  color: #5a4f45;
+  font-size: 15px;
+}
+
+.engine-icon-button:hover:not(:disabled) {
+  background: #ebe4d9;
+}
+
+.engine-icon-button:disabled {
+  color: #c5beb5;
+  cursor: default;
+}
+
+.engine-icon-button.active {
+  background: #e3d6c2;
+  border-color: #cdbb9f;
+  color: #8b6f47;
+}
+
+.engine-lines-stepper {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.engine-cpus {
+  font-size: 12px;
+  padding: 1px 2px;
+}
+
+.engine-settings-anchor {
+  position: relative;
+}
+
+.engine-settings {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 100;
+  width: 250px;
+  padding: 10px 12px;
+  background: #fff;
+  border: 1px solid #d5d0c8;
+  border-radius: 6px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+  font-size: 13px;
+}
+
+.engine-settings-title {
+  margin-bottom: 4px;
+  color: #888;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.engine-settings-choice {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 0;
+}
+
+.engine-settings-note {
+  margin: 4px 0 10px;
+  color: #999;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.engine-settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.engine-locked-note {
+  padding: 4px 12px;
+  color: #8b6f47;
+  font-size: 12px;
+  background: #f6f1ea;
+}
+
+.engine-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 4px 0;
+}
+
+.engine-note,
+.engine-error {
+  padding: 8px 12px;
+  color: #888;
+}
+
+.engine-error {
+  color: #c0392b;
+}
+
+.engine-line {
+  display: flex;
+  gap: 10px;
+  padding: 3px 10px;
+  border-bottom: 1px solid #f3f0eb;
+  line-height: 1.5;
+}
+
+.engine-score {
+  flex: 0 0 auto;
+  min-width: 52px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.engine-score.white {
+  color: #2e7d32;
+}
+
+.engine-score.black {
+  color: #b23a3a;
+}
+
+.engine-pv {
+  flex: 1;
+  min-width: 0;
+  color: #333;
+}

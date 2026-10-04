@@ -11,6 +11,7 @@ import { useDocuments } from './documentsStore';
 import { showError } from './errorStore';
 import { showToast } from './toastStore';
 import { SaveToDatabaseDialog } from './SaveToDatabaseDialog';
+import { setAnalysisPosition } from '../engine/analysis';
 import { askChoice } from './choiceStore';
 import { applyContent, deleteDraft, fingerprint, gameContent, loadDraft, saveDraft } from './drafts';
 import { registerSaver, type SaveMode, setUnsaved } from './unsavedStore';
@@ -143,6 +144,13 @@ export function BoardDocument({
     return move ? game.movesInOrder().indexOf(move) : null;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [game, version]);
+  // The engine analyses the position on the board shown
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const fen = useMemo(() => game.fen(), [game, version]);
+  useEffect(() => {
+    if (active) setAnalysisPosition(fen);
+  }, [active, fen]);
+
   // A game just loaded is as it was saved
   const [savedContent, setSavedContent] = useState<{ game: GameTree; content: string } | null>(null);
   if (savedContent?.game !== game) setSavedContent({ game, content });

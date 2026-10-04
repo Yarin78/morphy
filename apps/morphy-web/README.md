@@ -21,6 +21,17 @@ npm run dev
 The app runs on `http://localhost:5173` and proxies `/api` requests to the
 morphy-service.
 
+## Chess engine
+
+The Engine pane runs Stockfish 19 in the browser: the WebAssembly build from the
+`stockfish` package (GPL-3.0), served at `/engines/` by a small Vite plugin in
+`vite.config.ts` and copied into `dist/engines/` by a build. The multi-threaded
+engine needs the page to be cross-origin isolated, so the dev and preview servers
+send `Cross-Origin-Opener-Policy: same-origin` and
+`Cross-Origin-Embedder-Policy: require-corp`; whatever serves the built app must
+send them too. The engine code (`src/engine`) speaks UCI over a transport, so a
+remote engine can be added as another transport.
+
 ## Pages
 
 - `/` — the Morphy app (`src/app`). A navigator on the left lists the open
