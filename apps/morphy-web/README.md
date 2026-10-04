@@ -1,8 +1,7 @@
 # Morphy Web
 
-A multi-page Vite app: the main app (currently empty - a placeholder for what
-comes later) plus two test pages that exercise the morphy-service API and the
-`game-view` package in isolation.
+A multi-page Vite app: the main Morphy app plus two test pages that exercise
+the morphy-service API and the `game-view` package in isolation.
 
 ## Prerequisites
 
@@ -24,7 +23,13 @@ morphy-service.
 
 ## Pages
 
-- `/` — the main app. Empty for now.
+- `/` — the Morphy app (`src/app`). A navigator on the left lists the open
+  documents: Home, All Databases, Settings, and any opened databases and
+  boards. Each document has its own Dockview grid of panes, which fills the
+  rest of the screen while the document is active. A database document is the
+  search UI (`src/database`, shared with the search tester); clicking a game
+  opens it in a board document (`src/game`, shared with the board tester). The
+  open documents and their layouts are kept in localStorage.
 - `/search-tester.html` — debug and test the game/entity search API.
   1. Select a database from the dropdown (e.g. `world-ch` when using the test database)
   2. Use the filter query language or typed parameters to build your search

@@ -10,7 +10,7 @@ exactly as if it were standalone.
 
 ## Apps
 
-- **morphy-web** — The main app (currently an empty placeholder at `/`), plus
+- **morphy-web** — The main Morphy app at `/`, plus
   two multi-page test pages that exercise the morphy-service API and the
   `game-view` package in isolation:
   - `/search-tester.html` — Debug and test the game/entity search API.

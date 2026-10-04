@@ -7,7 +7,8 @@ import { ENTITY_TYPES } from './entityConfig';
 interface SearchPanelProps {
   databases: DatabaseResponse[];
   selectedDb: string;
-  onDbChange: (id: string) => void;
+  /** Picks another database; when not given, the database is fixed and the picker hidden. */
+  onDbChange?: (id: string) => void;
   entityType: EntityType;
   onEntityTypeChange: (t: EntityType) => void;
   filter: string;
@@ -95,21 +96,23 @@ export function SearchPanel({
   return (
     <section className="panel search-panel">
       <div className="database-row">
-        <div className="field">
-          <label>Database</label>
-          <select
-            value={selectedDb}
-            onChange={(e) => onDbChange(e.target.value)}
-            disabled={!databases.length}
-          >
-            {!databases.length && <option value="">Loading...</option>}
-            {databases.map((db) => (
-              <option key={db.id} value={db.id}>
-                {db.displayName} ({db.id})
-              </option>
-            ))}
-          </select>
-        </div>
+        {onDbChange && (
+          <div className="field">
+            <label>Database</label>
+            <select
+              value={selectedDb}
+              onChange={(e) => onDbChange(e.target.value)}
+              disabled={!databases.length}
+            >
+              {!databases.length && <option value="">Loading...</option>}
+              {databases.map((db) => (
+                <option key={db.id} value={db.id}>
+                  {db.displayName} ({db.id})
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
         {savedSearches.length > 0 && (
           <div className="field saved-searches-field">
             <label>Saved searches</label>
