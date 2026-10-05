@@ -133,12 +133,15 @@ const MAIN_PANE: Record<MorphyDocument['kind'], { component: string; title: stri
   home: { component: 'home', title: 'Home' },
   databases: { component: 'databases', title: 'Databases' },
   logs: { component: 'logs', title: 'Logs' },
-  database: { component: 'database', title: 'Search' },
+  database: { component: 'search', title: 'Search' },
   board: { component: 'board', title: 'Board' },
 };
 
 /** The id of a board document's board pane, which is alone in a group without tabs. */
 export const BOARD_PANE = 'board';
+
+/** The id of a database document's search pane, which is alone in a group without tabs. */
+export const SEARCH_PANE = 'search';
 
 /** The panes a board document can show beside the board, which can be closed and brought back. */
 export const BOARD_SIDE_PANES = {
@@ -189,9 +192,34 @@ export function toggleBoardPane(api: DockviewApi, id: BoardSidePane) {
   });
 }
 
+/** The panes a database document can show beside its search, which can be closed and brought back. */
+export const DATABASE_SIDE_PANES = {
+  preview: 'Preview',
+} as const;
+
+export type DatabaseSidePane = keyof typeof DATABASE_SIDE_PANES;
+
+/** Shows a pane beside a database's search, or closes it: the preview, to the right of it. */
+export function toggleDatabasePane(api: DockviewApi, id: DatabaseSidePane) {
+  const panel = api.getPanel(id);
+  if (panel) {
+    api.removePanel(panel);
+    return;
+  }
+  api.addPanel({
+    id,
+    component: id,
+    title: DATABASE_SIDE_PANES[id],
+    position: { referencePanel: SEARCH_PANE, direction: 'right' },
+    // The board fills the preview's width, at most half the height across
+    initialWidth: api.width > 0 ? Math.round(Math.min(api.height * 0.5, api.width * 0.45)) : undefined,
+  });
+}
+
 /**
  * Sets up a new document's grid: a single pane by kind. A board has the notation to its right;
- * the engine and the opening tree are a menu away.
+ * the engine and the opening tree are a menu away. A database has the preview of the game
+ * picked to the right of its search.
  */
 export function defaultLayout(doc: MorphyDocument, api: DockviewApi) {
   const pane = MAIN_PANE[doc.kind];
@@ -201,11 +229,21 @@ export function defaultLayout(doc: MorphyDocument, api: DockviewApi) {
     toggleBoardPane(api, 'notation');
     main.api.setActive();
   }
+  if (doc.kind === 'database') {
+    main.group.header.hidden = true;
+    toggleDatabasePane(api, 'preview');
+    main.api.setActive();
+  }
 }
 
-/** Whether a saved grid still has the pane the document's kind always has. */
+/**
+ * Whether a saved grid still has the pane the document's kind always has. A database's search is
+ * alone in its group, without tabs; a grid saved before it was isn't used.
+ */
 export function isLayoutComplete(doc: MorphyDocument, api: DockviewApi): boolean {
-  return !!api.getPanel(MAIN_PANE[doc.kind].component);
+  const main = api.getPanel(MAIN_PANE[doc.kind].component);
+  if (!main) return false;
+  return doc.kind !== 'database' || (main.group.header.hidden && main.group.panels.length === 1);
 }
 
 /**

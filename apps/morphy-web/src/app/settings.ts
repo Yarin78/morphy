@@ -32,6 +32,10 @@ export interface NotationSettings {
   fontSize: number;
   /** Whether !, ?, the comment keys and so on annotate the current move */
   annotationKeys: boolean;
+  /** Whether a database's preview shows the variations of the game, not just the main line */
+  previewVariations: boolean;
+  /** Whether a database's preview shows the annotations: text, symbols, squares and the rest */
+  previewCommentary: boolean;
 }
 
 export interface Settings {
@@ -70,6 +74,8 @@ export const DEFAULT_SETTINGS: Settings = {
     barGroups: NOTATION_BAR_GROUPS.map((g) => g.id),
     fontSize: 15,
     annotationKeys: true,
+    previewVariations: false,
+    previewCommentary: false,
   },
 };
 

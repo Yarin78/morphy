@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { Square } from 'chess.js';
 import Chessground from 'react-chessground';
 import 'react-chessground/dist/styles/chessground.css';
@@ -91,8 +91,9 @@ export function GameBoard({
     onMove: (from, to) => handleMove(from as Square, to as Square),
   });
 
-  // The largest square that fits above the buttons
-  useEffect(() => {
+  // The largest square that fits above the buttons; measured before the board is first painted,
+  // so a new board isn't shown at its default size first
+  useLayoutEffect(() => {
     const wrapper = boardWrapperRef.current;
     if (!wrapper) return;
     const calculateBoardSize = () => {

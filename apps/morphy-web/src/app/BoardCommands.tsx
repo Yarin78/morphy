@@ -112,7 +112,7 @@ export function BoardCommands({
   const { dispatch } = useDocuments();
   const settingsOpen = useSettingsTab() !== null;
 
-  // The panes menu and buttons show which panes are open
+  // The view menu and the buttons show which panes are open
   const [, setLayoutVersion] = useState(0);
   useEffect(() => {
     if (!api) return;
@@ -185,7 +185,7 @@ export function BoardCommands({
       ],
     },
     {
-      title: 'Panes',
+      title: 'View',
       items: [
         ...(Object.keys(BOARD_SIDE_PANES) as BoardSidePane[]).map((id) => ({
           label: BOARD_SIDE_PANES[id],
@@ -204,13 +204,8 @@ export function BoardCommands({
             defaultLayout(doc, api);
           },
         },
-      ],
-    },
-    {
-      title: 'View',
-      items: [
-        { label: 'Flip Board', icon: <TbSwitchVertical />, hint: shortcutLabel('Alt+F'), action: view.flipBoard },
         'separator',
+        { label: 'Flip Board', icon: <TbSwitchVertical />, hint: shortcutLabel('Alt+F'), action: view.flipBoard },
         { label: 'Board Settings…', icon: <TbAdjustments />, action: () => openSettings('board') },
       ],
     },

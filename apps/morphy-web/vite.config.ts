@@ -41,9 +41,30 @@ function engines(): Plugin {
   }
 }
 
+// The test pages, served at /search-tester and /board-tester as well as at their .html files
+const TEST_PAGES = ['search-tester', 'board-tester']
+
+function testPages(): Plugin {
+  const rewrite = (req: { url?: string }, _res: unknown, next: () => void) => {
+    const [path, query] = (req.url ?? '').split(/\?(.*)/s, 2)
+    const page = path.replace(/^\/|\/$/g, '')
+    if (TEST_PAGES.includes(page)) req.url = `/${page}.html${query ? `?${query}` : ''}`
+    next()
+  }
+  return {
+    name: 'morphy-test-pages',
+    configureServer(server) {
+      server.middlewares.use(rewrite)
+    },
+    configurePreviewServer(server) {
+      server.middlewares.use(rewrite)
+    },
+  }
+}
+
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), engines()],
+  plugins: [react(), engines(), testPages()],
   server: {
     headers: CROSS_ORIGIN_ISOLATION,
     proxy: {

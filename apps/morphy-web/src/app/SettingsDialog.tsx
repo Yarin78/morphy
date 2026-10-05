@@ -211,6 +211,18 @@ function NotationTab() {
           label="Annotate with the keys: ! ? = + − for symbols, A and B for comments, D for a diagram"
         />
       </Row>
+      <Row label="Preview" note="The game previewed beside a database's search; with neither, only its moves.">
+        <Check
+          checked={notation.previewVariations}
+          onChange={(previewVariations) => setNotationSettings({ previewVariations })}
+          label="Show variations"
+        />
+        <Check
+          checked={notation.previewCommentary}
+          onChange={(previewCommentary) => setNotationSettings({ previewCommentary })}
+          label="Show commentary: text, move symbols, colored squares and arrows"
+        />
+      </Row>
     </>
   );
 }

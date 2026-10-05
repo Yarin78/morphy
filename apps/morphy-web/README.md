@@ -43,17 +43,23 @@ search.
   documents: Home, All Databases, Logs, and any opened databases and
   boards; its Settings opens the settings dialog (`src/app/settings.ts`),
   whose settings apply to every document. Each document has its own Dockview grid of panes, which fills the
-  rest of the screen while the document is active. A database document is the
-  search UI (`src/database`, shared with the search tester); clicking a game
-  opens it in a board document (`src/game`, shared with the board tester). The
-  open documents and their layouts are kept in localStorage.
-- `/search-tester.html` — debug and test the game/entity search API.
+  rest of the screen while the document is active. A database document has a
+  Search pane (`src/search`) on the left: tabs for games, players, tournaments
+  and the other entities, a form with the common filters, more filters a click
+  away, or the query typed in full; the results below. The Preview pane on the
+  right shows the game picked on a board with its notation (↑↓ pick a game, ←→
+  move through it), or the entity picked, with a way to its games.
+  Double-clicking a game opens it in a board document (`src/game`, shared with
+  the board tester). The open documents and their layouts are kept in
+  localStorage.
+- `/search-tester` (or `/search-tester.html`) — debug and test the game/entity
+  search API, with the query plans and the raw request and response.
   1. Select a database from the dropdown (e.g. `world-ch` when using the test database)
   2. Use the filter query language or typed parameters to build your search
   3. Click **Search** to execute
   4. View results and the debug panel for raw request/response
   5. Click a game's id to open it in the board tester, in a new tab
-- `/board-tester.html` — a single chess board + header + move-notation view,
+- `/board-tester` (or `/board-tester.html`) — a single chess board + header + move-notation view,
   driven by `?db=<databaseId>&game=<gameId>` query params:
   - no params → an empty, unbound board
   - `?db=X` → an empty board bound to `X`; saving creates a new game
