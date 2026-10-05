@@ -170,7 +170,7 @@ export const GameInfoDialog: React.FC<GameInfoDialogProps> = ({ initial, service
     <input
       type="text"
       readOnly={existingTournament}
-      title={existingTournament ? "The existing tournament's; see Details" : undefined}
+      title={existingTournament ? "The existing event's; see Details" : undefined}
       autoComplete="off"
       data-1p-ignore
       data-lpignore="true"
@@ -274,7 +274,7 @@ export const GameInfoDialog: React.FC<GameInfoDialogProps> = ({ initial, service
         </fieldset>
 
         <fieldset className={`game-info-tournament${expanded ? '' : ' compact'}`}>
-          <legend>Tournament</legend>
+          <legend>Event</legend>
           <TournamentField value={info.tournament} onChange={setTournament} service={tournamentService} />
           {field('round', 'Round', numberProps)}
           {expanded && (

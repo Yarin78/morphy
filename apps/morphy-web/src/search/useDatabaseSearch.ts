@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { search } from '../api/client';
 import type { EntitySearchResponse, GameSearchResponse } from '../api/types';
+import { shownColumnKeys } from './columnLayout';
+import { NOTATION_COLUMN } from './columns';
 import {
   EMPTY_ENTITY_FORM,
   EMPTY_GAME_FORM,
@@ -32,6 +34,12 @@ export interface SearchResults {
   complete: boolean;
   loading: boolean;
   error: string | null;
+  /** How long the service took to search, in milliseconds; null until it answers */
+  durationMs: number | null;
+  /** The filter query sent, empty for everything */
+  query: string;
+  /** The sort sent, e.g. +id */
+  sortBy: string;
 }
 
 export interface KindSearch {
@@ -41,7 +49,7 @@ export interface KindSearch {
   gameForm: GameForm;
   entityForm: EntityForm;
   queryText: string;
-  /** The order of the results; null for the kind's own (games by number) */
+  /** The order of the results; null for the kind's own (the entities') */
   sort: SortOrder | null;
   /** The results of the last search; null before the first */
   results: SearchResults | null;
@@ -62,7 +70,11 @@ const EMPTY_SEARCH: KindSearch = {
 
 type Searches = Record<SearchKind, KindSearch>;
 
-const INITIAL: Searches = Object.fromEntries(SEARCH_KINDS.map((k) => [k, EMPTY_SEARCH])) as Searches;
+// Games are in the order of their numbers, shown as sorted by it, so the first click reverses it
+const INITIAL: Searches = {
+  ...(Object.fromEntries(SEARCH_KINDS.map((k) => [k, EMPTY_SEARCH])) as Searches),
+  games: { ...EMPTY_SEARCH, sort: { field: 'id', order: 'asc' } },
+};
 
 /** The query a search sends: the form's, or the one typed. */
 export function queryOf(kind: SearchKind, s: KindSearch): string {
@@ -70,8 +82,8 @@ export function queryOf(kind: SearchKind, s: KindSearch): string {
   return kind === 'games' ? gameQuery(s.gameForm) : entityQuery(kind, s.entityForm);
 }
 
-function sortParam(kind: SearchKind, sort: SortOrder | null): string {
-  if (!sort) return kind === 'games' ? '+id' : 'default';
+function sortParam(sort: SortOrder | null): string {
+  if (!sort) return 'default';
   return `${sort.order === 'desc' ? '-' : '+'}${sort.field}`;
 }
 
@@ -115,6 +127,8 @@ export function useDatabaseSearch(databaseId: string): DatabaseSearch {
       const fetchId = (fetchIds.current[k] ?? 0) + 1;
       fetchIds.current[k] = fetchId;
       const first = offset === 0;
+      const filter = queryOf(k, s);
+      const sortBy = sortParam(s.sort);
       updateKind(k, (prev) => ({
         ...prev,
         results: {
@@ -123,11 +137,20 @@ export function useDatabaseSearch(databaseId: string): DatabaseSearch {
           complete: false,
           loading: true,
           error: null,
+          durationMs: first ? null : (prev.results?.durationMs ?? null),
+          query: filter,
+          sortBy,
         },
         selected: first ? null : prev.selected,
       }));
-      const filter = queryOf(k, s);
-      const request = { filter: filter || undefined, sortBy: sortParam(k, s.sort), offset, limit: PAGE_SIZE };
+      const request = {
+        filter: filter || undefined,
+        sortBy,
+        offset,
+        limit: PAGE_SIZE,
+        // The first moves of the games come with the moves, which are only fetched when shown
+        ...(k === 'games' && shownColumnKeys('games').includes(NOTATION_COLUMN) ? { includeMoves: true } : {}),
+      };
       try {
         const res = await search<GameSearchResponse | EntitySearchResponse<{ id: number }>>(databaseId, k, request);
         if (fetchIds.current[k] !== fetchId) return;
@@ -142,6 +165,10 @@ export function useDatabaseSearch(databaseId: string): DatabaseSearch {
               complete: rows.length < PAGE_SIZE || (res.totalCount != null && all.length >= res.totalCount),
               loading: false,
               error: null,
+              // The time of the search, its first page; the later pages are continuations
+              durationMs: first ? res.metadata.executionTimeMs : (prev.results?.durationMs ?? null),
+              query: filter,
+              sortBy,
             },
             // The first match is shown, so the preview has something in it
             selected: first ? (all.length > 0 ? 0 : null) : prev.selected,
@@ -152,7 +179,16 @@ export function useDatabaseSearch(databaseId: string): DatabaseSearch {
         const message = err instanceof Error ? err.message : String(err);
         updateKind(k, (prev) => ({
           ...prev,
-          results: { rows: prev.results?.rows ?? [], total: null, complete: true, loading: false, error: message },
+          results: {
+            rows: prev.results?.rows ?? [],
+            total: null,
+            complete: true,
+            loading: false,
+            error: message,
+            durationMs: prev.results?.durationMs ?? null,
+            query: filter,
+            sortBy,
+          },
         }));
       }
     },

@@ -17,9 +17,9 @@ export const TournamentField: React.FC<TournamentFieldProps> = ({ value, onChang
     create={newTournament}
     hasDetails={hasDetails}
     subtitle={tournamentSubtitle}
-    what="tournament"
+    what="event"
     label="Name"
-    ariaLabel="Tournament name"
+    ariaLabel="Event name"
     className="game-info-field-tournament"
   />
 );

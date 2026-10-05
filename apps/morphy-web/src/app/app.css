@@ -1768,6 +1768,86 @@ html {
   font-size: 12px;
 }
 
+.search-duration {
+  cursor: help;
+}
+
+.search-duration:hover {
+  color: #2c2c2c;
+}
+
+.column-picker {
+  position: relative;
+}
+
+.column-picker-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.column-picker-button.open {
+  text-decoration: underline;
+}
+
+.column-picker-list {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 20;
+  max-height: 60vh;
+  overflow-y: auto;
+  min-width: 190px;
+  padding: 4px;
+  background: #fff;
+  color: #222;
+  border: 1px solid #d5d0c8;
+  border-radius: 6px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+  white-space: nowrap;
+}
+
+.column-picker-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.column-picker-item:hover {
+  background: #f3eee6;
+}
+
+.column-picker-item input {
+  margin: 0;
+  accent-color: #8b6f47;
+}
+
+.column-picker-reset {
+  display: block;
+  width: 100%;
+  padding: 4px 8px;
+  background: none;
+  border: none;
+  border-radius: 4px;
+  text-align: left;
+  font-size: 13px;
+  color: inherit;
+}
+
+.column-picker-reset:hover:not(:disabled) {
+  background: #8b6f47;
+  color: #fff;
+}
+
+.column-picker-reset:disabled {
+  color: #b0aaa2;
+  cursor: default;
+}
+
 .search-error {
   margin: 0 12px 6px;
   padding: 6px 8px;
@@ -1808,12 +1888,41 @@ html {
   user-select: none;
 }
 
-.search-table th.sortable {
+.search-table th.sortable .search-th-label {
   cursor: pointer;
 }
 
-.search-table th.sortable:hover {
+.search-table th.sortable .search-th-label:hover {
   color: #2c2c2c;
+}
+
+/* The right edge of a column's header, dragged to make it wider or narrower */
+.search-th-resize {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 6px;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.search-th-resize::after {
+  content: '';
+  position: absolute;
+  top: 5px;
+  bottom: 5px;
+  right: 0;
+  width: 1px;
+  background: #e0dbd3;
+}
+
+.search-th-resize:hover::after,
+.search-th-resize:active::after {
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: #b08a4f;
 }
 
 .search-sort {

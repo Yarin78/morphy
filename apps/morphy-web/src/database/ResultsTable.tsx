@@ -386,7 +386,7 @@ export const GAME_COLUMNS: Column<GameDto>[] = [
   { key: 'eco', label: 'ECO', width: 50, render: (g) => formatValue(g.eco) },
   {
     key: 'tournament',
-    label: 'Tournament',
+    label: 'Event',
     width: 180,
     render: (g) => formatValue(g.tournament?.title),
   },

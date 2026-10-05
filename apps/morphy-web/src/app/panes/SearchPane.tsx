@@ -1,7 +1,8 @@
-import { type KeyboardEvent, type ReactNode, useEffect, useRef } from 'react';
+import { type KeyboardEvent, type PointerEvent, type ReactNode, useEffect, useRef } from 'react';
 import { TbChevronDown, TbChevronRight, TbSearch, TbX } from 'react-icons/tb';
 import { useDatabaseView } from '../databaseStore';
-import { columnsOf, defaultOrderOf, entityLabel, sortFieldOf } from '../../search/columns';
+import { defaultOrderOf, entityLabel, NOTATION_COLUMN, sortFieldOf } from '../../search/columns';
+import { resetColumns, setColumnWidth, shownColumnKeys, toggleColumn, useResultColumns } from '../../search/columnLayout';
 import {
   type EntityForm,
   type GameForm,
@@ -19,9 +20,18 @@ import {
   type TimeControl,
 } from '../../search/queries';
 import { queryOf } from '../../search/useDatabaseSearch';
+import { ColumnPicker } from './ColumnPicker';
 
 // How near the end of the results, in rows, the next page is fetched
 const PREFETCH_ROWS = 20;
+
+/** A search's duration: "12 ms", or "1.4 s" from a second. */
+function formatDuration(ms: number): string {
+  return ms < 1000 ? `${Math.round(ms)} ms` : `${(ms / 1000).toFixed(1)} s`;
+}
+
+// The narrowest a column can be made
+const MIN_COLUMN_WIDTH = 32;
 
 /**
  * A database's search: games by default, or players, tournaments and the other entities. A form
@@ -147,7 +157,7 @@ function DateRange({
 
 function TimeControls({ value, onChange }: { value: TimeControl[]; onChange: (value: TimeControl[]) => void }) {
   return (
-    <div className="search-chips" title="The time control of the tournament; none picked is any">
+    <div className="search-chips" title="The time control of the event; none picked is any">
       {TIME_CONTROLS.map((tc) => {
         const on = value.includes(tc.id);
         return (
@@ -254,7 +264,7 @@ function GameFormFields() {
             </Field>
           </div>
           <div className="search-row">
-            <Field label="Tournament">
+            <Field label="Event">
               <TextInput value={form.tournament} onChange={(v) => set({ tournament: v })} />
             </Field>
             <Field label="Annotator">
@@ -342,7 +352,8 @@ function Results() {
   const kind = search.kind;
   const s = search.current;
   const results = s.results;
-  const columns = columnsOf(kind);
+  const resultColumns = useResultColumns(kind);
+  const columns = resultColumns.shown;
   const listRef = useRef<HTMLDivElement>(null);
   const rows = results?.rows ?? [];
 
@@ -399,6 +410,42 @@ function Results() {
     if (el && el.scrollTop + el.clientHeight > el.scrollHeight - 200) search.loadMore();
   };
 
+  // The games are fetched again when their moves are to be shown, as they come with the moves
+  const refetchIfMovesShown = (wasShown: boolean) => {
+    if (kind === 'games' && !wasShown && shownColumnKeys(kind).includes(NOTATION_COLUMN)) search.run();
+  };
+
+  const onToggleColumn = (key: string) => {
+    const wasShown = shownColumnKeys(kind).includes(NOTATION_COLUMN);
+    toggleColumn(kind, key);
+    refetchIfMovesShown(wasShown);
+  };
+
+  const onResetColumns = () => {
+    const wasShown = shownColumnKeys(kind).includes(NOTATION_COLUMN);
+    resetColumns(kind);
+    refetchIfMovesShown(wasShown);
+  };
+
+  // A column is made wider or narrower by dragging the right edge of its header
+  const startResize = (e: PointerEvent<HTMLDivElement>, key: string, width: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const handle = e.currentTarget;
+    const startX = e.clientX;
+    handle.setPointerCapture(e.pointerId);
+    const onMove = (ev: globalThis.PointerEvent) =>
+      setColumnWidth(kind, key, Math.max(MIN_COLUMN_WIDTH, Math.round(width + ev.clientX - startX)));
+    const onUp = () => {
+      handle.removeEventListener('pointermove', onMove);
+      handle.removeEventListener('pointerup', onUp);
+      handle.removeEventListener('pointercancel', onUp);
+    };
+    handle.addEventListener('pointermove', onMove);
+    handle.addEventListener('pointerup', onUp);
+    handle.addEventListener('pointercancel', onUp);
+  };
+
   const sortField = s.sort?.field;
   const label = SEARCH_KIND_LABELS[kind].toLowerCase();
   const count = results
@@ -410,19 +457,19 @@ function Results() {
   return (
     <div className="search-results">
       <div className="search-results-head">
-        <span>{results?.loading && rows.length === 0 ? 'Searching…' : count}</span>
-        {s.sort && (
-          <button
-            className="search-link"
-            title="Back to the database's own order"
-            onClick={() => {
-              search.update({ sort: null });
-              search.run();
-            }}
-          >
-            Unsorted
-          </button>
-        )}
+        <span>
+          {results?.loading && rows.length === 0 ? 'Searching…' : count}
+          {results?.durationMs != null && !(results.loading && rows.length === 0) && (
+            <span
+              className="search-duration"
+              title={`${results.query || '(everything)'}\nSorted by ${results.sortBy}`}
+            >
+              {' · '}
+              {formatDuration(results.durationMs)}
+            </span>
+          )}
+        </span>
+        <ColumnPicker columns={resultColumns} onToggle={onToggleColumn} onReset={onResetColumns} />
       </div>
       {results?.error && <div className="search-error">{results.error}</div>}
       <div className="search-results-list" ref={listRef} tabIndex={0} onKeyDown={onKeyDown} onScroll={onScroll}>
@@ -431,6 +478,8 @@ function Results() {
             {columns.map((c) => (
               <col key={c.key} style={{ width: c.width }} />
             ))}
+            {/* Takes the width the columns leave, so they keep theirs */}
+            <col />
           </colgroup>
           <thead>
             <tr>
@@ -438,17 +487,21 @@ function Results() {
                 const field = sortFieldOf(kind, c.key);
                 const sorted = field && field === sortField;
                 return (
-                  <th
-                    key={c.key}
-                    className={field ? 'sortable' : undefined}
-                    title={field ? `Sort by ${c.label}` : undefined}
-                    onClick={field ? () => search.sortBy(field, defaultOrderOf(field)) : undefined}
-                  >
-                    {c.label}
-                    {sorted && <span className="search-sort">{s.sort!.order === 'desc' ? ' ↓' : ' ↑'}</span>}
+                  <th key={c.key} className={field ? 'sortable' : undefined}>
+                    {/* The sort is on the label, so that letting go of a dragged edge doesn't sort */}
+                    <span
+                      className="search-th-label"
+                      title={field ? `Sort by ${c.label}` : c.label}
+                      onClick={field ? () => search.sortBy(field, defaultOrderOf(field)) : undefined}
+                    >
+                      {c.label}
+                      {sorted && <span className="search-sort">{s.sort!.order === 'desc' ? ' ↓' : ' ↑'}</span>}
+                    </span>
+                    <div className="search-th-resize" onPointerDown={(e) => startResize(e, c.key, c.width)} />
                   </th>
                 );
               })}
+              <th />
             </tr>
           </thead>
           <tbody className={results?.loading && rows.length === 0 ? 'loading' : undefined}>
@@ -464,6 +517,7 @@ function Results() {
                 {columns.map((c) => (
                   <td key={c.key}>{c.render(row)}</td>
                 ))}
+                <td />
               </tr>
             ))}
           </tbody>

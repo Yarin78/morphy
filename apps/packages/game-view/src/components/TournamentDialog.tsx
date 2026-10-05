@@ -88,7 +88,8 @@ function fromForm(form: Form, base: TournamentInfo, id: number | null): Tourname
 export const TournamentDialog: React.FC<TournamentDialogProps> = ({ tournament, service, onApply, onClose }) => (
   <EntityDetailsDialog<TournamentInfo, Form>
     entity={tournament}
-    what="tournament"
+    what="event"
+    name="tournament"
     update={service?.update}
     toForm={toForm}
     validate={validate}
@@ -170,7 +171,7 @@ export const TournamentDialog: React.FC<TournamentDialogProps> = ({ tournament, 
             </label>
             <label className="tournament-checkbox">
               <input type="checkbox" checked={form.teamTournament} onChange={set('teamTournament')} disabled={readOnly} />
-              Team tournament
+              Team event
             </label>
           </fieldset>
         </>

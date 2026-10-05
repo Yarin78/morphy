@@ -26,37 +26,48 @@ export function toEntityType(kind: SearchKind): EntityType {
   return ENTITY_TYPES[kind];
 }
 
-const GAME_COLUMN_KEYS = ['id', 'white', 'whiteElo', 'black', 'blackElo', 'result', 'noMoves', 'eco', 'tournament', 'date'];
+// The columns of a game shown until others are picked
+const DEFAULT_GAME_COLUMNS = ['id', 'white', 'whiteElo', 'black', 'blackElo', 'result', 'tournament', 'round', 'date', 'notation'];
 
 // Narrower than the search tester's, as the results share the screen with the preview
 const GAME_WIDTHS: Record<string, number> = {
   id: 56,
   white: 150,
-  whiteElo: 50,
+  whiteElo: 54,
   black: 150,
-  blackElo: 50,
-  result: 48,
-  noMoves: 50,
+  blackElo: 54,
+  result: 52,
+  noMoves: 54,
   eco: 46,
   tournament: 180,
-  date: 90,
+  round: 54,
+  date: 100,
+  notation: 300,
 };
 
-const GAME_LABELS: Record<string, string> = { id: '#', whiteElo: 'Elo', blackElo: 'Elo' };
+// Shorter than the search tester's headers
+const GAME_LABELS: Record<string, string> = { id: '#' };
+
+/** The column of a game's first moves, which are fetched only while it's shown. */
+export const NOTATION_COLUMN = 'notation';
 
 export function entityColumns(type: EntityType): Column[] {
   return ENTITY_CONFIG[type].columns as Column[];
 }
 
-/** The columns of a kind's results. */
+/** All the columns of a kind's results, the ones shown or not. */
 export function columnsOf(kind: SearchKind): Column[] {
   if (kind !== 'games') return entityColumns(ENTITY_TYPES[kind]);
-  const all = entityColumns('Games');
-  return GAME_COLUMN_KEYS.map((key) => all.find((c) => c.key === key)!).map((c) => ({
+  return entityColumns('Games').map((c) => ({
     ...c,
     label: GAME_LABELS[c.key] ?? c.label,
     width: GAME_WIDTHS[c.key] ?? c.width,
   }));
+}
+
+/** The keys of the columns of a kind's results shown until others are picked. */
+export function defaultColumnsOf(kind: SearchKind): string[] {
+  return kind === 'games' ? DEFAULT_GAME_COLUMNS : columnsOf(kind).map((c) => c.key);
 }
 
 /** The sort field of a column of a kind's results, if it can be sorted on. */

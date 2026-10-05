@@ -8,7 +8,7 @@ export type SearchKind = (typeof SEARCH_KINDS)[number];
 export const SEARCH_KIND_LABELS: Record<SearchKind, string> = {
   games: 'Games',
   players: 'Players',
-  tournaments: 'Tournaments',
+  tournaments: 'Events',
   annotators: 'Annotators',
   sources: 'Sources',
   teams: 'Teams',
@@ -19,7 +19,7 @@ export const SEARCH_KIND_LABELS: Record<SearchKind, string> = {
 export const SEARCH_KIND_SINGULAR: Record<SearchKind, string> = {
   games: 'Game',
   players: 'Player',
-  tournaments: 'Tournament',
+  tournaments: 'Event',
   annotators: 'Annotator',
   sources: 'Source',
   teams: 'Team',
