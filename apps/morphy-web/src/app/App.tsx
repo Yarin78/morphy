@@ -8,6 +8,8 @@ import { SettingsDialog } from './SettingsDialog';
 import { Toasts } from './Toasts';
 import { UnsavedChangesDialog } from './UnsavedChangesDialog';
 import { getUnsaved } from './unsavedStore';
+import { closeDocuments } from './closeDocuments';
+import { adjacentDocument } from './documents';
 import { useDocuments } from './documentsStore';
 import { Navigator, type NavigatorState } from './Navigator';
 import './app.css';
@@ -25,7 +27,7 @@ function loadNavigator(): NavigatorState {
 }
 
 function Workspace() {
-  const { state } = useDocuments();
+  const { state, dispatch } = useDocuments();
   const [navigator, setNavigator] = useState(loadNavigator);
 
   // A document's grid is created when it's first shown, and then kept while it's open
@@ -59,6 +61,30 @@ function Workspace() {
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
   }, []);
+
+  // Ctrl+Alt+Right goes to the next document in the navigator, Ctrl+Alt+Left to the one before,
+  // and Ctrl+Alt+W closes the one shown (CLOSE_DOCUMENT_SHORTCUT), if it's a database or a board.
+  // Taken before anything else does, as the board's arrows, so they work while typing in a field
+  // too. (Alt+Tab, the obvious keys, often never reach the page: a window switcher takes them.)
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!e.ctrlKey || !e.altKey || e.metaKey || e.shiftKey) return;
+      const step = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
+      // By the key itself, as Alt changes the character typed with it
+      const close = e.code === 'KeyW';
+      if (!step && !close) return;
+      e.preventDefault();
+      e.stopPropagation();
+      if (step) {
+        dispatch({ type: 'activate', id: adjacentDocument(state, step) });
+        return;
+      }
+      const shown = state.documents.find((d) => d.id === state.activeId);
+      if (shown?.kind === 'database' || shown?.kind === 'board') void closeDocuments([shown], dispatch);
+    };
+    document.addEventListener('keydown', onKey, true);
+    return () => document.removeEventListener('keydown', onKey, true);
+  }, [state, dispatch]);
 
   return (
     <div className="morphy-app">

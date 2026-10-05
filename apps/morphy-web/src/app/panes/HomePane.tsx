@@ -34,7 +34,9 @@ export function HomePane() {
       <p>
         Every database and board you open is a document in the navigator on the left. Each document has its own
         arrangement of windows, kept when you switch between documents and when you reload the page. Collapse the
-        navigator to icons with « or Alt+B.
+        navigator to icons with « or Alt+B, and go to the next document in it with Ctrl+Alt+→ (Ctrl+Alt+←
+        for the one before); Ctrl+Alt+W closes a database or a board. Drag them up and down in the navigator to
+        order them.
       </p>
     </div>
   );

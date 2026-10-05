@@ -19,6 +19,7 @@ import {
 } from './documents';
 import { useDocuments } from './documentsStore';
 import { type Menu, MenuBar } from './MenuBar';
+import { CLOSE_DOCUMENT_SHORTCUT, shortcutLabel } from './shortcuts';
 import { openSettings, useSettingsTab } from './settingsDialogStore';
 import { useSettings } from './settings';
 
@@ -169,7 +170,12 @@ function DatabaseCommands({
       items: [
         { label: 'New Board', action: () => dispatch({ type: 'openBoard', databaseId: doc.databaseId }) },
         'separator',
-        { label: 'Close Database', action: () => void closeDocuments([doc], dispatch) },
+        // The app takes the keys, as they work in fields too
+        {
+          label: 'Close Database',
+          hint: shortcutLabel(CLOSE_DOCUMENT_SHORTCUT),
+          action: () => void closeDocuments([doc], dispatch),
+        },
       ],
     },
     {

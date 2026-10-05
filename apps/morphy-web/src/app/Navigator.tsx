@@ -1,4 +1,4 @@
-import { type PointerEvent as ReactPointerEvent, useState, useSyncExternalStore } from 'react';
+import { type DragEvent, type PointerEvent as ReactPointerEvent, useState, useSyncExternalStore } from 'react';
 import { getSnapshot as getLogSnapshot, subscribe as subscribeLogs } from '../logs/logStore';
 import { closeDocuments } from './closeDocuments';
 import { getUnsaved, subscribeUnsaved } from './unsavedStore';
@@ -8,7 +8,8 @@ import { openSettings } from './settingsDialogStore';
 
 // The navigator on the left: the singleton documents, New Board, the open databases and
 // boards, and Close All and Settings at the bottom. It collapses to icons, and resizes by
-// dragging its right edge; dragged narrow enough, it snaps to icons.
+// dragging its right edge; dragged narrow enough, it snaps to icons. The databases and the boards
+// are dragged up and down within their section to order them.
 
 export const COLLAPSED_WIDTH = 44;
 const MIN_EXPANDED = 160;
@@ -28,6 +29,16 @@ const ICONS: Record<MorphyDocument['kind'], string> = {
   board: '♞',
 };
 
+/** For an item that's dragged to order it: the handlers, and where a drop on it would go */
+interface NavDrag {
+  onDragStart: (e: DragEvent<HTMLDivElement>) => void;
+  onDragOver: (e: DragEvent<HTMLDivElement>) => void;
+  onDrop: (e: DragEvent<HTMLDivElement>) => void;
+  onDragEnd: () => void;
+  dropSide: 'before' | 'after' | null;
+  dragging: boolean;
+}
+
 function NavItem({
   icon,
   label,
@@ -38,6 +49,7 @@ function NavItem({
   unsaved,
   onClick,
   onClose,
+  drag,
 }: {
   icon: string;
   label: string;
@@ -50,12 +62,21 @@ function NavItem({
   unsaved?: boolean;
   onClick: () => void;
   onClose?: () => void;
+  drag?: NavDrag;
 }) {
   return (
     <div
-      className={`nav-item${active ? ' active' : ''}${disabled ? ' disabled' : ''}`}
+      className={
+        `nav-item${active ? ' active' : ''}${disabled ? ' disabled' : ''}` +
+        `${drag?.dropSide ? ` drop-${drag.dropSide}` : ''}${drag?.dragging ? ' dragging' : ''}`
+      }
       title={collapsed ? label : undefined}
       onClick={disabled ? undefined : onClick}
+      draggable={!!drag}
+      onDragStart={drag?.onDragStart}
+      onDragOver={drag?.onDragOver}
+      onDrop={drag?.onDrop}
+      onDragEnd={drag?.onDragEnd}
     >
       <span className="nav-icon">
         {icon}
@@ -95,6 +116,44 @@ export function Navigator({ state, onChange }: { state: NavigatorState; onChange
   const databases = docs.documents.filter((d) => d.kind === 'database');
   const boards = docs.documents.filter((d) => d.kind === 'board');
 
+  // The item dragged to order it, and where it would go if dropped now
+  const [dragged, setDragged] = useState<MorphyDocument | null>(null);
+  const [drop, setDrop] = useState<{ id: string; after: boolean } | null>(null);
+  const endDrag = () => {
+    setDragged(null);
+    setDrop(null);
+  };
+  const dragOf = (d: MorphyDocument): NavDrag => ({
+    dragging: dragged?.id === d.id,
+    dropSide: drop?.id === d.id ? (drop.after ? 'after' : 'before') : null,
+    onDragStart: (e: DragEvent<HTMLDivElement>) => {
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', documentTitle(d));
+      setDragged(d);
+    },
+    // Only within its section: a database among the databases, a board among the boards
+    onDragOver: (e: DragEvent<HTMLDivElement>) => {
+      if (!dragged || dragged.kind !== d.kind) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      const box = e.currentTarget.getBoundingClientRect();
+      const after = e.clientY > box.top + box.height / 2;
+      // Dropped next to itself, it stays where it is
+      const order = docs.documents.filter((x) => x.kind === d.kind);
+      const target = order.indexOf(d) + (after ? 1 : 0);
+      const from = order.indexOf(dragged);
+      const stays = target === from || target === from + 1;
+      if (stays) setDrop(null);
+      else if (drop?.id !== d.id || drop.after !== after) setDrop({ id: d.id, after });
+    },
+    onDrop: (e: DragEvent<HTMLDivElement>) => {
+      e.preventDefault();
+      if (dragged && drop) dispatch({ type: 'move', id: dragged.id, targetId: drop.id, after: drop.after });
+      endDrag();
+    },
+    onDragEnd: endDrag,
+  });
+
   const { unseenErrors } = useSyncExternalStore(subscribeLogs, getLogSnapshot);
   const unsaved = useSyncExternalStore(subscribeUnsaved, getUnsaved);
 
@@ -123,6 +182,7 @@ export function Navigator({ state, onChange }: { state: NavigatorState; onChange
           unsaved={unsaved.has(d.id)}
           onClick={() => dispatch({ type: 'activate', id: d.id })}
           onClose={() => void closeDocuments([d], dispatch)}
+          drag={dragOf(d)}
         />
       ))}
     </>

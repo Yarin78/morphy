@@ -21,7 +21,7 @@ import { BOARD_SIDE_PANES, type BoardSidePane, type BoardDocument, defaultLayout
 import { useDocuments } from './documentsStore';
 import { type Menu, MenuBar } from './MenuBar';
 import { openSettings, useSettingsTab } from './settingsDialogStore';
-import { MAC, shortcutLabel } from './shortcuts';
+import { CLOSE_DOCUMENT_SHORTCUT, MAC, shortcutLabel } from './shortcuts';
 
 // The keys of the panes beside the board
 const PANE_SHORTCUTS: Record<BoardSidePane, string> = { notation: 'Alt+N', engine: 'Alt+E', tree: 'Alt+T' };
@@ -148,7 +148,8 @@ export function BoardCommands({
         'separator',
         { label: 'Edit Game Info…', icon: <TbInfoCircle />, disabled: !hasGame, action: view.openGameInfo },
         'separator',
-        { label: 'Close Board', action: () => void closeDocuments([doc], dispatch) },
+        // The app takes the keys, as they work in fields too
+        { label: 'Close Board', hint: shortcutLabel(CLOSE_DOCUMENT_SHORTCUT), action: () => void closeDocuments([doc], dispatch) },
       ],
     },
     {

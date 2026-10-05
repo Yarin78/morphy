@@ -43,6 +43,8 @@ export type DocumentsAction =
   | { type: 'openDatabase'; databaseId: string; name: string }
   | { type: 'openBoard'; databaseId?: string; gameId?: number; quote?: QuoteTarget }
   | { type: 'close'; id: string }
+  /** Moves a database or a board before or after another of its kind, as in the navigator */
+  | { type: 'move'; id: string; targetId: string; after: boolean }
   | { type: 'updateBoard'; id: string; changes: Partial<Pick<BoardDocument, 'title' | 'databaseId' | 'gameId'>> };
 
 export function documentTitle(doc: MorphyDocument): string {
@@ -60,6 +62,27 @@ export function documentTitle(doc: MorphyDocument): string {
   }
 }
 
+/**
+ * The open documents in the order the navigator lists them: Home and All Databases, the
+ * databases, the boards, and Logs at the bottom.
+ */
+export function navigatorOrder(documents: MorphyDocument[]): MorphyDocument[] {
+  const rank: Record<MorphyDocument['kind'], number> = { home: 0, databases: 1, database: 2, board: 3, logs: 4 };
+  // A stable sort, so the databases and the boards keep the order they were opened in
+  return [...documents].sort((a, b) => rank[a.kind] - rank[b.kind]);
+}
+
+/**
+ * The document after the active one in the navigator, or before it; round from the ends. Logs is
+ * passed over, being for looking into failures, not for working in; from Logs itself, the next is
+ * the first document, and the one before the last.
+ */
+export function adjacentDocument(state: DocumentsState, step: 1 | -1): string {
+  const order = navigatorOrder(state.documents).filter((d) => d.kind !== 'logs' || d.id === state.activeId);
+  const index = order.findIndex((d) => d.id === state.activeId);
+  return order[(index + step + order.length) % order.length].id;
+}
+
 /** The lowest board number no open board uses. */
 function freeBoardNumber(documents: MorphyDocument[]): number {
   const used = new Set(documents.flatMap((d) => (d.kind === 'board' ? [d.number] : [])));
@@ -74,11 +97,16 @@ function newId(prefix: string): string {
 
 /** The documents without these, and the one to show if the active one is among them. */
 function without(state: DocumentsState, removed: (doc: MorphyDocument) => boolean): DocumentsState {
-  const index = state.documents.findIndex((d) => d.id === state.activeId);
   const documents = state.documents.filter((d) => !removed(d));
   if (documents.some((d) => d.id === state.activeId)) return { ...state, documents };
-  // The nearest remaining document before the closed one, else Home
-  const before = state.documents.slice(0, index).reverse().find((d) => !removed(d));
+  // The nearest remaining document above the closed one in the navigator, else Home; never Logs,
+  // which is for looking into failures, not for working in
+  const order = navigatorOrder(state.documents);
+  const index = order.findIndex((d) => d.id === state.activeId);
+  const before = order
+    .slice(0, index)
+    .reverse()
+    .find((d) => !removed(d) && d.kind !== 'logs');
   if (before) return { documents, activeId: before.id };
   const home = documents.find((d) => d.kind === 'home');
   return home ? { documents, activeId: home.id } : { documents: [...documents, INITIAL_STATE.documents[0]], activeId: 'home' };
@@ -120,6 +148,14 @@ export function documentsReducer(state: DocumentsState, action: DocumentsAction)
     }
     case 'close':
       return without(state, (d) => d.id === action.id);
+    case 'move': {
+      const moved = state.documents.find((d) => d.id === action.id);
+      const target = state.documents.find((d) => d.id === action.targetId);
+      if (!moved || !target || moved === target || moved.kind !== target.kind) return state;
+      const documents = state.documents.filter((d) => d !== moved);
+      documents.splice(documents.indexOf(target) + (action.after ? 1 : 0), 0, moved);
+      return { ...state, documents };
+    }
     case 'updateBoard':
       return {
         ...state,
