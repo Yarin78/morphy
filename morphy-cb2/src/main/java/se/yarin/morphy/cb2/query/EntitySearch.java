@@ -239,7 +239,14 @@ public final class EntitySearch {
         c -> e -> DtoConverter.tournamentType((Tournament) e).getName().equalsIgnoreCase(c.value()));
     f.put(
         "time",
-        c -> e -> DtoConverter.timeControl((Tournament) e).getName().equalsIgnoreCase(c.value()));
+        c ->
+            alternatives(
+                c.value(),
+                v -> {
+                  // "classic" is the v1 name for normal time controls
+                  String name = v.equalsIgnoreCase("classic") ? "normal" : v;
+                  return e -> DtoConverter.timeControl((Tournament) e).getName().equalsIgnoreCase(name);
+                }));
     f.put("place", c -> e -> prefix(((Tournament) e).place(), c.value()));
     f.put("nation", c -> e -> c.value().equalsIgnoreCase(DtoConverter.nation(((Tournament) e).nation())));
     f.put("category", c -> intFilter(c, e -> ((Tournament) e).category(), 99));
@@ -386,8 +393,9 @@ public final class EntitySearch {
     return e -> inRange(Dates.decode(value.applyAsInt(e)), range);
   }
 
-  /** Whether a date lies in a range. */
+  /** Whether a date lies in a range; an unset end leaves the range open on that side. */
   static boolean inRange(Date date, PartialDateParser.DateRange range) {
-    return date.compareTo(range.from()) >= 0 && date.compareTo(range.to()) <= 0;
+    return date.compareTo(range.from()) >= 0
+        && (range.to().isUnset() || date.compareTo(range.to()) <= 0);
   }
 }
