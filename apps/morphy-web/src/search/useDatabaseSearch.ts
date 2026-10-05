@@ -20,6 +20,9 @@ import {
 
 const PAGE_SIZE = 100;
 
+// How long after the form was last changed its search is run, so typing doesn't search each letter
+const AUTO_SEARCH_DELAY_MS = 300;
+
 export interface SortOrder {
   /** The sort field of the search language, e.g. playedDate */
   field: string;
@@ -212,6 +215,18 @@ export function useDatabaseSearch(databaseId: string): DatabaseSearch {
   );
 
   const current = searches[kind];
+
+  // The form searches as it's changed: once its query is other than the last one searched for. A
+  // query typed in full waits for Enter, as it's often not one until finished.
+  const formQuery = current.mode === 'form' ? queryOf(kind, current) : null;
+  useEffect(() => {
+    if (formQuery == null) return;
+    const results = searchesRef.current[kind].results;
+    // Not yet searched: the kind is searched when first shown
+    if (!results || results.query === formQuery) return;
+    const timer = setTimeout(() => void fetchPage(kind, 0), AUTO_SEARCH_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [kind, formQuery, fetchPage]);
 
   return {
     kind,

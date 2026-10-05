@@ -45,8 +45,8 @@ search.
   whose settings apply to every document. Each document has its own Dockview grid of panes, which fills the
   rest of the screen while the document is active. A database document has a
   Search pane (`src/search`) on the left: tabs for games, players, events
-  and the other entities, a form with the common filters, more filters a click
-  away, or the query typed in full; the results below, in columns picked from
+  and the other entities, a form with the common filters, searched as it's
+  changed, more filters a click away, or the query typed in full; the results below, in columns picked from
   those of the search tester and resized by dragging their edges (kept in
   localStorage, the same in every database). The Preview pane on the
   right shows the game picked on a board with its notation (↑↓ pick a game, ←→
