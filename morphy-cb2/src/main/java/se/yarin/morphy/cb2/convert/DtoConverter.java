@@ -193,9 +193,26 @@ public final class DtoConverter {
       tournamentDto =
           details
               ? toDto(txn, tournamentId, tournament, false)
+              // The title and the place, as a list of games shows them
               : new TournamentDto(
-                  tournamentId, tournament.title(), null, null, null, null, null, null, null, null,
-                  null, null, null, null, null, null, null, null);
+                  tournamentId,
+                  tournament.title(),
+                  null,
+                  null,
+                  emptyToNull(tournament.place()),
+                  null,
+                  null,
+                  null,
+                  null,
+                  null,
+                  null,
+                  null,
+                  null,
+                  null,
+                  null,
+                  null,
+                  null,
+                  null);
     }
     Source source = game.source();
     SourceDto sourceDto = null;

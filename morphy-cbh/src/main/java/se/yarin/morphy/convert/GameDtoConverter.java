@@ -281,12 +281,13 @@ public class GameDtoConverter {
     Tournament tournament = game.tournament();
 
     if (!includeDetails) {
+      // The title and the place, as a list of games shows them
       return new TournamentDto(
           (long) tournamentId,
           tournament.title(),
           null,
           null,
-          null,
+          tournament.place().isEmpty() ? null : tournament.place(),
           null,
           null,
           null,

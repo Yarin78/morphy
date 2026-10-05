@@ -390,6 +390,12 @@ export const GAME_COLUMNS: Column<GameDto>[] = [
     width: 180,
     render: (g) => formatValue(g.tournament?.title),
   },
+  {
+    key: 'site',
+    label: 'Site',
+    width: 130,
+    render: (g) => formatValue(g.tournament?.place),
+  },
   { key: 'round', label: 'Round', width: 60, render: (g) => {
     if (g.round == null) return '';
     if (g.subRound != null && g.subRound > 0) return `${g.round}.${g.subRound}`;
