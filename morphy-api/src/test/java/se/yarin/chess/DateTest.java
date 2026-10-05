@@ -3,10 +3,33 @@ package se.yarin.chess;
 import org.junit.Test;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public class DateTest {
+
+  @Test
+  public void chronologicalOrderSortsPartialDatesBeforeFullOnes() {
+    List<Date> dates = new ArrayList<>();
+    // compareTo has 1990 equal to both of these, which differ; enough of them breaks a sort by it
+    for (int i = 0; i < 100; i++) {
+      dates.add(new Date(1990, 1 + i % 12, 1 + i % 28));
+      dates.add(new Date(1990));
+      dates.add(new Date(1990, 1 + (i * 7) % 12));
+    }
+    Collections.shuffle(dates);
+    dates.sort(Date.CHRONOLOGICAL);
+    for (int i = 1; i < dates.size(); i++) {
+      Date a = dates.get(i - 1);
+      Date b = dates.get(i);
+      assertTrue(a.month() < b.month() || (a.month() == b.month() && a.day() <= b.day()));
+    }
+    assertEquals(new Date(1990), dates.get(0));
+  }
 
   @Test
   public void testFullDate() {

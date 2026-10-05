@@ -1,11 +1,20 @@
 package se.yarin.chess;
 
 import java.time.LocalDate;
+import java.util.Comparator;
 
 /**
  * Represents a date where each of the year, month and day parts are optional. Date is immutable.
  */
 public record Date(int year, int month, int day) implements Comparable<Date> {
+  /**
+   * The order to sort dates by: by year, month and day, a missing part before any given one, so
+   * "1990" comes before "1990-03". Unlike {@link #compareTo}, which treats a missing part as equal
+   * to any for searching, this is a total order, as sorting needs.
+   */
+  public static final Comparator<Date> CHRONOLOGICAL =
+      Comparator.comparingInt(Date::year).thenComparingInt(Date::month).thenComparingInt(Date::day);
+
   public Date(int year) {
     this(year, 0, 0);
   }
@@ -73,6 +82,7 @@ public record Date(int year, int month, int day) implements Comparable<Date> {
     // If some part of the date is missing from one side, we treat it as equal
     // This it to ensure that when searching for "play date >= 1970"
     // we will find games that say "October 1970".
+    // It isn't transitive, so it can't sort dates; CHRONOLOGICAL does.
 
     if (this.year != that.year) {
       return this.year - that.year;

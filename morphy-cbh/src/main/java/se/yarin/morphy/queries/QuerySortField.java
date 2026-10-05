@@ -5,6 +5,7 @@ import java.util.Objects;
 import java.util.function.BiFunction;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import se.yarin.chess.Date;
 import se.yarin.morphy.Game;
 import se.yarin.morphy.IdObject;
 import se.yarin.morphy.entities.*;
@@ -83,7 +84,7 @@ public class QuerySortField<T extends IdObject> {
 
   public static QuerySortField<Game> playedDate() {
     return new QuerySortField<>(
-        Comparator.comparing(o -> o.data().playedDate()),
+        Comparator.comparing(o -> o.data().playedDate(), Date.CHRONOLOGICAL),
         "playedDate",
         true,
         QuerySortOrder.Direction.DESCENDING);
@@ -353,7 +354,7 @@ public class QuerySortField<T extends IdObject> {
 
   public static QuerySortField<Tournament> tournamentStartDate() {
     return new QuerySortField<>(
-        Comparator.comparing(o -> o.data().date()),
+        Comparator.comparing(o -> o.data().date(), Date.CHRONOLOGICAL),
         "startDate",
         true,
         QuerySortOrder.Direction.DESCENDING);
@@ -361,7 +362,7 @@ public class QuerySortField<T extends IdObject> {
 
   public static QuerySortField<Tournament> tournamentEndDate() {
     return new QuerySortField<>(
-        Comparator.comparing(o -> o.extra(TournamentExtra.class).endDate()),
+        Comparator.comparing(o -> o.extra(TournamentExtra.class).endDate(), Date.CHRONOLOGICAL),
         "endDate",
         true,
         QuerySortOrder.Direction.DESCENDING,
@@ -499,7 +500,7 @@ public class QuerySortField<T extends IdObject> {
 
   public static QuerySortField<Source> sourceDate() {
     return new QuerySortField<>(
-        Comparator.comparing(o -> o.data().date()),
+        Comparator.comparing(o -> o.data().date(), Date.CHRONOLOGICAL),
         "date",
         true,
         QuerySortOrder.Direction.DESCENDING);
