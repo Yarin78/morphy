@@ -14,6 +14,8 @@ interface EntityComboboxProps<T> {
   /** The first line of a suggestion, and the smaller second line. */
   optionTitle: (option: T) => string;
   optionSubtitle: (option: T) => string;
+  /** Something shown before a suggestion's title: a flag, say. */
+  optionIcon?: (option: T) => React.ReactNode;
   /**
    * What the last suggestion, which keeps the typed text as a new entity, calls it: "tournament".
    * Without it there's no such suggestion, and none is highlighted until moved to with the arrows,
@@ -42,6 +44,7 @@ export function EntityCombobox<T>({
   optionKey,
   optionTitle,
   optionSubtitle,
+  optionIcon,
   newWhat,
   inputProps,
   listClassName,
@@ -181,7 +184,10 @@ export function EntityCombobox<T>({
                   </span>
                 ) : (
                   <>
-                    <span className="entity-option-title">{optionTitle(option)}</span>
+                    <span className="entity-option-title">
+                      {optionIcon?.(option)}
+                      {optionTitle(option)}
+                    </span>
                     {optionSubtitle(option) && (
                       <span className="entity-option-subtitle">{optionSubtitle(option)}</span>
                     )}

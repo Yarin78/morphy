@@ -31,7 +31,10 @@ export type {
   ColoredSquare,
 } from './model/annotations';
 export { LINE_EVALUATION_TAG } from './utils/gameInfo';
-export { TOURNAMENT_TAGS, tournamentFromTags, tournamentToTags } from './utils/tournament';
+export { TOURNAMENT_TAGS, TOURNAMENT_TYPES, tournamentFromTags, tournamentToTags } from './utils/tournament';
+export { NATIONS, nationInfo } from './utils/nations';
+export type { NationInfo } from './utils/nations';
+export { NationFlag } from './components/EloTypeIcons';
 export type { DateParts } from './utils/date';
 export type { TournamentInfo, TournamentService } from './utils/tournament';
 export { FIDE_ID_TAGS, PLAYER_ID_TAGS, splitPlayerName } from './utils/player';

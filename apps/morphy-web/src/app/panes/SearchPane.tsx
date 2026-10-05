@@ -1,5 +1,5 @@
 import { type KeyboardEvent, type PointerEvent, type ReactNode, useCallback, useEffect, useRef } from 'react';
-import { EntityCombobox } from 'game-view';
+import { EntityCombobox, NATIONS, NationFlag, type NationInfo, TOURNAMENT_TYPES } from 'game-view';
 import { TbCalendar, TbChevronDown, TbChevronRight, TbSearch, TbX } from 'react-icons/tb';
 import { useDatabaseView } from '../databaseStore';
 import { defaultOrderOf, entityLabel, NOTATION_COLUMN, sortFieldOf } from '../../search/columns';
@@ -7,8 +7,11 @@ import { resetColumns, setColumnWidth, shownColumnKeys, toggleColumn, useResultC
 import {
   type EntityForm,
   type GameForm,
+  hasAdvancedEntityFilters,
   hasAdvancedFilters,
+  isValidCategory,
   isValidDate,
+  isValidNation,
   isValidRating,
   nameLabel,
   RATING_MODES,
@@ -394,38 +397,125 @@ function GameFormFields() {
   );
 }
 
+// The nations suggested for an event's: those whose names start with the text typed, then those
+// whose names have it or whose codes start with it
+const NATION_SUGGESTIONS = 5;
+
+function suggestNations(text: string): Promise<NationInfo[]> {
+  const t = text.trim().toLowerCase();
+  const starting = NATIONS.filter((n) => n.name.toLowerCase().startsWith(t));
+  const others = NATIONS.filter(
+    (n) => !starting.includes(n) && (n.name.toLowerCase().includes(t) || n.ioc.toLowerCase().startsWith(t))
+  );
+  return Promise.resolve([...starting, ...others].slice(0, NATION_SUGGESTIONS));
+}
+
+/** A nation, typed by its name or code, or picked from the nations suggested while typing. */
+function NationInput({ value, onChange }: { value: string; onChange: (value: string) => void }) {
+  return (
+    <EntityCombobox<NationInfo>
+      text={value}
+      onTextChange={onChange}
+      search={suggestNations}
+      onChoose={(n) => onChange(n.name)}
+      optionKey={(n) => n.ioc}
+      optionTitle={(n) => n.name}
+      optionSubtitle={() => ''}
+      optionIcon={(n) => <NationFlag nation={n.ioc} />}
+      inputProps={{
+        className: `search-input${isValidNation(value) ? '' : ' invalid'}`,
+        placeholder: 'Name or code',
+        spellCheck: false,
+      }}
+      listClassName="search-suggestions"
+      minListWidth={SUGGESTIONS_MIN_WIDTH}
+    />
+  );
+}
+
 function EntityFormFields({ kind }: { kind: Exclude<SearchKind, 'games'> }) {
   const { search } = useDatabaseView();
-  const form = search.current.entityForm;
+  const s = search.current;
+  const form = s.entityForm;
   const set = (changes: Partial<EntityForm>) => search.updateEntityForm(changes);
+  const nameField = (
+    <TextInput
+      value={form.name}
+      onChange={(v) => set({ name: v })}
+      placeholder={kind === 'players' ? 'Last name, first name' : 'Starts with'}
+      autoFocus
+    />
+  );
+  if (kind !== 'tournaments') {
+    return (
+      <div className="search-row">
+        <Field label={nameLabel(kind)} wide>
+          {nameField}
+        </Field>
+      </div>
+    );
+  }
   return (
     <>
       <div className="search-row">
-        <Field label={nameLabel(kind)} wide>
-          <TextInput
-            value={form.name}
-            onChange={(v) => set({ name: v })}
-            placeholder={kind === 'players' ? 'Last name, first name' : 'Starts with'}
-            autoFocus
-          />
+        <Field label={nameLabel(kind)} basis={200} max={320}>
+          {nameField}
+        </Field>
+        <Field label="Site" basis={120} max={200}>
+          <TextInput value={form.place} onChange={(v) => set({ place: v })} />
+        </Field>
+        <Field label="Date" basis={240} max={280}>
+          <DateRange from={form.dateFrom} to={form.dateTo} onChange={set} />
+        </Field>
+        <Field label="Time control" fixed>
+          <TimeControls value={form.timeControls} onChange={(v) => set({ timeControls: v })} />
         </Field>
       </div>
-      {kind === 'tournaments' && (
-        <>
+      <button
+        type="button"
+        className="search-disclosure"
+        aria-expanded={s.advancedOpen}
+        onClick={() => search.update({ advancedOpen: !s.advancedOpen })}
+      >
+        {s.advancedOpen ? <TbChevronDown /> : <TbChevronRight />}
+        More filters
+        {hasAdvancedEntityFilters(form) && !s.advancedOpen && <span className="search-dot" title="Some are set" />}
+      </button>
+      {s.advancedOpen && (
+        <div className="search-advanced">
           <div className="search-row">
-            <Field label="Place">
-              <TextInput value={form.place} onChange={(v) => set({ place: v })} />
+            <Field label="Type" fixed>
+              <select className="search-input search-select" value={form.type} onChange={(e) => set({ type: e.target.value })}>
+                <option value="">Any</option>
+                {TOURNAMENT_TYPES.map((t) => (
+                  <option key={t.value} value={t.value}>
+                    {t.label}
+                  </option>
+                ))}
+              </select>
             </Field>
-            <Field label="Date" basis={240} max={280}>
-              <DateRange from={form.dateFrom} to={form.dateTo} onChange={set} />
+            <Field label="Nation" basis={150} max={200}>
+              <NationInput value={form.nation} onChange={(v) => set({ nation: v })} />
+            </Field>
+            <Field label="Category" basis={140} max={180}>
+              <div className="search-range" title="From and to a category; either end can be left open">
+                <TextInput
+                  value={form.categoryMin}
+                  onChange={(v) => set({ categoryMin: v })}
+                  placeholder="Min"
+                  invalid={!isValidCategory(form.categoryMin)}
+                />
+                <span className="search-range-dash">–</span>
+                <TextInput
+                  value={form.categoryMax}
+                  onChange={(v) => set({ categoryMax: v })}
+                  placeholder="Max"
+                  invalid={!isValidCategory(form.categoryMax)}
+                />
+              </div>
             </Field>
           </div>
-          <div className="search-row">
-            <Field label="Time control" fixed>
-              <TimeControls value={form.timeControls} onChange={(v) => set({ timeControls: v })} />
-            </Field>
-          </div>
-        </>
+        </div>
       )}
     </>
   );

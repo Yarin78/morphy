@@ -93,7 +93,11 @@ export function columnsOf(kind: SearchKind, options: ColumnOptions): Column[] {
 
 /** The keys of the columns of a kind's results shown until others are picked. */
 export function defaultColumnsOf(kind: SearchKind): string[] {
-  return kind === 'games' ? DEFAULT_GAME_COLUMNS : entityColumns(ENTITY_TYPES[kind]).map((c) => c.key);
+  if (kind === 'games') return DEFAULT_GAME_COLUMNS;
+  // An entity's id is there to be picked, not shown at first
+  return entityColumns(ENTITY_TYPES[kind])
+    .map((c) => c.key)
+    .filter((key) => key !== 'id');
 }
 
 /** The sort field of a column of a kind's results, if it can be sorted on. */

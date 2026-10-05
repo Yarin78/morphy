@@ -49,3 +49,8 @@
   color: #3d6b1f;
   font-weight: 600;
 }
+
+.entity-option-title .elo-flag {
+  margin-right: 0.4rem;
+  vertical-align: -1px;
+}

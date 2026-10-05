@@ -1,3 +1,5 @@
+import { NATIONS } from 'game-view';
+
 // The search forms of a database document, and the filter queries they make in the search
 // language of morphy-service (see morphy-service/docs/SEARCH_GUIDE.md).
 
@@ -97,13 +99,36 @@ export const EMPTY_GAME_FORM: GameForm = {
 /** The form of an entity search: a name (the kind's main field) and, for tournaments, more. */
 export interface EntityForm {
   name: string;
+  /** The tournament's place, shown as its site */
   place: string;
   dateFrom: string;
   dateTo: string;
   timeControls: TimeControl[];
+  // The advanced filters of a tournament
+  /** One of game-view's TOURNAMENT_TYPES, by its value: tourn, swiss, ...; '' for any */
+  type: string;
+  /** A nation's name or IOC code, as typed or picked; '' for any */
+  nation: string;
+  categoryMin: string;
+  categoryMax: string;
 }
 
-export const EMPTY_ENTITY_FORM: EntityForm = { name: '', place: '', dateFrom: '', dateTo: '', timeControls: [] };
+export const EMPTY_ENTITY_FORM: EntityForm = {
+  name: '',
+  place: '',
+  dateFrom: '',
+  dateTo: '',
+  timeControls: [],
+  type: '',
+  nation: '',
+  categoryMin: '',
+  categoryMax: '',
+};
+
+/** Whether an entity form has any of a tournament's advanced filters set. */
+export function hasAdvancedEntityFilters(form: EntityForm): boolean {
+  return !!(form.type || form.nation.trim() || form.categoryMin.trim() || form.categoryMax.trim());
+}
 
 /** Whether a game form has any of its advanced filters set. */
 export function hasAdvancedFilters(form: GameForm): boolean {
@@ -131,6 +156,40 @@ export function isValidDate(value: string): boolean {
 /** Whether a rating can be searched for: a number up to 4 digits. */
 export function isValidRating(value: string): boolean {
   return value.trim() === '' || /^\d{1,4}$/.test(value.trim());
+}
+
+/** The IOC code of the nation a text names, by its name or code; undefined if none. */
+export function nationCode(text: string): string | undefined {
+  const t = text.trim().toLowerCase();
+  if (!t) return undefined;
+  return NATIONS.find((n) => n.ioc.toLowerCase() === t || n.name.toLowerCase() === t)?.ioc;
+}
+
+/** Whether a nation can be searched for: none, or one named by its name or code. */
+export function isValidNation(text: string): boolean {
+  return text.trim() === '' || nationCode(text) !== undefined;
+}
+
+function nationCondition(text: string): string | null {
+  const ioc = nationCode(text);
+  return ioc ? `nation:${ioc}` : null;
+}
+
+/** Whether a tournament's category can be searched for: a number up to 2 digits. */
+export function isValidCategory(value: string): boolean {
+  return value.trim() === '' || /^\d{1,2}$/.test(value.trim());
+}
+
+/**
+ * The category condition of a range, either end of which may be open; null for none. Always a
+ * range, as a single value is the least category in a v1 database but the exact one in a v2. A
+ * range up to a category starts at 1, leaving out the tournaments without one, stored as 0.
+ */
+function categoryCondition(min: string, max: string): string | null {
+  const hi = isValidCategory(max) ? max.trim() : '';
+  const lo = (isValidCategory(min) ? min.trim() : '') || (hi ? '1' : '');
+  if (!lo && !hi) return null;
+  return `category:${lo}..${hi}`;
 }
 
 /** The date condition on a field for a range, either end of which may be open; null for none. */
@@ -197,7 +256,10 @@ export function entityQuery(kind: Exclude<SearchKind, 'games'>, form: EntityForm
     conditions.push(
       form.place.trim() ? `place:${quote(form.place)}` : null,
       dateCondition('date', form.dateFrom, form.dateTo),
-      timeCondition('time', form.timeControls)
+      timeCondition('time', form.timeControls),
+      form.type ? `type:${form.type}` : null,
+      nationCondition(form.nation),
+      categoryCondition(form.categoryMin, form.categoryMax)
     );
   }
   return conditions.filter(Boolean).join(' ');

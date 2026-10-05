@@ -64,13 +64,24 @@ describe('entityQuery', () => {
   it('has more fields for tournaments', () => {
     expect(
       entityQuery('tournaments', {
+        ...EMPTY_ENTITY_FORM,
         name: 'World',
         place: 'New York',
         dateFrom: '1990',
-        dateTo: '',
         timeControls: ['rapid'],
       })
     ).toBe('World place:"New York" date:1990.. time:rapid');
+  });
+
+  it('filters tournaments by type, nation and a range of categories', () => {
+    const form = { ...EMPTY_ENTITY_FORM, type: 'tourn', nation: 'Netherlands', categoryMin: '15' };
+    expect(entityQuery('tournaments', form)).toBe('type:tourn nation:NED category:15..');
+    expect(entityQuery('tournaments', { ...form, categoryMax: '20' })).toBe('type:tourn nation:NED category:15..20');
+    expect(entityQuery('tournaments', { ...EMPTY_ENTITY_FORM, categoryMax: '9' })).toBe('category:1..9');
+    expect(entityQuery('tournaments', { ...EMPTY_ENTITY_FORM, categoryMin: 'x' })).toBe('');
+    expect(entityQuery('tournaments', { ...EMPTY_ENTITY_FORM, nation: 'ned' })).toBe('nation:NED');
+    // Text naming no nation is left out, as it's still being typed
+    expect(entityQuery('tournaments', { ...EMPTY_ENTITY_FORM, nation: 'Nether' })).toBe('');
   });
 });
 

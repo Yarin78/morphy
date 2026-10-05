@@ -1,5 +1,5 @@
 import { Fragment, useCallback, useEffect, useRef, type MutableRefObject } from 'react';
-import { medalColors } from 'game-view';
+import { medalColors, NationFlag, nationInfo } from 'game-view';
 import type {
   AnnotatorDto,
   GameDto,
@@ -332,6 +332,18 @@ function getGameTagTitle(gt: GameDto['gameTag']): string {
   return found ?? '';
 }
 
+/** A nation's flag and IOC code; just the code of one unknown. */
+function Nation({ ioc }: { ioc?: string }) {
+  if (!ioc) return null;
+  if (!nationInfo(ioc)) return ioc;
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, verticalAlign: 'middle' }}>
+      <NationFlag nation={ioc} />
+      {ioc}
+    </span>
+  );
+}
+
 function MedalBar({ medals }: { medals?: string[] }) {
   if (!medals || medals.length === 0) return null;
   return (
@@ -500,15 +512,16 @@ export const PLAYER_COLUMNS: Column<PlayerDto>[] = [
   { key: 'lastName', label: 'Last Name', width: 180, render: (p) => formatValue(p.lastName) },
   { key: 'firstName', label: 'First Name', width: 150, render: (p) => formatValue(p.firstName) },
   { key: 'gameCount', label: 'Game Count', width: 80, render: (p) => formatValue(p.gameCount) },
+  { key: 'fideId', label: 'FIDE ID', width: 90, render: (p) => formatValue(p.fideId) },
 ];
 
 export const TOURNAMENT_COLUMNS: Column<TournamentDto>[] = [
   { key: 'id', label: 'ID', width: 55, render: (t) => formatValue(t.id) },
   { key: 'title', label: 'Title', width: 250, render: (t) => formatValue(t.title) },
-  { key: 'place', label: 'Place', width: 150, render: (t) => formatValue(t.place) },
+  { key: 'place', label: 'Site', width: 150, render: (t) => formatValue(t.place) },
   { key: 'startDate', label: 'Start Date', width: 100, render: (t) => formatDate(t.startDate) },
   { key: 'typeCombined', label: 'Type', width: 100, render: (t) => formatValue(t.typeCombined) },
-  { key: 'nation', label: 'Nation', width: 55, render: (t) => formatValue(t.nation) },
+  { key: 'nation', label: 'Nation', width: 70, render: (t) => <Nation ioc={t.nation} /> },
   { key: 'category', label: 'Category', width: 70, render: (t) => formatValue(t.categoryRoman) },
   { key: 'rounds', label: 'Rounds', width: 60, render: (t) => formatValue(t.rounds) },
   { key: 'gameCount', label: 'Game Count', width: 80, render: (t) => formatValue(t.gameCount) },
@@ -568,7 +581,7 @@ export const TEAM_COLUMNS: Column<TeamDto>[] = [
       return String(t.year);
     },
   },
-  { key: 'nation', label: 'Nation', width: 60, render: (t) => formatValue(t.nation) },
+  { key: 'nation', label: 'Nation', width: 70, render: (t) => <Nation ioc={t.nation} /> },
   { key: 'gameCount', label: 'Game Count', width: 80, render: (t) => formatValue(t.gameCount) },
 ];
 
