@@ -1,5 +1,5 @@
 import { type KeyboardEvent, type PointerEvent, type ReactNode, useEffect, useRef } from 'react';
-import { TbChevronDown, TbChevronRight, TbSearch, TbX } from 'react-icons/tb';
+import { TbCalendar, TbChevronDown, TbChevronRight, TbSearch, TbX } from 'react-icons/tb';
 import { useDatabaseView } from '../databaseStore';
 import { defaultOrderOf, entityLabel, NOTATION_COLUMN, sortFieldOf } from '../../search/columns';
 import { resetColumns, setColumnWidth, shownColumnKeys, toggleColumn, useResultColumns } from '../../search/columnLayout';
@@ -104,9 +104,30 @@ function QueryPreview({ query }: { query: string }) {
   );
 }
 
-function Field({ label, children, wide }: { label: string; children: ReactNode; wide?: boolean }) {
+/**
+ * A field of the form, with its label above. A row's fields share its width, each from the basis
+ * given up to its max, or as wide as it needs with fixed; they wrap when the pane is too narrow.
+ */
+function Field({
+  label,
+  children,
+  wide,
+  basis,
+  max,
+  fixed,
+}: {
+  label: string;
+  children: ReactNode;
+  wide?: boolean;
+  basis?: number;
+  max?: number;
+  fixed?: boolean;
+}) {
   return (
-    <label className={`search-field${wide ? ' wide' : ''}`}>
+    <label
+      className={`search-field${wide ? ' wide' : ''}${fixed ? ' fixed' : ''}`}
+      style={{ flexBasis: basis, maxWidth: max }}
+    >
       <span className="search-label">{label}</span>
       {children}
     </label>
@@ -150,9 +171,56 @@ function DateRange({
 }) {
   return (
     <div className="search-range" title="A year, a month (1990-05) or a day (1990-05-17); either end can be left open">
-      <TextInput value={from} onChange={(v) => onChange({ dateFrom: v })} placeholder="From" invalid={!isValidDate(from)} />
+      <DateInput value={from} onChange={(v) => onChange({ dateFrom: v })} placeholder="From" />
       <span className="search-range-dash">–</span>
-      <TextInput value={to} onChange={(v) => onChange({ dateTo: v })} placeholder="To" invalid={!isValidDate(to)} />
+      <DateInput value={to} onChange={(v) => onChange({ dateTo: v })} placeholder="To" />
+    </div>
+  );
+}
+
+/** The day a date typed stands for in the date picker: its first, if only a year or a month. */
+function pickerDay(value: string): string {
+  const m = /^(\d{4})(?:-(\d{1,2})(?:-(\d{1,2}))?)?$/.exec(value.trim());
+  if (!m) return '';
+  return `${m[1]}-${(m[2] ?? '1').padStart(2, '0')}-${(m[3] ?? '1').padStart(2, '0')}`;
+}
+
+/**
+ * A date typed, as a year, a month or a day, or a day picked from the calendar its button opens:
+ * the browser's own, of a date input hidden under the button.
+ */
+function DateInput({
+  value,
+  onChange,
+  placeholder,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  placeholder: string;
+}) {
+  const pickerRef = useRef<HTMLInputElement>(null);
+  return (
+    <div className="search-date">
+      <TextInput value={value} onChange={onChange} placeholder={placeholder} invalid={!isValidDate(value)} />
+      <button
+        type="button"
+        className="search-date-button"
+        title="Pick a day"
+        tabIndex={-1}
+        onClick={() => pickerRef.current?.showPicker()}
+      >
+        <TbCalendar />
+      </button>
+      <input
+        ref={pickerRef}
+        type="date"
+        className="search-date-picker"
+        tabIndex={-1}
+        aria-hidden
+        value={pickerDay(value)}
+        // A day picked, or none when the calendar is cleared
+        onChange={(e) => onChange(e.target.value)}
+      />
     </div>
   );
 }
@@ -187,22 +255,20 @@ function GameFormFields() {
   return (
     <>
       <div className="search-row">
-        <Field label={form.eitherColour ? 'Player' : 'White'}>
+        <Field label={form.eitherColour ? 'Player' : 'White'} basis={130} max={220}>
           <TextInput value={form.white} onChange={(v) => set({ white: v })} placeholder="Last name" autoFocus />
         </Field>
-        <Field label={form.eitherColour ? 'Opponent' : 'Black'}>
+        <Field label={form.eitherColour ? 'Opponent' : 'Black'} basis={130} max={220}>
           <TextInput value={form.black} onChange={(v) => set({ black: v })} placeholder="Last name" />
         </Field>
-      </div>
-      <label className="search-check">
-        <input type="checkbox" checked={form.eitherColour} onChange={(e) => set({ eitherColour: e.target.checked })} />
-        Either colour
-      </label>
-      <div className="search-row">
-        <Field label="Date">
+        <label className="search-check" title="Either player may have had White">
+          <input type="checkbox" checked={form.eitherColour} onChange={(e) => set({ eitherColour: e.target.checked })} />
+          Either colour
+        </label>
+        <Field label="Date" basis={240} max={280}>
           <DateRange from={form.dateFrom} to={form.dateTo} onChange={set} />
         </Field>
-        <Field label="Time control">
+        <Field label="Time control" fixed>
           <TimeControls value={form.timeControls} onChange={(v) => set({ timeControls: v })} />
         </Field>
       </div>
@@ -227,7 +293,7 @@ function GameFormFields() {
             </div>
           )}
           <div className="search-row">
-            <Field label="Result">
+            <Field label="Result" fixed>
               <div className="search-segments">
                 {RESULTS.map((r) => (
                   <button
@@ -241,12 +307,7 @@ function GameFormFields() {
                 ))}
               </div>
             </Field>
-            <Field label="ECO">
-              <TextInput value={form.eco} onChange={(v) => set({ eco: v })} placeholder="B90, B9*" />
-            </Field>
-          </div>
-          <div className="search-row">
-            <Field label="Rating" wide>
+            <Field label="Rating" basis={270} max={320}>
               <div className="search-range">
                 <TextInput value={form.ratingMin} onChange={(v) => set({ ratingMin: v })} placeholder="Min" invalid={!isValidRating(form.ratingMin)} />
                 <span className="search-range-dash">–</span>
@@ -264,16 +325,14 @@ function GameFormFields() {
                 </select>
               </div>
             </Field>
-          </div>
-          <div className="search-row">
-            <Field label="Event">
+            <Field label="ECO" basis={80} max={110}>
+              <TextInput value={form.eco} onChange={(v) => set({ eco: v })} placeholder="B90, B9*" />
+            </Field>
+            <Field label="Event" basis={130} max={240}>
               <TextInput value={form.tournament} onChange={(v) => set({ tournament: v })} />
             </Field>
-            <Field label="Annotator">
-              <TextInput value={form.annotator} onChange={(v) => set({ annotator: v })} />
-            </Field>
-            <Field label="Source">
-              <TextInput value={form.source} onChange={(v) => set({ source: v })} />
+            <Field label="Site" basis={110} max={200}>
+              <TextInput value={form.site} onChange={(v) => set({ site: v })} />
             </Field>
           </div>
         </div>
@@ -304,12 +363,12 @@ function EntityFormFields({ kind }: { kind: Exclude<SearchKind, 'games'> }) {
             <Field label="Place">
               <TextInput value={form.place} onChange={(v) => set({ place: v })} />
             </Field>
-            <Field label="Date">
+            <Field label="Date" basis={240} max={280}>
               <DateRange from={form.dateFrom} to={form.dateTo} onChange={set} />
             </Field>
           </div>
           <div className="search-row">
-            <Field label="Time control">
+            <Field label="Time control" fixed>
               <TimeControls value={form.timeControls} onChange={(v) => set({ timeControls: v })} />
             </Field>
           </div>

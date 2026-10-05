@@ -1455,6 +1455,7 @@ html {
 .search-row {
   display: flex;
   flex-wrap: wrap;
+  align-items: flex-end;
   gap: 8px 12px;
 }
 
@@ -1466,8 +1467,19 @@ html {
   min-width: 0;
 }
 
+/* No wider than a field needs, unless given a max of its own */
+.search-field {
+  max-width: 280px;
+}
+
 .search-field.wide {
   flex-basis: 100%;
+  max-width: 460px;
+}
+
+.search-field.fixed {
+  flex: 0 0 auto;
+  max-width: none;
 }
 
 .search-label {
@@ -1521,17 +1533,65 @@ html {
   flex: 1 1 0;
 }
 
+.search-range .search-select {
+  flex: 0 0 auto;
+}
+
+.search-date {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.search-date .search-input {
+  padding-right: 26px;
+}
+
+.search-date-button {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 26px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  background: none;
+  border: none;
+  color: #a39b8f;
+}
+
+.search-date-button:hover {
+  color: #45403a;
+}
+
+/* Under the button, so the browser's calendar opens there */
+.search-date-picker {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 26px;
+  height: 1px;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
 .search-range-dash {
   color: #a39b8f;
 }
 
+/* Beside the fields, level with their inputs */
 .search-check {
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
   gap: 6px;
-  margin-top: -2px;
+  height: 28px;
   color: #555;
-  width: fit-content;
+  white-space: nowrap;
   cursor: pointer;
 }
 

@@ -72,8 +72,8 @@ export interface GameForm {
   ratingMax: string;
   ratingMode: RatingMode;
   tournament: string;
-  annotator: string;
-  source: string;
+  /** The place of the event */
+  site: string;
   entity: EntityConstraint | null;
 }
 
@@ -90,8 +90,7 @@ export const EMPTY_GAME_FORM: GameForm = {
   ratingMax: '',
   ratingMode: 'any',
   tournament: '',
-  annotator: '',
-  source: '',
+  site: '',
   entity: null,
 };
 
@@ -114,8 +113,7 @@ export function hasAdvancedFilters(form: GameForm): boolean {
     form.ratingMin.trim() ||
     form.ratingMax.trim() ||
     form.tournament.trim() ||
-    form.annotator.trim() ||
-    form.source.trim()
+    form.site.trim()
   );
 }
 
@@ -177,8 +175,7 @@ export function gameQuery(form: GameForm): string {
     form.eco.trim() ? `eco:${quote(form.eco.toUpperCase())}` : null,
     ratingCondition(form),
     form.tournament.trim() ? `tournament:${quote(form.tournament)}` : null,
-    form.annotator.trim() ? `annotator:${quote(form.annotator)}` : null,
-    form.source.trim() ? `source:${quote(form.source)}` : null,
+    form.site.trim() ? `tournament.place:${quote(form.site)}` : null,
     form.entity ? `${form.entity.field}:${form.entity.id}` : null,
   ];
   return conditions.filter(Boolean).join(' ');
