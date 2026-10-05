@@ -37,6 +37,7 @@ export type { TournamentInfo, TournamentService } from './utils/tournament';
 export { FIDE_ID_TAGS, PLAYER_ID_TAGS, splitPlayerName } from './utils/player';
 export type { PlayerInfo, PlayerService } from './utils/player';
 export type { GameInfoServices } from './utils/gameInfo';
+export { EntityCombobox, gameCountText } from './components/EntityCombobox';
 export { ANNOTATOR_ID_TAG, forgetEntityIds } from './utils/gameInfo';
 export { SOURCE_TAGS, sourceFromTags, sourceToTags } from './utils/source';
 export type { SourceInfo, SourceService } from './utils/source';

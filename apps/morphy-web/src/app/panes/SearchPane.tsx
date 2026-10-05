@@ -1,4 +1,5 @@
-import { type KeyboardEvent, type PointerEvent, type ReactNode, useEffect, useRef } from 'react';
+import { type KeyboardEvent, type PointerEvent, type ReactNode, useCallback, useEffect, useRef } from 'react';
+import { EntityCombobox } from 'game-view';
 import { TbCalendar, TbChevronDown, TbChevronRight, TbSearch, TbX } from 'react-icons/tb';
 import { useDatabaseView } from '../databaseStore';
 import { defaultOrderOf, entityLabel, NOTATION_COLUMN, sortFieldOf } from '../../search/columns';
@@ -19,6 +20,7 @@ import {
   TIME_CONTROLS,
   type TimeControl,
 } from '../../search/queries';
+import { playerFullName, suggestEvents, suggestPlayers } from '../../search/suggestions';
 import { queryOf } from '../../search/useDatabaseSearch';
 import { useSettings } from '../settings';
 import { ColumnPicker } from './ColumnPicker';
@@ -160,6 +162,57 @@ function TextInput({
   );
 }
 
+// The suggestions under a player's or an event's field are at least this wide
+const SUGGESTIONS_MIN_WIDTH = 220;
+
+/** A player's name, typed or picked from the players of the database suggested while typing. */
+function PlayerInput({
+  value,
+  onChange,
+  autoFocus,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  autoFocus?: boolean;
+}) {
+  const { databaseId } = useDatabaseView();
+  const suggest = useCallback((text: string) => suggestPlayers(databaseId, text), [databaseId]);
+  return (
+    <EntityCombobox
+      text={value}
+      onTextChange={onChange}
+      search={suggest}
+      onChoose={(p) => onChange(playerFullName(p))}
+      optionKey={(p) => p.id ?? playerFullName(p)}
+      optionTitle={playerFullName}
+      optionSubtitle={() => ''}
+      inputProps={{ className: 'search-input', placeholder: 'Last name', spellCheck: false, autoFocus }}
+      listClassName="search-suggestions"
+      minListWidth={SUGGESTIONS_MIN_WIDTH}
+    />
+  );
+}
+
+/** An event's title, typed or picked from the events of the database suggested while typing. */
+function EventInput({ value, onChange }: { value: string; onChange: (value: string) => void }) {
+  const { databaseId } = useDatabaseView();
+  const suggest = useCallback((text: string) => suggestEvents(databaseId, text), [databaseId]);
+  return (
+    <EntityCombobox
+      text={value}
+      onTextChange={onChange}
+      search={suggest}
+      onChoose={(t) => onChange(t.title ?? '')}
+      optionKey={(t) => t.id ?? t.title ?? ''}
+      optionTitle={(t) => t.title ?? ''}
+      optionSubtitle={(t) => [t.place, t.startDate?.year || undefined].filter(Boolean).join(' · ')}
+      inputProps={{ className: 'search-input', spellCheck: false }}
+      listClassName="search-suggestions"
+      minListWidth={SUGGESTIONS_MIN_WIDTH}
+    />
+  );
+}
+
 function DateRange({
   from,
   to,
@@ -256,10 +309,10 @@ function GameFormFields() {
     <>
       <div className="search-row">
         <Field label={form.eitherColour ? 'Player' : 'White'} basis={130} max={220}>
-          <TextInput value={form.white} onChange={(v) => set({ white: v })} placeholder="Last name" autoFocus />
+          <PlayerInput value={form.white} onChange={(v) => set({ white: v })} autoFocus />
         </Field>
         <Field label={form.eitherColour ? 'Opponent' : 'Black'} basis={130} max={220}>
-          <TextInput value={form.black} onChange={(v) => set({ black: v })} placeholder="Last name" />
+          <PlayerInput value={form.black} onChange={(v) => set({ black: v })} />
         </Field>
         <label className="search-check" title="Either player may have had White">
           <input type="checkbox" checked={form.eitherColour} onChange={(e) => set({ eitherColour: e.target.checked })} />
@@ -329,7 +382,7 @@ function GameFormFields() {
               <TextInput value={form.eco} onChange={(v) => set({ eco: v })} placeholder="B90, B9*" />
             </Field>
             <Field label="Event" basis={130} max={240}>
-              <TextInput value={form.tournament} onChange={(v) => set({ tournament: v })} />
+              <EventInput value={form.tournament} onChange={(v) => set({ tournament: v })} />
             </Field>
             <Field label="Site" basis={110} max={200}>
               <TextInput value={form.site} onChange={(v) => set({ site: v })} />

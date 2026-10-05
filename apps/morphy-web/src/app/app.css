@@ -1537,6 +1537,39 @@ html {
   flex: 0 0 auto;
 }
 
+/* The players and events suggested under a field: compact, as the form's */
+.entity-options.search-suggestions {
+  padding: 2px 0;
+  border-color: #d5d0c8;
+  border-radius: 4px;
+  background: #fff;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.14);
+}
+
+.entity-options.search-suggestions li {
+  padding: 3px 8px;
+  font-size: 13px;
+}
+
+.entity-options.search-suggestions li > span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.entity-options.search-suggestions li.highlighted {
+  background: #efe5d3;
+}
+
+.entity-options.search-suggestions .entity-option-title {
+  font-size: inherit;
+}
+
+.entity-options.search-suggestions .entity-option-subtitle {
+  font-size: 11px;
+  color: #8a8276;
+}
+
 .search-date {
   position: relative;
   flex: 1 1 0;

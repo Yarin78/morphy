@@ -238,16 +238,6 @@
   background: rgba(0, 0, 0, 0.25);
 }
 
-.entity-combobox {
-  position: relative;
-  flex: 1;
-  min-width: 0;
-}
-
-.entity-combobox input {
-  width: 100%;
-}
-
 /* Opens the details of an entity the game refers to; as tall as the inputs beside it */
 .details-button {
   box-sizing: border-box;
@@ -291,46 +281,6 @@
 .entity-badge-new {
   background: #e3efd9;
   color: #3d6b1f;
-}
-
-.entity-options {
-  position: fixed;
-  z-index: 10001;
-  margin: 0;
-  padding: 0.2rem 0;
-  list-style: none;
-  background: #fbf8f4;
-  border: 1px solid #b8a896;
-  border-radius: 4px;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
-  overflow-y: auto;
-  box-sizing: border-box;
-  color: #333;
-}
-
-.entity-options li {
-  display: flex;
-  flex-direction: column;
-  padding: 0.35rem 0.7rem;
-  cursor: pointer;
-}
-
-.entity-options li.highlighted {
-  background: #eadfd1;
-}
-
-.entity-option-title {
-  font-size: 0.9rem;
-}
-
-.entity-option-subtitle {
-  color: #777;
-  font-size: 0.75rem;
-}
-
-.entity-option-new {
-  color: #3d6b1f;
-  font-weight: 600;
 }
 
 /* The tournament details dialog */
