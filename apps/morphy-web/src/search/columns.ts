@@ -1,9 +1,9 @@
 import type { ReactNode } from 'react';
+import type { GameDto, PlayerDto } from '../api/types';
 import { ENTITY_CONFIG, type EntityType, SORTABLE_COLUMN_MAP } from '../database/entityConfig';
 import { SEARCH_KIND_SINGULAR, type SearchKind } from './queries';
 
-// The columns of the search results, taken from the search tester's: all of an entity's, and
-// the main ones of a game's.
+// The columns of the search results, taken from the search tester's.
 
 export interface Column {
   key: string;
@@ -55,19 +55,45 @@ export function entityColumns(type: EntityType): Column[] {
   return ENTITY_CONFIG[type].columns as Column[];
 }
 
+export interface ColumnOptions {
+  /** Players by their full names, "Carlsen, Magnus", not "Carlsen, M" */
+  fullPlayerNames: boolean;
+}
+
+/** A player as named in the results: "Carlsen, M", or in full. */
+function playerName(player: PlayerDto | undefined, full: boolean): string {
+  const last = player?.lastName ?? '';
+  const first = player?.firstName;
+  if (!last || !first) return last;
+  return `${last}, ${full ? first : first.charAt(0)}`;
+}
+
+/** The players' columns of the games, named as the options say; a text has its title as White. */
+function gameRender(key: string, options: ColumnOptions): ((row: unknown) => ReactNode) | undefined {
+  if (key === 'white') {
+    return (row) => {
+      const g = row as GameDto;
+      return g.type === 'text' ? (g.textTitle ?? 'Text') : playerName(g.whitePlayer, options.fullPlayerNames);
+    };
+  }
+  if (key === 'black') return (row) => playerName((row as GameDto).blackPlayer, options.fullPlayerNames);
+  return undefined;
+}
+
 /** All the columns of a kind's results, the ones shown or not. */
-export function columnsOf(kind: SearchKind): Column[] {
+export function columnsOf(kind: SearchKind, options: ColumnOptions): Column[] {
   if (kind !== 'games') return entityColumns(ENTITY_TYPES[kind]);
   return entityColumns('Games').map((c) => ({
     ...c,
     label: GAME_LABELS[c.key] ?? c.label,
     width: GAME_WIDTHS[c.key] ?? c.width,
+    render: gameRender(c.key, options) ?? c.render,
   }));
 }
 
 /** The keys of the columns of a kind's results shown until others are picked. */
 export function defaultColumnsOf(kind: SearchKind): string[] {
-  return kind === 'games' ? DEFAULT_GAME_COLUMNS : columnsOf(kind).map((c) => c.key);
+  return kind === 'games' ? DEFAULT_GAME_COLUMNS : entityColumns(ENTITY_TYPES[kind]).map((c) => c.key);
 }
 
 /** The sort field of a column of a kind's results, if it can be sorted on. */

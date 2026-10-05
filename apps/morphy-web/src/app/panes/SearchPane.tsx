@@ -20,6 +20,7 @@ import {
   type TimeControl,
 } from '../../search/queries';
 import { queryOf } from '../../search/useDatabaseSearch';
+import { useSettings } from '../settings';
 import { ColumnPicker } from './ColumnPicker';
 
 // How near the end of the results, in rows, the next page is fetched
@@ -40,6 +41,7 @@ const MIN_COLUMN_WIDTH = 32;
  */
 export function SearchPane() {
   const { search } = useDatabaseView();
+  const { debugInfo } = useSettings().search;
   const s = search.current;
   return (
     <div className="search-pane">
@@ -87,7 +89,7 @@ export function SearchPane() {
             </button>
           )}
         </div>
-        {s.mode === 'form' && <QueryPreview query={queryOf(search.kind, s)} />}
+        {debugInfo && s.mode === 'form' && <QueryPreview query={queryOf(search.kind, s)} />}
       </form>
       <Results />
     </div>
@@ -352,7 +354,8 @@ function Results() {
   const kind = search.kind;
   const s = search.current;
   const results = s.results;
-  const resultColumns = useResultColumns(kind);
+  const { fullPlayerNames, debugInfo } = useSettings().search;
+  const resultColumns = useResultColumns(kind, { fullPlayerNames });
   const columns = resultColumns.shown;
   const listRef = useRef<HTMLDivElement>(null);
   const rows = results?.rows ?? [];
@@ -459,7 +462,7 @@ function Results() {
       <div className="search-results-head">
         <span>
           {results?.loading && rows.length === 0 ? 'Searching…' : count}
-          {results?.durationMs != null && !(results.loading && rows.length === 0) && (
+          {debugInfo && results?.durationMs != null && !(results.loading && rows.length === 0) && (
             <span
               className="search-duration"
               title={`${results.query || '(everything)'}\nSorted by ${results.sortBy}`}

@@ -3,7 +3,7 @@ import { useSyncExternalStore } from 'react';
 // Whether the settings dialog is open, and on which tab. It's opened from the navigator, and from
 // a board's toolbar on the board's tab.
 
-export type SettingsTab = 'general' | 'board' | 'notation' | 'engine';
+export type SettingsTab = 'general' | 'board' | 'notation' | 'search' | 'engine';
 
 let tab: SettingsTab | null = null;
 const listeners = new Set<() => void>();

@@ -32,15 +32,23 @@ export interface NotationSettings {
   fontSize: number;
   /** Whether !, ?, the comment keys and so on annotate the current move */
   annotationKeys: boolean;
+}
+
+export interface SearchSettings {
   /** Whether a database's preview shows the variations of the game, not just the main line */
   previewVariations: boolean;
   /** Whether a database's preview shows the annotations: text, symbols, squares and the rest */
   previewCommentary: boolean;
+  /** Whether the players of the games found are shown by their full names, not the first initial */
+  fullPlayerNames: boolean;
+  /** Whether the search shows how long it took and the query it sent */
+  debugInfo: boolean;
 }
 
 export interface Settings {
   board: BoardSettings;
   notation: NotationSettings;
+  search: SearchSettings;
 }
 
 export const PIECE_SETS: readonly { id: PieceSet; label: string }[] = [
@@ -74,8 +82,12 @@ export const DEFAULT_SETTINGS: Settings = {
     barGroups: NOTATION_BAR_GROUPS.map((g) => g.id),
     fontSize: 15,
     annotationKeys: true,
+  },
+  search: {
     previewVariations: false,
     previewCommentary: false,
+    fullPlayerNames: false,
+    debugInfo: false,
   },
 };
 
@@ -88,6 +100,7 @@ function load(): Settings {
     return {
       board: { ...DEFAULT_SETTINGS.board, ...saved?.board },
       notation: { ...DEFAULT_SETTINGS.notation, ...saved?.notation },
+      search: { ...DEFAULT_SETTINGS.search, ...saved?.search },
     };
   } catch {
     return DEFAULT_SETTINGS;
@@ -116,6 +129,10 @@ export function setBoardSettings(changes: Partial<BoardSettings>) {
 
 export function setNotationSettings(changes: Partial<NotationSettings>) {
   update({ ...settings, notation: { ...settings.notation, ...changes } });
+}
+
+export function setSearchSettings(changes: Partial<SearchSettings>) {
+  update({ ...settings, search: { ...settings.search, ...changes } });
 }
 
 /** Puts back the defaults of a section of the settings. */

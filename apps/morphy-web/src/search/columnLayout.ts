@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react';
-import { columnsOf, defaultColumnsOf, type Column } from './columns';
+import { type ColumnOptions, columnsOf, defaultColumnsOf, type Column } from './columns';
 import type { SearchKind } from './queries';
 
 // The columns of the search results of each kind: which are shown and how wide they've been made,
@@ -62,9 +62,9 @@ export interface ResultColumns {
 }
 
 /** The columns of a kind's results, as they've been picked and sized. */
-export function useResultColumns(kind: SearchKind): ResultColumns {
+export function useResultColumns(kind: SearchKind, options: ColumnOptions): ResultColumns {
   const kindColumns = useSyncExternalStore(subscribe, getLayout)[kind] ?? NOT_CHANGED;
-  const all = columnsOf(kind).map((c) => ({ ...c, width: kindColumns.widths[c.key] ?? c.width }));
+  const all = columnsOf(kind, options).map((c) => ({ ...c, width: kindColumns.widths[c.key] ?? c.width }));
   const shownKeys = new Set(kindColumns.shown ?? defaultColumnsOf(kind));
   return {
     all,

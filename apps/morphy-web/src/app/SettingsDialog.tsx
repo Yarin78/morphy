@@ -22,6 +22,7 @@ import {
   resetSettings,
   setBoardSettings,
   setNotationSettings,
+  setSearchSettings,
   useSettings,
 } from './settings';
 import { closeSettings, openSettings, type SettingsTab, useSettingsTab } from './settingsDialogStore';
@@ -30,6 +31,7 @@ const TABS: { id: SettingsTab; label: string }[] = [
   { id: 'general', label: 'General' },
   { id: 'board', label: 'Board' },
   { id: 'notation', label: 'Notation' },
+  { id: 'search', label: 'Search' },
   { id: 'engine', label: 'Engine' },
 ];
 
@@ -211,16 +213,46 @@ function NotationTab() {
           label="Annotate with the keys: ! ? = + − for symbols, A and B for comments, D for a diagram"
         />
       </Row>
+    </>
+  );
+}
+
+const PLAYER_NAMES: { id: 'short' | 'full'; label: string }[] = [
+  { id: 'short', label: 'Carlsen, M' },
+  { id: 'full', label: 'Carlsen, Magnus' },
+];
+
+function SearchTab() {
+  const { search } = useSettings();
+  return (
+    <>
+      <Row label="Players" note="How the players of the games found are named.">
+        <Select<'short' | 'full'>
+          value={search.fullPlayerNames ? 'full' : 'short'}
+          options={PLAYER_NAMES}
+          onChange={(names) => setSearchSettings({ fullPlayerNames: names === 'full' })}
+        />
+      </Row>
       <Row label="Preview" note="The game previewed beside a database's search; with neither, only its moves.">
         <Check
-          checked={notation.previewVariations}
-          onChange={(previewVariations) => setNotationSettings({ previewVariations })}
+          checked={search.previewVariations}
+          onChange={(previewVariations) => setSearchSettings({ previewVariations })}
           label="Show variations"
         />
         <Check
-          checked={notation.previewCommentary}
-          onChange={(previewCommentary) => setNotationSettings({ previewCommentary })}
+          checked={search.previewCommentary}
+          onChange={(previewCommentary) => setSearchSettings({ previewCommentary })}
           label="Show commentary: text, move symbols, colored squares and arrows"
+        />
+      </Row>
+      <Row
+        label="Debugging"
+        note="How long the service took to search, after the count of what was found, and the query it was sent, below the form."
+      >
+        <Check
+          checked={search.debugInfo}
+          onChange={(debugInfo) => setSearchSettings({ debugInfo })}
+          label="Show the search time and query"
         />
       </Row>
     </>
@@ -273,6 +305,7 @@ function EngineTab() {
 const RESETTABLE: Partial<Record<SettingsTab, () => void>> = {
   board: () => resetSettings('board'),
   notation: () => resetSettings('notation'),
+  search: () => resetSettings('search'),
 };
 
 /** The settings of the app, by tab; they apply at once, everywhere. */
@@ -310,6 +343,7 @@ export function SettingsDialog() {
             {tab === 'general' && <GeneralTab />}
             {tab === 'board' && <BoardTab />}
             {tab === 'notation' && <NotationTab />}
+            {tab === 'search' && <SearchTab />}
             {tab === 'engine' && <EngineTab />}
           </div>
           <div className="dialog-buttons">

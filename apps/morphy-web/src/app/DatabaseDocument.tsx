@@ -81,9 +81,9 @@ export function DatabaseDocument({
   }, [doc.databaseId, pickedId]);
 
   const previewGame = preview.kind === 'loaded' ? preview.game : null;
-  const notationSettings = useSettings().notation;
+  const { notation: notationSettings, search: searchSettings } = useSettings();
   // Only the main line's moves, unless the settings show the variations or the commentary
-  const { previewVariations: variations, previewCommentary: commentary } = notationSettings;
+  const { previewVariations: variations, previewCommentary: commentary } = searchSettings;
   const selectedGame = useMemo<ChessGame | null>(
     () => (previewGame ? previewed(gameDtoToChessGame(previewGame), { variations, commentary }) : null),
     [previewGame, variations, commentary]
@@ -199,6 +199,7 @@ function DatabaseCommands({
         },
         'separator',
         { label: 'Board Settings…', icon: <TbAdjustments />, action: () => openSettings('board') },
+        { label: 'Search Settings…', action: () => openSettings('search') },
       ],
     },
   ];
