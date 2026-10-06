@@ -741,13 +741,30 @@ public class Position {
     return super.equals(obj);
   }
 
+  /**
+   * The en passant file as the hash has it: only when a pawn of the side to move stands beside the
+   * pawn that just moved two squares (pins are ignored), so the position is the same as when it's
+   * reached by another order of moves, in which the last move wasn't a pawn's double step.
+   */
+  private int hashedEnPassantCol() {
+    if (enPassantCol < 0) {
+      return NO_COL;
+    }
+    int row = toMove == WHITE ? 4 : 3;
+    Stone pawn = toMove == WHITE ? WHITE_PAWN : BLACK_PAWN;
+    boolean capturable =
+        (enPassantCol > 0 && stoneAt(enPassantCol - 1, row) == pawn)
+            || (enPassantCol < 7 && stoneAt(enPassantCol + 1, row) == pawn);
+    return capturable ? enPassantCol : NO_COL;
+  }
+
   public long getZobristHashLo() {
     if (hashLo == 0) {
       for (int i = 0; i < 64; i++) {
         hashLo ^= zobristKeyLo[board[i].ordinal()][i];
       }
       hashLo ^= zobristKeyCastleLo[castlesMask];
-      hashLo ^= zobristKeyEnPassantLo[enPassantCol + 1];
+      hashLo ^= zobristKeyEnPassantLo[hashedEnPassantCol() + 1];
       hashLo ^= zobristKeyToMoveLo[toMove == WHITE ? 1 : 0];
       hashLo ^= chess960sp;
     }
@@ -760,7 +777,7 @@ public class Position {
         hashHi ^= zobristKeyHi[board[i].ordinal()][i];
       }
       hashHi ^= zobristKeyCastleHi[castlesMask];
-      hashHi ^= zobristKeyEnPassantHi[enPassantCol + 1];
+      hashHi ^= zobristKeyEnPassantHi[hashedEnPassantCol() + 1];
       hashHi ^= zobristKeyToMoveHi[toMove == WHITE ? 1 : 0];
       hashHi ^= chess960sp;
     }

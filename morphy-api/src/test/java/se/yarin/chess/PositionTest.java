@@ -433,6 +433,24 @@ public class PositionTest {
   }
 
   @Test
+  public void testEnPassantOnlyHashedWhenCapturePossible() {
+    // 1.d4 Nf6 2.c4 and 1.c4 Nf6 2.d4: the last move was a double step, but no pawn can take
+    Position p1 = Position.start().doMove(D2, D4).doMove(G8, F6).doMove(C2, C4);
+    Position p2 = Position.start().doMove(C2, C4).doMove(G8, F6).doMove(D2, D4);
+    assertEquals(2, p1.getEnPassantCol());
+    assertEquals(3, p2.getEnPassantCol());
+    assertEquals(p1, p2);
+    assertEquals(p1.getZobristHashLo(), p2.getZobristHashLo());
+    assertEquals(p1.getZobristHashHi(), p2.getZobristHashHi());
+
+    // 1.e4 a6 2.e5 d5: the e5 pawn can take on d6, which 1.e4 d5 2.e5 a6 doesn't allow
+    Position q1 = Position.start().doMove(E2, E4).doMove(A7, A6).doMove(E4, E5).doMove(D7, D5);
+    Position q2 = Position.start().doMove(E2, E4).doMove(D7, D5).doMove(E4, E5).doMove(A7, A6);
+    assertNotEquals(q1, q2);
+    assertNotEquals(q1.getZobristHashLo(), q2.getZobristHashLo());
+  }
+
+  @Test
   public void testEqualsAndHashing() {
     Position p1 = Position.start().doMove(G1, F3).doMove(G8, F6).doMove(F3, G1).doMove(F6, G8);
     Position p2 = Position.start().doMove(G1, H3).doMove(G8, H6).doMove(H3, G1).doMove(H6, G8);
