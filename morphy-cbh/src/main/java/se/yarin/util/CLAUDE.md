@@ -5,7 +5,7 @@ Low-level I/O, parsing, and caching utilities.
 ## I/O Utilities
 
 - **BlobChannel** - Interface for sequential/random access to blob files. Factory methods for creating instances. Abstracts file reading/writing.
-- **BlobChannelImpl / PagedBlobChannel** - Implementations with paging support.
+- **PagedBlobChannel** - The implementation: reads through a small page cache, by position, so it's safe to read from several threads.
 - **ByteBufferBitReader / ByteBufferBitWriter** - Bit-level I/O for compact binary encoding (used by move serialization).
 - **ByteBufferUtil** - ByteBuffer manipulation helpers (endianness, alignment, string encoding).
 
