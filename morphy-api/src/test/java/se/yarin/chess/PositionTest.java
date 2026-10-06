@@ -2,9 +2,14 @@ package se.yarin.chess;
 
 import org.junit.Test;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import static org.junit.Assert.*;
 import static se.yarin.chess.Player.*;
@@ -448,6 +453,36 @@ public class PositionTest {
     Position q2 = Position.start().doMove(E2, E4).doMove(D7, D5).doMove(E4, E5).doMove(A7, A6);
     assertNotEquals(q1, q2);
     assertNotEquals(q1.getZobristHashLo(), q2.getZobristHashLo());
+  }
+
+  @Test
+  public void testHashOfASharedPositionFromSeveralThreads() throws Exception {
+    // Each round hashes a new position from several threads at once, as the games of a database
+    // all hash the one start position; every thread must get the hash
+    long expected = Position.start().getZobristHashLo();
+    int threads = 8;
+    ExecutorService pool = Executors.newFixedThreadPool(threads);
+    try {
+      for (int round = 0; round < 200; round++) {
+        Position shared = Position.start().doMove(G1, F3).doMove(G8, F6).doMove(F3, G1).doMove(F6, G8);
+        CountDownLatch go = new CountDownLatch(1);
+        List<Future<Long>> hashes = new ArrayList<>();
+        for (int t = 0; t < threads; t++) {
+          hashes.add(
+              pool.submit(
+                  () -> {
+                    go.await();
+                    return shared.getZobristHashLo();
+                  }));
+        }
+        go.countDown();
+        for (Future<Long> hash : hashes) {
+          assertEquals(expected, (long) hash.get());
+        }
+      }
+    } finally {
+      pool.shutdown();
+    }
   }
 
   @Test

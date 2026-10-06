@@ -758,30 +758,37 @@ public class Position {
     return capturable ? enPassantCol : NO_COL;
   }
 
+  // The hash is worked out in a local and stored once: positions are shared between threads (the
+  // start position by every game), and one seeing the field half worked out would keep a wrong
+  // hash.
   public long getZobristHashLo() {
-    if (hashLo == 0) {
+    long hash = hashLo;
+    if (hash == 0) {
       for (int i = 0; i < 64; i++) {
-        hashLo ^= zobristKeyLo[board[i].ordinal()][i];
+        hash ^= zobristKeyLo[board[i].ordinal()][i];
       }
-      hashLo ^= zobristKeyCastleLo[castlesMask];
-      hashLo ^= zobristKeyEnPassantLo[hashedEnPassantCol() + 1];
-      hashLo ^= zobristKeyToMoveLo[toMove == WHITE ? 1 : 0];
-      hashLo ^= chess960sp;
+      hash ^= zobristKeyCastleLo[castlesMask];
+      hash ^= zobristKeyEnPassantLo[hashedEnPassantCol() + 1];
+      hash ^= zobristKeyToMoveLo[toMove == WHITE ? 1 : 0];
+      hash ^= chess960sp;
+      hashLo = hash;
     }
-    return hashLo;
+    return hash;
   }
 
   public long getZobristHashHi() {
-    if (hashHi == 0) {
+    long hash = hashHi;
+    if (hash == 0) {
       for (int i = 0; i < 64; i++) {
-        hashHi ^= zobristKeyHi[board[i].ordinal()][i];
+        hash ^= zobristKeyHi[board[i].ordinal()][i];
       }
-      hashHi ^= zobristKeyCastleHi[castlesMask];
-      hashHi ^= zobristKeyEnPassantHi[hashedEnPassantCol() + 1];
-      hashHi ^= zobristKeyToMoveHi[toMove == WHITE ? 1 : 0];
-      hashHi ^= chess960sp;
+      hash ^= zobristKeyCastleHi[castlesMask];
+      hash ^= zobristKeyEnPassantHi[hashedEnPassantCol() + 1];
+      hash ^= zobristKeyToMoveHi[toMove == WHITE ? 1 : 0];
+      hash ^= chess960sp;
+      hashHi = hash;
     }
-    return hashHi;
+    return hash;
   }
 
   public int hashCode() {
