@@ -10,6 +10,8 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.Locale;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -17,7 +19,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 import org.jetbrains.annotations.NotNull;
@@ -51,8 +52,6 @@ public final class PositionIndexBuilder {
   private static final int BUCKETS = 1 << BUCKET_BITS;
   // Records per bucket a worker collects before writing them out
   private static final int BUFFERED = 2048;
-  // Games a worker takes at a time
-  private static final int BATCH = 256;
 
   private final @NotNull Consumer<String> progress;
 
@@ -199,69 +198,62 @@ public final class PositionIndexBuilder {
     return (int) (payload & 0xFFFF);
   }
 
+  /** What a thread reading games keeps: its records not yet written, and a game's positions. */
+  private record Worker(Buffer buffer, GamePositions positions) {}
+
   private void decode(GameScan scan, GameFactsTable facts, Path dir) throws IOException {
     int maxId = scan.maxId();
-    int threads = Runtime.getRuntime().availableProcessors();
-    AtomicInteger next = new AtomicInteger(1);
     AtomicLong done = new AtomicLong();
     long start = System.nanoTime();
-    ExecutorService pool = Executors.newFixedThreadPool(threads);
     ScheduledExecutorService reporter = Executors.newSingleThreadScheduledExecutor();
     reporter.scheduleAtFixedRate(
         () ->
             progress.accept(
                 String.format(
                     Locale.ROOT,
-                    "%,d of %,d games read, %.0f s",
+                    "%,d games read, %.0f s",
                     done.get(),
-                    maxId,
                     (System.nanoTime() - start) / 1e9)),
         5,
         5,
         TimeUnit.SECONDS);
     try (Buckets buckets = new Buckets(dir)) {
-      List<Future<?>> workers = new ArrayList<>();
-      for (int t = 0; t < threads; t++) {
-        workers.add(
-            pool.submit(
-                () -> {
-                  Buffer buffer = new Buffer(buckets);
-                  GamePositions positions = new GamePositions();
-                  int first;
-                  while ((first = next.getAndAdd(BATCH)) <= maxId) {
-                    for (int id = first; id < Math.min(first + BATCH, maxId + 1); id++) {
-                      try {
-                        ScannedGame game = scan.read(id);
-                        if (game != null) {
-                          facts.set(id, game.facts());
-                          addPositions(game, positions, buffer);
-                        }
-                      } catch (RuntimeException e) {
-                        throw new IllegalStateException("Failed to index game " + id + ": " + e, e);
-                      }
-                      done.incrementAndGet();
-                    }
-                  }
-                  buffer.flush();
-                  return null;
-                }));
+      // A worker per thread the scan reads games on, flushed when all are read
+      Queue<Worker> workers = new ConcurrentLinkedQueue<>();
+      ThreadLocal<Worker> worker =
+          ThreadLocal.withInitial(
+              () -> {
+                Worker w = new Worker(new Buffer(buckets), new GamePositions());
+                workers.add(w);
+                return w;
+              });
+      scan.forEach(
+          game -> {
+            try {
+              Worker w = worker.get();
+              facts.set(game.id(), game.facts());
+              addPositions(game, w.positions(), w.buffer());
+            } catch (RuntimeException e) {
+              throw new IllegalStateException(
+                  "Failed to index game " + game.id() + ": " + e, e);
+            }
+            done.incrementAndGet();
+          });
+      for (Worker w : workers) {
+        w.buffer().flush();
       }
-      for (Future<?> worker : workers) {
-        worker.get();
-      }
-    } catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-      throw new IOException("Interrupted", e);
-    } catch (ExecutionException e) {
-      throw new IOException(e.getCause().getMessage(), e.getCause());
+    } catch (UncheckedIOException e) {
+      throw e.getCause();
     } finally {
-      // Stops the other workers on a failure
-      pool.shutdownNow();
       reporter.shutdownNow();
     }
     progress.accept(
         String.format(
-            Locale.ROOT, "%,d games read in %.0f s", maxId, (System.nanoTime() - start) / 1e9));
+            Locale.ROOT,
+            "%,d games of %,d records read in %.0f s",
+            done.get(),
+            maxId,
+            (System.nanoTime() - start) / 1e9));
   }
 
   private static void addPositions(ScannedGame game, GamePositions positions, Buffer buffer) {
@@ -343,52 +335,51 @@ public final class PositionIndexBuilder {
     }
   }
 
-  /** Writes the index files; returns the numbers of shared and single-game positions. */
+  /**
+   * A bucket's positions, ready to be written: those several games reached, as their keys and
+   * records (with offsets from the bucket's first), and those one game reached, as their entries.
+   */
+  private record PreparedBucket(long[] keys, long[] offsets, Bytes sharedData, Bytes singleData) {}
+
+  // Buckets sorted at once: each takes some 30 bytes per record while sorted, up to 500 MB for the
+  // largest bucket of a Megabase
+  private static final int SORTED_AT_ONCE = Math.min(4, Runtime.getRuntime().availableProcessors());
+
+  /**
+   * Writes the index files, the buckets sorted several at a time and written in order; returns
+   * the numbers of shared and single-game positions.
+   */
   private long[] write(
       Path buckets, GameFactsTable facts, int recentSince, int gameIdBytes, Path dir)
       throws IOException {
     long start = System.nanoTime();
     long shared = 0, single = 0, sharedOffset = 0;
+    // Each bucket counts its own part of the directory, by the top bits of the hash
     int[] directory = new int[(1 << IndexFiles.DIRECTORY_BITS) + 1];
-    Bytes record = new Bytes();
+    ExecutorService pool = Executors.newFixedThreadPool(SORTED_AT_ONCE);
+    List<Future<PreparedBucket>> prepared = new ArrayList<>();
     try (DataOutputStream keys = output(dir.resolve(IndexFiles.SHARED_KEYS));
         DataOutputStream offsets = output(dir.resolve(IndexFiles.SHARED_OFFSETS));
         DataOutputStream sharedData = output(dir.resolve(IndexFiles.SHARED_DATA));
         DataOutputStream singleData = output(dir.resolve(IndexFiles.SINGLE_DATA))) {
       for (int b = 0; b < BUCKETS; b++) {
-        Path file = bucketFile(buckets, b);
-        long[] records = IndexFiles.readLongs(file);
-        Files.delete(file);
-        sortByHash(records);
-        int n = records.length / 2;
-        int i = 0;
-        while (i < n) {
-          long hash = records[2 * i];
-          int j = i + 1;
-          while (j < n && records[2 * j] == hash) {
-            j++;
-          }
-          if (j - i == 1) {
-            int game = gameOf(records[2 * i + 1]);
-            singleData.writeShort((int) (hash >>> 24));
-            if (gameIdBytes == 4) {
-              singleData.writeByte(game >>> 24);
-            }
-            singleData.writeShort(game >>> 8);
-            singleData.writeByte(game);
-            directory[(int) (hash >>> (64 - IndexFiles.DIRECTORY_BITS)) + 1]++;
-            single++;
-          } else {
-            record.clear();
-            writePosition(records, i, j, facts, recentSince, record);
-            keys.writeLong(hash);
-            offsets.writeLong(sharedOffset);
-            sharedData.write(record.array(), 0, record.size());
-            sharedOffset += record.size();
-            shared++;
-          }
-          i = j;
+        while (prepared.size() < Math.min(BUCKETS, b + SORTED_AT_ONCE)) {
+          Path file = bucketFile(buckets, prepared.size());
+          prepared.add(
+              pool.submit(() -> prepare(file, facts, recentSince, gameIdBytes, directory)));
         }
+        PreparedBucket bucket = prepared.get(b).get();
+        // Let the bucket be collected once written
+        prepared.set(b, null);
+        for (int k = 0; k < bucket.keys().length; k++) {
+          keys.writeLong(bucket.keys()[k]);
+          offsets.writeLong(sharedOffset + bucket.offsets()[k]);
+        }
+        sharedData.write(bucket.sharedData().array(), 0, bucket.sharedData().size());
+        singleData.write(bucket.singleData().array(), 0, bucket.singleData().size());
+        sharedOffset += bucket.sharedData().size();
+        shared += bucket.keys().length;
+        single += bucket.singleData().size() / (2 + gameIdBytes);
         if (b % 32 == 31) {
           progress.accept(
               String.format(
@@ -400,6 +391,16 @@ public final class PositionIndexBuilder {
         }
       }
       offsets.writeLong(sharedOffset);
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new IOException("Interrupted", e);
+    } catch (ExecutionException e) {
+      if (e.getCause() instanceof IOException io) {
+        throw io;
+      }
+      throw new IOException(e.getCause().getMessage(), e.getCause());
+    } finally {
+      pool.shutdownNow();
     }
     for (int k = 0; k < directory.length - 1; k++) {
       directory[k + 1] += directory[k];
@@ -410,6 +411,56 @@ public final class PositionIndexBuilder {
       }
     }
     return new long[] {shared, single};
+  }
+
+  /**
+   * Reads a bucket, deletes its file, sorts it and turns its positions into what's written; counts
+   * its single-game positions in its part of the directory.
+   */
+  private static PreparedBucket prepare(
+      Path file, GameFactsTable facts, int recentSince, int gameIdBytes, int[] directory)
+      throws IOException {
+    long[] records = IndexFiles.readLongs(file);
+    Files.delete(file);
+    sortByHash(records);
+    int n = records.length / 2;
+    int positions = 0;
+    for (int i = 0; i < n; i++) {
+      if (i == 0 || records[2 * i] != records[2 * i - 2]) {
+        positions++;
+      }
+    }
+    long[] keys = new long[positions];
+    long[] offsets = new long[positions];
+    int shared = 0;
+    Bytes sharedData = new Bytes();
+    Bytes singleData = new Bytes();
+    int i = 0;
+    while (i < n) {
+      long hash = records[2 * i];
+      int j = i + 1;
+      while (j < n && records[2 * j] == hash) {
+        j++;
+      }
+      if (j - i == 1) {
+        int game = gameOf(records[2 * i + 1]);
+        singleData.putShort((int) (hash >>> 24));
+        if (gameIdBytes == 4) {
+          singleData.put(game >>> 24);
+        }
+        singleData.putShort(game >>> 8);
+        singleData.put(game);
+        directory[(int) (hash >>> (64 - IndexFiles.DIRECTORY_BITS)) + 1]++;
+      } else {
+        keys[shared] = hash;
+        offsets[shared] = sharedData.size();
+        shared++;
+        writePosition(records, i, j, facts, recentSince, sharedData);
+      }
+      i = j;
+    }
+    return new PreparedBucket(
+        Arrays.copyOf(keys, shared), Arrays.copyOf(offsets, shared), sharedData, singleData);
   }
 
   private static DataOutputStream output(Path file) throws IOException {
