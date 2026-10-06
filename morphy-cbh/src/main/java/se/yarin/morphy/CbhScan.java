@@ -11,14 +11,13 @@ import se.yarin.morphy.exceptions.MorphyMoveDecodingException;
 import se.yarin.morphy.games.GameHeader;
 
 /**
- * A scan of a v1 database's games under a read transaction. The files are read one game at a
- * time, as their channels can't be read from several threads at once, and the moves decoded in
- * the threads asking for them.
+ * A scan of a v1 database's games under a read transaction. The files' channels read by position,
+ * so games can be read and decoded from several threads at once (the storages' metrics may then
+ * miss a count now and then).
  */
 final class CbhScan implements GameScan {
   private final @NotNull DatabaseCbh database;
   private final @NotNull DatabaseReadTransaction transaction;
-  private final @NotNull Object fileLock = new Object();
 
   CbhScan(@NotNull DatabaseCbh database) {
     this.database = database;
@@ -32,15 +31,11 @@ final class CbhScan implements GameScan {
 
   @Override
   public @Nullable ScannedGame read(int id) {
-    GameHeader header;
-    ByteBuffer blob;
-    synchronized (fileLock) {
-      header = database.gameHeaderIndex().getGameHeader(id);
-      if (header.deleted() || header.guidingText() || header.chess960StartPosition() >= 0) {
-        return null;
-      }
-      blob = database.moveRepository().getMovesBlob(header.movesOffset());
+    GameHeader header = database.gameHeaderIndex().getGameHeader(id);
+    if (header.deleted() || header.guidingText() || header.chess960StartPosition() >= 0) {
+      return null;
     }
+    ByteBuffer blob = database.moveRepository().getMovesBlob(header.movesOffset());
     GameMovesModel moves;
     try {
       moves = database.moveRepository().moveSerializer().deserializeMoves(blob, true, id);
