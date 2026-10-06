@@ -7,18 +7,22 @@ import {
   type IDockviewPanelProps,
   themeLight,
 } from 'dockview-react';
-import { type FunctionComponent, useState } from 'react';
+import { type FunctionComponent, useContext, useState } from 'react';
 import { BoardDocument } from './BoardDocument';
 import { DatabaseDocument } from './DatabaseDocument';
 import {
   BOARD_PANE,
   DATABASE_SIDE_PANES,
   defaultLayout,
+  ENTITY_DETAILS_PANE,
+  ENTITY_GAMES_PANE,
   isLayoutComplete,
   type MorphyDocument,
   SEARCH_PANE,
 } from './documents';
 import { DocumentActiveContext, DocumentContext, useDocuments } from './documentsStore';
+import { EntityDocument } from './EntityDocument';
+import { EntityDetailsPane, EntityGamesPane } from './panes/EntityPanes';
 import { BoardPane } from './panes/BoardPane';
 import { DatabasesPane } from './panes/DatabasesPane';
 import { HomePane } from './panes/HomePane';
@@ -41,12 +45,17 @@ const PANES: Record<string, FunctionComponent<IDockviewPanelProps>> = {
   notation: NotationPane,
   engine: EnginePane,
   tree: TreePane,
+  [ENTITY_DETAILS_PANE]: EntityDetailsPane,
+  [ENTITY_GAMES_PANE]: EntityGamesPane,
 };
 
 // A document's main pane can't be closed, as nothing would bring it back; the panes beside a
-// board or a database can, as their View menus bring them back
+// board or a database can, as their View menus bring them back. An entity's panes are all there
+// is to it, so none of them can.
 function PaneTab(props: IDockviewPanelHeaderProps) {
-  return <DockviewDefaultTab {...props} hideClose={!(props.api.id in DATABASE_SIDE_PANES)} />;
+  const doc = useContext(DocumentContext);
+  const closable = doc?.kind === 'database' && props.api.id in DATABASE_SIDE_PANES;
+  return <DockviewDefaultTab {...props} hideClose={!closable} />;
 }
 
 /**
@@ -85,7 +94,7 @@ export function DocumentGrid({ doc, active }: { doc: MorphyDocument; active: boo
       theme={themeLight}
       components={PANES}
       defaultTabComponent={doc.kind === 'board' ? undefined : PaneTab}
-      rightHeaderActionsComponent={doc.kind === 'database' ? PreviewActions : undefined}
+      rightHeaderActionsComponent={doc.kind === 'database' || doc.kind === 'entity' ? PreviewActions : undefined}
       onReady={onReady}
     />
   );
@@ -102,6 +111,10 @@ export function DocumentGrid({ doc, active }: { doc: MorphyDocument; active: boo
             <DatabaseDocument doc={doc} api={api} active={active}>
               {grid}
             </DatabaseDocument>
+          ) : doc.kind === 'entity' ? (
+            <EntityDocument doc={doc} api={api} active={active}>
+              {grid}
+            </EntityDocument>
           ) : (
             grid
           )}

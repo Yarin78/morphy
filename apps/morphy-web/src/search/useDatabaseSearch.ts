@@ -6,6 +6,7 @@ import { NOTATION_COLUMN } from './columns';
 import {
   EMPTY_ENTITY_FORM,
   EMPTY_GAME_FORM,
+  type EntityConstraint,
   ENTITY_ID_FIELDS,
   type EntityForm,
   entityQuery,
@@ -110,9 +111,15 @@ export interface DatabaseSearch {
   showGamesOf: (kind: Exclude<SearchKind, 'games'>, id: number, label: string) => void;
 }
 
-export function useDatabaseSearch(databaseId: string): DatabaseSearch {
+/**
+ * The searches of a database. With an entity, the games are limited to it from the start: the
+ * games of an entity's document.
+ */
+export function useDatabaseSearch(databaseId: string, entity?: EntityConstraint): DatabaseSearch {
   const [kind, setKindState] = useState<SearchKind>('games');
-  const [searches, setSearches] = useState<Searches>(INITIAL);
+  const [searches, setSearches] = useState<Searches>(() =>
+    entity ? { ...INITIAL, games: { ...INITIAL.games, gameForm: { ...EMPTY_GAME_FORM, entity } } } : INITIAL
+  );
   // The latest searches, changed at once, so a fetch started right after a change sees it
   const searchesRef = useRef(searches);
   // The latest fetch of each kind; an answer to an earlier one is dropped

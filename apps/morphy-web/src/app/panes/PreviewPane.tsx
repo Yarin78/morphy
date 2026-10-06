@@ -1,7 +1,11 @@
+import type { ReactNode } from 'react';
 import type { IDockviewHeaderActionsProps } from 'dockview-react';
 import { GameBoard, GameNotationPanel } from 'game-view';
 import { TbExternalLink } from 'react-icons/tb';
 import { type DatabaseView, useDatabaseView } from '../databaseStore';
+import type { EntityKind } from '../documents';
+import { openEntityAction } from '../openEntity';
+import { useDocuments } from '../documentsStore';
 import { useSettings } from '../settings';
 import { entityColumns, entityLabel, entityTitle, toEntityType } from '../../search/columns';
 import { SEARCH_KIND_SINGULAR } from '../../search/queries';
@@ -88,21 +92,53 @@ function GamePreview() {
 }
 
 function EntityPreview() {
-  const { search } = useDatabaseView();
+  const { search, databaseId } = useDatabaseView();
+  const { dispatch } = useDocuments();
   const kind = search.kind;
   if (kind === 'games') return null;
   const s = search.current;
   const entity = s.selected != null ? (s.results?.rows[s.selected] as Record<string, unknown> | undefined) : undefined;
-  const singular = SEARCH_KIND_SINGULAR[kind];
   if (!entity) {
-    return <div className="preview-empty">Pick a {singular.toLowerCase()} in the results to see it here.</div>;
+    return (
+      <div className="preview-empty">Pick a {SEARCH_KIND_SINGULAR[kind].toLowerCase()} in the results to see it here.</div>
+    );
   }
-  const title = entityTitle(kind, entity);
+  return (
+    <EntityDetails kind={kind} entity={entity}>
+      <div className="preview-entity-actions">
+        <button
+          className="search-button primary"
+          title="Open in a document of its own, with its games"
+          onClick={() => dispatch(openEntityAction(databaseId, kind, entity))}
+        >
+          <TbExternalLink /> Open
+        </button>
+        <button
+          className="search-button"
+          onClick={() => search.showGamesOf(kind, entity.id as number, entityLabel(kind, entity))}
+        >
+          Show Games
+        </button>
+      </div>
+    </EntityDetails>
+  );
+}
+
+/** An entity's details: what it is, its name or title, and its fields; and anything below them. */
+export function EntityDetails({
+  kind,
+  entity,
+  children,
+}: {
+  kind: EntityKind;
+  entity: Record<string, unknown>;
+  children?: ReactNode;
+}) {
   const columns = entityColumns(toEntityType(kind)).filter((c) => c.key !== 'id');
   return (
     <div className="preview-entity">
-      <div className="preview-entity-kind">{singular}</div>
-      <h2>{title}</h2>
+      <div className="preview-entity-kind">{SEARCH_KIND_SINGULAR[kind]}</div>
+      <h2>{entityTitle(kind, entity)}</h2>
       <dl>
         {columns.map((c) => {
           const value = c.render(entity);
@@ -115,12 +151,7 @@ function EntityPreview() {
           );
         })}
       </dl>
-      <button
-        className="search-button primary"
-        onClick={() => search.showGamesOf(kind, entity.id as number, entityLabel(kind, entity))}
-      >
-        Show Games
-      </button>
+      {children}
     </div>
   );
 }

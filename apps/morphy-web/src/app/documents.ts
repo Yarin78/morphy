@@ -1,8 +1,12 @@
 import type { AddPanelPositionOptions, DockviewApi } from 'dockview-react';
+import { SEARCH_KINDS, type SearchKind } from '../search/queries';
 
 // The documents of the app. Each one has its own Dockview grid, which fills the screen when it
-// is the active one. Home, All Databases and Logs are singletons; databases and boards can be
-// opened any number of times.
+// is the active one. Home, All Databases and Logs are singletons; databases, boards and the
+// entities of databases (players, events, ...) can be opened any number of times.
+
+/** The kinds of entity a document can be of: a database's players, events and the rest. */
+export type EntityKind = Exclude<SearchKind, 'games'>;
 
 export type SingletonKind = 'home' | 'databases' | 'logs';
 
@@ -25,10 +29,20 @@ export type MorphyDocument =
       quote?: QuoteTarget;
       /** "White vs Black", once the game is loaded */
       title?: string;
+    }
+  | {
+      kind: 'entity';
+      id: string;
+      databaseId: string;
+      entityKind: EntityKind;
+      entityId: number;
+      /** Its name or title, as it was when opened: "Kasparov, Garry" */
+      title: string;
     };
 
 export type BoardDocument = Extract<MorphyDocument, { kind: 'board' }>;
 export type DatabaseDocument = Extract<MorphyDocument, { kind: 'database' }>;
+export type EntityDocument = Extract<MorphyDocument, { kind: 'entity' }>;
 
 export interface DocumentsState {
   documents: MorphyDocument[];
@@ -42,8 +56,9 @@ export type DocumentsAction =
   | { type: 'openSingleton'; kind: SingletonKind }
   | { type: 'openDatabase'; databaseId: string; name: string }
   | { type: 'openBoard'; databaseId?: string; gameId?: number; quote?: QuoteTarget }
+  | { type: 'openEntity'; databaseId: string; entityKind: EntityKind; entityId: number; title: string }
   | { type: 'close'; id: string }
-  /** Moves a database or a board before or after another of its kind, as in the navigator */
+  /** Moves a database, a board or an entity before or after another of its kind, as in the navigator */
   | { type: 'move'; id: string; targetId: string; after: boolean }
   | { type: 'updateBoard'; id: string; changes: Partial<Pick<BoardDocument, 'title' | 'databaseId' | 'gameId'>> };
 
@@ -59,17 +74,25 @@ export function documentTitle(doc: MorphyDocument): string {
       return doc.name;
     case 'board':
       return doc.title ?? `Board ${doc.number}`;
+    case 'entity':
+      return doc.title;
   }
+}
+
+/** The section of the navigator a document is listed in: its kind, and an entity's kind too. */
+export function sectionOf(doc: MorphyDocument): string {
+  return doc.kind === 'entity' ? `entity:${doc.entityKind}` : doc.kind;
 }
 
 /**
  * The open documents in the order the navigator lists them: Home and All Databases, the
- * databases, the boards, and Logs at the bottom.
+ * databases, the boards, the entities by kind (players, events, ...), and Logs at the bottom.
  */
 export function navigatorOrder(documents: MorphyDocument[]): MorphyDocument[] {
-  const rank: Record<MorphyDocument['kind'], number> = { home: 0, databases: 1, database: 2, board: 3, logs: 4 };
-  // A stable sort, so the databases and the boards keep the order they were opened in
-  return [...documents].sort((a, b) => rank[a.kind] - rank[b.kind]);
+  const rank: Record<MorphyDocument['kind'], number> = { home: 0, databases: 1, database: 2, board: 3, entity: 4, logs: 5 };
+  const rankOf = (d: MorphyDocument) => rank[d.kind] + (d.kind === 'entity' ? SEARCH_KINDS.indexOf(d.entityKind) / 100 : 0);
+  // A stable sort, so the documents of a section keep the order they were opened in
+  return [...documents].sort((a, b) => rankOf(a) - rankOf(b));
 }
 
 /**
@@ -146,12 +169,31 @@ export function documentsReducer(state: DocumentsState, action: DocumentsAction)
       };
       return { documents: [...state.documents, doc], activeId: doc.id };
     }
+    case 'openEntity': {
+      const open = state.documents.find(
+        (d) =>
+          d.kind === 'entity' &&
+          d.databaseId === action.databaseId &&
+          d.entityKind === action.entityKind &&
+          d.entityId === action.entityId
+      );
+      if (open) return { ...state, activeId: open.id };
+      const doc: MorphyDocument = {
+        kind: 'entity',
+        id: newId('entity'),
+        databaseId: action.databaseId,
+        entityKind: action.entityKind,
+        entityId: action.entityId,
+        title: action.title,
+      };
+      return { documents: [...state.documents, doc], activeId: doc.id };
+    }
     case 'close':
       return without(state, (d) => d.id === action.id);
     case 'move': {
       const moved = state.documents.find((d) => d.id === action.id);
       const target = state.documents.find((d) => d.id === action.targetId);
-      if (!moved || !target || moved === target || moved.kind !== target.kind) return state;
+      if (!moved || !target || moved === target || sectionOf(moved) !== sectionOf(target)) return state;
       const documents = state.documents.filter((d) => d !== moved);
       documents.splice(documents.indexOf(target) + (action.after ? 1 : 0), 0, moved);
       return { ...state, documents };
@@ -164,6 +206,10 @@ export function documentsReducer(state: DocumentsState, action: DocumentsAction)
   }
 }
 
+/** The ids of an entity document's panes: its details, and its games below them. */
+export const ENTITY_DETAILS_PANE = 'entity-details';
+export const ENTITY_GAMES_PANE = 'entity-games';
+
 /** The pane every document's grid starts with, by kind: its component and title. */
 const MAIN_PANE: Record<MorphyDocument['kind'], { component: string; title: string }> = {
   home: { component: 'home', title: 'Home' },
@@ -171,6 +217,7 @@ const MAIN_PANE: Record<MorphyDocument['kind'], { component: string; title: stri
   logs: { component: 'logs', title: 'Logs' },
   database: { component: 'search', title: 'Search' },
   board: { component: 'board', title: 'Board' },
+  entity: { component: ENTITY_DETAILS_PANE, title: 'Details' },
 };
 
 /** The id of a board document's board pane, which is alone in a group without tabs. */
@@ -255,7 +302,8 @@ export function toggleDatabasePane(api: DockviewApi, id: DatabaseSidePane) {
 /**
  * Sets up a new document's grid: a single pane by kind. A board has the notation to its right;
  * the engine and the opening tree are a menu away. A database has the preview of the game
- * picked to the right of its search.
+ * picked to the right of its search. An entity has its details above its games, and the preview
+ * of the game picked to the right of both.
  */
 export function defaultLayout(doc: MorphyDocument, api: DockviewApi) {
   const pane = MAIN_PANE[doc.kind];
@@ -270,6 +318,23 @@ export function defaultLayout(doc: MorphyDocument, api: DockviewApi) {
     toggleDatabasePane(api, 'preview');
     main.api.setActive();
   }
+  if (doc.kind === 'entity') {
+    api.addPanel({
+      id: 'preview',
+      component: 'preview',
+      title: DATABASE_SIDE_PANES.preview,
+      position: { referencePanel: ENTITY_DETAILS_PANE, direction: 'right' },
+      initialWidth: api.width > 0 ? Math.round(Math.min(api.height * 0.5, api.width * 0.45)) : undefined,
+    });
+    api.addPanel({
+      id: ENTITY_GAMES_PANE,
+      component: ENTITY_GAMES_PANE,
+      title: 'Games',
+      position: { referencePanel: ENTITY_DETAILS_PANE, direction: 'below' },
+      initialHeight: api.height > 0 ? Math.round(api.height * 0.65) : undefined,
+    });
+    main.api.setActive();
+  }
 }
 
 /**
@@ -279,6 +344,7 @@ export function defaultLayout(doc: MorphyDocument, api: DockviewApi) {
 export function isLayoutComplete(doc: MorphyDocument, api: DockviewApi): boolean {
   const main = api.getPanel(MAIN_PANE[doc.kind].component);
   if (!main) return false;
+  if (doc.kind === 'entity') return !!api.getPanel(ENTITY_GAMES_PANE) && !!api.getPanel('preview');
   return doc.kind !== 'database' || (main.group.header.hidden && main.group.panels.length === 1);
 }
 

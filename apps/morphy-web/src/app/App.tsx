@@ -63,7 +63,7 @@ function Workspace() {
   }, []);
 
   // Ctrl+Alt+Right goes to the next document in the navigator, Ctrl+Alt+Left to the one before,
-  // and Ctrl+Alt+W closes the one shown (CLOSE_DOCUMENT_SHORTCUT), if it's a database or a board.
+  // and Ctrl+Alt+W closes the one shown (CLOSE_DOCUMENT_SHORTCUT), if it's a database, a board or an entity.
   // Taken before anything else does, as the board's arrows, so they work while typing in a field
   // too. (Alt+Tab, the obvious keys, often never reach the page: a window switcher takes them.)
   useEffect(() => {
@@ -80,7 +80,9 @@ function Workspace() {
         return;
       }
       const shown = state.documents.find((d) => d.id === state.activeId);
-      if (shown?.kind === 'database' || shown?.kind === 'board') void closeDocuments([shown], dispatch);
+      if (shown?.kind === 'database' || shown?.kind === 'board' || shown?.kind === 'entity') {
+        void closeDocuments([shown], dispatch);
+      }
     };
     document.addEventListener('keydown', onKey, true);
     return () => document.removeEventListener('keydown', onKey, true);

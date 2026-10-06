@@ -80,3 +80,31 @@ describe('closing a document', () => {
     expect(documentsReducer(state, { type: 'close', id: 'b1' }).activeId).toBe('home');
   });
 });
+
+describe('entity documents', () => {
+  const open = (state: DocumentsState, entityKind: 'players' | 'tournaments', entityId: number) =>
+    documentsReducer(state, { type: 'openEntity', databaseId: 'x', entityKind, entityId, title: `${entityKind} ${entityId}` });
+
+  it('opens an entity once, showing it when opened again', () => {
+    const once = open(at('home'), 'players', 7);
+    const entity = once.documents.find((d) => d.kind === 'entity')!;
+    expect(once.activeId).toBe(entity.id);
+    const again = open({ ...once, activeId: 'home' }, 'players', 7);
+    expect(again.documents).toHaveLength(once.documents.length);
+    expect(again.activeId).toBe(entity.id);
+  });
+
+  it('lists the entities after the boards, by kind, and moves them only among their kind', () => {
+    let state = open(at('home'), 'tournaments', 1);
+    state = open(state, 'players', 2);
+    state = open(state, 'players', 3);
+    const [event, p2, p3] = state.documents.slice(-3).map((d) => d.id);
+    const order: string[] = [];
+    let id = 'b1';
+    for (let i = 0; i < 4; i++) order.push((id = adjacentDocument({ ...state, activeId: id }, 1)));
+    expect(order).toEqual([p2, p3, event, 'home']);
+    expect(documentsReducer(state, { type: 'move', id: p3, targetId: event, after: false })).toBe(state);
+    const moved = documentsReducer(state, { type: 'move', id: p3, targetId: p2, after: false });
+    expect(moved.documents.slice(-2).map((d) => d.id)).toEqual([p3, p2]);
+  });
+});

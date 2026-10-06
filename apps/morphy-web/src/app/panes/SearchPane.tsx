@@ -2,7 +2,7 @@ import { type KeyboardEvent, type PointerEvent, type ReactNode, useCallback, use
 import { EntityCombobox, NATIONS, NationFlag, type NationInfo, TOURNAMENT_TYPES } from 'game-view';
 import { TbCalendar, TbChevronDown, TbChevronRight, TbSearch, TbX } from 'react-icons/tb';
 import { useDatabaseView } from '../databaseStore';
-import { defaultOrderOf, entityLabel, NOTATION_COLUMN, sortFieldOf } from '../../search/columns';
+import { defaultOrderOf, NOTATION_COLUMN, sortFieldOf } from '../../search/columns';
 import { resetColumns, setColumnWidth, shownColumnKeys, toggleColumn, useResultColumns } from '../../search/columnLayout';
 import {
   type EntityForm,
@@ -25,6 +25,8 @@ import {
 } from '../../search/queries';
 import { playerFullName, suggestEvents, suggestPlayers } from '../../search/suggestions';
 import { queryOf } from '../../search/useDatabaseSearch';
+import { useDocuments } from '../documentsStore';
+import { openEntityAction } from '../openEntity';
 import { useSettings } from '../settings';
 import { ColumnPicker } from './ColumnPicker';
 
@@ -551,8 +553,13 @@ function QueryForm() {
   );
 }
 
-function Results() {
-  const { search, openGame, previewKeys } = useDatabaseView();
+/**
+ * The results of a search, the one picked shown in the preview: a database's, or the games of an
+ * entity's document. Double-clicked, a game opens on a board, an entity in a document of its own.
+ */
+export function Results() {
+  const { search, databaseId, openGame, previewKeys } = useDatabaseView();
+  const { dispatch } = useDocuments();
   const kind = search.kind;
   const s = search.current;
   const results = s.results;
@@ -573,7 +580,7 @@ function Results() {
     const row = rows[index] as { id: number } & Record<string, unknown>;
     if (!row) return;
     if (kind === 'games') openGame(row.id);
-    else search.showGamesOf(kind, row.id, entityLabel(kind, row));
+    else dispatch(openEntityAction(databaseId, kind, row));
   };
 
   const pick = (index: number) => {
@@ -717,7 +724,7 @@ function Results() {
                 className={`${i === s.selected ? 'selected' : ''}${(row as { deleted?: boolean }).deleted ? ' deleted' : ''}`}
                 onClick={() => pick(i)}
                 onDoubleClick={() => open(i)}
-                title={kind === 'games' ? 'Double-click to open on a board' : 'Double-click to show the games'}
+                title={kind === 'games' ? 'Double-click to open on a board' : 'Double-click to open, with its games'}
               >
                 {columns.map((c) => (
                   <td key={c.key}>{c.render(row)}</td>

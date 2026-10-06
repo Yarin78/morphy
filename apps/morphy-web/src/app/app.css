@@ -2176,6 +2176,11 @@ html {
   margin-bottom: 18px;
 }
 
+.preview-entity-actions {
+  display: flex;
+  gap: 6px;
+}
+
 .preview-entity-row {
   display: flex;
   gap: 12px;

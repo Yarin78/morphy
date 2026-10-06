@@ -1,15 +1,17 @@
-import { type DragEvent, type PointerEvent as ReactPointerEvent, useState, useSyncExternalStore } from 'react';
+import { type DragEvent, Fragment, type PointerEvent as ReactPointerEvent, useState, useSyncExternalStore } from 'react';
 import { getSnapshot as getLogSnapshot, subscribe as subscribeLogs } from '../logs/logStore';
 import { closeDocuments } from './closeDocuments';
 import { getUnsaved, subscribeUnsaved } from './unsavedStore';
-import { documentTitle, type MorphyDocument, type SingletonKind } from './documents';
+import { SEARCH_KIND_LABELS, SEARCH_KINDS } from '../search/queries';
+import { documentTitle, type EntityKind, type MorphyDocument, sectionOf, type SingletonKind } from './documents';
 import { useDocuments } from './documentsStore';
 import { openSettings } from './settingsDialogStore';
 
 // The navigator on the left: the singleton documents, New Board, the open databases and
-// boards, and Close All and Settings at the bottom. It collapses to icons, and resizes by
-// dragging its right edge; dragged narrow enough, it snaps to icons. The databases and the boards
-// are dragged up and down within their section to order them.
+// boards, the open entities by kind (Players, Events, ...: a section only while one is open), and
+// Close All and Settings at the bottom. It collapses to icons, and resizes by dragging its right
+// edge; dragged narrow enough, it snaps to icons. The documents are dragged up and down within
+// their section to order them.
 
 export const COLLAPSED_WIDTH = 44;
 const MIN_EXPANDED = 160;
@@ -27,7 +29,23 @@ const ICONS: Record<MorphyDocument['kind'], string> = {
   logs: '≣',
   database: '▤',
   board: '♞',
+  entity: '◆',
 };
+
+const ENTITY_ICONS: Record<EntityKind, string> = {
+  players: '☺',
+  tournaments: '⚑',
+  annotators: '✎',
+  sources: '❏',
+  teams: '⚭',
+  gametags: '#',
+};
+
+const ENTITY_KINDS = SEARCH_KINDS.filter((k): k is EntityKind => k !== 'games');
+
+function iconOf(d: MorphyDocument): string {
+  return d.kind === 'entity' ? ENTITY_ICONS[d.entityKind] : ICONS[d.kind];
+}
 
 /** For an item that's dragged to order it: the handlers, and where a drop on it would go */
 interface NavDrag {
@@ -115,6 +133,7 @@ export function Navigator({ state, onChange }: { state: NavigatorState; onChange
 
   const databases = docs.documents.filter((d) => d.kind === 'database');
   const boards = docs.documents.filter((d) => d.kind === 'board');
+  const entities = docs.documents.filter((d) => d.kind === 'entity');
 
   // The item dragged to order it, and where it would go if dropped now
   const [dragged, setDragged] = useState<MorphyDocument | null>(null);
@@ -131,15 +150,15 @@ export function Navigator({ state, onChange }: { state: NavigatorState; onChange
       e.dataTransfer.setData('text/plain', documentTitle(d));
       setDragged(d);
     },
-    // Only within its section: a database among the databases, a board among the boards
+    // Only within its section: a database among the databases, a player among the players
     onDragOver: (e: DragEvent<HTMLDivElement>) => {
-      if (!dragged || dragged.kind !== d.kind) return;
+      if (!dragged || sectionOf(dragged) !== sectionOf(d)) return;
       e.preventDefault();
       e.dataTransfer.dropEffect = 'move';
       const box = e.currentTarget.getBoundingClientRect();
       const after = e.clientY > box.top + box.height / 2;
       // Dropped next to itself, it stays where it is
-      const order = docs.documents.filter((x) => x.kind === d.kind);
+      const order = docs.documents.filter((x) => sectionOf(x) === sectionOf(d));
       const target = order.indexOf(d) + (after ? 1 : 0);
       const from = order.indexOf(dragged);
       const stays = target === from || target === from + 1;
@@ -175,7 +194,7 @@ export function Navigator({ state, onChange }: { state: NavigatorState; onChange
       {items.map((d) => (
         <NavItem
           key={d.id}
-          icon={ICONS[d.kind]}
+          icon={iconOf(d)}
           label={documentTitle(d)}
           collapsed={collapsed}
           active={docs.activeId === d.id}
@@ -242,14 +261,18 @@ export function Navigator({ state, onChange }: { state: NavigatorState; onChange
         <NavItem icon="+" label="New Board" collapsed={collapsed} onClick={() => dispatch({ type: 'openBoard' })} />
         {section('Databases', databases)}
         {section('Boards', boards)}
+        {ENTITY_KINDS.map((k) => {
+          const open = entities.filter((d) => d.kind === 'entity' && d.entityKind === k);
+          return open.length > 0 && <Fragment key={k}>{section(SEARCH_KIND_LABELS[k], open)}</Fragment>;
+        })}
       </div>
       <div className="nav-foot">
         <NavItem
           icon="✕"
           label="Close All"
           collapsed={collapsed}
-          disabled={boards.length === 0}
-          onClick={() => void closeDocuments(boards, dispatch)}
+          disabled={boards.length === 0 && entities.length === 0}
+          onClick={() => void closeDocuments([...boards, ...entities], dispatch)}
         />
         {singleton('logs', unseenErrors)}
         <NavItem icon="⚙" label="Settings" collapsed={collapsed} onClick={() => openSettings()} />

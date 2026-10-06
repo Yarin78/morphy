@@ -50,7 +50,10 @@ search.
   those of the search tester and resized by dragging their edges (kept in
   localStorage, the same in every database). The Preview pane on the
   right shows the game picked on a board with its notation (↑↓ pick a game, ←→
-  move through it), or the entity picked, with a way to its games.
+  move through it), or the entity picked, with a way to its games. An entity
+  double-clicked, or opened from the preview, gets a document of its own, listed
+  under its kind in the navigator (Players, Events, ...): its details above its
+  games, the game picked previewed beside them.
   Double-clicking a game opens it in a board document (`src/game`, shared with
   the board tester). The open documents and their layouts are kept in
   localStorage.
