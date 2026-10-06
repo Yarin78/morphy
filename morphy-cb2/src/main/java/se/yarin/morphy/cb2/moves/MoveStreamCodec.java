@@ -134,7 +134,9 @@ public final class MoveStreamCodec {
     }
     int moveNumber = words[start];
     Player toMove = (words[start + 1] & 0xFF) == 0 ? Player.WHITE : Player.BLACK;
-    int epFile = (words[start + 1] >> 8) - 1;
+    // 1-8 for the files a-h; 0 for none, and 15 is also found where no capture is possible
+    int epByte = words[start + 1] >> 8;
+    int epFile = epByte >= 1 && epByte <= 8 ? epByte - 1 : -1;
     int castling = words[start + 2];
     Stone[] stones = new Stone[64];
     Arrays.fill(stones, Stone.NO_STONE);
