@@ -37,6 +37,27 @@ the piece meant when a move is made by pressing the square it goes to
 (`src/engine/moveGuesser.ts`): the best of the moves to that square, by a 0.1 s
 search.
 
+## Games of a position
+
+The Games pane below a board searches a reference database by the position on
+the board. Only reference databases can be, as they have the indexes for it; the
+service marks them in `/api/databases` with a short `referenceName`, and they're
+picked from as pills at the top right of the pane (the one picked last is kept).
+The top row shows how many games reached the position and how the side to move
+scored. Below it, the moves played from the position on the left: how often each
+was played, its score, whether it's played more or less of late than the other
+moves (its share of the recent games against its share of all), the year it was
+last played, and some of the strongest players who played it; a move clicked is
+played on the board. On the right, the games that reached it, listed as a
+database's game results; one double-clicked opens at the position.
+
+Both come from one call, `searchPosition` (to be
+`GET /api/databases/{id}/positions/search?fen=...`): a page of the games, and with
+the first page what was played from the position. The service has neither yet, so
+it's a mock (`src/api/mockPositionSearch.ts`): the databases with a year in their name count
+as reference databases, named by their first word and the year; the summary is made up from the
+position; and the games are the database's, all of them, whatever the position.
+
 ## Pages
 
 - `/` — the Morphy app (`src/app`). A navigator on the left lists the open

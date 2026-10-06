@@ -20,6 +20,11 @@ export interface DatabaseResponse {
   path: string;
   /** A read-only database can be searched, but games can't be saved to it */
   readOnly: boolean;
+  /**
+   * The short name of a reference database, e.g. "Mega", which has the indexes to search its
+   * games by position; absent for any other. Not sent by the service yet.
+   */
+  referenceName?: string;
 }
 
 export interface DatabaseListResponse {
@@ -351,4 +356,62 @@ export interface DebugSearchResponse<R> {
   plans: QueryPlanDebugInfo;
   /** The raw records of every returned item, keyed by its id. */
   raw: Record<string, RawRecord[]>;
+}
+
+/** A player who played a move, among the strongest who did. */
+export interface PositionMovePlayer {
+  /** "Lastname, Firstname" */
+  name: string;
+  /** Their rating in the game they played the move in, if it had one */
+  rating: number | null;
+}
+
+/** How often a move was played from a position, and how the games went on from there. */
+export interface PositionMoveStats {
+  /** The move, in SAN */
+  san: string;
+  /** The games that played it */
+  games: number;
+  whiteWins: number;
+  draws: number;
+  blackWins: number;
+  /** The games since the response's recentSince year that played it, to tell how it's trending */
+  recentGames: number;
+  /** The year of the latest game that played it, if any game has a year */
+  lastPlayed: number | null;
+  /** The average rating of the players who played it, of those rated; null if none was */
+  averageRating: number | null;
+  /** Some of the highest rated players who played it, the highest first */
+  topPlayers: PositionMovePlayer[];
+}
+
+/** The games of a reference database that reached a position, and what was played from it. */
+export interface PositionSummary {
+  fen: string;
+  /** The games that reached the position, including those that ended there */
+  games: number;
+  whiteWins: number;
+  draws: number;
+  blackWins: number;
+  /** The first year of the games that count as recent, in each move's recentGames */
+  recentSince: number;
+  /** The moves played from it, the most played first */
+  moves: PositionMoveStats[];
+}
+
+/** A search of a reference database's games by position: a page of them, sorted as asked. */
+export interface PositionSearchRequest {
+  fen: string;
+  sortBy?: string;
+  offset?: number;
+  limit?: number;
+  /** Whether the games come with their moves, as in a game search */
+  includeMoves?: boolean;
+}
+
+export interface PositionSearchResponse {
+  /** What was played from the position; with the first page only, null with the later ones */
+  summary: PositionSummary | null;
+  /** The page of the games that reached it */
+  games: GameSearchResponse;
 }

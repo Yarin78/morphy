@@ -24,11 +24,11 @@ import { openSettings, useSettingsTab } from './settingsDialogStore';
 import { CLOSE_DOCUMENT_SHORTCUT, MAC, shortcutLabel } from './shortcuts';
 
 // The keys of the panes beside the board
-const PANE_SHORTCUTS: Record<BoardSidePane, string> = { notation: 'Alt+N', engine: 'Alt+E', tree: 'Alt+T' };
+const PANE_SHORTCUTS: Record<BoardSidePane, string> = { notation: 'Alt+N', engine: 'Alt+E', games: 'Alt+G' };
 const PANE_ICONS: Record<BoardSidePane, ReactNode> = {
   notation: <TbNotes />,
   engine: <TbCpu />,
-  tree: <TbBinaryTree />,
+  games: <TbBinaryTree />,
 };
 
 export interface BoardCommandsProps {

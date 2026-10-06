@@ -1,8 +1,8 @@
-import { type KeyboardEvent, type PointerEvent, type ReactNode, useCallback, useEffect, useRef } from 'react';
+import { type KeyboardEvent, type PointerEvent, type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import { EntityCombobox, NATIONS, NationFlag, type NationInfo, TOURNAMENT_TYPES } from 'game-view';
 import { TbCalendar, TbChevronDown, TbChevronRight, TbSearch, TbX } from 'react-icons/tb';
-import { useDatabaseView } from '../databaseStore';
-import { defaultOrderOf, NOTATION_COLUMN, sortFieldOf } from '../../search/columns';
+import { type ResultsSource, useDatabaseView } from '../databaseStore';
+import { type ColumnSet, defaultOrderOf, NOTATION_COLUMN, sortFieldOf } from '../../search/columns';
 import { resetColumns, setColumnWidth, shownColumnKeys, toggleColumn, useResultColumns } from '../../search/columnLayout';
 import {
   type EntityForm,
@@ -28,7 +28,7 @@ import { queryOf } from '../../search/useDatabaseSearch';
 import { useDocuments } from '../documentsStore';
 import { openEntityAction } from '../openEntity';
 import { useSettings } from '../settings';
-import { ColumnPicker } from './ColumnPicker';
+import { ColumnMenu, ColumnPicker } from './ColumnPicker';
 
 // How near the end of the results, in rows, the next page is fetched
 const PREFETCH_ROWS = 20;
@@ -558,16 +558,38 @@ function QueryForm() {
  * entity's document. Double-clicked, a game opens on a board, an entity in a document of its own.
  */
 export function Results() {
-  const { search, databaseId, openGame, previewKeys } = useDatabaseView();
+  return <ResultsList {...useDatabaseView()} />;
+}
+
+/**
+ * The results of a search, as {@link Results}, of any search: the games of a board's position too.
+ * Without the count row, where the count is shown otherwise; the columns are then picked by
+ * right-clicking their headers alone, as they can be anyway.
+ */
+export function ResultsList({
+  search,
+  databaseId,
+  openGame,
+  previewKeys,
+  countRow = true,
+  columnSet,
+}: ResultsSource & {
+  countRow?: boolean;
+  /** The columns the list has, shown and sized apart from other lists of its kind; its kind's by default */
+  columnSet?: ColumnSet;
+}) {
   const { dispatch } = useDocuments();
   const kind = search.kind;
   const s = search.current;
   const results = s.results;
   const { fullPlayerNames, debugInfo } = useSettings().search;
-  const resultColumns = useResultColumns(kind, { fullPlayerNames });
+  const set = columnSet ?? kind;
+  const resultColumns = useResultColumns(set, { fullPlayerNames });
   const columns = resultColumns.shown;
   const listRef = useRef<HTMLDivElement>(null);
   const rows = results?.rows ?? [];
+  // The columns to pick from, where the column headers were right-clicked
+  const [columnMenu, setColumnMenu] = useState<{ x: number; y: number } | null>(null);
 
   // The row picked stays in sight as it's moved with the keys
   useEffect(() => {
@@ -615,6 +637,8 @@ export function Results() {
         return;
     }
     e.preventDefault();
+    // Not for the board of a board document too, which takes the keys of the whole page
+    e.stopPropagation();
   };
 
   const onScroll = () => {
@@ -624,18 +648,18 @@ export function Results() {
 
   // The games are fetched again when their moves are to be shown, as they come with the moves
   const refetchIfMovesShown = (wasShown: boolean) => {
-    if (kind === 'games' && !wasShown && shownColumnKeys(kind).includes(NOTATION_COLUMN)) search.run();
+    if (kind === 'games' && !wasShown && shownColumnKeys(set).includes(NOTATION_COLUMN)) search.run();
   };
 
   const onToggleColumn = (key: string) => {
-    const wasShown = shownColumnKeys(kind).includes(NOTATION_COLUMN);
-    toggleColumn(kind, key);
+    const wasShown = shownColumnKeys(set).includes(NOTATION_COLUMN);
+    toggleColumn(set, key);
     refetchIfMovesShown(wasShown);
   };
 
   const onResetColumns = () => {
-    const wasShown = shownColumnKeys(kind).includes(NOTATION_COLUMN);
-    resetColumns(kind);
+    const wasShown = shownColumnKeys(set).includes(NOTATION_COLUMN);
+    resetColumns(set);
     refetchIfMovesShown(wasShown);
   };
 
@@ -647,7 +671,7 @@ export function Results() {
     const startX = e.clientX;
     handle.setPointerCapture(e.pointerId);
     const onMove = (ev: globalThis.PointerEvent) =>
-      setColumnWidth(kind, key, Math.max(MIN_COLUMN_WIDTH, Math.round(width + ev.clientX - startX)));
+      setColumnWidth(set, key, Math.max(MIN_COLUMN_WIDTH, Math.round(width + ev.clientX - startX)));
     const onUp = () => {
       handle.removeEventListener('pointermove', onMove);
       handle.removeEventListener('pointerup', onUp);
@@ -668,21 +692,32 @@ export function Results() {
 
   return (
     <div className="search-results">
-      <div className="search-results-head">
-        <span>
-          {results?.loading && rows.length === 0 ? 'Searching…' : count}
-          {debugInfo && results?.durationMs != null && !(results.loading && rows.length === 0) && (
-            <span
-              className="search-duration"
-              title={`${results.query || '(everything)'}\nSorted by ${results.sortBy}`}
-            >
-              {' · '}
-              {formatDuration(results.durationMs)}
-            </span>
-          )}
-        </span>
-        <ColumnPicker columns={resultColumns} onToggle={onToggleColumn} onReset={onResetColumns} />
-      </div>
+      {countRow && (
+        <div className="search-results-head">
+          <span>
+            {results?.loading && rows.length === 0 ? 'Searching…' : count}
+            {debugInfo && results?.durationMs != null && !(results.loading && rows.length === 0) && (
+              <span
+                className="search-duration"
+                title={`${results.query || '(everything)'}\nSorted by ${results.sortBy}`}
+              >
+                {' · '}
+                {formatDuration(results.durationMs)}
+              </span>
+            )}
+          </span>
+          <ColumnPicker columns={resultColumns} onToggle={onToggleColumn} onReset={onResetColumns} />
+        </div>
+      )}
+      {columnMenu && (
+        <ColumnMenu
+          {...columnMenu}
+          columns={resultColumns}
+          onToggle={onToggleColumn}
+          onReset={onResetColumns}
+          onClose={() => setColumnMenu(null)}
+        />
+      )}
       {results?.error && <div className="search-error">{results.error}</div>}
       <div className="search-results-list" ref={listRef} tabIndex={0} onKeyDown={onKeyDown} onScroll={onScroll}>
         <table className="search-table" style={{ minWidth: columns.reduce((sum, c) => sum + c.width, 0) }}>
@@ -694,7 +729,12 @@ export function Results() {
             <col />
           </colgroup>
           <thead>
-            <tr>
+            <tr
+              onContextMenu={(e) => {
+                e.preventDefault();
+                setColumnMenu({ x: e.clientX, y: e.clientY });
+              }}
+            >
               {columns.map((c) => {
                 const field = sortFieldOf(kind, c.key);
                 const sorted = field && field === sortField;
