@@ -17,4 +17,8 @@ describe('scoreOf', () => {
     expect(scoreOf(results, true)).toBe(0.6);
     expect(scoreOf(results, false)).toBe(0.4);
   });
+
+  it('leaves out the games without a result', () => {
+    expect(scoreOf({ games: 12, whiteWins: 5, draws: 2, blackWins: 3 }, true)).toBe(0.6);
+  });
 });

@@ -20,11 +20,12 @@ Morphy is a Java 21 library and CLI for reading/writing ChessBase databases (.cb
 - **morphy-chessbase**: ChessBase concepts shared by the v1 and v2 formats but independent of either on-disk layout (`se.yarin.morphy.chessbase`): the annotation models and their PGN codecs, `Nation`, `Medal`, `GameHeaderFlags`, the guiding text model, `GameDtoImporter`, `GameMovesDtos` (moves + annotations as DTOs) and `GameMovesPgn` (annotations in PGN comments), and the `DatabaseLocks` behind transactions. Each format module keeps its own binary serializers for these
 - **morphy-cbh**: The ChessBase v1 (`.cbh`) reader/writer and database API; `DatabaseCbh` is the v1 engine, and `DatabaseCbhFacade` wraps it as the `Database` facade, using the v1↔DTO converters (`se.yarin.morphy.convert`)
 - **morphy-cb2**: The ChessBase v2 (`.2cbh`) reader/writer; `Database2Cbh` is the v2 engine (read and write transactions over the six files), and `Database2CbhFacade` wraps it as the `Database` facade
+- **morphy-positions**: The position index of a reference database: from each position in its games to the games that reached it and the moves they played, with their statistics; built from any format through the facade's `GameScanning` extension, kept next to the database
 - **morphy-cli**: Command-line interface using Picocli
 - **morphy-tools**: Development utilities
 - **morphy-service**: Spring Boot backend exposing the DTOs over HTTP for the NodeJS frontend
 
-Module dependencies point downward only: everything depends on **morphy-api**, the v1/v2 modules also depend on **morphy-chessbase**, and they never depend on each other (morphy-cb2 uses morphy-cbh in tests only, to compare the two formats). A `DatabaseProvider` SPI + `Databases.open` factory dispatch to the right format by file extension.
+Module dependencies point downward only: everything depends on **morphy-api**, the v1/v2 modules also depend on **morphy-chessbase**, morphy-positions depends on morphy-api alone, and the format modules never depend on each other (morphy-cb2 uses morphy-cbh in tests only, to compare the two formats). A `DatabaseProvider` SPI + `Databases.open` factory dispatch to the right format by file extension.
 
 This is an internal project! There is no need to keep things around for backward compatibility, unless explicitly told to do so.
 
@@ -49,6 +50,7 @@ Key patterns:
 - `DatabaseCbh.java` (morphy-cbh) - The v1 engine: indexes, transactions, the query planner
 - `DatabaseCbhFacade.java` (morphy-cbh) - The `Database` facade over a `DatabaseCbh`, returned by `Databases.open` for `.cbh` files; also offers `CbhDiagnostics` via `extension(...)`
 - `Database2Cbh.java` (morphy-cb2) - The v2 engine: `ReadTransaction`/`WriteTransaction` over the file classes in `se.yarin.morphy.cb2.*` (one package per file kind); `Database2CbhFacade` is its `Database` facade
+- `GameScanning` (morphy-api) - A facade extension reading every game's moves and header facts fast, from several threads; what the position index is built from (`PositionIndexBuilder`, morphy-positions)
 - `DatabasePgn.java` (morphy-api) - The `Database` over a plain `.pgn` file, with a `.pgi` offset index in ChessBase's format (rebuilt when missing or stale); no entities, search is a full scan; adds append, replaces rewrite the file
 - `DatabaseReadTransaction` / `DatabaseWriteTransaction` - All v1 database operations
 - `Position.java` - Immutable board state with Zobrist hashing

@@ -7,7 +7,13 @@ import picocli.CommandLine;
     description = "Performs an operation on a ChessBase file",
     mixinStandardHelpOptions = true,
     subcommands = {
-      Games.class, Players.class, Tournaments.class, Check.class, Update.class, SummarizeOpening.class
+      Games.class,
+      Players.class,
+      Tournaments.class,
+      Check.class,
+      Update.class,
+      SummarizeOpening.class,
+      Positions.class
     })
 class ChessBaseCommand implements Runnable {
 

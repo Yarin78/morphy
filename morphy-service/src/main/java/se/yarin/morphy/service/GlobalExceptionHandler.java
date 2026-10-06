@@ -2,6 +2,7 @@ package se.yarin.morphy.service;
 
 import java.util.Map;
 import org.slf4j.Logger;
+import se.yarin.morphy.service.positions.PositionIndexUnavailableException;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.http.HttpStatus;
@@ -19,6 +20,14 @@ public class GlobalExceptionHandler {
   public ResponseEntity<Map<String, String>> handleIllegalArgument(IllegalArgumentException e) {
     log.warn("Bad request: {}", e.getMessage());
     return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+  }
+
+  /** A reference database without a usable position index: it needs to be built. */
+  @ExceptionHandler(PositionIndexUnavailableException.class)
+  public ResponseEntity<Map<String, String>> handlePositionIndexUnavailable(
+      PositionIndexUnavailableException e) {
+    log.warn("Position index unavailable: {}", describe(e));
+    return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", describe(e)));
   }
 
   /** An operation the database's format doesn't support, e.g. reading a format that is a stub. */

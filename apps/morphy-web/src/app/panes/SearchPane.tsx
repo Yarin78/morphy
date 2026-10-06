@@ -736,7 +736,7 @@ export function ResultsList({
               }}
             >
               {columns.map((c) => {
-                const field = sortFieldOf(kind, c.key);
+                const field = sortFieldOf(set, c.key);
                 const sorted = field && field === sortField;
                 return (
                   <th key={c.key} className={field ? 'sortable' : undefined}>

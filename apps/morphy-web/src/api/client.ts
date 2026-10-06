@@ -4,11 +4,9 @@ import type {
   DebugSearchResponse,
   FilterOptionsResponse,
   GameDto,
-  GameSearchResponse,
   PositionSearchRequest,
   PositionSearchResponse,
 } from './types';
-import { mockSearchPosition } from './mockPositionSearch';
 import { callFinished, callStarted, newRequestId, SESSION_ID } from '../logs/logStore';
 
 const API_BASE = '/api';
@@ -105,20 +103,12 @@ export async function fetchDatabases(): Promise<DatabaseListResponse> {
 }
 
 /**
- * The reference databases, which have the indexes to search their games by position. The service
- * doesn't mark them yet: until it does, those with a year in their name are, named by their first
- * word and the year: Megabase '26 (or every database, if none has a year).
+ * The reference databases: those given a short reference name in the service's configuration,
+ * whose games can be searched by position.
  */
 export async function fetchReferenceDatabases(): Promise<(DatabaseResponse & { referenceName: string })[]> {
   const { databases } = await fetchDatabases();
-  const marked = databases.filter((db): db is DatabaseResponse & { referenceName: string } => !!db.referenceName);
-  if (marked.length > 0) return marked;
-  const firstWord = (db: DatabaseResponse) => db.displayName.split(/\s+/)[0];
-  const withYear = databases.flatMap((db) => {
-    const year = db.displayName.match(/\b(19|20)(\d\d)\b/);
-    return year ? [{ ...db, referenceName: `${firstWord(db)} '${year[2]}` }] : [];
-  });
-  return withYear.length > 0 ? withYear : databases.map((db) => ({ ...db, referenceName: firstWord(db) }));
+  return databases.filter((db): db is DatabaseResponse & { referenceName: string } => !!db.referenceName);
 }
 
 /**
@@ -205,12 +195,9 @@ export async function updateEntity<T extends { id: number | null }>(
 
 /**
  * The games of a reference database that reached a position, a page of them, with what was played
- * from it on the first page.
- *
- * Not in the service yet: answered by a mock until it is. It will be
- * `GET /databases/{id}/positions/search?fen=...&sortBy=...&offset=...&limit=...`, with filters on
- * the games to come.
+ * from it on the first page. A database whose position index is missing or out of date answers
+ * 409, saying how to build it.
  */
 export async function searchPosition(databaseId: string, request: PositionSearchRequest): Promise<PositionSearchResponse> {
-  return mockSearchPosition(databaseId, request, (id, page) => search<GameSearchResponse>(id, 'games', page));
+  return getJson(`${databaseUrl(databaseId)}/positions/search?${toParams(request)}`, 'Search position');
 }

@@ -17,7 +17,7 @@ mvn exec:java -pl morphy-tools -Dexec.mainClass="se.yarin.morphy.tools.<ToolName
 - **ExploreCbmFile** - Analyzes ChessBase media (CBM) file structure and manifest data.
 - **FileSearch** - Binary file analysis for finding byte sequences and encryption keys in ChessBase executables.
 - **RipDbHeaders** - Backs up file headers from CBH/CBG files for comparative analysis.
-- **PositionIndexStats** - Counts the positions in a v2 database's games (distinct, reached by one game, by move) and estimates how much an index from positions to games would take.
+- **PositionIndexStats** - Counts the positions in a database's games (distinct, reached by one game, by move) and estimates how much an index from positions to games would take.
 - **IOCPUPerformanceTest / FileChannelPerformanceTest** - Performance benchmarking utilities.
 
 ## Archived Tools

@@ -116,9 +116,13 @@ export function defaultColumnsOf(kind: ColumnSet): string[] {
     .filter((key) => key !== 'id');
 }
 
-/** The sort field of a column of a kind's results, if it can be sorted on. */
-export function sortFieldOf(kind: SearchKind, columnKey: string): string | undefined {
-  return SORTABLE_COLUMN_MAP[ENTITY_TYPES[kind]][columnKey];
+// The fields the games of a position can be sorted on, from the facts its index keeps of them
+const POSITION_GAME_SORT_FIELDS = new Set(['id', 'playedDate', 'playedYear', 'whiteElo', 'blackElo', 'eloAvg', 'eloMax']);
+
+/** The sort field of a column of a list of results, if it can be sorted on. */
+export function sortFieldOf(set: ColumnSet, columnKey: string): string | undefined {
+  const field = SORTABLE_COLUMN_MAP[ENTITY_TYPES[kindOfSet(set)]][columnKey];
+  return set === 'positionGames' && field && !POSITION_GAME_SORT_FIELDS.has(field) ? undefined : field;
 }
 
 // The sort fields sorted with the largest or latest first, unless sorted again

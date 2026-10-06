@@ -27,16 +27,14 @@ import se.yarin.chess.GameMovesModel;
 import se.yarin.chess.Move;
 import se.yarin.chess.Position;
 import se.yarin.morphy.api.AccessMode;
-import se.yarin.morphy.cb2.Database2Cbh;
-import se.yarin.morphy.cb2.ReadTransaction;
-import se.yarin.morphy.cb2.games.GameHeader;
-import se.yarin.morphy.cb2.games.GameRecord;
-import se.yarin.morphy.cb2.games.TextHeader;
-import se.yarin.morphy.cb2.moves.MoveStreamCodec;
-import se.yarin.morphy.cb2.storage.RecordFile;
+import se.yarin.morphy.api.Database;
+import se.yarin.morphy.api.Databases;
+import se.yarin.morphy.api.GameScan;
+import se.yarin.morphy.api.GameScanning;
+import se.yarin.morphy.api.ScannedGame;
 
 /**
- * Measures what an index from positions to the games reaching them would hold for a v2 database:
+ * Measures what an index from positions to the games reaching them would hold for a database:
  * how many distinct positions its games' main lines go through, how many of them only one game
  * reaches, how many (position, next move) groups there are of each size, and roughly how much
  * the parts of such an index would take compactly stored.
@@ -71,7 +69,7 @@ public class PositionIndexStats {
   public static void main(String[] args) throws Exception {
     if (args.length < 3) {
       System.err.println(
-          "Usage: PositionIndexStats <database.2cbh> <work directory> <report file> [max games]");
+          "Usage: PositionIndexStats <database> <work directory> <report file> [max games]");
       System.exit(1);
     }
     File database = new File(args[0]);
@@ -79,13 +77,13 @@ public class PositionIndexStats {
     int maxGames = args.length > 3 ? Integer.parseInt(args[3]) : Integer.MAX_VALUE;
     Stats stats = new Stats();
     System.err.println("Opening " + database);
-    try (Database2Cbh db = Database2Cbh.open(database, AccessMode.READ_ONLY);
-        ReadTransaction txn = new ReadTransaction(db)) {
-      int count = Math.min(txn.count(), maxGames);
+    try (Database db = Databases.open(database, AccessMode.READ_ONLY);
+        GameScan scan = db.extension(GameScanning.class).orElseThrow().openScan()) {
+      int count = Math.min(scan.maxId(), maxGames);
       stats.database = database.getName();
       stats.records = count;
       stats.gameIdUniverse = count;
-      decode(db, count, work, stats);
+      decode(scan, count, work, stats);
     }
     try {
       int[] branchOff = new int[stats.gameIdUniverse + 1];
@@ -180,7 +178,7 @@ public class PositionIndexStats {
     }
   }
 
-  private static void decode(Database2Cbh db, int count, Path work, Stats stats)
+  private static void decode(GameScan scan, int count, Path work, Stats stats)
       throws Exception {
     int threads = Runtime.getRuntime().availableProcessors();
     AtomicInteger next = new AtomicInteger(1);
@@ -212,7 +210,7 @@ public class PositionIndexStats {
                   while ((id = next.getAndAdd(256)) <= count) {
                     for (int i = id; i < Math.min(id + 256, count + 1); i++) {
                       try {
-                        decodeGame(db, i, positions, buffer, local);
+                        decodeGame(scan, i, positions, buffer, local);
                       } catch (RuntimeException e) {
                         throw new IllegalStateException("Failed at record " + i + ": " + e, e);
                       }
@@ -265,37 +263,13 @@ public class PositionIndexStats {
   }
 
   private static void decodeGame(
-      Database2Cbh db, int id, GamePositions positions, Buffer buffer, Stats stats) {
-    GameRecord record = db.gameHeaderFile().get(id);
-    if (record instanceof TextHeader) {
-      stats.texts++;
+      GameScan scan, int id, GamePositions positions, Buffer buffer, Stats stats) {
+    ScannedGame game = scan.read(id);
+    if (game == null) {
+      stats.skipped++;
       return;
     }
-    if (!(record instanceof GameHeader header)) {
-      stats.analyses++;
-      return;
-    }
-    if (header.deleted()) {
-      stats.deleted++;
-      return;
-    }
-    if (header.chess960()) {
-      stats.chess960++;
-      return;
-    }
-    GameMovesModel moves;
-    try {
-      RecordFile.Record data = db.moveFile().read(header.movesOffset());
-      // A guiding text's body is in the same file; never decoded as moves
-      if (data.tag() != RecordFile.TAG_GAME) {
-        stats.notMoves++;
-        return;
-      }
-      moves = MoveStreamCodec.decode(data.tag(), data.content());
-    } catch (RuntimeException e) {
-      stats.undecodable++;
-      return;
-    }
+    GameMovesModel moves = game.moves();
     stats.games++;
     if (moves.isSetupPosition()) {
       stats.setupGames++;
@@ -481,7 +455,7 @@ public class PositionIndexStats {
     int gameIdUniverse;
 
     // Pass 1
-    long games, texts, analyses, deleted, notMoves, chess960, undecodable, setupGames;
+    long games, skipped, setupGames;
     long occurrences, repeated;
     double decodeSeconds;
 
@@ -507,12 +481,7 @@ public class PositionIndexStats {
 
     void addDecodeCounts(Stats o) {
       games += o.games;
-      texts += o.texts;
-      analyses += o.analyses;
-      deleted += o.deleted;
-      notMoves += o.notMoves;
-      chess960 += o.chess960;
-      undecodable += o.undecodable;
+      skipped += o.skipped;
       setupGames += o.setupGames;
       occurrences += o.occurrences;
       repeated += o.repeated;
@@ -591,12 +560,8 @@ public class PositionIndexStats {
       out.printf(Locale.ROOT, "Records                     %,15d%n", records);
       out.printf(Locale.ROOT, "Games indexed               %,15d%n", games);
       out.printf(Locale.ROOT, "  from a setup position     %,15d%n", setupGames);
-      out.printf(Locale.ROOT, "Skipped: guiding texts      %,15d%n", texts);
-      out.printf(Locale.ROOT, "Skipped: analyses           %,15d%n", analyses);
-      out.printf(Locale.ROOT, "Skipped: deleted games      %,15d%n", deleted);
-      out.printf(Locale.ROOT, "Skipped: moves not a game   %,15d%n", notMoves);
-      out.printf(Locale.ROOT, "Skipped: Chess960           %,15d%n", chess960);
-      out.printf(Locale.ROOT, "Skipped: undecodable        %,15d%n", undecodable);
+      out.printf(Locale.ROOT, "Skipped (texts, analyses,   %,15d%n", skipped);
+      out.printf(Locale.ROOT, "  deleted, Chess960, broken)%n");
       out.printf(
           Locale.ROOT,
           "Decoding                    %,15.0f s (%,.0f games/s)%n%n",

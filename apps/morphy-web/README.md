@@ -51,12 +51,13 @@ last played, and some of the strongest players who played it; a move clicked is
 played on the board. On the right, the games that reached it, listed as a
 database's game results; one double-clicked opens at the position.
 
-Both come from one call, `searchPosition` (to be
-`GET /api/databases/{id}/positions/search?fen=...`): a page of the games, and with
-the first page what was played from the position. The service has neither yet, so
-it's a mock (`src/api/mockPositionSearch.ts`): the databases with a year in their name count
-as reference databases, named by their first word and the year; the summary is made up from the
-position; and the games are the database's, all of them, whatever the position.
+Both come from one call, `searchPosition`
+(`GET /api/databases/{id}/positions/search?fen=...`): a page of the games, and with
+the first page what was played from the position. The service answers from the
+database's position index (morphy-positions), built with `morphy positions build`;
+without one, or with one out of date, it answers 409 saying so, which the pane shows.
+The games can only be sorted by what the index keeps of them: id, date, year and
+ratings. Scores count the games with a result.
 
 ## Pages
 

@@ -14,10 +14,11 @@ interface Results {
   blackWins: number;
 }
 
-/** The share of the points a side got in the games, 0–1. */
+/** The share of the points a side got in the games that were decided, 0–1. */
 export function scoreOf(results: Results, white: boolean): number {
   const wins = white ? results.whiteWins : results.blackWins;
-  return results.games > 0 ? (wins + results.draws / 2) / results.games : 0;
+  const decided = results.whiteWins + results.draws + results.blackWins;
+  return decided > 0 ? (wins + results.draws / 2) / decided : 0;
 }
 
 /** Whether White is to move in a position. */

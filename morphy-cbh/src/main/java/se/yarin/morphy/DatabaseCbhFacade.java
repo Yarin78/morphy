@@ -15,6 +15,8 @@ import se.yarin.morphy.api.Database;
 import se.yarin.morphy.api.DatabaseFormat;
 import se.yarin.morphy.api.EntityKind;
 import se.yarin.morphy.api.GameFetchOptions;
+import se.yarin.morphy.api.GameScan;
+import se.yarin.morphy.api.GameScanning;
 import se.yarin.morphy.api.query.FilterCondition;
 import se.yarin.morphy.api.query.Query;
 import se.yarin.morphy.api.query.QuerySupport;
@@ -75,7 +77,7 @@ import se.yarin.morphy.queries.visualisation.QueryDescriptionFormatter;
  * <p>Obtain one through {@link se.yarin.morphy.api.Databases#open}; code that needs the v1
  * internals uses {@link DatabaseCbh} directly instead.
  */
-public class DatabaseCbhFacade implements Database, CbhDiagnostics {
+public class DatabaseCbhFacade implements Database, CbhDiagnostics, GameScanning {
 
   private final @NotNull DatabaseCbh database;
   private final @NotNull PlayerDtoConverter players = new PlayerDtoConverter();
@@ -198,6 +200,11 @@ public class DatabaseCbhFacade implements Database, CbhDiagnostics {
   @Override
   public void close() throws IOException {
     database.close();
+  }
+
+  @Override
+  public @NotNull GameScan openScan() {
+    return new CbhScan(database);
   }
 
   // ── Games ────────────────────────────────────────────────────────────────
