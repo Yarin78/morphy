@@ -2,10 +2,7 @@ package se.yarin.morphy.positions;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -56,7 +53,7 @@ public record MoveStats(
       int recentSince) {
     int whiteWins = 0, draws = 0, blackWins = 0, recent = 0, lastYear = 0, eloCount = 0;
     long eloSum = 0;
-    Map<Long, Integer> best = new HashMap<>();
+    TopPlayers top = new TopPlayers();
     for (int id : gameIds) {
       switch (facts.result(id)) {
         case WHITE_WINS, WHITE_WINS_ON_FORFEIT -> whiteWins++;
@@ -75,21 +72,64 @@ public record MoveStats(
         eloCount++;
         long player = whiteToMove ? facts.whitePlayer(id) : facts.blackPlayer(id);
         if (player >= 0) {
-          best.merge(player, elo, Math::max);
+          top.add(player, elo);
         }
       }
     }
-    List<RatedPlayer> top =
-        best.entrySet().stream()
-            .map(e -> new RatedPlayer(e.getKey(), e.getValue()))
-            .sorted(
-                Comparator.comparingInt(RatedPlayer::elo)
-                    .reversed()
-                    .thenComparingLong(RatedPlayer::playerId))
-            .limit(TOP_PLAYERS)
-            .toList();
     return new MoveStats(
-        gameIds.length, whiteWins, draws, blackWins, recent, lastYear, eloSum, eloCount, top);
+        gameIds.length, whiteWins, draws, blackWins, recent, lastYear, eloSum, eloCount, top.list());
+  }
+
+  /**
+   * The players with the highest ratings, each with their highest, as games are gone through: the
+   * best few kept in small arrays, the highest first, the lower player id first among equals. A
+   * game rarely gets in, so most cost a comparison.
+   */
+  private static final class TopPlayers {
+    private final long[] players = new long[TOP_PLAYERS];
+    private final int[] elos = new int[TOP_PLAYERS];
+    private int size;
+
+    private boolean better(int elo, long player, int i) {
+      return elo > elos[i] || (elo == elos[i] && player < players[i]);
+    }
+
+    void add(long player, int elo) {
+      if (size == TOP_PLAYERS && !better(elo, player, size - 1)) {
+        // Not among the best; if the player is, they're there with a rating at least this high
+        return;
+      }
+      int at = -1;
+      for (int i = 0; i < size; i++) {
+        if (players[i] == player) {
+          at = i;
+          break;
+        }
+      }
+      if (at >= 0) {
+        if (elo <= elos[at]) {
+          return;
+        }
+      } else {
+        at = size < TOP_PLAYERS ? size++ : size - 1;
+      }
+      // In at's place, moved up past those it's better than
+      while (at > 0 && better(elo, player, at - 1)) {
+        players[at] = players[at - 1];
+        elos[at] = elos[at - 1];
+        at--;
+      }
+      players[at] = player;
+      elos[at] = elo;
+    }
+
+    List<RatedPlayer> list() {
+      List<RatedPlayer> list = new ArrayList<>(size);
+      for (int i = 0; i < size; i++) {
+        list.add(new RatedPlayer(players[i], elos[i]));
+      }
+      return list;
+    }
   }
 
   void write(@NotNull Bytes out) {

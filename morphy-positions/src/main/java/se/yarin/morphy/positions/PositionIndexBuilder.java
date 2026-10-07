@@ -341,9 +341,9 @@ public final class PositionIndexBuilder {
    */
   private record PreparedBucket(long[] keys, long[] offsets, Bytes sharedData, Bytes singleData) {}
 
-  // Buckets sorted at once: each takes some 30 bytes per record while sorted, up to 500 MB for the
-  // largest bucket of a Megabase
-  private static final int SORTED_AT_ONCE = Math.min(4, Runtime.getRuntime().availableProcessors());
+  // Buckets sorted at once: each takes some 32 bytes per record while sorted, 60 MB for the average
+  // bucket of a Megabase and 500 MB for its largest
+  private static final int SORTED_AT_ONCE = Math.min(8, Runtime.getRuntime().availableProcessors());
 
   /**
    * Writes the index files, the buckets sorted several at a time and written in order; returns
