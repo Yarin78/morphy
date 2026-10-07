@@ -44,16 +44,23 @@ public class Position {
 
   private static final Stone[] emptyBoard;
 
+  // The stones by ordinal, as the board holds them
+  private static final Stone[] STONES = Stone.values();
+  private static final byte EMPTY = (byte) NO_STONE.ordinal();
+
   static {
     startPosition =
-        new Position(startBoard, E1, E8, WHITE, 15, Chess.NO_COL, Chess960.REGULAR_CHESS_SP);
+        new Position(
+            toOrdinals(startBoard), E1, E8, WHITE, 15, Chess.NO_COL, Chess960.REGULAR_CHESS_SP);
     emptyBoard = new Stone[64];
     for (int i = 0; i < 64; i++) {
       emptyBoard[i] = NO_STONE;
     }
   }
 
-  private final Stone[] board; // This array must not be modified nor exposed
+  // The ordinal of the stone on each square: a byte rather than a reference, as every move copies
+  // the board. This array must not be modified nor exposed
+  private final byte[] board;
   private final Player toMove;
   private final int enPassantCol; // Chess.NO_COL if EP not possible;
   private final int castlesMask;
@@ -68,13 +75,27 @@ public class Position {
   public Stone stoneAt(int sqi) {
     if (sqi < 0 || sqi > 63)
       throw new IllegalArgumentException("sqi must be between 0 and 63, inclusive.");
-    return board[sqi];
+    return STONES[board[sqi]];
   }
 
   public Stone stoneAt(int col, int row) {
     if (row < 0 || col < 0 || row >= 8 || col >= 8)
       throw new IllegalArgumentException("row and col must be between 0 and 7, inclusive.");
-    return board[Chess.coorToSqi(col, row)];
+    return STONES[board[Chess.coorToSqi(col, row)]];
+  }
+
+  /** The stone on a square, without checking the square. */
+  private Stone at(int sqi) {
+    return STONES[board[sqi]];
+  }
+
+  /** A board of stones as their ordinals. */
+  private static byte[] toOrdinals(Stone[] stones) {
+    byte[] ordinals = new byte[64];
+    for (int i = 0; i < 64; i++) {
+      ordinals[i] = (byte) stones[i].ordinal();
+    }
+    return ordinals;
   }
 
   public Player playerToMove() {
@@ -137,7 +158,7 @@ public class Position {
   public Position(
       Stone[] board, Player playerToMove, EnumSet<Castles> castles, int epFile, int chess960sp) {
     this(
-        board.clone(),
+        toOrdinals(board),
         locateStone(board, WHITE_KING),
         locateStone(board, BLACK_KING),
         playerToMove,
@@ -151,7 +172,7 @@ public class Position {
   // the contents of the array after calling. We can enforce this since this is a private
   // constructor.
   private Position(
-      Stone[] board,
+      byte[] board,
       int whiteKingSqi,
       int blackKingSqi,
       Player playerToMove,
@@ -161,9 +182,9 @@ public class Position {
     if (chess960sp < 0 || chess960sp >= 960) {
       throw new IllegalArgumentException("Illegal Chess960 start position: " + chess960sp);
     }
-    assert board[whiteKingSqi] == WHITE_KING
+    assert STONES[board[whiteKingSqi]] == WHITE_KING
         : "White king was not at the expected square " + Chess.sqiToStr(whiteKingSqi);
-    assert board[blackKingSqi] == BLACK_KING
+    assert STONES[board[blackKingSqi]] == BLACK_KING
         : "Black king was not at the expected square " + Chess.sqiToStr(blackKingSqi);
     this.board = board; // No cloning for performance reasons; see comment above
     // locateKings(); // TODO: Add constructor option to pass this in
@@ -174,22 +195,22 @@ public class Position {
     if ((castles & 3) != 0) {
       int wk = Chess960.getKingSqi(chess960sp, WHITE);
       if (!(whiteKingSqi == wk
-          && this.board[Chess960.getHRookSqi(chess960sp, WHITE)] == WHITE_ROOK)) {
+          && at(Chess960.getHRookSqi(chess960sp, WHITE)) == WHITE_ROOK)) {
         castles &= ~1;
       }
       if (!(whiteKingSqi == wk
-          && this.board[Chess960.getARookSqi(chess960sp, WHITE)] == WHITE_ROOK)) {
+          && at(Chess960.getARookSqi(chess960sp, WHITE)) == WHITE_ROOK)) {
         castles &= ~2;
       }
     }
     if ((castles & 12) != 0) {
       int bk = Chess960.getKingSqi(chess960sp, BLACK);
       if (!(blackKingSqi == bk
-          && this.board[Chess960.getHRookSqi(chess960sp, BLACK)] == BLACK_ROOK)) {
+          && at(Chess960.getHRookSqi(chess960sp, BLACK)) == BLACK_ROOK)) {
         castles &= ~4;
       }
       if (!(blackKingSqi == bk
-          && this.board[Chess960.getARookSqi(chess960sp, BLACK)] == BLACK_ROOK)) {
+          && at(Chess960.getARookSqi(chess960sp, BLACK)) == BLACK_ROOK)) {
         castles &= ~8;
       }
     }
@@ -229,7 +250,7 @@ public class Position {
     }
 
     return new Position(
-        board,
+        toOrdinals(board),
         locateStone(board, WHITE_KING),
         locateStone(board, BLACK_KING),
         playerToMove,
@@ -545,13 +566,13 @@ public class Position {
       return next;
     }
 
-    Stone[] newBoard = board.clone();
+    byte[] newBoard = board.clone();
     int enPassantFile = NO_COL;
     int newCastlesMask = this.castlesMask;
     int newWhiteKingSqi = this.whiteKingSqi;
     int newBlackKingSqi = this.blackKingSqi;
 
-    Piece movingPiece = stoneAt(move.fromSqi()).toPiece();
+    Piece movingPiece = at(move.fromSqi()).toPiece();
     // The squares changed besides the move's own: the rook's when castling, or the pawn's taken
     // en passant
     int otherSqi = NO_SQUARE, anotherSqi = NO_SQUARE;
@@ -575,10 +596,10 @@ public class Position {
 
       otherSqi = rookFromSqi;
       anotherSqi = rookToSqi;
-      newBoard[rookFromSqi] = NO_STONE;
-      newBoard[move.fromSqi()] = NO_STONE;
-      newBoard[rookToSqi] = Piece.ROOK.toStone(toMove);
-      newBoard[move.toSqi()] = Piece.KING.toStone(toMove);
+      newBoard[rookFromSqi] = EMPTY;
+      newBoard[move.fromSqi()] = EMPTY;
+      newBoard[rookToSqi] = (byte) Piece.ROOK.toStone(toMove).ordinal();
+      newBoard[move.toSqi()] = (byte) Piece.KING.toStone(toMove).ordinal();
 
       if (toMove == WHITE) {
         newCastlesMask &= ~1;
@@ -590,22 +611,22 @@ public class Position {
     } else {
       newBoard[move.toSqi()] = newBoard[move.fromSqi()];
       if (move.toSqi() != move.fromSqi()) {
-        newBoard[move.fromSqi()] = NO_STONE;
+        newBoard[move.fromSqi()] = EMPTY;
       }
 
       switch (movingPiece) {
         case PAWN -> {
           if (Chess.deltaCol(move.fromSqi(), move.toSqi()) != 0
-              && board[move.toSqi()] == NO_STONE) {
+              && board[move.toSqi()] == EMPTY) {
             // En passant
             otherSqi = coorToSqi(move.toCol(), move.fromRow());
-            newBoard[otherSqi] = NO_STONE;
+            newBoard[otherSqi] = EMPTY;
           } else if (move.toRow() == 0 || move.toRow() == 7) {
             Stone promotionStone = move.promotionStone();
             if (promotionStone == NO_STONE) {
               promotionStone = toMove == WHITE ? WHITE_QUEEN : BLACK_QUEEN;
             }
-            newBoard[move.toSqi()] = promotionStone;
+            newBoard[move.toSqi()] = (byte) promotionStone.ordinal();
           } else if (Math.abs(Chess.deltaRow(move.fromSqi(), move.toSqi())) == 2) {
             enPassantFile = move.fromCol();
           }
@@ -662,7 +683,7 @@ public class Position {
       if (sqi == NO_SQUARE || board[sqi] == parent.board[sqi] || seenBefore(squares, i)) {
         continue;
       }
-      int before = parent.board[sqi].ordinal(), after = board[sqi].ordinal();
+      int before = parent.board[sqi], after = board[sqi];
       lo ^= zobristKeyLo[before][sqi] ^ zobristKeyLo[after][sqi];
       hi ^= zobristKeyHi[before][sqi] ^ zobristKeyHi[after][sqi];
     }
@@ -718,9 +739,9 @@ public class Position {
   public List<Move> generateAllPseudoLegalMoves(EnumSet<Piece> pieces) {
     ArrayList<Move> moves = new ArrayList<>();
     for (int i = 0; i < 64; i++) {
-      if (board[i].hasPlayer(toMove)) {
-        if (pieces.contains(board[i].toPiece())) {
-          switch (board[i].toPiece()) {
+      if (at(i).hasPlayer(toMove)) {
+        if (pieces.contains(at(i).toPiece())) {
+          switch (at(i).toPiece()) {
             case PAWN -> moves.addAll(generatePawnMoves(i));
             case KNIGHT -> moves.addAll(generateKnightMoves(i));
             case BISHOP -> moves.addAll(generateBishopMoves(i));
@@ -756,12 +777,12 @@ public class Position {
     if (move.isNullMove()) {
       return !isCheck();
     }
-    if (!board[move.fromSqi()].hasPlayer(toMove)) {
+    if (!at(move.fromSqi()).hasPlayer(toMove)) {
       return false;
     }
     // This could be made more efficient
     boolean pseudoLegal =
-        switch (board[move.fromSqi()].toPiece()) {
+        switch (at(move.fromSqi()).toPiece()) {
           case PAWN -> generatePawnMoves(move.fromSqi()).contains(move);
           case KNIGHT -> generateKnightMoves(move.fromSqi()).contains(move);
           case BISHOP -> generateBishopMoves(move.fromSqi()).contains(move);
@@ -809,7 +830,7 @@ public class Position {
     long hash = hashLo;
     if (hash == 0) {
       for (int i = 0; i < 64; i++) {
-        hash ^= zobristKeyLo[board[i].ordinal()][i];
+        hash ^= zobristKeyLo[board[i]][i];
       }
       hash ^= zobristKeyCastleLo[castlesMask];
       hash ^= zobristKeyEnPassantLo[hashedEnPassantCol() + 1];
@@ -824,7 +845,7 @@ public class Position {
     long hash = hashHi;
     if (hash == 0) {
       for (int i = 0; i < 64; i++) {
-        hash ^= zobristKeyHi[board[i].ordinal()][i];
+        hash ^= zobristKeyHi[board[i]][i];
       }
       hash ^= zobristKeyCastleHi[castlesMask];
       hash ^= zobristKeyEnPassantHi[hashedEnPassantCol() + 1];
