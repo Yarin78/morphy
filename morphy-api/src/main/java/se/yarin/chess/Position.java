@@ -19,12 +19,14 @@ import static se.yarin.chess.Castles.*;
  */
 public class Position {
 
-  // Zobrist Hashing is used to calculate the hash code for a position
-  private static final long[][] zobristKeyLo = new long[13][64], zobristKeyHi = new long[13][64];
-  private static final long[] zobristKeyCastleLo = new long[16], zobristKeyCastleHi = new long[16];
-  private static final long[] zobristKeyToMoveLo = new long[2], zobristKeyToMoveHi = new long[2];
-  private static final long[] zobristKeyEnPassantLo = new long[9],
-      zobristKeyEnPassantHi = new long[9];
+  // Zobrist Hashing is used to calculate the hash code for a position; the keys are in Zobrist
+  private static final long[][] zobristKeyLo = Zobrist.PIECE_LO, zobristKeyHi = Zobrist.PIECE_HI;
+  private static final long[] zobristKeyCastleLo = Zobrist.CASTLE_LO,
+      zobristKeyCastleHi = Zobrist.CASTLE_HI;
+  private static final long[] zobristKeyToMoveLo = Zobrist.TO_MOVE_LO,
+      zobristKeyToMoveHi = Zobrist.TO_MOVE_HI;
+  private static final long[] zobristKeyEnPassantLo = Zobrist.EN_PASSANT_LO,
+      zobristKeyEnPassantHi = Zobrist.EN_PASSANT_HI;
 
   private static final Position startPosition;
 
@@ -42,37 +44,7 @@ public class Position {
 
   private static final Stone[] emptyBoard;
 
-  private static long getNonzeroLong(Random r) {
-    long v;
-    do {
-      long v1 = r.nextLong(), v2 = r.nextLong();
-      v = (v1 << 32) + v2;
-    } while (v == 0);
-    return v;
-  }
-
   static {
-    Random rlo = new Random(0);
-    Random rhi = new Random(1);
-    for (int i = 0; i < 64; i++) {
-      for (int c = 0; c < 13; c++) {
-        zobristKeyLo[c][i] = getNonzeroLong(rlo);
-        zobristKeyHi[c][i] = getNonzeroLong(rhi);
-      }
-    }
-    for (int i = 0; i < 16; i++) {
-      zobristKeyCastleLo[i] = getNonzeroLong(rlo);
-      zobristKeyCastleHi[i] = getNonzeroLong(rhi);
-    }
-    for (int i = 0; i < 9; i++) {
-      zobristKeyEnPassantLo[i] = getNonzeroLong(rlo);
-      zobristKeyEnPassantHi[i] = getNonzeroLong(rhi);
-    }
-    for (int i = 0; i < 2; i++) {
-      zobristKeyToMoveLo[i] = getNonzeroLong(rlo);
-      zobristKeyToMoveHi[i] = getNonzeroLong(rhi);
-    }
-
     startPosition =
         new Position(startBoard, E1, E8, WHITE, 15, Chess.NO_COL, Chess960.REGULAR_CHESS_SP);
     emptyBoard = new Stone[64];
@@ -198,23 +170,28 @@ public class Position {
     this.whiteKingSqi = whiteKingSqi;
     this.blackKingSqi = blackKingSqi;
     this.toMove = playerToMove;
-    int wk = Chess960.getKingSqi(chess960sp, WHITE);
-    int bk = Chess960.getKingSqi(chess960sp, BLACK);
-    if (!(whiteKingSqi == wk
-        && this.board[Chess960.getHRookSqi(chess960sp, WHITE)] == WHITE_ROOK)) {
-      castles &= ~1;
+    // Only the rights there are need checking; after the opening there are rarely any
+    if ((castles & 3) != 0) {
+      int wk = Chess960.getKingSqi(chess960sp, WHITE);
+      if (!(whiteKingSqi == wk
+          && this.board[Chess960.getHRookSqi(chess960sp, WHITE)] == WHITE_ROOK)) {
+        castles &= ~1;
+      }
+      if (!(whiteKingSqi == wk
+          && this.board[Chess960.getARookSqi(chess960sp, WHITE)] == WHITE_ROOK)) {
+        castles &= ~2;
+      }
     }
-    if (!(whiteKingSqi == wk
-        && this.board[Chess960.getARookSqi(chess960sp, WHITE)] == WHITE_ROOK)) {
-      castles &= ~2;
-    }
-    if (!(blackKingSqi == bk
-        && this.board[Chess960.getHRookSqi(chess960sp, BLACK)] == BLACK_ROOK)) {
-      castles &= ~4;
-    }
-    if (!(blackKingSqi == bk
-        && this.board[Chess960.getARookSqi(chess960sp, BLACK)] == BLACK_ROOK)) {
-      castles &= ~8;
+    if ((castles & 12) != 0) {
+      int bk = Chess960.getKingSqi(chess960sp, BLACK);
+      if (!(blackKingSqi == bk
+          && this.board[Chess960.getHRookSqi(chess960sp, BLACK)] == BLACK_ROOK)) {
+        castles &= ~4;
+      }
+      if (!(blackKingSqi == bk
+          && this.board[Chess960.getARookSqi(chess960sp, BLACK)] == BLACK_ROOK)) {
+        castles &= ~8;
+      }
     }
     this.castlesMask = castles;
     this.enPassantCol = epFile;

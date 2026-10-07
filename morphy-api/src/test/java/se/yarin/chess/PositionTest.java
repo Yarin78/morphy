@@ -488,6 +488,39 @@ public class PositionTest {
     }
   }
 
+  @Test
+  public void testHashingBoardHashesAsPosition() {
+    Random random = new Random(11);
+    int[] kinds = new int[5];
+    for (int game = 0; game < 400; game++) {
+      Position position = Position.start();
+      HashingBoard board = new HashingBoard();
+      for (int ply = 0; ply < 150; ply++) {
+        assertEquals("game " + game + " ply " + ply, position.getZobristHashLo(), board.hash());
+        assertEquals(position.playerToMove() == WHITE, board.whiteToMove());
+        assertEquals(position, board.toPosition());
+        List<Move> moves = position.generateAllLegalMoves();
+        if (moves.isEmpty()) {
+          break;
+        }
+        Move move = moves.get(random.nextInt(moves.size()));
+        if (random.nextInt(50) == 0 && !position.isCheck()) {
+          move = Move.nullMove(position);
+        }
+        kinds[move.isNullMove() ? 0 : move.isCastle() ? 1 : move.isEnPassant() ? 2 : !move.promotionStone().isNoStone() ? 3 : move.isCapture() ? 4 : 0]++;
+        if (move.isNullMove()) {
+          board.playNull();
+        } else {
+          board.play(move.fromSqi(), move.toSqi(), move.promotionStone().toPiece());
+        }
+        position = position.doMove(move);
+      }
+    }
+    for (int kind : kinds) {
+      assertTrue("every kind of move was played", kind > 0);
+    }
+  }
+
   /** The same position, built anew, so its hash is worked out from the whole board. */
   private static Position copyOf(Position position) {
     Stone[] board = new Stone[64];

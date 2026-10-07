@@ -57,16 +57,15 @@ public enum Stone {
     return Player.NOBODY;
   }
 
+  // The piece of each stone, by its value: looked up for every move played, so not a switch
+  private static final Piece[] PIECES = {
+    Piece.KING, Piece.QUEEN, Piece.ROOK, Piece.BISHOP, Piece.KNIGHT, Piece.PAWN,
+    Piece.NO_PIECE,
+    Piece.PAWN, Piece.KNIGHT, Piece.BISHOP, Piece.ROOK, Piece.QUEEN, Piece.KING
+  };
+
   public Piece toPiece() {
-    return switch (this) {
-      case NO_STONE -> Piece.NO_PIECE;
-      case WHITE_PAWN, BLACK_PAWN -> Piece.PAWN;
-      case WHITE_KNIGHT, BLACK_KNIGHT -> Piece.KNIGHT;
-      case WHITE_BISHOP, BLACK_BISHOP -> Piece.BISHOP;
-      case WHITE_ROOK, BLACK_ROOK -> Piece.ROOK;
-      case WHITE_QUEEN, BLACK_QUEEN -> Piece.QUEEN;
-      case WHITE_KING, BLACK_KING -> Piece.KING;
-    };
+    return PIECES[value + 6];
   }
 
   public char toChar() {
