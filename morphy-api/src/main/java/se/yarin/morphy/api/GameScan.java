@@ -1,6 +1,5 @@
 package se.yarin.morphy.api;
 
-import java.util.function.Consumer;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -22,28 +21,6 @@ public interface GameScan extends AutoCloseable {
   @Nullable
   ScannedGame read(int id);
 
-  /**
-   * Reads every game, each passed to the consumer, on several threads at once, in no particular
-   * order; returns when all are done. Records that hold no regular chess game are left out, as
-   * {@link #read} returns null for them. A format can read its files in large pieces here, which
-   * is much faster than game by game.
-   *
-   * @param consumer called from several threads at once
-   */
-  default void forEach(@NotNull Consumer<ScannedGame> consumer) {
-    ParallelBatches.run(
-        maxId(),
-        256,
-        (first, end) -> {
-          for (int id = first; id < end; id++) {
-            ScannedGame game = read(id);
-            if (game != null) {
-              consumer.accept(game);
-            }
-          }
-        });
-  }
-
   /** What's done with each game's main line by {@link #forEachMainLine}. */
   @FunctionalInterface
   interface MainLineVisitor {
@@ -59,14 +36,25 @@ public interface GameScan extends AutoCloseable {
 
   /**
    * Plays through the main line of every game, on several threads at once, in no particular order;
-   * returns when all are done. The games are those {@link #forEach} gives. A format can decode
-   * each game's moves only as far as the visitor plays through them, which is faster when only
-   * the main line, or only its beginning, is wanted.
+   * returns when all are done. The games are those {@link #read} gives: records that hold no
+   * regular chess game are left out. By default each game is read and decoded in full; a format can
+   * read its files in large pieces instead, and decode each game's moves only as far as the visitor
+   * plays through them.
    *
    * @param visitor called from several threads at once
    */
   default void forEachMainLine(@NotNull MainLineVisitor visitor) {
-    forEach(game -> visitor.visit(game.id(), game.facts(), MainLine.of(game.moves())));
+    ParallelBatches.run(
+        maxId(),
+        256,
+        (first, end) -> {
+          for (int id = first; id < end; id++) {
+            ScannedGame game = read(id);
+            if (game != null) {
+              visitor.visit(game.id(), game.facts(), MainLine.of(game.moves()));
+            }
+          }
+        });
   }
 
   @Override

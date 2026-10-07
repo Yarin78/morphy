@@ -1,7 +1,7 @@
-import { type PointerEvent, type ReactNode, type RefObject, useEffect, useMemo, useRef, useState } from 'react';
+import { type PointerEvent, type ReactNode, type RefObject, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { TbLayoutColumns, TbLayoutRows } from 'react-icons/tb';
-import { fetchReferenceDatabases } from '../../api/client';
-import type { DatabaseResponse } from '../../api/types';
+import { buildPositionIndex, fetchPositionIndex, fetchPositionIndexes } from '../../api/client';
+import type { PositionIndexResponse } from '../../api/types';
 import { usePositionSearch } from '../../search/usePositionSearch';
 import { useBoardView } from '../boardStore';
 import { useDocuments } from '../documentsStore';
@@ -23,10 +23,11 @@ const DEFAULT_SPLIT = 0.45;
 const MIN_SPLIT = 0.2;
 const MAX_SPLIT = 0.8;
 
-// The reference database picked last, which a board opened later starts with
-const REFERENCE_KEY = 'morphy-reference-database';
+// The position index picked last, which a board opened later starts with
+const INDEX_KEY = 'morphy-position-index';
 
-type ReferenceDatabase = DatabaseResponse & { referenceName: string };
+// How often the status of an index being built is asked for
+const BUILD_POLL_MS = 2000;
 
 function load(key: string): string | null {
   try {
@@ -49,30 +50,98 @@ function loadSplit(arrangement: Arrangement): number {
   return saved >= MIN_SPLIT && saved <= MAX_SPLIT ? saved : DEFAULT_SPLIT;
 }
 
-/** The reference databases, as pills, the one searched picked. */
-function DatabasePills({
-  databases,
+/** What an index holds, for its pill's tooltip. */
+function describe(index: PositionIndexResponse): string {
+  const games = index.games ? `${index.games.toLocaleString()} games` : 'The games';
+  return index.filter ? `${games} of ${index.databaseId} matching ${index.filter}` : `${games} of ${index.databaseId}`;
+}
+
+/** The position indexes, as pills, the one searched picked. */
+function IndexPills({
+  indexes,
   picked,
   onPick,
 }: {
-  databases: ReferenceDatabase[];
+  indexes: PositionIndexResponse[];
   picked: string;
   onPick: (id: string) => void;
 }) {
   return (
-    <div className="games-pane-databases" role="radiogroup" aria-label="Reference database">
-      {databases.map((db) => (
+    <div className="games-pane-databases" role="radiogroup" aria-label="Position index">
+      {indexes.map((index) => (
         <button
-          key={db.id}
+          key={index.id}
           role="radio"
-          aria-checked={db.id === picked}
-          className={`games-pane-database${db.id === picked ? ' picked' : ''}`}
-          onClick={() => onPick(db.id)}
-          title={db.displayName}
+          aria-checked={index.id === picked}
+          className={`games-pane-database${index.id === picked ? ' picked' : ''}`}
+          onClick={() => onPick(index.id)}
+          title={describe(index)}
         >
-          {db.referenceName}
+          {index.name}
         </button>
       ))}
+    </div>
+  );
+}
+
+/**
+ * An index that can't be searched yet: why, and a way to build it; while it's built, how that
+ * goes, until it's ready.
+ */
+function UnbuiltIndex({
+  index,
+  pills,
+  onReady,
+}: {
+  index: PositionIndexResponse;
+  pills: ReactNode;
+  onReady: () => void;
+}) {
+  const [status, setStatus] = useState(index);
+  const [error, setError] = useState<string | null>(null);
+
+  // While it's built, its status is asked for every few seconds
+  useEffect(() => {
+    if (status.status !== 'building') return;
+    const timer = setTimeout(() => {
+      fetchPositionIndex(status.id)
+        .then((next) => (next.status === 'ready' ? onReady() : setStatus(next)))
+        .catch((err: unknown) => setError(err instanceof Error ? err.message : String(err)));
+    }, BUILD_POLL_MS);
+    return () => clearTimeout(timer);
+  }, [status, onReady]);
+
+  const build = () => {
+    setError(null);
+    buildPositionIndex(status.id)
+      .then(setStatus)
+      .catch((err: unknown) => setError(err instanceof Error ? err.message : String(err)));
+  };
+
+  const what =
+    status.status === 'missing'
+      ? `${status.name} hasn't been built yet.`
+      : status.status === 'stale'
+        ? `${status.name} is out of date: its database or its filter has changed since it was built.`
+        : status.status === 'failed'
+          ? (status.message ?? 'The last build failed.')
+          : `Building ${status.name}…`;
+  return (
+    <div className="games-pane">
+      <div className="games-pane-head">
+        <span className="games-pane-totals" />
+        <div className="games-pane-head-right">{pills}</div>
+      </div>
+      <div className="games-pane-unbuilt">
+        <p>{what}</p>
+        {status.status === 'building' && status.message && <p className="games-pane-progress">{status.message}</p>}
+        {status.status !== 'building' && (
+          <button type="button" onClick={build} title={describe(status)}>
+            {status.status === 'missing' ? 'Build' : 'Rebuild'} the index
+          </button>
+        )}
+        {error && <p className="search-error">{error}</p>}
+      </div>
     </div>
   );
 }
@@ -110,10 +179,12 @@ function useSplit(paneRef: RefObject<HTMLDivElement | null>, arrangement: Arrang
   return { split, startResize };
 }
 
-/** The games of a reference database from a position: the totals, the moves and the games. */
-function PositionGames({ databaseId, fen, pills }: { databaseId: string; fen: string; pills: ReactNode }) {
+/** The games of a position index from a position: the totals, the moves and the games. */
+function PositionGames({ index, fen, pills }: { index: PositionIndexResponse; fen: string; pills: ReactNode }) {
   const { dispatch } = useDocuments();
-  const { search, summary } = usePositionSearch(databaseId, fen);
+  const indexId = index.id;
+  const databaseId = index.databaseId;
+  const { search, summary } = usePositionSearch(indexId, fen);
   const [arrangement, setArrangement] = useState<Arrangement>(() =>
     load(ARRANGEMENT_KEY) === 'stacked' ? 'stacked' : 'side'
   );
@@ -127,10 +198,10 @@ function PositionGames({ databaseId, fen, pills }: { databaseId: string; fen: st
 
   // Until the position on the board has been searched for, what was played from the one before
   // is shown
-  const shown = summary?.kind === 'loaded' && summary.databaseId === databaseId ? summary.summary : null;
+  const shown = summary?.kind === 'loaded' && summary.indexId === indexId ? summary.summary : null;
   const stale = shown?.fen !== fen;
   const error =
-    summary?.kind === 'error' && summary.databaseId === databaseId && summary.fen === fen ? summary.message : null;
+    summary?.kind === 'error' && summary.indexId === indexId && summary.fen === fen ? summary.message : null;
   const white = shown ? whiteToMove(shown.fen) : true;
 
   return (
@@ -190,39 +261,43 @@ function PositionGames({ databaseId, fen, pills }: { databaseId: string; fen: st
 }
 
 /**
- * The games from the position on the board, below it, in a reference database picked from those
- * there are: how many reached it and how they went, the moves played from it on the left, and the
- * games on the right.
+ * The games from the position on the board, below it, in a position index picked from those the
+ * service defines: how many reached it and how they went, the moves played from it on the left, and
+ * the games on the right. An index that isn't built can be built from here.
  */
 export function GamesPane() {
   const { game, version } = useBoardView();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const fen = useMemo(() => game.fen(), [game, version]);
 
-  const [databases, setDatabases] = useState<ReferenceDatabase[] | { error: string } | null>(null);
-  useEffect(() => {
-    fetchReferenceDatabases()
-      .then(setDatabases)
-      .catch((err: unknown) => setDatabases({ error: err instanceof Error ? err.message : String(err) }));
+  const [indexes, setIndexes] = useState<PositionIndexResponse[] | { error: string } | null>(null);
+  const reload = useCallback(() => {
+    fetchPositionIndexes()
+      .then(setIndexes)
+      .catch((err: unknown) => setIndexes({ error: err instanceof Error ? err.message : String(err) }));
   }, []);
+  useEffect(reload, [reload]);
 
-  const [picked, setPicked] = useState(() => load(REFERENCE_KEY));
+  const [picked, setPicked] = useState(() => load(INDEX_KEY));
   const pick = (id: string) => {
     setPicked(id);
-    save(REFERENCE_KEY, id);
+    save(INDEX_KEY, id);
   };
 
-  if (!databases) return <div className="games-pane-note">Loading the reference databases…</div>;
-  if ('error' in databases) return <div className="games-pane-note search-error">{databases.error}</div>;
-  if (databases.length === 0) {
-    return <div className="games-pane-note">There is no reference database to look in.</div>;
+  if (!indexes) return <div className="games-pane-note">Loading the position indexes…</div>;
+  if ('error' in indexes) return <div className="games-pane-note search-error">{indexes.error}</div>;
+  if (indexes.length === 0) {
+    return (
+      <div className="games-pane-note">
+        No position index is defined; the service reads them from position-indexes.json.
+      </div>
+    );
   }
-  const databaseId = databases.some((db) => db.id === picked) ? picked! : databases[0].id;
-  return (
-    <PositionGames
-      databaseId={databaseId}
-      fen={fen}
-      pills={<DatabasePills databases={databases} picked={databaseId} onPick={pick} />}
-    />
-  );
+  const index = indexes.find((i) => i.id === picked) ?? indexes[0];
+  const pills = <IndexPills indexes={indexes} picked={index.id} onPick={pick} />;
+  if (index.status !== 'ready') {
+    // Its own state for each index, which starts from the index as listed
+    return <UnbuiltIndex key={index.id} index={index} pills={pills} onReady={reload} />;
+  }
+  return <PositionGames index={index} fen={fen} pills={pills} />;
 }

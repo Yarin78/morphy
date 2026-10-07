@@ -7,8 +7,11 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -22,12 +25,12 @@ import se.yarin.morphy.api.GameScan;
 import se.yarin.morphy.api.GameScanning;
 import se.yarin.morphy.api.ScannedGame;
 import se.yarin.morphy.model.GameDto;
-import se.yarin.morphy.positions.DatabaseIdentity;
-import se.yarin.morphy.positions.PositionIndexBuilder;
-import se.yarin.morphy.service.config.DatabaseConfig;
 import se.yarin.morphy.service.databases.DatabaseService;
 
-/** The position search of the sample v2 database, through an index built for it. */
+/**
+ * Position indexes of the sample v2 database, defined in a file as the service reads them: built
+ * through the service, listed, and searched.
+ */
 class PositionsServiceTest {
 
   private static final String START = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
@@ -47,11 +50,8 @@ class PositionsServiceTest {
   static void setUp() throws Exception {
     File file = new File("../test-databases/wch2/wch2.2cbh");
     assertTrue(file.exists(), "sample database not found: " + file.getAbsolutePath());
-    Path index = dir.resolve("wch2.positions");
     try (Database db = Databases.open(file, AccessMode.READ_ONLY);
         GameScan scan = db.extension(GameScanning.class).orElseThrow().openScan()) {
-      new PositionIndexBuilder(message -> {})
-          .build(scan, DatabaseIdentity.of(file.toPath(), db.gameCount()), index, dir.resolve("work"));
       for (int id = 1; id <= scan.maxId(); id++) {
         ScannedGame game = scan.read(id);
         if (game != null && !game.moves().isSetupPosition()) {
@@ -70,21 +70,26 @@ class PositionsServiceTest {
 
     databases = new DatabaseService();
     databases.registerDatabase("wch2", "World Championships", file.getPath());
-    DatabaseConfig config = databases.getDatabaseConfig("wch2");
-    config.setReadOnly(true);
-    config.setReferenceName("WCh");
-    config.setPositionIndex(index.toString());
+    databases.getDatabaseConfig("wch2").setReadOnly(true);
 
-    databases.registerDatabase("plain", "Not a reference database", file.getPath());
-    databases.getDatabaseConfig("plain").setReadOnly(true);
-
-    databases.registerDatabase("unindexed", "Without an index", file.getPath());
-    DatabaseConfig unindexed = databases.getDatabaseConfig("unindexed");
-    unindexed.setReadOnly(true);
-    unindexed.setReferenceName("None");
-    unindexed.setPositionIndex(dir.resolve("missing.positions").toString());
-
-    positions = new PositionsService(databases);
+    // "all" and "old" (a filter) are built; "other" has another filter than its index was built
+    // with; "unbuilt" isn't built
+    Path definitions = dir.resolve("position-indexes.json");
+    Files.writeString(
+        definitions,
+        """
+        {
+          "all": {"name": "WCh", "database": "wch2", "path": "%1$s/all.positions"},
+          "old": {"name": "WCh old", "database": "wch2", "filter": "date:..1960", "path": "%1$s/old.positions"},
+          "other": {"name": "Other", "database": "wch2", "filter": "date:1961..", "path": "%1$s/old.positions"},
+          "unbuilt": {"name": "Unbuilt", "database": "wch2", "path": "%1$s/unbuilt.positions"}
+        }
+        """
+            .formatted(dir.toString().replace("\\", "/")));
+    positions = new PositionsService(databases, definitions.toString());
+    assertEquals("missing", positions.info("all").status());
+    positions.build("all").join();
+    positions.build("old").join();
   }
 
   @AfterAll
@@ -94,8 +99,28 @@ class PositionsServiceTest {
   }
 
   @Test
+  void indexesAreListedWithTheirStatus() {
+    Map<String, PositionIndexInfo> byId =
+        positions.list().stream().collect(Collectors.toMap(PositionIndexInfo::id, i -> i));
+    assertEquals(
+        List.of("all", "old", "other", "unbuilt"),
+        positions.list().stream().map(PositionIndexInfo::id).toList());
+    assertEquals("ready", byId.get("all").status());
+    assertEquals(fromStart, (long) byId.get("all").games());
+    assertEquals("ready", byId.get("old").status());
+    assertEquals("date:..1960", byId.get("old").filter());
+    assertTrue(byId.get("old").games() < byId.get("all").games());
+    assertEquals("stale", byId.get("other").status());
+    assertEquals("missing", byId.get("unbuilt").status());
+    assertNull(byId.get("unbuilt").games());
+    assertEquals("wch2", byId.get("all").databaseId());
+  }
+
+  @Test
   void startPositionHasEveryGameAndItsMoves() {
-    PositionSearchResponse response = positions.search("wch2", START, "+id", 0, 100, false);
+    PositionSearchResponse response = positions.search("all", START, "+id", 0, 100, false);
+    assertEquals("all", response.indexId());
+    assertEquals("wch2", response.databaseId());
     PositionSummary summary = response.summary();
     assertNotNull(summary);
     assertEquals(START, summary.fen());
@@ -112,17 +137,28 @@ class PositionsServiceTest {
   }
 
   @Test
+  void aFilteredIndexHasOnlyItsGames() {
+    PositionSearchResponse response = positions.search("old", START, "-playedDate", 0, 1000, false);
+    List<GameDto> games = response.games().games();
+    assertTrue(games.size() > 10);
+    assertTrue(games.size() < fromStart);
+    for (GameDto game : games) {
+      assertTrue(game.date().year() <= 1960, "game " + game.id() + " of " + game.date());
+    }
+    assertEquals(games.size(), response.summary().games());
+  }
+
+  @Test
   void laterPagesComeWithoutTheSummary() {
-    PositionSearchResponse first = positions.search("wch2", START, "+id", 0, 100, false);
-    PositionSearchResponse second = positions.search("wch2", START, "+id", 100, 100, false);
+    PositionSearchResponse first = positions.search("all", START, "+id", 0, 100, false);
+    PositionSearchResponse second = positions.search("all", START, "+id", 100, 100, false);
     assertNull(second.summary());
-    assertTrue(
-        second.games().games().getFirst().id() > first.games().games().getLast().id());
+    assertTrue(second.games().games().getFirst().id() > first.games().games().getLast().id());
   }
 
   @Test
   void gamesAreSortedAsAsked() {
-    List<GameDto> games = positions.search("wch2", START, "-whiteElo", 0, 200, false).games().games();
+    List<GameDto> games = positions.search("all", START, "-whiteElo", 0, 200, false).games().games();
     for (int i = 1; i < games.size(); i++) {
       int previous = games.get(i - 1).whiteElo() == null ? 0 : games.get(i - 1).whiteElo();
       int current = games.get(i).whiteElo() == null ? 0 : games.get(i).whiteElo();
@@ -132,7 +168,7 @@ class PositionsServiceTest {
 
   @Test
   void aPositionOnlyOneGameReachedIsFound() {
-    PositionSearchResponse response = positions.search("wch2", lastOfGame1, "+id", 0, 100, true);
+    PositionSearchResponse response = positions.search("all", lastOfGame1, "+id", 0, 100, true);
     assertEquals(1, response.summary().games());
     assertEquals(List.of(), response.summary().moves());
     assertEquals(1L, response.games().games().getFirst().id());
@@ -142,7 +178,7 @@ class PositionsServiceTest {
   @Test
   void aPositionNoGameReachedHasNoGames() {
     PositionSearchResponse response =
-        positions.search("wch2", "8/8/8/4k3/8/8/8/4K2R w K - 0 1", "+id", 0, 100, false);
+        positions.search("all", "8/8/8/4k3/8/8/8/4K2R w K - 0 1", "+id", 0, 100, false);
     assertEquals(0, response.summary().games());
     assertEquals(0, response.games().games().size());
   }
@@ -151,29 +187,35 @@ class PositionsServiceTest {
   void unsupportedSortOrdersAreRefused() {
     assertThrows(
         IllegalArgumentException.class,
-        () -> positions.search("wch2", START, "+event", 0, 100, false));
+        () -> positions.search("all", START, "+event", 0, 100, false));
   }
 
   @Test
-  void onlyReferenceDatabasesCanBeSearched() {
+  void unknownIndexesAreRefused() {
     assertThrows(
         IllegalArgumentException.class,
-        () -> positions.search("plain", START, "+id", 0, 100, false));
+        () -> positions.search("nosuch", START, "+id", 0, 100, false));
   }
 
   @Test
-  void aMissingIndexIsReported() {
-    PositionIndexUnavailableException e =
+  void aMissingOrOutOfDateIndexIsReported() {
+    PositionIndexUnavailableException missing =
         assertThrows(
             PositionIndexUnavailableException.class,
-            () -> positions.search("unindexed", START, "+id", 0, 100, false));
-    assertTrue(e.getMessage().contains("morphy positions build"), e.getMessage());
+            () -> positions.search("unbuilt", START, "+id", 0, 100, false));
+    assertTrue(missing.getMessage().contains("morphy positions build"), missing.getMessage());
+    PositionIndexUnavailableException stale =
+        assertThrows(
+            PositionIndexUnavailableException.class,
+            () -> positions.search("other", START, "+id", 0, 100, false));
+    assertTrue(stale.getMessage().contains("out of date"), stale.getMessage());
+    assertTrue(stale.getMessage().contains("--filter \"date:1961..\""), stale.getMessage());
   }
 
   @Test
   void invalidPositionsAreRefused() {
     assertThrows(
         IllegalArgumentException.class,
-        () -> positions.search("wch2", "not a position", "+id", 0, 100, false));
+        () -> positions.search("all", "not a position", "+id", 0, 100, false));
   }
 }

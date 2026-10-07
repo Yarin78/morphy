@@ -139,8 +139,7 @@ public class DatabaseService {
                     state.config.getId(),
                     state.config.getDisplayName(),
                     state.config.getPath(),
-                    state.config.isReadOnly(),
-                    state.config.getReferenceName()))
+                    state.config.isReadOnly()))
         .toList();
   }
 

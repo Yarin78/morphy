@@ -5,16 +5,16 @@ import { shownColumnKeys } from './columnLayout';
 import { NOTATION_COLUMN } from './columns';
 import type { ResultsSearch, SearchResults, SortOrder } from './useDatabaseSearch';
 
-// The search of a reference database's games by position: what was played from the position,
-// and the games that reached it, fetched a page at a time as they're scrolled to, as a database's
-// game search lists them. A new position is searched for at once.
+// The search of a position index's games by position: what was played from the position, and the
+// games that reached it, fetched a page at a time as they're scrolled to, as a database's game
+// search lists them. A new position is searched for at once.
 
 const PAGE_SIZE = 100;
 
 /** What was played from a position, or why it isn't known. */
 export type SummaryState =
-  | { kind: 'loaded'; databaseId: string; summary: PositionSummary }
-  | { kind: 'error'; databaseId: string; fen: string; message: string };
+  | { kind: 'loaded'; indexId: string; summary: PositionSummary }
+  | { kind: 'error'; indexId: string; fen: string; message: string };
 
 interface State {
   results: SearchResults | null;
@@ -31,7 +31,7 @@ export interface PositionSearch {
   summary: SummaryState | null;
 }
 
-export function usePositionSearch(databaseId: string, fen: string): PositionSearch {
+export function usePositionSearch(indexId: string, fen: string): PositionSearch {
   const [state, setState] = useState<State>(INITIAL);
   // The latest state, changed at once, so a fetch started right after a change sees it
   const stateRef = useRef(state);
@@ -64,7 +64,7 @@ export function usePositionSearch(databaseId: string, fen: string): PositionSear
         selected: first ? null : s.selected,
       }));
       try {
-        const res = await searchPosition(databaseId, {
+        const res = await searchPosition(indexId, {
           fen,
           sortBy,
           offset,
@@ -88,7 +88,7 @@ export function usePositionSearch(databaseId: string, fen: string): PositionSear
               query: fen,
               sortBy,
             },
-            summary: res.summary ? { kind: 'loaded', databaseId, summary: res.summary } : s.summary,
+            summary: res.summary ? { kind: 'loaded', indexId, summary: res.summary } : s.summary,
           };
         });
       } catch (err) {
@@ -106,11 +106,11 @@ export function usePositionSearch(databaseId: string, fen: string): PositionSear
             query: fen,
             sortBy,
           },
-          summary: first ? { kind: 'error', databaseId, fen, message } : s.summary,
+          summary: first ? { kind: 'error', indexId, fen, message } : s.summary,
         }));
       }
     },
-    [databaseId, fen, update]
+    [indexId, fen, update]
   );
 
   useEffect(() => {

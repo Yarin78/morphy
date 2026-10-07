@@ -73,3 +73,14 @@ Databases of your own, which shouldn't be in the repository, go in
 `databases.local.json` next to it instead, in the same form. Git ignores that file.
 The service loads it after `databases.json`, and an entry in it replaces one with the
 same ID. Databases registered or created through the service are added to it too.
+
+## Position indexes
+
+`position-indexes.json` defines the position indexes the service searches games
+by position in (a board's Games pane): each has a short `name`, the `database`
+it's of, optionally a `filter` of its games in the game search's language
+(`"tournament.time:normal rating:2300..,mode=both"`), and optionally a `path`.
+By default an index is next to its database, `<name>.<id>.positions` (git
+ignores these). `position-indexes.local.json` (ignored too) defines those of
+personal databases. Build one from the Games pane, or with
+`morphy positions build <database> --filter ... --index <dir>`.

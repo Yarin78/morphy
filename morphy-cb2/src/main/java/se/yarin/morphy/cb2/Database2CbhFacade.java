@@ -91,8 +91,8 @@ public class Database2CbhFacade implements Database, GameScanning {
   }
 
   @Override
-  public @NotNull GameScan openScan() {
-    return new Scan(database);
+  public @NotNull GameScan openScan(@NotNull String filter) {
+    return new Scan(database, filter);
   }
 
   // ── Games ────────────────────────────────────────────────────────────────

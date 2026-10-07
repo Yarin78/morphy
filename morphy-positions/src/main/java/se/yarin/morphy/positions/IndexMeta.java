@@ -20,6 +20,8 @@ import org.jetbrains.annotations.NotNull;
  * @param gameIdBytes the bytes of a game id in {@code single.data}
  * @param sharedPositions the positions several games reached
  * @param singlePositions the positions one game reached
+ * @param filter the games indexed, in the database's game filter language; blank for every game
+ * @param games the games indexed
  */
 public record IndexMeta(
     int formatVersion,
@@ -29,7 +31,9 @@ public record IndexMeta(
     int statsThreshold,
     int gameIdBytes,
     long sharedPositions,
-    long singlePositions) {
+    long singlePositions,
+    @NotNull String filter,
+    long games) {
 
   public static final int FORMAT_VERSION = 1;
 
@@ -45,6 +49,8 @@ public record IndexMeta(
     p.setProperty("gameIdBytes", String.valueOf(gameIdBytes));
     p.setProperty("sharedPositions", String.valueOf(sharedPositions));
     p.setProperty("singlePositions", String.valueOf(singlePositions));
+    p.setProperty("filter", filter);
+    p.setProperty("games", String.valueOf(games));
     try (Writer out = Files.newBufferedWriter(file)) {
       p.store(out, "Morphy position index");
     }
@@ -71,6 +77,8 @@ public record IndexMeta(
         Integer.parseInt(p.getProperty("statsThreshold")),
         Integer.parseInt(p.getProperty("gameIdBytes")),
         Long.parseLong(p.getProperty("sharedPositions")),
-        Long.parseLong(p.getProperty("singlePositions")));
+        Long.parseLong(p.getProperty("singlePositions")),
+        p.getProperty("filter", ""),
+        Long.parseLong(p.getProperty("games", "0")));
   }
 }

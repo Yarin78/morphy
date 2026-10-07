@@ -1,6 +1,7 @@
 package se.yarin.morphy;
 
 import java.nio.ByteBuffer;
+import java.util.BitSet;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import se.yarin.chess.GameMovesModel;
@@ -19,8 +20,13 @@ final class CbhScan implements GameScan {
   private final @NotNull DatabaseCbh database;
   private final @NotNull DatabaseReadTransaction transaction;
 
-  CbhScan(@NotNull DatabaseCbh database) {
+  // The games scanned; null for every one
+  private final @Nullable BitSet games;
+
+  /** @param games the games to scan, or null for every one */
+  CbhScan(@NotNull DatabaseCbh database, @Nullable BitSet games) {
     this.database = database;
+    this.games = games;
     this.transaction = new DatabaseReadTransaction(database);
   }
 
@@ -31,6 +37,9 @@ final class CbhScan implements GameScan {
 
   @Override
   public @Nullable ScannedGame read(int id) {
+    if (games != null && !games.get(id)) {
+      return null;
+    }
     GameHeader header = database.gameHeaderIndex().getGameHeader(id);
     if (header.deleted() || header.guidingText() || header.chess960StartPosition() >= 0) {
       return null;

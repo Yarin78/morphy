@@ -8,8 +8,16 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 import org.jetbrains.annotations.NotNull;
+import se.yarin.chess.GameMovesModel;
+import se.yarin.chess.Move;
+import se.yarin.chess.MoveCode;
+import se.yarin.chess.Player;
+import se.yarin.chess.Position;
+import se.yarin.morphy.api.GameScan;
+import se.yarin.morphy.api.ScannedGame;
 
 /**
  * An open position index: the keys of the positions several games reached, their offsets, the
@@ -69,6 +77,15 @@ public final class PositionIndex implements AutoCloseable {
     return new PositionIndex(directory, meta, keys, offsets, singleDirectory, facts, shared, single);
   }
 
+  /**
+   * What an index holds and was built from, without opening it.
+   *
+   * @throws IOException if there is no index in the directory, or it can't be read
+   */
+  public static @NotNull IndexMeta readMeta(@NotNull Path directory) throws IOException {
+    return IndexMeta.read(directory.resolve(IndexFiles.META));
+  }
+
   public @NotNull Path directory() {
     return directory;
   }
@@ -81,13 +98,98 @@ public final class PositionIndex implements AutoCloseable {
     return facts;
   }
 
-  /** Whether the database has changed since the index was built. */
-  public boolean isStale(@NotNull DatabaseIdentity database) {
-    return !meta.database().equals(database);
+  /**
+   * Whether the index is out of date for a database and filter: the database has changed since it
+   * was built, or it was built with another filter.
+   */
+  public boolean isStale(@NotNull DatabaseIdentity database, @NotNull String filter) {
+    return !meta.database().equals(database) || !meta.filter().strip().equals(filter.strip());
   }
 
-  /** What the index knows of a position, by its {@link PositionKeys#hash}. */
-  public @NotNull Lookup lookup(long hash) {
+  /**
+   * Finds the games that reached a position, and the moves they played from it. A position only one
+   * game reached is only stored by part of its hash, so the games that may have reached it are
+   * played through to check.
+   *
+   * @param scan a scan of the indexed database, to check those games by
+   */
+  public @NotNull PositionGames find(@NotNull Position position, @NotNull GameScan scan) {
+    long hash = position.getZobristHashLo();
+    boolean whiteToMove = position.playerToMove() == Player.WHITE;
+    List<MoveGroup> groups =
+        switch (lookup(hash)) {
+          case Lookup.Shared shared -> shared.groups();
+          case Lookup.SingleCandidates candidates -> check(scan, candidates.gameIds(), hash);
+        };
+    List<PositionGames.PlayedMove> moves = new ArrayList<>();
+    PositionGames.PlayedMove ended = null;
+    List<int[]> all = new ArrayList<>();
+    for (MoveGroup group : groups) {
+      MoveStats stats = stats(group, whiteToMove);
+      all.add(group.gameIds());
+      if (group.moveCode() == IndexFiles.GAME_ENDED) {
+        ended = new PositionGames.PlayedMove(null, group.gameIds(), stats);
+        continue;
+      }
+      Move move = MoveCode.move(position, group.moveCode());
+      // A move that can't be played here would be a hash collision; never seen, but left out
+      if (move != null) {
+        moves.add(new PositionGames.PlayedMove(move, group.gameIds(), stats));
+      }
+    }
+    moves.sort(Comparator.comparingInt((PositionGames.PlayedMove m) -> -m.gameIds().length));
+    if (ended == null) {
+      ended =
+          new PositionGames.PlayedMove(
+              null, new int[0], MoveStats.of(new int[0], facts, whiteToMove, 0));
+    }
+    int[] gameIds = all.stream().flatMapToInt(Arrays::stream).sorted().toArray();
+    return new PositionGames(List.copyOf(moves), ended, gameIds);
+  }
+
+  /** The candidates that do reach a position, as one group by the move each played. */
+  private static List<MoveGroup> check(GameScan scan, int[] candidates, long hash) {
+    List<MoveGroup> groups = new ArrayList<>();
+    for (int id : candidates) {
+      ScannedGame game = id <= scan.maxId() ? scan.read(id) : null;
+      if (game == null) {
+        continue;
+      }
+      int move = moveAfter(game.moves(), hash);
+      if (move != NOT_REACHED) {
+        groups.add(new MoveGroup(move, new int[] {id}, null));
+      }
+    }
+    return groups;
+  }
+
+  /** What {@link #moveAfter} returns for a position the game never reaches. */
+  static final int NOT_REACHED = -1;
+
+  /**
+   * The move a game's main line plays from a position, the first time it's reached.
+   *
+   * @return the move's code, {@link IndexFiles#GAME_ENDED} if the game ends there, or {@link
+   *     #NOT_REACHED}
+   */
+  static int moveAfter(@NotNull GameMovesModel moves, long hash) {
+    GameMovesModel.Node node = moves.root();
+    while (true) {
+      boolean reached = node.position().getZobristHashLo() == hash;
+      if (!node.hasMoves()) {
+        return reached ? IndexFiles.GAME_ENDED : NOT_REACHED;
+      }
+      GameMovesModel.Node next = node.mainNode();
+      if (reached) {
+        return MoveCode.of(next.lastMove());
+      }
+      node = next;
+    }
+  }
+
+  /** What the index knows of a position, by its hash. */
+  @NotNull
+  Lookup lookup(long hash) {
     int i = indexOf(hash);
     if (i >= 0) {
       return new Lookup.Shared(readShared(i));
@@ -172,7 +274,8 @@ public final class PositionIndex implements AutoCloseable {
    *
    * @param whiteToMove whether White is to move in the position
    */
-  public @NotNull MoveStats stats(@NotNull MoveGroup group, boolean whiteToMove) {
+  @NotNull
+  MoveStats stats(@NotNull MoveGroup group, boolean whiteToMove) {
     return group.stats() != null
         ? group.stats()
         : MoveStats.of(group.gameIds(), facts, whiteToMove, meta.recentSince());

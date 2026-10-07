@@ -47,7 +47,8 @@ class Positions implements Runnable {
 
   @CommandLine.Command(
       name = "build",
-      description = "Builds the position index of a database, next to it",
+      description =
+          "Builds a position index of a database, of all its games or those matching a filter",
       mixinStandardHelpOptions = true)
   static class Build implements Callable<Integer> {
     @CommandLine.Parameters(index = "0", description = "The database")
@@ -60,19 +61,32 @@ class Positions implements Runnable {
                 + " to the database)")
     private Path workDir;
 
+    @CommandLine.Option(
+        names = "--filter",
+        description =
+            "Index only the games matching this filter, in the game search's language, e.g."
+                + " \"tournament.time:normal rating:2300..,mode=both\"")
+    private String filter = "";
+
+    @CommandLine.Option(
+        names = "--index",
+        description = "The index directory (default: next to the database, <name>.positions)")
+    private Path indexDir;
+
     @Override
     public Integer call() throws Exception {
       Locale.setDefault(Locale.US);
       Path databaseFile = file.toPath();
-      Path indexDir = IndexFiles.indexDirectoryOf(databaseFile);
+      Path indexDir = this.indexDir != null ? this.indexDir : IndexFiles.indexDirectoryOf(databaseFile);
       long start = System.nanoTime();
       try (Database db = Databases.open(file, AccessMode.READ_ONLY);
-          GameScan scan = scanning(db).openScan()) {
+          GameScan scan = scanning(db).openScan(filter)) {
         IndexMeta meta =
             new PositionIndexBuilder(System.out::println)
                 .build(
                     scan,
                     DatabaseIdentity.of(databaseFile, db.gameCount()),
+                    filter,
                     indexDir,
                     workDir != null ? workDir : databaseFile.toAbsolutePath().getParent());
         long size;
@@ -80,8 +94,9 @@ class Positions implements Runnable {
           size = files.mapToLong(f -> f.toFile().length()).sum();
         }
         System.out.printf(
-            "Indexed %,d positions several games reached and %,d one game reached in %.0f s;"
-                + " %,d MB in %s%n",
+            "Indexed %,d games: %,d positions several games reached and %,d one game reached, in"
+                + " %.0f s; %,d MB in %s%n",
+            meta.games(),
             meta.sharedPositions(),
             meta.singlePositions(),
             (System.nanoTime() - start) / 1e9,
@@ -103,6 +118,11 @@ class Positions implements Runnable {
     @CommandLine.Parameters(index = "1", description = "The position, as FEN")
     private String fen;
 
+    @CommandLine.Option(
+        names = "--index",
+        description = "The index directory (default: next to the database, <name>.positions)")
+    private Path indexDir;
+
     @Override
     public Integer call() throws Exception {
       Locale.setDefault(Locale.US);
@@ -110,15 +130,17 @@ class Positions implements Runnable {
       boolean white = position.playerToMove() == Player.WHITE;
       long opened = System.nanoTime();
       try (Database db = Databases.open(file, AccessMode.READ_ONLY);
-          PositionIndex index = PositionIndex.open(IndexFiles.indexDirectoryOf(file.toPath()))) {
-        if (index.isStale(DatabaseIdentity.of(file.toPath(), db.gameCount()))) {
+          PositionIndex index =
+              PositionIndex.open(
+                  indexDir != null ? indexDir : IndexFiles.indexDirectoryOf(file.toPath()))) {
+        if (index.isStale(DatabaseIdentity.of(file.toPath(), db.gameCount()), index.meta().filter())) {
           System.out.println("The index is out of date; build it again");
           return 1;
         }
         long start = System.nanoTime();
         PositionGames games;
         try (GameScan scan = scanning(db).openScan()) {
-          games = PositionGames.find(index, scan, position);
+          games = index.find(position, scan);
         }
         long looked = System.nanoTime();
         System.out.printf(

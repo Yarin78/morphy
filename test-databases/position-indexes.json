@@ -1,0 +1,11 @@
+{
+  "wch": {
+    "name": "WCh",
+    "database": "wch2"
+  },
+  "wch-classic": {
+    "name": "WCh to 1960",
+    "database": "wch2",
+    "filter": "date:..1960"
+  }
+}

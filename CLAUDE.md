@@ -50,7 +50,7 @@ Key patterns:
 - `DatabaseCbh.java` (morphy-cbh) - The v1 engine: indexes, transactions, the query planner
 - `DatabaseCbhFacade.java` (morphy-cbh) - The `Database` facade over a `DatabaseCbh`, returned by `Databases.open` for `.cbh` files; also offers `CbhDiagnostics` via `extension(...)`
 - `Database2Cbh.java` (morphy-cb2) - The v2 engine: `ReadTransaction`/`WriteTransaction` over the file classes in `se.yarin.morphy.cb2.*` (one package per file kind); `Database2CbhFacade` is its `Database` facade
-- `GameScanning` (morphy-api) - A facade extension reading every game's moves and header facts fast, from several threads; what the position index is built from (`PositionIndexBuilder`, morphy-positions)
+- `GameScanning` (morphy-api) - A facade extension reading every game's moves and header facts fast, from several threads, optionally only the games matching a filter (checked on the headers before any moves are read); `forEachMainLine` plays through main lines with a `MainLine` cursor, which v2 does off the move words on a `HashingBoard`. What the position index is built from (`PositionIndexBuilder`, morphy-positions)
 - `DatabasePgn.java` (morphy-api) - The `Database` over a plain `.pgn` file, with a `.pgi` offset index in ChessBase's format (rebuilt when missing or stale); no entities, search is a full scan; adds append, replaces rewrite the file
 - `DatabaseReadTransaction` / `DatabaseWriteTransaction` - All v1 database operations
 - `Position.java` - Immutable board state with Zobrist hashing
@@ -79,6 +79,8 @@ Library documentation in `morphy-cbh/docs/`:
 - `ARCHITECTURE.md` - System design
 - `USER-GUIDE.md` - Library usage
 - `DEVELOPER-GUIDE.md` - Contributing guide
+
+Position indexes (morphy-positions, the service's position search): `morphy-positions/docs/POSITION-INDEX.md` - the index files, building, lookups and the classes involved, with diagrams
 
 File format documentation in `format/`, one directory per format:
 - `format/v1/` - the `.cbh` family, which this library implements

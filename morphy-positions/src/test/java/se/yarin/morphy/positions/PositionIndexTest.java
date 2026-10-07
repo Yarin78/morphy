@@ -22,6 +22,7 @@ import se.yarin.chess.Chess;
 import se.yarin.chess.Date;
 import se.yarin.chess.GameMovesModel;
 import se.yarin.chess.GameResult;
+import se.yarin.chess.MoveCode;
 import se.yarin.chess.Position;
 import se.yarin.morphy.api.GameFacts;
 import se.yarin.morphy.api.GameScan;
@@ -67,7 +68,7 @@ class PositionIndexTest {
           public void close() {}
         };
     Path indexDir = dir.resolve("test.positions");
-    new PositionIndexBuilder(message -> {}).build(scan, DATABASE, indexDir, dir.resolve("work"));
+    new PositionIndexBuilder(message -> {}).build(scan, DATABASE, "", indexDir, dir.resolve("work"));
     index = PositionIndex.open(indexDir);
   }
 
@@ -97,15 +98,15 @@ class PositionIndexTest {
 
   private static Map<String, List<Integer>> movesFrom(String moves) {
     Position position = after(moves);
-    Lookup lookup = index.lookup(PositionKeys.hash(position));
+    Lookup lookup = index.lookup(position.getZobristHashLo());
     Lookup.Shared shared = assertInstanceOf(Lookup.Shared.class, lookup);
     return shared.groups().stream()
         .collect(
             Collectors.toMap(
                 g ->
-                    g.moveCode() == PositionKeys.GAME_ENDED
+                    g.moveCode() == IndexFiles.GAME_ENDED
                         ? "end"
-                        : PositionKeys.move(position, g.moveCode()).toSAN(),
+                        : MoveCode.move(position, g.moveCode()).toSAN(),
                 g -> Arrays.stream(g.gameIds()).boxed().toList()));
   }
 
@@ -138,14 +139,14 @@ class PositionIndexTest {
   /** The move of the single game that reaches a position, as the lookup finds and checks it. */
   private static Map<String, List<Integer>> single(String moves) {
     Position position = after(moves);
-    long hash = PositionKeys.hash(position);
+    long hash = position.getZobristHashLo();
     Lookup.SingleCandidates candidates =
         assertInstanceOf(Lookup.SingleCandidates.class, index.lookup(hash));
     Map<String, List<Integer>> found = new HashMap<>();
     for (int id : candidates.gameIds()) {
-      int move = PositionKeys.moveAfter(GAMES.get(id).moves(), hash);
-      if (move != PositionKeys.NOT_REACHED) {
-        String san = move == PositionKeys.GAME_ENDED ? "end" : PositionKeys.move(position, move).toSAN();
+      int move = PositionIndex.moveAfter(GAMES.get(id).moves(), hash);
+      if (move != PositionIndex.NOT_REACHED) {
+        String san = move == IndexFiles.GAME_ENDED ? "end" : MoveCode.move(position, move).toSAN();
         found.put(san, List.of(id));
       }
     }
@@ -167,7 +168,7 @@ class PositionIndexTest {
   @Test
   void statsOfFrequentMovesAreStoredAndTheSameAsWorkedOut() {
     Position position = after("e2e4");
-    Lookup.Shared shared = assertInstanceOf(Lookup.Shared.class, index.lookup(PositionKeys.hash(position)));
+    Lookup.Shared shared = assertInstanceOf(Lookup.Shared.class, index.lookup(position.getZobristHashLo()));
     MoveGroup c5 = shared.groups().stream().filter(g -> g.gameIds().length == 60).findFirst().orElseThrow();
     assertNotNull(c5.stats());
     MoveStats worked =
@@ -185,7 +186,7 @@ class PositionIndexTest {
   @Test
   void statsOfRareMovesAreWorkedOutFromTheFacts() {
     Position position = after("d2d4 g8f6 c2c4");
-    Lookup.Shared shared = assertInstanceOf(Lookup.Shared.class, index.lookup(PositionKeys.hash(position)));
+    Lookup.Shared shared = assertInstanceOf(Lookup.Shared.class, index.lookup(position.getZobristHashLo()));
     MoveGroup e6 = shared.groups().stream().filter(g -> g.gameIds().length == 2).findFirst().orElseThrow();
     assertNull(e6.stats());
     MoveStats stats = index.stats(e6, false);
@@ -211,8 +212,9 @@ class PositionIndexTest {
 
   @Test
   void staleWhenTheDatabaseChanged() {
-    assertFalse(index.isStale(DATABASE));
-    assertTrue(index.isStale(new DatabaseIdentity(1234, 5679, 70)));
+    assertFalse(index.isStale(DATABASE, ""));
+    assertTrue(index.isStale(new DatabaseIdentity(1234, 5679, 70), ""));
+    assertTrue(index.isStale(DATABASE, "date:2000.."));
     assertEquals(DATABASE, index.meta().database());
   }
 }

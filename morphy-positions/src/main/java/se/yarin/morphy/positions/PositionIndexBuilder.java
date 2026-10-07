@@ -61,8 +61,10 @@ public final class PositionIndexBuilder {
   /**
    * Builds an index, replacing any there is.
    *
-   * @param scan the games
+   * @param scan the games, opened with the filter
    * @param database what identifies the database the games are of
+   * @param filter the filter the scan was opened with, recorded in the index (see {@link
+   *     PositionIndex#isStale}); blank for every game
    * @param indexDir the index directory, see {@link IndexFiles#indexDirectoryOf}
    * @param workDir where the buckets are written
    * @return what the index holds
@@ -70,6 +72,7 @@ public final class PositionIndexBuilder {
   public @NotNull IndexMeta build(
       @NotNull GameScan scan,
       @NotNull DatabaseIdentity database,
+      @NotNull String filter,
       @NotNull Path indexDir,
       @NotNull Path workDir)
       throws IOException {
@@ -81,7 +84,7 @@ public final class PositionIndexBuilder {
     boolean done = false;
     try {
       GameFactsTable facts = GameFactsTable.forGames(scan.maxId());
-      decode(scan, facts, buckets);
+      long games = decode(scan, facts, buckets);
       int newest = facts.newestYear();
       int recentSince = newest > 0 ? newest - 2 : 0;
       int gameIdBytes = scan.maxId() < (1 << 24) ? 3 : 4;
@@ -96,7 +99,9 @@ public final class PositionIndexBuilder {
               STATS_THRESHOLD,
               gameIdBytes,
               counts[0],
-              counts[1]);
+              counts[1],
+              filter.strip(),
+              games);
       meta.write(building.resolve(IndexFiles.META));
       IndexFiles.deleteDirectory(indexDir);
       Files.move(building, indexDir);
@@ -199,7 +204,8 @@ public final class PositionIndexBuilder {
   /** What a thread reading games keeps: its records not yet written, and a game's positions. */
   private record Worker(Buffer buffer, GamePositions positions) {}
 
-  private void decode(GameScan scan, GameFactsTable facts, Path dir) throws IOException {
+  /** Writes every game's positions to the bucket files; returns the number of games. */
+  private long decode(GameScan scan, GameFactsTable facts, Path dir) throws IOException {
     int maxId = scan.maxId();
     AtomicLong done = new AtomicLong();
     long start = System.nanoTime();
@@ -251,6 +257,7 @@ public final class PositionIndexBuilder {
             done.get(),
             maxId,
             (System.nanoTime() - start) / 1e9));
+    return done.get();
   }
 
   /**
@@ -263,7 +270,7 @@ public final class PositionIndexBuilder {
       long hash = line.hash();
       int code = line.moveCode();
       if (positions.add(hash)) {
-        int move = code == MoveCode.NONE ? PositionKeys.GAME_ENDED : code;
+        int move = code == MoveCode.NONE ? IndexFiles.GAME_ENDED : code;
         buffer.add(hash, payload(id, line.whiteToMove(), move));
       }
       if (code == MoveCode.NONE) {
@@ -500,7 +507,7 @@ public final class PositionIndexBuilder {
       }
       out.putShort(move);
       out.putVar(ids.length);
-      boolean stats = ids.length >= STATS_THRESHOLD && move != PositionKeys.GAME_ENDED;
+      boolean stats = ids.length >= STATS_THRESHOLD && move != IndexFiles.GAME_ENDED;
       out.put(stats ? 1 : 0);
       if (stats) {
         MoveStats.of(ids, facts, whiteToMove, recentSince).write(out);

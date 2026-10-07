@@ -20,6 +20,11 @@ __pycache__/
 # The service's own list of databases besides the shared databases.json, such as personal ones;
 # see test-databases/README.md.
 /test-databases/databases.local.json
+/test-databases/position-indexes.local.json
+
+# Position indexes, built from the databases next to them.
+*.positions/
+*.positions.building/
 
 # The working notes behind the format specifications mention personal databases,
 # and the superseded v1 documents are only of use with them. They live in a

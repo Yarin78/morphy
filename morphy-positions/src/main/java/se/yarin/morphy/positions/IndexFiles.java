@@ -9,8 +9,8 @@ import java.nio.file.StandardOpenOption;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * The files of a position index, in a directory next to the database: {@code Mega.2cbh} has its
- * index in {@code Mega.positions}. Numbers of fixed width are big-endian.
+ * The files of a position index, in a directory, by default next to the database (see {@link
+ * #indexDirectoryOf}). Numbers of fixed width are big-endian.
  */
 public final class IndexFiles {
   private IndexFiles() {}
@@ -23,15 +23,33 @@ public final class IndexFiles {
   static final String SINGLE_DIRECTORY = "single.dir";
   static final String SINGLE_DATA = "single.data";
 
+  /**
+   * The move code of the games that ended in a position, in a shared position's record: no move.
+   * The other codes are {@link se.yarin.chess.MoveCode}s, which fit in 15 bits.
+   */
+  static final int GAME_ENDED = 0xFFFF;
+
   /** The top bits of a hash the directory of the single-game positions is by. */
   static final int DIRECTORY_BITS = 24;
 
-  /** The index directory of a database file. */
+  /** The default index directory of a database file: {@code Mega.2cbh} has {@code Mega.positions}. */
   public static @NotNull Path indexDirectoryOf(@NotNull Path databaseFile) {
-    String name = databaseFile.getFileName().toString();
+    return databaseFile.resolveSibling(baseName(databaseFile) + ".positions");
+  }
+
+  /**
+   * The default directory of a named index of a database, as a database may have several (with
+   * different filters): index {@code classical} of {@code Mega.2cbh} is in {@code
+   * Mega.classical.positions}.
+   */
+  public static @NotNull Path indexDirectoryOf(@NotNull Path databaseFile, @NotNull String indexId) {
+    return databaseFile.resolveSibling(baseName(databaseFile) + "." + indexId + ".positions");
+  }
+
+  private static String baseName(Path file) {
+    String name = file.getFileName().toString();
     int dot = name.lastIndexOf('.');
-    String base = dot > 0 ? name.substring(0, dot) : name;
-    return databaseFile.resolveSibling(base + ".positions");
+    return dot > 0 ? name.substring(0, dot) : name;
   }
 
   static void writeFully(@NotNull FileChannel channel, @NotNull ByteBuffer buf) throws IOException {

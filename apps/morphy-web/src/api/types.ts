@@ -20,11 +20,27 @@ export interface DatabaseResponse {
   path: string;
   /** A read-only database can be searched, but games can't be saved to it */
   readOnly: boolean;
-  /**
-   * The short name of a reference database, e.g. "Mega", which has the indexes to search its
-   * games by position; absent for any other. Not sent by the service yet.
-   */
-  referenceName?: string;
+}
+
+/**
+ * A position index, as the service defines it: the games of a database (or those matching a
+ * filter) by the positions they reached, to search a board's position in.
+ */
+export interface PositionIndexResponse {
+  id: string;
+  /** A short name, as its pill shows it */
+  name: string;
+  /** The database whose games it holds, which they open in */
+  databaseId: string;
+  /** The games it holds, in the game search's language; empty for every game */
+  filter: string;
+  /** Whether it can be searched, or is to be built, or being built */
+  status: 'ready' | 'missing' | 'stale' | 'building' | 'failed';
+  /** What's to know about the status: the build's progress, why it failed, how to build it */
+  message?: string;
+  /** The games it holds, when built */
+  games?: number;
+  builtAt?: string;
 }
 
 export interface DatabaseListResponse {
@@ -410,6 +426,9 @@ export interface PositionSearchRequest {
 }
 
 export interface PositionSearchResponse {
+  indexId: string;
+  /** The database the games are of, which they open in */
+  databaseId: string;
   /** What was played from the position; with the first page only, null with the later ones */
   summary: PositionSummary | null;
   /** The page of the games that reached it */

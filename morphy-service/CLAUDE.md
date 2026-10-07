@@ -19,7 +19,8 @@ mvn test                   # Run tests
 ## Configuration
 
 - **Port**: 8080
-- **Database config**: Loaded from `test-databases/databases.json` at startup. Each entry has a `displayName` and a `path` (the format follows from its extension), and optionally `readOnly`, `createIfMissing`, `referenceName` (marks a reference database, searchable by position; the short name its pill shows) and `positionIndex` (where its position index is, if not next to it). Databases open on first access; a missing one is created empty only with `createIfMissing`, and otherwise fails to open
+- **Database config**: Loaded from `test-databases/databases.json` at startup. Each entry has a `displayName` and a `path` (the format follows from its extension), and optionally `readOnly` and `createIfMissing`. Databases open on first access; a missing one is created empty only with `createIfMissing`, and otherwise fails to open
+- **Position indexes**: Defined in `test-databases/position-indexes.json` (and the git-ignored `position-indexes.local.json` next to it; property `app.position-indexes.config`), in parallel to the databases. Each entry, keyed by its id, has a short `name` (its pill in the Games pane), a `database` id, optionally a `filter` of the games it holds (in the game search's language, e.g. `"tournament.time:normal rating:2300..,mode=both"`) and optionally a `path` (default: next to the database, `<name>.<id>.positions`). A database can have several; an index of several databases is meant for later
 - **Freshness check**: 600,000ms (10 min) - reopens stale database connections
 - **Allowed paths**: Configurable for security when registering/creating databases
 
@@ -56,8 +57,11 @@ See @GAME_DTO_USAGE.md for DTO conversion details.
 - `POST /` - Add game
 - `PUT /{gameId}` - Replace game
 
-### Positions (`/api/databases/{id}/positions`) — reference databases only
-- `GET /search?fen=&sortBy=&offset=&limit=&includeMoves=` - A page of the games that reached a position, and with the first page a summary: the games, their results, and the moves played from it with their statistics (`PositionsService`, on the database's morphy-positions index, kept open once used). Sorted by `id`, `playedDate`, `playedYear`, `whiteElo`, `blackElo`, `eloAvg` or `eloMax`; others are refused. 400 for a database without a `referenceName`, 409 when its index is missing or out of date (built with `morphy positions build`)
+### Position indexes (`/api/position-indexes`)
+- `GET /` - The defined indexes, each with its status: `ready`, `missing`, `stale` (its database changed since it was built, or it was built with another filter), `building` (with the build's progress) or `failed`
+- `GET /{id}` - One index and its status
+- `GET /{id}/search?fen=&sortBy=&offset=&limit=&includeMoves=` - A page of the games of the index that reached a position, and with the first page a summary: the games, their results, and the moves played from it with their statistics (`PositionsService`, on the morphy-positions index, kept open once used). The response names the database the games are of. Sorted by `id`, `playedDate`, `playedYear`, `whiteElo`, `blackElo`, `eloAvg` or `eloMax`; others are refused. 400 for an unknown index, 409 when it's missing or out of date
+- `POST /{id}/build` - Builds the index in the background (202, with its status); builds run one at a time, in the order asked for. The temporary bucket files go next to the index directory
 
 ### Entities (Players, Tournaments, Annotators, Sources, Teams, GameTags)
 Each entity type has: list, get by ID, count, search, update endpoints under `/api/databases/{id}/{entity-type}/`.

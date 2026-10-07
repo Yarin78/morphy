@@ -1,18 +1,27 @@
 package se.yarin.morphy.service.positions;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PreDestroy;
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.FileTime;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import se.yarin.chess.Player;
 import se.yarin.chess.Position;
@@ -28,9 +37,11 @@ import se.yarin.morphy.model.PlayerDto;
 import se.yarin.morphy.positions.DatabaseIdentity;
 import se.yarin.morphy.positions.GameFactsTable;
 import se.yarin.morphy.positions.IndexFiles;
+import se.yarin.morphy.positions.IndexMeta;
 import se.yarin.morphy.positions.MoveStats;
 import se.yarin.morphy.positions.PositionGames;
 import se.yarin.morphy.positions.PositionIndex;
+import se.yarin.morphy.positions.PositionIndexBuilder;
 import se.yarin.morphy.positions.RatedPlayer;
 import se.yarin.morphy.service.config.DatabaseConfig;
 import se.yarin.morphy.service.databases.DatabaseService;
@@ -38,8 +49,11 @@ import se.yarin.morphy.service.games.dto.GameSearchResponse;
 import se.yarin.morphy.service.search.SearchMetadata;
 
 /**
- * Searches the games of reference databases by position, through their position indexes. An
- * index is opened when first needed and kept open; it's opened again when it has been rebuilt.
+ * The position indexes, as {@code position-indexes.json} defines them, next to {@code
+ * databases.json} (and {@code position-indexes.local.json}, out of version control, for those of
+ * databases that aren't shared): listing them, searching their games by position, and building
+ * them. An index is opened when first searched and kept open; it's opened again when it has been
+ * rebuilt. Builds run one at a time, in the background.
  */
 @Service
 public class PositionsService {
@@ -56,38 +70,181 @@ public class PositionsService {
 
   private final DatabaseService databaseService;
 
-  /** The open indexes, by database id, with the time their files were built. */
+  /** The definitions, by id, in the order of the files. */
+  private final Map<String, PositionIndexConfig> definitions;
+
+  /** The open indexes, by index id, with the time their files were built. */
   private final Map<String, OpenIndex> indexes = new ConcurrentHashMap<>();
 
   private record OpenIndex(PositionIndex index, FileTime built) {}
 
-  public PositionsService(DatabaseService databaseService) {
+  /** A build queued or running, or the last one, if it failed. */
+  private static final class Build {
+    volatile boolean running = true;
+    volatile String progress = "Waiting for another build";
+    volatile @Nullable String failure;
+    CompletableFuture<Void> done = new CompletableFuture<>();
+  }
+
+  private final Map<String, Build> builds = new ConcurrentHashMap<>();
+  private final ExecutorService builder =
+      Executors.newSingleThreadExecutor(
+          r -> {
+            Thread t = new Thread(r, "position-index-build");
+            t.setDaemon(true);
+            return t;
+          });
+
+  /**
+   * @param configPath the definitions file; the {@code .local} file next to it is read too. A
+   *     missing file defines no indexes
+   */
+  public PositionsService(
+      DatabaseService databaseService,
+      @Value("${app.position-indexes.config:test-databases/position-indexes.json}")
+          String configPath) {
     this.databaseService = databaseService;
+    this.definitions = readDefinitions(configPath);
+  }
+
+  private static Map<String, PositionIndexConfig> readDefinitions(String configPath) {
+    Map<String, PositionIndexConfig> definitions = new LinkedHashMap<>();
+    if (configPath == null || configPath.isBlank()) {
+      return definitions;
+    }
+    File file = new File(configPath).getAbsoluteFile();
+    String name = file.getName();
+    int dot = name.lastIndexOf('.');
+    File local =
+        new File(
+            file.getParentFile(),
+            dot > 0 ? name.substring(0, dot) + ".local" + name.substring(dot) : name + ".local");
+    ObjectMapper mapper = new ObjectMapper();
+    for (File f : List.of(file, local)) {
+      if (!f.isFile()) {
+        continue;
+      }
+      try {
+        Map<String, PositionIndexConfig> read =
+            mapper.readValue(f, new TypeReference<LinkedHashMap<String, PositionIndexConfig>>() {});
+        read.forEach((id, definition) -> definitions.put(id, definition.withId(id)));
+        log.info("Loaded {} position index definition(s) from {}", read.size(), f);
+      } catch (IOException e) {
+        throw new IllegalStateException("Can't read the position indexes in " + f + ": " + e.getMessage(), e);
+      }
+    }
+    return definitions;
+  }
+
+  // ── Listing ──────────────────────────────────────────────────────────────
+
+  /** Every index, in the order of the definitions. */
+  public List<PositionIndexInfo> list() {
+    return definitions.values().stream().map(this::info).toList();
   }
 
   /**
-   * A page of the games of a reference database that reached a position.
+   * An index.
    *
-   * @throws IllegalArgumentException if the database isn't a reference database, or the position
-   *     or the sort order isn't valid
-   * @throws PositionIndexUnavailableException if the database's index is missing or out of date
+   * @throws IllegalArgumentException if there is no such index
+   */
+  public PositionIndexInfo info(@NotNull String indexId) {
+    return info(definition(indexId));
+  }
+
+  private PositionIndexInfo info(PositionIndexConfig definition) {
+    String id = definition.id();
+    Build build = builds.get(id);
+    String status, message = null;
+    Long games = null;
+    String builtAt = null;
+    IndexMeta meta = null;
+    try {
+      meta = PositionIndex.readMeta(directory(definition));
+      games = meta.games();
+      builtAt = meta.builtAt().toString();
+    } catch (IOException | RuntimeException e) {
+      // No index yet
+    }
+    if (build != null && build.running) {
+      status = "building";
+      message = build.progress;
+    } else if (build != null && build.failure != null) {
+      status = "failed";
+      message = build.failure;
+    } else if (meta == null) {
+      status = "missing";
+      message = "The position index " + definition.name() + " hasn't been built";
+    } else if (isStale(definition, meta)) {
+      status = "stale";
+      message = "The position index " + definition.name() + " is out of date";
+    } else {
+      status = "ready";
+    }
+    return new PositionIndexInfo(
+        id, definition.name(), definition.database(), definition.filterOrAll(), status, message, games, builtAt);
+  }
+
+  private PositionIndexConfig definition(String indexId) {
+    PositionIndexConfig definition = definitions.get(indexId);
+    if (definition == null) {
+      throw new IllegalArgumentException("Unknown position index: " + indexId);
+    }
+    return definition;
+  }
+
+  private DatabaseConfig databaseOf(PositionIndexConfig definition) {
+    DatabaseConfig config = databaseService.getDatabaseConfig(definition.database());
+    if (config == null) {
+      throw new IllegalArgumentException(
+          "The position index " + definition.id() + " is of an unknown database: " + definition.database());
+    }
+    return config;
+  }
+
+  /** The directory of an index: as defined, or next to its database. */
+  private Path directory(PositionIndexConfig definition) {
+    return definition.path() != null
+        ? Path.of(definition.path())
+        : IndexFiles.indexDirectoryOf(Path.of(databaseOf(definition).getPath()), definition.id());
+  }
+
+  /** Whether an index was built from another filter, or its database has changed since. */
+  private boolean isStale(PositionIndexConfig definition, IndexMeta meta) {
+    if (!meta.filter().strip().equals(definition.filterOrAll())) {
+      return true;
+    }
+    DatabaseConfig config = databaseOf(definition);
+    return databaseService.read(
+        config.getId(),
+        db -> {
+          try {
+            return !meta.database().equals(DatabaseIdentity.of(Path.of(config.getPath()), db.gameCount()));
+          } catch (IOException e) {
+            return true;
+          }
+        });
+  }
+
+  // ── Searching ────────────────────────────────────────────────────────────
+
+  /**
+   * A page of the games of an index that reached a position.
+   *
+   * @throws IllegalArgumentException if there is no such index, or the position or the sort order
+   *     isn't valid
+   * @throws PositionIndexUnavailableException if the index is missing or out of date
    */
   public PositionSearchResponse search(
-      @NotNull String databaseId,
+      @NotNull String indexId,
       @NotNull String fen,
       @NotNull String sortBy,
       int offset,
       int limit,
       boolean includeMoves) {
     long startTime = System.currentTimeMillis();
-    DatabaseConfig config = databaseService.getDatabaseConfig(databaseId);
-    if (config == null) {
-      throw new IllegalArgumentException("Unknown database ID: " + databaseId);
-    }
-    if (config.getReferenceName() == null) {
-      throw new IllegalArgumentException(
-          "Database '" + databaseId + "' is not a reference database; it can't be searched by position");
-    }
+    PositionIndexConfig definition = definition(indexId);
+    DatabaseConfig config = databaseOf(definition);
     Position position;
     try {
       position = PositionState.fromFen(fen).position();
@@ -99,12 +256,12 @@ public class PositionsService {
     int count = Math.min(Math.max(0, limit), MAX_LIMIT);
 
     return databaseService.read(
-        databaseId,
+        config.getId(),
         db -> {
-          PositionIndex index = indexOf(config, db);
+          PositionIndex index = indexOf(definition, config, db);
           PositionGames games;
           try (GameScan scan = scanning(db).openScan()) {
-            games = PositionGames.find(index, scan, position);
+            games = index.find(position, scan);
           }
           int[] sorted = order.sort(games.gameIds(), index.facts());
           GameFetchOptions fetch = new GameFetchOptions(includeMoves, false, false);
@@ -120,6 +277,8 @@ public class PositionsService {
           SearchMetadata metadata =
               new SearchMetadata(null, order.toString(), System.currentTimeMillis() - startTime);
           return new PositionSearchResponse(
+              indexId,
+              config.getId(),
               summary,
               new GameSearchResponse(page, page.size(), sorted.length, first, count, metadata));
         });
@@ -133,24 +292,22 @@ public class PositionsService {
                     "Database " + db.name() + " can't be searched by position"));
   }
 
-  /** The database's index, opened if it isn't, or opened again if it has been rebuilt. */
-  private PositionIndex indexOf(DatabaseConfig config, Database db) {
-    Path databaseFile = Path.of(config.getPath());
-    Path dir =
-        config.getPositionIndex() != null
-            ? Path.of(config.getPositionIndex())
-            : IndexFiles.indexDirectoryOf(databaseFile);
-    String build = "build it with: morphy positions build \"" + databaseFile + "\"";
+  /** An index, opened if it isn't, or opened again if it has been rebuilt. */
+  private PositionIndex indexOf(PositionIndexConfig definition, DatabaseConfig config, Database db) {
+    Path dir = directory(definition);
+    String build = "build it from the Games pane, or with: morphy positions build \"" + config.getPath() + "\""
+        + (definition.filterOrAll().isEmpty() ? "" : " --filter \"" + definition.filterOrAll() + "\"")
+        + " --index \"" + dir + "\"";
     FileTime built;
     try {
       built = Files.getLastModifiedTime(dir.resolve("meta.properties"));
     } catch (IOException e) {
       throw new PositionIndexUnavailableException(
-          "The reference database " + config.getReferenceName() + " has no position index; " + build);
+          "The position index " + definition.name() + " hasn't been built; " + build);
     }
     OpenIndex open =
         indexes.compute(
-            config.getId(),
+            definition.id(),
             (id, current) -> {
               if (current != null && current.built().equals(built)) {
                 return current;
@@ -159,23 +316,79 @@ public class PositionsService {
                 close(current.index());
               }
               try {
-                log.info("Opening the position index of '{}' in {}", id, dir);
+                log.info("Opening the position index '{}' in {}", id, dir);
                 return new OpenIndex(PositionIndex.open(dir), built);
               } catch (IOException e) {
                 throw new PositionIndexUnavailableException(
-                    "The position index of " + config.getReferenceName() + " can't be read; " + build,
-                    e);
+                    "The position index " + definition.name() + " can't be read; " + build, e);
               }
             });
     try {
-      if (open.index().isStale(DatabaseIdentity.of(databaseFile, db.gameCount()))) {
+      if (open.index().isStale(DatabaseIdentity.of(Path.of(config.getPath()), db.gameCount()), definition.filterOrAll())) {
         throw new PositionIndexUnavailableException(
-            "The position index of " + config.getReferenceName() + " is out of date; " + build);
+            "The position index " + definition.name() + " is out of date; " + build);
       }
     } catch (IOException e) {
-      throw new PositionIndexUnavailableException("Can't read " + databaseFile, e);
+      throw new PositionIndexUnavailableException("Can't read " + config.getPath(), e);
     }
     return open.index();
+  }
+
+  // ── Building ─────────────────────────────────────────────────────────────
+
+  /**
+   * Builds an index in the background, after any build before it; does nothing if it's already
+   * being built.
+   *
+   * @return when the build is done; it completes exceptionally if the build fails
+   * @throws IllegalArgumentException if there is no such index
+   */
+  public CompletableFuture<Void> build(@NotNull String indexId) {
+    PositionIndexConfig definition = definition(indexId);
+    DatabaseConfig config = databaseOf(definition);
+    Build build = new Build();
+    Build current = builds.putIfAbsent(indexId, build);
+    if (current != null) {
+      if (current.running) {
+        return current.done;
+      }
+      builds.put(indexId, build);
+    }
+    builder.submit(
+        () -> {
+          long start = System.nanoTime();
+          try {
+            Path dir = directory(definition);
+            build.progress = "Starting";
+            databaseService.read(
+                config.getId(),
+                db -> {
+                  try (GameScan scan = scanning(db).openScan(definition.filterOrAll())) {
+                    new PositionIndexBuilder(message -> build.progress = message)
+                        .build(
+                            scan,
+                            DatabaseIdentity.of(Path.of(config.getPath()), db.gameCount()),
+                            definition.filterOrAll(),
+                            dir,
+                            dir.toAbsolutePath().getParent());
+                    return null;
+                  } catch (IOException e) {
+                    throw new IllegalStateException(e.getMessage(), e);
+                  }
+                });
+            log.info(
+                "Built the position index '{}' in {} s", indexId, (System.nanoTime() - start) / 1_000_000_000);
+            builds.remove(indexId, build);
+            build.running = false;
+            build.done.complete(null);
+          } catch (RuntimeException e) {
+            log.error("Failed to build the position index '{}'", indexId, e);
+            build.failure = "The last build failed: " + e.getMessage();
+            build.running = false;
+            build.done.completeExceptionally(e);
+          }
+        });
+    return build.done;
   }
 
   private static void close(PositionIndex index) {
@@ -188,6 +401,7 @@ public class PositionsService {
 
   @PreDestroy
   public void closeAll() {
+    builder.shutdownNow();
     indexes.values().forEach(open -> close(open.index()));
     indexes.clear();
   }

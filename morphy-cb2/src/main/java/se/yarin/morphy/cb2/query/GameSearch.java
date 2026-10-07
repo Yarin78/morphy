@@ -203,6 +203,60 @@ public final class GameSearch {
   public static @NotNull List<Integer> find(
       @NotNull DatabaseTransaction txn, @NotNull List<FilterCondition> conditions, @NotNull Sort sort) {
     EntityCache cache = new EntityCache(txn);
+    Compiled compiled = compile(txn, conditions, cache);
+    Predicate<GameRecord> filter = compiled.filter();
+    BitSet candidates = compiled.candidates();
+    List<GameRecord> matches = new ArrayList<>();
+    if (candidates == null) {
+      for (int id = 1; id <= txn.count(); id++) {
+        GameRecord record = txn.record(id);
+        if (filter.test(record)) {
+          matches.add(record);
+        }
+      }
+    } else {
+      for (int id = candidates.nextSetBit(1); id >= 0 && id <= txn.count(); id = candidates.nextSetBit(id + 1)) {
+        GameRecord record = txn.record(id);
+        if (filter.test(record)) {
+          matches.add(record);
+        }
+      }
+    }
+    Comparator<GameRecord> comparator = comparator(sort, cache);
+    if (comparator != null) {
+      matches.sort(comparator);
+    }
+    return matches.stream().map(GameRecord::id).toList();
+  }
+
+  /**
+   * Conditions made into a test of a game's record, and the games that can match at all.
+   *
+   * @param filter whether a record matches, from its header alone (entity conditions are turned
+   *     into the ids of the entities that match)
+   * @param candidates the games that can match, from the games of the matching entities; null if
+   *     any can
+   */
+  public record Compiled(@NotNull Predicate<GameRecord> filter, @Nullable BitSet candidates) {
+    /** Whether a record matches. */
+    public boolean matches(@NotNull GameRecord record) {
+      return (candidates == null || candidates.get(record.id())) && filter.test(record);
+    }
+  }
+
+  /**
+   * Makes conditions into a test of game records, which a scan of every game can apply to each
+   * header it reads.
+   *
+   * @throws IllegalArgumentException if a field is unknown or a value invalid
+   */
+  public static @NotNull Compiled compile(
+      @NotNull DatabaseTransaction txn, @NotNull List<FilterCondition> conditions) {
+    return compile(txn, conditions, new EntityCache(txn));
+  }
+
+  private static Compiled compile(
+      DatabaseTransaction txn, List<FilterCondition> conditions, EntityCache cache) {
     Predicate<GameRecord> filter = r -> true;
     BitSet candidates = null;
     Map<String, List<FilterCondition>> groups = new LinkedHashMap<>();
@@ -255,27 +309,7 @@ public final class GameSearch {
       candidates = intersect(candidates, gamesOf(txn, kind, ids));
     }
 
-    List<GameRecord> matches = new ArrayList<>();
-    if (candidates == null) {
-      for (int id = 1; id <= txn.count(); id++) {
-        GameRecord record = txn.record(id);
-        if (filter.test(record)) {
-          matches.add(record);
-        }
-      }
-    } else {
-      for (int id = candidates.nextSetBit(1); id >= 0 && id <= txn.count(); id = candidates.nextSetBit(id + 1)) {
-        GameRecord record = txn.record(id);
-        if (filter.test(record)) {
-          matches.add(record);
-        }
-      }
-    }
-    Comparator<GameRecord> comparator = comparator(sort, cache);
-    if (comparator != null) {
-      matches.sort(comparator);
-    }
-    return matches.stream().map(GameRecord::id).toList();
+    return new Compiled(filter, candidates);
   }
 
   private static BitSet intersect(@Nullable BitSet a, BitSet b) {

@@ -5,10 +5,15 @@ import org.jetbrains.annotations.Nullable;
 import se.yarin.morphy.service.games.dto.GameSearchResponse;
 
 /**
- * A page of the games of a reference database that reached a position.
+ * A page of the games of a position index that reached a position.
  *
+ * @param indexId the index searched
+ * @param databaseId the database the games are of, which they open in
  * @param summary what was played from the position; with the first page only
  * @param games the page of games
  */
 public record PositionSearchResponse(
-    @Nullable PositionSummary summary, @NotNull GameSearchResponse games) {}
+    @NotNull String indexId,
+    @NotNull String databaseId,
+    @Nullable PositionSummary summary,
+    @NotNull GameSearchResponse games) {}

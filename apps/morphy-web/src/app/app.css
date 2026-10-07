@@ -1264,6 +1264,24 @@ html {
   font-size: 13px;
 }
 
+/* An index that can't be searched yet: why, and the button that builds it */
+.games-pane-unbuilt {
+  flex: 1;
+  padding: 8px 12px;
+  background: #fff;
+  color: #666;
+  font-size: 13px;
+}
+
+.games-pane-unbuilt p {
+  margin: 0 0 8px;
+}
+
+.games-pane-progress {
+  color: #888;
+  font-variant-numeric: tabular-nums;
+}
+
 /* The totals of the position, and the reference databases to pick from */
 .games-pane-head {
   flex: 0 0 auto;

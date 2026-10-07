@@ -18,18 +18,6 @@ public class DatabaseConfig {
   @JsonInclude(JsonInclude.Include.NON_DEFAULT)
   private boolean createIfMissing;
 
-  /**
-   * The short name of a reference database, which its games can be searched by position in (as
-   * its pill in a board's Games pane); null for other databases. A reference database needs a
-   * position index, built with {@code morphy positions build}.
-   */
-  @JsonInclude(JsonInclude.Include.NON_NULL)
-  private String referenceName;
-
-  /** Where the position index is, if not next to the database (as tests put it). */
-  @JsonInclude(JsonInclude.Include.NON_NULL)
-  private String positionIndex;
-
   public DatabaseConfig() {}
 
   public DatabaseConfig(String id, String displayName, String path) {
@@ -73,22 +61,6 @@ public class DatabaseConfig {
 
   public void setReadOnly(boolean readOnly) {
     this.readOnly = readOnly;
-  }
-
-  public String getReferenceName() {
-    return referenceName;
-  }
-
-  public void setReferenceName(String referenceName) {
-    this.referenceName = referenceName;
-  }
-
-  public String getPositionIndex() {
-    return positionIndex;
-  }
-
-  public void setPositionIndex(String positionIndex) {
-    this.positionIndex = positionIndex;
   }
 
   public boolean isCreateIfMissing() {

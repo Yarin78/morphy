@@ -1,7 +1,6 @@
 package se.yarin.morphy.cb2;
 
 import java.util.function.BiConsumer;
-import java.util.function.Consumer;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import se.yarin.chess.GameMovesModel;
@@ -11,27 +10,47 @@ import se.yarin.morphy.api.GameScan;
 import se.yarin.morphy.api.MainLine;
 import se.yarin.morphy.api.ParallelBatches;
 import se.yarin.morphy.api.ScannedGame;
+import se.yarin.morphy.api.query.FilterQueryParser;
 import se.yarin.morphy.cb2.games.Dates;
 import se.yarin.morphy.cb2.games.GameHeader;
 import se.yarin.morphy.cb2.games.GameRecord;
 import se.yarin.morphy.cb2.moves.MoveStreamCodec;
+import se.yarin.morphy.cb2.query.GameSearch;
 import se.yarin.morphy.cb2.storage.RecordFile;
 
 /**
  * A scan of a v2 database's games: the headers and moves read straight from their files, which
- * can be read from several threads, under a read transaction that keeps writers out.
+ * can be read from several threads, under a read transaction that keeps writers out. A filter is
+ * checked on each header (and the entities it refers to, looked up once) before the moves are
+ * read.
  */
 final class Scan implements GameScan {
-  // The games read at a time by {@link #forEach}: their headers in one read, and their moves,
+  // The games read at a time by {@link #forEachMainLine}: their headers in one read, and their moves,
   // which follow each other in the moves file, in one or a few
   private static final int BATCH = 4096;
 
   private final @NotNull Database2Cbh database;
   private final @NotNull ReadTransaction transaction;
+  // The games scanned; null for every one
+  private final @Nullable GameSearch.Compiled filter;
 
-  Scan(@NotNull Database2Cbh database) {
+  /**
+   * @param filter the games to scan, in the game filter language; blank for every one
+   * @throws IllegalArgumentException if the filter is invalid
+   */
+  Scan(@NotNull Database2Cbh database, @NotNull String filter) {
     this.database = database;
     this.transaction = new ReadTransaction(database);
+    try {
+      this.filter =
+          filter.isBlank()
+              ? null
+              : GameSearch.compile(
+                  transaction, new FilterQueryParser(GameSearch.DEFAULT_FIELD).parse(filter));
+    } catch (RuntimeException e) {
+      transaction.close();
+      throw e;
+    }
   }
 
   @Override
@@ -52,17 +71,6 @@ final class Scan implements GameScan {
       return null;
     }
     return scanned(header, moves);
-  }
-
-  @Override
-  public void forEach(@NotNull Consumer<ScannedGame> consumer) {
-    forEachRecord(
-        (header, moves) -> {
-          ScannedGame game = scanned(header, moves);
-          if (game != null) {
-            consumer.accept(game);
-          }
-        });
   }
 
   @Override
@@ -126,10 +134,13 @@ final class Scan implements GameScan {
         });
   }
 
-  /** The record as a game to index, or null if it isn't one. */
-  private static @Nullable GameHeader indexable(GameRecord record) {
+  /** The record as a game to index, or null if it isn't one or doesn't match the filter. */
+  private @Nullable GameHeader indexable(GameRecord record) {
     // Guiding texts and analyses have records of their own kinds
-    return record instanceof GameHeader header && !header.deleted() && !header.chess960()
+    return record instanceof GameHeader header
+            && !header.deleted()
+            && !header.chess960()
+            && (filter == null || filter.matches(header))
         ? header
         : null;
   }

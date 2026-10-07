@@ -39,10 +39,13 @@ search.
 
 ## Games of a position
 
-The Games pane below a board searches a reference database by the position on
-the board. Only reference databases can be, as they have the indexes for it; the
-service marks them in `/api/databases` with a short `referenceName`, and they're
-picked from as pills at the top right of the pane (the one picked last is kept).
+The Games pane below a board searches a position index by the position on the
+board. The service defines the indexes (`GET /api/position-indexes`, from its
+`position-indexes.json`): each holds the games of a database, or those matching a
+filter (only classical games, say), so a database can have several. They're
+picked from as pills at the top right of the pane (the one picked last is kept);
+an index that isn't built, or is out of date, says so, with a button that builds
+it in the service and shows how the build goes.
 The top row shows how many games reached the position and how the side to move
 scored. Below it, the moves played from the position on the left: how often each
 was played, its score, whether it's played more or less of late than the other
@@ -52,10 +55,10 @@ played on the board. On the right, the games that reached it, listed as a
 database's game results; one double-clicked opens at the position.
 
 Both come from one call, `searchPosition`
-(`GET /api/databases/{id}/positions/search?fen=...`): a page of the games, and with
-the first page what was played from the position. The service answers from the
-database's position index (morphy-positions), built with `morphy positions build`;
-without one, or with one out of date, it answers 409 saying so, which the pane shows.
+(`GET /api/position-indexes/{id}/search?fen=...`): a page of the games, and with
+the first page what was played from the position; the games open in the index's
+database. If the index went out of date meanwhile, the service answers 409 saying
+so, which the pane shows.
 The games can only be sorted by what the index keeps of them: id, date, year and
 ratings. Scores count the games with a result.
 
