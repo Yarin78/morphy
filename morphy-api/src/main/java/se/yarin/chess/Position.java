@@ -555,14 +555,17 @@ public class Position {
    */
   public Position doMove(Move move) {
     if (move.isNullMove()) {
-      return new Position(
-          board,
-          whiteKingSqi,
-          blackKingSqi,
-          playerToMove().otherPlayer(),
-          castlesMask,
-          NO_COL,
-          chess960sp);
+      Position next =
+          new Position(
+              board,
+              whiteKingSqi,
+              blackKingSqi,
+              playerToMove().otherPlayer(),
+              castlesMask,
+              NO_COL,
+              chess960sp);
+      next.inheritHash(this, NO_SQUARE, NO_SQUARE, NO_SQUARE, NO_SQUARE);
+      return next;
     }
 
     Stone[] newBoard = board.clone();
@@ -572,6 +575,9 @@ public class Position {
     int newBlackKingSqi = this.blackKingSqi;
 
     Piece movingPiece = stoneAt(move.fromSqi()).toPiece();
+    // The squares changed besides the move's own: the rook's when castling, or the pawn's taken
+    // en passant
+    int otherSqi = NO_SQUARE, anotherSqi = NO_SQUARE;
 
     if (move.isCastle()) {
       // Castles; update the position of the rook
@@ -590,6 +596,8 @@ public class Position {
         newBlackKingSqi = move.toSqi();
       }
 
+      otherSqi = rookFromSqi;
+      anotherSqi = rookToSqi;
       newBoard[rookFromSqi] = NO_STONE;
       newBoard[move.fromSqi()] = NO_STONE;
       newBoard[rookToSqi] = Piece.ROOK.toStone(toMove);
@@ -613,7 +621,8 @@ public class Position {
           if (Chess.deltaCol(move.fromSqi(), move.toSqi()) != 0
               && board[move.toSqi()] == NO_STONE) {
             // En passant
-            newBoard[coorToSqi(move.toCol(), move.fromRow())] = NO_STONE;
+            otherSqi = coorToSqi(move.toCol(), move.fromRow());
+            newBoard[otherSqi] = NO_STONE;
           } else if (move.toRow() == 0 || move.toRow() == 7) {
             Stone promotionStone = move.promotionStone();
             if (promotionStone == NO_STONE) {
@@ -644,14 +653,72 @@ public class Position {
       }
     }
 
-    return new Position(
-        newBoard,
-        newWhiteKingSqi,
-        newBlackKingSqi,
-        toMove.otherPlayer(),
-        newCastlesMask,
-        enPassantFile,
-        chess960sp);
+    Position next =
+        new Position(
+            newBoard,
+            newWhiteKingSqi,
+            newBlackKingSqi,
+            toMove.otherPlayer(),
+            newCastlesMask,
+            enPassantFile,
+            chess960sp);
+    next.inheritHash(this, move.fromSqi(), move.toSqi(), otherSqi, anotherSqi);
+    return next;
+  }
+
+  /**
+   * Works out this position's hash from that of the position before the move that led to it, if
+   * that one is known: only the squares the move changed, the castling rights, the en passant file
+   * and the side to move differ. Much cheaper than going over the whole board, which a game played
+   * through would otherwise do for every position.
+   *
+   * @param parent the position before the move
+   * @param squares the squares the move may have changed; {@link Chess#NO_SQUARE} for none
+   */
+  private void inheritHash(Position parent, int... squares) {
+    long lo = parent.hashLo, hi = parent.hashHi;
+    if (lo == 0 && hi == 0) {
+      return;
+    }
+    for (int i = 0; i < squares.length; i++) {
+      int sqi = squares[i];
+      if (sqi == NO_SQUARE || board[sqi] == parent.board[sqi] || seenBefore(squares, i)) {
+        continue;
+      }
+      int before = parent.board[sqi].ordinal(), after = board[sqi].ordinal();
+      lo ^= zobristKeyLo[before][sqi] ^ zobristKeyLo[after][sqi];
+      hi ^= zobristKeyHi[before][sqi] ^ zobristKeyHi[after][sqi];
+    }
+    if (castlesMask != parent.castlesMask) {
+      lo ^= zobristKeyCastleLo[parent.castlesMask] ^ zobristKeyCastleLo[castlesMask];
+      hi ^= zobristKeyCastleHi[parent.castlesMask] ^ zobristKeyCastleHi[castlesMask];
+    }
+    int parentEp = parent.hashedEnPassantCol(), ep = hashedEnPassantCol();
+    if (parentEp != ep) {
+      lo ^= zobristKeyEnPassantLo[parentEp + 1] ^ zobristKeyEnPassantLo[ep + 1];
+      hi ^= zobristKeyEnPassantHi[parentEp + 1] ^ zobristKeyEnPassantHi[ep + 1];
+    }
+    if (toMove != parent.toMove) {
+      int p = parent.toMove == WHITE ? 1 : 0, t = toMove == WHITE ? 1 : 0;
+      lo ^= zobristKeyToMoveLo[p] ^ zobristKeyToMoveLo[t];
+      hi ^= zobristKeyToMoveHi[p] ^ zobristKeyToMoveHi[t];
+    }
+    // Each half only if the parent's is known; 0 is left to be worked out when asked for
+    if (parent.hashLo != 0) {
+      hashLo = lo;
+    }
+    if (parent.hashHi != 0) {
+      hashHi = hi;
+    }
+  }
+
+  private static boolean seenBefore(int[] squares, int i) {
+    for (int j = 0; j < i; j++) {
+      if (squares[j] == squares[i]) {
+        return true;
+      }
+    }
+    return false;
   }
 
   /**

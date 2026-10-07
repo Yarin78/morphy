@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -453,6 +454,54 @@ public class PositionTest {
     Position q2 = Position.start().doMove(E2, E4).doMove(D7, D5).doMove(E4, E5).doMove(A7, A6);
     assertNotEquals(q1, q2);
     assertNotEquals(q1.getZobristHashLo(), q2.getZobristHashLo());
+  }
+
+  @Test
+  public void testHashWorkedOutFromThePositionBeforeIsTheSameAsFromScratch() {
+    // Random games, long enough for every kind of move to occur: captures, castling either way,
+    // en passant, promotions, and now and then a null move
+    Random random = new Random(7);
+    int[] kinds = new int[5];
+    for (int game = 0; game < 400; game++) {
+      Position position = Position.start();
+      position.getZobristHashLo();
+      position.getZobristHashHi();
+      for (int ply = 0; ply < 150; ply++) {
+        List<Move> moves = position.generateAllLegalMoves();
+        if (moves.isEmpty()) {
+          break;
+        }
+        Move move = moves.get(random.nextInt(moves.size()));
+        // A null move in check would leave a king that can be taken
+        if (random.nextInt(50) == 0 && !position.isCheck()) {
+          move = Move.nullMove(position);
+        }
+        kinds[move.isNullMove() ? 0 : move.isCastle() ? 1 : move.isEnPassant() ? 2 : !move.promotionStone().isNoStone() ? 3 : move.isCapture() ? 4 : 0]++;
+        position = position.doMove(move);
+        Position fresh = copyOf(position);
+        assertEquals("game " + game + " ply " + ply + " " + move, fresh.getZobristHashLo(), position.getZobristHashLo());
+        assertEquals(fresh.getZobristHashHi(), position.getZobristHashHi());
+      }
+    }
+    for (int kind : kinds) {
+      assertTrue("every kind of move was played", kind > 0);
+    }
+  }
+
+  /** The same position, built anew, so its hash is worked out from the whole board. */
+  private static Position copyOf(Position position) {
+    Stone[] board = new Stone[64];
+    for (int i = 0; i < 64; i++) {
+      board[i] = position.stoneAt(i);
+    }
+    EnumSet<Castles> castles = EnumSet.noneOf(Castles.class);
+    for (Castles c : Castles.values()) {
+      if (position.isCastles(c)) {
+        castles.add(c);
+      }
+    }
+    return new Position(
+        board, position.playerToMove(), castles, position.getEnPassantCol(), position.chess960StartPosition());
   }
 
   @Test
