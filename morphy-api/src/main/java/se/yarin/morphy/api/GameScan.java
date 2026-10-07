@@ -44,6 +44,31 @@ public interface GameScan extends AutoCloseable {
         });
   }
 
+  /** What's done with each game's main line by {@link #forEachMainLine}. */
+  @FunctionalInterface
+  interface MainLineVisitor {
+    /**
+     * Plays through as much of a game's main line as is wanted.
+     *
+     * @param id the game id
+     * @param facts the game's header facts
+     * @param line the main line, at the game's start position
+     */
+    void visit(int id, @NotNull GameFacts facts, @NotNull MainLine line);
+  }
+
+  /**
+   * Plays through the main line of every game, on several threads at once, in no particular order;
+   * returns when all are done. The games are those {@link #forEach} gives. A format can decode
+   * each game's moves only as far as the visitor plays through them, which is faster when only
+   * the main line, or only its beginning, is wanted.
+   *
+   * @param visitor called from several threads at once
+   */
+  default void forEachMainLine(@NotNull MainLineVisitor visitor) {
+    forEach(game -> visitor.visit(game.id(), game.facts(), MainLine.of(game.moves())));
+  }
+
   @Override
   void close();
 }

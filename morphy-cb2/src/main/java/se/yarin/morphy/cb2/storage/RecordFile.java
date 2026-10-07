@@ -156,7 +156,7 @@ public final class RecordFile implements AutoCloseable {
       throw new InvalidDataException(
           String.format("Record at offset %d in %s doesn't fit in the file", offset, name));
     }
-    return parse(store.read(offset, CONTENT_OFFSET + contentSize), 0, offset);
+    return parse(store.read(offset, CONTENT_OFFSET + contentSize), 0, offset, size());
   }
 
   /**
@@ -174,6 +174,8 @@ public final class RecordFile implements AutoCloseable {
       order[i] = i;
     }
     Arrays.sort(order, (a, b) -> Long.compare(offsets[a], offsets[b]));
+    // Asked once: the store's size may be a system call
+    long fileSize = size();
     int i = 0;
     while (i < order.length) {
       long start = offsets[order[i]];
@@ -184,13 +186,13 @@ public final class RecordFile implements AutoCloseable {
         j++;
       }
       // Up to the last record's start, and as much after it as a record usually takes
-      long end = Math.min(size(), offsets[order[j - 1]] + MAX_SPAN_GAP);
+      long end = Math.min(fileSize, offsets[order[j - 1]] + MAX_SPAN_GAP);
       ByteBuffer span = start >= HEADER_SIZE && end > start ? store.read(start, (int) (end - start)) : null;
       for (int k = i; k < j; k++) {
         int index = order[k];
         long offset = offsets[index];
         int at = (int) (offset - start);
-        Record record = span == null ? null : parseIfInside(span, at, offset);
+        Record record = span == null ? null : parseIfInside(span, at, offset, fileSize);
         // A record reaching past the span is read by itself
         records[index] = record != null ? record : read(offset);
       }
@@ -200,7 +202,7 @@ public final class RecordFile implements AutoCloseable {
   }
 
   /** The record at a position of a buffer, or null if its content doesn't fit in it. */
-  private Record parseIfInside(ByteBuffer buf, int at, long offset) {
+  private Record parseIfInside(ByteBuffer buf, int at, long offset, long fileSize) {
     if (at + CONTENT_OFFSET > buf.limit()) {
       return null;
     }
@@ -208,14 +210,14 @@ public final class RecordFile implements AutoCloseable {
     if (contentSize < 0 || at + CONTENT_OFFSET + (long) contentSize > buf.limit()) {
       return null;
     }
-    return parse(buf, at, offset);
+    return parse(buf, at, offset, fileSize);
   }
 
   /**
    * The record at a position of a buffer holding at least its head and content: its magic number
    * checked, and its checksum (a wrong one is only logged).
    */
-  private Record parse(ByteBuffer buf, int at, long offset) {
+  private Record parse(ByteBuffer buf, int at, long offset, long fileSize) {
     for (int i = 0; i < MAGIC.length; i++) {
       if (buf.get(at + i) != MAGIC[i]) {
         throw new InvalidDataException("No record at offset " + offset + " in " + name);
@@ -223,7 +225,7 @@ public final class RecordFile implements AutoCloseable {
     }
     int contentSize = buf.getInt(at + 8);
     int spare = buf.getInt(at + 12);
-    if (spare < 0 || offset + contentSize + spare + FRAMING_SIZE > size()) {
+    if (spare < 0 || offset + contentSize + spare + FRAMING_SIZE > fileSize) {
       throw new InvalidDataException(
           String.format("Record at offset %d in %s doesn't fit in the file", offset, name));
     }

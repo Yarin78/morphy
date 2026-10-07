@@ -1,5 +1,6 @@
 package se.yarin.morphy.cb2;
 
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -7,6 +8,7 @@ import se.yarin.chess.GameMovesModel;
 import se.yarin.chess.GameResult;
 import se.yarin.morphy.api.GameFacts;
 import se.yarin.morphy.api.GameScan;
+import se.yarin.morphy.api.MainLine;
 import se.yarin.morphy.api.ParallelBatches;
 import se.yarin.morphy.api.ScannedGame;
 import se.yarin.morphy.cb2.games.Dates;
@@ -54,6 +56,37 @@ final class Scan implements GameScan {
 
   @Override
   public void forEach(@NotNull Consumer<ScannedGame> consumer) {
+    forEachRecord(
+        (header, moves) -> {
+          ScannedGame game = scanned(header, moves);
+          if (game != null) {
+            consumer.accept(game);
+          }
+        });
+  }
+
+  @Override
+  public void forEachMainLine(@NotNull MainLineVisitor visitor) {
+    forEachRecord(
+        (header, moves) -> {
+          if (moves.tag() != RecordFile.TAG_GAME) {
+            return;
+          }
+          MainLine line;
+          try {
+            line = MoveStreamCodec.mainLine(moves.tag(), moves.content());
+          } catch (RuntimeException e) {
+            return;
+          }
+          visitor.visit(header.id(), facts(header), line);
+        });
+  }
+
+  /**
+   * Gives the header and moves record of every game to index, on several threads, reading
+   * {@link #BATCH} games at a time.
+   */
+  private void forEachRecord(@NotNull BiConsumer<GameHeader, RecordFile.Record> consumer) {
     ParallelBatches.run(
         maxId(),
         BATCH,
@@ -77,18 +110,18 @@ final class Scan implements GameScan {
           } catch (RuntimeException e) {
             // A record that can't be read: the batch game by game, leaving that one out
             for (int i = 0; i < n; i++) {
-              ScannedGame game = read(headers[i].id());
-              if (game != null) {
-                consumer.accept(game);
+              RecordFile.Record record;
+              try {
+                record = database.moveFile().read(headers[i].movesOffset());
+              } catch (RuntimeException e2) {
+                continue;
               }
+              consumer.accept(headers[i], record);
             }
             return;
           }
           for (int i = 0; i < n; i++) {
-            ScannedGame game = scanned(headers[i], moves[i]);
-            if (game != null) {
-              consumer.accept(game);
-            }
+            consumer.accept(headers[i], moves[i]);
           }
         });
   }
@@ -113,20 +146,22 @@ final class Scan implements GameScan {
       // Not only InvalidDataException: a move that can't be played fails in the chess core
       return null;
     }
+    return new ScannedGame(header.id(), moves, facts(header));
+  }
+
+  private static GameFacts facts(GameHeader header) {
     GameResult[] results = GameResult.values();
     GameResult result =
         header.result() >= 0 && header.result() < results.length
             ? results[header.result()]
             : GameResult.NOT_FINISHED;
-    GameFacts facts =
-        new GameFacts(
-            result,
-            Dates.decode(header.playedDate()),
-            Math.max(0, header.whiteElo()),
-            Math.max(0, header.blackElo()),
-            header.whiteId(),
-            header.blackId());
-    return new ScannedGame(header.id(), moves, facts);
+    return new GameFacts(
+        result,
+        Dates.decode(header.playedDate()),
+        Math.max(0, header.whiteElo()),
+        Math.max(0, header.blackElo()),
+        header.whiteId(),
+        header.blackId());
   }
 
   @Override

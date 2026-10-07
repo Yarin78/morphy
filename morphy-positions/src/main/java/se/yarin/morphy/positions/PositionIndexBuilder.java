@@ -22,16 +22,14 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 import org.jetbrains.annotations.NotNull;
-import se.yarin.chess.GameMovesModel;
-import se.yarin.chess.Player;
-import se.yarin.chess.Position;
+import se.yarin.chess.MoveCode;
 import se.yarin.morphy.api.GameScan;
-import se.yarin.morphy.api.ScannedGame;
+import se.yarin.morphy.api.MainLine;
 
 /**
  * Builds the position index of a database from a {@link GameScan}.
  *
- * <p>The games are decoded in parallel, and each position of a game's main line becomes a record
+ * <p>The games' main lines are played through in parallel, and each position becomes a record
  * of its hash, the game, the side to move and the move played from it, written to one of 256
  * bucket files by the top bits of the hash. A position repeated in a game counts once, with the
  * move first played from it. Each bucket is then sorted by hash and its positions written out in
@@ -227,15 +225,14 @@ public final class PositionIndexBuilder {
                 workers.add(w);
                 return w;
               });
-      scan.forEach(
-          game -> {
+      scan.forEachMainLine(
+          (id, gameFacts, line) -> {
             try {
               Worker w = worker.get();
-              facts.set(game.id(), game.facts());
-              addPositions(game, w.positions(), w.buffer());
+              facts.set(id, gameFacts);
+              addPositions(id, line, w.positions(), w.buffer());
             } catch (RuntimeException e) {
-              throw new IllegalStateException(
-                  "Failed to index game " + game.id() + ": " + e, e);
+              throw new IllegalStateException("Failed to index game " + id + ": " + e, e);
             }
             done.incrementAndGet();
           });
@@ -256,21 +253,23 @@ public final class PositionIndexBuilder {
             (System.nanoTime() - start) / 1e9));
   }
 
-  private static void addPositions(ScannedGame game, GamePositions positions, Buffer buffer) {
+  /**
+   * Gives the records of a game's positions to a buffer, each position once, played through on the
+   * main-line cursor, which a format can do without making positions or moves.
+   */
+  private static void addPositions(int id, MainLine line, GamePositions positions, Buffer buffer) {
     positions.clear();
-    GameMovesModel.Node node = game.moves().root();
     while (true) {
-      Position position = node.position();
-      long hash = PositionKeys.hash(position);
-      GameMovesModel.Node next = node.hasMoves() ? node.mainNode() : null;
+      long hash = line.hash();
+      int code = line.moveCode();
       if (positions.add(hash)) {
-        int move = next == null ? PositionKeys.GAME_ENDED : PositionKeys.moveCode(next.lastMove());
-        buffer.add(hash, payload(game.id(), position.playerToMove() == Player.WHITE, move));
+        int move = code == MoveCode.NONE ? PositionKeys.GAME_ENDED : code;
+        buffer.add(hash, payload(id, line.whiteToMove(), move));
       }
-      if (next == null) {
+      if (code == MoveCode.NONE) {
         return;
       }
-      node = next;
+      line.advance();
     }
   }
 

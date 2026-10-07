@@ -4,6 +4,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import se.yarin.chess.GameMovesModel;
 import se.yarin.chess.Move;
+import se.yarin.chess.MoveCode;
 import se.yarin.chess.Position;
 
 /** How the index identifies a position, and a move played from it. */
@@ -16,7 +17,7 @@ public final class PositionKeys {
   /** What {@link #moveAfter} returns for a position the game never reaches. */
   public static final int NOT_REACHED = -1;
 
-  private static final int NULL_MOVE = 0x7FFF;
+  private static final int NULL_MOVE = MoveCode.NULL_MOVE;
 
   /**
    * The position's key: its 64-bit Zobrist hash, in which the en passant file only counts when a
@@ -26,20 +27,9 @@ public final class PositionKeys {
     return position.getZobristHashLo();
   }
 
-  /** A move as 16 bits: the from and to squares, and the piece promoted to. */
+  /** A move as 16 bits: the from and to squares, and the piece promoted to; see {@link MoveCode}. */
   public static int moveCode(@NotNull Move move) {
-    if (move.isNullMove()) {
-      return NULL_MOVE;
-    }
-    int promotion =
-        switch (move.promotionStone().toPiece()) {
-          case KNIGHT -> 1;
-          case BISHOP -> 2;
-          case ROOK -> 3;
-          case QUEEN -> 4;
-          default -> 0;
-        };
-    return move.fromSqi() | (move.toSqi() << 6) | (promotion << 12);
+    return MoveCode.of(move);
   }
 
   /** The legal move in a position with a code, or null if there is none. */
