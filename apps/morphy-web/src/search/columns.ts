@@ -29,6 +29,21 @@ export function toEntityType(kind: SearchKind): EntityType {
 // The columns of a game shown until others are picked
 const DEFAULT_GAME_COLUMNS = ['id', 'white', 'whiteElo', 'black', 'blackElo', 'result', 'tournament', 'round', 'date', 'notation'];
 
+// The games of a board's position, from a reference database, where a game's number in it and
+// its round say little
+const DEFAULT_POSITION_GAME_COLUMNS = DEFAULT_GAME_COLUMNS.filter((key) => key !== 'id' && key !== 'round');
+
+/**
+ * The lists of results whose columns are picked apart: those of each kind, and the games of a
+ * board's position, which have the columns of games.
+ */
+export type ColumnSet = SearchKind | 'positionGames';
+
+/** The kind of results a list of results has the columns of. */
+export function kindOfSet(set: ColumnSet): SearchKind {
+  return set === 'positionGames' ? 'games' : set;
+}
+
 // Narrower than the search tester's, as the results share the screen with the preview
 const GAME_WIDTHS: Record<string, number> = {
   id: 56,
@@ -91,8 +106,9 @@ export function columnsOf(kind: SearchKind, options: ColumnOptions): Column[] {
   }));
 }
 
-/** The keys of the columns of a kind's results shown until others are picked. */
-export function defaultColumnsOf(kind: SearchKind): string[] {
+/** The keys of the columns of a list of results shown until others are picked. */
+export function defaultColumnsOf(kind: ColumnSet): string[] {
+  if (kind === 'positionGames') return DEFAULT_POSITION_GAME_COLUMNS;
   if (kind === 'games') return DEFAULT_GAME_COLUMNS;
   // An entity's id is there to be picked, not shown at first
   return entityColumns(ENTITY_TYPES[kind])
@@ -100,9 +116,13 @@ export function defaultColumnsOf(kind: SearchKind): string[] {
     .filter((key) => key !== 'id');
 }
 
-/** The sort field of a column of a kind's results, if it can be sorted on. */
-export function sortFieldOf(kind: SearchKind, columnKey: string): string | undefined {
-  return SORTABLE_COLUMN_MAP[ENTITY_TYPES[kind]][columnKey];
+// The fields the games of a position can be sorted on, from the facts its index keeps of them
+const POSITION_GAME_SORT_FIELDS = new Set(['relevance', 'id', 'playedDate', 'playedYear', 'whiteElo', 'blackElo', 'eloAvg', 'eloMax']);
+
+/** The sort field of a column of a list of results, if it can be sorted on. */
+export function sortFieldOf(set: ColumnSet, columnKey: string): string | undefined {
+  const field = SORTABLE_COLUMN_MAP[ENTITY_TYPES[kindOfSet(set)]][columnKey];
+  return set === 'positionGames' && field && !POSITION_GAME_SORT_FIELDS.has(field) ? undefined : field;
 }
 
 // The sort fields sorted with the largest or latest first, unless sorted again

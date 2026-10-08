@@ -25,6 +25,10 @@
         </dependency>
         <dependency>
             <groupId>se.yarin</groupId>
+            <artifactId>morphy-positions</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>se.yarin</groupId>
             <artifactId>morphy-api</artifactId>
             <version>0.1-SNAPSHOT</version>
         </dependency>

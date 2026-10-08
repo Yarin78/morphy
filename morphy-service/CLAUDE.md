@@ -20,6 +20,7 @@ mvn test                   # Run tests
 
 - **Port**: 8080
 - **Database config**: Loaded from `test-databases/databases.json` at startup. Each entry has a `displayName` and a `path` (the format follows from its extension), and optionally `readOnly` and `createIfMissing`. Databases open on first access; a missing one is created empty only with `createIfMissing`, and otherwise fails to open
+- **Position indexes**: Defined in `test-databases/position-indexes.json` (and the git-ignored `position-indexes.local.json` next to it; property `app.position-indexes.config`), in parallel to the databases. Each entry, keyed by its id, has a short `name` (its pill in the Games pane), a `database` id, optionally a `filter` of the games it holds (in the game search's language, e.g. `"tournament.time:normal rating:2300..,mode=both"`) and optionally a `path` (default: next to the database, `<name>.<id>.positions`). A database can have several; an index of several databases is meant for later
 - **Freshness check**: 600,000ms (10 min) - reopens stale database connections
 - **Allowed paths**: Configurable for security when registering/creating databases
 
@@ -55,6 +56,13 @@ See @GAME_DTO_USAGE.md for DTO conversion details.
 - `GET|POST /search` - Advanced search with filter DSL, sorting, pagination, debug query plans
 - `POST /` - Add game
 - `PUT /{gameId}` - Replace game
+
+### Position indexes (`/api/position-indexes`)
+- `GET /` - The defined indexes, each with its status: `ready`, `missing`, `stale` (its database changed since it was built, or it was built with another filter), `building` (with the build's progress) or `failed`
+- `GET /{id}` - One index and its status
+- `GET /{id}/search?fen=&sortBy=&offset=&limit=&includeMoves=` - A page of the games of the index that reached a position, and with the first page a summary: the games, their results, and the moves played from it with their statistics (`PositionsService`, on the morphy-positions index, kept open once used). The response names the database the games are of. Sorted by `relevance` (the default, most relevant first: the players' average rating less `RELEVANCE_ELO_PER_YEAR`, 50, for every year before the index's newest game), `id`, `playedDate`, `playedYear`, `whiteElo`, `blackElo`, `eloAvg` or `eloMax`; others are refused. 400 for an unknown index. An index that is missing, unreadable or of another filter isn't needed: every game is played through for the position instead (`PositionScanner`), the last few scans kept for paging; one out of date is used anyway. The response's `index` tells which: `ready`, `stale` (with `missingGames`, the games added since the build) or `missing` (with why)
+- `POST /{id}/build` - Builds the index in the background (202, with its status); builds and updates run one at a time, in the order asked for. The batches go in the index's `.building` directory
+- `POST /{id}/update` - Adds the games added to the database since the index was built or last updated, as a segment of their own (compacting when there are too many), in the background like a build; builds the index if there is none or it's of another filter
 
 ### Entities (Players, Tournaments, Annotators, Sources, Teams, GameTags)
 Each entity type has: list, get by ID, count, search, update endpoints under `/api/databases/{id}/{entity-type}/`.

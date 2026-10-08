@@ -599,21 +599,6 @@ html {
   padding: 4px 16px;
 }
 
-/* Panes not built yet */
-
-.pane-placeholder {
-  height: 100%;
-  padding: 24px;
-  background: #faf8f5;
-  color: #888;
-}
-
-.pane-placeholder h2 {
-  font-size: 15px;
-  color: #666;
-  margin-bottom: 6px;
-}
-
 .dialog-buttons button:disabled {
   background: #bbb;
   border-color: #aaa;
@@ -1262,6 +1247,253 @@ html {
   color: #333;
 }
 
+/* The Games pane below a board: the moves from its position, and the games that reached it */
+
+.games-pane {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+}
+
+.games-pane-note {
+  height: 100%;
+  padding: 8px 12px;
+  background: #fff;
+  color: #888;
+  font-size: 13px;
+}
+
+/* An index that can't be searched yet: why, and the button that builds it */
+/* Why the games may be slow or incomplete: no index, or an out of date one; and building it */
+.games-pane-head-left {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  min-width: 0;
+}
+
+.games-pane-index-note {
+  flex: 0 0 auto;
+  white-space: nowrap;
+  color: #a05a00;
+}
+
+.games-pane-index-build {
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.games-pane-index-build:hover {
+  color: #6b3c00;
+}
+
+/* The totals of the position, and the reference databases to pick from */
+.games-pane-head {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 8px;
+  border-bottom: 1px solid #ebe6df;
+  background: #f7f5f2;
+  font-size: 13px;
+}
+
+.games-pane-totals {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.games-pane-databases {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 4px;
+}
+
+.games-pane-database {
+  padding: 1px 10px;
+  border: 1px solid #d5d0c8;
+  border-radius: 999px;
+  background: #fff;
+  color: #5a4f45;
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.games-pane-database:hover:not(.picked) {
+  background: #ebe4d9;
+}
+
+.games-pane-database.picked {
+  background: #8b6f47;
+  border-color: #8b6f47;
+  color: #fff;
+}
+
+.games-pane-head-right {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.games-pane-split {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+
+.games-pane-split.stacked {
+  flex-direction: column;
+}
+
+.games-pane-moves {
+  flex: 0 0 auto;
+  min-width: 0;
+  min-height: 0;
+}
+
+.games-pane-games {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+
+/* The line between the moves and the games, a gutter to drag */
+.games-pane-divider {
+  flex: 0 0 6px;
+  background: #ebe6df;
+  border: 0 solid #ddd5ca;
+}
+
+.games-pane-split.side > .games-pane-divider {
+  cursor: col-resize;
+  border-left-width: 1px;
+  border-right-width: 1px;
+}
+
+.games-pane-split.stacked > .games-pane-divider {
+  cursor: row-resize;
+  border-top-width: 1px;
+  border-bottom-width: 1px;
+}
+
+.games-pane-divider:hover {
+  background: #cdbb9f;
+  border-color: #b9a587;
+}
+
+/* The moves from a position */
+
+.position-moves {
+  height: 100%;
+  overflow: auto;
+  background: #fff;
+  font-size: 13px;
+}
+
+.position-moves-note,
+.position-moves-error {
+  padding: 8px 12px;
+  color: #888;
+}
+
+.position-moves-error {
+  color: #c0392b;
+}
+
+.position-moves-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.position-moves-table th {
+  position: sticky;
+  top: 0;
+  padding: 4px 8px;
+  background: #f7f5f2;
+  border-bottom: 1px solid #ebe6df;
+  color: #888;
+  font-size: 11px;
+  font-weight: 600;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.position-moves-table td {
+  padding: 3px 8px;
+  border-bottom: 1px solid #f3f0eb;
+  white-space: nowrap;
+}
+
+.position-moves-table tbody tr {
+  cursor: pointer;
+}
+
+.position-moves-table tbody tr:hover {
+  background: #f6f1ea;
+}
+
+/* The moves of the position before, while the board's is looked up, can't be played */
+.position-moves-table.stale tbody tr {
+  cursor: default;
+}
+
+.position-moves-table .position-moves-move {
+  font-weight: 600;
+}
+
+.position-moves-table .position-moves-num {
+  text-align: right;
+}
+
+.position-moves-table .position-moves-trend {
+  width: 44px;
+}
+
+/* How much more a move is played of late, the longer and the hotter in colour the more */
+.position-moves-trend-bar {
+  width: 40px;
+  height: 8px;
+  border-radius: 2px;
+  background: #f3f0eb;
+  overflow: hidden;
+}
+
+.position-moves-trend-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+}
+
+.position-moves-better {
+  color: #2e7d32;
+}
+
+.position-moves-worse {
+  color: #b23a3a;
+}
+
+/* The players take the width left, and are cut short when there's too little */
+.position-moves-table .position-moves-players {
+  width: 100%;
+  max-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #666;
+}
+
 /* Settings: tabs on the left, the tab's settings on the right */
 
 .settings-dialog {
@@ -1898,6 +2130,13 @@ html {
   border-radius: 6px;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
   white-space: nowrap;
+}
+
+/* The list of columns where the column headers were right-clicked */
+.column-menu {
+  position: fixed;
+  right: auto;
+  z-index: 1000;
 }
 
 .column-picker-item {

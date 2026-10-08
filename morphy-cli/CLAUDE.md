@@ -35,6 +35,11 @@ java -jar morphy-cli/target/morphy-cli-*.jar <command> [options]
 - Checks entity consistency, sort order, game headers, moves, annotations
 - Selective checks with `--no-players`, `--no-games`, `--no-load-games`, etc.
 
+### `positions` - The position index of a database (morphy-positions)
+- `positions build <database> [--filter Q] [--index DIR] [--work-dir DIR]` - Builds an index of the database's games, or of those matching a filter in the game search's language; by default next to the database (`<name>.positions`). The work directory takes the temporary buckets, some 16 bytes per position of every game
+- The service builds the indexes it defines itself (`POST /api/position-indexes/{id}/build`)
+- `positions lookup <database> "<fen>" [--index DIR]` - The moves played from a position, with their games, score, average rating, last year and top players
+
 ## Structure
 
 - **commands/** - Picocli command implementations

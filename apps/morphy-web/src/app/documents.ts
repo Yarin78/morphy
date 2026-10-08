@@ -230,23 +230,34 @@ export const SEARCH_PANE = 'search';
 export const BOARD_SIDE_PANES = {
   notation: 'Notation',
   engine: 'Engine',
-  tree: 'Opening tree',
+  games: 'Games',
 } as const;
 
 export type BoardSidePane = keyof typeof BOARD_SIDE_PANES;
 
 // The analysis panes, which share a group below the notation
-const ANALYSIS_PANES: BoardSidePane[] = ['engine', 'tree'];
+const ANALYSIS_PANES: BoardSidePane[] = ['engine'];
 
 /**
- * Shows a pane beside a board, or closes it. The engine and the opening tree share a group below
- * the notation; the notation goes above them. With neither shown, a pane goes to the right of
- * the board.
+ * Shows a pane beside a board, or closes it. The games of the position go below the board. The
+ * engine goes below the notation, and the notation above the engine; with neither shown, a pane
+ * goes to the right of the board.
  */
 export function toggleBoardPane(api: DockviewApi, id: BoardSidePane) {
   const panel = api.getPanel(id);
   if (panel) {
     api.removePanel(panel);
+    return;
+  }
+  if (id === 'games') {
+    const boardHeight = api.getPanel(BOARD_PANE)?.group.api.height ?? api.height;
+    api.addPanel({
+      id,
+      component: id,
+      title: BOARD_SIDE_PANES[id],
+      position: { referencePanel: BOARD_PANE, direction: 'below' },
+      initialHeight: boardHeight > 0 ? Math.round(boardHeight * 0.35) : undefined,
+    });
     return;
   }
   const notation = api.getPanel('notation');
@@ -301,7 +312,7 @@ export function toggleDatabasePane(api: DockviewApi, id: DatabaseSidePane) {
 
 /**
  * Sets up a new document's grid: a single pane by kind. A board has the notation to its right;
- * the engine and the opening tree are a menu away. A database has the preview of the game
+ * the engine and the games of the position are a menu away. A database has the preview of the game
  * picked to the right of its search. An entity has its details above its games, and the preview
  * of the game picked to the right of both.
  */

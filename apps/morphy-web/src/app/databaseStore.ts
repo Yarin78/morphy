@@ -1,7 +1,7 @@
 import { createContext, useContext } from 'react';
 import type { GameViewState } from 'game-view';
 import type { GameDto } from '../api/types';
-import type { DatabaseSearch } from '../search/useDatabaseSearch';
+import type { DatabaseSearch, ResultsSearch } from '../search/useDatabaseSearch';
 
 /** The game picked in a database's search results, shown in its preview. */
 export type PreviewGame =
@@ -22,6 +22,9 @@ export interface DatabaseView {
   /** Handles the keys that move through the previewed game; whether it did */
   previewKeys: (e: React.KeyboardEvent) => boolean;
 }
+
+/** What a list of search results is of, and what it does with them. */
+export type ResultsSource = Pick<DatabaseView, 'databaseId' | 'openGame' | 'previewKeys'> & { search: ResultsSearch };
 
 export const DatabaseViewContext = createContext<DatabaseView | null>(null);
 

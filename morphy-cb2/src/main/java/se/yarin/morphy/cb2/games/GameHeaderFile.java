@@ -84,6 +84,25 @@ public final class GameHeaderFile implements AutoCloseable {
     return GameRecord.decode(id, readRaw(id));
   }
 
+  /**
+   * Reads consecutive records with one read.
+   *
+   * @param firstId the first id
+   * @param count how many records
+   */
+  public @NotNull GameRecord @NotNull [] read(int firstId, int count) {
+    checkId(firstId);
+    checkId(firstId + count - 1);
+    ByteBuffer buf = store.read((long) firstId * GameRecord.SIZE, count * GameRecord.SIZE);
+    GameRecord[] records = new GameRecord[count];
+    for (int i = 0; i < count; i++) {
+      byte[] bytes = new byte[GameRecord.SIZE];
+      buf.get(bytes);
+      records[i] = GameRecord.decode(firstId + i, bytes);
+    }
+    return records;
+  }
+
   /** Overwrites an existing record. */
   public void put(@NotNull GameRecord record) {
     checkId(record.id());

@@ -42,6 +42,12 @@
             <scope>runtime</scope>
         </dependency>
 
+        <!-- The position indexes of reference databases -->
+        <dependency>
+            <groupId>se.yarin</groupId>
+            <artifactId>morphy-positions</artifactId>
+        </dependency>
+
         <!-- Spring Boot Starters -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

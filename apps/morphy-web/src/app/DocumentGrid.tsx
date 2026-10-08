@@ -29,7 +29,7 @@ import { HomePane } from './panes/HomePane';
 import { LogsPane } from './panes/LogsPane';
 import { NotationPane } from './panes/NotationPane';
 import { EnginePane } from './panes/EnginePane';
-import { TreePane } from './panes/PlaceholderPanes';
+import { GamesPane } from './panes/GamesPane';
 import { PreviewActions, PreviewPane } from './panes/PreviewPane';
 import { SearchPane } from './panes/SearchPane';
 
@@ -44,7 +44,7 @@ const PANES: Record<string, FunctionComponent<IDockviewPanelProps>> = {
   board: BoardPane,
   notation: NotationPane,
   engine: EnginePane,
-  tree: TreePane,
+  games: GamesPane,
   [ENTITY_DETAILS_PANE]: EntityDetailsPane,
   [ENTITY_GAMES_PANE]: EntityGamesPane,
 };

@@ -25,9 +25,7 @@ public class DatabaseController {
     List<DatabaseDto> databases = databaseService.getAllDatabase();
     List<DatabaseResponse> response =
         databases.stream()
-            .map(
-                dto ->
-                    new DatabaseResponse(dto.id(), dto.displayName(), dto.path(), dto.readOnly()))
+            .map(DatabaseResponse::of)
             .toList();
     return ResponseEntity.ok(new DatabaseListResponse(response));
   }
@@ -39,9 +37,7 @@ public class DatabaseController {
     if (config == null) {
       return ResponseEntity.notFound().build();
     }
-    return ResponseEntity.ok(
-        new DatabaseResponse(
-            config.getId(), config.getDisplayName(), config.getPath(), config.isReadOnly()));
+    return ResponseEntity.ok(DatabaseResponse.of(config));
   }
 
   /** Refresh a database by forcing it to reload from disk. */
@@ -63,9 +59,7 @@ public class DatabaseController {
     databaseService.createDatabase(request.id(), request.displayName(), request.path());
     var config = databaseService.getDatabaseConfig(request.id());
     return ResponseEntity.status(HttpStatus.CREATED)
-        .body(
-            new DatabaseResponse(
-                config.getId(), config.getDisplayName(), config.getPath(), config.isReadOnly()));
+        .body(DatabaseResponse.of(config));
   }
 
   /**
@@ -80,9 +74,7 @@ public class DatabaseController {
     databaseService.registerDatabase(request.id(), request.displayName(), request.path());
     var config = databaseService.getDatabaseConfig(request.id());
     return ResponseEntity.status(HttpStatus.CREATED)
-        .body(
-            new DatabaseResponse(
-                config.getId(), config.getDisplayName(), config.getPath(), config.isReadOnly()));
+        .body(DatabaseResponse.of(config));
   }
 
   /**

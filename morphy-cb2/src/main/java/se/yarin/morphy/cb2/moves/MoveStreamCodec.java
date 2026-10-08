@@ -8,14 +8,19 @@ import java.util.Deque;
 import java.util.EnumSet;
 import java.util.List;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import se.yarin.chess.Castles;
 import se.yarin.chess.Chess;
 import se.yarin.chess.Chess960;
 import se.yarin.chess.GameMovesModel;
+import se.yarin.chess.HashingBoard;
 import se.yarin.chess.Move;
+import se.yarin.chess.MoveCode;
+import se.yarin.chess.Piece;
 import se.yarin.chess.Player;
 import se.yarin.chess.Position;
 import se.yarin.chess.Stone;
+import se.yarin.morphy.api.MainLine;
 import se.yarin.morphy.cb2.InvalidDataException;
 import se.yarin.morphy.cb2.storage.RecordFile;
 
@@ -44,6 +49,140 @@ public final class MoveStreamCodec {
   public record Encoded(int tag, byte @NotNull [] content) {}
 
   private MoveStreamCodec() {}
+
+  /**
+   * The main line of a game, decoded a move at a time as it's played through, without the rest
+   * of the move tree: the main line comes first in the stream, to its first end of line. A game
+   * from a set-up position is decoded in full first. A word that can't be played (by the wrong
+   * side, of a piece that isn't there) ends the line there.
+   *
+   * @param tag the record's tag, the variant
+   * @param content the record's content
+   * @throws InvalidDataException if the content can't be decoded
+   */
+  public static @NotNull MainLine mainLine(int tag, byte @NotNull [] content) {
+    if (tag != RecordFile.TAG_GAME || content.length < 2 || word(content, 0) != MoveWords.MOVES_SECTION) {
+      return MainLine.of(decode(tag, content));
+    }
+    return new WordMainLine(content);
+  }
+
+  private static int word(byte[] content, int index) {
+    return (content[2 * index] & 0xFF) | (content[2 * index + 1] & 0xFF) << 8;
+  }
+
+  /**
+   * The main line of a game from the standard position, played off its words on a {@link
+   * HashingBoard}: the hash, the side to move and the move codes come without making positions or
+   * moves, which are only made if asked for.
+   */
+  private static final class WordMainLine implements MainLine {
+    private final byte[] content;
+    private final HashingBoard board = new HashingBoard();
+    // The next word to read
+    private int next = 1;
+    // The move from the current position: read yet, the game ended, its word
+    private boolean read;
+    private boolean ended;
+    private int word;
+    private @Nullable MoveWords.Word move;
+    // Made when asked for
+    private @Nullable Position position;
+    private @Nullable Move madeMove;
+
+    WordMainLine(byte[] content) {
+      this.content = content;
+    }
+
+    /** Reads the move from the current position; false if the game ends there. */
+    private boolean readMove() {
+      if (read) {
+        return !ended;
+      }
+      read = true;
+      // A move with alternatives later in the stream is followed by a marker saying so
+      while (next < content.length / 2 && word(content, next) == MoveWords.MORE_ALTERNATIVES) {
+        next++;
+      }
+      word = next < content.length / 2 ? word(content, next) : MoveWords.END_OF_LINE;
+      if (word == MoveWords.END_OF_LINE) {
+        ended = true;
+      } else if (word != MoveWords.NULL_MOVE) {
+        move = MoveWords.word(word);
+        // A word that isn't a move of the side to move, or of a piece that isn't there, ends it
+        ended =
+            move == null
+                || move.chess960() >= 0
+                || (move.stone().toPlayer() == Player.WHITE) != board.whiteToMove()
+                || (move.castles() == 0 && board.stoneAt(move.from()) != move.stone());
+      }
+      return !ended;
+    }
+
+    @Override
+    public long hash() {
+      return board.hash();
+    }
+
+    @Override
+    public boolean whiteToMove() {
+      return board.whiteToMove();
+    }
+
+    @Override
+    public int moveCode() {
+      if (!readMove()) {
+        return MoveCode.NONE;
+      }
+      if (word == MoveWords.NULL_MOVE) {
+        return MoveCode.NULL_MOVE;
+      }
+      if (move.castles() != 0) {
+        int row = board.whiteToMove() ? 0 : 7;
+        return MoveCode.of(Chess.E1 + row, (move.castles() == 1 ? Chess.C1 : Chess.G1) + row, Piece.NO_PIECE);
+      }
+      return MoveCode.of(move.from(), move.to(), move.promotion());
+    }
+
+    @Override
+    public @NotNull Position position() {
+      if (position == null) {
+        position = board.toPosition();
+      }
+      return position;
+    }
+
+    @Override
+    public @Nullable Move move() {
+      if (!readMove()) {
+        return null;
+      }
+      if (madeMove == null) {
+        madeMove = MoveWords.decode(word, position());
+      }
+      return madeMove;
+    }
+
+    @Override
+    public void advance() {
+      if (!readMove()) {
+        throw new IllegalStateException("The game has ended");
+      }
+      if (word == MoveWords.NULL_MOVE) {
+        board.playNull();
+      } else if (move.castles() != 0) {
+        int row = board.whiteToMove() ? 0 : 7;
+        board.play(Chess.E1 + row, (move.castles() == 1 ? Chess.C1 : Chess.G1) + row, Piece.NO_PIECE);
+      } else {
+        board.play(move.from(), move.to(), move.promotion());
+      }
+      next++;
+      read = false;
+      move = null;
+      position = null;
+      madeMove = null;
+    }
+  }
 
   /**
    * Decodes the moves of a game.

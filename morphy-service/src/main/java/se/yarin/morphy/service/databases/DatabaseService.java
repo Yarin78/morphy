@@ -136,7 +136,10 @@ public class DatabaseService {
         .map(
             state ->
                 new DatabaseDto(
-                    state.config.getId(), state.config.getDisplayName(), state.config.getPath(), state.config.isReadOnly()))
+                    state.config.getId(),
+                    state.config.getDisplayName(),
+                    state.config.getPath(),
+                    state.config.isReadOnly()))
         .toList();
   }
 

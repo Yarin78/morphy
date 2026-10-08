@@ -91,6 +91,21 @@ function sortParam(sort: SortOrder | null): string {
   return `${sort.order === 'desc' ? '-' : '+'}${sort.field}`;
 }
 
+/**
+ * What a list of results needs of a search: a database's search, or another that lists games as
+ * it does, such as a search by position.
+ */
+export interface ResultsSearch {
+  kind: SearchKind;
+  current: Pick<KindSearch, 'results' | 'selected' | 'sort'>;
+  /** Searches again from the first page */
+  run: () => void;
+  /** Fetches the next page of results */
+  loadMore: () => void;
+  sortBy: (field: string, defaultOrder: 'asc' | 'desc') => void;
+  select: (index: number | null) => void;
+}
+
 export interface DatabaseSearch {
   kind: SearchKind;
   setKind: (kind: SearchKind) => void;

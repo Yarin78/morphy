@@ -25,6 +25,12 @@ public final class RecordFile implements AutoCloseable {
   /** The offset of the content within a record. */
   public static final int CONTENT_OFFSET = 26;
 
+  // Records further apart than this aren't read as one span; also how much is read after the last
+  // record of a span, to take it in
+  private static final int MAX_SPAN_GAP = 64 * 1024;
+  // The longest span read at once
+  private static final int MAX_SPAN = 16 * 1024 * 1024;
+
   private static final byte[] MAGIC = {
     (byte) 0x88, 0x77, 0x66, 0x55, 0x44, 0x33, 0x22, 0x11
   };
@@ -146,15 +152,88 @@ public final class RecordFile implements AutoCloseable {
     ByteBuffer head = readHead(offset);
     int contentSize = head.getInt(8);
     int spare = head.getInt(12);
-    byte[] storedChecksum = new byte[8];
-    head.get(16, storedChecksum);
-    int tag = head.getShort(24) & 0xFFFF;
     if (contentSize < 0 || spare < 0 || offset + contentSize + spare + FRAMING_SIZE > size()) {
       throw new InvalidDataException(
           String.format("Record at offset %d in %s doesn't fit in the file", offset, name));
     }
+    return parse(store.read(offset, CONTENT_OFFSET + contentSize), 0, offset, size());
+  }
+
+  /**
+   * Reads the records at some offsets with few reads: offsets close together, as those of games
+   * in id order are, are read as one span, and the records cut out of it.
+   *
+   * @param offsets where the records begin
+   * @return the records, in the order of the offsets
+   * @throws InvalidDataException if there is no record at one of the offsets
+   */
+  public @NotNull Record @NotNull [] readMany(long @NotNull [] offsets) {
+    Record[] records = new Record[offsets.length];
+    Integer[] order = new Integer[offsets.length];
+    for (int i = 0; i < order.length; i++) {
+      order[i] = i;
+    }
+    Arrays.sort(order, (a, b) -> Long.compare(offsets[a], offsets[b]));
+    // Asked once: the store's size may be a system call
+    long fileSize = size();
+    int i = 0;
+    while (i < order.length) {
+      long start = offsets[order[i]];
+      int j = i + 1;
+      while (j < order.length
+          && offsets[order[j]] - offsets[order[j - 1]] <= MAX_SPAN_GAP
+          && offsets[order[j]] - start <= MAX_SPAN) {
+        j++;
+      }
+      // Up to the last record's start, and as much after it as a record usually takes
+      long end = Math.min(fileSize, offsets[order[j - 1]] + MAX_SPAN_GAP);
+      ByteBuffer span = start >= HEADER_SIZE && end > start ? store.read(start, (int) (end - start)) : null;
+      for (int k = i; k < j; k++) {
+        int index = order[k];
+        long offset = offsets[index];
+        int at = (int) (offset - start);
+        Record record = span == null ? null : parseIfInside(span, at, offset, fileSize);
+        // A record reaching past the span is read by itself
+        records[index] = record != null ? record : read(offset);
+      }
+      i = j;
+    }
+    return records;
+  }
+
+  /** The record at a position of a buffer, or null if its content doesn't fit in it. */
+  private Record parseIfInside(ByteBuffer buf, int at, long offset, long fileSize) {
+    if (at + CONTENT_OFFSET > buf.limit()) {
+      return null;
+    }
+    int contentSize = buf.getInt(at + 8);
+    if (contentSize < 0 || at + CONTENT_OFFSET + (long) contentSize > buf.limit()) {
+      return null;
+    }
+    return parse(buf, at, offset, fileSize);
+  }
+
+  /**
+   * The record at a position of a buffer holding at least its head and content: its magic number
+   * checked, and its checksum (a wrong one is only logged).
+   */
+  private Record parse(ByteBuffer buf, int at, long offset, long fileSize) {
+    for (int i = 0; i < MAGIC.length; i++) {
+      if (buf.get(at + i) != MAGIC[i]) {
+        throw new InvalidDataException("No record at offset " + offset + " in " + name);
+      }
+    }
+    int contentSize = buf.getInt(at + 8);
+    int spare = buf.getInt(at + 12);
+    if (spare < 0 || offset + contentSize + spare + FRAMING_SIZE > fileSize) {
+      throw new InvalidDataException(
+          String.format("Record at offset %d in %s doesn't fit in the file", offset, name));
+    }
+    byte[] storedChecksum = new byte[8];
+    buf.get(at + 16, storedChecksum);
+    int tag = buf.getShort(at + 24) & 0xFFFF;
     byte[] content = new byte[contentSize];
-    store.read(offset + CONTENT_OFFSET, contentSize).get(content);
+    buf.get(at + CONTENT_OFFSET, content);
     if (!Arrays.equals(storedChecksum, checksum(content))) {
       log.warn("Wrong checksum in the record at offset {} in {}", offset, name);
     }

@@ -2,6 +2,7 @@ package se.yarin.morphy;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.BitSet;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -15,7 +16,10 @@ import se.yarin.morphy.api.Database;
 import se.yarin.morphy.api.DatabaseFormat;
 import se.yarin.morphy.api.EntityKind;
 import se.yarin.morphy.api.GameFetchOptions;
+import se.yarin.morphy.api.GameScan;
+import se.yarin.morphy.api.GameScanning;
 import se.yarin.morphy.api.query.FilterCondition;
+import se.yarin.morphy.api.query.FilterQueryParser;
 import se.yarin.morphy.api.query.Query;
 import se.yarin.morphy.api.query.QuerySupport;
 import se.yarin.morphy.api.query.ResultPage;
@@ -75,7 +79,7 @@ import se.yarin.morphy.queries.visualisation.QueryDescriptionFormatter;
  * <p>Obtain one through {@link se.yarin.morphy.api.Databases#open}; code that needs the v1
  * internals uses {@link DatabaseCbh} directly instead.
  */
-public class DatabaseCbhFacade implements Database, CbhDiagnostics {
+public class DatabaseCbhFacade implements Database, CbhDiagnostics, GameScanning {
 
   private final @NotNull DatabaseCbh database;
   private final @NotNull PlayerDtoConverter players = new PlayerDtoConverter();
@@ -198,6 +202,27 @@ public class DatabaseCbhFacade implements Database, CbhDiagnostics {
   @Override
   public void close() throws IOException {
     database.close();
+  }
+
+  @Override
+  public @NotNull GameScan openScan(@NotNull String filter) {
+    if (filter.isBlank()) {
+      return new CbhScan(database, null);
+    }
+    // The games matching the filter, found up front by the query planner
+    requireLegacyEngine();
+    List<FilterCondition> conditions =
+        new FilterQueryParser(gameQueryBuilder.defaultField()).parse(filter);
+    BitSet games = new BitSet();
+    try (DatabaseReadTransaction txn = new DatabaseReadTransaction(database)) {
+      GameQuery gameQuery =
+          gameQuery(conditions, gameQueryBuilder.buildSortOrder(Sort.natural()));
+      gamePlans(new QueryContext(txn, false), gameQuery)
+          .getFirst()
+          .stream()
+          .forEach(data -> games.set(data.data().id()));
+    }
+    return new CbhScan(database, games);
   }
 
   // ── Games ────────────────────────────────────────────────────────────────

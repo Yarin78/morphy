@@ -11,6 +11,8 @@ import se.yarin.morphy.api.Database;
 import se.yarin.morphy.api.DatabaseFormat;
 import se.yarin.morphy.api.EntityKind;
 import se.yarin.morphy.api.GameFetchOptions;
+import se.yarin.morphy.api.GameScan;
+import se.yarin.morphy.api.GameScanning;
 import se.yarin.morphy.api.query.FilterCondition;
 import se.yarin.morphy.api.query.Query;
 import se.yarin.morphy.api.query.QuerySupport;
@@ -45,7 +47,7 @@ import se.yarin.morphy.model.TournamentDto;
  * <p>Obtain one through {@link se.yarin.morphy.api.Databases#open}; code that needs the v2
  * internals uses {@link Database2Cbh} directly instead.
  */
-public class Database2CbhFacade implements Database {
+public class Database2CbhFacade implements Database, GameScanning {
 
   private final @NotNull Database2Cbh database;
   private final @NotNull DtoConverter converter = new DtoConverter();
@@ -86,6 +88,11 @@ public class Database2CbhFacade implements Database {
   @Override
   public void close() {
     database.close();
+  }
+
+  @Override
+  public @NotNull GameScan openScan(@NotNull String filter) {
+    return new Scan(database, filter);
   }
 
   // ── Games ────────────────────────────────────────────────────────────────

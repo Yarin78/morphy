@@ -22,6 +22,27 @@ export interface DatabaseResponse {
   readOnly: boolean;
 }
 
+/**
+ * A position index, as the service defines it: the games of a database (or those matching a
+ * filter) by the positions they reached, to search a board's position in.
+ */
+export interface PositionIndexResponse {
+  id: string;
+  /** A short name, as its pill shows it */
+  name: string;
+  /** The database whose games it holds, which they open in */
+  databaseId: string;
+  /** The games it holds, in the game search's language; empty for every game */
+  filter: string;
+  /** Whether it can be searched, or is to be built, or being built */
+  status: 'ready' | 'missing' | 'stale' | 'building' | 'failed';
+  /** What's to know about the status: the build's progress, why it failed, how to build it */
+  message?: string;
+  /** The games it holds, when built */
+  games?: number;
+  builtAt?: string;
+}
+
 export interface DatabaseListResponse {
   databases: DatabaseResponse[];
 }
@@ -351,4 +372,81 @@ export interface DebugSearchResponse<R> {
   plans: QueryPlanDebugInfo;
   /** The raw records of every returned item, keyed by its id. */
   raw: Record<string, RawRecord[]>;
+}
+
+/** A player who played a move, among the strongest who did. */
+export interface PositionMovePlayer {
+  /** "Lastname, Firstname" */
+  name: string;
+  /** Their rating in the game they played the move in, if it had one */
+  rating: number | null;
+}
+
+/** How often a move was played from a position, and how the games went on from there. */
+export interface PositionMoveStats {
+  /** The move, in SAN */
+  san: string;
+  /** The games that played it */
+  games: number;
+  whiteWins: number;
+  draws: number;
+  blackWins: number;
+  /** The games since the response's recentSince year that played it, to tell how it's trending */
+  recentGames: number;
+  /** The year of the latest game that played it, if any game has a year */
+  lastPlayed: number | null;
+  /** The average rating of the players who played it, of those rated; null if none was */
+  averageRating: number | null;
+  /** Some of the highest rated players who played it, the highest first */
+  topPlayers: PositionMovePlayer[];
+}
+
+/** The games of a reference database that reached a position, and what was played from it. */
+export interface PositionSummary {
+  fen: string;
+  /** The games that reached the position, including those that ended there */
+  games: number;
+  whiteWins: number;
+  draws: number;
+  blackWins: number;
+  /** The first year of the games that count as recent, in each move's recentGames */
+  recentSince: number;
+  /** The moves played from it, the most played first */
+  moves: PositionMoveStats[];
+}
+
+/** A search of a reference database's games by position: a page of them, sorted as asked. */
+export interface PositionSearchRequest {
+  fen: string;
+  sortBy?: string;
+  offset?: number;
+  limit?: number;
+  /** Whether the games come with their moves, as in a game search */
+  includeMoves?: boolean;
+}
+
+/** How a position search used its index. */
+export interface PositionIndexState {
+  /**
+   * ready: used and up to date; stale: used, but its database has changed since it was built;
+   * missing: none to use (not built, unreadable, or of another filter), so every game was played
+   * through instead
+   */
+  status: 'ready' | 'stale' | 'missing';
+  /** Why it's missing */
+  message?: string | null;
+  /** When stale, the games added to the database since it was built (0 if only changed or deleted) */
+  missingGames?: number | null;
+}
+
+export interface PositionSearchResponse {
+  indexId: string;
+  /** The database the games are of, which they open in */
+  databaseId: string;
+  /** Whether the index was used, and how up to date it is */
+  index: PositionIndexState;
+  /** What was played from the position; with the first page only, null with the later ones */
+  summary: PositionSummary | null;
+  /** The page of the games that reached it */
+  games: GameSearchResponse;
 }

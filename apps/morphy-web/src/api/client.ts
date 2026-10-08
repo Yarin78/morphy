@@ -3,6 +3,9 @@ import type {
   DebugSearchResponse,
   FilterOptionsResponse,
   GameDto,
+  PositionIndexResponse,
+  PositionSearchRequest,
+  PositionSearchResponse,
 } from './types';
 import { callFinished, callStarted, newRequestId, SESSION_ID } from '../logs/logStore';
 
@@ -99,6 +102,28 @@ export async function fetchDatabases(): Promise<DatabaseListResponse> {
   return getJson(`${API_BASE}/databases`, 'Fetch databases');
 }
 
+/** The position indexes the service defines, and whether each can be searched. */
+export async function fetchPositionIndexes(): Promise<PositionIndexResponse[]> {
+  return getJson(`${API_BASE}/position-indexes`, 'Fetch position indexes');
+}
+
+export async function fetchPositionIndex(indexId: string): Promise<PositionIndexResponse> {
+  return getJson(`${API_BASE}/position-indexes/${encodeURIComponent(indexId)}`, 'Fetch position index');
+}
+
+/** Starts building a position index in the service; its status tells how it goes. */
+export async function buildPositionIndex(indexId: string): Promise<PositionIndexResponse> {
+  return sendJson('POST', `${API_BASE}/position-indexes/${encodeURIComponent(indexId)}/build`, {}, 'Build position index');
+}
+
+/**
+ * Starts adding the games added to an index's database since it was built or last updated; its
+ * status tells how it goes.
+ */
+export async function updatePositionIndex(indexId: string): Promise<PositionIndexResponse> {
+  return sendJson('POST', `${API_BASE}/position-indexes/${encodeURIComponent(indexId)}/update`, {}, 'Update position index');
+}
+
 /**
  * The filter fields and sort fields of a database, for games or one entity kind.
  *
@@ -179,4 +204,15 @@ export async function updateEntity<T extends { id: number | null }>(
   entity: T
 ): Promise<T> {
   return sendJson('PUT', `${databaseUrl(databaseId)}/${path}/${entity.id}`, entity, `Update ${path}`);
+}
+
+/**
+ * The games of a position index that reached a position, a page of them, with what was played
+ * from it on the first page. An index that is missing or out of date answers 409, saying so.
+ */
+export async function searchPosition(indexId: string, request: PositionSearchRequest): Promise<PositionSearchResponse> {
+  return getJson(
+    `${API_BASE}/position-indexes/${encodeURIComponent(indexId)}/search?${toParams(request)}`,
+    'Search position'
+  );
 }

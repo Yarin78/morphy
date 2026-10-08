@@ -275,6 +275,17 @@ export function useGameView({
     }
   }, [game, isEditMode, edit]);
 
+  // Plays a move picked elsewhere than on the board, as from a list of moves, promotion and all
+  const playMove = useCallback(
+    (move: { from: string; to: string; promotion?: string }) => {
+      if (!isEditMode) return;
+      edit(() => {
+        if (!game.play(move)) console.error('Invalid move:', move);
+      });
+    },
+    [game, isEditMode, edit]
+  );
+
   // Handle promotion piece selection
   const handlePromotionSelect = useCallback((piece: 'q' | 'r' | 'b' | 'n') => {
     if (!promotionPending) return;
@@ -799,6 +810,7 @@ export function useGameView({
     autoShapes,
     userDrawnShapes,
     handleMove,
+    playMove,
     handlePromotionSelect,
     handlePromotionCancel,
     handleDrawableChange,

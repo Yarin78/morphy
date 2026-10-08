@@ -1,9 +1,9 @@
 import { useSyncExternalStore } from 'react';
-import { type ColumnOptions, columnsOf, defaultColumnsOf, type Column } from './columns';
-import type { SearchKind } from './queries';
+import { type ColumnOptions, type ColumnSet, columnsOf, defaultColumnsOf, kindOfSet, type Column } from './columns';
 
-// The columns of the search results of each kind: which are shown and how wide they've been made,
-// the same in every database. Kept in localStorage; a kind not changed has its default columns.
+// The columns of the search results of each kind, and of the games of a board's position: which
+// are shown and how wide they've been made, the same in every database. Kept in localStorage; a
+// list not changed has its default columns.
 
 export interface KindColumns {
   /** The keys of the columns shown, if others than the default ones have been picked */
@@ -12,7 +12,7 @@ export interface KindColumns {
   widths: Record<string, number>;
 }
 
-type ColumnLayout = Partial<Record<SearchKind, KindColumns>>;
+type ColumnLayout = Partial<Record<ColumnSet, KindColumns>>;
 
 const STORAGE_KEY = 'morphy-search-columns';
 const NOT_CHANGED: KindColumns = { widths: {} };
@@ -37,7 +37,7 @@ function getLayout(): ColumnLayout {
   return layout;
 }
 
-function update(kind: SearchKind, change: (c: KindColumns) => KindColumns) {
+function update(kind: ColumnSet, change: (c: KindColumns) => KindColumns) {
   layout = { ...layout, [kind]: change(layout[kind] ?? NOT_CHANGED) };
   listeners.forEach((l) => l());
   try {
@@ -48,7 +48,7 @@ function update(kind: SearchKind, change: (c: KindColumns) => KindColumns) {
 }
 
 /** The keys of the columns of a kind's results that are shown. */
-export function shownColumnKeys(kind: SearchKind): string[] {
+export function shownColumnKeys(kind: ColumnSet): string[] {
   return layout[kind]?.shown ?? defaultColumnsOf(kind);
 }
 
@@ -62,9 +62,9 @@ export interface ResultColumns {
 }
 
 /** The columns of a kind's results, as they've been picked and sized. */
-export function useResultColumns(kind: SearchKind, options: ColumnOptions): ResultColumns {
+export function useResultColumns(kind: ColumnSet, options: ColumnOptions): ResultColumns {
   const kindColumns = useSyncExternalStore(subscribe, getLayout)[kind] ?? NOT_CHANGED;
-  const all = columnsOf(kind, options).map((c) => ({ ...c, width: kindColumns.widths[c.key] ?? c.width }));
+  const all = columnsOf(kindOfSet(kind), options).map((c) => ({ ...c, width: kindColumns.widths[c.key] ?? c.width }));
   const shownKeys = new Set(kindColumns.shown ?? defaultColumnsOf(kind));
   return {
     all,
@@ -74,17 +74,17 @@ export function useResultColumns(kind: SearchKind, options: ColumnOptions): Resu
 }
 
 /** Shows a column of a kind's results, or hides it. */
-export function toggleColumn(kind: SearchKind, key: string) {
+export function toggleColumn(kind: ColumnSet, key: string) {
   const shown = shownColumnKeys(kind);
   const next = shown.includes(key) ? shown.filter((k) => k !== key) : [...shown, key];
   update(kind, (c) => ({ ...c, shown: next }));
 }
 
-export function setColumnWidth(kind: SearchKind, key: string, width: number) {
+export function setColumnWidth(kind: ColumnSet, key: string, width: number) {
   update(kind, (c) => ({ ...c, widths: { ...c.widths, [key]: width } }));
 }
 
 /** Puts back the default columns of a kind's results, at their default widths. */
-export function resetColumns(kind: SearchKind) {
+export function resetColumns(kind: ColumnSet) {
   update(kind, () => NOT_CHANGED);
 }
