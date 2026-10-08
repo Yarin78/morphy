@@ -37,13 +37,14 @@ public class PositionsController {
    * tells what was played from it.
    *
    * @param fen the position
-   * @param sortBy the order: {@code +} or {@code -} and one of {@link PositionsService#SORT_FIELDS}
+   * @param sortBy the order: {@code +} or {@code -} and one of {@link PositionsService#SORT_FIELDS};
+   *     by default the most relevant first (strong players, recent games)
    */
   @GetMapping("/{indexId}/search")
   public ResponseEntity<PositionSearchResponse> search(
       @PathVariable String indexId,
       @RequestParam String fen,
-      @RequestParam(defaultValue = "+id") String sortBy,
+      @RequestParam(defaultValue = "-relevance") String sortBy,
       @RequestParam(defaultValue = "0") int offset,
       @RequestParam(defaultValue = "100") int limit,
       @RequestParam(defaultValue = "false") boolean includeMoves) {

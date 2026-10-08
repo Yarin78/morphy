@@ -167,6 +167,26 @@ class PositionsServiceTest {
   }
 
   @Test
+  void gamesAreMostRelevantFirstByDefault() {
+    int newest =
+        positions.search("all", START, "-playedYear", 0, 1, false).games().games().getFirst().date().year();
+    List<GameDto> games = positions.search("all", START, "", 0, 300, false).games().games();
+    assertEquals("-relevance", positions.search("all", START, "", 0, 1, false).games().metadata().sortBy());
+    long previous = Long.MAX_VALUE;
+    for (GameDto game : games) {
+      int white = game.whiteElo() == null ? 0 : game.whiteElo();
+      int black = game.blackElo() == null ? 0 : game.blackElo();
+      int rating = white > 0 && black > 0 ? (white + black) / 2 : Math.max(white, black);
+      int year = game.date().year();
+      long relevance = rating - (long) PositionsService.RELEVANCE_ELO_PER_YEAR * (year > 0 ? newest - year : 100);
+      assertTrue(relevance <= previous, "game " + game.id() + " is more relevant than the one before");
+      previous = relevance;
+    }
+    // Recent games of strong players first: the first is from the last decade or so
+    assertTrue(games.getFirst().date().year() >= newest - 10, "first game of " + games.getFirst().date());
+  }
+
+  @Test
   void aPositionOnlyOneGameReachedIsFound() {
     PositionSearchResponse response = positions.search("all", lastOfGame1, "+id", 0, 100, true);
     assertEquals(1, response.summary().games());

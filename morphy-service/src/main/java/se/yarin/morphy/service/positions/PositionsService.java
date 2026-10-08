@@ -61,7 +61,18 @@ public class PositionsService {
 
   /** The fields the games of a position can be sorted by. */
   public static final List<String> SORT_FIELDS =
-      List.of("id", "playedDate", "playedYear", "whiteElo", "blackElo", "eloAvg", "eloMax");
+      List.of(
+          "relevance", "id", "playedDate", "playedYear", "whiteElo", "blackElo", "eloAvg", "eloMax");
+
+  /**
+   * How much a year of age weighs against rating in a game's relevance: its average rating less
+   * this much for every year it was played before the newest game of the index. A game of 2700 a
+   * year old comes before one of 2600 played this year. To be tuned.
+   */
+  static final int RELEVANCE_ELO_PER_YEAR = 50;
+
+  // The age of a game of no known year, in its relevance
+  private static final int UNKNOWN_AGE = 100;
 
   // The players named for a move
   private static final int TOP_PLAYERS = 3;
@@ -263,7 +274,7 @@ public class PositionsService {
           try (GameScan scan = scanning(db).openScan()) {
             games = index.find(position, scan);
           }
-          int[] sorted = order.sort(games.gameIds(), index.facts());
+          int[] sorted = order.sort(games.gameIds(), index.facts(), index.meta().recentSince() + 2);
           GameFetchOptions fetch = new GameFetchOptions(includeMoves, false, false);
           List<GameDto> page = new ArrayList<>();
           for (int i = first; i < Math.min(sorted.length, first + count); i++) {
@@ -459,7 +470,7 @@ public class PositionsService {
   /** How the games are sorted: by one of the {@link #SORT_FIELDS}, then by id. */
   private record Order(String field, boolean descending) {
     static Order parse(String sortBy) {
-      String spec = sortBy.isBlank() ? "+id" : sortBy.trim();
+      String spec = sortBy.isBlank() ? "-relevance" : sortBy.trim();
       boolean descending = spec.startsWith("-");
       String field = spec.startsWith("-") || spec.startsWith("+") ? spec.substring(1) : spec;
       if (!SORT_FIELDS.contains(field)) {
@@ -469,8 +480,13 @@ public class PositionsService {
       return new Order(field, descending);
     }
 
-    /** The games in this order. */
-    int[] sort(int[] gameIds, GameFactsTable facts) {
+    /**
+     * The games in this order.
+     *
+     * @param newestYear the year of the index's newest game, which the age in a game's relevance
+     *     is counted from
+     */
+    int[] sort(int[] gameIds, GameFactsTable facts, int newestYear) {
       if (field.equals("id")) {
         if (!descending) {
           return gameIds;
@@ -484,7 +500,7 @@ public class PositionsService {
       // The value above the id, so a primitive sort orders by value, then id
       long[] keys = new long[gameIds.length];
       for (int i = 0; i < gameIds.length; i++) {
-        long value = value(facts, gameIds[i]);
+        long value = value(facts, gameIds[i], newestYear);
         keys[i] = ((descending ? (1L << 30) - value : value) << 32) | gameIds[i];
       }
       Arrays.sort(keys);
@@ -495,9 +511,11 @@ public class PositionsService {
       return sorted;
     }
 
-    private long value(GameFactsTable facts, int id) {
+    /** The value sorted by, at least 0 and below 2^30. */
+    private long value(GameFactsTable facts, int id, int newestYear) {
       int white = facts.whiteElo(id), black = facts.blackElo(id);
       return switch (field) {
+        case "relevance" -> relevance(facts, id, newestYear);
         case "playedDate" -> facts.sortableDate(id);
         case "playedYear" -> facts.year(id);
         case "whiteElo" -> white;
@@ -512,5 +530,18 @@ public class PositionsService {
     public String toString() {
       return (descending ? "-" : "+") + field;
     }
+  }
+
+  /**
+   * How relevant a game is, the higher the more: the average rating of its players (or the one
+   * rating, if only one is rated) less {@link #RELEVANCE_ELO_PER_YEAR} for each year it was played
+   * before the newest year; offset to be above 0.
+   */
+  static long relevance(GameFactsTable facts, int id, int newestYear) {
+    int white = facts.whiteElo(id), black = facts.blackElo(id);
+    int rating = white > 0 && black > 0 ? (white + black) / 2 : Math.max(white, black);
+    int year = facts.year(id);
+    int age = year > 0 ? Math.max(0, newestYear - year) : UNKNOWN_AGE;
+    return (1 << 20) + rating - (long) RELEVANCE_ELO_PER_YEAR * Math.min(age, 1000);
   }
 }

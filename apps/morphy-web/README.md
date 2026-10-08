@@ -59,8 +59,10 @@ Both come from one call, `searchPosition`
 the first page what was played from the position; the games open in the index's
 database. If the index went out of date meanwhile, the service answers 409 saying
 so, which the pane shows.
-The games can only be sorted by what the index keeps of them: id, date, year and
-ratings. Scores count the games with a result.
+The games come most relevant first: strong players and recent games, the
+players' average rating less 50 for every year back (the service's
+`RELEVANCE_ELO_PER_YEAR`). A column sorts them otherwise, by what the index keeps
+of them: id, date, year and ratings. Scores count the games with a result.
 
 ## Pages
 

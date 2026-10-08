@@ -182,7 +182,7 @@ sequenceDiagram
     end
   end
   G-->>S: moves (with stats), games that ended there, all game ids
-  S->>S: sort the ids by facts.bin, cut the page
+  S->>S: sort the ids by facts.bin (by default by relevance), cut the page
   S->>D: getGame for the page's games
 ```
 
@@ -221,7 +221,9 @@ flowchart LR
 
 An index's status is `ready`, `missing`, `stale` (its database changed since it was built, or its
 filter differs from the definition's), `building` (with the builder's progress) or `failed`. A
-search of an index that isn't ready answers 409, saying how to build it. Builds run in the
+search of an index that isn't ready answers 409, saying how to build it. The games come most
+relevant first by default: the players' average rating less 50 for every year before the index's
+newest game (`PositionsService.RELEVANCE_ELO_PER_YEAR`), worked out from `facts.bin`. Builds run in the
 background on one thread, so they queue; the bucket files go next to the index directory.
 
 ## The code

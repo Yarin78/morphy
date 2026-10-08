@@ -24,7 +24,8 @@ interface State {
   summary: SummaryState | null;
 }
 
-const INITIAL: State = { results: null, selected: null, sort: { field: 'id', order: 'asc' }, summary: null };
+// The games most relevant first: strong players and recent games, as the service weighs them
+const INITIAL: State = { results: null, selected: null, sort: { field: 'relevance', order: 'desc' }, summary: null };
 
 export interface PositionSearch {
   search: ResultsSearch;

@@ -117,7 +117,7 @@ export function defaultColumnsOf(kind: ColumnSet): string[] {
 }
 
 // The fields the games of a position can be sorted on, from the facts its index keeps of them
-const POSITION_GAME_SORT_FIELDS = new Set(['id', 'playedDate', 'playedYear', 'whiteElo', 'blackElo', 'eloAvg', 'eloMax']);
+const POSITION_GAME_SORT_FIELDS = new Set(['relevance', 'id', 'playedDate', 'playedYear', 'whiteElo', 'blackElo', 'eloAvg', 'eloMax']);
 
 /** The sort field of a column of a list of results, if it can be sorted on. */
 export function sortFieldOf(set: ColumnSet, columnKey: string): string | undefined {
