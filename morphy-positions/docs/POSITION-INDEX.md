@@ -387,12 +387,60 @@ and the bucket files are gone. What's left, ordered by how much it would help fo
 2. **`PositionIndexBuilder` is 650 lines**: reading games, the batches and their sorting, and
    build, update and compact. Update and compact could be a class of their own (an
    `IndexMaintenance`), leaving the builder the games-to-segments part.
-3. **The build waits while a batch is sorted and written** (7 s each, 15 times for Mega): handing a
-   full batch to a writer thread while the next is collected would take some 50 s off a build, for
-   one batch more in memory.
-4. **`PositionIndexStats` in morphy-tools** has its own copy of the old bucket logic, from measuring
+3. **`PositionIndexStats` in morphy-tools** has its own copy of the old bucket logic, from measuring
    before the index existed. It could go, or report on a built index instead.
 
 What is **not** worth simplifying away: the split between shared and single-game positions (single
 entries of 10 bytes rather than records of some 14), and `HashingBoard` (decoding went from 14 s to
 4 s).
+
+## Possible optimisations
+
+Left for later; none of them changes the format.
+
+**A full build (222 s for Mega 2026, against 60–90 s with the old bucket files).**
+- *Where the time goes.* Reading is 98 s, but nearly all of that is waiting. When the shared batch
+  fills, the thread that filled it sorts it and writes it as a segment while holding the lock (about
+  7 s, 15 times), and the other reading threads wait. Reading the games themselves takes a few
+  seconds; a scan of every main line is about 5 s. Merging the 15 batch segments takes about 120 s,
+  on one thread.
+- *A writer thread alone won't help.* Giving a full batch to a writer thread and reading on into a
+  fresh one just makes the writer the bottleneck: 15 × 7 s is still about 105 s. Only overlapping
+  the few seconds of reading is saved.
+- *Measure first.* Time the sort (already parallel over 256 parts) and `SegmentWriter` (one thread:
+  building the groups, writing about 500 MB) separately within the 7 s, and the merge on its own.
+- *Parallel batch writes.* If writing dominates, write two or three batches at once. Each needs
+  about 2 GB (records and sort space), so on a 4 GB heap the batches get smaller and more numerous;
+  this wants more memory to pay off.
+- *Parallel merge, probably the bigger win.* Split the merge by ranges of the hash's top bits, one
+  thread per range, each writing part files, then join them. The files are in hash order, so joining
+  is concatenating: the shared offsets shift by the parts' sizes, and the directory's counts are per
+  range anyway. With 8 threads, perhaps 20–30 s instead of 120 s, unless writing the 8 GB to disk is
+  the limit. Compaction (78 s) would gain the same way.
+
+**Searching without an index (`PositionScanner`).**
+- *Mega 2026 (v2).* About 4.8 s. The floor is 2.9 s, just reading every game's header and move
+  record, with no move played.
+- *Tried: a ply limit.* Stopping each game 6 plies past the position's own (by its move number)
+  brought it to about 3 s, but misses games that transpose later (4 of 1.27M for 1.d4 Nf6 2.c4).
+  Not kept.
+- *v1 is slow.* A v1 Megabase takes about 58 s, as its scan decodes every game into a move tree. A
+  v1 `MainLine` played straight off the move bytes onto a `HashingBoard`, as v2 does off its move
+  words, would bring it near v2's time, and speed up v1 builds as well.
+
+**Updates.**
+- *Changed and deleted games aren't detected.* An update adds the games after the last one indexed;
+  changed games must be given by id. Two ways to detect them:
+  - a fingerprint per game in the facts (a hash of its header facts and move bytes), compared on an
+    update, at the cost of reading every game (about 3 s for Mega 2026 in v2);
+  - or the ids of the games the service adds, replaces or deletes, recorded as it writes them,
+    which misses changes made outside the service.
+- *`recentSince` stays as built.* An update keeps the index's year until a compaction, so "recent"
+  drifts by a year or so on an index only ever updated.
+
+**Relevance (the default order of a position's games).**
+- *No time control.* The top games of a common position are often recent blitz games of the
+  strongest players. Weighting by time control needs it in the facts (it's the tournament's), so a
+  format change; until then an index of classical games (`tournament.time:normal`) avoids it.
+- *No way back.* Once a column is sorted by, the Games pane has no way back to the relevance order.
+
