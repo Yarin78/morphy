@@ -19,6 +19,9 @@ import se.yarin.morphy.api.MainLine;
 public final class PositionScanner {
   private PositionScanner() {}
 
+  // What moveFrom returns for a game that doesn't reach the position
+  private static final int NOT_REACHED = -1;
+
   /**
    * Finds the games of a scan that reached a position, and the moves they played from it, the
    * first time they reached it.
@@ -46,7 +49,7 @@ public final class PositionScanner {
             // Moves that can't be decoded; the game is left out, as a scan leaves out such games
             return;
           }
-          if (move != PositionIndex.NOT_REACHED) {
+          if (move != NOT_REACHED) {
             f.add(id, move);
             GameFactsTable.pack(facts, f.facts, 2 * (f.size - 1));
           }
@@ -86,7 +89,7 @@ public final class PositionScanner {
    * The move a main line plays from a position, the first time it's reached.
    *
    * @return the move's code, {@link IndexFiles#GAME_ENDED} if the game ends there, or {@link
-   *     PositionIndex#NOT_REACHED}
+   *     #NOT_REACHED}
    */
   private static int moveFrom(MainLine line, long hash) {
     while (true) {
@@ -95,7 +98,7 @@ public final class PositionScanner {
         return code == MoveCode.NONE ? IndexFiles.GAME_ENDED : code;
       }
       if (code == MoveCode.NONE) {
-        return PositionIndex.NOT_REACHED;
+        return NOT_REACHED;
       }
       line.advance();
     }

@@ -58,4 +58,14 @@ public class PositionsController {
     positionsService.build(indexId);
     return ResponseEntity.status(HttpStatus.ACCEPTED).body(positionsService.info(indexId));
   }
+
+  /**
+   * Starts adding the games added to an index's database since it was built or last updated, in
+   * the background; its status tells how it goes.
+   */
+  @PostMapping("/{indexId}/update")
+  public ResponseEntity<PositionIndexInfo> update(@PathVariable String indexId) {
+    positionsService.update(indexId);
+    return ResponseEntity.status(HttpStatus.ACCEPTED).body(positionsService.info(indexId));
+  }
 }

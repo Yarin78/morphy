@@ -33,7 +33,12 @@ import se.yarin.morphy.positions.RatedPlayer;
     name = "positions",
     description = "Builds and searches a database's position index",
     mixinStandardHelpOptions = true,
-    subcommands = {Positions.Build.class, Positions.Lookup.class})
+    subcommands = {
+      Positions.Build.class,
+      Positions.Update.class,
+      Positions.Compact.class,
+      Positions.Lookup.class
+    })
 class Positions implements Runnable {
 
   @Override
@@ -55,13 +60,6 @@ class Positions implements Runnable {
   static class Build implements Callable<Integer> {
     @CommandLine.Parameters(index = "0", description = "The database")
     private File file;
-
-    @CommandLine.Option(
-        names = "--work-dir",
-        description =
-            "Where the temporary files go, some 16 bytes per position of every game (default: next"
-                + " to the database)")
-    private Path workDir;
 
     @CommandLine.Option(
         names = "--filter",
@@ -89,12 +87,7 @@ class Positions implements Runnable {
                     scan,
                     DatabaseIdentity.of(databaseFile, db.gameCount()),
                     filter,
-                    indexDir,
-                    workDir != null ? workDir : databaseFile.toAbsolutePath().getParent());
-        long size;
-        try (var files = Files.list(indexDir)) {
-          size = files.mapToLong(f -> f.toFile().length()).sum();
-        }
+                    indexDir);
         System.out.printf(
             "Indexed %,d games: %,d positions several games reached and %,d one game reached, in"
                 + " %.0f s; %,d MB in %s%n",
@@ -102,9 +95,87 @@ class Positions implements Runnable {
             meta.sharedPositions(),
             meta.singlePositions(),
             (System.nanoTime() - start) / 1e9,
-            size / 1_000_000,
+            sizeOf(indexDir) / 1_000_000,
             indexDir);
       }
+      return 0;
+    }
+  }
+
+  /** The bytes of the files in a directory and those below it. */
+  private static long sizeOf(Path dir) throws IOException {
+    try (var files = Files.walk(dir)) {
+      return files.filter(Files::isRegularFile).mapToLong(f -> f.toFile().length()).sum();
+    }
+  }
+
+  @CommandLine.Command(
+      name = "update",
+      description =
+          "Adds the games added to a database since its position index was built or updated, as a"
+              + " segment of their own; compacts the index when it has grown too many",
+      mixinStandardHelpOptions = true)
+  static class Update implements Callable<Integer> {
+    @CommandLine.Parameters(index = "0", description = "The database")
+    private File file;
+
+    @CommandLine.Option(
+        names = "--index",
+        description = "The index directory (default: next to the database, <name>.positions)")
+    private Path indexDir;
+
+    @CommandLine.Option(
+        names = "--changed",
+        split = ",",
+        description = "Games changed or deleted since, by id, to index again")
+    private int[] changed = new int[0];
+
+    @Override
+    public Integer call() throws Exception {
+      Locale.setDefault(Locale.US);
+      Path databaseFile = file.toPath();
+      Path indexDir = this.indexDir != null ? this.indexDir : IndexFiles.indexDirectoryOf(databaseFile);
+      long start = System.nanoTime();
+      String filter = PositionIndex.readMeta(indexDir).filter();
+      try (Database db = Databases.open(file, AccessMode.READ_ONLY);
+          GameScan scan = scanning(db).openScan(filter)) {
+        IndexMeta meta =
+            new PositionIndexBuilder(System.out::println)
+                .update(scan, DatabaseIdentity.of(databaseFile, db.gameCount()), indexDir, changed);
+        System.out.printf(
+            "%,d games in %d segment(s), updated in %.1f s; %,d MB%n",
+            meta.games(),
+            meta.segments().size(),
+            (System.nanoTime() - start) / 1e9,
+            sizeOf(indexDir) / 1_000_000);
+      }
+      return 0;
+    }
+  }
+
+  @CommandLine.Command(
+      name = "compact",
+      description = "Merges the segments of a database's position index into one",
+      mixinStandardHelpOptions = true)
+  static class Compact implements Callable<Integer> {
+    @CommandLine.Parameters(index = "0", description = "The database")
+    private File file;
+
+    @CommandLine.Option(
+        names = "--index",
+        description = "The index directory (default: next to the database, <name>.positions)")
+    private Path indexDir;
+
+    @Override
+    public Integer call() throws Exception {
+      Locale.setDefault(Locale.US);
+      Path indexDir =
+          this.indexDir != null ? this.indexDir : IndexFiles.indexDirectoryOf(file.toPath());
+      long start = System.nanoTime();
+      IndexMeta meta = new PositionIndexBuilder(System.out::println).compact(indexDir);
+      System.out.printf(
+          "%,d games in one segment, compacted in %.1f s; %,d MB%n",
+          meta.games(), (System.nanoTime() - start) / 1e9, sizeOf(indexDir) / 1_000_000);
       return 0;
     }
   }
@@ -189,10 +260,7 @@ class Positions implements Runnable {
           return null;
         }
         long start = System.nanoTime();
-        PositionGames games;
-        try (GameScan scan = scanning(db).openScan()) {
-          games = index.find(position, scan);
-        }
+        PositionGames games = index.find(position);
         long looked = System.nanoTime();
         System.out.printf(
             "%,d games (index opened in %.0f ms, looked up in %.1f ms)%n",

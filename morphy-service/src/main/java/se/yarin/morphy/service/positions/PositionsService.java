@@ -18,6 +18,7 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
+import java.util.function.Consumer;
 import java.util.concurrent.Executors;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -277,9 +278,7 @@ public class PositionsService {
           Usable usable = usableIndex(definition, identity);
           PositionGames games;
           if (usable.index() != null) {
-            try (GameScan scan = scanning(db).openScan()) {
-              games = usable.index().find(position, scan);
-            }
+            games = usable.index().find(position);
           } else {
             games = scanned(definition, identity, db, position);
           }
@@ -332,7 +331,7 @@ public class PositionsService {
     Path dir = directory(definition);
     FileTime built;
     try {
-      built = Files.getLastModifiedTime(dir.resolve("meta.properties"));
+      built = Files.getLastModifiedTime(dir.resolve(IndexFiles.MANIFEST));
     } catch (IOException e) {
       return new Usable(null, PositionIndexState.missing("It hasn't been built"));
     }
@@ -421,13 +420,75 @@ public class PositionsService {
   // ── Building ─────────────────────────────────────────────────────────────
 
   /**
-   * Builds an index in the background, after any build before it; does nothing if it's already
-   * being built.
+   * Builds an index in the background, after any build or update before it; does nothing if it's
+   * already being built.
    *
    * @return when the build is done; it completes exceptionally if the build fails
    * @throws IllegalArgumentException if there is no such index
    */
   public CompletableFuture<Void> build(@NotNull String indexId) {
+    return run(
+        indexId,
+        "built",
+        (definition, config, db, scan) ->
+            new PositionIndexBuilder(progressOf(indexId))
+                .build(
+                    scan,
+                    DatabaseIdentity.of(Path.of(config.getPath()), db.gameCount()),
+                    definition.filterOrAll(),
+                    directory(definition)));
+  }
+
+  /**
+   * Adds the games added to an index's database since it was built or last updated, in the
+   * background, as {@link #build} builds it; an index of another filter, or none, is built.
+   *
+   * @return when the update is done; it completes exceptionally if it fails
+   * @throws IllegalArgumentException if there is no such index
+   */
+  public CompletableFuture<Void> update(@NotNull String indexId) {
+    return run(
+        indexId,
+        "updated",
+        (definition, config, db, scan) -> {
+          Path dir = directory(definition);
+          PositionIndexBuilder builder = new PositionIndexBuilder(progressOf(indexId));
+          DatabaseIdentity identity = DatabaseIdentity.of(Path.of(config.getPath()), db.gameCount());
+          IndexMeta meta;
+          try {
+            meta = PositionIndex.readMeta(dir);
+          } catch (IOException e) {
+            meta = null;
+          }
+          if (meta == null || !meta.filter().strip().equals(definition.filterOrAll())) {
+            builder.build(scan, identity, definition.filterOrAll(), dir);
+          } else {
+            builder.update(scan, identity, dir);
+          }
+        });
+  }
+
+  /** The work of a build or an update, on a scan of the index's games. */
+  @FunctionalInterface
+  private interface IndexJob {
+    void run(PositionIndexConfig definition, DatabaseConfig config, Database db, GameScan scan)
+        throws IOException;
+  }
+
+  private Consumer<String> progressOf(String indexId) {
+    return message -> {
+      Build build = builds.get(indexId);
+      if (build != null) {
+        build.progress = message;
+      }
+    };
+  }
+
+  /**
+   * Runs a build or an update of an index in the background, one at a time, in the order asked
+   * for; does nothing if one of the index is already queued or running.
+   */
+  private CompletableFuture<Void> run(String indexId, String done, IndexJob job) {
     PositionIndexConfig definition = definition(indexId);
     DatabaseConfig config = databaseOf(definition);
     Build build = new Build();
@@ -442,31 +503,27 @@ public class PositionsService {
         () -> {
           long start = System.nanoTime();
           try {
-            Path dir = directory(definition);
             build.progress = "Starting";
             databaseService.read(
                 config.getId(),
                 db -> {
                   try (GameScan scan = scanning(db).openScan(definition.filterOrAll())) {
-                    new PositionIndexBuilder(message -> build.progress = message)
-                        .build(
-                            scan,
-                            DatabaseIdentity.of(Path.of(config.getPath()), db.gameCount()),
-                            definition.filterOrAll(),
-                            dir,
-                            dir.toAbsolutePath().getParent());
+                    job.run(definition, config, db, scan);
                     return null;
                   } catch (IOException e) {
                     throw new IllegalStateException(e.getMessage(), e);
                   }
                 });
             log.info(
-                "Built the position index '{}' in {} s", indexId, (System.nanoTime() - start) / 1_000_000_000);
+                "The position index '{}' {} in {} s",
+                indexId,
+                done,
+                (System.nanoTime() - start) / 1_000_000_000);
             builds.remove(indexId, build);
             build.running = false;
             build.done.complete(null);
           } catch (RuntimeException e) {
-            log.error("Failed to build the position index '{}'", indexId, e);
+            log.error("Failed: the position index '{}' wasn't {}", indexId, done, e);
             build.failure = "The last build failed: " + e.getMessage();
             build.running = false;
             build.done.completeExceptionally(e);

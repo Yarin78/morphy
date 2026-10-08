@@ -44,7 +44,18 @@ public interface GameScan extends AutoCloseable {
    * @param visitor called from several threads at once
    */
   default void forEachMainLine(@NotNull MainLineVisitor visitor) {
+    forEachMainLine(1, visitor);
+  }
+
+  /**
+   * Plays through the main line of every game from an id on, as {@link
+   * #forEachMainLine(MainLineVisitor)} does: the games added since some were indexed, say.
+   *
+   * @param firstId the first game id
+   */
+  default void forEachMainLine(int firstId, @NotNull MainLineVisitor visitor) {
     ParallelBatches.run(
+        firstId,
         maxId(),
         256,
         (first, end) -> {

@@ -47,7 +47,8 @@ picked from as pills at the top right of the pane (the one picked last is kept);
 without an index the service plays through every game instead, which takes some
 seconds, and the top row says "No index"; an index out of date is still used, and
 the top row says so, with how many games it lacks. Either way a link there builds
-the index in the service and shows how the build goes.
+the index in the service (or, when it only lacks the games added since, updates it
+with them) and shows how that goes.
 The top row shows how many games reached the position and how the side to move
 scored. Below it, the moves played from the position on the left: how often each
 was played, its score, whether it's played more or less of late than the other

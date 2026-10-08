@@ -1,10 +1,7 @@
 package se.yarin.morphy.positions;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
 import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
 import java.util.Arrays;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -54,8 +51,34 @@ public final class GameFactsTable {
     return ids == null ? facts.length / 2 - 1 : ids.length == 0 ? 0 : ids[ids.length - 1];
   }
 
+  /** A copy of a table of every game id, for the games up to a higher id. */
+  @NotNull
+  GameFactsTable grownTo(int maxId) {
+    if (ids != null) {
+      throw new IllegalStateException("Only a table of every game id grows");
+    }
+    return new GameFactsTable(Arrays.copyOf(facts, 2 * (Math.max(maxId, maxId()) + 1)), null);
+  }
+
   void set(int id, @NotNull GameFacts f) {
     pack(f, facts, 2 * id);
+  }
+
+  /** Forgets a game: one deleted, or no longer indexed. */
+  void clear(int id) {
+    facts[2 * id] = 0;
+    facts[2 * id + 1] = 0;
+  }
+
+  /** The games there are facts of. */
+  long count() {
+    long n = 0;
+    for (int at = 0; at < facts.length; at += 2) {
+      if ((facts[at] & 15) != 0) {
+        n++;
+      }
+    }
+    return n;
   }
 
   /** Puts a game's facts in two longs of an array, from an index. */
@@ -148,22 +171,7 @@ public final class GameFactsTable {
     if (ids != null) {
       throw new IllegalStateException("Only a table of every game id is written");
     }
-    try (FileChannel channel =
-        FileChannel.open(
-            file,
-            StandardOpenOption.CREATE,
-            StandardOpenOption.TRUNCATE_EXISTING,
-            StandardOpenOption.WRITE)) {
-      ByteBuffer buf = ByteBuffer.allocate(1 << 20);
-      for (long f : facts) {
-        if (!buf.hasRemaining()) {
-          IndexFiles.writeFully(channel, buf.flip());
-          buf.clear();
-        }
-        buf.putLong(f);
-      }
-      IndexFiles.writeFully(channel, buf.flip());
-    }
+    IndexFiles.writeLongs(file, facts);
   }
 
   static @NotNull GameFactsTable read(@NotNull Path file) throws IOException {

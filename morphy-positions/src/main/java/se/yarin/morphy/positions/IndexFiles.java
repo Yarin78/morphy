@@ -10,27 +10,45 @@ import org.jetbrains.annotations.NotNull;
 
 /**
  * The files of a position index, in a directory, by default next to the database (see {@link
- * #indexDirectoryOf}). Numbers of fixed width are big-endian.
+ * #indexDirectoryOf}): the manifest, the facts of the games, and a directory per segment. Numbers
+ * of fixed width are big-endian.
  */
 public final class IndexFiles {
   private IndexFiles() {}
 
-  static final String META = "meta.properties";
-  static final String FACTS = "facts.bin";
+  /** The manifest: what the index was built from, and its segments; see {@link IndexMeta}. */
+  public static final String MANIFEST = "index.properties";
+
+  // A segment's files, in its directory
+  static final String SEGMENT_META = "segment.properties";
   static final String SHARED_KEYS = "shared.keys";
   static final String SHARED_OFFSETS = "shared.offsets";
   static final String SHARED_DATA = "shared.data";
   static final String SINGLE_DIRECTORY = "single.dir";
   static final String SINGLE_DATA = "single.data";
+  static final String SUPERSEDES = "supersedes.bin";
 
   /**
-   * The move code of the games that ended in a position, in a shared position's record: no move.
-   * The other codes are {@link se.yarin.chess.MoveCode}s, which fit in 15 bits.
+   * The move code of the games that ended in a position: no move. The other codes are {@link
+   * se.yarin.chess.MoveCode}s, of 15 bits, among which 0 (a1 to a1) is no move.
    */
-  static final int GAME_ENDED = 0xFFFF;
+  static final int GAME_ENDED = 0;
 
-  /** The top bits of a hash the directory of the single-game positions is by. */
-  static final int DIRECTORY_BITS = 24;
+  /**
+   * A move as stored: its code in the low 15 bits, and above them whether White played it (is to
+   * move in the position).
+   */
+  static int moveField(int moveCode, boolean whiteToMove) {
+    return (whiteToMove ? 0x8000 : 0) | moveCode;
+  }
+
+  static int codeOf(int moveField) {
+    return moveField & 0x7FFF;
+  }
+
+  static boolean whiteToMoveOf(int moveField) {
+    return (moveField & 0x8000) != 0;
+  }
 
   /** The default index directory of a database file: {@code Mega.2cbh} has {@code Mega.positions}. */
   public static @NotNull Path indexDirectoryOf(@NotNull Path databaseFile) {
@@ -105,16 +123,58 @@ public final class IndexFiles {
     }
   }
 
-  /** Deletes a directory and the files in it, if it exists. */
+  /** Deletes a directory and everything in it, if it exists. */
   static void deleteDirectory(@NotNull Path dir) throws IOException {
     if (!Files.isDirectory(dir)) {
       return;
     }
     try (var files = Files.list(dir)) {
       for (Path f : files.toList()) {
-        Files.delete(f);
+        if (Files.isDirectory(f)) {
+          deleteDirectory(f);
+        } else {
+          Files.delete(f);
+        }
       }
     }
     Files.delete(dir);
+  }
+
+  static void writeLongs(@NotNull Path file, long @NotNull [] values) throws IOException {
+    try (FileChannel channel =
+        FileChannel.open(
+            file,
+            StandardOpenOption.CREATE,
+            StandardOpenOption.TRUNCATE_EXISTING,
+            StandardOpenOption.WRITE)) {
+      ByteBuffer buf = ByteBuffer.allocate(1 << 20);
+      for (long v : values) {
+        if (!buf.hasRemaining()) {
+          writeFully(channel, buf.flip());
+          buf.clear();
+        }
+        buf.putLong(v);
+      }
+      writeFully(channel, buf.flip());
+    }
+  }
+
+  static void writeInts(@NotNull Path file, int @NotNull [] values) throws IOException {
+    try (FileChannel channel =
+        FileChannel.open(
+            file,
+            StandardOpenOption.CREATE,
+            StandardOpenOption.TRUNCATE_EXISTING,
+            StandardOpenOption.WRITE)) {
+      ByteBuffer buf = ByteBuffer.allocate(1 << 20);
+      for (int v : values) {
+        if (!buf.hasRemaining()) {
+          writeFully(channel, buf.flip());
+          buf.clear();
+        }
+        buf.putInt(v);
+      }
+      writeFully(channel, buf.flip());
+    }
   }
 }

@@ -26,6 +26,9 @@ import se.yarin.morphy.api.GameScan;
 import se.yarin.morphy.api.GameScanning;
 import se.yarin.morphy.api.ScannedGame;
 import se.yarin.morphy.model.GameDto;
+import se.yarin.morphy.positions.DatabaseIdentity;
+import se.yarin.morphy.positions.IndexFiles;
+import se.yarin.morphy.positions.PositionIndexBuilder;
 import se.yarin.morphy.service.databases.DatabaseService;
 
 /**
@@ -48,6 +51,9 @@ class PositionsServiceTest {
   private static long withoutMoves;
   // The last position of game 1, which only it reaches
   private static String lastOfGame1;
+  // The game records of the sample database, and those of them the "grown" index was built of
+  private static long allRecords;
+  private static long grownGames;
 
   @BeforeAll
   static void setUp() throws Exception {
@@ -71,10 +77,27 @@ class PositionsServiceTest {
       lastOfGame1 = PositionState.toFen(node.position(), node.ply());
     }
 
-    // A copy, changed after its index is built
+    // A copy, changed after its index is built; and another, whose index has only the first half
+    // of its games, as if built before the others were added
     Path copy = Files.createDirectories(dir.resolve("copy"));
+    Path grown = Files.createDirectories(dir.resolve("grown"));
     for (File f : file.getParentFile().listFiles(File::isFile)) {
       Files.copy(f.toPath(), copy.resolve(f.getName()));
+      Files.copy(f.toPath(), grown.resolve(f.getName()));
+    }
+    Path grownFile = grown.resolve(file.getName());
+    try (Database db = Databases.open(grownFile.toFile(), AccessMode.READ_ONLY);
+        GameScan scan = db.extension(GameScanning.class).orElseThrow().openScan()) {
+      allRecords = db.gameCount();
+      int half = scan.maxId() / 2;
+      DatabaseIdentity identity = DatabaseIdentity.of(grownFile, db.gameCount());
+      new PositionIndexBuilder(message -> {})
+          .build(
+              firstGames(scan, half),
+              new DatabaseIdentity(identity.size(), identity.modified(), half),
+              "",
+              IndexFiles.indexDirectoryOf(grownFile, "grown"));
+      grownGames = half;
     }
 
     databases = new DatabaseService();
@@ -82,6 +105,8 @@ class PositionsServiceTest {
     databases.getDatabaseConfig("wch2").setReadOnly(true);
     databases.registerDatabase("copy", "Copy", copy.resolve(file.getName()).toString());
     databases.getDatabaseConfig("copy").setReadOnly(true);
+    databases.registerDatabase("grown", "Grown", grownFile.toString());
+    databases.getDatabaseConfig("grown").setReadOnly(true);
 
     // "all" and "old" (a filter) are built; "other" has another filter than its index was built
     // with; "unbuilt" isn't built; "copied" is built, then its database changes
@@ -94,7 +119,8 @@ class PositionsServiceTest {
           "old": {"name": "WCh old", "database": "wch2", "filter": "date:..1960", "path": "%1$s/old.positions"},
           "other": {"name": "Other", "database": "wch2", "filter": "date:1961..", "path": "%1$s/old.positions"},
           "unbuilt": {"name": "Unbuilt", "database": "wch2", "path": "%1$s/unbuilt.positions"},
-          "copied": {"name": "Copied", "database": "copy"}
+          "copied": {"name": "Copied", "database": "copy"},
+          "grown": {"name": "Grown", "database": "grown"}
         }
         """
             .formatted(dir.toString().replace("\\", "/")));
@@ -119,7 +145,7 @@ class PositionsServiceTest {
     Map<String, PositionIndexInfo> byId =
         positions.list().stream().collect(Collectors.toMap(PositionIndexInfo::id, i -> i));
     assertEquals(
-        List.of("all", "old", "other", "unbuilt", "copied"),
+        List.of("all", "old", "other", "unbuilt", "copied", "grown"),
         positions.list().stream().map(PositionIndexInfo::id).toList());
     assertEquals("ready", byId.get("all").status());
     assertEquals(fromStart, (long) byId.get("all").games());
@@ -269,6 +295,39 @@ class PositionsServiceTest {
     PositionSearchResponse response = positions.search("copied", START, "+id", 0, 100, false);
     assertEquals(new PositionIndexState("stale", null, 0L), response.index());
     assertEquals(fromStart, response.summary().games());
+  }
+
+  @Test
+  void anUpdateAddsTheGamesAddedSince() {
+    PositionSearchResponse before = positions.search("grown", START, "+id", 0, 1, false);
+    assertEquals(new PositionIndexState("stale", null, allRecords - grownGames), before.index());
+    assertTrue(before.summary().games() < fromStart);
+    positions.update("grown").join();
+    assertEquals("ready", positions.info("grown").status());
+    PositionSearchResponse after = positions.search("grown", START, "+id", 0, 1, false);
+    assertEquals(PositionIndexState.READY, after.index());
+    assertEquals(fromStart, after.summary().games());
+    assertEquals(
+        positions.search("all", AFTER_D4_NF6_C4, "-relevance", 0, 1000, false).summary(),
+        positions.search("grown", AFTER_D4_NF6_C4, "-relevance", 0, 1000, false).summary());
+  }
+
+  /** A scan of the games up to an id. */
+  private static GameScan firstGames(GameScan scan, int maxId) {
+    return new GameScan() {
+      @Override
+      public int maxId() {
+        return maxId;
+      }
+
+      @Override
+      public ScannedGame read(int id) {
+        return id <= maxId ? scan.read(id) : null;
+      }
+
+      @Override
+      public void close() {}
+    };
   }
 
   private static List<Long> ids(PositionSearchResponse response) {

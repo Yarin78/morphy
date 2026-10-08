@@ -74,8 +74,9 @@ final class Scan implements GameScan {
   }
 
   @Override
-  public void forEachMainLine(@NotNull MainLineVisitor visitor) {
+  public void forEachMainLine(int firstId, @NotNull MainLineVisitor visitor) {
     forEachRecord(
+        firstId,
         (header, moves) -> {
           if (moves.tag() != RecordFile.TAG_GAME) {
             return;
@@ -94,8 +95,10 @@ final class Scan implements GameScan {
    * Gives the header and moves record of every game to index, on several threads, reading
    * {@link #BATCH} games at a time.
    */
-  private void forEachRecord(@NotNull BiConsumer<GameHeader, RecordFile.Record> consumer) {
+  private void forEachRecord(
+      int firstId, @NotNull BiConsumer<GameHeader, RecordFile.Record> consumer) {
     ParallelBatches.run(
+        firstId,
         maxId(),
         BATCH,
         (first, end) -> {

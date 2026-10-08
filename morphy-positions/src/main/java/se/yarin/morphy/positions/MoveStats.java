@@ -81,6 +81,30 @@ public record MoveStats(
   }
 
   /**
+   * The statistics of these games and others, none of them among both: the counts added up, the
+   * latest year and the highest rated players of the two.
+   */
+  public @NotNull MoveStats plus(@NotNull MoveStats other) {
+    TopPlayers top = new TopPlayers();
+    for (RatedPlayer p : topPlayers) {
+      top.add(p.playerId(), p.elo());
+    }
+    for (RatedPlayer p : other.topPlayers) {
+      top.add(p.playerId(), p.elo());
+    }
+    return new MoveStats(
+        games + other.games,
+        whiteWins + other.whiteWins,
+        draws + other.draws,
+        blackWins + other.blackWins,
+        recentGames + other.recentGames,
+        Math.max(lastYear, other.lastYear),
+        eloSum + other.eloSum,
+        eloCount + other.eloCount,
+        top.list());
+  }
+
+  /**
    * The players with the highest ratings, each with their highest, as games are gone through: the
    * best few kept in small arrays, the highest first, the lower player id first among equals. A
    * game rarely gets in, so most cost a comparison.

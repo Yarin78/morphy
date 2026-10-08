@@ -9,7 +9,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jetbrains.annotations.NotNull;
 
-/** Runs work over the ids 1 to a maximum in batches of consecutive ids, on several threads. */
+/** Runs work over a range of ids in batches of consecutive ids, on several threads. */
 public final class ParallelBatches {
   private ParallelBatches() {}
 
@@ -27,8 +27,16 @@ public final class ParallelBatches {
    * @throws RuntimeException the first failure of a batch, after the other threads are stopped
    */
   public static void run(int maxId, int batchSize, @NotNull Batch batch) {
+    run(1, maxId, batchSize, batch);
+  }
+
+  /**
+   * Runs the work on every batch of the ids from {@code firstId} to {@code maxId}, as {@link
+   * #run(int, int, Batch)} does.
+   */
+  public static void run(int firstId, int maxId, int batchSize, @NotNull Batch batch) {
     int threads = Runtime.getRuntime().availableProcessors();
-    AtomicInteger next = new AtomicInteger(1);
+    AtomicInteger next = new AtomicInteger(Math.max(1, firstId));
     ExecutorService pool = Executors.newFixedThreadPool(threads);
     try {
       List<Future<?>> workers = new ArrayList<>();

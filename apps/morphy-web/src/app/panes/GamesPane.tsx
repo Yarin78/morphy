@@ -1,6 +1,6 @@
 import { type PointerEvent, type ReactNode, type RefObject, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { TbLayoutColumns, TbLayoutRows } from 'react-icons/tb';
-import { buildPositionIndex, fetchPositionIndex, fetchPositionIndexes } from '../../api/client';
+import { buildPositionIndex, fetchPositionIndex, fetchPositionIndexes, updatePositionIndex } from '../../api/client';
 import type { PositionIndexResponse, PositionIndexState } from '../../api/types';
 import { usePositionSearch } from '../../search/usePositionSearch';
 import { useBoardView } from '../boardStore';
@@ -116,9 +116,11 @@ function IndexNote({
     return () => clearTimeout(timer);
   }, [status, onBuilt]);
 
+  // An index lacking only the games added since is updated with them; any other is built again
+  const update = state?.status === 'stale' && (state.missingGames ?? 0) > 0;
   const build = () => {
     setError(null);
-    buildPositionIndex(status.id)
+    (update ? updatePositionIndex : buildPositionIndex)(status.id)
       .then(setStatus)
       .catch((err: unknown) => setError(err instanceof Error ? err.message : String(err)));
   };
@@ -127,7 +129,7 @@ function IndexNote({
   if (status.status === 'building') {
     return (
       <span className="games-pane-index-note" title={status.message}>
-        Building the index…{status.message ? ` ${status.message}` : ''}
+        Indexing…{status.message ? ` ${status.message}` : ''}
       </span>
     );
   }
@@ -160,7 +162,7 @@ function IndexNote({
       {note}
       {' · '}
       <button type="button" className="games-pane-index-build" onClick={build} title={describe(status)}>
-        {state?.status === 'stale' || status.status === 'failed' ? 'Rebuild' : 'Build'}
+        {update ? 'Update' : state?.status === 'stale' || status.status === 'failed' ? 'Rebuild' : 'Build'}
       </button>
     </span>
   );

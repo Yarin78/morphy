@@ -117,6 +117,14 @@ export async function buildPositionIndex(indexId: string): Promise<PositionIndex
 }
 
 /**
+ * Starts adding the games added to an index's database since it was built or last updated; its
+ * status tells how it goes.
+ */
+export async function updatePositionIndex(indexId: string): Promise<PositionIndexResponse> {
+  return sendJson('POST', `${API_BASE}/position-indexes/${encodeURIComponent(indexId)}/update`, {}, 'Update position index');
+}
+
+/**
  * The filter fields and sort fields of a database, for games or one entity kind.
  *
  * @param path the API path segment: games, players, tournaments, annotators, sources, teams or
