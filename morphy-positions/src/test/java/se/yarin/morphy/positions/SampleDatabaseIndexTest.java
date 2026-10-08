@@ -188,6 +188,28 @@ class SampleDatabaseIndexTest {
         assertEquals(sharedHashes.size(), shared);
         assertEquals(sharedHashes.size(), index.meta().sharedPositions());
         assertEquals(expected.size() - sharedHashes.size(), index.meta().singlePositions());
+
+        // Scanning the games for a position, without the index, finds the same games and moves:
+        // positions of some games, early (shared) and late (single-game)
+        try (GameScan scan = scanning.openScan()) {
+          List<Integer> ids = games.keySet().stream().sorted().toList();
+          for (int i : List.of(0, 1, 100, 333, ids.size() / 2)) {
+            GameMovesModel.Node node = games.get(ids.get(i)).root();
+            for (int ply = 0; node.hasMoves(); ply++, node = node.mainNode()) {
+              if (ply % 13 != 0) {
+                continue;
+              }
+              Position position = node.position();
+              PositionGames indexed = index.find(position, scan);
+              PositionGames scanned = PositionScanner.find(position, scan);
+              assertTrue(indexed.games() > 0);
+              assertEquals(Arrays.toString(indexed.gameIds()), Arrays.toString(scanned.gameIds()));
+              assertEquals(
+                  indexed.moves().stream().map(m -> m.move().toSAN() + Arrays.toString(m.gameIds()) + m.stats()).toList(),
+                  scanned.moves().stream().map(m -> m.move().toSAN() + Arrays.toString(m.gameIds()) + m.stats()).toList());
+            }
+          }
+        }
       }
     }
   }

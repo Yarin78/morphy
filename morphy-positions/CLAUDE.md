@@ -2,10 +2,10 @@
 
 An index from the positions in a database's games to the games that reached them and the moves
 they played from them, with the statistics of those moves. It's what the service's position
-search (`/api/databases/{id}/positions/search`) and the board's Games pane run on; only
-*reference databases* (marked with a `referenceName` in the service's config) are searched by
-position. Depends on morphy-api only: the games are read through the `GameScanning` extension
-of the `Database` facade, which the v1 and v2 facades implement.
+search (`/api/position-indexes/{id}/search`) and the board's Games pane run on; without one,
+`PositionScanner` finds the same answer by playing through every game, which takes seconds.
+Depends on morphy-api only: the games are read through the `GameScanning` extension of the
+`Database` facade, which the v1 and v2 facades implement.
 
 The whole approach (files, building, lookups, the service, the classes, and what could be
 simpler) is described, with diagrams, in [docs/POSITION-INDEX.md](docs/POSITION-INDEX.md).
@@ -14,7 +14,7 @@ simpler) is described, with diagrams, in [docs/POSITION-INDEX.md](docs/POSITION-
 
 ```bash
 morphy positions build <database> [--filter Q] [--index DIR] [--work-dir DIR]
-morphy positions lookup <database> "<fen>" [--index DIR]
+morphy positions lookup <database> "<fen>" [--index DIR | --scan [--filter Q]]
 ```
 
 An index holds every game of a database, or those matching a filter in the database's game

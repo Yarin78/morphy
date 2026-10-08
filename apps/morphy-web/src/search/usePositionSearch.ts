@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { searchPosition } from '../api/client';
-import type { PositionSummary } from '../api/types';
+import type { PositionIndexState, PositionSummary } from '../api/types';
 import { shownColumnKeys } from './columnLayout';
 import { NOTATION_COLUMN } from './columns';
 import type { ResultsSearch, SearchResults, SortOrder } from './useDatabaseSearch';
@@ -11,9 +11,9 @@ import type { ResultsSearch, SearchResults, SortOrder } from './useDatabaseSearc
 
 const PAGE_SIZE = 100;
 
-/** What was played from a position, or why it isn't known. */
+/** What was played from a position, and how the index was used for it, or why it isn't known. */
 export type SummaryState =
-  | { kind: 'loaded'; indexId: string; summary: PositionSummary }
+  | { kind: 'loaded'; indexId: string; summary: PositionSummary; index: PositionIndexState; durationMs: number }
   | { kind: 'error'; indexId: string; fen: string; message: string };
 
 interface State {
@@ -32,7 +32,10 @@ export interface PositionSearch {
   summary: SummaryState | null;
 }
 
-export function usePositionSearch(indexId: string, fen: string): PositionSearch {
+/**
+ * @param version changed when the index has been built, to search again
+ */
+export function usePositionSearch(indexId: string, fen: string, version: string): PositionSearch {
   const [state, setState] = useState<State>(INITIAL);
   // The latest state, changed at once, so a fetch started right after a change sees it
   const stateRef = useRef(state);
@@ -89,7 +92,15 @@ export function usePositionSearch(indexId: string, fen: string): PositionSearch 
               query: fen,
               sortBy,
             },
-            summary: res.summary ? { kind: 'loaded', indexId, summary: res.summary } : s.summary,
+            summary: res.summary
+              ? {
+                  kind: 'loaded',
+                  indexId,
+                  summary: res.summary,
+                  index: res.index,
+                  durationMs: res.games.metadata.executionTimeMs,
+                }
+              : s.summary,
           };
         });
       } catch (err) {
@@ -111,7 +122,8 @@ export function usePositionSearch(indexId: string, fen: string): PositionSearch 
         }));
       }
     },
-    [indexId, fen, update]
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- version only makes it search again
+    [indexId, fen, version, update]
   );
 
   useEffect(() => {

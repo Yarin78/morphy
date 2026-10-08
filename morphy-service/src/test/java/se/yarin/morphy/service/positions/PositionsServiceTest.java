@@ -9,6 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.FileTime;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -34,6 +35,8 @@ import se.yarin.morphy.service.databases.DatabaseService;
 class PositionsServiceTest {
 
   private static final String START = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+  private static final String AFTER_D4_NF6_C4 =
+      "rnbqkb1r/pppppppp/5n2/8/2PP4/8/PP2PPPP/RNBQKBNR b KQkq - 0 2";
 
   @TempDir static Path dir;
 
@@ -68,12 +71,20 @@ class PositionsServiceTest {
       lastOfGame1 = PositionState.toFen(node.position(), node.ply());
     }
 
+    // A copy, changed after its index is built
+    Path copy = Files.createDirectories(dir.resolve("copy"));
+    for (File f : file.getParentFile().listFiles(File::isFile)) {
+      Files.copy(f.toPath(), copy.resolve(f.getName()));
+    }
+
     databases = new DatabaseService();
     databases.registerDatabase("wch2", "World Championships", file.getPath());
     databases.getDatabaseConfig("wch2").setReadOnly(true);
+    databases.registerDatabase("copy", "Copy", copy.resolve(file.getName()).toString());
+    databases.getDatabaseConfig("copy").setReadOnly(true);
 
     // "all" and "old" (a filter) are built; "other" has another filter than its index was built
-    // with; "unbuilt" isn't built
+    // with; "unbuilt" isn't built; "copied" is built, then its database changes
     Path definitions = dir.resolve("position-indexes.json");
     Files.writeString(
         definitions,
@@ -82,7 +93,8 @@ class PositionsServiceTest {
           "all": {"name": "WCh", "database": "wch2", "path": "%1$s/all.positions"},
           "old": {"name": "WCh old", "database": "wch2", "filter": "date:..1960", "path": "%1$s/old.positions"},
           "other": {"name": "Other", "database": "wch2", "filter": "date:1961..", "path": "%1$s/old.positions"},
-          "unbuilt": {"name": "Unbuilt", "database": "wch2", "path": "%1$s/unbuilt.positions"}
+          "unbuilt": {"name": "Unbuilt", "database": "wch2", "path": "%1$s/unbuilt.positions"},
+          "copied": {"name": "Copied", "database": "copy"}
         }
         """
             .formatted(dir.toString().replace("\\", "/")));
@@ -90,6 +102,10 @@ class PositionsServiceTest {
     assertEquals("missing", positions.info("all").status());
     positions.build("all").join();
     positions.build("old").join();
+    positions.build("copied").join();
+    Path copied = copy.resolve(file.getName());
+    Files.setLastModifiedTime(
+        copied, FileTime.fromMillis(Files.getLastModifiedTime(copied).toMillis() + 60_000));
   }
 
   @AfterAll
@@ -103,7 +119,7 @@ class PositionsServiceTest {
     Map<String, PositionIndexInfo> byId =
         positions.list().stream().collect(Collectors.toMap(PositionIndexInfo::id, i -> i));
     assertEquals(
-        List.of("all", "old", "other", "unbuilt"),
+        List.of("all", "old", "other", "unbuilt", "copied"),
         positions.list().stream().map(PositionIndexInfo::id).toList());
     assertEquals("ready", byId.get("all").status());
     assertEquals(fromStart, (long) byId.get("all").games());
@@ -114,6 +130,7 @@ class PositionsServiceTest {
     assertEquals("missing", byId.get("unbuilt").status());
     assertNull(byId.get("unbuilt").games());
     assertEquals("wch2", byId.get("all").databaseId());
+    assertEquals("stale", byId.get("copied").status());
   }
 
   @Test
@@ -121,6 +138,7 @@ class PositionsServiceTest {
     PositionSearchResponse response = positions.search("all", START, "+id", 0, 100, false);
     assertEquals("all", response.indexId());
     assertEquals("wch2", response.databaseId());
+    assertEquals(PositionIndexState.READY, response.index());
     PositionSummary summary = response.summary();
     assertNotNull(summary);
     assertEquals(START, summary.fen());
@@ -218,18 +236,43 @@ class PositionsServiceTest {
   }
 
   @Test
-  void aMissingOrOutOfDateIndexIsReported() {
-    PositionIndexUnavailableException missing =
-        assertThrows(
-            PositionIndexUnavailableException.class,
-            () -> positions.search("unbuilt", START, "+id", 0, 100, false));
-    assertTrue(missing.getMessage().contains("morphy positions build"), missing.getMessage());
-    PositionIndexUnavailableException stale =
-        assertThrows(
-            PositionIndexUnavailableException.class,
-            () -> positions.search("other", START, "+id", 0, 100, false));
-    assertTrue(stale.getMessage().contains("out of date"), stale.getMessage());
-    assertTrue(stale.getMessage().contains("--filter \"date:1961..\""), stale.getMessage());
+  void withoutAnIndexEveryGameIsPlayedThrough() {
+    for (String fen : List.of(START, AFTER_D4_NF6_C4, lastOfGame1)) {
+      PositionSearchResponse indexed = positions.search("all", fen, "-relevance", 0, 1000, false);
+      PositionSearchResponse scanned = positions.search("unbuilt", fen, "-relevance", 0, 1000, false);
+      assertEquals("missing", scanned.index().status());
+      assertTrue(scanned.index().message().contains("hasn't been built"), scanned.index().message());
+      assertEquals(indexed.summary(), scanned.summary());
+      assertEquals(ids(indexed), ids(scanned));
+      // A later page, as the scan is kept
+      assertEquals(
+          ids(positions.search("all", fen, "+playedDate", 3, 5, false)),
+          ids(positions.search("unbuilt", fen, "+playedDate", 3, 5, false)));
+    }
+  }
+
+  @Test
+  void anIndexOfAnotherFilterIsNotUsed() {
+    PositionSearchResponse response = positions.search("other", START, "+id", 0, 1000, false);
+    assertEquals("missing", response.index().status());
+    assertTrue(response.index().message().contains("another filter"), response.index().message());
+    List<GameDto> games = response.games().games();
+    assertTrue(games.size() > 10);
+    assertTrue(games.size() < fromStart);
+    for (GameDto game : games) {
+      assertTrue(game.date().year() >= 1961, "game " + game.id() + " of " + game.date());
+    }
+  }
+
+  @Test
+  void anOutOfDateIndexIsUsed() {
+    PositionSearchResponse response = positions.search("copied", START, "+id", 0, 100, false);
+    assertEquals(new PositionIndexState("stale", null, 0L), response.index());
+    assertEquals(fromStart, response.summary().games());
+  }
+
+  private static List<Long> ids(PositionSearchResponse response) {
+    return response.games().games().stream().map(GameDto::id).toList();
   }
 
   @Test

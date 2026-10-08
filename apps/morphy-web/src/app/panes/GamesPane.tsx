@@ -1,7 +1,7 @@
 import { type PointerEvent, type ReactNode, type RefObject, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { TbLayoutColumns, TbLayoutRows } from 'react-icons/tb';
 import { buildPositionIndex, fetchPositionIndex, fetchPositionIndexes } from '../../api/client';
-import type { PositionIndexResponse } from '../../api/types';
+import type { PositionIndexResponse, PositionIndexState } from '../../api/types';
 import { usePositionSearch } from '../../search/usePositionSearch';
 import { useBoardView } from '../boardStore';
 import { useDocuments } from '../documentsStore';
@@ -85,19 +85,24 @@ function IndexPills({
 }
 
 /**
- * An index that can't be searched yet: why, and a way to build it; while it's built, how that
- * goes, until it's ready.
+ * Why the games of a position may be slow to come or incomplete, in the pane's top row: there's
+ * no index, so every game was played through, or it's out of date, with how many games it lacks;
+ * and a way to build it. While it's built, how that goes, until it's done.
  */
-function UnbuiltIndex({
-  index,
-  pills,
-  onReady,
+function IndexNote({
+  listed,
+  state,
+  durationMs,
+  onBuilt,
 }: {
-  index: PositionIndexResponse;
-  pills: ReactNode;
-  onReady: () => void;
+  /** The index as listed, which this starts from */
+  listed: PositionIndexResponse;
+  /** How the search of the position shown used it, once answered */
+  state: PositionIndexState | null;
+  durationMs: number | null;
+  onBuilt: () => void;
 }) {
-  const [status, setStatus] = useState(index);
+  const [status, setStatus] = useState(listed);
   const [error, setError] = useState<string | null>(null);
 
   // While it's built, its status is asked for every few seconds
@@ -105,11 +110,11 @@ function UnbuiltIndex({
     if (status.status !== 'building') return;
     const timer = setTimeout(() => {
       fetchPositionIndex(status.id)
-        .then((next) => (next.status === 'ready' ? onReady() : setStatus(next)))
+        .then((next) => (next.status === 'building' ? setStatus(next) : onBuilt()))
         .catch((err: unknown) => setError(err instanceof Error ? err.message : String(err)));
     }, BUILD_POLL_MS);
     return () => clearTimeout(timer);
-  }, [status, onReady]);
+  }, [status, onBuilt]);
 
   const build = () => {
     setError(null);
@@ -118,31 +123,46 @@ function UnbuiltIndex({
       .catch((err: unknown) => setError(err instanceof Error ? err.message : String(err)));
   };
 
-  const what =
-    status.status === 'missing'
-      ? `${status.name} hasn't been built yet.`
-      : status.status === 'stale'
-        ? `${status.name} is out of date: its database or its filter has changed since it was built.`
-        : status.status === 'failed'
-          ? (status.message ?? 'The last build failed.')
-          : `Building ${status.name}…`;
+  if (error) return <span className="games-pane-index-note search-error">{error}</span>;
+  if (status.status === 'building') {
+    return (
+      <span className="games-pane-index-note" title={status.message}>
+        Building the index…{status.message ? ` ${status.message}` : ''}
+      </span>
+    );
+  }
+  const seconds = durationMs != null ? ` in ${(durationMs / 1000).toFixed(1)} s` : '';
+  let note: string;
+  let title: string;
+  if (state?.status === 'missing') {
+    note = 'No index';
+    title = `${state.message ?? 'There is no index'}, so every game was played through to find the position${seconds}`;
+  } else if (state?.status === 'stale') {
+    const missing = state.missingGames ?? 0;
+    note =
+      missing > 0
+        ? `Index out of date · ${formatCount(missing)} ${missing === 1 ? 'game' : 'games'} missing`
+        : 'Index out of date';
+    title =
+      missing > 0
+        ? `${missing.toLocaleString()} games have been added to ${status.databaseId} since the index was built` +
+          (status.filter ? ' (not all of them may match its filter)' : '') +
+          ', so they are not among these'
+        : `Games of ${status.databaseId} have been changed or deleted since the index was built; the moves and games shown may be a little off`;
+  } else if (state == null && status.status === 'failed') {
+    note = 'The last build failed';
+    title = status.message ?? note;
+  } else {
+    return null;
+  }
   return (
-    <div className="games-pane">
-      <div className="games-pane-head">
-        <span className="games-pane-totals" />
-        <div className="games-pane-head-right">{pills}</div>
-      </div>
-      <div className="games-pane-unbuilt">
-        <p>{what}</p>
-        {status.status === 'building' && status.message && <p className="games-pane-progress">{status.message}</p>}
-        {status.status !== 'building' && (
-          <button type="button" onClick={build} title={describe(status)}>
-            {status.status === 'missing' ? 'Build' : 'Rebuild'} the index
-          </button>
-        )}
-        {error && <p className="search-error">{error}</p>}
-      </div>
-    </div>
+    <span className="games-pane-index-note" title={title}>
+      {note}
+      {' · '}
+      <button type="button" className="games-pane-index-build" onClick={build} title={describe(status)}>
+        {state?.status === 'stale' || status.status === 'failed' ? 'Rebuild' : 'Build'}
+      </button>
+    </span>
   );
 }
 
@@ -180,11 +200,21 @@ function useSplit(paneRef: RefObject<HTMLDivElement | null>, arrangement: Arrang
 }
 
 /** The games of a position index from a position: the totals, the moves and the games. */
-function PositionGames({ index, fen, pills }: { index: PositionIndexResponse; fen: string; pills: ReactNode }) {
+function PositionGames({
+  index,
+  fen,
+  pills,
+  onBuilt,
+}: {
+  index: PositionIndexResponse;
+  fen: string;
+  pills: ReactNode;
+  onBuilt: () => void;
+}) {
   const { dispatch } = useDocuments();
   const indexId = index.id;
   const databaseId = index.databaseId;
-  const { search, summary } = usePositionSearch(indexId, fen);
+  const { search, summary } = usePositionSearch(indexId, fen, `${index.status} ${index.builtAt ?? ''}`);
   const [arrangement, setArrangement] = useState<Arrangement>(() =>
     load(ARRANGEMENT_KEY) === 'stacked' ? 'stacked' : 'side'
   );
@@ -198,7 +228,8 @@ function PositionGames({ index, fen, pills }: { index: PositionIndexResponse; fe
 
   // Until the position on the board has been searched for, what was played from the one before
   // is shown
-  const shown = summary?.kind === 'loaded' && summary.indexId === indexId ? summary.summary : null;
+  const loaded = summary?.kind === 'loaded' && summary.indexId === indexId ? summary : null;
+  const shown = loaded?.summary ?? null;
   const stale = shown?.fen !== fen;
   const error =
     summary?.kind === 'error' && summary.indexId === indexId && summary.fen === fen ? summary.message : null;
@@ -207,23 +238,33 @@ function PositionGames({ index, fen, pills }: { index: PositionIndexResponse; fe
   return (
     <div className="games-pane">
       <div className="games-pane-head">
-        <span className="games-pane-totals">
-          {shown && (
-            <>
-              <span title={`${shown.games.toLocaleString()} games reached this position`}>
-                {formatCount(shown.games)} {shown.games === 1 ? 'game' : 'games'}
-              </span>
-              {shown.games > 0 && (
-                <span
-                  title={`White won ${shown.whiteWins.toLocaleString()}, drawn ${shown.draws.toLocaleString()}, Black won ${shown.blackWins.toLocaleString()}`}
-                >
-                  {' · '}
-                  {white ? 'White' : 'Black'} scores {Math.round(100 * scoreOf(shown, white))}%
+        <div className="games-pane-head-left">
+          <span className="games-pane-totals">
+            {shown && (
+              <>
+                <span title={`${shown.games.toLocaleString()} games reached this position`}>
+                  {formatCount(shown.games)} {shown.games === 1 ? 'game' : 'games'}
                 </span>
-              )}
-            </>
-          )}
-        </span>
+                {shown.games > 0 && (
+                  <span
+                    title={`White won ${shown.whiteWins.toLocaleString()}, drawn ${shown.draws.toLocaleString()}, Black won ${shown.blackWins.toLocaleString()}`}
+                  >
+                    {' · '}
+                    {white ? 'White' : 'Black'} scores {Math.round(100 * scoreOf(shown, white))}%
+                  </span>
+                )}
+              </>
+            )}
+          </span>
+          <IndexNote
+            // Its own state for each index, and again when it has been built
+            key={`${index.id} ${index.status} ${index.builtAt ?? ''}`}
+            listed={index}
+            state={loaded?.index ?? null}
+            durationMs={loaded?.durationMs ?? null}
+            onBuilt={onBuilt}
+          />
+        </div>
         <div className="games-pane-head-right">
           {pills}
           <button
@@ -263,7 +304,8 @@ function PositionGames({ index, fen, pills }: { index: PositionIndexResponse; fe
 /**
  * The games from the position on the board, below it, in a position index picked from those the
  * service defines: how many reached it and how they went, the moves played from it on the left, and
- * the games on the right. An index that isn't built can be built from here.
+ * the games on the right. Without an index every game is played through instead, which takes longer;
+ * an index that isn't built, or is out of date, can be built from here.
  */
 export function GamesPane() {
   const { game, version } = useBoardView();
@@ -295,9 +337,5 @@ export function GamesPane() {
   }
   const index = indexes.find((i) => i.id === picked) ?? indexes[0];
   const pills = <IndexPills indexes={indexes} picked={index.id} onPick={pick} />;
-  if (index.status !== 'ready') {
-    // Its own state for each index, which starts from the index as listed
-    return <UnbuiltIndex key={index.id} index={index} pills={pills} onReady={reload} />;
-  }
-  return <PositionGames index={index} fen={fen} pills={pills} />;
+  return <PositionGames index={index} fen={fen} pills={pills} onBuilt={reload} />;
 }

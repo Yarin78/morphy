@@ -8,13 +8,10 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Comparator;
 import java.util.List;
 import org.jetbrains.annotations.NotNull;
 import se.yarin.chess.GameMovesModel;
-import se.yarin.chess.Move;
 import se.yarin.chess.MoveCode;
-import se.yarin.chess.Player;
 import se.yarin.chess.Position;
 import se.yarin.morphy.api.GameScan;
 import se.yarin.morphy.api.ScannedGame;
@@ -115,36 +112,12 @@ public final class PositionIndex implements AutoCloseable {
    */
   public @NotNull PositionGames find(@NotNull Position position, @NotNull GameScan scan) {
     long hash = position.getZobristHashLo();
-    boolean whiteToMove = position.playerToMove() == Player.WHITE;
     List<MoveGroup> groups =
         switch (lookup(hash)) {
           case Lookup.Shared shared -> shared.groups();
           case Lookup.SingleCandidates candidates -> check(scan, candidates.gameIds(), hash);
         };
-    List<PositionGames.PlayedMove> moves = new ArrayList<>();
-    PositionGames.PlayedMove ended = null;
-    List<int[]> all = new ArrayList<>();
-    for (MoveGroup group : groups) {
-      MoveStats stats = stats(group, whiteToMove);
-      all.add(group.gameIds());
-      if (group.moveCode() == IndexFiles.GAME_ENDED) {
-        ended = new PositionGames.PlayedMove(null, group.gameIds(), stats);
-        continue;
-      }
-      Move move = MoveCode.move(position, group.moveCode());
-      // A move that can't be played here would be a hash collision; never seen, but left out
-      if (move != null) {
-        moves.add(new PositionGames.PlayedMove(move, group.gameIds(), stats));
-      }
-    }
-    moves.sort(Comparator.comparingInt((PositionGames.PlayedMove m) -> -m.gameIds().length));
-    if (ended == null) {
-      ended =
-          new PositionGames.PlayedMove(
-              null, new int[0], MoveStats.of(new int[0], facts, whiteToMove, 0));
-    }
-    int[] gameIds = all.stream().flatMapToInt(Arrays::stream).sorted().toArray();
-    return new PositionGames(List.copyOf(moves), ended, gameIds);
+    return PositionGames.of(position, groups, facts, meta.recentSince());
   }
 
   /** The candidates that do reach a position, as one group by the move each played. */
@@ -266,19 +239,6 @@ public final class PositionIndex implements AutoCloseable {
       throw new UncheckedIOException(e);
     }
     return buf;
-  }
-
-  /**
-   * The statistics of a move's games: those stored in the index, or worked out from the facts of
-   * the games.
-   *
-   * @param whiteToMove whether White is to move in the position
-   */
-  @NotNull
-  MoveStats stats(@NotNull MoveGroup group, boolean whiteToMove) {
-    return group.stats() != null
-        ? group.stats()
-        : MoveStats.of(group.gameIds(), facts, whiteToMove, meta.recentSince());
   }
 
   @Override

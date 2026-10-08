@@ -44,8 +44,10 @@ board. The service defines the indexes (`GET /api/position-indexes`, from its
 `position-indexes.json`): each holds the games of a database, or those matching a
 filter (only classical games, say), so a database can have several. They're
 picked from as pills at the top right of the pane (the one picked last is kept);
-an index that isn't built, or is out of date, says so, with a button that builds
-it in the service and shows how the build goes.
+without an index the service plays through every game instead, which takes some
+seconds, and the top row says "No index"; an index out of date is still used, and
+the top row says so, with how many games it lacks. Either way a link there builds
+the index in the service and shows how the build goes.
 The top row shows how many games reached the position and how the side to move
 scored. Below it, the moves played from the position on the left: how often each
 was played, its score, whether it's played more or less of late than the other
@@ -57,8 +59,8 @@ database's game results; one double-clicked opens at the position.
 Both come from one call, `searchPosition`
 (`GET /api/position-indexes/{id}/search?fen=...`): a page of the games, and with
 the first page what was played from the position; the games open in the index's
-database. If the index went out of date meanwhile, the service answers 409 saying
-so, which the pane shows.
+database, and the response says whether the index was used and how up to date
+it is.
 The games come most relevant first: strong players and recent games, the
 players' average rating less 50 for every year back (the service's
 `RELEVANCE_ELO_PER_YEAR`). A column sorts them otherwise, by what the index keeps

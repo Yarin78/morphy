@@ -1,6 +1,7 @@
 package se.yarin.morphy.cli.commands;
 
 import java.io.File;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -24,6 +25,7 @@ import se.yarin.morphy.positions.IndexMeta;
 import se.yarin.morphy.positions.MoveStats;
 import se.yarin.morphy.positions.PositionGames;
 import se.yarin.morphy.positions.PositionIndex;
+import se.yarin.morphy.positions.PositionScanner;
 import se.yarin.morphy.positions.PositionIndexBuilder;
 import se.yarin.morphy.positions.RatedPlayer;
 
@@ -123,29 +125,26 @@ class Positions implements Runnable {
         description = "The index directory (default: next to the database, <name>.positions)")
     private Path indexDir;
 
+    @CommandLine.Option(
+        names = "--scan",
+        description = "Play through every game instead of using an index")
+    private boolean scan;
+
+    @CommandLine.Option(
+        names = "--filter",
+        description = "With --scan, only the games matching this game search filter")
+    private String filter = "";
+
     @Override
     public Integer call() throws Exception {
       Locale.setDefault(Locale.US);
       Position position = PositionState.fromFen(fen).position();
       boolean white = position.playerToMove() == Player.WHITE;
-      long opened = System.nanoTime();
-      try (Database db = Databases.open(file, AccessMode.READ_ONLY);
-          PositionIndex index =
-              PositionIndex.open(
-                  indexDir != null ? indexDir : IndexFiles.indexDirectoryOf(file.toPath()))) {
-        if (index.isStale(DatabaseIdentity.of(file.toPath(), db.gameCount()), index.meta().filter())) {
-          System.out.println("The index is out of date; build it again");
+      try (Database db = Databases.open(file, AccessMode.READ_ONLY)) {
+        PositionGames games = scan ? scanned(db, position) : lookedUp(db, position);
+        if (games == null) {
           return 1;
         }
-        long start = System.nanoTime();
-        PositionGames games;
-        try (GameScan scan = scanning(db).openScan()) {
-          games = index.find(position, scan);
-        }
-        long looked = System.nanoTime();
-        System.out.printf(
-            "%,d games (index opened in %.0f ms, looked up in %.1f ms)%n",
-            games.games(), (start - opened) / 1e6, (looked - start) / 1e6);
         System.out.printf("%-8s %9s %6s %5s %5s  %s%n", "Move", "Games", "Score", "Avg", "Last", "Top players");
         for (PositionGames.PlayedMove move : games.moves()) {
           MoveStats s = move.stats();
@@ -166,6 +165,40 @@ class Positions implements Runnable {
         }
       }
       return 0;
+    }
+
+    private PositionGames scanned(Database db, Position position) {
+      long start = System.nanoTime();
+      PositionGames games;
+      try (GameScan scan = scanning(db).openScan(filter)) {
+        games = PositionScanner.find(position, scan);
+      }
+      System.out.printf(
+          "%,d games (every game played through in %.1f s)%n",
+          games.games(), (System.nanoTime() - start) / 1e9);
+      return games;
+    }
+
+    private PositionGames lookedUp(Database db, Position position) throws IOException {
+      long opened = System.nanoTime();
+      try (PositionIndex index =
+          PositionIndex.open(
+              indexDir != null ? indexDir : IndexFiles.indexDirectoryOf(file.toPath()))) {
+        if (index.isStale(DatabaseIdentity.of(file.toPath(), db.gameCount()), index.meta().filter())) {
+          System.out.println("The index is out of date; build it again, or use --scan");
+          return null;
+        }
+        long start = System.nanoTime();
+        PositionGames games;
+        try (GameScan scan = scanning(db).openScan()) {
+          games = index.find(position, scan);
+        }
+        long looked = System.nanoTime();
+        System.out.printf(
+            "%,d games (index opened in %.0f ms, looked up in %.1f ms)%n",
+            games.games(), (start - opened) / 1e6, (looked - start) / 1e6);
+        return games;
+      }
     }
 
     private static String names(Database db, List<RatedPlayer> players) {

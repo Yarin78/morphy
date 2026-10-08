@@ -221,7 +221,13 @@ flowchart LR
 
 An index's status is `ready`, `missing`, `stale` (its database changed since it was built, or its
 filter differs from the definition's), `building` (with the builder's progress) or `failed`. A
-search of an index that isn't ready answers 409, saying how to build it. The games come most
+search still answers without an index: when it's missing, can't be read or was built with another
+filter, every game of the definition's filter is played through for the position instead
+(`PositionScanner`: some 4–5 s for Mega 2026 in v2, about a minute for a v1 Megabase, whose scan
+decodes each game in full); the last few positions scanned are kept, up to 5M games all told, so
+their later pages and other orders come at once. An index that is out of date is used anyway. The
+response's `index` says which (`ready`, `stale` with the games added to the database since the
+build, or `missing` with why), and the Games pane shows it in its top row. The games come most
 relevant first by default: the players' average rating less 50 for every year before the index's
 newest game (`PositionsService.RELEVANCE_ELO_PER_YEAR`), worked out from `facts.bin`. Builds run in the
 background on one thread, so they queue; the bucket files go next to the index directory.
@@ -298,15 +304,16 @@ classDiagram
 | morphy-cbh | `CbhScan` | The v1 scan: game by game through the full decoder; the filter as ids from the query planner |
 | morphy-positions | `PositionIndexBuilder` | Buckets, sorting, writing every file |
 | | `PositionIndex` | An open index: the in-memory files, and `find`, which looks a position up, confirms single-game candidates by playing through the game, resolves the moves and fills in their stats |
-| | `PositionGames` | What `find` returns: the moves with their games and stats, the games that ended there, all the game ids |
+| | `PositionScanner` | Without an index: plays through every main line of a scan for one position, giving what `find` would |
+| | `PositionGames` | What `find` and `PositionScanner.find` return: the moves with their games and stats (ties by move code), the games that ended there, all the game ids, the games' facts and the recent year |
 | | `Lookup`, `MoveGroup` (package-private) | A raw lookup: the move groups of a shared position, or the candidates of a single-game one |
 | | `MoveStats`, `RatedPlayer` | A move's statistics, worked out from facts or read from the index |
-| | `GameFactsTable` | The facts of every game, packed |
+| | `GameFactsTable` | The facts of every game, packed; or of only the games a scan found, looked up by id |
 | | `IndexMeta`, `DatabaseIdentity`, `IndexFiles`, `Bytes` | Metadata and staleness, file names, I/O helpers and the `GAME_ENDED` code, varints |
 | morphy-cli | `Positions` | `positions build` and `positions lookup` |
 | morphy-service | `PositionsService` | Definitions, statuses, the build queue, searching and the response's summary |
 | | `PositionsController` | The HTTP endpoints |
-| | `PositionIndexConfig`, `PositionIndexInfo`, `PositionSearchResponse`, `PositionSummary`, `PositionMove`, `PositionPlayer`, `PositionIndexUnavailableException` | A definition, a status, and the search's response |
+| | `PositionIndexConfig`, `PositionIndexInfo`, `PositionSearchResponse`, `PositionSummary`, `PositionMove`, `PositionPlayer`, `PositionIndexState` | A definition, a status, and the search's response, with how the index was used |
 
 ## Numbers
 

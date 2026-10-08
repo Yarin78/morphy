@@ -39,6 +39,7 @@ class PositionIndexTest {
   private static final Map<Integer, ScannedGame> GAMES = new HashMap<>();
 
   private static PositionIndex index;
+  private static GameScan scan;
 
   @BeforeAll
   static void build() throws IOException {
@@ -52,7 +53,7 @@ class PositionIndexTest {
     for (int id = 7; id <= 66; id++) {
       add(id, "e2e4 c7c5", id % 2 == 0 ? GameResult.WHITE_WINS : GameResult.BLACK_WINS, 1990 + id % 30, 2000 + id, 2100, 100 + id, 200 + id);
     }
-    GameScan scan =
+    scan =
         new GameScan() {
           @Override
           public int maxId() {
@@ -189,7 +190,7 @@ class PositionIndexTest {
     Lookup.Shared shared = assertInstanceOf(Lookup.Shared.class, index.lookup(position.getZobristHashLo()));
     MoveGroup e6 = shared.groups().stream().filter(g -> g.gameIds().length == 2).findFirst().orElseThrow();
     assertNull(e6.stats());
-    MoveStats stats = index.stats(e6, false);
+    MoveStats stats = MoveStats.of(e6.gameIds(), index.facts(), false, index.meta().recentSince());
     assertEquals(1, stats.whiteWins());
     assertEquals(1, stats.draws());
     assertEquals(2625, stats.averageElo());
@@ -216,5 +217,41 @@ class PositionIndexTest {
     assertTrue(index.isStale(new DatabaseIdentity(1234, 5679, 70), ""));
     assertTrue(index.isStale(DATABASE, "date:2000.."));
     assertEquals(DATABASE, index.meta().database());
+  }
+
+  @Test
+  void scanningFindsWhatTheIndexHas() {
+    for (String moves :
+        List.of(
+            "",
+            "e2e4",
+            "d2d4 g8f6",
+            "c2c4 g8f6 d2d4",
+            "e2e4 e7e5 g1f3",
+            "d2d4 g8f6 c2c4 g7g6 b1c3",
+            "a2a4")) {
+      Position position = after(moves);
+      PositionGames indexed = index.find(position, scan);
+      PositionGames scanned = PositionScanner.find(position, scan);
+      assertEquals(Arrays.toString(indexed.gameIds()), Arrays.toString(scanned.gameIds()), moves);
+      assertEquals(describe(indexed.ended()), describe(scanned.ended()), moves);
+      assertEquals(
+          indexed.moves().stream().map(PositionIndexTest::describe).toList(),
+          scanned.moves().stream().map(PositionIndexTest::describe).toList(),
+          moves);
+      assertEquals(index.meta().recentSince(), scanned.recentSince());
+      for (int id : scanned.gameIds()) {
+        assertEquals(index.facts().sortableDate(id), scanned.facts().sortableDate(id));
+        assertEquals(index.facts().blackPlayer(id), scanned.facts().blackPlayer(id));
+      }
+    }
+  }
+
+  private static String describe(PositionGames.PlayedMove move) {
+    return (move.move() == null ? "end" : move.move().toSAN())
+        + " "
+        + Arrays.toString(move.gameIds())
+        + " "
+        + move.stats();
   }
 }

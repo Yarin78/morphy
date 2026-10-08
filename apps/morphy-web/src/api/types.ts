@@ -425,10 +425,26 @@ export interface PositionSearchRequest {
   includeMoves?: boolean;
 }
 
+/** How a position search used its index. */
+export interface PositionIndexState {
+  /**
+   * ready: used and up to date; stale: used, but its database has changed since it was built;
+   * missing: none to use (not built, unreadable, or of another filter), so every game was played
+   * through instead
+   */
+  status: 'ready' | 'stale' | 'missing';
+  /** Why it's missing */
+  message?: string | null;
+  /** When stale, the games added to the database since it was built (0 if only changed or deleted) */
+  missingGames?: number | null;
+}
+
 export interface PositionSearchResponse {
   indexId: string;
   /** The database the games are of, which they open in */
   databaseId: string;
+  /** Whether the index was used, and how up to date it is */
+  index: PositionIndexState;
   /** What was played from the position; with the first page only, null with the later ones */
   summary: PositionSummary | null;
   /** The page of the games that reached it */

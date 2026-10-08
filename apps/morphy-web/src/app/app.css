@@ -1265,21 +1265,32 @@ html {
 }
 
 /* An index that can't be searched yet: why, and the button that builds it */
-.games-pane-unbuilt {
-  flex: 1;
-  padding: 8px 12px;
-  background: #fff;
-  color: #666;
-  font-size: 13px;
+/* Why the games may be slow or incomplete: no index, or an out of date one; and building it */
+.games-pane-head-left {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  min-width: 0;
 }
 
-.games-pane-unbuilt p {
-  margin: 0 0 8px;
+.games-pane-index-note {
+  flex: 0 0 auto;
+  white-space: nowrap;
+  color: #a05a00;
 }
 
-.games-pane-progress {
-  color: #888;
-  font-variant-numeric: tabular-nums;
+.games-pane-index-build {
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.games-pane-index-build:hover {
+  color: #6b3c00;
 }
 
 /* The totals of the position, and the reference databases to pick from */

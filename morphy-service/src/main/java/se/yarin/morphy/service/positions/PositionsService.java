@@ -5,11 +5,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PreDestroy;
 import java.io.File;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.FileTime;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -23,7 +25,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import se.yarin.chess.Player;
 import se.yarin.chess.Position;
 import se.yarin.chess.pgn.PgnFormatException;
 import se.yarin.chess.pgn.PositionState;
@@ -42,6 +43,7 @@ import se.yarin.morphy.positions.MoveStats;
 import se.yarin.morphy.positions.PositionGames;
 import se.yarin.morphy.positions.PositionIndex;
 import se.yarin.morphy.positions.PositionIndexBuilder;
+import se.yarin.morphy.positions.PositionScanner;
 import se.yarin.morphy.positions.RatedPlayer;
 import se.yarin.morphy.service.config.DatabaseConfig;
 import se.yarin.morphy.service.databases.DatabaseService;
@@ -240,11 +242,13 @@ public class PositionsService {
   // ── Searching ────────────────────────────────────────────────────────────
 
   /**
-   * A page of the games of an index that reached a position.
+   * A page of the games of an index that reached a position. When the index is missing, can't be
+   * read or was built with another filter, the games are scanned for the position instead (some
+   * seconds for a Megabase); when its database has changed since it was built, it's used anyway.
+   * The response tells which.
    *
    * @throws IllegalArgumentException if there is no such index, or the position or the sort order
    *     isn't valid
-   * @throws PositionIndexUnavailableException if the index is missing or out of date
    */
   public PositionSearchResponse search(
       @NotNull String indexId,
@@ -269,12 +273,17 @@ public class PositionsService {
     return databaseService.read(
         config.getId(),
         db -> {
-          PositionIndex index = indexOf(definition, config, db);
+          DatabaseIdentity identity = identityOf(config, db);
+          Usable usable = usableIndex(definition, identity);
           PositionGames games;
-          try (GameScan scan = scanning(db).openScan()) {
-            games = index.find(position, scan);
+          if (usable.index() != null) {
+            try (GameScan scan = scanning(db).openScan()) {
+              games = usable.index().find(position, scan);
+            }
+          } else {
+            games = scanned(definition, identity, db, position);
           }
-          int[] sorted = order.sort(games.gameIds(), index.facts(), index.meta().recentSince() + 2);
+          int[] sorted = order.sort(games.gameIds(), games.facts(), games.recentSince() + 2);
           GameFetchOptions fetch = new GameFetchOptions(includeMoves, false, false);
           List<GameDto> page = new ArrayList<>();
           for (int i = first; i < Math.min(sorted.length, first + count); i++) {
@@ -284,12 +293,13 @@ public class PositionsService {
             }
           }
           PositionSummary summary =
-              first == 0 ? summary(db, fen, position, games, index.meta().recentSince()) : null;
+              first == 0 ? summary(db, fen, position, games, games.recentSince()) : null;
           SearchMetadata metadata =
               new SearchMetadata(null, order.toString(), System.currentTimeMillis() - startTime);
           return new PositionSearchResponse(
               indexId,
               config.getId(),
+              usable.state(),
               summary,
               new GameSearchResponse(page, page.size(), sorted.length, first, count, metadata));
         });
@@ -303,46 +313,109 @@ public class PositionsService {
                     "Database " + db.name() + " can't be searched by position"));
   }
 
-  /** An index, opened if it isn't, or opened again if it has been rebuilt. */
-  private PositionIndex indexOf(PositionIndexConfig definition, DatabaseConfig config, Database db) {
+  private static DatabaseIdentity identityOf(DatabaseConfig config, Database db) {
+    try {
+      return DatabaseIdentity.of(Path.of(config.getPath()), db.gameCount());
+    } catch (IOException e) {
+      throw new UncheckedIOException("Can't read " + config.getPath(), e);
+    }
+  }
+
+  /** The index to search, if it can be, and what to tell of it. */
+  private record Usable(@Nullable PositionIndex index, @NotNull PositionIndexState state) {}
+
+  /**
+   * An index to search, opened if it isn't, or opened again if it has been rebuilt; none if it's
+   * missing, can't be read or was built with another filter.
+   */
+  private Usable usableIndex(PositionIndexConfig definition, DatabaseIdentity identity) {
     Path dir = directory(definition);
-    String build = "build it from the Games pane, or with: morphy positions build \"" + config.getPath() + "\""
-        + (definition.filterOrAll().isEmpty() ? "" : " --filter \"" + definition.filterOrAll() + "\"")
-        + " --index \"" + dir + "\"";
     FileTime built;
     try {
       built = Files.getLastModifiedTime(dir.resolve("meta.properties"));
     } catch (IOException e) {
-      throw new PositionIndexUnavailableException(
-          "The position index " + definition.name() + " hasn't been built; " + build);
+      return new Usable(null, PositionIndexState.missing("It hasn't been built"));
     }
-    OpenIndex open =
-        indexes.compute(
-            definition.id(),
-            (id, current) -> {
-              if (current != null && current.built().equals(built)) {
-                return current;
-              }
-              if (current != null) {
-                close(current.index());
-              }
-              try {
-                log.info("Opening the position index '{}' in {}", id, dir);
-                return new OpenIndex(PositionIndex.open(dir), built);
-              } catch (IOException e) {
-                throw new PositionIndexUnavailableException(
-                    "The position index " + definition.name() + " can't be read; " + build, e);
-              }
-            });
+    OpenIndex open;
     try {
-      if (open.index().isStale(DatabaseIdentity.of(Path.of(config.getPath()), db.gameCount()), definition.filterOrAll())) {
-        throw new PositionIndexUnavailableException(
-            "The position index " + definition.name() + " is out of date; " + build);
-      }
-    } catch (IOException e) {
-      throw new PositionIndexUnavailableException("Can't read " + config.getPath(), e);
+      open =
+          indexes.compute(
+              definition.id(),
+              (id, current) -> {
+                if (current != null && current.built().equals(built)) {
+                  return current;
+                }
+                if (current != null) {
+                  close(current.index());
+                }
+                try {
+                  log.info("Opening the position index '{}' in {}", id, dir);
+                  return new OpenIndex(PositionIndex.open(dir), built);
+                } catch (IOException e) {
+                  throw new UncheckedIOException(e);
+                }
+              });
+    } catch (UncheckedIOException e) {
+      log.warn("Can't read the position index '{}' in {}", definition.id(), dir, e.getCause());
+      return new Usable(null, PositionIndexState.missing("It can't be read: " + e.getCause().getMessage()));
     }
-    return open.index();
+    IndexMeta meta = open.index().meta();
+    if (!meta.filter().strip().equals(definition.filterOrAll())) {
+      return new Usable(null, PositionIndexState.missing("It was built with another filter"));
+    }
+    if (!meta.database().equals(identity)) {
+      long missing = Math.max(0, identity.gameCount() - meta.database().gameCount());
+      return new Usable(open.index(), PositionIndexState.stale(missing));
+    }
+    return new Usable(open.index(), PositionIndexState.READY);
+  }
+
+  /**
+   * The positions scanned for lately, by index, database and position, the latest used last, so
+   * their later pages and other orders aren't scanned for again: as many as {@link
+   * #SCANNED_GAMES_KEPT} games all told.
+   */
+  private final LinkedHashMap<ScanKey, PositionGames> scans = new LinkedHashMap<>(16, 0.75f, true);
+
+  private record ScanKey(String indexId, String filter, DatabaseIdentity database, long position) {}
+
+  // The games of the scans kept, all told: some 30 bytes each. The start position of a Megabase
+  // has more, and isn't kept
+  private static final long SCANNED_GAMES_KEPT = 5_000_000;
+
+  /** The games of an index's database that reached a position, by scanning them all. */
+  private PositionGames scanned(
+      PositionIndexConfig definition, DatabaseIdentity identity, Database db, Position position) {
+    ScanKey key =
+        new ScanKey(definition.id(), definition.filterOrAll(), identity, position.getZobristHashLo());
+    synchronized (scans) {
+      PositionGames kept = scans.get(key);
+      if (kept != null) {
+        return kept;
+      }
+    }
+    long start = System.nanoTime();
+    PositionGames games;
+    try (GameScan scan = scanning(db).openScan(definition.filterOrAll())) {
+      games = PositionScanner.find(position, scan);
+    }
+    log.info(
+        "Scanned {} for a position without its index: {} games in {} ms",
+        definition.id(),
+        games.games(),
+        (System.nanoTime() - start) / 1_000_000);
+    if (games.games() <= SCANNED_GAMES_KEPT) {
+      synchronized (scans) {
+        scans.put(key, games);
+        long kept = scans.values().stream().mapToLong(PositionGames::games).sum();
+        Iterator<Map.Entry<ScanKey, PositionGames>> eldest = scans.entrySet().iterator();
+        while (kept > SCANNED_GAMES_KEPT) {
+          kept -= eldest.next().getValue().games();
+          eldest.remove();
+        }
+      }
+    }
+    return games;
   }
 
   // ── Building ─────────────────────────────────────────────────────────────
